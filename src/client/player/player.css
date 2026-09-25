@@ -293,6 +293,12 @@ h1 {
   border-radius: 999px;
 }
 
+.streak-note {
+  font-weight: 900;
+  font-size: 18px;
+  animation: pop-in 0.4s ease-out;
+}
+
 .small-q {
   margin: 4px 0 0;
   font-weight: 700;
@@ -383,4 +389,303 @@ h1 {
   font-size: 24px;
   font-weight: 800;
   margin: 0;
+}
+
+/* ----- Tallest Tower ----- */
+
+.team-badge {
+  display: inline-block;
+  padding: 6px 16px;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 18px;
+  box-shadow: var(--shadow);
+}
+
+.team-badge.big {
+  font-size: 30px;
+  padding: 10px 26px;
+  animation: pop-in 0.3s ease-out;
+}
+
+.tower-count {
+  font-size: 96px;
+  font-weight: 900;
+  color: var(--accent);
+  line-height: 1;
+}
+
+.team-bar {
+  border-bottom: 4px solid var(--team);
+}
+
+.blocks-meter {
+  display: flex;
+  gap: 4px;
+}
+
+.blocks-meter i {
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+.blocks-meter i.full {
+  background: var(--team);
+  border-color: #fff;
+  animation: pop-in 0.25s ease-out;
+}
+
+.tower-q {
+  margin: 4px 0 0;
+  font-size: clamp(20px, 5.5vw, 26px);
+  font-weight: 800;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.flash {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  animation: pop-in 0.15s ease-out;
+}
+
+.flash.good {
+  background: var(--good);
+}
+
+.flash.bad {
+  background: var(--bad);
+}
+
+.flash-icon {
+  font-size: 110px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.flash-answer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin: 8px 24px 0;
+  padding: 12px 20px;
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.25);
+  text-align: center;
+  max-width: calc(100vw - 48px);
+}
+
+.flash-answer span {
+  font-size: 15px;
+  font-weight: 700;
+  opacity: 0.9;
+}
+
+.flash-answer b {
+  font-size: 24px;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+.flash-text {
+  font-size: 28px;
+  font-weight: 900;
+}
+
+/* build mode */
+
+.build {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  cursor: pointer;
+}
+
+.build-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 12px 4px;
+  text-align: center;
+}
+
+.build-head b {
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.build-head span {
+  font-size: 13px;
+  color: var(--on-bg-soft);
+}
+
+.build-area {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  margin: 6px 0 max(8px, env(safe-area-inset-bottom));
+}
+
+.zone.miss {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 14px;
+  font-size: 30px;
+  font-weight: 900;
+  color: #ff5c70;
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
+  /* Dark red "danger" strips: blocks dropped here fall off the building. */
+  background:
+    linear-gradient(to top, rgba(110, 8, 26, 0.9), rgba(110, 8, 26, 0.45) 55%, rgba(110, 8, 26, 0.25)),
+    repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.22) 0 10px, transparent 10px 20px);
+}
+
+.zone.miss.left {
+  left: 0;
+  border-right: 3px dashed rgba(255, 92, 112, 0.7);
+}
+
+.zone.miss.right {
+  right: 0;
+  border-left: 3px dashed rgba(255, 92, 112, 0.7);
+}
+
+.below {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  z-index: 2;
+}
+
+.phone-skyline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 28%;
+}
+
+.phone-skyline .skyline {
+  width: 100%;
+  height: 100%;
+  display: block;
+  fill: rgba(15, 8, 40, 0.28);
+}
+
+.build-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.build-svg .sidewalk {
+  fill: #9ea3ae;
+}
+
+.piece {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.35));
+}
+
+.piece.slider {
+  will-change: transform;
+}
+
+.piece svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.final-rank .unit {
+  font-size: 0.4em;
+}
+
+.award-chip {
+  background: var(--accent);
+  color: #2a1a00;
+  font-weight: 900;
+  padding: 8px 16px;
+  border-radius: 999px;
+}
+
+/* ----- monster ----- */
+
+.egg-chip {
+  margin: 10px 12px 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #5b2799;
+  border: 2px solid #c6a2f2;
+  font-weight: 800;
+  font-size: 14px;
+  text-align: center;
+  animation: pop-in 0.3s ease-out;
+}
+
+.flash.monster-flash {
+  z-index: 60;
+}
+
+.flash.monster-flash.egg {
+  background: #5b2799;
+}
+
+.flash.monster-flash.hatched {
+  background: #1f8a5b;
+}
+
+.flash.monster-flash.smashed {
+  background: #8e1330;
+  animation: pop-in 0.15s ease-out, phone-shake 0.5s ease-in-out 0.15s;
+}
+
+.monster-flash .flash-text {
+  text-align: center;
+  padding: 0 16px;
+}
+
+.monster-flash .monster-detail {
+  font-size: 18px;
+}
+
+@keyframes phone-shake {
+  20% {
+    transform: translateX(-12px);
+  }
+  40% {
+    transform: translateX(10px);
+  }
+  60% {
+    transform: translateX(-6px);
+  }
+  80% {
+    transform: translateX(3px);
+  }
 }

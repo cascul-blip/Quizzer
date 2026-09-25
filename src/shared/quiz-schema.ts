@@ -72,8 +72,10 @@ export const Question = z
 export type Question = z.infer<typeof Question>;
 
 export const QuizSettings = z.object({
-  shuffleQuestions: z.boolean().describe("Randomize question order each game."),
-  shuffleAnswers: z.boolean().describe("Randomize answer order each game (same order for everyone)."),
+  shuffleQuestions: z.boolean().describe("Default for the lobby's \"shuffle questions\" toggle: randomize question order each game."),
+  shuffleAnswers: z
+    .boolean()
+    .describe("Default for the lobby's \"shuffle answers\" toggle: randomize answer positions/colors each game (same order for everyone)."),
 });
 export type QuizSettings = z.infer<typeof QuizSettings>;
 export const DEFAULT_SETTINGS: QuizSettings = { shuffleQuestions: false, shuffleAnswers: false };

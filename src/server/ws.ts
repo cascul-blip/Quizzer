@@ -1,9 +1,10 @@
 import type { ServerWebSocket } from "bun";
 import QRCode from "qrcode";
-import type { ClientMsg, HostView, JoinInfo, Pacing, PlayerView, ServerMsg } from "../shared/protocol.ts";
+import type { ClientMsg, GameMode, HostView, JoinInfo, Pacing, PlayerView, ServerMsg, TowerSettings } from "../shared/protocol.ts";
 import { ValidationError } from "../shared/quiz-schema.ts";
-import { Game, GameError, type Clock } from "./game/game.ts";
-import { buildResultsCsv, writeResultsFile } from "./game/results.ts";
+import { DEFAULT_TOWER, Game, GameError, type Clock } from "./game/game.ts";
+import { buildResultsCsv, buildTowerResultsCsv, writeResultsFile } from "./game/results.ts";
+import { TowerGame } from "./game/tower.ts";
 import { lanAddresses, type LanAddress } from "./network.ts";
 import { NotFoundError, type QuizStore } from "./quiz/store.ts";
 
@@ -32,18 +33,27 @@ export interface LastResults {
 }
 
 const PACINGS = new Set<Pacing>(["manual", "auto"]);
+/** In Tallest Tower, answers stream in constantly: the acting player is updated at once, everyone else at most this often. */
+const ACTIVITY_THROTTLE_MS = 100;
+
+export type LiveGame = Game | TowerGame;
 
 /** Owns the single live game and every connected socket; pushes full view snapshots on each change. */
 export class GameHub {
-  game: Game | null = null;
+  game: LiveGame | null = null;
   lastResults: LastResults | null = null;
   port = 0;
+  /** Changes on every server start; pages that reconnect to a different one reload to pick up new code. */
+  readonly serverId = crypto.randomUUID();
 
   private readonly sockets = new Set<WS>();
   private selected: string | null;
   private addressCache: { at: number; list: LanAddress[] } | null = null;
   private qrCache = new Map<string, string>();
   private broadcastQueued = false;
+  private activityTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Mode and tower settings carry over to the next lobby ("Play again"). */
+  private lastSetup: { mode: GameMode; tower: TowerSettings } = { mode: "classic", tower: DEFAULT_TOWER };
   private readonly log: (msg: string) => void;
 
   constructor(
@@ -102,13 +112,14 @@ export class GameHub {
 
   hostView(): HostView {
     const join = this.joinInfo();
-    return this.game ? { ...this.game.hostView(), join } : { phase: "idle", join };
+    return this.game ? { ...this.game.hostView(), join } : { kind: "idle", phase: "idle", join };
   }
 
   playerView(ws: WS): PlayerView {
     if (!this.game) return { kind: "none", game: null };
-    if (!ws.data.playerId) return { kind: "none", game: { title: this.game.title, phase: this.game.phase } };
-    return this.game.playerView(ws.data.playerId);
+    const none: PlayerView = { kind: "none", game: { title: this.game.title, phase: this.game.phase } };
+    if (!ws.data.playerId) return none;
+    return this.game.playerView(ws.data.playerId) ?? none;
   }
 
   private send(ws: WS, msg: ServerMsg): void {
@@ -130,6 +141,15 @@ export class GameHub {
     });
   }
 
+  /** One player acted (Tallest Tower): update them now and everyone else shortly. */
+  private onActivity(playerId: string): void {
+    for (const ws of this.sockets) if (ws.data.playerId === playerId) this.sendState(ws);
+    this.activityTimer ??= setTimeout(() => {
+      this.activityTimer = null;
+      this.broadcast();
+    }, ACTIVITY_THROTTLE_MS);
+  }
+
   broadcast(): void {
     let hostMsg: string | null = null;
     for (const ws of this.sockets) {
@@ -142,6 +162,7 @@ export class GameHub {
 
   onOpen(ws: WS): void {
     this.sockets.add(ws);
+    this.send(ws, { type: "hello", serverId: this.serverId });
     this.sendState(ws);
   }
 
@@ -199,8 +220,18 @@ export class GameHub {
         return this.sendState(ws);
       }
       case "answer": {
-        if (!this.game || !ws.data.playerId) return;
+        if (!(this.game instanceof Game) || !ws.data.playerId) return;
         this.game.answer(ws.data.playerId, Number(msg.qIndex), Number(msg.option));
+        return;
+      }
+      case "tower.answer": {
+        if (!(this.game instanceof TowerGame) || !ws.data.playerId) return;
+        if (!this.game.answer(ws.data.playerId, Number(msg.seq), Number(msg.option))) this.sendState(ws);
+        return;
+      }
+      case "tower.drop": {
+        if (!(this.game instanceof TowerGame) || !ws.data.playerId) return;
+        if (this.game.drop(ws.data.playerId, Number(msg.zone)) === null) this.sendState(ws);
         return;
       }
       default:
@@ -212,6 +243,11 @@ export class GameHub {
     const game = () => {
       if (!this.game) throw new GameError("No game is open");
       return this.game;
+    };
+    const classic = () => {
+      const g = game();
+      if (!(g instanceof Game)) throw new GameError("Not available in Tallest Tower");
+      return g;
     };
     switch (msg.type) {
       case "host.hello":
@@ -225,20 +261,34 @@ export class GameHub {
           clock: this.opts.clock,
           onChange: () => this.scheduleBroadcast(),
           onFinish: (g) => this.onFinish(g),
+          ...this.lastSetup,
         });
         this.log(`Game opened: ${quiz.title}. Players join at ${this.joinUrl()}`);
         this.scheduleBroadcast();
         return;
       }
-      case "host.start":
-        return game().start(PACINGS.has(msg.pacing) ? msg.pacing : undefined);
+      case "host.start": {
+        const lobby = classic();
+        if (lobby.phase === "lobby" && lobby.mode === "tower") return this.startTower(lobby);
+        return lobby.start(PACINGS.has(msg.pacing) ? msg.pacing : undefined);
+      }
       case "host.setPacing":
         if (!PACINGS.has(msg.pacing)) throw new GameError("Unknown pacing");
-        return game().setPacing(msg.pacing);
+        return classic().setPacing(msg.pacing);
+      case "host.setShuffle":
+        return classic().setShuffle({ questions: !!msg.questions, answers: !!msg.answers });
+      case "host.setMode":
+        classic().setMode(msg.mode);
+        this.lastSetup.mode = classic().mode;
+        return;
+      case "host.setTower":
+        classic().setTower({ teams: Number(msg.teams), minutes: Number(msg.minutes), monster: msg.monster });
+        this.lastSetup.tower = { ...classic().tower };
+        return;
       case "host.next":
-        return game().next();
+        return classic().next();
       case "host.skip":
-        return game().skip();
+        return classic().skip();
       case "host.end":
         return game().end();
       case "host.kick": {
@@ -264,15 +314,32 @@ export class GameHub {
     }
   }
 
+  /** Hand the lobby's players (same ids/tokens, so sockets stay attached) to a Tallest Tower game. */
+  private startTower(lobby: Game): void {
+    if (lobby.players.size === 0) throw new GameError("Wait for at least one player to join");
+    const tower = TowerGame.fromLobby(lobby, {
+      clock: this.opts.clock,
+      onChange: () => this.scheduleBroadcast(),
+      onActivity: (pid) => this.onActivity(pid),
+      onFinish: (g) => this.onFinish(g),
+    });
+    lobby.dispose();
+    this.game = tower;
+    tower.start();
+    this.log(`Tallest Tower started: ${tower.teams.length} team(s), ${tower.settings.minutes} min`);
+  }
+
   private closeGame(): void {
+    if (this.activityTimer) clearTimeout(this.activityTimer);
+    this.activityTimer = null;
     if (!this.game) return;
     this.game.dispose();
     this.game = null;
     for (const s of this.sockets) s.data.playerId = null;
   }
 
-  private onFinish(game: Game): void {
-    const csv = buildResultsCsv(game);
+  private onFinish(game: LiveGame): void {
+    const csv = game instanceof TowerGame ? buildTowerResultsCsv(game) : buildResultsCsv(game);
     let file: string | null = null;
     try {
       file = writeResultsFile(game, csv, this.store.resultsDir);

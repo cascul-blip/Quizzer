@@ -17,6 +17,7 @@ export function connect(handlers: {
   let delay = 500;
   let retry: ReturnType<typeof setTimeout> | null = null;
   let stopped = false;
+  let serverId: string | null = null;
 
   const url = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`;
 
@@ -37,11 +38,22 @@ export function connect(handlers: {
       handlers.onOpen(send);
     };
     sock.onmessage = (ev) => {
+      let msg: ServerMsg;
       try {
-        handlers.onMessage(JSON.parse(ev.data));
+        msg = JSON.parse(ev.data);
       } catch (e) {
-        console.error("Bad message", e);
+        return console.error("Bad message", e);
       }
+      if (msg.type === "hello") {
+        // Reconnected to a restarted server: this page may be running outdated code, so reload it.
+        if (serverId && serverId !== msg.serverId) {
+          stopped = true;
+          location.reload();
+        }
+        serverId = msg.serverId;
+        return;
+      }
+      handlers.onMessage(msg);
     };
     sock.onclose = () => {
       if (ws !== sock) return;

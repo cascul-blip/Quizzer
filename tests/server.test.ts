@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { INTRO_MS } from "../src/server/game/game.ts";
+import { COUNTDOWN_MS, DROP_COOLDOWN_MS, FEEDBACK_MS } from "../src/server/game/tower.ts";
 import { startServer, type RunningServer } from "../src/server/http.ts";
 import { isAdminRequest } from "../src/server/network.ts";
 import { QuizStore } from "../src/server/quiz/store.ts";
@@ -173,7 +174,7 @@ describe("full game over WebSockets", () => {
     players[1]!.send({ type: "answer", qIndex: 0, option: 0 });
     players[2]!.send({ type: "answer", qIndex: 0, option: 1 });
     const reveal = await host.hostState((v) => v.phase === "reveal");
-    expect(reveal.view.phase !== "idle" && reveal.view.answerCounts).toEqual([1, 2]);
+    expect(reveal.view.kind === "classic" && reveal.view.answerCounts).toEqual([1, 2]);
 
     const bobResult = await players[1]!.playerState((v) => v.kind === "player" && v.phase === "reveal");
     expect(bobResult.view.kind === "player" && bobResult.view.result).toEqual({ choice: 0, correct: [1], wasCorrect: false, points: 0 });
@@ -182,7 +183,7 @@ describe("full game over WebSockets", () => {
 
     // Bob's phone reloads: resume with the token and keep the same identity.
     players[1]!.close();
-    await host.hostState((v) => v.phase !== "idle" && v.players.some((p) => p.nickname === "Bob" && !p.connected));
+    await host.hostState((v) => v.kind === "classic" && v.players.some((p) => p.nickname === "Bob" && !p.connected));
     const bob2 = await TestSocket.open(wsUrl);
     bob2.send({ type: "resume", token: tokens[1]! });
     const resumed = await bob2.playerState((v) => v.kind === "player");
@@ -191,19 +192,19 @@ describe("full game over WebSockets", () => {
 
     host.send({ type: "host.next" }); // leaderboard
     const lb = await host.hostState((v) => v.phase === "leaderboard");
-    expect(lb.view.phase !== "idle" && lb.view.leaderboard.map((e) => e.nickname).slice(2)).toEqual(["Bob"]);
+    expect(lb.view.kind === "classic" && lb.view.leaderboard.map((e) => e.nickname).slice(2)).toEqual(["Bob"]);
     host.send({ type: "host.next" }); // intro Q2
     await host.hostState((v) => v.phase === "intro");
     host.send({ type: "host.next" }); // open now
     await host.hostState((v) => v.phase === "open");
-    host.send({ type: "host.kick", playerId: (lb.view.phase !== "idle" && lb.view.players.find((p) => p.nickname === "Cy")!.id) as string });
+    host.send({ type: "host.kick", playerId: (lb.view.kind === "classic" && lb.view.players.find((p) => p.nickname === "Cy")!.id) as string });
     await players[2]!.waitFor((m) => m.type === "kicked");
     players[0]!.send({ type: "answer", qIndex: 1, option: 1 });
     players[1]!.send({ type: "answer", qIndex: 1, option: 1 });
     await host.hostState((v) => v.phase === "reveal");
     host.send({ type: "host.next" }); // last question → podium
     const podium = await host.hostState((v) => v.phase === "podium");
-    expect(podium.view.phase !== "idle" && podium.view.hasResults).toBe(true);
+    expect(podium.view.kind === "classic" && podium.view.hasResults).toBe(true);
     const annFinal = await players[0]!.playerState((v) => v.kind === "player" && v.phase === "podium");
     expect(annFinal.view.kind === "player" && annFinal.view.me.rank).toBe(1);
 
@@ -224,5 +225,93 @@ describe("full game over WebSockets", () => {
     s.send({ type: "resume", token: "nope" });
     await s.waitFor((m) => m.type === "resumeFailed");
     s.close();
+  });
+});
+
+describe("Tallest Tower over WebSockets", () => {
+  test("lobby → teams → answer to earn blocks → build → timer → podium", async () => {
+    const quiz = store.create({
+      title: "Tower E2E",
+      questions: [1, 2, 3].map((n) => ({ type: "multiple_choice", text: `Q${n}`, options: ["right", "wrong"], correct: [0] })),
+    });
+    const wsUrl = `ws://localhost:${srv.port}/ws`;
+    const host = await TestSocket.open(wsUrl);
+    host.send({ type: "host.hello" });
+    await host.hostState((v) => v.kind === "idle");
+    host.send({ type: "host.open", quizId: quiz.id });
+    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
+    host.send({ type: "host.setMode", mode: "tower" });
+    host.send({ type: "host.setTower", teams: 2, minutes: 2 });
+    await host.hostState((v) => v.kind === "classic" && v.mode === "tower" && v.tower.minutes === 2);
+
+    const names = ["Ann", "Bob", "Cy"];
+    const players = await Promise.all(names.map(() => TestSocket.open(wsUrl)));
+    for (const [i, p] of players.entries()) {
+      await p.playerState((v) => v.kind === "none" && !!v.game);
+      p.send({ type: "join", nickname: names[i]! });
+      await p.waitFor((m) => m.type === "joined");
+    }
+    const lobby = await host.hostState((v) => v.kind === "classic" && !!v.teams && v.players.length === 3);
+    expect(lobby.view.kind === "classic" && lobby.view.teams!.map((t) => t.members.map((m) => m.nickname))).toEqual([["Ann", "Cy"], ["Bob"]]);
+    const annLobby = await players[0]!.playerState((v) => v.kind === "player" && !!v.team);
+    expect(annLobby.view.kind === "player" && annLobby.view.team?.name).toBe("Red");
+
+    host.send({ type: "host.start", pacing: "manual" });
+    await host.hostState((v) => v.kind === "tower" && v.phase === "countdown");
+    host.send({ type: "host.next" });
+    expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: expect.stringContaining("Tallest Tower") });
+    clock.advance(COUNTDOWN_MS);
+    srv.hub.broadcast();
+
+    // Ann answers 4 correctly at her own pace; the others do nothing.
+    const ann = players[0]!;
+    for (let i = 0; i < 4; i++) {
+      const st = await ann.playerState((v) => v.kind === "tower" && v.phase === "playing" && !!v.question && !v.feedback);
+      const q = st.view.kind === "tower" ? st.view.question! : null;
+      ann.send({ type: "tower.answer", seq: q!.seq, option: 0 });
+      await ann.playerState((v) => v.kind === "tower" && v.feedback?.seq === q!.seq);
+      clock.advance(FEEDBACK_MS);
+      srv.hub.broadcast();
+    }
+    const building = await ann.playerState((v) => v.kind === "tower" && v.state === "build");
+    expect(building.view.kind === "tower" && building.view.build).toEqual({ columns: [0, 0, 0], floors: 0, sweepMs: 2500 });
+
+    for (const [i, zone] of [1, 2, 3, 0].entries()) {
+      ann.send({ type: "tower.drop", zone });
+      await ann.playerState((v) => v.kind === "tower" && v.blocksHeld === 3 - i);
+      clock.advance(DROP_COOLDOWN_MS);
+    }
+    const back = await ann.playerState((v) => v.kind === "tower" && v.state === "question" && v.me.placed === 3);
+    expect(back.view.kind === "tower" && back.view.blocksHeld).toBe(0);
+    const towers = await host.hostState((v) => v.kind === "tower" && v.teams[0]!.floors === 1);
+    expect(towers.view.kind === "tower" && towers.view.teams.map((t) => [t.name, t.columns, t.placed])).toEqual([
+      ["Red", [1, 1, 1], 3],
+      ["Blue", [0, 0, 0], 0],
+    ]);
+
+    // At 1/3 of the game the monster egg appears for everyone (monster is on by default).
+    clock.advance(40_000);
+    const eggView = await host.hostState((v) => v.kind === "tower" && !!v.egg);
+    expect(eggView.view.kind === "tower" && eggView.view.monster).toBe(true);
+    await players[1]!.playerState((v) => v.kind === "tower" && v.monsterEvent?.kind === "egg" && !!v.egg);
+
+    // Time runs out.
+    clock.advance(2 * 60_000);
+    const podium = await host.hostState((v) => v.kind === "tower" && v.phase === "podium");
+    expect(podium.view.kind === "tower" && podium.view.awards).toEqual({
+      mostCorrect: { value: 4, nicknames: ["Ann"] },
+      masterBuilder: { value: 3, nicknames: ["Ann"] },
+    });
+    const bobEnd = await players[1]!.playerState((v) => v.kind === "tower" && v.phase === "podium");
+    expect(bobEnd.view.kind === "tower" && bobEnd.view.result).toMatchObject({ teamRank: 2, teamCount: 2, floors: 0 });
+    const csv = await (await fetch(`${base}/api/results/latest.csv`)).text();
+    expect(csv).toContain("Team,Team rank,Team floors");
+    expect(csv).toContain("Red,1,1,3,Ann,4,0,100,3,1,0");
+
+    // Play again keeps Tallest Tower selected.
+    host.send({ type: "host.open", quizId: quiz.id });
+    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "tower" && v.tower.teams === 2);
+    host.send({ type: "host.close" });
+    [host, ...players].forEach((s) => s.close());
   });
 });

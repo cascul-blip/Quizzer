@@ -228,27 +228,90 @@ describe("views", () => {
 });
 
 describe("preparePlayOrder", () => {
+  const off = { questions: false, answers: false };
+
   test("no shuffle keeps order", () => {
-    expect(preparePlayOrder(sampleQuiz()).map((q) => q.id)).toEqual(["q1", "q2", "q3"]);
+    expect(preparePlayOrder(sampleQuiz().questions, off).map((q) => q.id)).toEqual(["q1", "q2", "q3"]);
   });
 
   test("answer shuffle remaps correct indices; true/false stays put", () => {
-    const quiz = sampleQuiz({ settings: { shuffleQuestions: false, shuffleAnswers: true } });
+    const quiz = sampleQuiz();
+    const q1Positions = new Set<number>();
     for (let seed = 0; seed < 20; seed++) {
       let s = seed + 1;
       const rng = () => ((s = (s * 16807) % 2147483647) / 2147483647);
-      const qs = preparePlayOrder(quiz, rng);
-      const [q1, q2, q3] = qs;
+      const [q1, q2, q3] = preparePlayOrder(quiz.questions, { questions: false, answers: true }, rng);
       expect(q1!.correct.map((i) => q1!.options[i])).toEqual(["4"]);
+      expect([...q1!.options].sort()).toEqual(["22", "3", "4", "5"]);
       expect(q2!.options).toEqual(["True", "False"]);
       expect(q3!.correct.map((i) => q3!.options[i]).sort()).toEqual(["2", "7"]);
+      q1Positions.add(q1!.correct[0]!);
     }
+    // The correct answer really moves around (not always the 2nd, blue tile).
+    expect(q1Positions.size).toBeGreaterThan(1);
     // The source quiz is untouched.
     expect(quiz.questions[0]!.options).toEqual(["3", "4", "5", "22"]);
   });
 
   test("question shuffle is a permutation", () => {
+    expect(preparePlayOrder(sampleQuiz().questions, { questions: true, answers: false }, () => 0).map((q) => q.id).sort()).toEqual(["q1", "q2", "q3"]);
+  });
+});
+
+describe("lobby shuffle options", () => {
+  test("default to the quiz settings and apply when the game starts", () => {
+    const clock = new FakeClock();
     const quiz = sampleQuiz({ settings: { shuffleQuestions: true, shuffleAnswers: false } });
-    expect(preparePlayOrder(quiz, () => 0).map((q) => q.id).sort()).toEqual(["q1", "q2", "q3"]);
+    const game = new Game(quiz, { clock, rng: () => 0 });
+    expect(game.hostView().shuffle).toEqual({ questions: true, answers: false });
+    // Lobby keeps the authored order until Start.
+    expect(game.questions.map((q) => q.id)).toEqual(["q1", "q2", "q3"]);
+    game.join("A");
+    game.start();
+    // rng() = 0 turns a Fisher-Yates shuffle into a rotation.
+    expect(game.questions.map((q) => q.id)).toEqual(["q2", "q3", "q1"]);
+  });
+
+  test("the host can change them in the lobby only", () => {
+    const game = new Game(sampleQuiz(), { clock: new FakeClock(), rng: () => 0 });
+    game.setShuffle({ questions: false, answers: true });
+    expect(game.hostView().shuffle).toEqual({ questions: false, answers: true });
+    game.join("A");
+    game.start();
+    expect(game.questions.map((q) => q.id)).toEqual(["q1", "q2", "q3"]);
+    expect(game.questions[0]!.options).toEqual(["4", "5", "22", "3"]);
+    expect(game.questions[0]!.correct).toEqual([0]);
+    expect(() => game.setShuffle({ questions: true, answers: true })).toThrow(GameError);
+  });
+});
+
+describe("streaks", () => {
+  test("count consecutive correct answers and reset on a wrong or missing answer", () => {
+    const clock = new FakeClock();
+    const q = (i: number) => ({ id: `q${i}`, type: "true_false" as const, text: `Q${i}`, timeLimitSec: 10, options: ["True", "False"], correct: [0] });
+    const game = new Game(sampleQuiz({ questions: [1, 2, 3, 4, 5, 6].map(q) }), { clock });
+    const a = game.join("A");
+    const b = game.join("B");
+    game.start();
+    // A: right ×4, wrong, right. B: right, no answer, right…
+    const aPicks = [0, 0, 0, 0, 1, 0];
+    const bPicks = [0, null, 0, 0, 0, 0];
+    const aStreaks: number[] = [];
+    const bStreaks: number[] = [];
+    for (let i = 0; i < 6; i++) {
+      clock.advance(INTRO_MS);
+      game.answer(a.id, i, aPicks[i]!);
+      if (bPicks[i] !== null) game.answer(b.id, i, bPicks[i]!);
+      game.skip();
+      aStreaks.push(a.streak);
+      bStreaks.push(b.streak);
+      expect(game.leaderboard().find((e) => e.id === a.id)!.streak).toBe(a.streak);
+      const v = game.playerView(a.id);
+      expect(v.kind === "player" && v.me.streak).toBe(a.streak);
+      game.next(); // → leaderboard (or podium after the last)
+      game.next(); // → next intro
+    }
+    expect(aStreaks).toEqual([1, 2, 3, 4, 0, 1]);
+    expect(bStreaks).toEqual([1, 0, 1, 2, 3, 4]);
   });
 });

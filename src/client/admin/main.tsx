@@ -424,7 +424,7 @@ function Editor({ id, notify }: { id: string; notify: (m: string) => void }) {
               checked={draft.settings.shuffleQuestions}
               onChange={(e) => set({ settings: { ...draft.settings, shuffleQuestions: e.currentTarget.checked } })}
             />
-            Shuffle question order each game
+            Shuffle question order by default
           </label>
           <label>
             <input
@@ -432,7 +432,7 @@ function Editor({ id, notify }: { id: string; notify: (m: string) => void }) {
               checked={draft.settings.shuffleAnswers}
               onChange={(e) => set({ settings: { ...draft.settings, shuffleAnswers: e.currentTarget.checked } })}
             />
-            Shuffle answer order each game
+            Shuffle answer positions by default
           </label>
         </div>
       </section>

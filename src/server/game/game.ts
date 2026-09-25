@@ -1,29 +1,30 @@
-import type { HostGameState, Pacing, Phase, PlayerView, QuestionView, RankedEntry } from "../../shared/protocol.ts";
-import { newId, type Question, type Quiz } from "../../shared/quiz-schema.ts";
+import {
+  MAX_TEAMS,
+  TOWER_MINUTES,
+  type GameMode,
+  type HostGameState,
+  type Pacing,
+  type Phase,
+  type PlayerView,
+  type QuestionView,
+  type RankedEntry,
+  type ShuffleOptions,
+  type TowerSettings,
+} from "../../shared/protocol.ts";
+import type { Question, Quiz } from "../../shared/quiz-schema.ts";
+import { GameError, assignTeams, realClock, shuffle, shuffleOptions, teamInfo, type Clock } from "./common.ts";
+import { Roster, type BasePlayer } from "./roster.ts";
 import { rankScores, scoreAnswer } from "./scoring.ts";
 
-export interface Clock {
-  now(): number;
-  setTimeout(fn: () => void, ms: number): unknown;
-  clearTimeout(handle: unknown): void;
-}
-
-export const realClock: Clock = {
-  now: () => Date.now(),
-  setTimeout: (fn, ms) => setTimeout(fn, ms),
-  clearTimeout: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
-};
+export { GameError, MAX_NICKNAME, MAX_PLAYERS, cleanNickname, realClock, type Clock } from "./common.ts";
 
 export const INTRO_MS = 3000;
 export const AUTO_REVEAL_MS = 5000;
 export const AUTO_LEADERBOARD_MS = 5000;
 /** Answers sent just before the deadline may arrive slightly after it. */
 export const GRACE_MS = 500;
-export const MAX_PLAYERS = 200;
-export const MAX_NICKNAME = 20;
 const LEADERBOARD_SIZE = 10;
-
-export class GameError extends Error {}
+export const DEFAULT_TOWER: TowerSettings = { teams: 2, minutes: 5, monster: true };
 
 export interface Answer {
   option: number;
@@ -32,46 +33,21 @@ export interface Answer {
   ms: number;
 }
 
-export interface Player {
-  id: string;
-  nickname: string;
-  token: string;
+export interface Player extends BasePlayer {
   score: number;
   /** Points gained on the most recently closed question. */
   lastDelta: number;
+  /** Consecutive correct answers up to the most recently closed question. */
+  streak: number;
   answers: (Answer | undefined)[];
-  connected: boolean;
 }
 
-function shuffle<T>(arr: T[], rng: () => number): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    [a[i], a[j]] = [a[j]!, a[i]!];
-  }
-  return a;
-}
-
-/** Apply the quiz's shuffle settings once per game; correct indices are remapped. */
-export function preparePlayOrder(quiz: Quiz, rng: () => number = Math.random): Question[] {
-  let questions = quiz.questions.map((q) => ({ ...q, options: [...q.options], correct: [...q.correct] }));
-  if (quiz.settings.shuffleQuestions) questions = shuffle(questions, rng);
-  if (quiz.settings.shuffleAnswers) {
-    questions = questions.map((q) => {
-      if (q.type === "true_false") return q; // keep True/False in the familiar order
-      const order = shuffle(q.options.map((_, i) => i), rng);
-      return { ...q, options: order.map((i) => q.options[i]!), correct: q.correct.map((c) => order.indexOf(c)).sort((a, b) => a - b) };
-    });
-  }
+/** Shuffle once per game (same order for everyone); correct indices are remapped. */
+export function preparePlayOrder(source: Question[], opts: ShuffleOptions, rng: () => number = Math.random): Question[] {
+  let questions = source.map((q) => ({ ...q, options: [...q.options], correct: [...q.correct] }));
+  if (opts.questions) questions = shuffle(questions, rng);
+  if (opts.answers) questions = questions.map((q) => shuffleOptions(q, rng));
   return questions;
-}
-
-export function cleanNickname(raw: unknown): string {
-  if (typeof raw !== "string") throw new GameError("Please enter a nickname");
-  const name = raw.replace(/[\p{C}]/gu, "").replace(/\s+/g, " ").trim();
-  if (!name) throw new GameError("Please enter a nickname");
-  if ([...name].length > MAX_NICKNAME) throw new GameError(`Nickname must be at most ${MAX_NICKNAME} characters`);
-  return name;
 }
 
 export interface GameOptions {
@@ -80,36 +56,60 @@ export interface GameOptions {
   pacing?: Pacing;
   onChange?: () => void;
   onFinish?: (game: Game) => void;
+  /** Initial lobby choices (e.g. carried over from the previous game). */
+  mode?: GameMode;
+  tower?: TowerSettings;
 }
 
-/** A single live game: lobby → (intro → open → reveal → leaderboard)* → podium. */
+/**
+ * A Classic game: lobby → (intro → open → reveal → leaderboard)* → podium.
+ * It also serves as the lobby for every mode; in Tallest Tower mode the hub
+ * hands its players to a TowerGame on start.
+ */
 export class Game {
+  readonly kind = "classic";
+  readonly quiz: Quiz;
   readonly quizId: string;
   readonly title: string;
-  readonly questions: Question[];
+  /** Play order; fixed (and shuffled if chosen) when the game starts. */
+  questions: Question[];
   phase: Phase = "lobby";
   qIndex = -1;
   pacing: Pacing;
+  shuffle: ShuffleOptions;
+  mode: GameMode;
+  tower: TowerSettings;
   /** When the current phase's countdown ends (intro/open), for views. */
   phaseEndsAt = 0;
   openedAt = 0;
-  readonly players = new Map<string, Player>();
+  readonly roster = new Roster<Player>();
   readonly startedAt = new Date();
 
   private readonly clock: Clock;
-  private readonly tokens = new Map<string, string>();
+  private readonly rng: () => number;
+  private readonly source: Question[];
   private timer: unknown = null;
   private readonly onChange: () => void;
   private readonly onFinish: (game: Game) => void;
 
   constructor(quiz: Quiz, opts: GameOptions = {}) {
+    this.quiz = quiz;
     this.quizId = quiz.id;
     this.title = quiz.title;
-    this.questions = preparePlayOrder(quiz, opts.rng);
+    this.source = quiz.questions;
+    this.questions = preparePlayOrder(quiz.questions, { questions: false, answers: false });
+    this.shuffle = { questions: quiz.settings.shuffleQuestions, answers: quiz.settings.shuffleAnswers };
+    this.rng = opts.rng ?? Math.random;
     this.clock = opts.clock ?? realClock;
     this.pacing = opts.pacing ?? "manual";
     this.onChange = opts.onChange ?? (() => {});
     this.onFinish = opts.onFinish ?? (() => {});
+    this.mode = opts.mode ?? "classic";
+    this.tower = { ...(opts.tower ?? DEFAULT_TOWER) };
+  }
+
+  get players(): Map<string, Player> {
+    return this.roster.players;
   }
 
   get currentQuestion(): Question | null {
@@ -120,23 +120,13 @@ export class Game {
 
   join(rawNickname: unknown): Player {
     if (this.phase === "podium") throw new GameError("This game has finished");
-    const nickname = cleanNickname(rawNickname);
-    const key = nickname.toLocaleLowerCase();
-    for (const p of this.players.values()) {
-      if (p.nickname.toLocaleLowerCase() === key) throw new GameError("That nickname is taken, pick another");
-    }
-    if (this.players.size >= MAX_PLAYERS) throw new GameError("This game is full");
-    const player: Player = { id: "p" + newId(8), nickname, token: crypto.randomUUID(), score: 0, lastDelta: 0, answers: [], connected: true };
-    this.players.set(player.id, player);
-    this.tokens.set(player.token, player.id);
+    const player = this.roster.add(rawNickname, (base) => ({ ...base, score: 0, lastDelta: 0, streak: 0, answers: [] }));
     this.onChange();
     return player;
   }
 
   byToken(token: unknown): Player | null {
-    if (typeof token !== "string") return null;
-    const id = this.tokens.get(token);
-    return id ? (this.players.get(id) ?? null) : null;
+    return this.roster.byToken(token);
   }
 
   setConnected(playerId: string, connected: boolean): void {
@@ -148,10 +138,8 @@ export class Game {
   }
 
   kick(playerId: string): Player | null {
-    const p = this.players.get(playerId);
+    const p = this.roster.remove(playerId);
     if (!p) return null;
-    this.players.delete(playerId);
-    this.tokens.delete(p.token);
     this.onChange();
     this.maybeCloseEarly();
     return p;
@@ -180,7 +168,38 @@ export class Game {
     if (this.questions.length === 0) throw new GameError("This quiz has no questions");
     if (this.players.size === 0) throw new GameError("Wait for at least one player to join");
     if (pacing) this.pacing = pacing;
+    this.questions = preparePlayOrder(this.source, this.shuffle, this.rng);
     this.enterIntro(0);
+  }
+
+  setShuffle(opts: ShuffleOptions): void {
+    if (this.phase !== "lobby") throw new GameError("Shuffle can only be changed before the game starts");
+    this.shuffle = { questions: !!opts.questions, answers: !!opts.answers };
+    this.onChange();
+  }
+
+  setMode(mode: GameMode): void {
+    if (this.phase !== "lobby") throw new GameError("The game mode can only be changed before the game starts");
+    if (mode !== "classic" && mode !== "tower") throw new GameError("Unknown game mode");
+    this.mode = mode;
+    this.onChange();
+  }
+
+  setTower(settings: Omit<TowerSettings, "monster"> & { monster?: boolean }): void {
+    if (this.phase !== "lobby") throw new GameError("Tower settings can only be changed before the game starts");
+    const teams = Math.trunc(Number(settings.teams));
+    const minutes = Number(settings.minutes);
+    if (!(teams >= 1 && teams <= MAX_TEAMS)) throw new GameError(`Teams must be between 1 and ${MAX_TEAMS}`);
+    if (!(TOWER_MINUTES as readonly number[]).includes(minutes)) throw new GameError("Unsupported game length");
+    this.tower = { teams, minutes, monster: settings.monster === undefined ? this.tower.monster : !!settings.monster };
+    this.onChange();
+  }
+
+  /** Team index per player (join order) for the Tallest Tower preview. */
+  private teamPreview(): Map<string, number> {
+    const ids = [...this.players.keys()];
+    const teams = assignTeams(ids.length, this.tower.teams);
+    return new Map(ids.map((id, i) => [id, teams[i]!]));
   }
 
   setPacing(pacing: Pacing): void {
@@ -257,9 +276,10 @@ export class Game {
     if (this.phase !== "open") return;
     this.clearTimer();
     for (const p of this.players.values()) {
-      const pts = p.answers[this.qIndex]?.points ?? 0;
-      p.score += pts;
-      p.lastDelta = pts;
+      const ans = p.answers[this.qIndex];
+      p.score += ans?.points ?? 0;
+      p.lastDelta = ans?.points ?? 0;
+      p.streak = ans?.correct ? p.streak + 1 : 0;
     }
     this.phase = "reveal";
     this.phaseEndsAt = 0;
@@ -303,7 +323,7 @@ export class Game {
   leaderboard(limit = LEADERBOARD_SIZE): RankedEntry[] {
     return this.ranked()
       .slice(0, limit)
-      .map((p) => ({ id: p.id, nickname: p.nickname, score: p.score, rank: p.rank, delta: p.lastDelta }));
+      .map((p) => ({ id: p.id, nickname: p.nickname, score: p.score, rank: p.rank, delta: p.lastDelta, streak: p.streak }));
   }
 
   private questionView(): QuestionView | null {
@@ -328,11 +348,25 @@ export class Game {
   hostView(): HostGameState {
     const q = this.currentQuestion;
     const answered = [...this.players.values()].map((p) => p.answers[this.qIndex]).filter((a): a is Answer => !!a);
+    const hostPlayer = (p: Player) => ({ id: p.id, nickname: p.nickname, score: p.score, connected: p.connected });
+    let teams: HostGameState["teams"] = null;
+    if (this.phase === "lobby" && this.mode === "tower") {
+      const preview = this.teamPreview();
+      teams = Array.from({ length: this.tower.teams }, (_, i) => ({
+        ...teamInfo(i),
+        members: [...this.players.values()].filter((p) => preview.get(p.id) === i).map(hostPlayer),
+      }));
+    }
     return {
+      kind: "classic",
       phase: this.phase,
+      mode: this.mode,
+      tower: this.tower,
+      teams,
       quiz: { id: this.quizId, title: this.title, questionCount: this.questions.length },
       pacing: this.pacing,
-      players: [...this.players.values()].map((p) => ({ id: p.id, nickname: p.nickname, score: p.score, connected: p.connected })),
+      shuffle: this.shuffle,
+      players: [...this.players.values()].map(hostPlayer),
       question: this.questionView(),
       correct: this.revealed && q ? q.correct : null,
       answeredCount: this.phase === "lobby" ? 0 : answered.length,
@@ -352,7 +386,7 @@ export class Game {
       kind: "player",
       phase: this.phase,
       title: this.title,
-      me: { id: p.id, nickname: p.nickname, score: p.score, rank: me.rank },
+      me: { id: p.id, nickname: p.nickname, score: p.score, rank: me.rank, streak: p.streak },
       playerCount: this.players.size,
       question: this.questionView(),
       myChoice: this.phase === "open" || this.revealed ? (ans?.option ?? null) : null,
@@ -361,6 +395,7 @@ export class Game {
           ? { choice: ans?.option ?? null, correct: q.correct, wasCorrect: !!ans?.correct, points: ans?.points ?? 0 }
           : null,
       podium: this.phase === "podium" ? this.leaderboard(5) : null,
+      team: this.phase === "lobby" && this.mode === "tower" ? teamInfo(this.teamPreview().get(p.id) ?? 0) : null,
     };
   }
 }

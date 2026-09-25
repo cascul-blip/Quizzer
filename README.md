@@ -50,18 +50,48 @@ quizzer mcp [options]       Run the MCP server over stdio (for AI agents)
 
 | Host screen | What happens |
 |---|---|
-| Lobby | Big QR code and URL; names appear as players join. Click a name to remove that player. Pick the pacing, then press **Start**. |
+| Lobby | Big QR code and URL; names appear as players join. Click a name to remove that player. Choose the pacing and whether to **shuffle question order** and **shuffle answer positions**, then press **Start**. |
 | Question | Question text first, then the answer tiles, a countdown and an answered counter. The question ends when time runs out **or** everyone has answered. Press **S** to skip. |
 | Reveal | The correct answer(s) are highlighted and a chart shows how many picked each option. Each phone shows **Correct/Wrong** with the correct answer highlighted. |
-| Leaderboard | Top 5, with points gained on the last question. |
+| Leaderboard | Top 5, with points gained on the last question. Players on a streak of 4+ correct answers in a row get a 🔥 badge with the count (e.g. 🔥x4). |
 | Podium | Top 3 plus the rest, with **Download results (CSV)**, **Play again** and **Done**. |
 
 - **Pacing**: *Manual* waits for you to press **Next** (or Space/→). *Auto-advance* moves on after 5 seconds on the reveal and leaderboard. You can switch pacing mid-game from the top bar.
 - **Scoring**: a correct answer is worth 1000 points if given instantly, falling to 500 at the time limit. Wrong or missing answers score 0.
 - **Multiple correct answers**: players still tap one option, and any correct option scores.
-- **Shuffling** happens once per game, so the projector and every phone show the same order. True/False order is never shuffled.
+- **Shuffling** is chosen in the lobby for each game; the quiz's shuffle settings in the editor are the defaults. Shuffling answer positions moves each answer to a random tile (and color), so the correct answer isn't always in the same place. The order is fixed when you press Start and is the same on the projector and every phone. True/False keeps True before False.
+- **Streaks**: after 4 correct answers in a row, a player gets 🔥x4 (x5, x6, …) next to their name on the leaderboard, the podium and their phone. A wrong or missed answer resets it.
 - **Reconnecting**: if a phone locks, refreshes or drops Wi-Fi, it rejoins as the same player with the same score. Players can also join after the game has started.
 - Only one game runs at a time. The admin, host controls and API only work from the host computer itself (`localhost`). Phones can only reach the player page.
+
+## Tallest Tower mode
+
+A team game modeled on Kahoot's Tallest Tower. Choose **Game mode → 🏗 Tallest Tower** in the lobby, then pick:
+
+- **Teams** (1–6). Players are placed automatically in join order; the lobby shows the teams live. Late joiners go to the smallest team.
+- **Time**: 2, 3, 5, 7 or 10 minutes. The countdown runs on the projector, and **End game** stops it early.
+- **Shuffle answer positions**: shuffles each player's answers independently.
+
+How it plays:
+
+1. Every player answers questions **on their own phone, at their own pace**. Nobody waits for anyone else. Questions come from the quiz in a random order and repeat once they run out.
+2. After each answer, a green ✓ or red ✗ shows for 1 second, then the next question appears. **Each correct answer earns a block.**
+3. At **4 blocks** the phone switches to **build mode**:
+   - A block slides back and forth across the top. Tap anywhere to drop it.
+   - The screen has five zones: **✕ · left · center · right · ✕**. A block in the left, center or right zone lands on top of that column of the team's tower; a block in an outer ✕ zone falls off and is lost.
+   - After all 4 blocks are dropped, the player goes back to questions.
+4. A **floor** counts once all 3 columns reach that height. The block slides faster as the team's tower gets taller.
+5. When time is up, the team with the **most floors** wins; ties go to the most blocks placed. There are also individual awards for **Most correct answers** and **Master builder** (most blocks placed).
+
+**👾 The monster** (lobby option, on by default, needs 2+ teams):
+
+1. At 1/3 and 2/3 of the game, every tower gets a 🥚 **monster egg** placed **4 levels above its highest complete floor** (a tower with 10 full floors gets its egg on level 14), in a random column where that spot is still empty.
+2. Teams race to land a block on their own egg. **The first team to do it hatches the monster** and is safe.
+3. The monster stomps over to the **tallest other tower** and smashes its **top 2 floors**.
+
+If nobody reaches the egg, it stays until someone does or the game ends. Phones show the egg in build mode and a reminder while answering, and pop up a message when your team hatches it or gets smashed. The results CSV counts eggs hatched per player.
+
+The projector shows only the teams' towers, side by side and at the same scale, plus the timer. Each phone shows only that player's question, or their own team's tower while they're building. The results CSV has one row per player: team, rank, floors, correct/wrong, accuracy, and blocks placed and missed.
 
 ## AI agents (MCP)
 
@@ -87,7 +117,7 @@ If the program isn't next to its `data` folder, add `"--data-dir", "<path to dat
 |---|---|
 | `list_quizzes`, `get_quiz` | Browse quizzes; `get_quiz` returns question ids |
 | `create_quiz` | Create a quiz with all its questions in one call |
-| `update_quiz`, `delete_quiz` | Title, description, shuffle settings; delete |
+| `update_quiz`, `delete_quiz` | Title, description, default shuffle settings; delete |
 | `add_question`, `update_question`, `delete_question`, `reorder_questions` | Per-question edits |
 | `set_question_image`, `remove_question_image` | Image from a local path, base64 data or an http(s) URL (PNG/JPEG/GIF/WebP, ≤ 5 MB) |
 

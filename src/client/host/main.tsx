@@ -1,13 +1,14 @@
 import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
-import type { HostMsg, HostView, Pacing, ServerMsg } from "../../shared/protocol.ts";
+import { MAX_TEAMS, TOWER_MINUTES, type GameMode, type HostView, type Pacing, type ServerMsg } from "../../shared/protocol.ts";
 import type { QuizSummary } from "../../shared/quiz-schema.ts";
-import { isMuted, play, setMuted, unlockAudio } from "../shared/sounds.ts";
+import { play, unlockAudio } from "../shared/sounds.ts";
 import { connect, type ConnStatus } from "../shared/ws.ts";
-import { ConnBanner, Shape, Toast, optionColor, ordinal, useCountdown } from "../shared/ui.tsx";
+import { ConnBanner, ErrorBoundary, Shape, StreakBadge, Toast, optionColor, ordinal, useCountdown } from "../shared/ui.tsx";
+import { ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
+import { TowerStage } from "./tower.tsx";
 
-type GameView = Exclude<HostView, { phase: "idle" }>;
-type Send = (m: HostMsg) => void;
+type GameView = Extract<HostView, { kind: "classic" }>;
 
 function App() {
   const [status, setStatus] = useState<ConnStatus>("connecting");
@@ -34,7 +35,7 @@ function App() {
   // Arriving from the admin page with ?quiz=… opens that quiz, unless a game is already running.
   useEffect(() => {
     if (!pendingQuiz || !view) return;
-    if (view.phase === "idle") {
+    if (view.kind === "idle") {
       send({ type: "host.open", quizId: pendingQuiz });
       clearPending();
     } else if (view.quiz.id === pendingQuiz) {
@@ -64,8 +65,10 @@ function App() {
         <div class="spinner" />
       </div>
     );
-  } else if (view.phase === "idle") {
+  } else if (view.kind === "idle") {
     body = <Idle onOpen={(quizId) => send({ type: "host.open", quizId })} />;
+  } else if (view.kind === "tower") {
+    body = <TowerStage view={view} send={send} />;
   } else {
     body = <Game view={view} send={send} />;
   }
@@ -73,7 +76,7 @@ function App() {
   return (
     <>
       <ConnBanner status={view ? status : "open"} />
-      {pendingQuiz && view && view.phase !== "idle" && view.quiz.id !== pendingQuiz && (
+      {pendingQuiz && view && view.kind !== "idle" && view.quiz.id !== pendingQuiz && (
         <div class="replace-banner">
           <span>
             A game of <b>{view.quiz.title}</b> is still open.
@@ -137,7 +140,6 @@ function Idle({ onOpen }: { onOpen: (id: string) => void }) {
 }
 
 function Game({ view, send }: { view: GameView; send: Send }) {
-  const [muted, setMutedState] = useState(isMuted());
   const prev = useRef<GameView | null>(null);
 
   // Sound cues on transitions.
@@ -159,8 +161,9 @@ function Game({ view, send }: { view: GameView; send: Send }) {
       if ((e.target as HTMLElement)?.closest?.("input, select, textarea")) return;
       if (e.key === " " || e.key === "ArrowRight") {
         e.preventDefault();
-        if (view.phase === "lobby" && view.players.length === 0) return;
-        if (view.phase !== "podium") send({ type: "host.next" });
+        if (view.phase === "lobby") {
+          if (view.players.length > 0) send({ type: "host.start", pacing: view.pacing });
+        } else if (view.phase !== "podium") send({ type: "host.next" });
       } else if (e.key === "s" || e.key === "S") {
         if (view.phase === "open" || view.phase === "intro") send({ type: "host.skip" });
       } else if (e.key === "f" || e.key === "F") {
@@ -197,22 +200,7 @@ function Game({ view, send }: { view: GameView; send: Send }) {
           👥 {view.players.filter((p) => p.connected).length}
           {view.players.some((p) => !p.connected) && <span class="dim"> / {view.players.length}</span>}
         </div>
-        <button
-          class="icon-btn"
-          title={muted ? "Unmute sounds" : "Mute sounds"}
-          aria-label={muted ? "Unmute sounds" : "Mute sounds"}
-          onClick={() => {
-            setMuted(!muted);
-            setMutedState(!muted);
-          }}
-        >
-          {muted ? "🔇" : "🔊"}
-        </button>
-        <button class="icon-btn" title="Fullscreen (F)" aria-label="Toggle fullscreen" onClick={toggleFullscreen}>
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
-            <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
-          </svg>
-        </button>
+        <ScreenControls />
         {view.phase !== "podium" && (
           <button
             class="btn ghost small"
@@ -231,11 +219,6 @@ function Game({ view, send }: { view: GameView; send: Send }) {
   );
 }
 
-function toggleFullscreen() {
-  if (document.fullscreenElement) void document.exitFullscreen();
-  else void document.documentElement.requestFullscreen?.().catch(() => {});
-}
-
 function PhaseView({ view, send }: { view: GameView; send: Send }) {
   switch (view.phase) {
     case "lobby":
@@ -252,9 +235,22 @@ function PhaseView({ view, send }: { view: GameView; send: Send }) {
   }
 }
 
+function PlayerChip({ p, send }: { p: { id: string; nickname: string; connected: boolean }; send: Send }) {
+  return (
+    <button
+      class={`chip ${p.connected ? "" : "offline"}`}
+      title="Click to remove"
+      onClick={() => confirm(`Remove ${p.nickname} from the game?`) && send({ type: "host.kick", playerId: p.id })}
+    >
+      {p.nickname}
+    </button>
+  );
+}
+
 function Lobby({ view, send }: { view: GameView; send: Send }) {
   const { join } = view;
   const connected = view.players.length;
+  const tower = view.mode === "tower";
   return (
     <main class="lobby">
       <section class="join-panel">
@@ -290,38 +286,108 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
           <h2>
             {connected} player{connected === 1 ? "" : "s"}
           </h2>
-          <div class="start-controls">
-            <label class="pacing">
-              Pacing
-              <select value={view.pacing} onChange={(e) => send({ type: "host.setPacing", pacing: e.currentTarget.value as Pacing })}>
-                <option value="manual">Manual: I click Next</option>
-                <option value="auto">Auto-advance</option>
-              </select>
-            </label>
-            <button class="btn primary start" disabled={connected === 0} onClick={() => send({ type: "host.start", pacing: view.pacing })}>
-              Start
-            </button>
-          </div>
+          <button class="btn primary start" disabled={connected === 0} onClick={() => send({ type: "host.start", pacing: view.pacing })}>
+            Start
+          </button>
+        </div>
+        <div class="game-options">
+          <label class="opt">
+            Game mode
+            <select value={view.mode} onChange={(e) => send({ type: "host.setMode", mode: e.currentTarget.value as GameMode })}>
+              <option value="classic">Classic</option>
+              <option value="tower">🏗 Tallest Tower</option>
+            </select>
+          </label>
+          {tower ? (
+            <>
+              <label class="opt">
+                Teams
+                <select value={view.tower.teams} onChange={(e) => send({ type: "host.setTower", teams: Number(e.currentTarget.value), minutes: view.tower.minutes })}>
+                  {Array.from({ length: MAX_TEAMS }, (_, i) => (
+                    <option key={i} value={i + 1}>
+                      {i + 1}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label class="opt">
+                Time
+                <select value={view.tower.minutes} onChange={(e) => send({ type: "host.setTower", teams: view.tower.teams, minutes: Number(e.currentTarget.value) })}>
+                  {TOWER_MINUTES.map((m) => (
+                    <option key={m} value={m}>
+                      {m} min
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label class="opt check" title={view.tower.teams < 2 ? "The monster needs 2 or more teams" : "Monster eggs appear at 1/3 and 2/3 of the game"}>
+                <input
+                  type="checkbox"
+                  disabled={view.tower.teams < 2}
+                  checked={view.tower.monster && view.tower.teams >= 2}
+                  onChange={(e) => send({ type: "host.setTower", teams: view.tower.teams, minutes: view.tower.minutes, monster: e.currentTarget.checked })}
+                />
+                👾 Monster{view.tower.teams < 2 ? " (needs 2+ teams)" : ""}
+              </label>
+            </>
+          ) : (
+            <>
+              <label class="opt">
+                Pacing
+                <select value={view.pacing} onChange={(e) => send({ type: "host.setPacing", pacing: e.currentTarget.value as Pacing })}>
+                  <option value="manual">Manual: I click Next</option>
+                  <option value="auto">Auto-advance</option>
+                </select>
+              </label>
+              <label class="opt check">
+                <input
+                  type="checkbox"
+                  checked={view.shuffle.questions}
+                  onChange={(e) => send({ type: "host.setShuffle", questions: e.currentTarget.checked, answers: view.shuffle.answers })}
+                />
+                Shuffle question order
+              </label>
+            </>
+          )}
+          <label class="opt check">
+            <input
+              type="checkbox"
+              checked={view.shuffle.answers}
+              onChange={(e) => send({ type: "host.setShuffle", questions: view.shuffle.questions, answers: e.currentTarget.checked })}
+            />
+            Shuffle answer positions
+          </label>
         </div>
         {connected === 0 ? (
           <div class="waiting">Waiting for players…</div>
+        ) : view.teams ? (
+          <div class={`team-preview n${view.teams.length}`}>
+            {view.teams.map((t) => (
+              <section key={t.index} class="team-box" style={{ "--team": t.color }}>
+                <h3>
+                  Team {t.name} <span>{t.members.length}</span>
+                </h3>
+                <ul class="player-chips">
+                  {t.members.map((p) => (
+                    <li key={p.id}>
+                      <PlayerChip p={p} send={send} />
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </div>
         ) : (
           <ul class="player-chips">
             {view.players.map((p) => (
               <li key={p.id}>
-                <button
-                  class={`chip ${p.connected ? "" : "offline"}`}
-                  title="Click to remove"
-                  onClick={() => confirm(`Remove ${p.nickname} from the game?`) && send({ type: "host.kick", playerId: p.id })}
-                >
-                  {p.nickname}
-                </button>
+                <PlayerChip p={p} send={send} />
               </li>
             ))}
           </ul>
         )}
         <p class="hint">
-          {view.quiz.questionCount} questions · click a name to remove a player · Space to start
+          {view.quiz.questionCount} questions · {tower ? "teams are filled in join order · " : ""}click a name to remove a player · Space to start
         </p>
       </section>
     </main>
@@ -444,7 +510,10 @@ function Leaderboard({ view, send }: { view: GameView; send: Send }) {
         {top.map((p, i) => (
           <li key={p.id} class="lb-row" style={{ animationDelay: `${i * 80}ms` }}>
             <span class="lb-rank">{p.rank}</span>
-            <span class="lb-name">{p.nickname}</span>
+            <span class="lb-name">
+              {p.nickname}
+              <StreakBadge streak={p.streak} />
+            </span>
             {p.delta > 0 && <span class="lb-delta">+{p.delta}</span>}
             <span class="lb-score">{p.score.toLocaleString()}</span>
           </li>
@@ -472,7 +541,10 @@ function Podium({ view, send }: { view: GameView; send: Send }) {
         {places.map(({ entry, cls }) =>
           entry ? (
             <div key={cls} class={`place ${cls}`}>
-              <div class="place-name">{entry.nickname}</div>
+              <div class="place-name">
+                {entry.nickname}
+                <StreakBadge streak={entry.streak} />
+              </div>
               <div class="place-score">{entry.score.toLocaleString()}</div>
               <div class="place-block">{ordinal(entry.rank)}</div>
             </div>
@@ -487,6 +559,7 @@ function Podium({ view, send }: { view: GameView; send: Send }) {
             <li key={p.id}>
               <span>
                 {ordinal(p.rank)} {p.nickname}
+                <StreakBadge streak={p.streak} />
               </span>
               <span>{p.score.toLocaleString()}</span>
             </li>
@@ -510,4 +583,9 @@ function Podium({ view, send }: { view: GameView; send: Send }) {
   );
 }
 
-render(<App />, document.getElementById("app")!);
+render(
+  <ErrorBoundary>
+    <App />
+  </ErrorBoundary>,
+  document.getElementById("app")!,
+);

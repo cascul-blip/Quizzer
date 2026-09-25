@@ -3,18 +3,94 @@ import type { QuestionType } from "./quiz-schema.ts";
 export type Phase = "lobby" | "intro" | "open" | "reveal" | "leaderboard" | "podium";
 export type Pacing = "manual" | "auto";
 
+/** Consecutive correct answers needed before a 🔥 streak badge shows. */
+export const STREAK_MIN = 4;
+
+export interface ShuffleOptions {
+  questions: boolean;
+  answers: boolean;
+}
+
+// ---------- Tallest Tower ----------
+
+export type GameMode = "classic" | "tower";
+export type TowerPhase = "countdown" | "playing" | "podium";
+
+export const TEAMS = [
+  { name: "Red", color: "#e21b3c" },
+  { name: "Blue", color: "#1368ce" },
+  { name: "Yellow", color: "#c98a00" },
+  { name: "Green", color: "#26890c" },
+  { name: "Purple", color: "#864cbf" },
+  { name: "Orange", color: "#e8710a" },
+] as const;
+export const MAX_TEAMS = TEAMS.length;
+export const TOWER_MINUTES = [2, 3, 5, 7, 10] as const;
+/** Correct answers (blocks) needed before a player switches to build mode. */
+export const BLOCKS_PER_BUILD = 4;
+/** Drop zones across the build screen: miss · left · center · right · miss. */
+export const DROP_ZONES = 5;
+
+export interface TowerSettings {
+  teams: number;
+  minutes: number;
+  /** Monster eggs at 1/3 and 2/3 of the game (needs 2+ teams). */
+  monster: boolean;
+}
+
+/** Floors the monster knocks off the tower it attacks. */
+export const MONSTER_DAMAGE = 2;
+
+/** How many levels above a tower's highest complete floor its egg is placed. */
+export const EGG_LEVELS_ABOVE = 4;
+
+/** One team's monster egg: the first block landing on it hatches the monster. */
+export interface MonsterEgg {
+  seq: number;
+  col: number;
+  /** 0-based row: level (row + 1). */
+  row: number;
+}
+
+/** Every team's egg from one announcement; cells[i] belongs to team i. */
+export interface MonsterEggs {
+  seq: number;
+  cells: { col: number; row: number }[];
+}
+
+export interface MonsterAttack {
+  seq: number;
+  byTeam: number;
+  byNickname: string;
+  target: number;
+  /** Target's columns before and after the attack (for the smash animation). */
+  before: number[];
+  after: number[];
+}
+
+export interface TeamInfo {
+  index: number;
+  name: string;
+  color: string;
+}
+
 // ---------- client → server ----------
 
 export type PlayerMsg =
   | { type: "join"; nickname: string }
   | { type: "resume"; token: string }
-  | { type: "answer"; qIndex: number; option: number };
+  | { type: "answer"; qIndex: number; option: number }
+  | { type: "tower.answer"; seq: number; option: number }
+  | { type: "tower.drop"; zone: number };
 
 export type HostMsg =
   | { type: "host.hello" }
   | { type: "host.open"; quizId: string }
   | { type: "host.start"; pacing: Pacing }
   | { type: "host.setPacing"; pacing: Pacing }
+  | { type: "host.setShuffle"; questions: boolean; answers: boolean }
+  | { type: "host.setMode"; mode: GameMode }
+  | { type: "host.setTower"; teams: number; minutes: number; monster?: boolean }
   | { type: "host.next" }
   | { type: "host.skip" }
   | { type: "host.kick"; playerId: string }
@@ -46,6 +122,8 @@ export interface RankedEntry {
   rank: number;
   /** Points gained on the most recent question. */
   delta: number;
+  /** Current run of consecutive correct answers. */
+  streak: number;
 }
 
 export interface PlayerResult {
@@ -57,19 +135,54 @@ export interface PlayerResult {
 
 export type PlayerView =
   | { kind: "none"; game: null }
-  | { kind: "none"; game: { title: string; phase: Phase } }
+  | { kind: "none"; game: { title: string; phase: Phase | TowerPhase } }
   | {
       kind: "player";
       phase: Phase;
       title: string;
-      me: { id: string; nickname: string; score: number; rank: number };
+      me: { id: string; nickname: string; score: number; rank: number; streak: number };
       playerCount: number;
       question: QuestionView | null;
       /** The option chosen for the current question, if any. */
       myChoice: number | null;
       result: PlayerResult | null;
       podium: RankedEntry[] | null;
-    };
+      /** In the lobby with Tallest Tower selected: the team this player will be on. */
+      team: TeamInfo | null;
+    }
+  | PlayerTowerView;
+
+export interface TowerAwards {
+  mostCorrect: { value: number; nicknames: string[] } | null;
+  masterBuilder: { value: number; nicknames: string[] } | null;
+}
+
+export interface PlayerTowerView {
+  kind: "tower";
+  phase: TowerPhase;
+  title: string;
+  /** Countdown to play (countdown phase) or to the end of the game (playing). */
+  remainingMs: number;
+  me: { id: string; nickname: string; correct: number; placed: number };
+  team: TeamInfo;
+  state: "question" | "build";
+  blocksHeld: number;
+  question: { seq: number; type: QuestionType; text: string; image?: string; options: string[] } | null;
+  /** Result of the last answer while its 1 s flash is still showing. */
+  feedback: { seq: number; correct: boolean; remainingMs: number; answers: string[] } | null;
+  egg: MonsterEgg | null;
+  /** Latest monster news for this player (shown once per seq). */
+  monsterEvent: { seq: number; kind: "egg" | "hatched" | "smashed"; byTeam: string | null; target: string | null } | null;
+  /** The team tower, while this player is building. */
+  build: { columns: number[]; floors: number; sweepMs: number } | null;
+  result: {
+    teamRank: number;
+    teamCount: number;
+    floors: number;
+    placed: number;
+    awards: string[];
+  } | null;
+}
 
 export interface HostPlayer {
   id: string;
@@ -88,9 +201,17 @@ export interface JoinInfo {
 
 /** Everything the projector needs about a live game, except join info. */
 export interface HostGameState {
+  kind: "classic";
   phase: Phase;
+  /** Lobby choice; "tower" hands the players over to a Tallest Tower game on start. */
+  mode: GameMode;
+  tower: TowerSettings;
+  /** Team preview while the lobby is in Tallest Tower mode. */
+  teams: (TeamInfo & { members: HostPlayer[] })[] | null;
   quiz: { id: string; title: string; questionCount: number };
   pacing: Pacing;
+  /** Chosen in the lobby; applied when the game starts. */
+  shuffle: ShuffleOptions;
   players: HostPlayer[];
   question: QuestionView | null;
   /** Revealed only once answering has closed. */
@@ -101,9 +222,40 @@ export interface HostGameState {
   hasResults: boolean;
 }
 
-export type HostView = { phase: "idle"; join: JoinInfo } | (HostGameState & { join: JoinInfo });
+export interface HostTowerTeam extends TeamInfo {
+  columns: number[];
+  floors: number;
+  placed: number;
+  rank: number;
+  members: { id: string; nickname: string; connected: boolean; building: boolean }[];
+}
+
+export interface HostTowerState {
+  kind: "tower";
+  phase: TowerPhase;
+  quiz: { id: string; title: string; questionCount: number };
+  remainingMs: number;
+  teams: HostTowerTeam[];
+  playerCount: number;
+  /** Increments with every drop so screens can animate/sound new blocks. */
+  dropCount: number;
+  monster: boolean;
+  egg: MonsterEggs | null;
+  lastAttack: MonsterAttack | null;
+  /** Time until the next egg announcement, or null if none is coming. */
+  nextMonsterMs: number | null;
+  awards: TowerAwards | null;
+  hasResults: boolean;
+}
+
+export type HostView =
+  | { kind: "idle"; phase: "idle"; join: JoinInfo }
+  | (HostGameState & { join: JoinInfo })
+  | (HostTowerState & { join: JoinInfo });
 
 export type ServerMsg =
+  /** First message on every connection. A new serverId means the server restarted (maybe with new code). */
+  | { type: "hello"; serverId: string }
   | { type: "player.state"; view: PlayerView }
   | { type: "host.state"; view: HostView }
   | { type: "joined"; token: string; playerId: string }

@@ -290,17 +290,28 @@ select {
   font-weight: 900;
 }
 
-.start-controls {
+.game-options {
   display: flex;
   align-items: center;
-  gap: 14px;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius);
+  font-weight: 700;
 }
 
-.pacing {
+.game-options .opt {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-weight: 700;
+  cursor: pointer;
+}
+
+.game-options input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent);
 }
 
 .btn.start {
@@ -679,6 +690,10 @@ select {
   white-space: nowrap;
 }
 
+.lb-row .streak {
+  color: #c2410c;
+}
+
 .lb-delta {
   font-size: 0.6em;
   color: var(--good);
@@ -792,5 +807,585 @@ select {
   }
   .q-middle {
     grid-template-columns: 1fr 2fr 1fr;
+  }
+}
+
+/* ----- lobby: Tallest Tower team preview ----- */
+
+.team-preview {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  align-content: start;
+}
+
+.team-box {
+  --team: #888;
+  background: rgba(0, 0, 0, 0.2);
+  border-top: 6px solid var(--team);
+  border-radius: var(--radius);
+  padding: 10px 12px 12px;
+}
+
+.team-box h3 {
+  margin: 0 0 10px;
+  display: flex;
+  justify-content: space-between;
+  font-size: clamp(18px, 1.6vw, 26px);
+  font-weight: 900;
+}
+
+.team-box h3 span {
+  background: var(--team);
+  border-radius: 999px;
+  padding: 0 10px;
+  font-size: 0.8em;
+}
+
+.team-box .chip {
+  font-size: clamp(15px, 1.3vw, 20px);
+  padding: 5px 12px;
+}
+
+/* ----- Tallest Tower stage ----- */
+
+.tower-clock {
+  font-size: clamp(22px, 2.4vw, 40px);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  background: var(--paper);
+  color: var(--ink);
+  padding: 0 0.6em;
+  border-radius: 10px;
+}
+
+.tower-clock.urgent {
+  background: var(--bad);
+  color: #fff;
+}
+
+.towers-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ----- sky ----- */
+
+.sky {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.sky-layer {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 3s ease;
+}
+
+.sky-layer.on {
+  opacity: 1;
+}
+
+.stars {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  fill: #fff;
+  opacity: 0;
+  transition: opacity 3s ease;
+}
+
+.stars.on {
+  opacity: 0.45;
+}
+
+.stars.bright {
+  opacity: 1;
+}
+
+.stars .twinkle {
+  animation: twinkle 2.4s ease-in-out infinite alternate;
+}
+
+@keyframes twinkle {
+  to {
+    opacity: 0.2;
+  }
+}
+
+.clouds {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 3s ease;
+}
+
+.clouds.on {
+  opacity: 0.9;
+}
+
+.cloud {
+  position: absolute;
+  left: 0;
+  width: 14vw;
+  fill: rgba(255, 255, 255, 0.85);
+  animation: drift linear infinite;
+}
+
+.cloud.c0 {
+  top: 8%;
+  animation-duration: 95s;
+  animation-delay: -30s;
+}
+
+.cloud.c1 {
+  top: 22%;
+  width: 10vw;
+  animation-duration: 70s;
+  animation-delay: -55s;
+}
+
+.cloud.c2 {
+  top: 36%;
+  width: 17vw;
+  animation-duration: 120s;
+  animation-delay: -10s;
+}
+
+@keyframes drift {
+  from {
+    transform: translateX(-20vw);
+  }
+  to {
+    transform: translateX(110vw);
+  }
+}
+
+/* ----- towers, street, players ----- */
+
+.scene-main {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.towers {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 1.5vw;
+  padding: 1.2vh 2vw 0;
+}
+
+.skyline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 26%;
+  fill: rgba(15, 8, 40, 0.28);
+}
+
+.tower-col {
+  --team: #888;
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.tower-chip {
+  align-self: center;
+  display: flex;
+  align-items: baseline;
+  gap: 0.8vw;
+  max-width: 100%;
+  padding: 0.5vh 1vw;
+  border-radius: 999px;
+  background: rgba(10, 5, 30, 0.6);
+  border: 3px solid var(--team);
+  z-index: 1;
+}
+
+.tower-name {
+  font-weight: 900;
+  font-size: clamp(15px, 1.5vw, 28px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tower-floors {
+  font-weight: 700;
+  font-size: clamp(13px, 1.1vw, 20px);
+  color: var(--on-bg-soft);
+  white-space: nowrap;
+}
+
+.tower-floors b {
+  font-size: 1.8em;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+.tower-art {
+  flex: 1;
+  min-height: 0;
+  padding-top: 0.5vh;
+}
+
+.tower-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+
+.tower-svg .mark line {
+  stroke: rgba(255, 255, 255, 0.55);
+  stroke-width: 0.25;
+  stroke-dasharray: 1 1;
+}
+
+.tower-svg .mark text {
+  fill: #fff;
+  font-weight: 800;
+  paint-order: stroke;
+  stroke: rgba(0, 0, 0, 0.45);
+  stroke-width: 0.12em;
+}
+
+.street {
+  flex: none;
+  height: 4.5vh;
+  background:
+    linear-gradient(#b7bcc8 0 22%, #8a8f9b 22% 28%, transparent 28%),
+    linear-gradient(90deg, #f5d142 0 40%, transparent 40%) 0 64% / 5vw 4px repeat-x,
+    #3a3d47;
+  box-shadow: 0 -2px 0 rgba(0, 0, 0, 0.2);
+  z-index: 1;
+}
+
+.members-row {
+  flex: none;
+  display: flex;
+  gap: 1.5vw;
+  padding: 0.8vh 2vw 1vh;
+  background: #2b2d36;
+}
+
+.tower-members {
+  --team: #888;
+  flex: 1 1 0;
+  min-width: 0;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-content: flex-start;
+  gap: 4px 6px;
+  max-height: 12vh;
+  overflow: hidden;
+  font-size: clamp(12px, 0.95vw, 17px);
+  font-weight: 700;
+}
+
+.tower-members li {
+  background: rgba(255, 255, 255, 0.12);
+  border-left: 4px solid var(--team);
+  padding: 2px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.tower-members li.building {
+  background: var(--team);
+}
+
+.tower-members li.offline {
+  opacity: 0.45;
+}
+
+.countdown-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2vh;
+  background: rgba(20, 5, 45, 0.7);
+  text-align: center;
+}
+
+.countdown-label {
+  font-size: clamp(22px, 2.6vw, 48px);
+  font-weight: 900;
+}
+
+.countdown-num {
+  font-size: clamp(100px, 16vw, 280px);
+  font-weight: 900;
+  line-height: 1;
+  color: var(--accent);
+  animation: pop-in 0.4s ease-out;
+}
+
+/* ----- Tallest Tower podium ----- */
+
+.tower-podium {
+  position: relative;
+}
+
+.tower-podium > :not(.podium-bg) {
+  position: relative;
+  z-index: 1;
+}
+
+.podium-bg {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  opacity: 0.28;
+  pointer-events: none;
+}
+
+.podium-bg .tower-chip,
+.podium-bg .members-row {
+  display: none;
+}
+
+.tower-podium .place .team-block {
+  background: var(--team);
+  color: #fff;
+}
+
+.tower-podium .place-name {
+  color: #fff;
+}
+
+.awards {
+  display: flex;
+  gap: 2vw;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 2vh;
+}
+
+.award {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: var(--radius);
+  padding: 1.2vh 1.6vw;
+  min-width: min(360px, 90vw);
+}
+
+.award-icon {
+  font-size: clamp(30px, 3vw, 52px);
+}
+
+.award-title {
+  font-size: clamp(13px, 1vw, 18px);
+  font-weight: 800;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.award-who {
+  font-size: clamp(20px, 2vw, 36px);
+  font-weight: 900;
+}
+
+.award-value {
+  font-size: clamp(13px, 1vw, 18px);
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+/* ----- monster ----- */
+
+.monster-pill {
+  background: #5b2799;
+}
+
+.monster-banner {
+  position: absolute;
+  top: 0.6vh;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  max-width: 80%;
+  padding: 1.2vh 2vw;
+  border-radius: var(--radius);
+  background: #5b2799;
+  border: 3px solid #c6a2f2;
+  font-size: clamp(16px, 1.6vw, 30px);
+  font-weight: 900;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  animation: banner-in 0.4s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+
+.monster-banner.attack {
+  background: #8e1330;
+  border-color: #ff9aa9;
+}
+
+@keyframes banner-in {
+  from {
+    transform: translate(-50%, -40px) scale(0.8);
+    opacity: 0;
+  }
+}
+
+.monster-stage {
+  position: absolute;
+  bottom: 0;
+  left: 55%;
+  height: 34%;
+  aspect-ratio: 200 / 220;
+  z-index: 4;
+  pointer-events: none;
+  animation: monster-visit 3.4s ease-in-out both;
+}
+
+@keyframes monster-visit {
+  0% {
+    transform: translateX(160%);
+  }
+  22% {
+    transform: translateX(0) translateY(0);
+  }
+  26% {
+    transform: translateY(-4%);
+  }
+  30% {
+    transform: translateY(0);
+  }
+  72% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(170%);
+    opacity: 0;
+  }
+}
+
+.monster-stage .m-leg-front,
+.monster-stage .m-leg-back {
+  animation: stomp 0.35s ease-in-out 3 alternate;
+}
+
+.monster-stage .m-leg-back {
+  animation-delay: 0.17s;
+}
+
+@keyframes stomp {
+  to {
+    transform: translateY(-6px);
+  }
+}
+
+.monster-stage .m-jaw {
+  animation: roar 3.4s ease-in-out both;
+}
+
+@keyframes roar {
+  0%,
+  22% {
+    transform: rotate(0deg);
+  }
+  28%,
+  36% {
+    transform: rotate(18deg);
+  }
+  44%,
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+.monster-stage .m-arm {
+  animation: smash 3.4s ease-in both;
+}
+
+@keyframes smash {
+  0%,
+  33% {
+    transform: rotate(0deg);
+  }
+  37% {
+    transform: rotate(40deg);
+  }
+  41% {
+    transform: rotate(-70deg);
+  }
+  50%,
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+.debris {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: debris 1.1s cubic-bezier(0.3, 0, 0.8, 0.6) both;
+}
+
+@keyframes debris {
+  from {
+    transform: none;
+    opacity: 1;
+  }
+  to {
+    transform: translate(var(--dx), 160px) rotate(var(--rot));
+    opacity: 0;
+  }
+}
+
+.towers-wrap.shake .scene-main {
+  animation: shake 0.6s ease-in-out 1.3s both;
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: none;
+  }
+  15% {
+    transform: translate(-10px, 4px);
+  }
+  30% {
+    transform: translate(9px, -5px);
+  }
+  45% {
+    transform: translate(-7px, 3px);
+  }
+  60% {
+    transform: translate(5px, -2px);
+  }
+  80% {
+    transform: translate(-2px, 1px);
   }
 }

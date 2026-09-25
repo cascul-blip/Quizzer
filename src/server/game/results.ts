@@ -1,6 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Game } from "./game.ts";
+import type { TowerGame } from "./tower.ts";
 
 function csvCell(v: string | number): string {
   const s = String(v);
@@ -25,17 +26,35 @@ export function buildResultsCsv(game: Game): string {
     });
     return row;
   });
-  // BOM so Excel opens UTF-8 correctly.
-  return "﻿" + [header, ...rows].map((r) => r.map(csvCell).join(",")).join("\r\n") + "\r\n";
+  return toCsv([header, ...rows]);
 }
 
-export function resultsFileName(game: Game, when = new Date()): string {
+function toCsv(rows: (string | number)[][]): string {
+  // BOM so Excel opens UTF-8 correctly.
+  return "\ufeff" + rows.map((r) => r.map(csvCell).join(",")).join("\r\n") + "\r\n";
+}
+
+/** Tallest Tower: one row per player, grouped by team in final team order. */
+export function buildTowerResultsCsv(game: TowerGame): string {
+  const header = ["Team", "Team rank", "Team floors", "Team blocks", "Nickname", "Correct", "Wrong", "Accuracy %", "Blocks placed", "Blocks missed", "Monster hatched"];
+  const rows: (string | number)[][] = [];
+  for (const t of game.rankedTeams()) {
+    const members = [...game.players.values()].filter((p) => p.team === t.index).sort((a, b) => b.placed - a.placed || b.correct - a.correct);
+    for (const p of members) {
+      const answered = p.correct + p.wrong;
+      rows.push([t.name, t.rank, t.floors, t.placed, p.nickname, p.correct, p.wrong, answered ? Math.round((p.correct / answered) * 100) : "", p.placed, p.missed, p.hatched]);
+    }
+  }
+  return toCsv([header, ...rows]);
+}
+
+export function resultsFileName(game: { quizId: string }, when = new Date()): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   const stamp = `${when.getFullYear()}-${pad(when.getMonth() + 1)}-${pad(when.getDate())}_${pad(when.getHours())}${pad(when.getMinutes())}${pad(when.getSeconds())}`;
   return `${stamp}_${game.quizId}.csv`;
 }
 
-export function writeResultsFile(game: Game, csv: string, resultsDir: string): string {
+export function writeResultsFile(game: { quizId: string }, csv: string, resultsDir: string): string {
   const file = join(resultsDir, resultsFileName(game));
   writeFileSync(file, csv);
   return file;

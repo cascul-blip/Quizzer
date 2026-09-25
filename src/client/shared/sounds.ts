@@ -1,6 +1,6 @@
 /** Tiny synthesized sound effects (WebAudio), so no audio files need to be shipped. */
 
-export type Sfx = "tick" | "tickHigh" | "timeUp" | "reveal" | "join" | "start" | "fanfare";
+export type Sfx = "tick" | "tickHigh" | "timeUp" | "reveal" | "join" | "start" | "fanfare" | "thud" | "floor" | "rumble" | "roar";
 
 const MUTE_KEY = "quizzer.muted";
 let ctx: AudioContext | null = null;
@@ -70,6 +70,17 @@ export function play(sfx: Sfx): void {
     case "start":
       [392, 523.25, 659.25, 783.99].forEach((f, i) => tone(f, i * 0.08, 0.2, "triangle", 0.15));
       return;
+    case "thud":
+      return tone(110, 0, 0.18, "sine", 0.3);
+    case "floor":
+      tone(784, 0, 0.12, "triangle", 0.14);
+      return tone(1175, 0.08, 0.25, "triangle", 0.14);
+    case "rumble":
+      tone(55, 0, 1.2, "sine", 0.35);
+      return tone(70, 0.3, 0.9, "triangle", 0.2);
+    case "roar":
+      [90, 118, 140, 75].forEach((f, i) => tone(f, i * 0.05, 1.1 - i * 0.1, "sawtooth", 0.13));
+      return tone(45, 0.55, 0.6, "square", 0.2); // the smash
     case "fanfare":
       [523.25, 523.25, 523.25, 698.46, 880, 1046.5].forEach((f, i) => tone(f, i * 0.14, i === 5 ? 0.9 : 0.16, "triangle", 0.18));
       return;

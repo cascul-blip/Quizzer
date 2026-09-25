@@ -1,8 +1,9 @@
 import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
-import type { ClientMsg, PlayerView, ServerMsg } from "../../shared/protocol.ts";
+import { STREAK_MIN, type ClientMsg, type PlayerView, type ServerMsg } from "../../shared/protocol.ts";
 import { connect, type ConnStatus } from "../shared/ws.ts";
-import { ConnBanner, Shape, Toast, optionColor, ordinal, useCountdown } from "../shared/ui.tsx";
+import { ConnBanner, ErrorBoundary, Shape, StreakBadge, Toast, optionColor, ordinal, useCountdown } from "../shared/ui.tsx";
+import { TowerPlayer } from "./tower.tsx";
 
 const TOKEN_KEY = "quizzer.token";
 const NAME_KEY = "quizzer.nickname";
@@ -116,6 +117,8 @@ function App() {
         />
       );
     }
+  } else if (view.kind === "tower") {
+    body = <TowerPlayer view={view} send={send} />;
   } else {
     body = <Game view={view} send={send} />;
   }
@@ -173,13 +176,16 @@ function Game({ view, send }: { view: Joined; send: (m: ClientMsg) => void }) {
   return (
     <div class="game">
       <header class="bar">
-        <span class="name">{view.me.nickname}</span>
+        <span class="name">
+          {view.me.nickname}
+          <StreakBadge streak={view.me.streak} />
+        </span>
         {view.question && view.phase !== "lobby" && (
           <span class="qnum">
             {view.question.index + 1} / {view.question.total}
           </span>
         )}
-        <span class="score">{view.me.score.toLocaleString()}</span>
+        {view.phase !== "lobby" && <span class="score">{view.me.score.toLocaleString()}</span>}
       </header>
       <Phase view={view} send={send} />
     </div>
@@ -194,6 +200,11 @@ function Phase({ view, send }: { view: Joined; send: (m: ClientMsg) => void }) {
         <Center>
           <div class="big-check">✓</div>
           <h1>You're in!</h1>
+          {view.team && (
+            <div class="team-badge" style={{ background: view.team.color }}>
+              Team {view.team.name}
+            </div>
+          )}
           <p class="muted">See your nickname on the big screen? The game starts soon.</p>
           <p class="muted small">{view.playerCount} player{view.playerCount === 1 ? "" : "s"} joined</p>
         </Center>
@@ -289,6 +300,7 @@ function Result({ view }: { view: Joined }) {
         <div class="verdict-icon">{r.wasCorrect ? "✓" : "✗"}</div>
         <h1>{heading}</h1>
         <div class="points">{r.wasCorrect ? `+${r.points.toLocaleString()}` : "+0"}</div>
+        {r.wasCorrect && view.me.streak >= STREAK_MIN && <div class="streak-note">🔥 {view.me.streak} in a row!</div>}
       </div>
       <p class="q-text small-q">{q.text}</p>
       <ul class="reveal-list">
@@ -313,4 +325,9 @@ function Result({ view }: { view: Joined }) {
   );
 }
 
-render(<App />, document.getElementById("app")!);
+render(
+  <ErrorBoundary>
+    <App />
+  </ErrorBoundary>,
+  document.getElementById("app")!,
+);
