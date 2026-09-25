@@ -1,0 +1,45 @@
+{
+  "title": "Science Warm-Up",
+  "description": "Eight quick questions to try Quizzer out.",
+  "settings": { "shuffleQuestions": false, "shuffleAnswers": false },
+  "questions": [
+    {
+      "type": "multiple_choice",
+      "text": "Which planet is known as the Red Planet?",
+      "options": ["Venus", "Mars", "Jupiter", "Mercury"],
+      "correct": [1],
+      "timeLimitSec": 20
+    },
+    { "type": "true_false", "text": "The Sun is a star.", "correct": [0], "timeLimitSec": 10 },
+    {
+      "type": "multiple_choice",
+      "text": "What gas do plants absorb from the air?",
+      "options": ["Oxygen", "Nitrogen", "Carbon dioxide", "Helium"],
+      "correct": [2],
+      "timeLimitSec": 20
+    },
+    { "type": "true_false", "text": "Sound travels faster than light.", "correct": [1], "timeLimitSec": 10 },
+    {
+      "type": "multiple_choice",
+      "text": "Which of these are mammals?",
+      "options": ["Dolphin", "Shark", "Bat", "Penguin"],
+      "correct": [0, 2],
+      "timeLimitSec": 20
+    },
+    {
+      "type": "multiple_choice",
+      "text": "What is H₂O more commonly called?",
+      "options": ["Salt", "Water", "Hydrogen"],
+      "correct": [1],
+      "timeLimitSec": 10
+    },
+    { "type": "true_false", "text": "An octopus has three hearts.", "correct": [0], "timeLimitSec": 10 },
+    {
+      "type": "multiple_choice",
+      "text": "How many bones are in the adult human body?",
+      "options": ["106", "206", "306", "406"],
+      "correct": [1],
+      "timeLimitSec": 20
+    }
+  ]
+}
