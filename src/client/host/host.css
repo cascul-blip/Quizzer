@@ -354,8 +354,17 @@ select {
   color: var(--ink);
   font-weight: 800;
   font-size: clamp(18px, 1.8vw, 28px);
-  padding: 8px 18px;
+  padding: 6px 18px 6px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   animation: pop-in 0.25s ease-out;
+}
+
+.chip .avatar {
+  width: 1.9em;
+  height: 1.9em;
+  flex: none;
 }
 
 .chip:hover {
@@ -847,7 +856,7 @@ select {
 
 .team-box .chip {
   font-size: clamp(15px, 1.3vw, 20px);
-  padding: 5px 12px;
+  padding: 4px 12px 4px 6px;
 }
 
 /* ----- Tallest Tower stage ----- */

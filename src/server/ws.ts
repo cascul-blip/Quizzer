@@ -1,6 +1,7 @@
 import type { ServerWebSocket } from "bun";
 import QRCode from "qrcode";
 import type { ClientMsg, GameMode, HostView, JoinInfo, Pacing, PlayerView, ServerMsg, TowerSettings } from "../shared/protocol.ts";
+import { cleanAvatar } from "../shared/avatars.ts";
 import { ValidationError } from "../shared/quiz-schema.ts";
 import { DEFAULT_TOWER, Game, GameError, type Clock } from "./game/game.ts";
 import { buildResultsCsv, buildSubResultsCsv, buildTowerResultsCsv, writeResultsFile } from "./game/results.ts";
@@ -203,10 +204,15 @@ export class GameHub {
       case "join": {
         if (!this.game) throw new GameError("No game is open yet. Wait for the host.");
         if (ws.data.playerId && this.game.players.has(ws.data.playerId)) return this.sendState(ws);
-        const p = this.game.join(msg.nickname);
+        const p = this.game.join(msg.nickname, cleanAvatar(msg.avatar, msg.accessory));
         ws.data.playerId = p.id;
         this.send(ws, { type: "joined", token: p.token, playerId: p.id });
         this.log(`Player joined: ${p.nickname}`);
+        return;
+      }
+      case "setAvatar": {
+        if (!(this.game instanceof Game) || !ws.data.playerId) return;
+        this.game.setAvatar(ws.data.playerId, msg.avatar, msg.accessory);
         return;
       }
       case "resume": {

@@ -11,6 +11,7 @@ import {
   type ShuffleOptions,
   type TowerSettings,
 } from "../../shared/protocol.ts";
+import { cleanAvatar, randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import { GameError, assignTeams, realClock, shuffle, shuffleOptions, teamInfo, type Clock } from "./common.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
@@ -118,15 +119,27 @@ export class Game {
 
   // ---------- players ----------
 
-  join(rawNickname: unknown): Player {
+  /** `avatar` is the player's previous pick (if any); otherwise they get a random one to change in the lobby. */
+  join(rawNickname: unknown, avatar?: AvatarChoice | null): Player {
     if (this.phase === "podium") throw new GameError("This game has finished");
-    const player = this.roster.add(rawNickname, (base) => ({ ...base, score: 0, lastDelta: 0, streak: 0, answers: [] }));
+    const player = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), (base) => ({ ...base, score: 0, lastDelta: 0, streak: 0, answers: [] }));
     this.onChange();
     return player;
   }
 
   byToken(token: unknown): Player | null {
     return this.roster.byToken(token);
+  }
+
+  /** Change a player's character/accessory; only while waiting in the lobby. */
+  setAvatar(playerId: string, avatar: unknown, accessory: unknown): void {
+    const p = this.players.get(playerId);
+    if (!p) return;
+    if (this.phase !== "lobby") throw new GameError("The game has already started");
+    const choice = cleanAvatar(avatar, accessory);
+    if (!choice) throw new GameError("Unknown avatar");
+    p.avatar = choice;
+    this.onChange();
   }
 
   setConnected(playerId: string, connected: boolean): void {
@@ -348,7 +361,7 @@ export class Game {
   hostView(): HostGameState {
     const q = this.currentQuestion;
     const answered = [...this.players.values()].map((p) => p.answers[this.qIndex]).filter((a): a is Answer => !!a);
-    const hostPlayer = (p: Player) => ({ id: p.id, nickname: p.nickname, score: p.score, connected: p.connected });
+    const hostPlayer = (p: Player) => ({ id: p.id, nickname: p.nickname, avatar: p.avatar, score: p.score, connected: p.connected });
     let teams: HostGameState["teams"] = null;
     if (this.phase === "lobby" && this.mode === "tower") {
       const preview = this.teamPreview();
@@ -386,7 +399,7 @@ export class Game {
       kind: "player",
       phase: this.phase,
       title: this.title,
-      me: { id: p.id, nickname: p.nickname, score: p.score, rank: me.rank, streak: p.streak },
+      me: { id: p.id, nickname: p.nickname, avatar: p.avatar, score: p.score, rank: me.rank, streak: p.streak },
       playerCount: this.players.size,
       question: this.questionView(),
       myChoice: this.phase === "open" || this.revealed ? (ans?.option ?? null) : null,

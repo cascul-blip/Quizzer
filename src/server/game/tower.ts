@@ -11,6 +11,7 @@ import {
   type TowerPhase,
   type TowerSettings,
 } from "../../shared/protocol.ts";
+import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import { GameError, assignTeams, realClock, teamInfo, type Clock } from "./common.ts";
 import type { Game } from "./game.ts";
@@ -117,7 +118,7 @@ export class TowerGame {
     const players = [...lobby.players.values()];
     const teams = assignTeams(players.length, lobby.tower.teams);
     players.forEach((p, i) => {
-      game.roster.adopt(game.newPlayer({ id: p.id, nickname: p.nickname, token: p.token, connected: p.connected }, teams[i]!));
+      game.roster.adopt(game.newPlayer({ id: p.id, nickname: p.nickname, token: p.token, connected: p.connected, avatar: p.avatar }, teams[i]!));
     });
     return game;
   }
@@ -244,9 +245,9 @@ export class TowerGame {
 
   // ---------- players ----------
 
-  join(rawNickname: unknown): TowerPlayer {
+  join(rawNickname: unknown, avatar?: AvatarChoice | null): TowerPlayer {
     if (this.phase === "podium") throw new GameError("This game has finished");
-    const player = this.roster.add(rawNickname, (base) => this.newPlayer(base, this.smallestTeam()));
+    const player = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), (base) => this.newPlayer(base, this.smallestTeam()));
     if (this.phase === "playing") this.deal(player);
     this.onChange();
     return player;
@@ -369,7 +370,7 @@ export class TowerGame {
         rank: ranked.get(t.index)!,
         members: players
           .filter((p) => p.team === t.index)
-          .map((p) => ({ id: p.id, nickname: p.nickname, connected: p.connected, building: p.state === "build" && this.phase === "playing" })),
+          .map((p) => ({ id: p.id, nickname: p.nickname, avatar: p.avatar, connected: p.connected, building: p.state === "build" && this.phase === "playing" })),
       })),
       playerCount: players.length,
       dropCount: this.dropCount,
@@ -419,7 +420,7 @@ export class TowerGame {
       phase: this.phase,
       title: this.title,
       remainingMs: this.remainingMs(),
-      me: { id: p.id, nickname: p.nickname, correct: p.correct, placed: p.placed },
+      me: { id: p.id, nickname: p.nickname, avatar: p.avatar, correct: p.correct, placed: p.placed },
       team: teamInfo(team.index),
       state: p.state,
       blocksHeld: p.blocksHeld,

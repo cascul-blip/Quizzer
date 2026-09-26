@@ -164,6 +164,11 @@ describe("full game over WebSockets", () => {
     dup.close();
 
     await host.hostState((v) => v.phase === "lobby" && v.players.length === 3);
+    // Avatars: picked in the lobby, shown on the host.
+    players[0]!.send({ type: "setAvatar", avatar: "panda", accessory: "crown" });
+    await host.hostState((v) => v.phase === "lobby" && v.players.some((p) => p.nickname === "Ann" && p.avatar.avatar === "panda" && p.avatar.accessory === "crown"));
+    players[1]!.send({ type: "setAvatar", avatar: "panda", accessory: "jetpack" });
+    expect(await players[1]!.waitFor((m) => m.type === "error")).toMatchObject({ message: "Unknown avatar" });
     host.send({ type: "host.start", pacing: "manual" });
     await host.hostState((v) => v.phase === "intro");
     clock.advance(INTRO_MS);

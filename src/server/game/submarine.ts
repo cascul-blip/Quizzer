@@ -6,6 +6,7 @@ import {
   type SubAwards,
   type SubPhase,
 } from "../../shared/protocol.ts";
+import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import type { Quiz } from "../../shared/quiz-schema.ts";
 import { ALL_SYMBOLS, SEA_COLORS, SEA_SHAPES, parseSymbol, symbolId } from "../../shared/sea-symbols.ts";
 import { GameError, realClock, shuffle, type Clock } from "./common.ts";
@@ -119,7 +120,7 @@ export class SubGame {
   static fromLobby(lobby: Game, opts: SubOptions = {}): SubGame {
     const game = new SubGame(lobby.quiz, { ...opts, shuffleAnswers: lobby.shuffle.answers });
     for (const p of lobby.players.values()) {
-      game.roster.adopt(game.newPlayer({ id: p.id, nickname: p.nickname, token: p.token, connected: p.connected }));
+      game.roster.adopt(game.newPlayer({ id: p.id, nickname: p.nickname, token: p.token, connected: p.connected, avatar: p.avatar }));
     }
     return game;
   }
@@ -370,9 +371,9 @@ export class SubGame {
 
   // ---------- players ----------
 
-  join(rawNickname: unknown): SubPlayer {
+  join(rawNickname: unknown, avatar?: AvatarChoice | null): SubPlayer {
     if (this.phase === "podium") throw new GameError("This game has finished");
-    const p = this.roster.add(rawNickname, (base) => this.newPlayer(base));
+    const p = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), (base) => this.newPlayer(base));
     // Joining mid-dive: wait for the next level (like Kahoot).
     if (this.phase === "dive") p.state = "waiting";
     else if (this.phase === "chase") this.stream.deal(p);
@@ -447,7 +448,7 @@ export class SubGame {
               })),
             }
           : null,
-      players: [...this.players.values()].map((p) => ({ id: p.id, nickname: p.nickname, connected: p.connected, state: p.state })),
+      players: [...this.players.values()].map((p) => ({ id: p.id, nickname: p.nickname, avatar: p.avatar, connected: p.connected, state: p.state })),
       playerCount: this.players.size,
       awards: this.phase === "podium" ? this.awards() : null,
       hasResults: this.phase === "podium",
@@ -493,7 +494,7 @@ export class SubGame {
       level: this.level,
       depth: this.depth,
       phaseRemainingMs: this.phaseRemainingMs(),
-      me: { id: p.id, nickname: p.nickname, correct: p.correct, boosts: p.boosts, diveHits: p.diveHits },
+      me: { id: p.id, nickname: p.nickname, avatar: p.avatar, correct: p.correct, boosts: p.boosts, diveHits: p.diveHits },
       state: p.state,
       towardBoost: p.towardBoost,
       question: this.phase === "chase" && p.state === "question" ? this.stream.questionView(p) : null,
