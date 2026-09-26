@@ -1,6 +1,7 @@
 import { render } from "preact";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { DEFAULT_TIME_LIMIT, MAX_OPTIONS, MIN_OPTIONS, TF_OPTIONS, TIME_LIMITS, newId } from "../../shared/quiz-constants.ts";
+import { MUSIC_TRACKS } from "../../shared/music-tracks.ts";
 import type { Question, Quiz, QuizSettings, QuizSummary } from "../../shared/quiz-schema.ts";
 import { Shape, Toast, optionColor } from "../shared/ui.tsx";
 
@@ -29,6 +30,7 @@ const jsonInit = (method: string, body: unknown): RequestInit => ({
 interface Info {
   version: string;
   dataDir: string;
+  musicDir: string;
   port: number;
   joinUrl: string;
   mcp: { httpUrl: string; stdioCommand: string[] };
@@ -227,8 +229,47 @@ function Library({ notify }: { notify: (m: string) => void }) {
         </ul>
       )}
 
+      {info && <MusicPanel dir={info.musicDir} />}
       {info && <InfoPanel info={info} notify={notify} />}
     </div>
+  );
+}
+
+function MusicPanel({ dir }: { dir: string }) {
+  const [files, setFiles] = useState<Record<string, string>>({});
+  useEffect(() => {
+    api<{ files: Record<string, string> }>("/api/music").then((r) => setFiles(r.files), () => {});
+  }, []);
+  return (
+    <section class="info">
+      <h2>Background music</h2>
+      <p>
+        Each game mode has built-in music. To use your own, put an audio file (MP3, OGG, M4A, WAV…) named after the track in <code>{dir}</code>, for example{" "}
+        <code>submarine-chase.mp3</code>. It replaces that track the next time the host screen loads. Use music you have the rights to (royalty-free or Creative Commons).
+      </p>
+      <table class="music-table">
+        <thead>
+          <tr>
+            <th>Mode</th>
+            <th>Screen</th>
+            <th>File name</th>
+            <th>Playing</th>
+          </tr>
+        </thead>
+        <tbody>
+          {MUSIC_TRACKS.map((t) => (
+            <tr key={t.id}>
+              <td>{t.mode}</td>
+              <td>{t.screen}</td>
+              <td>
+                <code>{t.id}.mp3</code>
+              </td>
+              <td>{files[t.id] ? <b>Your file</b> : "Built-in"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
   );
 }
 

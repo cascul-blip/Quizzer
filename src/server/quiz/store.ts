@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { musicTrackForFile } from "../../shared/music-tracks.ts";
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import {
@@ -52,12 +53,15 @@ export class QuizStore {
   readonly quizzesDir: string;
   readonly mediaDir: string;
   readonly resultsDir: string;
+  /** Custom background music: files named after a track id (see src/shared/music-tracks.ts). */
+  readonly musicDir: string;
 
   constructor(readonly dataDir: string) {
     this.quizzesDir = join(dataDir, "quizzes");
     this.mediaDir = join(dataDir, "media");
     this.resultsDir = join(dataDir, "results");
-    for (const d of [this.quizzesDir, this.mediaDir, this.resultsDir]) mkdirSync(d, { recursive: true });
+    this.musicDir = join(dataDir, "music");
+    for (const d of [this.quizzesDir, this.mediaDir, this.resultsDir, this.musicDir]) mkdirSync(d, { recursive: true });
   }
 
   private file(id: string): string {
@@ -235,6 +239,23 @@ export class QuizStore {
     const path = join(this.dataDir, ref);
     if (!existsSync(path)) writeFileSync(path, bytes);
     return ref;
+  }
+
+  /** Custom music files present in data/music/: track id → file name. */
+  musicFiles(): Record<string, string> {
+    const out: Record<string, string> = {};
+    for (const name of readdirSync(this.musicDir).sort()) {
+      const id = musicTrackForFile(name);
+      if (id && !out[id]) out[id] = name;
+    }
+    return out;
+  }
+
+  /** Absolute path of a custom music file, or null if the name isn't an allowed track file. */
+  musicFile(name: string): string | null {
+    if (!musicTrackForFile(name)) return null;
+    const path = join(this.musicDir, name);
+    return existsSync(path) ? path : null;
   }
 
   /** Absolute path for a media reference, or null if the reference is invalid. */

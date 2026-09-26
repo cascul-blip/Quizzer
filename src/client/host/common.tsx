@@ -1,5 +1,6 @@
 import { useState } from "preact/hooks";
 import type { HostMsg } from "../../shared/protocol.ts";
+import { musicEnabled, musicVolume, setMusicEnabled, setMusicVolume } from "../shared/music/index.ts";
 import { isMuted, setMuted } from "../shared/sounds.ts";
 
 export type Send = (m: HostMsg) => void;
@@ -12,8 +13,39 @@ export function toggleFullscreen() {
 /** Mute + fullscreen buttons for the projector's top bar. */
 export function ScreenControls() {
   const [muted, setMutedState] = useState(isMuted());
+  const [musicOn, setMusicOn] = useState(musicEnabled());
+  const [volume, setVolume] = useState(musicVolume());
   return (
     <>
+      <div class={`music-ctl ${musicOn ? "" : "off"}`}>
+        <button
+          class="icon-btn"
+          title={musicOn ? "Turn music off" : "Turn music on"}
+          aria-label={musicOn ? "Turn music off" : "Turn music on"}
+          aria-pressed={musicOn}
+          onClick={() => {
+            setMusicEnabled(!musicOn);
+            setMusicOn(!musicOn);
+          }}
+        >
+          🎵
+        </button>
+        <input
+          type="range"
+          min="0"
+          max="1"
+          step="0.05"
+          value={volume}
+          aria-label="Music volume"
+          title="Music volume"
+          disabled={!musicOn}
+          onInput={(e) => {
+            const v = Number(e.currentTarget.value);
+            setMusicVolume(v);
+            setVolume(v);
+          }}
+        />
+      </div>
       <button
         class="icon-btn"
         title={muted ? "Unmute sounds" : "Mute sounds"}
