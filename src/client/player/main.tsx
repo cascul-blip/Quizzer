@@ -1,13 +1,17 @@
 import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
+import { cleanAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import { STREAK_MIN, type ClientMsg, type PlayerView, type ServerMsg } from "../../shared/protocol.ts";
+import { Avatar } from "../shared/avatar-art.tsx";
 import { connect, type ConnStatus } from "../shared/ws.ts";
 import { ConnBanner, ErrorBoundary, Shape, StreakBadge, Toast, optionColor, ordinal, useCountdown } from "../shared/ui.tsx";
+import { AvatarPicker } from "./avatar-picker.tsx";
 import { SubPlayer } from "./submarine.tsx";
 import { TowerPlayer } from "./tower.tsx";
 
 const TOKEN_KEY = "quizzer.token";
 const NAME_KEY = "quizzer.nickname";
+const AVATAR_KEY = "quizzer.avatar";
 
 const storage = {
   get(key: string): string | null {
@@ -26,6 +30,16 @@ const storage = {
     }
   },
 };
+
+/** The look this phone picked last time, so returning players keep it. */
+function savedAvatar(): AvatarChoice | null {
+  try {
+    const raw = JSON.parse(storage.get(AVATAR_KEY) ?? "null");
+    return cleanAvatar(raw?.avatar, raw?.accessory);
+  } catch {
+    return null;
+  }
+}
 
 type Joined = Extract<PlayerView, { kind: "player" }>;
 
@@ -113,7 +127,7 @@ function App() {
           onJoin={(nickname) => {
             setJoining(true);
             storage.set(NAME_KEY, nickname);
-            send({ type: "join", nickname });
+            send({ type: "join", nickname, ...savedAvatar() });
           }}
         />
       );
@@ -199,19 +213,7 @@ function Phase({ view, send }: { view: Joined; send: (m: ClientMsg) => void }) {
   const q = view.question;
   switch (view.phase) {
     case "lobby":
-      return (
-        <Center>
-          <div class="big-check">✓</div>
-          <h1>You're in!</h1>
-          {view.team && (
-            <div class="team-badge" style={{ background: view.team.color }}>
-              Team {view.team.name}
-            </div>
-          )}
-          <p class="muted">See your nickname on the big screen? The game starts soon.</p>
-          <p class="muted small">{view.playerCount} player{view.playerCount === 1 ? "" : "s"} joined</p>
-        </Center>
-      );
+      return <Lobby view={view} send={send} />;
     case "intro":
       return (
         <Center>
@@ -240,6 +242,37 @@ function Phase({ view, send }: { view: Joined; send: (m: ClientMsg) => void }) {
         </Center>
       );
   }
+}
+
+function Lobby({ view, send }: { view: Joined; send: (m: ClientMsg) => void }) {
+  // Show a pick straight away; the next snapshot from the server confirms it.
+  const [picked, setPicked] = useState<AvatarChoice | null>(null);
+  const server = view.me.avatar;
+  useEffect(() => setPicked(null), [server.avatar, server.accessory]);
+  const look = picked ?? server;
+  return (
+    <main class="center lobby-wait">
+      <div class="me-avatar">
+        <Avatar choice={look} />
+      </div>
+      <h1>You're in!</h1>
+      {view.team && (
+        <div class="team-badge" style={{ background: view.team.color }}>
+          Team {view.team.name}
+        </div>
+      )}
+      <p class="muted">Pick your look while you wait. It shows on the big screen!</p>
+      <AvatarPicker
+        value={look}
+        onPick={(choice) => {
+          setPicked(choice);
+          storage.set(AVATAR_KEY, JSON.stringify(choice));
+          send({ type: "setAvatar", ...choice });
+        }}
+      />
+      <p class="muted small">{view.playerCount} player{view.playerCount === 1 ? "" : "s"} joined</p>
+    </main>
+  );
 }
 
 function Answering({ view, send }: { view: Joined; send: (m: ClientMsg) => void }) {

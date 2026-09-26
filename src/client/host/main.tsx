@@ -1,7 +1,8 @@
 import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
-import { MAX_TEAMS, TOWER_MINUTES, type GameMode, type HostView, type Pacing, type ServerMsg } from "../../shared/protocol.ts";
+import { MAX_TEAMS, TOWER_MINUTES, type GameMode, type HostPlayer, type HostView, type Pacing, type ServerMsg } from "../../shared/protocol.ts";
 import type { QuizSummary } from "../../shared/quiz-schema.ts";
+import { Avatar } from "../shared/avatar-art.tsx";
 import { play, unlockAudio } from "../shared/sounds.ts";
 import { connect, type ConnStatus } from "../shared/ws.ts";
 import { ConnBanner, ErrorBoundary, Shape, StreakBadge, Toast, optionColor, ordinal, useCountdown } from "../shared/ui.tsx";
@@ -238,13 +239,14 @@ function PhaseView({ view, send }: { view: GameView; send: Send }) {
   }
 }
 
-function PlayerChip({ p, send }: { p: { id: string; nickname: string; connected: boolean }; send: Send }) {
+function PlayerChip({ p, send }: { p: HostPlayer; send: Send }) {
   return (
     <button
       class={`chip ${p.connected ? "" : "offline"}`}
       title="Click to remove"
       onClick={() => confirm(`Remove ${p.nickname} from the game?`) && send({ type: "host.kick", playerId: p.id })}
     >
+      <Avatar choice={p.avatar} />
       {p.nickname}
     </button>
   );

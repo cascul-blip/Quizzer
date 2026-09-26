@@ -1,3 +1,4 @@
+import type { AvatarChoice } from "../../shared/avatars.ts";
 import { newId } from "../../shared/quiz-schema.ts";
 import { GameError, MAX_PLAYERS, cleanNickname } from "./common.ts";
 
@@ -7,6 +8,7 @@ export interface BasePlayer {
   nickname: string;
   token: string;
   connected: boolean;
+  avatar: AvatarChoice;
 }
 
 /** Players of one game, in join order, findable by id or reconnect token. */
@@ -15,14 +17,14 @@ export class Roster<P extends BasePlayer> {
   private readonly tokens = new Map<string, string>();
 
   /** Validate the nickname (unique, case-insensitive) and create a player. Throws GameError. */
-  add(rawNickname: unknown, make: (base: BasePlayer) => P): P {
+  add(rawNickname: unknown, avatar: AvatarChoice, make: (base: BasePlayer) => P): P {
     const nickname = cleanNickname(rawNickname);
     const key = nickname.toLocaleLowerCase();
     for (const p of this.players.values()) {
       if (p.nickname.toLocaleLowerCase() === key) throw new GameError("That nickname is taken, pick another");
     }
     if (this.players.size >= MAX_PLAYERS) throw new GameError("This game is full");
-    return this.adopt(make({ id: "p" + newId(8), nickname, token: crypto.randomUUID(), connected: true }));
+    return this.adopt(make({ id: "p" + newId(8), nickname, token: crypto.randomUUID(), connected: true, avatar }));
   }
 
   /** Insert an existing player (keeping id and token), e.g. when a lobby hands over to another mode. */

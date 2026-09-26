@@ -1,3 +1,4 @@
+import type { AvatarChoice } from "./avatars.ts";
 import type { QuestionType } from "./quiz-schema.ts";
 
 export type Phase = "lobby" | "intro" | "open" | "reveal" | "leaderboard" | "podium";
@@ -77,7 +78,9 @@ export interface TeamInfo {
 // ---------- client → server ----------
 
 export type PlayerMsg =
-  | { type: "join"; nickname: string }
+  /** avatar/accessory: the player's last pick, remembered on the phone (optional). */
+  | { type: "join"; nickname: string; avatar?: string; accessory?: string }
+  | { type: "setAvatar"; avatar: string; accessory: string }
   | { type: "resume"; token: string }
   | { type: "answer"; qIndex: number; option: number }
   | { type: "tower.answer"; seq: number; option: number }
@@ -143,7 +146,7 @@ export type PlayerView =
       kind: "player";
       phase: Phase;
       title: string;
-      me: { id: string; nickname: string; score: number; rank: number; streak: number };
+      me: { id: string; nickname: string; avatar: AvatarChoice; score: number; rank: number; streak: number };
       playerCount: number;
       question: QuestionView | null;
       /** The option chosen for the current question, if any. */
@@ -167,7 +170,7 @@ export interface PlayerTowerView {
   title: string;
   /** Countdown to play (countdown phase) or to the end of the game (playing). */
   remainingMs: number;
-  me: { id: string; nickname: string; correct: number; placed: number };
+  me: { id: string; nickname: string; avatar: AvatarChoice; correct: number; placed: number };
   team: TeamInfo;
   state: "question" | "build";
   blocksHeld: number;
@@ -191,6 +194,7 @@ export interface PlayerTowerView {
 export interface HostPlayer {
   id: string;
   nickname: string;
+  avatar: AvatarChoice;
   score: number;
   connected: boolean;
 }
@@ -231,7 +235,7 @@ export interface HostTowerTeam extends TeamInfo {
   floors: number;
   placed: number;
   rank: number;
-  members: { id: string; nickname: string; connected: boolean; building: boolean }[];
+  members: { id: string; nickname: string; avatar: AvatarChoice; connected: boolean; building: boolean }[];
 }
 
 export interface HostTowerState {
@@ -289,7 +293,7 @@ export interface HostSubState {
   dive: {
     instructors: { nickname: string; index: number; total: number; found: number; groupSize: number; done: boolean }[];
   } | null;
-  players: { id: string; nickname: string; connected: boolean; state: "question" | "boost" | "waiting" }[];
+  players: { id: string; nickname: string; avatar: AvatarChoice; connected: boolean; state: "question" | "boost" | "waiting" }[];
   playerCount: number;
   awards: SubAwards | null;
   hasResults: boolean;
@@ -302,7 +306,7 @@ export interface PlayerSubView {
   level: number;
   depth: number;
   phaseRemainingMs: number;
-  me: { id: string; nickname: string; correct: number; boosts: number; diveHits: number };
+  me: { id: string; nickname: string; avatar: AvatarChoice; correct: number; boosts: number; diveHits: number };
   state: "question" | "boost" | "waiting";
   /** Correct answers toward the next boost (0 … CORRECT_PER_BOOST-1). */
   towardBoost: number;
