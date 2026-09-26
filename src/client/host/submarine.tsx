@@ -33,6 +33,38 @@ function useLiveGap(view: SubView): number {
   return Math.max(0, base.current.gap - (view.speed * (performance.now() - base.current.at)) / 1000);
 }
 
+/**
+ * Fish placement (left edge, % of the sea). At gap 0 the front of its open mouth
+ * touches the sub's propeller; at the max gap it's mostly off-screen.
+ */
+const FISH_TOUCH_LEFT = 27;
+const FISH_FAR_LEFT = -24;
+/** On a catch: lunge this far with jaws wide (the propeller goes in), then snap shut. */
+const LUNGE_LEFT = 8;
+const LUNGE_MS = 450;
+const SNAP_MS = 140;
+const SWALLOW_AT_MS = LUNGE_MS + SNAP_MS + 60;
+
+/** Milliseconds since the catch began, re-rendering every frame until the bite is over. */
+function useCatchClock(caught: boolean): number {
+  const start = useRef(0);
+  const [, tick] = useState(0);
+  useEffect(() => {
+    if (!caught) return;
+    start.current = performance.now();
+    let raf = 0;
+    const loop = () => {
+      tick((n) => n + 1);
+      if (performance.now() - start.current < SWALLOW_AT_MS + 100) raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [caught]);
+  return caught && start.current ? performance.now() - start.current : 0;
+}
+
+const easeOut = (t: number) => 1 - (1 - Math.max(0, Math.min(1, t))) ** 3;
+
 /** How long a boost notice stays next to the sub, and how many can stack. */
 const POP_MS = 2600;
 const MAX_POPS = 3;
@@ -95,19 +127,37 @@ function usePortholeFaces(players: SubView["players"], boost: SubView["lastBoost
 
 export function SubStage({ view, send }: { view: SubView; send: Send }) {
   const gap = useLiveGap(view);
-  const closeness = view.phase === "caught" ? 1 : Math.max(0, Math.min(1, 1 - gap / view.maxGap));
+  const caught = view.phase === "caught";
+  const closeness = caught ? 1 : Math.max(0, Math.min(1, 1 - gap / view.maxGap));
+  // The catch: lunge with the mouth wide open around the propeller, then the jaw snaps shut.
+  const biteMs = useCatchClock(caught);
+  const fishLeft = caught
+    ? FISH_TOUCH_LEFT + LUNGE_LEFT * easeOut(biteMs / LUNGE_MS)
+    : FISH_TOUCH_LEFT - (gap / view.maxGap) * (FISH_TOUCH_LEFT - FISH_FAR_LEFT);
+  const openness = caught ? 1 - easeOut((biteMs - LUNGE_MS) / SNAP_MS) : closeness ** 2.2;
+  const swallowed = caught && biteMs >= SWALLOW_AT_MS;
   const secs = useCountdown(view.phaseRemainingMs, `${view.phase}:${view.level}`);
 
   // Boost notices next to the sub, each with the booster's avatar.
   const boost = useEventFlash(view.lastBoost, view.lastBoost?.seq, 700);
   const [pops, setPops] = useState<NonNullable<SubView["lastBoost"]>[]>([]);
+  // Each pop's removal timer lives here, not in the effect cleanup, which also runs when the flash ends.
+  const popTimers = useRef(new Set<ReturnType<typeof setTimeout>>());
+  useEffect(() => () => popTimers.current.forEach(clearTimeout), []);
   useEffect(() => {
     if (!boost) return;
     play("whoosh");
     setPops((p) => [boost, ...p].slice(0, MAX_POPS));
-    const t = setTimeout(() => setPops((p) => p.filter((x) => x.seq !== boost.seq)), POP_MS);
-    return () => clearTimeout(t);
+    const t = setTimeout(() => {
+      popTimers.current.delete(t);
+      setPops((p) => p.filter((x) => x.seq !== boost.seq));
+    }, POP_MS);
+    popTimers.current.add(t);
   }, [boost?.seq]);
+  // A new level starts with a clean slate.
+  useEffect(() => {
+    if (view.phase !== "chase") setPops([]);
+  }, [view.phase]);
   const faces = usePortholeFaces(view.players, boost);
 
   // Sound cues.
@@ -174,14 +224,11 @@ export function SubStage({ view, send }: { view: SubView; send: Send }) {
                   <div class="boost-fill" style={{ width: `${(100 * view.boosts) / view.required}%` }} />
                 </div>
               </div>
-              <div
-                class={`fish-pos ${view.phase === "caught" ? "lunge" : ""}`}
-                style={{ left: `${view.phase === "caught" ? 34 : 24 - (gap / view.maxGap) * 48}%` }}
-              >
+              <div class={`fish-pos ${caught ? "biting" : ""}`} style={{ left: `${fishLeft}%` }}>
                 {/* Mouth stays nearly shut while far away and gapes as the fish closes in. */}
-                <Anglerfish openness={view.phase === "caught" ? 0 : closeness ** 2.2} glow={closeness} />
+                <Anglerfish openness={openness} glow={closeness} />
               </div>
-              <div class={`sub-pos ${boost ? "boosting" : ""} ${view.phase === "escaped" ? "escaping" : ""} ${view.phase === "caught" ? "eaten" : ""}`}>
+              <div class={`sub-pos ${boost ? "boosting" : ""} ${view.phase === "escaped" ? "escaping" : ""} ${caught ? "in-mouth" : ""} ${swallowed ? "eaten" : ""}`}>
                 {boost && <div class="speed-lines" />}
                 <div class="boost-pops">
                   {pops.map((b, i) => (

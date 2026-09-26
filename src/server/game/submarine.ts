@@ -8,7 +8,7 @@ import {
 } from "../../shared/protocol.ts";
 import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import type { Quiz } from "../../shared/quiz-schema.ts";
-import { ALL_SYMBOLS, SEA_COLORS, SEA_SHAPES, parseSymbol, symbolId } from "../../shared/sea-symbols.ts";
+import { glyphId, parseGlyph, randomGlyph, variantOf } from "../../shared/glyphs.ts";
 import { GameError, realClock, shuffle, type Clock } from "./common.ts";
 import type { Game } from "./game.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
@@ -37,6 +37,8 @@ export const DIVE_WRONG_LOCK_MS = 1000;
 export const DIVE_METERS_PER_HIT = 2;
 export const LEVEL_METERS = 100;
 export const GRID_SIZE = 6;
+/** Grid entries that differ from the target by just one part. */
+export const LOOKALIKES = 3;
 export const PLAYERS_PER_INSTRUCTOR = 6;
 export const MAX_INSTRUCTORS = 4;
 
@@ -195,7 +197,8 @@ export class SubGame {
     return Math.max(0, this.gapValue - (this.speed * (now - this.gapAt)) / 1000);
   }
 
-  private startChase(): void {
+  /** After a dive the fish starts as far back as a boost can push it. */
+  private startChase(gap = GAP_START): void {
     const players = this.connectedCount();
     this.phase = "chase";
     this.phaseEndsAt = 0;
@@ -203,7 +206,7 @@ export class SubGame {
     this.boosts = 0;
     this.required = BOOSTS_BASE + players;
     this.boostPower = BOOST_POWER / players;
-    this.gapValue = GAP_START;
+    this.gapValue = gap;
     this.gapAt = this.clock.now();
     for (const p of this.players.values()) {
       if (p.state === "waiting") p.state = "question";
@@ -284,13 +287,26 @@ export class SubGame {
     if (divers.length === 0) return this.nextLevel();
     const count = divers.length === 1 ? 1 : Math.min(MAX_INSTRUCTORS, Math.max(1, Math.ceil(divers.length / PLAYERS_PER_INSTRUCTOR)), divers.length - 1);
     const leads = divers.slice(0, count);
+    // Every symbol in this dive is different, across all instructors.
+    const used = new Set<string>();
+    const freshSymbols = () => {
+      const out: string[] = [];
+      while (out.length < DIVE_SYMBOLS) {
+        const id = glyphId(randomGlyph(this.rng));
+        if (!used.has(id)) {
+          used.add(id);
+          out.push(id);
+        }
+      }
+      return out;
+    };
     const rest = divers.slice(count);
     this.instructors = leads.map((lead, i) => {
       lead.instructorRounds++;
       const solo = divers.length === 1;
       return {
         playerId: lead.id,
-        symbols: shuffle(ALL_SYMBOLS, this.rng).slice(0, DIVE_SYMBOLS),
+        symbols: freshSymbols(),
         index: 0,
         group: solo ? [lead.id] : rest.filter((_, k) => k % count === i).map((p) => p.id),
         found: new Set<string>(),
@@ -319,14 +335,16 @@ export class SubGame {
     }, DIVE_SYMBOL_TIMEOUT_MS);
   }
 
-  /** The target plus look-alikes (same shape or same color), so players have to listen. */
+  /**
+   * The target, 3 near look-alikes (each with one part changed) and random
+   * fillers, so divers have to listen for the details.
+   */
   makeGrid(target: string): string[] {
-    const t = parseSymbol(target)!;
-    const sameShape = SEA_COLORS.filter((c) => c.id !== t.color).map((c) => symbolId(c.id, t.shape));
-    const sameColor = SEA_SHAPES.filter((s) => s !== t.shape).map((s) => symbolId(t.color, s));
-    const picks = [...shuffle(sameShape, this.rng).slice(0, 2), ...shuffle(sameColor, this.rng).slice(0, 2)];
-    const others = shuffle(ALL_SYMBOLS.filter((s) => s !== target && !picks.includes(s)), this.rng);
-    return shuffle([target, ...picks, ...others].slice(0, GRID_SIZE), this.rng);
+    const t = parseGlyph(target)!;
+    const grid = new Set<string>([target]);
+    for (let guard = 0; grid.size < 1 + LOOKALIKES && guard < 100; guard++) grid.add(glyphId(variantOf(t, this.rng)));
+    while (grid.size < GRID_SIZE) grid.add(glyphId(randomGlyph(this.rng)));
+    return shuffle([...grid], this.rng);
   }
 
   private instructorOf(playerId: string): Instructor | null {
@@ -366,7 +384,7 @@ export class SubGame {
   private nextLevel(): void {
     for (const i of this.instructors) if (i.timer !== null) this.clock.clearTimeout(i.timer);
     this.level++;
-    this.startChase();
+    this.startChase(GAP_MAX);
   }
 
   // ---------- players ----------

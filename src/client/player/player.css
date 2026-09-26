@@ -807,12 +807,6 @@ h1 {
   display: block;
 }
 
-.symbol-name {
-  font-size: 26px;
-  font-weight: 900;
-  text-transform: capitalize;
-}
-
 .dive-progress {
   font-weight: 700;
   margin: 0;

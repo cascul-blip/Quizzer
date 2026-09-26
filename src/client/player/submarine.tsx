@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { CORRECT_PER_BOOST, type ClientMsg, type PlayerSubView } from "../../shared/protocol.ts";
-import { symbolName } from "../../shared/sea-symbols.ts";
-import { SeaSymbol, oceanGradient } from "../shared/sea-art.tsx";
+import { GlyphSymbol, oceanGradient } from "../shared/sea-art.tsx";
 import { play, startRev, type Rev } from "../shared/sounds.ts";
 import { useCountdown } from "../shared/ui.tsx";
 import { Feedback, StreamQuestion } from "./tower.tsx";
@@ -205,9 +204,8 @@ function DiveScreen({ view, send }: { view: PlayerSubView; send: Send }) {
         <div class="role-tag">📣 You're an INSTRUCTOR</div>
         <p class="muted">Describe this symbol out loud so your divers can find it!</p>
         <div class="big-symbol" key={dive.symbol}>
-          <SeaSymbol id={dive.symbol} />
+          <GlyphSymbol id={dive.symbol} />
         </div>
-        <div class="symbol-name">{symbolName(dive.symbol)}</div>
         <p class="dive-progress">
           Symbol {Math.min(dive.index + 1, dive.total)} of {dive.total} · {dive.found} of {dive.groupSize} found
         </p>
@@ -230,7 +228,7 @@ function DiveScreen({ view, send }: { view: PlayerSubView; send: Send }) {
         <div class={`symbol-grid ${locked ? "locked" : ""}`}>
           {dive.grid.map((id) => (
             <button key={id} class={`symbol-btn ${dive.hint === id ? "hint" : ""}`} disabled={locked} onClick={() => send({ type: "sub.tap", symbol: id })}>
-              <SeaSymbol id={id} />
+              <GlyphSymbol id={id} />
             </button>
           ))}
         </div>

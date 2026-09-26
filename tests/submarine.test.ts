@@ -9,6 +9,7 @@ import {
   COUNTDOWN_MS,
   DIVE_METERS_PER_HIT,
   DIVE_SYMBOLS,
+  LOOKALIKES,
   DIVE_SYMBOL_TIMEOUT_MS,
   DIVE_WRONG_LOCK_MS,
   ESCAPED_MS,
@@ -20,7 +21,7 @@ import {
   type SubPlayer,
 } from "../src/server/game/submarine.ts";
 import { FEEDBACK_MS } from "../src/server/game/stream.ts";
-import { parseSymbol } from "../src/shared/sea-symbols.ts";
+import { parseGlyph, partsDiffering } from "../src/shared/glyphs.ts";
 import { FakeClock, sampleQuiz } from "./helpers.ts";
 
 function setup(names: string[], rng?: () => number) {
@@ -152,7 +153,8 @@ describe("dive", () => {
     const { game } = toDive(["A", "B", "C"]);
     const ins = game.instructors[0]!;
     const target = ins.symbols[0]!;
-    const t = parseSymbol(target)!;
+    const t = parseGlyph(target)!;
+    expect(new Set(ins.symbols).size).toBe(DIVE_SYMBOLS);
     const leadView = game.playerView(ins.playerId)!.dive;
     expect(leadView).toMatchObject({ role: "instructor", symbol: target, index: 0, total: DIVE_SYMBOLS });
     for (const id of ins.group) {
@@ -162,8 +164,10 @@ describe("dive", () => {
       expect(v.grid).toHaveLength(6);
       expect(v.grid).toContain(target);
       expect(new Set(v.grid).size).toBe(6);
-      const lookAlikes = v.grid.filter((s) => s !== target).map((s) => parseSymbol(s)!).filter((s) => s.shape === t.shape || s.color === t.color);
-      expect(lookAlikes.length).toBeGreaterThanOrEqual(4);
+      for (const s of v.grid) expect(parseGlyph(s)).not.toBeNull();
+      // Near-misses: the target with exactly one part changed.
+      const lookAlikes = v.grid.filter((s) => partsDiffering(parseGlyph(s)!, t) === 1);
+      expect(lookAlikes.length).toBeGreaterThanOrEqual(LOOKALIKES);
     }
   });
 
@@ -198,7 +202,8 @@ describe("dive", () => {
     expect(game.phase).toBe("chase");
     expect(game.level).toBe(2);
     expect(game.speed).toBe(speedFor(2));
-    expect(game.gap()).toBe(GAP_START);
+    // The fish comes back from the dive as far away as a boost can push it.
+    expect(game.gap()).toBe(GAP_MAX);
   });
 
   test("playing solo: you're your own instructor and see the target", () => {
