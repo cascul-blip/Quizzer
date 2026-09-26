@@ -87,7 +87,7 @@ export class SubGame {
   diveMeters = 0;
   boosts = 0;
   required = BOOSTS_BASE + 1;
-  lastBoost: { seq: number; nickname: string } | null = null;
+  lastBoost: { seq: number; nickname: string; avatar: AvatarChoice } | null = null;
   instructors: Instructor[] = [];
 
   private gapValue = GAP_START;
@@ -254,7 +254,7 @@ export class SubGame {
     this.boosts++;
     p.boosts++;
     p.state = "question";
-    this.lastBoost = { seq: ++this.boostSeq, nickname: p.nickname };
+    this.lastBoost = { seq: ++this.boostSeq, nickname: p.nickname, avatar: p.avatar };
     if (this.boosts >= this.required) {
       this.escaped();
     } else {

@@ -297,7 +297,7 @@ export interface HostSubState {
   maxGap: number;
   boosts: number;
   required: number;
-  lastBoost: { seq: number; nickname: string } | null;
+  lastBoost: { seq: number; nickname: string; avatar: AvatarChoice } | null;
   dive: {
     instructors: { nickname: string; index: number; total: number; found: number; groupSize: number; done: boolean }[];
   } | null;

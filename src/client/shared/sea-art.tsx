@@ -2,7 +2,10 @@
  * Submarine Squad art, drawn in SVG so it works offline and stays crisp:
  * the anglerfish, the submarine, ocean colors by depth, and the dive symbols.
  */
+import { useId } from "preact/hooks";
+import type { AvatarChoice } from "../../shared/avatars.ts";
 import { parseSymbol, SEA_COLORS, type SeaShape } from "../../shared/sea-symbols.ts";
+import { ACCESSORY_ART, AVATAR_ART } from "./avatar-art.tsx";
 
 // ---------- anglerfish ----------
 
@@ -78,8 +81,20 @@ export function Anglerfish({ openness, glow = 0.6 }: { openness: number; glow?: 
 
 // ---------- submarine ----------
 
-/** Yellow submarine facing right (viewBox 0 0 240 130). */
-export function Submarine() {
+/** Someone looking out of a porthole; `key` restarts the peek animation. */
+export interface PortholeFace {
+  key: string;
+  choice: AvatarChoice;
+}
+
+const PORTHOLES = [70, 118, 166];
+/** Porthole glass radius, and the size of an avatar looking out of it. */
+const GLASS_R = 11.5;
+const FACE = 27;
+
+/** Yellow submarine facing right (viewBox 0 0 240 130). `faces[i]` peeks out of porthole i. */
+export function Submarine({ faces = [] }: { faces?: (PortholeFace | null)[] }) {
+  const uid = useId();
   return (
     <svg class="submarine" viewBox="0 0 240 130" aria-hidden="true">
       {/* propeller */}
@@ -95,14 +110,35 @@ export function Submarine() {
       <path d="M92,42 L98,16 L150,16 L156,42 Z" fill="#ffc933" stroke="#c98a00" stroke-width="3" />
       <path d="M136,16 L136,2 L156,2" stroke="#8a8f9b" stroke-width="5" fill="none" stroke-linecap="round" />
       <rect x="152" y="-2" width="10" height="9" rx="2" fill="#8a8f9b" />
-      {/* portholes */}
-      {[70, 118, 166].map((x) => (
-        <g key={x}>
-          <circle cx={x} cy="64" r="13" fill="#c98a00" />
-          <circle cx={x} cy="64" r="9" fill="#8fd3ff" />
-          <path d={`M${x - 5},${59} q4,-3 8,0`} stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round" />
-        </g>
-      ))}
+      {/* portholes, sometimes with a player looking out */}
+      {PORTHOLES.map((x, i) => {
+        const face = faces[i];
+        const clip = `port-${uid}-${i}`;
+        const body = face ? (AVATAR_ART[face.choice.avatar] ?? AVATAR_ART.cat) : null;
+        const extra = face ? (ACCESSORY_ART[face.choice.accessory] ?? ACCESSORY_ART.none) : null;
+        return (
+          <g key={x}>
+            <clipPath id={clip}>
+              <circle cx={x} cy="64" r={GLASS_R} />
+            </clipPath>
+            <circle cx={x} cy="64" r={GLASS_R + 4} fill="#c98a00" />
+            <circle cx={x} cy="64" r={GLASS_R} fill="#8fd3ff" />
+            {face && body && extra && (
+              <g clip-path={`url(#${clip})`}>
+                <g class="peek" key={face.key}>
+                  <svg x={x - FACE / 2} y={64 - FACE * 0.56} width={FACE} height={FACE} viewBox="0 0 100 100">
+                    {body()}
+                    {extra()}
+                  </svg>
+                </g>
+              </g>
+            )}
+            {/* glass: a light tint and a shine on top, so faces look like they're behind the window */}
+            {face && <circle cx={x} cy="64" r={GLASS_R} fill="#8fd3ff" opacity="0.25" />}
+            <path d={`M${x - 6},${57} q5,-3.5 10,0`} stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round" opacity={face ? 0.7 : 1} />
+          </g>
+        );
+      })}
       {/* headlight */}
       <circle cx="216" cy="66" r="6" fill="#fffbd0" stroke="#c98a00" stroke-width="2" />
     </svg>

@@ -365,6 +365,11 @@ describe("Submarine Squad over WebSockets", () => {
     sam.send({ type: "sub.boost" });
     const boosted = await host.hostState((v) => v.kind === "sub" && v.boosts === 1);
     expect(boosted.view.kind === "sub" && boosted.view.lastBoost?.nickname).toBe("Sam");
+    // The boost carries Sam's avatar so the projector can show who boosted.
+    if (boosted.view.kind === "sub") {
+      const samAvatar = boosted.view.players.find((p) => p.nickname === "Sam")!.avatar;
+      expect(boosted.view.lastBoost?.avatar).toEqual(samAvatar);
+    }
 
     host.send({ type: "host.end" });
     await host.hostState((v) => v.kind === "sub" && v.phase === "podium");
