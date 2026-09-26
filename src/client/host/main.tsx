@@ -7,7 +7,9 @@ import { Avatar } from "../shared/avatar-art.tsx";
 import { play, unlockAudio } from "../shared/sounds.ts";
 import { connect, type ConnStatus } from "../shared/ws.ts";
 import { ConnBanner, ErrorBoundary, Shape, StreakBadge, Toast, optionColor, ordinal, useCountdown } from "../shared/ui.tsx";
+import { loadCustomMusic, useMusic } from "../shared/music/index.ts";
 import { ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
+import { musicFor } from "./music-cues.ts";
 import { FightStage } from "./fight.tsx";
 import { SubStage } from "./submarine.tsx";
 import { TowerStage } from "./tower.tsx";
@@ -35,6 +37,10 @@ function App() {
   }, []);
 
   const send: Send = (m) => conn.current?.send(m);
+
+  // Background music follows whatever screen the projector is showing.
+  useEffect(() => void loadCustomMusic(), []);
+  useMusic(musicFor(view));
 
   // Arriving from the admin page with ?quiz=… opens that quiz, unless a game is already running.
   useEffect(() => {

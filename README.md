@@ -168,6 +168,32 @@ A two-team battle: **Red** and **Blue** each defend a castle tower, with a hill 
 
 If the host ends the game early, **the least damaged tower wins**. With equal damage, the team with more correct answers wins; otherwise it's a draw. The podium shows the winning team and awards for **Top gunner** (most hits on the enemy tower), **Master builder** (most rebuilds) and **Most correct answers**. The results CSV lists each player's answers, shots, enemy hits, friendly hits and rebuilds.
 
+## Music
+
+Every game mode has **built-in background music** on the projector (phones stay quiet). It's composed in code, so it adds nothing to the download and needs no licenses:
+
+| Mode | Style | Reacts to the game |
+|---|---|---|
+| Classic | Upbeat game show | Questions get faster and more intense as the timer runs out |
+| Tallest Tower | Retro arcade (chiptune) | Builds up as the game clock runs down |
+| Submarine Squad | Deep-sea suspense | Speeds up and adds layers as the anglerfish closes in; a calmer theme while diving |
+| Tower Fight | Medieval battle | Gets more intense as the towers take damage |
+
+The lobby plays the music of whichever game mode is selected. Use the **🎵 button and slider** in the projector's top bar to turn music off or change its volume. The 🔊 button still mutes everything.
+
+### Using your own music
+
+Put audio files (MP3, OGG, M4A, WAV, WebM or FLAC) in the **`data/music`** folder next to the program, named after the track they replace. A file replaces the built-in track the next time the host screen loads, with no restart needed. The admin page lists every track and shows which ones use your files.
+
+| File name | Plays during |
+|---|---|
+| `classic-lobby` · `classic-question` · `classic-leaderboard` · `classic-results` | Classic: lobby, questions, answer reveal and leaderboard, final podium |
+| `tower-lobby` · `tower-play` · `tower-results` | Tallest Tower |
+| `submarine-lobby` · `submarine-chase` · `submarine-dive` · `submarine-results` | Submarine Squad |
+| `fight-lobby` · `fight-play` · `fight-results` | Tower Fight |
+
+For example, `data/music/submarine-chase.mp3`. Your files loop; they don't speed up with the game like the built-in music does. Only use music you're allowed to play: royalty-free or Creative Commons tracks (e.g. Pixabay Music, OpenGameArt, or incompetech with credit). Delete a file to go back to the built-in track.
+
 ## AI agents (MCP)
 
 The admin page shows ready-to-copy commands that include the correct paths for your machine. Examples:

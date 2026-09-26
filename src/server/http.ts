@@ -3,6 +3,7 @@ import type { Server } from "bun";
 import adminPage from "../client/admin/index.html";
 import hostPage from "../client/host/index.html";
 import playerPage from "../client/player/index.html";
+import { MUSIC_EXTENSIONS } from "../shared/music-tracks.ts";
 import { ValidationError } from "../shared/quiz-schema.ts";
 import type { Clock } from "./game/game.ts";
 import { handleMcpRequest } from "./mcp/http.ts";
@@ -76,10 +77,16 @@ export function startServer(opts: ServerOptions): RunningServer {
       return json({ ref }, 201);
     }
 
+    if (path === "/api/music" && method === "GET") {
+      const files = Object.fromEntries(Object.entries(store.musicFiles()).map(([id, name]) => [id, `/music/${encodeURIComponent(name)}`]));
+      return json({ dir: store.musicDir, files });
+    }
+
     if (path === "/api/info" && method === "GET") {
       return json({
         version,
         dataDir: store.dataDir,
+        musicDir: store.musicDir,
         port: server.port,
         joinUrl: hub.joinUrl(),
         mcp: { httpUrl: `http://localhost:${server.port}/mcp`, stdioCommand: [process.execPath, ...(isCompiled() ? [] : [Bun.main]), "mcp", "--data-dir", store.dataDir] },
@@ -117,6 +124,14 @@ export function startServer(opts: ServerOptions): RunningServer {
       if (path === "/ws") {
         if (srv.upgrade(req, { data: { admin, role: "player", playerId: null } })) return undefined;
         return new Response("Expected a WebSocket upgrade", { status: 426 });
+      }
+
+      if (path.startsWith("/music/")) {
+        const name = decodeURIComponent(path.slice("/music/".length));
+        const file = store.musicFile(name);
+        if (!file) return new Response("Not found", { status: 404 });
+        const ext = name.slice(name.lastIndexOf(".") + 1).toLowerCase();
+        return new Response(Bun.file(file), { headers: { "content-type": MUSIC_EXTENSIONS[ext] ?? "application/octet-stream", "cache-control": "no-cache" } });
       }
 
       if (path.startsWith("/media/")) {

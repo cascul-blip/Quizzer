@@ -2210,3 +2210,28 @@ select {
   background: #fff;
   border-radius: 50%;
 }
+
+/* ----- music controls (top bar) ----- */
+
+.music-ctl {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding-right: 8px;
+}
+
+.music-ctl input[type="range"] {
+  width: 84px;
+  accent-color: var(--accent);
+}
+
+.music-ctl.off .icon-btn {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+
+.music-ctl.off input[type="range"] {
+  opacity: 0.35;
+}

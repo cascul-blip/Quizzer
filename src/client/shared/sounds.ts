@@ -18,11 +18,24 @@ export function isMuted(): boolean {
 
 export function setMuted(value: boolean): void {
   muted = value;
+  for (const fn of muteListeners) fn();
   try {
     localStorage.setItem(MUTE_KEY, value ? "1" : "0");
   } catch {
     // storage unavailable: setting just won't persist
   }
+}
+
+/** The shared AudioContext (null until unlockAudio has run from a user gesture). */
+export function getAudioContext(): AudioContext | null {
+  return ctx;
+}
+
+const muteListeners = new Set<() => void>();
+/** Called whenever sounds are muted or unmuted (music follows the mute button). */
+export function onMuteChange(fn: () => void): () => void {
+  muteListeners.add(fn);
+  return () => muteListeners.delete(fn);
 }
 
 /** Browsers only allow audio after a user gesture; call this from click/key handlers. */

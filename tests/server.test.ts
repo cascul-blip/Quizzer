@@ -116,6 +116,22 @@ describe("REST API", () => {
     expect((await fetch(`${base}/media/..%2f..%2fetc%2fpasswd`)).status).toBe(404);
   });
 
+  test("custom music: listed by track id, served with the right type, nothing else", async () => {
+    const { writeFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    writeFileSync(join(store.musicDir, "submarine-chase.mp3"), new Uint8Array([0x49, 0x44, 0x33, 1, 2, 3]));
+    writeFileSync(join(store.musicDir, "notes.txt"), "ignore me");
+    writeFileSync(join(store.musicDir, "unknown-song.mp3"), "x");
+    const list = await (await fetch(`${base}/api/music`)).json();
+    expect(list.files).toEqual({ "submarine-chase": "/music/submarine-chase.mp3" });
+    const file = await fetch(`${base}/music/submarine-chase.mp3`);
+    expect(file.status).toBe(200);
+    expect(file.headers.get("content-type")).toBe("audio/mpeg");
+    expect((await fetch(`${base}/music/notes.txt`)).status).toBe(404);
+    expect((await fetch(`${base}/music/unknown-song.mp3`)).status).toBe(404);
+    expect((await fetch(`${base}/music/..%2Fquizzes%2Fx.json`)).status).toBe(404);
+  });
+
   test("admin guard rejects cross-site requests", async () => {
     const r = await fetch(`${base}/api/quizzes`, { method: "POST", headers: { origin: "http://evil.example" }, body: "{}" });
     expect(r.status).toBe(403);
