@@ -401,3 +401,171 @@ a.btn {
   display: block;
   overflow: visible;
 }
+
+/* ----- Tower Fight battlefield (shared by projector and phones) ----- */
+
+.battlefield {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.bf-cloud {
+  animation: bf-drift 40s linear infinite alternate;
+}
+
+.bf-cloud.c1,
+.bf-cloud.c3 {
+  animation-duration: 55s;
+  animation-direction: alternate-reverse;
+}
+
+@keyframes bf-drift {
+  from {
+    translate: -40px 0;
+  }
+  to {
+    translate: 40px 0;
+  }
+}
+
+.castle-flag .flag-cloth {
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: flag-wave 1.6s ease-in-out infinite alternate;
+}
+
+.castle-fire path {
+  transform-box: fill-box;
+  transform-origin: bottom center;
+  animation: fire-flicker 0.35s ease-in-out infinite alternate;
+}
+
+@keyframes fire-flicker {
+  from {
+    transform: scale(1, 1);
+  }
+  to {
+    transform: scale(0.85, 1.15);
+  }
+}
+
+.smoke circle {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: smoke-rise 1.8s ease-out infinite both;
+}
+
+@keyframes smoke-rise {
+  0% {
+    transform: translateY(0) scale(0.5);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateY(-70px) scale(1.8);
+    opacity: 0;
+  }
+}
+
+.castle.collapsing .castle-body {
+  transform-box: fill-box;
+  transform-origin: bottom center;
+  animation: castle-fall 2.4s cubic-bezier(0.5, 0, 0.9, 0.5) both;
+}
+
+.castle.collapsing .rubble {
+  animation: rubble-in 0.6s ease-out 1.9s both;
+}
+
+@keyframes castle-fall {
+  0% {
+    transform: none;
+  }
+  15% {
+    transform: translateX(-4px) rotate(-1deg);
+  }
+  30% {
+    transform: translateX(4px) rotate(1deg);
+  }
+  100% {
+    transform: translateY(40%) rotate(14deg) scaleY(0.2);
+    opacity: 0;
+  }
+}
+
+@keyframes rubble-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.burst circle {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: burst 0.9s ease-out both;
+}
+
+@keyframes burst {
+  from {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: translate(var(--dx), var(--dy)) scale(0.2);
+    opacity: 0;
+  }
+}
+
+.burst-text {
+  font-size: 48px;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pop-in 0.3s ease-out both;
+}
+
+.health {
+  display: inline-flex;
+  gap: 3px;
+  vertical-align: middle;
+}
+
+.health i {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.health i.full {
+  background: var(--team);
+  border-color: #fff;
+}
+
+.scaffold {
+  animation: rubble-in 0.4s ease-out both;
+}
+
+.scaffold-hammer {
+  font-size: 40px;
+  transform-box: fill-box;
+  transform-origin: bottom right;
+  animation: hammer 0.45s ease-in-out infinite alternate;
+}
+
+@keyframes hammer {
+  from {
+    transform: rotate(-30deg);
+  }
+  to {
+    transform: rotate(20deg);
+  }
+}

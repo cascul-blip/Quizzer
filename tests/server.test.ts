@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { INTRO_MS } from "../src/server/game/game.ts";
 import { COUNTDOWN_MS, DROP_COOLDOWN_MS, FEEDBACK_MS } from "../src/server/game/tower.ts";
+import { COUNTDOWN_MS as FIGHT_COUNTDOWN_MS, RESULT_MS } from "../src/server/game/fight.ts";
 import { BOOST_MIN_HOLD_MS, COUNTDOWN_MS as SUB_COUNTDOWN_MS } from "../src/server/game/submarine.ts";
 import { startServer, type RunningServer } from "../src/server/http.ts";
 import { isAdminRequest } from "../src/server/network.ts";
@@ -370,6 +371,80 @@ describe("Submarine Squad over WebSockets", () => {
     const csv = await (await fetch(`${base}/api/results/latest.csv`)).text();
     expect(csv).toContain("Nickname,Correct,Wrong,Boosts");
     expect(csv).toContain("Sam,4,0,1,");
+    host.send({ type: "host.close" });
+    [host, ...players].forEach((s) => s.close());
+  });
+});
+
+describe("Tower Fight over WebSockets", () => {
+  test("lobby → Red vs Blue → earn a move → fire → host sees the shot land → end → results", async () => {
+    const quiz = store.create({
+      title: "Fight E2E",
+      questions: [1, 2].map((n) => ({ type: "multiple_choice", text: `Q${n}`, options: ["right", "wrong"], correct: [0] })),
+    });
+    const wsUrl = `ws://localhost:${srv.port}/ws`;
+    const host = await TestSocket.open(wsUrl);
+    host.send({ type: "host.hello" });
+    await host.hostState((v) => v.kind === "idle");
+    host.send({ type: "host.open", quizId: quiz.id });
+    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
+    host.send({ type: "host.setMode", mode: "fight" });
+    host.send({ type: "host.setFight", hill: "low" });
+    await host.hostState((v) => v.kind === "classic" && v.mode === "fight" && v.fight.hill === "low");
+
+    const names = ["Red1", "Blue1"];
+    const players = await Promise.all(names.map(() => TestSocket.open(wsUrl)));
+    for (const [i, p] of players.entries()) {
+      await p.playerState((v) => v.kind === "none" && !!v.game);
+      p.send({ type: "join", nickname: names[i]! });
+      await p.waitFor((m) => m.type === "joined");
+    }
+    const lobby = await host.hostState((v) => v.kind === "classic" && !!v.teams && v.players.length === 2);
+    expect(lobby.view.kind === "classic" && lobby.view.teams!.map((t) => t.name)).toEqual(["Red", "Blue"]);
+
+    host.send({ type: "host.start", pacing: "manual" });
+    await host.hostState((v) => v.kind === "fight" && v.phase === "countdown" && v.hill === "low");
+    clock.advance(FIGHT_COUNTDOWN_MS);
+    srv.hub.broadcast();
+
+    const red = players[0]!;
+    for (let i = 0; i < 4; i++) {
+      const st = await red.playerState((v) => v.kind === "fight" && v.phase === "playing" && !!v.question && !v.feedback);
+      const q = st.view.kind === "fight" ? st.view.question! : null;
+      red.send({ type: "fight.answer", seq: q!.seq, option: 0 });
+      await red.playerState((v) => v.kind === "fight" && v.feedback?.seq === q!.seq);
+      clock.advance(FEEDBACK_MS);
+      srv.hub.broadcast();
+    }
+    // Undamaged tower: straight to aiming.
+    const aiming = await red.playerState((v) => v.kind === "fight" && v.state === "aim");
+    expect(aiming.view.kind === "fight" && aiming.view.decisionMs).toBe(0);
+
+    // A hard throw backwards: friendly fire on Red's own tower.
+    red.send({ type: "fight.fire", dx: 170, dy: -20 });
+    const watching = await red.playerState((v) => v.kind === "fight" && v.state === "watch" && !!v.shot);
+    const shot = watching.view.kind === "fight" ? watching.view.shot! : null;
+    expect(shot!.impact).toMatchObject({ kind: "tower", team: 0 });
+    await host.hostState((v) => v.kind === "fight" && v.shots.some((s) => s.id === shot!.id));
+    clock.advance(shot!.durationMs);
+    const hit = await host.hostState((v) => v.kind === "fight" && v.teams[0]!.damage === 1);
+    expect(hit.view.kind === "fight" && hit.view.events.at(-1)).toMatchObject({ kind: "friendly", nickname: "Red1" });
+    clock.advance(RESULT_MS);
+    srv.hub.broadcast();
+    await red.playerState((v) => v.kind === "fight" && v.state === "question");
+
+    host.send({ type: "host.end" });
+    const podium = await host.hostState((v) => v.kind === "fight" && v.phase === "podium");
+    expect(podium.view.kind === "fight" && podium.view.outcome).toEqual({ winner: 1, reason: "damage" });
+    const blueEnd = await players[1]!.playerState((v) => v.kind === "fight" && v.phase === "podium");
+    expect(blueEnd.view.kind === "fight" && blueEnd.view.result?.outcome.winner).toBe(1);
+    const csv = await (await fetch(`${base}/api/results/latest.csv`)).text();
+    expect(csv).toContain("Blue,Won,0,Blue1,");
+    expect(csv).toContain("Red,Lost,1,Red1,4,0,100,1,0,1,0");
+
+    // Play again keeps Tower Fight and the hill.
+    host.send({ type: "host.open", quizId: quiz.id });
+    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "fight" && v.fight.hill === "low");
     host.send({ type: "host.close" });
     [host, ...players].forEach((s) => s.close());
   });

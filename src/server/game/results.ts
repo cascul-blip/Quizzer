@@ -1,5 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
+import type { FightGame } from "./fight.ts";
 import type { Game } from "./game.ts";
 import type { SubGame } from "./submarine.ts";
 import type { TowerGame } from "./tower.ts";
@@ -55,6 +56,23 @@ export function buildSubResultsCsv(game: SubGame): string {
   const rows: (string | number)[][] = [...game.players.values()]
     .sort((a, b) => b.boosts - a.boosts || b.correct - a.correct)
     .map((p) => [p.nickname, p.correct, p.wrong, p.boosts, p.diveHits, p.instructorRounds, game.depth, game.level]);
+  return toCsv([header, ...rows]);
+}
+
+/** Tower Fight: one row per player, winning team first. */
+export function buildFightResultsCsv(game: FightGame): string {
+  const outcome = game.outcome ?? game.judge();
+  const header = ["Team", "Result", "Tower damage", "Nickname", "Correct", "Wrong", "Accuracy %", "Shots", "Enemy hits", "Friendly hits", "Rebuilds"];
+  const order = [...game.teams].sort((a, b) => Number(b.index === outcome.winner) - Number(a.index === outcome.winner) || a.index - b.index);
+  const rows: (string | number)[][] = [];
+  for (const t of order) {
+    const result = outcome.winner === null ? "Draw" : t.index === outcome.winner ? "Won" : "Lost";
+    const members = [...game.players.values()].filter((p) => p.team === t.index).sort((a, b) => b.hits - a.hits || b.correct - a.correct);
+    for (const p of members) {
+      const answered = p.correct + p.wrong;
+      rows.push([t.name, result, t.damage, p.nickname, p.correct, p.wrong, answered ? Math.round((p.correct / answered) * 100) : "", p.shots, p.hits, p.friendlyHits, p.rebuilds]);
+    }
+  }
   return toCsv([header, ...rows]);
 }
 
