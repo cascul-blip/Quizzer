@@ -58,6 +58,9 @@ describe("question flow", () => {
     expect(a.score).toBe(950);
     expect(b.score).toBe(0);
     expect(game.hostView().answerCounts).toEqual([1, 1, 0, 0]);
+    // Avatars per option, fastest first; hidden until the reveal (checked in "views" below).
+    expect(game.hostView().answerAvatars).toEqual([[b.avatar], [a.avatar], [], []]);
+    expect(game.leaderboard().map((e) => e.avatar)).toEqual([a.avatar, b.avatar]);
     expect(game.hostView().correct).toEqual([1]);
   });
 
@@ -210,6 +213,7 @@ describe("views", () => {
     v = game.playerView(a.id);
     expect(JSON.stringify(v)).not.toContain('"correct"');
     expect(JSON.stringify(game.hostView().correct)).toBe("null");
+    expect(game.hostView().answerAvatars).toBeNull();
     game.answer(a.id, 0, 2);
     v = game.playerView(a.id);
     expect(v.kind === "player" && v.myChoice).toBe(2);
@@ -314,4 +318,20 @@ describe("streaks", () => {
     expect(aStreaks).toEqual([1, 2, 3, 4, 0, 1]);
     expect(bStreaks).toEqual([1, 0, 1, 2, 3, 4]);
   });
+});
+
+test("answer avatars list pickers in answer order and match the counts", () => {
+  const clock = new FakeClock();
+  const game = new Game(sampleQuiz(), { clock });
+  const ps = ["P1", "P2", "P3", "P4"].map((n) => game.join(n));
+  game.start();
+  clock.advance(INTRO_MS);
+  // P3 fastest, then P1, then P4 — all on option 1; P2 on option 0.
+  for (const [p, opt] of [[ps[2]!, 1], [ps[0]!, 1], [ps[1]!, 0], [ps[3]!, 1]] as const) {
+    clock.advance(500);
+    game.answer(p.id, 0, opt);
+  }
+  const v = game.hostView();
+  expect(v.answerAvatars![1]).toEqual([ps[2]!.avatar, ps[0]!.avatar, ps[3]!.avatar]);
+  expect(v.answerAvatars!.map((x) => x.length)).toEqual(v.answerCounts!);
 });

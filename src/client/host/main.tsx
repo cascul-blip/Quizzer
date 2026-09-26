@@ -1,6 +1,7 @@
 import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { HILL_SETTINGS, MAX_TEAMS, TOWER_MINUTES, type GameMode, type HillSetting, type HostPlayer, type HostView, type Pacing, type ServerMsg } from "../../shared/protocol.ts";
+import type { AvatarChoice } from "../../shared/avatars.ts";
 import type { QuizSummary } from "../../shared/quiz-schema.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { play, unlockAudio } from "../shared/sounds.ts";
@@ -470,11 +471,12 @@ function QuestionScreen({ view, send }: { view: GameView; send: Send }) {
                 const c = optionColor(q.type, i);
                 return (
                   <div class="bar-col" key={i}>
+                    <PickerAvatars avatars={view.answerAvatars?.[i] ?? []} dim={!correct.has(i)} />
                     <div class="bar-count">
                       {correct.has(i) && "✓ "}
                       {counts[i] ?? 0}
                     </div>
-                    <div class={`bar opt-${c} ${correct.has(i) ? "" : "dim"}`} style={{ height: `${8 + ((counts[i] ?? 0) / maxCount) * 92}%` }} />
+                    <div class={`bar opt-${c} ${correct.has(i) ? "" : "dim"}`} style={{ height: `${6 + ((counts[i] ?? 0) / maxCount) * 50}%` }} />
                     <div class={`bar-base opt-${c}`}>
                       <Shape index={c} />
                     </div>
@@ -538,6 +540,7 @@ function Leaderboard({ view, send }: { view: GameView; send: Send }) {
         {top.map((p, i) => (
           <li key={p.id} class="lb-row" style={{ animationDelay: `${i * 80}ms` }}>
             <span class="lb-rank">{p.rank}</span>
+            <Avatar choice={p.avatar} class="lb-avatar" />
             <span class="lb-name">
               {p.nickname}
               <StreakBadge streak={p.streak} />
@@ -551,6 +554,24 @@ function Leaderboard({ view, send }: { view: GameView; send: Send }) {
         <NextButton view={view} send={send} label="Next question" />
       </footer>
     </main>
+  );
+}
+
+/** Avatars shown above each answer's bar (no names), in answer order; shrink as they crowd, overflow as "+N". */
+const MAX_PICKER_AVATARS = 24;
+
+function PickerAvatars({ avatars, dim }: { avatars: AvatarChoice[]; dim: boolean }) {
+  if (avatars.length === 0) return <div class="pickers" />;
+  const shown = avatars.slice(0, MAX_PICKER_AVATARS);
+  const extra = avatars.length - shown.length;
+  const size = avatars.length <= 4 ? "lg" : avatars.length <= 10 ? "md" : "sm";
+  return (
+    <div class={`pickers ${size} ${dim ? "dim" : ""}`}>
+      {shown.map((a, k) => (
+        <Avatar key={k} choice={a} class="picker" />
+      ))}
+      {extra > 0 && <span class="picker-more">+{extra}</span>}
+    </div>
   );
 }
 
@@ -569,6 +590,9 @@ function Podium({ view, send }: { view: GameView; send: Send }) {
         {places.map(({ entry, cls }) =>
           entry ? (
             <div key={cls} class={`place ${cls}`}>
+              <div class="place-avatar">
+                <Avatar choice={entry.avatar} title={entry.nickname} />
+              </div>
               <div class="place-name">
                 {entry.nickname}
                 <StreakBadge streak={entry.streak} />
@@ -585,8 +609,8 @@ function Podium({ view, send }: { view: GameView; send: Send }) {
         <ol class="rest" start={4}>
           {lb.slice(3).map((p) => (
             <li key={p.id}>
-              <span>
-                {ordinal(p.rank)} {p.nickname}
+              <span class="rest-who">
+                {ordinal(p.rank)} <Avatar choice={p.avatar} class="rest-avatar" /> {p.nickname}
                 <StreakBadge streak={p.streak} />
               </span>
               <span>{p.score.toLocaleString()}</span>

@@ -130,6 +130,7 @@ export interface QuestionView {
 export interface RankedEntry {
   id: string;
   nickname: string;
+  avatar: AvatarChoice;
   score: number;
   rank: number;
   /** Points gained on the most recent question. */
@@ -234,6 +235,8 @@ export interface HostGameState {
   correct: number[] | null;
   answeredCount: number;
   answerCounts: number[] | null;
+  /** Revealed only: per option, the avatars of the players who picked it, fastest first. */
+  answerAvatars: AvatarChoice[][] | null;
   leaderboard: RankedEntry[];
   hasResults: boolean;
 }

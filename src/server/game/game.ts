@@ -352,10 +352,19 @@ export class Game {
     return rankScores([...this.players.values()]);
   }
 
+  /** Per option, who picked it on the current question (fastest first). */
+  private answerAvatars(optionCount: number): HostGameState["answerAvatars"] {
+    const picks = [...this.players.values()]
+      .map((p) => ({ p, a: p.answers[this.qIndex] }))
+      .filter((x): x is { p: Player; a: Answer } => !!x.a)
+      .sort((x, y) => x.a.ms - y.a.ms);
+    return Array.from({ length: optionCount }, (_, i) => picks.filter((x) => x.a.option === i).map((x) => x.p.avatar));
+  }
+
   leaderboard(limit = LEADERBOARD_SIZE): RankedEntry[] {
     return this.ranked()
       .slice(0, limit)
-      .map((p) => ({ id: p.id, nickname: p.nickname, score: p.score, rank: p.rank, delta: p.lastDelta, streak: p.streak }));
+      .map((p) => ({ id: p.id, nickname: p.nickname, avatar: p.avatar, score: p.score, rank: p.rank, delta: p.lastDelta, streak: p.streak }));
   }
 
   private questionView(): QuestionView | null {
@@ -405,6 +414,7 @@ export class Game {
       correct: this.revealed && q ? q.correct : null,
       answeredCount: this.phase === "lobby" ? 0 : answered.length,
       answerCounts: this.revealed && q ? q.options.map((_, i) => answered.filter((a) => a.option === i).length) : null,
+      answerAvatars: this.revealed && q ? this.answerAvatars(q.options.length) : null,
       leaderboard: this.phase === "lobby" ? [] : this.leaderboard(),
       hasResults: this.phase === "podium",
     };
