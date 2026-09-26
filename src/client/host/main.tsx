@@ -1,12 +1,13 @@
 import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
-import { MAX_TEAMS, TOWER_MINUTES, type GameMode, type HostPlayer, type HostView, type Pacing, type ServerMsg } from "../../shared/protocol.ts";
+import { HILL_SETTINGS, MAX_TEAMS, TOWER_MINUTES, type GameMode, type HillSetting, type HostPlayer, type HostView, type Pacing, type ServerMsg } from "../../shared/protocol.ts";
 import type { QuizSummary } from "../../shared/quiz-schema.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { play, unlockAudio } from "../shared/sounds.ts";
 import { connect, type ConnStatus } from "../shared/ws.ts";
 import { ConnBanner, ErrorBoundary, Shape, StreakBadge, Toast, optionColor, ordinal, useCountdown } from "../shared/ui.tsx";
 import { ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
+import { FightStage } from "./fight.tsx";
 import { SubStage } from "./submarine.tsx";
 import { TowerStage } from "./tower.tsx";
 
@@ -73,6 +74,8 @@ function App() {
     body = <TowerStage view={view} send={send} />;
   } else if (view.kind === "sub") {
     body = <SubStage view={view} send={send} />;
+  } else if (view.kind === "fight") {
+    body = <FightStage view={view} send={send} />;
   } else {
     body = <Game view={view} send={send} />;
   }
@@ -239,6 +242,8 @@ function PhaseView({ view, send }: { view: GameView; send: Send }) {
   }
 }
 
+const HILL_LABELS: Record<HillSetting, string> = { random: "🎲 Random", low: "Low", medium: "Medium", high: "High" };
+
 function PlayerChip({ p, send }: { p: HostPlayer; send: Send }) {
   return (
     <button
@@ -302,6 +307,7 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
               <option value="classic">Classic</option>
               <option value="tower">🏗 Tallest Tower</option>
               <option value="submarine">🐟 Submarine Squad</option>
+              <option value="fight">🏰 Tower Fight</option>
             </select>
           </label>
           {tower ? (
@@ -335,6 +341,20 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
                 />
                 👾 Monster{view.tower.teams < 2 ? " (needs 2+ teams)" : ""}
               </label>
+            </>
+          ) : view.mode === "fight" ? (
+            <>
+              <label class="opt">
+                Hill
+                <select value={view.fight.hill} onChange={(e) => send({ type: "host.setFight", hill: e.currentTarget.value as HillSetting })}>
+                  {HILL_SETTINGS.map((h) => (
+                    <option key={h} value={h}>
+                      {HILL_LABELS[h]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <span class="opt mode-hint">Red vs Blue: knock down the other team's tower. The game runs until a tower falls or you end it.</span>
             </>
           ) : view.mode === "submarine" ? (
             <span class="opt mode-hint">Everyone works together to outrun the anglerfish. The game ends when it catches you.</span>
@@ -395,7 +415,7 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
           </ul>
         )}
         <p class="hint">
-          {view.quiz.questionCount} questions · {tower ? "teams are filled in join order · " : ""}click a name to remove a player · Space to start
+          {view.quiz.questionCount} questions · {view.teams ? "teams are filled in join order · " : ""}click a name to remove a player · Space to start
         </p>
       </section>
     </main>

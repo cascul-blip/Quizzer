@@ -154,6 +154,20 @@ A cooperative mode based on Kahoot's Submarine Squad. The whole class is one squ
 
 Each level is worth 100 m. **Deeper levels have a faster fish.** The podium shows the final depth and awards for **Top booster**, **Sharpest eyes** (most symbols found) and **Most correct answers**. The results CSV lists each player's answers, boosts, dive taps and instructor rounds.
 
+## Tower Fight mode
+
+A two-team battle: **Red** and **Blue** each defend a castle tower, with a hill between them. Choose **Game mode → 🏰 Tower Fight** in the lobby, and pick a **Hill** height: Low, Medium, High or 🎲 Random (the default). Players are split into the two teams by join order, and late joiners go to the smaller team. There's no timer: **the game runs until a tower falls** or the host clicks **End game**.
+
+- Everyone answers questions on their phone at their own pace, with the correct answer shown after a wrong one. Questions repeat until the game ends.
+- Every 4 correct answers gives that player a move. They have **10 seconds** to choose Attack or Rebuild, or the move is lost:
+  - **💥 Attack.** The player's avatar sits in their team's catapult, and there's no time limit for aiming. They press anywhere, **pull back like a slingshot** (away from the target) and let go. A longer pull throws harder. A short dotted arc shows the direction, but not where the shot lands.
+  - **🧱 Rebuild.** Repairs 1 damage on their own tower, but it takes **4 seconds**: the phone fills up with bricks as a progress bar (and the projector shows scaffolding on the tower). The tower is repaired when the wall is full, then the player goes back to questions. If teammates have already fixed the tower by then, the repair is wasted. Rebuild is only offered when the tower is damaged; otherwise the player goes straight to the catapult.
+- The avatar flies across the projector screen and lands on a tower, on the ground, or off the map. The hill always blocks flat shots, so players have to lob over it.
+- **Every tower hit does 1 damage**, including hits on your own tower (friendly fire). The tower looks worse with each hit, and **the 5th hit brings it down**. The other team wins.
+- Shots that land on the ground **knock craters into the terrain**. Enough of them can flatten the hill completely.
+
+If the host ends the game early, **the least damaged tower wins**. With equal damage, the team with more correct answers wins; otherwise it's a draw. The podium shows the winning team and awards for **Top gunner** (most hits on the enemy tower), **Master builder** (most rebuilds) and **Most correct answers**. The results CSV lists each player's answers, shots, enemy hits, friendly hits and rebuilds.
+
 ## AI agents (MCP)
 
 The admin page shows ready-to-copy commands that include the correct paths for your machine. Examples:

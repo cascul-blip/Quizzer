@@ -1,4 +1,5 @@
 import type { AvatarChoice } from "./avatars.ts";
+import type { HillHeight, ShotImpact } from "./fight-physics.ts";
 import type { QuestionType } from "./quiz-schema.ts";
 
 export type Phase = "lobby" | "intro" | "open" | "reveal" | "leaderboard" | "podium";
@@ -14,7 +15,7 @@ export interface ShuffleOptions {
 
 // ---------- Tallest Tower ----------
 
-export type GameMode = "classic" | "tower" | "submarine";
+export type GameMode = "classic" | "tower" | "submarine" | "fight";
 export type TowerPhase = "countdown" | "playing" | "podium";
 
 export const TEAMS = [
@@ -87,7 +88,11 @@ export type PlayerMsg =
   | { type: "tower.drop"; zone: number }
   | { type: "sub.answer"; seq: number; option: number }
   | { type: "sub.boost" }
-  | { type: "sub.tap"; symbol: string };
+  | { type: "sub.tap"; symbol: string }
+  | { type: "fight.answer"; seq: number; option: number }
+  | { type: "fight.choose"; action: "attack" | "rebuild" }
+  /** The slingshot pull in field units (y up); the shot flies the opposite way. */
+  | { type: "fight.fire"; dx: number; dy: number };
 
 export type HostMsg =
   | { type: "host.hello" }
@@ -97,6 +102,7 @@ export type HostMsg =
   | { type: "host.setShuffle"; questions: boolean; answers: boolean }
   | { type: "host.setMode"; mode: GameMode }
   | { type: "host.setTower"; teams: number; minutes: number; monster?: boolean }
+  | { type: "host.setFight"; hill: HillSetting }
   | { type: "host.next" }
   | { type: "host.skip" }
   | { type: "host.kick"; playerId: string }
@@ -141,7 +147,7 @@ export interface PlayerResult {
 
 export type PlayerView =
   | { kind: "none"; game: null }
-  | { kind: "none"; game: { title: string; phase: Phase | TowerPhase | SubPhase } }
+  | { kind: "none"; game: { title: string; phase: Phase | TowerPhase | SubPhase | FightPhase } }
   | {
       kind: "player";
       phase: Phase;
@@ -153,11 +159,12 @@ export type PlayerView =
       myChoice: number | null;
       result: PlayerResult | null;
       podium: RankedEntry[] | null;
-      /** In the lobby with Tallest Tower selected: the team this player will be on. */
+      /** In the lobby with a team mode selected: the team this player will be on. */
       team: TeamInfo | null;
     }
   | PlayerTowerView
-  | PlayerSubView;
+  | PlayerSubView
+  | PlayerFightView;
 
 export interface TowerAwards {
   mostCorrect: { value: number; nicknames: string[] } | null;
@@ -214,7 +221,8 @@ export interface HostGameState {
   /** Lobby choice; "tower" hands the players over to a Tallest Tower game on start. */
   mode: GameMode;
   tower: TowerSettings;
-  /** Team preview while the lobby is in Tallest Tower mode. */
+  fight: FightSettings;
+  /** Team preview while the lobby is in a team mode (Tallest Tower, Tower Fight). */
   teams: (TeamInfo & { members: HostPlayer[] })[] | null;
   quiz: { id: string; title: string; questionCount: number };
   pacing: Pacing;
@@ -320,11 +328,118 @@ export interface PlayerSubView {
   result: { depth: number; level: number; awards: string[] } | null;
 }
 
+// ---------- Tower Fight ----------
+
+export type FightPhase = "countdown" | "playing" | "collapse" | "podium";
+export type HillSetting = HillHeight | "random";
+export const HILL_SETTINGS: readonly HillSetting[] = ["random", "low", "medium", "high"];
+/** Correct answers needed to earn one attack-or-rebuild decision. */
+export const CORRECT_PER_DECISION = 4;
+/** Hits a tower can take; the last one brings it down. */
+export const TOWER_MAX_DAMAGE = 5;
+/** Time to choose attack or rebuild before the move is forfeited (aiming has no time limit). */
+export const DECISION_MS = 10_000;
+/** How long a rebuild takes; the tower is repaired when it finishes. */
+export const REPAIR_MS = 4000;
+
+export interface FightSettings {
+  hill: HillSetting;
+}
+
+export type FightState = "question" | "decide" | "aim" | "watch" | "repair";
+
+export interface FightShot {
+  id: number;
+  playerId: string;
+  nickname: string;
+  avatar: AvatarChoice;
+  team: number;
+  vx: number;
+  vy: number;
+  durationMs: number;
+  /** How long ago it was fired when this was sent (clients add it to their own clock). */
+  elapsedMs: number;
+  impact: ShotImpact;
+}
+
+export interface FightEvent {
+  seq: number;
+  kind: "hit" | "friendly" | "miss" | "rebuild";
+  nickname: string;
+  team: number;
+}
+
+export interface FightAwards {
+  topGunner: SubAward | null;
+  masterBuilder: SubAward | null;
+  mostCorrect: SubAward | null;
+}
+
+export interface FightOutcome {
+  /** Winning team, or null for a draw. */
+  winner: number | null;
+  reason: "destroyed" | "damage" | "correct" | "draw";
+}
+
+export interface HostFightTeam extends TeamInfo {
+  damage: number;
+  /** Someone on the team is repairing the tower right now. */
+  repairing: boolean;
+  correct: number;
+  members: { id: string; nickname: string; avatar: AvatarChoice; connected: boolean; state: FightState; hits: number; rebuilds: number }[];
+}
+
+export interface HostFightState {
+  kind: "fight";
+  phase: FightPhase;
+  quiz: { id: string; title: string; questionCount: number };
+  phaseRemainingMs: number;
+  hill: HillHeight;
+  terrain: number[];
+  teams: HostFightTeam[];
+  /** Shots still flying, or landed moments ago. */
+  shots: FightShot[];
+  /** Newest last. */
+  events: FightEvent[];
+  outcome: FightOutcome | null;
+  playerCount: number;
+  awards: FightAwards | null;
+  hasResults: boolean;
+}
+
+export interface PlayerFightView {
+  kind: "fight";
+  phase: FightPhase;
+  title: string;
+  phaseRemainingMs: number;
+  me: { id: string; nickname: string; avatar: AvatarChoice; correct: number; hits: number; rebuilds: number };
+  team: TeamInfo;
+  teams: TeamInfo[];
+  state: FightState;
+  /** Correct answers toward the next decision (0 … CORRECT_PER_DECISION-1). */
+  towardDecision: number;
+  /** Time left to choose attack or rebuild (decide state). */
+  decisionMs: number;
+  /** Time left on this player's repair (repair state). */
+  repairMs: number;
+  /** This player's most recently finished repair; repaired is false if teammates had already fixed the tower. */
+  lastRepair: { seq: number; repaired: boolean } | null;
+  question: { seq: number; type: QuestionType; text: string; image?: string; options: string[] } | null;
+  feedback: { seq: number; correct: boolean; remainingMs: number; answers: string[] } | null;
+  /** Damage per team. */
+  damage: number[];
+  terrain: number[];
+  /** This player's shot while watching it fly. */
+  shot: FightShot | null;
+  result: { outcome: FightOutcome; awards: string[] } | null;
+}
+
 export type HostView =
   | { kind: "idle"; phase: "idle"; join: JoinInfo }
   | (HostGameState & { join: JoinInfo })
   | (HostTowerState & { join: JoinInfo })
-  | (HostSubState & { join: JoinInfo });
+  | (HostSubState & { join: JoinInfo })
+  | (HostFightState & { join: JoinInfo });
 
 export type ServerMsg =
   /** First message on every connection. A new serverId means the server restarted (maybe with new code). */

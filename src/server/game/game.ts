@@ -1,7 +1,10 @@
 import {
+  HILL_SETTINGS,
   MAX_TEAMS,
   TOWER_MINUTES,
+  type FightSettings,
   type GameMode,
+  type HillSetting,
   type HostGameState,
   type Pacing,
   type Phase,
@@ -26,6 +29,7 @@ export const AUTO_LEADERBOARD_MS = 5000;
 export const GRACE_MS = 500;
 const LEADERBOARD_SIZE = 10;
 export const DEFAULT_TOWER: TowerSettings = { teams: 2, minutes: 5, monster: true };
+export const DEFAULT_FIGHT: FightSettings = { hill: "random" };
 
 export interface Answer {
   option: number;
@@ -60,12 +64,13 @@ export interface GameOptions {
   /** Initial lobby choices (e.g. carried over from the previous game). */
   mode?: GameMode;
   tower?: TowerSettings;
+  fight?: FightSettings;
 }
 
 /**
  * A Classic game: lobby → (intro → open → reveal → leaderboard)* → podium.
- * It also serves as the lobby for every mode; in Tallest Tower mode the hub
- * hands its players to a TowerGame on start.
+ * It also serves as the lobby for every mode; in the other modes the hub
+ * hands its players to that mode's game (TowerGame, SubGame, FightGame) on start.
  */
 export class Game {
   readonly kind = "classic";
@@ -80,6 +85,7 @@ export class Game {
   shuffle: ShuffleOptions;
   mode: GameMode;
   tower: TowerSettings;
+  fight: FightSettings;
   /** When the current phase's countdown ends (intro/open), for views. */
   phaseEndsAt = 0;
   openedAt = 0;
@@ -107,6 +113,7 @@ export class Game {
     this.onFinish = opts.onFinish ?? (() => {});
     this.mode = opts.mode ?? "classic";
     this.tower = { ...(opts.tower ?? DEFAULT_TOWER) };
+    this.fight = { ...(opts.fight ?? DEFAULT_FIGHT) };
   }
 
   get players(): Map<string, Player> {
@@ -193,7 +200,7 @@ export class Game {
 
   setMode(mode: GameMode): void {
     if (this.phase !== "lobby") throw new GameError("The game mode can only be changed before the game starts");
-    if (mode !== "classic" && mode !== "tower" && mode !== "submarine") throw new GameError("Unknown game mode");
+    if (mode !== "classic" && mode !== "tower" && mode !== "submarine" && mode !== "fight") throw new GameError("Unknown game mode");
     this.mode = mode;
     this.onChange();
   }
@@ -208,10 +215,22 @@ export class Game {
     this.onChange();
   }
 
-  /** Team index per player (join order) for the Tallest Tower preview. */
+  setFight(settings: { hill: HillSetting }): void {
+    if (this.phase !== "lobby") throw new GameError("Tower Fight settings can only be changed before the game starts");
+    if (!HILL_SETTINGS.includes(settings.hill)) throw new GameError("Unknown hill height");
+    this.fight = { hill: settings.hill };
+    this.onChange();
+  }
+
+  /** Teams in the lobby preview: Tallest Tower's setting, or Red vs Blue for Tower Fight; null in solo modes. */
+  private get previewTeams(): number | null {
+    return this.mode === "tower" ? this.tower.teams : this.mode === "fight" ? 2 : null;
+  }
+
+  /** Team index per player (join order) for the team-mode preview. */
   private teamPreview(): Map<string, number> {
     const ids = [...this.players.keys()];
-    const teams = assignTeams(ids.length, this.tower.teams);
+    const teams = assignTeams(ids.length, this.previewTeams ?? 1);
     return new Map(ids.map((id, i) => [id, teams[i]!]));
   }
 
@@ -363,9 +382,10 @@ export class Game {
     const answered = [...this.players.values()].map((p) => p.answers[this.qIndex]).filter((a): a is Answer => !!a);
     const hostPlayer = (p: Player) => ({ id: p.id, nickname: p.nickname, avatar: p.avatar, score: p.score, connected: p.connected });
     let teams: HostGameState["teams"] = null;
-    if (this.phase === "lobby" && this.mode === "tower") {
+    const teamCount = this.previewTeams;
+    if (this.phase === "lobby" && teamCount !== null) {
       const preview = this.teamPreview();
-      teams = Array.from({ length: this.tower.teams }, (_, i) => ({
+      teams = Array.from({ length: teamCount }, (_, i) => ({
         ...teamInfo(i),
         members: [...this.players.values()].filter((p) => preview.get(p.id) === i).map(hostPlayer),
       }));
@@ -375,6 +395,7 @@ export class Game {
       phase: this.phase,
       mode: this.mode,
       tower: this.tower,
+      fight: this.fight,
       teams,
       quiz: { id: this.quizId, title: this.title, questionCount: this.questions.length },
       pacing: this.pacing,
@@ -408,7 +429,7 @@ export class Game {
           ? { choice: ans?.option ?? null, correct: q.correct, wasCorrect: !!ans?.correct, points: ans?.points ?? 0 }
           : null,
       podium: this.phase === "podium" ? this.leaderboard(5) : null,
-      team: this.phase === "lobby" && this.mode === "tower" ? teamInfo(this.teamPreview().get(p.id) ?? 0) : null,
+      team: this.phase === "lobby" && this.previewTeams !== null ? teamInfo(this.teamPreview().get(p.id) ?? 0) : null,
     };
   }
 }

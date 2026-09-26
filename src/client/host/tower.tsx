@@ -344,7 +344,7 @@ function TowerPodium({ view, send }: { view: TowerView; send: Send }) {
   );
 }
 
-function Award({ icon, title, award, unit }: { icon: string; title: string; award: { value: number; nicknames: string[] } | null; unit: string }) {
+export function Award({ icon, title, award, unit }: { icon: string; title: string; award: { value: number; nicknames: string[] } | null; unit: string }) {
   return (
     <div class="award">
       <div class="award-icon" aria-hidden="true">

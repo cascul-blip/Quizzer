@@ -6,6 +6,7 @@ import { Avatar } from "../shared/avatar-art.tsx";
 import { connect, type ConnStatus } from "../shared/ws.ts";
 import { ConnBanner, ErrorBoundary, Shape, StreakBadge, Toast, optionColor, ordinal, useCountdown } from "../shared/ui.tsx";
 import { AvatarPicker } from "./avatar-picker.tsx";
+import { FightPlayer } from "./fight.tsx";
 import { SubPlayer } from "./submarine.tsx";
 import { TowerPlayer } from "./tower.tsx";
 
@@ -136,6 +137,8 @@ function App() {
     body = <TowerPlayer view={view} send={send} />;
   } else if (view.kind === "sub") {
     body = <SubPlayer view={view} send={send} />;
+  } else if (view.kind === "fight") {
+    body = <FightPlayer view={view} send={send} />;
   } else {
     body = <Game view={view} send={send} />;
   }

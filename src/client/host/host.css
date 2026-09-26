@@ -1813,3 +1813,203 @@ select {
   font-size: clamp(20px, 2vw, 34px);
   font-weight: 800;
 }
+
+/* ----- Tower Fight stage ----- */
+
+.fight-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+  background: #cdeaff;
+}
+
+/* Sky and ground run past the field's edges to fill screens wider or taller than it. */
+.fight-wrap .battlefield,
+.fight-podium .podium-bg .battlefield {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+
+.fight-podium .podium-bg {
+  overflow: hidden;
+}
+
+.fight-wrap.shake-long .battlefield {
+  animation: shake 0.6s ease-in-out 3;
+}
+
+.fight-team {
+  position: absolute;
+  top: 1.6vh;
+  width: min(24vw, 340px);
+  max-height: 46%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: rgba(20, 5, 45, 0.72);
+  border-top: 5px solid var(--team);
+  overflow: hidden;
+}
+
+.fight-team.side-0 {
+  left: 1.2vw;
+}
+
+.fight-team.side-1 {
+  right: 1.2vw;
+}
+
+.fight-team h2 {
+  margin: 0;
+  font-size: clamp(18px, 1.8vw, 30px);
+  font-weight: 900;
+}
+
+.fight-team .health i {
+  width: clamp(18px, 1.8vw, 30px);
+  height: clamp(18px, 1.8vw, 30px);
+}
+
+.fight-team ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow: hidden;
+  font-size: clamp(13px, 1.1vw, 20px);
+  font-weight: 700;
+}
+
+.fight-team li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fight-team li .avatar {
+  width: 1.6em;
+  height: 1.6em;
+  flex: none;
+}
+
+.fight-team li .n {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fight-team li.busy .n {
+  color: var(--accent);
+}
+
+.fight-team li.offline {
+  opacity: 0.45;
+}
+
+.fight-team .hits {
+  font-variant-numeric: tabular-nums;
+}
+
+.fight-feed {
+  position: absolute;
+  left: 50%;
+  top: 1.6vh;
+  translate: -50% 0;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: min(44vw, 640px);
+  pointer-events: none;
+}
+
+.fight-feed li {
+  background: rgba(20, 5, 45, 0.72);
+  border-left: 5px solid var(--team);
+  border-radius: 8px;
+  padding: 4px 12px;
+  font-size: clamp(14px, 1.2vw, 22px);
+  font-weight: 800;
+  animation: pop-in 0.3s ease-out both;
+  opacity: 0.75;
+}
+
+.fight-feed li:last-child {
+  opacity: 1;
+}
+
+.fight-banner {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 32%;
+  width: fit-content;
+  margin: 0 auto;
+  background: var(--paper);
+  color: var(--ink);
+  padding: 0.4em 1em;
+  border-radius: var(--radius);
+  font-size: clamp(26px, 3.4vw, 60px);
+  font-weight: 900;
+  white-space: nowrap;
+  animation: pop-in 0.5s ease-out both;
+}
+
+.fight-podium .podium-bg {
+  opacity: 0.35;
+}
+
+
+.fight-reason {
+  margin: -1.5vh 0 2vh;
+  font-size: clamp(18px, 1.8vw, 32px);
+  font-weight: 800;
+}
+
+.fight-scores {
+  display: flex;
+  gap: 3vw;
+  justify-content: center;
+  flex: 1;
+  align-items: center;
+  min-height: 0;
+}
+
+.fight-score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 2vh 3vw;
+  border-radius: var(--radius);
+  background: rgba(20, 5, 45, 0.72);
+  border-top: 6px solid var(--team);
+  animation: rise 0.6s ease-out both;
+}
+
+.fight-score.won {
+  outline: 4px solid var(--accent);
+  scale: 1.08;
+}
+
+.fight-score .health i {
+  width: clamp(22px, 2.2vw, 36px);
+  height: clamp(22px, 2.2vw, 36px);
+}
+
+.fight-score-line {
+  font-size: clamp(16px, 1.4vw, 26px);
+  font-weight: 700;
+}
