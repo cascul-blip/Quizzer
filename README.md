@@ -29,8 +29,49 @@ data/results/             CSV of every finished game (rank, score, each answer a
 Phones must be able to reach the host computer on the port (default 8080).
 
 - **Windows** asks the first time you run the program. Allow access on **Private networks**.
-- **Linux** with a firewall needs the port opened, e.g. `sudo ufw allow 8080/tcp`.
+- **Linux** with a firewall needs the port opened. See [Opening the port with UFW](#opening-the-port-with-ufw-linux) below.
 - Some guest/school Wi-Fi networks block devices from talking to each other ("client isolation"). If phones can't load the page, use a network without isolation, or a phone hotspot.
+
+#### Opening the port with UFW (Linux)
+
+Many Linux distributions use UFW ("Uncomplicated Firewall"). When it's active, it blocks phones from reaching Quizzer until you open the port. The admin page still works on the host computer, because `localhost` isn't affected.
+
+1. Check whether UFW is running:
+
+   ```sh
+   sudo ufw status
+   ```
+
+   If it says `Status: inactive`, nothing is blocked and you can skip the rest.
+
+2. Open the port. Either allow it from anywhere:
+
+   ```sh
+   sudo ufw allow 8080/tcp comment 'Quizzer'
+   ```
+
+   or, safer, only from your local network. Replace `192.168.1.0/24` with your network. The join URL shows your computer's address (e.g. `192.168.1.23`); the network is the same first three numbers followed by `.0/24`.
+
+   ```sh
+   sudo ufw allow from 192.168.1.0/24 to any port 8080 proto tcp comment 'Quizzer'
+   ```
+
+3. Check that the rule is there:
+
+   ```sh
+   sudo ufw status numbered
+   ```
+
+   You should see a line with `8080/tcp` and `ALLOW`. The rule takes effect immediately and stays after a reboot; there's no need to restart Quizzer.
+
+**Using a different port?** If you start Quizzer with `--port 9000`, open that port instead (`sudo ufw allow 9000/tcp`).
+
+**Removing the rule later:** find its number with `sudo ufw status numbered`, then delete it, e.g. `sudo ufw delete 3`. Or delete it by its rule text, e.g. `sudo ufw delete allow 8080/tcp`.
+
+**Still can't connect?** Test from a phone by opening `http://<computer-address>:8080/` in its browser. If that fails with UFW allowing the port:
+- The phone may be on a different network (e.g. mobile data or a guest Wi-Fi).
+- The Wi-Fi may use client isolation.
+- Another firewall (such as `firewalld` on Fedora) may be running instead. For `firewalld`, use `sudo firewall-cmd --add-port=8080/tcp --permanent && sudo firewall-cmd --reload`.
 
 If the QR code shows the wrong address (a VPN or virtual adapter, for example), choose the right one under **Network settings** in the lobby, or start with `--host <ip>`.
 
