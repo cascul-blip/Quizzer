@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { INTRO_MS } from "../src/server/game/game.ts";
 import { COUNTDOWN_MS, DROP_COOLDOWN_MS, FEEDBACK_MS } from "../src/server/game/tower.ts";
+import { BOOST_MIN_HOLD_MS, COUNTDOWN_MS as SUB_COUNTDOWN_MS } from "../src/server/game/submarine.ts";
 import { startServer, type RunningServer } from "../src/server/http.ts";
 import { isAdminRequest } from "../src/server/network.ts";
 import { QuizStore } from "../src/server/quiz/store.ts";
@@ -311,6 +312,59 @@ describe("Tallest Tower over WebSockets", () => {
     // Play again keeps Tallest Tower selected.
     host.send({ type: "host.open", quizId: quiz.id });
     await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "tower" && v.tower.teams === 2);
+    host.send({ type: "host.close" });
+    [host, ...players].forEach((s) => s.close());
+  });
+});
+
+describe("Submarine Squad over WebSockets", () => {
+  test("lobby → chase → answer → boost → host sees it → end → results", async () => {
+    const quiz = store.create({
+      title: "Sub E2E",
+      questions: [1, 2].map((n) => ({ type: "multiple_choice", text: `Q${n}`, options: ["right", "wrong"], correct: [0] })),
+    });
+    const wsUrl = `ws://localhost:${srv.port}/ws`;
+    const host = await TestSocket.open(wsUrl);
+    host.send({ type: "host.hello" });
+    await host.hostState((v) => v.kind === "idle");
+    host.send({ type: "host.open", quizId: quiz.id });
+    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
+    host.send({ type: "host.setMode", mode: "submarine" });
+    await host.hostState((v) => v.kind === "classic" && v.mode === "submarine");
+
+    const players = await Promise.all(["Sam", "Kim"].map(() => TestSocket.open(wsUrl)));
+    for (const [i, p] of players.entries()) {
+      await p.playerState((v) => v.kind === "none" && !!v.game);
+      p.send({ type: "join", nickname: ["Sam", "Kim"][i]! });
+      await p.waitFor((m) => m.type === "joined");
+    }
+    host.send({ type: "host.start", pacing: "manual" });
+    await host.hostState((v) => v.kind === "sub" && v.phase === "countdown");
+    clock.advance(SUB_COUNTDOWN_MS);
+    srv.hub.broadcast();
+    const chase = await host.hostState((v) => v.kind === "sub" && v.phase === "chase");
+    expect(chase.view.kind === "sub" && chase.view.required).toBe(5);
+
+    const sam = players[0]!;
+    for (let i = 0; i < 4; i++) {
+      const st = await sam.playerState((v) => v.kind === "sub" && !!v.question && !v.feedback);
+      const q = st.view.kind === "sub" ? st.view.question! : null;
+      sam.send({ type: "sub.answer", seq: q!.seq, option: 0 });
+      await sam.playerState((v) => v.kind === "sub" && v.feedback?.seq === q!.seq);
+      clock.advance(FEEDBACK_MS);
+      srv.hub.broadcast();
+    }
+    await sam.playerState((v) => v.kind === "sub" && v.state === "boost");
+    clock.advance(BOOST_MIN_HOLD_MS);
+    sam.send({ type: "sub.boost" });
+    const boosted = await host.hostState((v) => v.kind === "sub" && v.boosts === 1);
+    expect(boosted.view.kind === "sub" && boosted.view.lastBoost?.nickname).toBe("Sam");
+
+    host.send({ type: "host.end" });
+    await host.hostState((v) => v.kind === "sub" && v.phase === "podium");
+    const csv = await (await fetch(`${base}/api/results/latest.csv`)).text();
+    expect(csv).toContain("Nickname,Correct,Wrong,Boosts");
+    expect(csv).toContain("Sam,4,0,1,");
     host.send({ type: "host.close" });
     [host, ...players].forEach((s) => s.close());
   });

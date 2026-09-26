@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { STREAK_MIN, type ClientMsg, type PlayerView, type ServerMsg } from "../../shared/protocol.ts";
 import { connect, type ConnStatus } from "../shared/ws.ts";
 import { ConnBanner, ErrorBoundary, Shape, StreakBadge, Toast, optionColor, ordinal, useCountdown } from "../shared/ui.tsx";
+import { SubPlayer } from "./submarine.tsx";
 import { TowerPlayer } from "./tower.tsx";
 
 const TOKEN_KEY = "quizzer.token";
@@ -119,6 +120,8 @@ function App() {
     }
   } else if (view.kind === "tower") {
     body = <TowerPlayer view={view} send={send} />;
+  } else if (view.kind === "sub") {
+    body = <SubPlayer view={view} send={send} />;
   } else {
     body = <Game view={view} send={send} />;
   }

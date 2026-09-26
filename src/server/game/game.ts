@@ -180,7 +180,7 @@ export class Game {
 
   setMode(mode: GameMode): void {
     if (this.phase !== "lobby") throw new GameError("The game mode can only be changed before the game starts");
-    if (mode !== "classic" && mode !== "tower") throw new GameError("Unknown game mode");
+    if (mode !== "classic" && mode !== "tower" && mode !== "submarine") throw new GameError("Unknown game mode");
     this.mode = mode;
     this.onChange();
   }

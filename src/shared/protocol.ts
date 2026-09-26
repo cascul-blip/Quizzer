@@ -13,7 +13,7 @@ export interface ShuffleOptions {
 
 // ---------- Tallest Tower ----------
 
-export type GameMode = "classic" | "tower";
+export type GameMode = "classic" | "tower" | "submarine";
 export type TowerPhase = "countdown" | "playing" | "podium";
 
 export const TEAMS = [
@@ -81,7 +81,10 @@ export type PlayerMsg =
   | { type: "resume"; token: string }
   | { type: "answer"; qIndex: number; option: number }
   | { type: "tower.answer"; seq: number; option: number }
-  | { type: "tower.drop"; zone: number };
+  | { type: "tower.drop"; zone: number }
+  | { type: "sub.answer"; seq: number; option: number }
+  | { type: "sub.boost" }
+  | { type: "sub.tap"; symbol: string };
 
 export type HostMsg =
   | { type: "host.hello" }
@@ -135,7 +138,7 @@ export interface PlayerResult {
 
 export type PlayerView =
   | { kind: "none"; game: null }
-  | { kind: "none"; game: { title: string; phase: Phase | TowerPhase } }
+  | { kind: "none"; game: { title: string; phase: Phase | TowerPhase | SubPhase } }
   | {
       kind: "player";
       phase: Phase;
@@ -150,7 +153,8 @@ export type PlayerView =
       /** In the lobby with Tallest Tower selected: the team this player will be on. */
       team: TeamInfo | null;
     }
-  | PlayerTowerView;
+  | PlayerTowerView
+  | PlayerSubView;
 
 export interface TowerAwards {
   mostCorrect: { value: number; nicknames: string[] } | null;
@@ -248,10 +252,75 @@ export interface HostTowerState {
   hasResults: boolean;
 }
 
+// ---------- Submarine Squad ----------
+
+export type SubPhase = "countdown" | "chase" | "escaped" | "dive" | "caught" | "podium";
+/** Correct answers needed to earn one boost. */
+export const CORRECT_PER_BOOST = 4;
+
+export interface SubAward {
+  value: number;
+  nicknames: string[];
+}
+
+export interface SubAwards {
+  topBooster: SubAward | null;
+  sharpestEyes: SubAward | null;
+  mostCorrect: SubAward | null;
+}
+
+export interface HostSubState {
+  kind: "sub";
+  phase: SubPhase;
+  quiz: { id: string; title: string; questionCount: number };
+  level: number;
+  /** Meters below the surface; the final score. */
+  depth: number;
+  /** Time left in the countdown / cut-scene / dive. */
+  phaseRemainingMs: number;
+  /** Distance to the fish in seconds of fish travel, as of when this was sent. */
+  gap: number;
+  /** How fast the gap closes (gap-seconds per second). */
+  speed: number;
+  maxGap: number;
+  boosts: number;
+  required: number;
+  lastBoost: { seq: number; nickname: string } | null;
+  dive: {
+    instructors: { nickname: string; index: number; total: number; found: number; groupSize: number; done: boolean }[];
+  } | null;
+  players: { id: string; nickname: string; connected: boolean; state: "question" | "boost" | "waiting" }[];
+  playerCount: number;
+  awards: SubAwards | null;
+  hasResults: boolean;
+}
+
+export interface PlayerSubView {
+  kind: "sub";
+  phase: SubPhase;
+  title: string;
+  level: number;
+  depth: number;
+  phaseRemainingMs: number;
+  me: { id: string; nickname: string; correct: number; boosts: number; diveHits: number };
+  state: "question" | "boost" | "waiting";
+  /** Correct answers toward the next boost (0 … CORRECT_PER_BOOST-1). */
+  towardBoost: number;
+  question: { seq: number; type: QuestionType; text: string; image?: string; options: string[] } | null;
+  feedback: { seq: number; correct: boolean; remainingMs: number; answers: string[] } | null;
+  dive:
+    | { role: "instructor"; symbol: string; index: number; total: number; found: number; groupSize: number }
+    | { role: "diver"; grid: string[]; index: number; total: number; lockedMs: number; done: boolean; hint: string | null }
+    | { role: "waiting" }
+    | null;
+  result: { depth: number; level: number; awards: string[] } | null;
+}
+
 export type HostView =
   | { kind: "idle"; phase: "idle"; join: JoinInfo }
   | (HostGameState & { join: JoinInfo })
-  | (HostTowerState & { join: JoinInfo });
+  | (HostTowerState & { join: JoinInfo })
+  | (HostSubState & { join: JoinInfo });
 
 export type ServerMsg =
   /** First message on every connection. A new serverId means the server restarted (maybe with new code). */

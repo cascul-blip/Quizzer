@@ -3,7 +3,8 @@ import QRCode from "qrcode";
 import type { ClientMsg, GameMode, HostView, JoinInfo, Pacing, PlayerView, ServerMsg, TowerSettings } from "../shared/protocol.ts";
 import { ValidationError } from "../shared/quiz-schema.ts";
 import { DEFAULT_TOWER, Game, GameError, type Clock } from "./game/game.ts";
-import { buildResultsCsv, buildTowerResultsCsv, writeResultsFile } from "./game/results.ts";
+import { buildResultsCsv, buildSubResultsCsv, buildTowerResultsCsv, writeResultsFile } from "./game/results.ts";
+import { SubGame } from "./game/submarine.ts";
 import { TowerGame } from "./game/tower.ts";
 import { lanAddresses, type LanAddress } from "./network.ts";
 import { NotFoundError, type QuizStore } from "./quiz/store.ts";
@@ -36,7 +37,7 @@ const PACINGS = new Set<Pacing>(["manual", "auto"]);
 /** In Tallest Tower, answers stream in constantly: the acting player is updated at once, everyone else at most this often. */
 const ACTIVITY_THROTTLE_MS = 100;
 
-export type LiveGame = Game | TowerGame;
+export type LiveGame = Game | TowerGame | SubGame;
 
 /** Owns the single live game and every connected socket; pushes full view snapshots on each change. */
 export class GameHub {
@@ -229,6 +230,21 @@ export class GameHub {
         if (!this.game.answer(ws.data.playerId, Number(msg.seq), Number(msg.option))) this.sendState(ws);
         return;
       }
+      case "sub.answer": {
+        if (!(this.game instanceof SubGame) || !ws.data.playerId) return;
+        if (!this.game.answer(ws.data.playerId, Number(msg.seq), Number(msg.option))) this.sendState(ws);
+        return;
+      }
+      case "sub.boost": {
+        if (!(this.game instanceof SubGame) || !ws.data.playerId) return;
+        if (!this.game.boost(ws.data.playerId)) this.sendState(ws);
+        return;
+      }
+      case "sub.tap": {
+        if (!(this.game instanceof SubGame) || !ws.data.playerId) return;
+        if (this.game.tap(ws.data.playerId, String(msg.symbol)) === null) this.sendState(ws);
+        return;
+      }
       case "tower.drop": {
         if (!(this.game instanceof TowerGame) || !ws.data.playerId) return;
         if (this.game.drop(ws.data.playerId, Number(msg.zone)) === null) this.sendState(ws);
@@ -246,7 +262,7 @@ export class GameHub {
     };
     const classic = () => {
       const g = game();
-      if (!(g instanceof Game)) throw new GameError("Not available in Tallest Tower");
+      if (!(g instanceof Game)) throw new GameError(g instanceof TowerGame ? "Not available in Tallest Tower" : "Not available in Submarine Squad");
       return g;
     };
     switch (msg.type) {
@@ -270,6 +286,7 @@ export class GameHub {
       case "host.start": {
         const lobby = classic();
         if (lobby.phase === "lobby" && lobby.mode === "tower") return this.startTower(lobby);
+        if (lobby.phase === "lobby" && lobby.mode === "submarine") return this.startSub(lobby);
         return lobby.start(PACINGS.has(msg.pacing) ? msg.pacing : undefined);
       }
       case "host.setPacing":
@@ -329,6 +346,21 @@ export class GameHub {
     this.log(`Tallest Tower started: ${tower.teams.length} team(s), ${tower.settings.minutes} min`);
   }
 
+  /** Hand the lobby's players to a Submarine Squad game. */
+  private startSub(lobby: Game): void {
+    if (lobby.players.size === 0) throw new GameError("Wait for at least one player to join");
+    const sub = SubGame.fromLobby(lobby, {
+      clock: this.opts.clock,
+      onChange: () => this.scheduleBroadcast(),
+      onActivity: (pid) => this.onActivity(pid),
+      onFinish: (g) => this.onFinish(g),
+    });
+    lobby.dispose();
+    this.game = sub;
+    sub.start();
+    this.log(`Submarine Squad started with ${sub.players.size} player(s)`);
+  }
+
   private closeGame(): void {
     if (this.activityTimer) clearTimeout(this.activityTimer);
     this.activityTimer = null;
@@ -339,7 +371,7 @@ export class GameHub {
   }
 
   private onFinish(game: LiveGame): void {
-    const csv = game instanceof TowerGame ? buildTowerResultsCsv(game) : buildResultsCsv(game);
+    const csv = game instanceof TowerGame ? buildTowerResultsCsv(game) : game instanceof SubGame ? buildSubResultsCsv(game) : buildResultsCsv(game);
     let file: string | null = null;
     try {
       file = writeResultsFile(game, csv, this.store.resultsDir);

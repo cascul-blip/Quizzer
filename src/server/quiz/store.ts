@@ -119,8 +119,7 @@ export class QuizStore {
       settings: { ...DEFAULT_SETTINGS, ...d.settings },
       questions,
     };
-    this.write(quiz);
-    return quiz;
+    return this.write(quiz);
   }
 
   /** Replace a quiz's content (title, description, settings, questions) keeping id and createdAt. */

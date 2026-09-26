@@ -12,13 +12,14 @@ import {
   type TowerSettings,
 } from "../../shared/protocol.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
-import { GameError, assignTeams, realClock, shuffle, shuffleOptions, teamInfo, type Clock } from "./common.ts";
+import { GameError, assignTeams, realClock, teamInfo, type Clock } from "./common.ts";
 import type { Game } from "./game.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
+import { QuestionStream, newStreamPlayer, type StreamPlayer } from "./stream.ts";
+
+export { FEEDBACK_MS } from "./stream.ts";
 
 export const COUNTDOWN_MS = 3000;
-/** How long the ✓/✗ flash shows before the next question can be answered. */
-export const FEEDBACK_MS = 1000;
 export const SWEEP_START_MS = 2500;
 export const SWEEP_MIN_MS = 1200;
 /** The sliding block speeds up by this much per completed floor. */
@@ -39,31 +40,14 @@ export const floorsOf = (t: TowerTeam) => Math.min(...t.columns);
 export const placedOf = (t: TowerTeam) => t.columns[0] + t.columns[1] + t.columns[2];
 export const sweepMsFor = (floors: number) => Math.max(SWEEP_MIN_MS, SWEEP_START_MS - floors * SWEEP_STEP_MS);
 
-interface CurrentQuestion {
-  seq: number;
-  qIndex: number;
-  options: string[];
-  correct: number[];
-}
-
-export interface TowerPlayer extends BasePlayer {
+export interface TowerPlayer extends BasePlayer, StreamPlayer {
   team: number;
-  correct: number;
-  wrong: number;
   blocksHeld: number;
   placed: number;
   missed: number;
   /** Monster eggs this player hatched. */
   hatched: number;
   state: "question" | "build";
-  /** Remaining question indices of this player's shuffled deck. */
-  deck: number[];
-  current: CurrentQuestion | null;
-  seq: number;
-  /** answers = text of the correct option(s), shown when the player got it wrong. */
-  feedback: { seq: number; correct: boolean; answers: string[] } | null;
-  /** Answers are ignored until the feedback flash is over. */
-  readyAt: number;
   lastDropAt: number;
 }
 
@@ -106,6 +90,7 @@ export class TowerGame {
 
   private readonly clock: Clock;
   private readonly rng: () => number;
+  private readonly stream: QuestionStream;
   private timer: unknown = null;
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
@@ -120,6 +105,7 @@ export class TowerGame {
     this.teams = Array.from({ length: settings.teams }, (_, i) => ({ ...teamInfo(i), columns: [0, 0, 0] }));
     this.clock = opts.clock ?? realClock;
     this.rng = opts.rng ?? Math.random;
+    this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock);
     this.onChange = opts.onChange ?? (() => {});
     this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
@@ -144,18 +130,12 @@ export class TowerGame {
     return {
       ...base,
       team,
-      correct: 0,
-      wrong: 0,
+      ...newStreamPlayer(),
       blocksHeld: 0,
       placed: 0,
       missed: 0,
       hatched: 0,
       state: "question",
-      deck: [],
-      current: null,
-      seq: 0,
-      feedback: null,
-      readyAt: 0,
       lastDropAt: -Infinity,
     };
   }
@@ -297,38 +277,18 @@ export class TowerGame {
 
   // ---------- questions ----------
 
-  /** Give the player their next question: a personal shuffled deck, reshuffled when used up. */
   private deal(p: TowerPlayer): void {
-    const last = p.current?.qIndex;
-    if (p.deck.length === 0) {
-      p.deck = shuffle(this.questions.map((_, i) => i), this.rng);
-      // Don't repeat the question just answered across a reshuffle.
-      if (p.deck.length > 1 && p.deck[0] === last) p.deck.push(p.deck.shift()!);
-    }
-    const qIndex = p.deck.shift()!;
-    const q = this.questions[qIndex]!;
-    const shown = this.settings.shuffleAnswers ? shuffleOptions(q, this.rng) : q;
-    p.seq++;
-    p.current = { seq: p.seq, qIndex, options: [...shown.options], correct: [...shown.correct] };
+    this.stream.deal(p);
   }
 
   answer(playerId: string, seq: number, option: number): boolean {
     const p = this.players.get(playerId);
     const cur = p?.current;
     if (!p || !cur || this.phase !== "playing" || p.state !== "question") return false;
-    if (seq !== cur.seq || this.clock.now() < p.readyAt) return false;
-    if (!Number.isInteger(option) || option < 0 || option >= cur.options.length) return false;
-    const correct = cur.correct.includes(option);
-    if (correct) {
-      p.correct++;
-      p.blocksHeld++;
-    } else {
-      p.wrong++;
-    }
-    p.feedback = { seq, correct, answers: correct ? [] : cur.correct.map((i) => cur.options[i]!) };
-    p.readyAt = this.clock.now() + FEEDBACK_MS;
+    const correct = this.stream.answer(p, seq, option);
+    if (correct === null) return false;
+    if (correct) p.blocksHeld++;
     if (p.blocksHeld >= BLOCKS_PER_BUILD) p.state = "build";
-    this.deal(p);
     this.onActivity(p.id);
     return true;
   }
@@ -438,9 +398,7 @@ export class TowerGame {
     const p = this.players.get(playerId);
     if (!p) return null;
     const team = this.teams[p.team]!;
-    const now = this.clock.now();
     const playing = this.phase === "playing";
-    const q = playing && p.state === "question" && p.current ? this.questions[p.current.qIndex]! : null;
     let result: PlayerTowerView["result"] = null;
     if (this.phase === "podium") {
       const mine = this.rankedTeams().find((t) => t.index === p.team)!;
@@ -465,11 +423,8 @@ export class TowerGame {
       team: teamInfo(team.index),
       state: p.state,
       blocksHeld: p.blocksHeld,
-      question:
-        q && p.current
-          ? { seq: p.current.seq, type: q.type, text: q.text, ...(q.image ? { image: q.image } : {}), options: p.current.options }
-          : null,
-      feedback: p.feedback && now < p.readyAt ? { ...p.feedback, remainingMs: p.readyAt - now } : null,
+      question: playing && p.state === "question" ? this.stream.questionView(p) : null,
+      feedback: this.stream.feedbackView(p),
       egg: playing && this.egg ? { seq: this.egg.seq, ...this.egg.cells[p.team]! } : null,
       monsterEvent: this.monsterEventFor(p),
       build: playing && p.state === "build" ? { columns: [...team.columns], floors: floorsOf(team), sweepMs: sweepMsFor(floorsOf(team)) } : null,

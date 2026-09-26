@@ -1,6 +1,6 @@
 /** Tiny synthesized sound effects (WebAudio), so no audio files need to be shipped. */
 
-export type Sfx = "tick" | "tickHigh" | "timeUp" | "reveal" | "join" | "start" | "fanfare" | "thud" | "floor" | "rumble" | "roar";
+export type Sfx = "tick" | "tickHigh" | "timeUp" | "reveal" | "join" | "start" | "fanfare" | "thud" | "floor" | "rumble" | "roar" | "whoosh" | "chomp" | "bubble" | "heartbeat";
 
 const MUTE_KEY = "quizzer.muted";
 let ctx: AudioContext | null = null;
@@ -81,8 +81,63 @@ export function play(sfx: Sfx): void {
     case "roar":
       [90, 118, 140, 75].forEach((f, i) => tone(f, i * 0.05, 1.1 - i * 0.1, "sawtooth", 0.13));
       return tone(45, 0.55, 0.6, "square", 0.2); // the smash
+    case "whoosh":
+      [200, 320, 480, 640].forEach((f, i) => tone(f, i * 0.04, 0.3, "sawtooth", 0.05));
+      return;
+    case "chomp":
+      tone(90, 0, 0.12, "square", 0.3);
+      return tone(60, 0.1, 0.35, "square", 0.3);
+    case "bubble":
+      return tone(700 + Math.random() * 500, 0, 0.08, "sine", 0.08);
+    case "heartbeat":
+      tone(60, 0, 0.12, "sine", 0.4);
+      return tone(55, 0.18, 0.14, "sine", 0.3);
     case "fanfare":
       [523.25, 523.25, 523.25, 698.46, 880, 1046.5].forEach((f, i) => tone(f, i * 0.14, i === 5 ? 0.9 : 0.16, "triangle", 0.18));
       return;
   }
+}
+
+export interface Rev {
+  /** 0 = idle, 1 = fully charged. */
+  set(level: number): void;
+  stop(): void;
+}
+
+/** A continuous engine rev whose pitch and volume follow the boost charge. Call from a press handler. */
+export function startRev(): Rev | null {
+  unlockAudio();
+  if (muted || !ctx) return null;
+  const c = ctx;
+  const main = c.createOscillator();
+  const grit = c.createOscillator();
+  const filter = c.createBiquadFilter();
+  const gain = c.createGain();
+  main.type = "sawtooth";
+  grit.type = "square";
+  filter.type = "lowpass";
+  gain.gain.value = 0.0001;
+  main.frequency.value = 55;
+  grit.frequency.value = 57;
+  main.connect(filter);
+  grit.connect(filter);
+  filter.connect(gain).connect(c.destination);
+  main.start();
+  grit.start();
+  return {
+    set(level) {
+      const t = c.currentTime;
+      const l = Math.max(0, Math.min(1, level));
+      main.frequency.setTargetAtTime(55 + l * 230, t, 0.05);
+      grit.frequency.setTargetAtTime(57 + l * 236, t, 0.05);
+      filter.frequency.setTargetAtTime(350 + l * 2600, t, 0.05);
+      gain.gain.setTargetAtTime(0.05 + l * 0.14, t, 0.05);
+    },
+    stop() {
+      const t = c.currentTime;
+      gain.gain.setTargetAtTime(0.0001, t, 0.06);
+      main.stop(t + 0.4);
+      grit.stop(t + 0.4);
+    },
+  };
 }

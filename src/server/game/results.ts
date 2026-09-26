@@ -1,6 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Game } from "./game.ts";
+import type { SubGame } from "./submarine.ts";
 import type { TowerGame } from "./tower.ts";
 
 function csvCell(v: string | number): string {
@@ -45,6 +46,15 @@ export function buildTowerResultsCsv(game: TowerGame): string {
       rows.push([t.name, t.rank, t.floors, t.placed, p.nickname, p.correct, p.wrong, answered ? Math.round((p.correct / answered) * 100) : "", p.placed, p.missed, p.hatched]);
     }
   }
+  return toCsv([header, ...rows]);
+}
+
+/** Submarine Squad: one row per player; the squad's final depth is in every row. */
+export function buildSubResultsCsv(game: SubGame): string {
+  const header = ["Nickname", "Correct", "Wrong", "Boosts", "Dive taps (correct)", "Instructor rounds", "Squad depth (m)", "Level reached"];
+  const rows: (string | number)[][] = [...game.players.values()]
+    .sort((a, b) => b.boosts - a.boosts || b.correct - a.correct)
+    .map((p) => [p.nickname, p.correct, p.wrong, p.boosts, p.diveHits, p.instructorRounds, game.depth, game.level]);
   return toCsv([header, ...rows]);
 }
 

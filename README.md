@@ -93,6 +93,26 @@ If nobody reaches the egg, it stays until someone does or the game ends. Phones 
 
 The projector shows only the teams' towers, side by side and at the same scale, plus the timer. Each phone shows only that player's question, or their own team's tower while they're building. The results CSV has one row per player: team, rank, floors, correct/wrong, accuracy, and blocks placed and missed.
 
+## Submarine Squad mode
+
+A cooperative mode based on Kahoot's Submarine Squad. The whole class is one squad trying to keep a submarine away from a giant **anglerfish**. Choose **Game mode → 🐟 Submarine Squad** in the lobby. There's no timer: **the game ends when the fish catches the sub**, and the score is how deep the squad got.
+
+**Submarine mode**
+- Everyone answers questions on their phone at their own pace, with the correct answer shown after a wrong one.
+- Every 4 correct answers gives that player a **boost button**. They hold it down: a ring charges over about 2 seconds while the phone revs like an engine. Letting go drains the charge.
+- When the ring is full, the submarine surges away from the fish on the projector.
+- The fish closes in steadily, and **its jaws open wider the closer it gets**.
+- Filling the boost bar (**3 + number of players** boosts) clears the level.
+
+**Diving mode** (after each level)
+- One or more players (1 per 6 players, up to 4) become **instructors**. Each sees a symbol, such as "the red octopus", and describes it out loud.
+- Everyone else is secretly assigned to an instructor and must tap that instructor's symbol in a grid of look-alikes. Players have to work out which instructor is describing *their* symbols.
+- An instructor moves on when 70% of their group finds the symbol (or after 20 seconds). Each instructor has 5 symbols.
+- Every correct tap takes the sub 2 m deeper. Wrong taps lock the player out for a second.
+- Players who join mid-dive wait for the next level.
+
+Each level is worth 100 m. **Deeper levels have a faster fish.** The podium shows the final depth and awards for **Top booster**, **Sharpest eyes** (most symbols found) and **Most correct answers**. The results CSV lists each player's answers, boosts, dive taps and instructor rounds.
+
 ## AI agents (MCP)
 
 The admin page shows ready-to-copy commands that include the correct paths for your machine. Examples:

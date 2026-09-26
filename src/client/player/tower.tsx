@@ -51,7 +51,7 @@ export function TowerPlayer({ view, send }: { view: PlayerTowerView; send: Send 
             🥚 Monster egg at level {view.egg.row + 1} ({COLUMN_NAMES[view.egg.col]}): build to it first!
           </div>
         )}
-        <TowerQuestion question={view.question} send={send} />
+        <StreamQuestion question={view.question} onAnswer={(seq, option) => send({ type: "tower.answer", seq, option })} />
       </>
     );
   } else {
@@ -76,13 +76,14 @@ export function TowerPlayer({ view, send }: { view: PlayerTowerView; send: Send 
         <span class="score">{view.phase === "playing" ? formatClock(secs) : `Team ${view.team.name}`}</span>
       </header>
       {body}
-      <Feedback feedback={view.feedback} building={view.state === "build"} />
+      <Feedback feedback={view.feedback} rightText={view.state === "build" ? "+1 block. Build time!" : "+1 block"} />
       <MonsterNotice event={view.monsterEvent} egg={view.egg} />
     </div>
   );
 }
 
-function TowerQuestion({ question, send }: { question: NonNullable<PlayerTowerView["question"]>; send: Send }) {
+/** A self-paced question (Tallest Tower, Submarine Squad). */
+export function StreamQuestion({ question, onAnswer }: { question: NonNullable<PlayerTowerView["question"]>; onAnswer: (seq: number, option: number) => void }) {
   const [sentSeq, setSentSeq] = useState<number | null>(null);
   const locked = sentSeq === question.seq;
   return (
@@ -99,7 +100,7 @@ function TowerQuestion({ question, send }: { question: NonNullable<PlayerTowerVi
               disabled={locked}
               onClick={() => {
                 setSentSeq(question.seq);
-                send({ type: "tower.answer", seq: question.seq, option: i });
+                onAnswer(question.seq, i);
               }}
             >
               <Shape index={c} />
@@ -137,7 +138,7 @@ function MonsterNotice({ event, egg }: { event: PlayerTowerView["monsterEvent"];
 }
 
 /** Full-screen ✓/✗ for the second after each answer. */
-function Feedback({ feedback, building }: { feedback: PlayerTowerView["feedback"]; building: boolean }) {
+export function Feedback({ feedback, rightText }: { feedback: PlayerTowerView["feedback"]; rightText: string }) {
   const [shown, setShown] = useState<{ correct: boolean; answers: string[] } | null>(null);
   const seen = useRef(-1);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -154,7 +155,7 @@ function Feedback({ feedback, building }: { feedback: PlayerTowerView["feedback"
   return (
     <div class={`flash ${shown.correct ? "good" : "bad"}`} role="status">
       <div class="flash-icon">{shown.correct ? "✓" : "✗"}</div>
-      <div class="flash-text">{shown.correct ? (building ? "+1 block. Build time!" : "+1 block") : "Not quite"}</div>
+      <div class="flash-text">{shown.correct ? rightText : "Not quite"}</div>
       {!shown.correct && shown.answers.length > 0 && (
         <div class="flash-answer">
           <span>Correct answer{shown.answers.length > 1 ? "s" : ""}:</span>

@@ -6,6 +6,7 @@ import { play, unlockAudio } from "../shared/sounds.ts";
 import { connect, type ConnStatus } from "../shared/ws.ts";
 import { ConnBanner, ErrorBoundary, Shape, StreakBadge, Toast, optionColor, ordinal, useCountdown } from "../shared/ui.tsx";
 import { ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
+import { SubStage } from "./submarine.tsx";
 import { TowerStage } from "./tower.tsx";
 
 type GameView = Extract<HostView, { kind: "classic" }>;
@@ -69,6 +70,8 @@ function App() {
     body = <Idle onOpen={(quizId) => send({ type: "host.open", quizId })} />;
   } else if (view.kind === "tower") {
     body = <TowerStage view={view} send={send} />;
+  } else if (view.kind === "sub") {
+    body = <SubStage view={view} send={send} />;
   } else {
     body = <Game view={view} send={send} />;
   }
@@ -296,6 +299,7 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
             <select value={view.mode} onChange={(e) => send({ type: "host.setMode", mode: e.currentTarget.value as GameMode })}>
               <option value="classic">Classic</option>
               <option value="tower">🏗 Tallest Tower</option>
+              <option value="submarine">🐟 Submarine Squad</option>
             </select>
           </label>
           {tower ? (
@@ -330,6 +334,8 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
                 👾 Monster{view.tower.teams < 2 ? " (needs 2+ teams)" : ""}
               </label>
             </>
+          ) : view.mode === "submarine" ? (
+            <span class="opt mode-hint">Everyone works together to outrun the anglerfish. The game ends when it catches you.</span>
           ) : (
             <>
               <label class="opt">
