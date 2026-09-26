@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "preact/hooks";
+import type { AvatarChoice } from "../../shared/avatars.ts";
 import type { HostView, SubAward } from "../../shared/protocol.ts";
-import { Anglerfish, Submarine, oceanGradient } from "../shared/sea-art.tsx";
+import { Avatar } from "../shared/avatar-art.tsx";
+import { Anglerfish, Submarine, oceanGradient, type PortholeFace } from "../shared/sea-art.tsx";
 import { play } from "../shared/sounds.ts";
 import { useEventFlash } from "../shared/tower-art.tsx";
 import { useCountdown } from "../shared/ui.tsx";
@@ -31,19 +33,82 @@ function useLiveGap(view: SubView): number {
   return Math.max(0, base.current.gap - (view.speed * (performance.now() - base.current.at)) / 1000);
 }
 
+/** How long a boost notice stays next to the sub, and how many can stack. */
+const POP_MS = 2600;
+const MAX_POPS = 3;
+/** Someone looks out of a porthole every PEEK_EVERY_MS..+PEEK_JITTER_MS, for PEEK_MS. */
+const PEEK_MS = 3000;
+const PEEK_EVERY_MS = 3000;
+const PEEK_JITTER_MS = 3000;
+const PORTHOLE_COUNT = 3;
+const MIDDLE_PORTHOLE = 1;
+
+/** Players' avatars occasionally look out of the portholes; the latest booster pops into the middle one. */
+function usePortholeFaces(players: SubView["players"], boost: SubView["lastBoost"]): (PortholeFace | null)[] {
+  const [faces, setFaces] = useState<(PortholeFace | null)[]>(() => Array(PORTHOLE_COUNT).fill(null));
+  const facesRef = useRef(faces);
+  facesRef.current = faces;
+  const playersRef = useRef(players);
+  playersRef.current = players;
+  const timers = useRef(new Set<ReturnType<typeof setTimeout>>());
+
+  const later = (fn: () => void, ms: number) => {
+    const t = setTimeout(() => {
+      timers.current.delete(t);
+      fn();
+    }, ms);
+    timers.current.add(t);
+  };
+  const show = (slot: number, choice: AvatarChoice) => {
+    const key = `${performance.now()}-${slot}`;
+    setFaces((f) => f.map((x, i) => (i === slot ? { key, choice } : x)));
+    later(() => setFaces((f) => f.map((x, i) => (i === slot && x?.key === key ? null : x))), PEEK_MS);
+  };
+
+  useEffect(() => {
+    const tick = () => {
+      // Prefer players who aren't already at a window.
+      const showing = new Set(facesRef.current.map((f) => (f ? `${f.choice.avatar}/${f.choice.accessory}` : "")));
+      const connected = playersRef.current.filter((p) => p.connected);
+      const fresh = connected.filter((p) => !showing.has(`${p.avatar.avatar}/${p.avatar.accessory}`));
+      const pool = fresh.length ? fresh : connected;
+      const empty = facesRef.current.map((f, i) => (f ? -1 : i)).filter((i) => i >= 0);
+      if (pool.length && empty.length) {
+        const slot = empty[Math.floor(Math.random() * empty.length)]!;
+        show(slot, pool[Math.floor(Math.random() * pool.length)]!.avatar);
+      }
+      later(tick, PEEK_EVERY_MS + Math.random() * PEEK_JITTER_MS);
+    };
+    later(tick, 1500);
+    return () => {
+      for (const t of timers.current) clearTimeout(t);
+      timers.current.clear();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (boost) show(MIDDLE_PORTHOLE, boost.avatar);
+  }, [boost?.seq]);
+
+  return faces;
+}
+
 export function SubStage({ view, send }: { view: SubView; send: Send }) {
   const gap = useLiveGap(view);
   const closeness = view.phase === "caught" ? 1 : Math.max(0, Math.min(1, 1 - gap / view.maxGap));
   const secs = useCountdown(view.phaseRemainingMs, `${view.phase}:${view.level}`);
 
-  // Feed of recent boosts.
+  // Boost notices next to the sub, each with the booster's avatar.
   const boost = useEventFlash(view.lastBoost, view.lastBoost?.seq, 700);
-  const [feed, setFeed] = useState<{ seq: number; nickname: string }[]>([]);
+  const [pops, setPops] = useState<NonNullable<SubView["lastBoost"]>[]>([]);
   useEffect(() => {
     if (!boost) return;
     play("whoosh");
-    setFeed((f) => [boost, ...f].slice(0, 4));
+    setPops((p) => [boost, ...p].slice(0, MAX_POPS));
+    const t = setTimeout(() => setPops((p) => p.filter((x) => x.seq !== boost.seq)), POP_MS);
+    return () => clearTimeout(t);
   }, [boost?.seq]);
+  const faces = usePortholeFaces(view.players, boost);
 
   // Sound cues.
   const prevPhase = useRef(view.phase);
@@ -98,7 +163,7 @@ export function SubStage({ view, send }: { view: SubView; send: Send }) {
           <Bubbles />
           <Seaweed />
           {view.phase === "dive" ? (
-            <Dive view={view} />
+            <Dive view={view} faces={faces} />
           ) : (
             <>
               <div class="boost-progress" aria-label={`${view.boosts} of ${view.required} boosts`}>
@@ -118,13 +183,18 @@ export function SubStage({ view, send }: { view: SubView; send: Send }) {
               </div>
               <div class={`sub-pos ${boost ? "boosting" : ""} ${view.phase === "escaped" ? "escaping" : ""} ${view.phase === "caught" ? "eaten" : ""}`}>
                 {boost && <div class="speed-lines" />}
-                <Submarine />
+                <div class="boost-pops">
+                  {pops.map((b, i) => (
+                    <div key={b.seq} class={`boost-pop ${i === 0 ? "newest" : ""}`}>
+                      <Avatar choice={b.avatar} />
+                      <span>
+                        <b>{b.nickname}</b> boosted! ⚡
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <Submarine faces={faces} />
               </div>
-              <ul class="boost-feed">
-                {feed.map((b) => (
-                  <li key={b.seq}>⚡ {b.nickname} boosted!</li>
-                ))}
-              </ul>
               {view.phase === "countdown" && (
                 <div class="countdown-overlay">
                   <div class="countdown-label">Answer questions to earn boosts. Keep the sub away from the anglerfish!</div>
@@ -143,7 +213,7 @@ export function SubStage({ view, send }: { view: SubView; send: Send }) {
   );
 }
 
-function Dive({ view }: { view: SubView }) {
+function Dive({ view, faces }: { view: SubView; faces: (PortholeFace | null)[] }) {
   const dive = view.dive!;
   return (
     <>
@@ -161,7 +231,7 @@ function Dive({ view }: { view: SubView }) {
         ))}
       </div>
       <div class="dive-sub">
-        <Submarine />
+        <Submarine faces={faces} />
       </div>
       <div class="dive-help">
         <b>Diving!</b> Instructors: describe the symbol on your phone. Everyone else: find it on yours!

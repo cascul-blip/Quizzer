@@ -1569,9 +1569,9 @@ select {
 
 .sub-pos {
   position: absolute;
-  top: 40%;
-  left: 62%;
-  width: 22vw;
+  top: 42%;
+  left: 60%;
+  width: 26vw;
   z-index: 2;
   animation: sub-bob 2s ease-in-out infinite alternate;
 }
@@ -1646,30 +1646,101 @@ select {
   }
 }
 
-.boost-feed {
+.boost-pops {
   position: absolute;
-  right: 2vw;
-  bottom: 16vh;
-  list-style: none;
-  margin: 0;
-  padding: 0;
+  left: 50%;
+  bottom: 108%;
+  transform: translateX(-50%);
   display: flex;
-  flex-direction: column;
+  flex-direction: column-reverse;
+  align-items: center;
   gap: 6px;
   z-index: 3;
-  font-weight: 800;
-  font-size: clamp(14px, 1.3vw, 22px);
+  pointer-events: none;
 }
 
-.boost-feed li {
-  background: rgba(0, 0, 0, 0.45);
-  padding: 4px 12px;
+.boost-pop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 16px 4px 4px;
   border-radius: 999px;
-  animation: rise 0.3s ease-out;
+  background: rgba(10, 20, 45, 0.78);
+  border: 3px solid #ffd23f;
+  font-size: clamp(15px, 1.4vw, 26px);
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  animation: pop-rise 2.6s ease-out forwards;
 }
 
-.boost-feed li:not(:first-child) {
-  opacity: 0.6;
+.boost-pop:not(.newest) {
+  border-color: rgba(255, 210, 63, 0.5);
+  opacity: 0.75;
+  transform: scale(0.88);
+}
+
+.boost-pop .avatar {
+  width: 2.4em;
+  height: 2.4em;
+  flex: none;
+  background: #fff;
+  border-radius: 50%;
+}
+
+.boost-pop b {
+  color: #ffd23f;
+}
+
+@keyframes pop-rise {
+  0% {
+    translate: 0 20px;
+    opacity: 0;
+    scale: 0.7;
+  }
+  12% {
+    translate: 0 0;
+    opacity: 1;
+    scale: 1.08;
+  }
+  20% {
+    scale: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    translate: 0 -24px;
+    opacity: 0;
+  }
+}
+
+/* A player peeking out of a porthole: rises into the window, looks around, ducks back down. */
+.peek {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: peek 3s ease-in-out both;
+}
+
+@keyframes peek {
+  0% {
+    transform: translateY(95%);
+  }
+  18% {
+    transform: translateY(8%) rotate(0deg);
+  }
+  40% {
+    transform: translateY(8%) rotate(-10deg);
+  }
+  62% {
+    transform: translateY(8%) rotate(10deg);
+  }
+  82% {
+    transform: translateY(8%) rotate(0deg);
+  }
+  100% {
+    transform: translateY(95%);
+  }
 }
 
 .sea-banner {
@@ -1757,8 +1828,8 @@ select {
 .dive-sub {
   position: absolute;
   left: 50%;
-  top: 38%;
-  width: 20vw;
+  top: 36%;
+  width: 28vw;
   transform: translateX(-50%) rotate(12deg);
   animation: descend 3s ease-in-out infinite alternate;
 }
