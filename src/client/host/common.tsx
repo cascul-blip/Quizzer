@@ -2,6 +2,7 @@ import { useState } from "preact/hooks";
 import type { HostMsg } from "../../shared/protocol.ts";
 import { musicEnabled, musicVolume, setMusicEnabled, setMusicVolume } from "../shared/music/index.ts";
 import { isMuted, setMuted } from "../shared/sounds.ts";
+import { setVoiceEnabled, voiceEnabled } from "../shared/voice.ts";
 
 export type Send = (m: HostMsg) => void;
 
@@ -10,11 +11,12 @@ export function toggleFullscreen() {
   else void document.documentElement.requestFullscreen?.().catch(() => {});
 }
 
-/** Mute + fullscreen buttons for the projector's top bar. */
-export function ScreenControls() {
+/** Music, voice, mute and fullscreen buttons for the projector's top bar. `voice` shows the announcer toggle (modes that speak). */
+export function ScreenControls({ voice = false }: { voice?: boolean } = {}) {
   const [muted, setMutedState] = useState(isMuted());
   const [musicOn, setMusicOn] = useState(musicEnabled());
   const [volume, setVolume] = useState(musicVolume());
+  const [voiceOn, setVoiceOn] = useState(voiceEnabled());
   return (
     <>
       <div class={`music-ctl ${musicOn ? "" : "off"}`}>
@@ -46,6 +48,20 @@ export function ScreenControls() {
           }}
         />
       </div>
+      {voice && (
+        <button
+          class={`icon-btn voice-btn ${voiceOn ? "" : "off"}`}
+          title={voiceOn ? "Turn the announcer voice off" : "Turn the announcer voice on"}
+          aria-label={voiceOn ? "Turn the announcer voice off" : "Turn the announcer voice on"}
+          aria-pressed={voiceOn}
+          onClick={() => {
+            setVoiceEnabled(!voiceOn);
+            setVoiceOn(!voiceOn);
+          }}
+        >
+          🗣
+        </button>
+      )}
       <button
         class="icon-btn"
         title={muted ? "Unmute sounds" : "Mute sounds"}

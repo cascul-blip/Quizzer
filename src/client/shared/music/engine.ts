@@ -23,6 +23,7 @@ export type Instrument =
   | "pluck"
   | "bell"
   | "brass"
+  | "organ"
   | "woodblock"
   | "sonar"
   | "taiko"
@@ -253,6 +254,37 @@ export function playInstrument(ctx: Ctx, dest: AudioNode, inst: Instrument, t: n
         o.connect(g);
         o.start(t);
         o.stop(t + len * 1.4 + 0.5);
+      }
+      return;
+    }
+    case "organ": {
+      // Drawbar organ: stacked sine harmonics through a shared gain, with a slow rotary-speaker wobble.
+      const g = ctx.createGain();
+      g.connect(dest);
+      env(g, t, 0.07 * v, 0.02, Math.max(0, len - 0.05), 0.12);
+      const lfo = ctx.createOscillator();
+      const depth = ctx.createGain();
+      lfo.frequency.value = 5.5;
+      depth.gain.value = 6;
+      lfo.connect(depth);
+      lfo.start(t);
+      lfo.stop(t + len + 0.3);
+      for (const [mult, level] of [
+        [0.5, 0.7],
+        [1, 1],
+        [2, 0.55],
+        [3, 0.3],
+        [4, 0.2],
+      ] as const) {
+        const o = ctx.createOscillator();
+        const og = ctx.createGain();
+        o.type = "sine";
+        o.frequency.value = freq * mult;
+        depth.connect(o.detune);
+        og.gain.value = level;
+        o.connect(og).connect(g);
+        o.start(t);
+        o.stop(t + len + 0.3);
       }
       return;
     }

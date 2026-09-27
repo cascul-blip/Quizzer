@@ -7,6 +7,7 @@ const LOBBY: Record<GameMode, MusicTrackId> = {
   tower: "tower-lobby",
   submarine: "submarine-lobby",
   fight: "fight-lobby",
+  robot: "robot-lobby",
 };
 
 /** Which track the projector should play for this screen, and how intense. */
@@ -43,6 +44,16 @@ export function musicFor(view: HostView | null): MusicCue {
       if (view.phase === "podium") return { track: "fight-results" };
       const worst = Math.max(0, ...view.teams.map((t) => t.damage)) / TOWER_MAX_DAMAGE;
       return { track: "fight-play", intensity: Math.max(0, Math.min(1, 0.15 + worst * 0.85)) };
+    }
+    case "robot": {
+      if (view.phase === "podium") return { track: "robot-results" };
+      if (view.phase === "move" || view.phase === "attack") return { track: "robot-move" };
+      if (view.phase === "quiz") {
+        // The less time left to answer, the more intense.
+        const start = Math.max(0, Math.min(1, 1 - view.phaseRemainingMs / Math.max(1, view.phaseDurationMs)));
+        return { track: "robot-quiz", intensity: 0.2 + start * 0.8, rampTo: 1, rampMs: view.phaseRemainingMs, key: `robot-q${view.round}` };
+      }
+      return { track: "robot-quiz", intensity: 0, key: "robot-countdown" };
     }
   }
 }

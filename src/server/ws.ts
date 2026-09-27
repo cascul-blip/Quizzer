@@ -5,7 +5,8 @@ import { cleanAvatar } from "../shared/avatars.ts";
 import { ValidationError } from "../shared/quiz-schema.ts";
 import { FightGame } from "./game/fight.ts";
 import { DEFAULT_FIGHT, DEFAULT_TOWER, Game, GameError, type Clock } from "./game/game.ts";
-import { buildFightResultsCsv, buildResultsCsv, buildSubResultsCsv, buildTowerResultsCsv, writeResultsFile } from "./game/results.ts";
+import { buildFightResultsCsv, buildResultsCsv, buildRobotResultsCsv, buildSubResultsCsv, buildTowerResultsCsv, writeResultsFile } from "./game/results.ts";
+import { RobotGame } from "./game/robot.ts";
 import { SubGame } from "./game/submarine.ts";
 import { TowerGame } from "./game/tower.ts";
 import { lanAddresses, type LanAddress } from "./network.ts";
@@ -39,7 +40,7 @@ const PACINGS = new Set<Pacing>(["manual", "auto"]);
 /** In Tallest Tower, answers stream in constantly: the acting player is updated at once, everyone else at most this often. */
 const ACTIVITY_THROTTLE_MS = 100;
 
-export type LiveGame = Game | TowerGame | SubGame | FightGame;
+export type LiveGame = Game | TowerGame | SubGame | FightGame | RobotGame;
 
 /** Owns the single live game and every connected socket; pushes full view snapshots on each change. */
 export class GameHub {
@@ -267,6 +268,16 @@ export class GameHub {
         if (this.game.fire(ws.data.playerId, Number(msg.dx), Number(msg.dy)) === null) this.sendState(ws);
         return;
       }
+      case "robot.answer": {
+        if (!(this.game instanceof RobotGame) || !ws.data.playerId) return;
+        if (!this.game.answer(ws.data.playerId, Number(msg.seq), Number(msg.option))) this.sendState(ws);
+        return;
+      }
+      case "robot.move": {
+        if (!(this.game instanceof RobotGame) || !ws.data.playerId) return;
+        if (!this.game.move(ws.data.playerId, msg.dir)) this.sendState(ws);
+        return;
+      }
       case "tower.drop": {
         if (!(this.game instanceof TowerGame) || !ws.data.playerId) return;
         if (this.game.drop(ws.data.playerId, Number(msg.zone)) === null) this.sendState(ws);
@@ -284,7 +295,7 @@ export class GameHub {
     };
     const classic = () => {
       const g = game();
-      if (!(g instanceof Game)) throw new GameError(`Not available in ${g instanceof TowerGame ? "Tallest Tower" : g instanceof SubGame ? "Submarine Squad" : "Tower Fight"}`);
+      if (!(g instanceof Game)) throw new GameError(`Not available in ${g instanceof TowerGame ? "Tallest Tower" : g instanceof SubGame ? "Submarine Squad" : g instanceof RobotGame ? "Robot Attack" : "Tower Fight"}`);
       return g;
     };
     switch (msg.type) {
@@ -310,6 +321,7 @@ export class GameHub {
         if (lobby.phase === "lobby" && lobby.mode === "tower") return this.startTower(lobby);
         if (lobby.phase === "lobby" && lobby.mode === "submarine") return this.startSub(lobby);
         if (lobby.phase === "lobby" && lobby.mode === "fight") return this.startFight(lobby);
+        if (lobby.phase === "lobby" && lobby.mode === "robot") return this.startRobot(lobby);
         return lobby.start(PACINGS.has(msg.pacing) ? msg.pacing : undefined);
       }
       case "host.setPacing":
@@ -403,6 +415,21 @@ export class GameHub {
     this.log(`Tower Fight started with ${fight.players.size} player(s), ${fight.hill} hill`);
   }
 
+  /** Hand the lobby's players to a Robot Attack game. */
+  private startRobot(lobby: Game): void {
+    if (lobby.players.size === 0) throw new GameError("Wait for at least one player to join");
+    const robot = RobotGame.fromLobby(lobby, {
+      clock: this.opts.clock,
+      onChange: () => this.scheduleBroadcast(),
+      onActivity: (pid) => this.onActivity(pid),
+      onFinish: (g) => this.onFinish(g),
+    });
+    lobby.dispose();
+    this.game = robot;
+    robot.start();
+    this.log(`Robot Attack started with ${robot.players.size} player(s)`);
+  }
+
   private closeGame(): void {
     if (this.activityTimer) clearTimeout(this.activityTimer);
     this.activityTimer = null;
@@ -420,7 +447,9 @@ export class GameHub {
           ? buildSubResultsCsv(game)
           : game instanceof FightGame
             ? buildFightResultsCsv(game)
-            : buildResultsCsv(game);
+            : game instanceof RobotGame
+              ? buildRobotResultsCsv(game)
+              : buildResultsCsv(game);
     let file: string | null = null;
     try {
       file = writeResultsFile(game, csv, this.store.resultsDir);

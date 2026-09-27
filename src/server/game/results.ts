@@ -2,6 +2,7 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { FightGame } from "./fight.ts";
 import type { Game } from "./game.ts";
+import type { RobotGame } from "./robot.ts";
 import type { SubGame } from "./submarine.ts";
 import type { TowerGame } from "./tower.ts";
 
@@ -73,6 +74,18 @@ export function buildFightResultsCsv(game: FightGame): string {
       rows.push([t.name, result, t.damage, p.nickname, p.correct, p.wrong, answered ? Math.round((p.correct / answered) * 100) : "", p.shots, p.hits, p.friendlyHits, p.rebuilds]);
     }
   }
+  return toCsv([header, ...rows]);
+}
+
+/** Robot Attack: one row per player in final standing order. */
+export function buildRobotResultsCsv(game: RobotGame): string {
+  const header = ["Rank", "Nickname", "Status", "Lives left", "Rounds survived", "Correct", "Wrong", "Accuracy %", "Moves", "Laser hits"];
+  const rows: (string | number)[][] = game.standings().map((s) => {
+    const p = game.players.get(s.id)!;
+    const answered = p.correct + p.wrong;
+    const status = s.rank === 1 ? "Winner" : p.outRound === null ? "Survived" : `Out in round ${p.outRound}`;
+    return [s.rank, p.nickname, status, p.lives, p.outRound === null ? game.attacks : p.outRound - 1, p.correct, p.wrong, answered ? Math.round((p.correct / answered) * 100) : "", p.moves, p.hits];
+  });
   return toCsv([header, ...rows]);
 }
 

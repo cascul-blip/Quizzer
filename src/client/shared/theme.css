@@ -569,3 +569,201 @@ a.btn {
     transform: rotate(20deg);
   }
 }
+
+/* ----- Robot Attack arena (shared by projector and phones) ----- */
+
+.robot-arena {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.robot-arena .tile.light,
+.mini-board .tile.light {
+  fill: #d7d3e6;
+}
+
+.robot-arena .tile.dark,
+.mini-board .tile.dark {
+  fill: #3d3558;
+}
+
+.robot-arena .tile {
+  stroke: rgba(0, 0, 0, 0.25);
+  stroke-width: 1;
+}
+
+.tile-x line {
+  stroke: #ff2438;
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+
+.tile-danger {
+  fill: rgba(255, 36, 56, 0.22);
+}
+
+.tile-x {
+  animation: x-in 0.35s ease-out both;
+}
+
+@keyframes x-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.robot-arena.attacking .tile-danger {
+  animation: danger-flash 0.25s steps(2) infinite;
+}
+
+@keyframes danger-flash {
+  to {
+    fill: rgba(255, 90, 40, 0.55);
+  }
+}
+
+.robot .eyes {
+  animation: eye-glow 2.4s ease-in-out infinite alternate;
+}
+
+.robot.attacking .eyes ellipse {
+  fill: #ff4a5c;
+}
+
+@keyframes eye-glow {
+  from {
+    opacity: 0.75;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.robot .spark {
+  opacity: 0;
+  animation: spark 1.3s linear infinite;
+}
+
+.robot .spark.s2 {
+  animation-delay: 0.45s;
+}
+
+.robot .spark.s3 {
+  animation-delay: 0.9s;
+}
+
+@keyframes spark {
+  0%,
+  8% {
+    opacity: 1;
+  }
+  16%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.robot .axe-edge {
+  animation: eye-glow 0.3s steps(2) infinite alternate;
+}
+
+.emitter-core {
+  fill: #4fd8ff;
+}
+
+.emitter.firing .emitter-core {
+  fill: #ff4a5c;
+  animation: danger-flash 0.12s steps(2) infinite;
+}
+
+.beam-glow,
+.beam-core {
+  stroke-linecap: round;
+  opacity: 0;
+  animation: beam 0.9s ease-out both;
+}
+
+.beam-glow {
+  stroke: rgba(255, 40, 60, 0.45);
+  stroke-width: 12;
+}
+
+.beam-core {
+  stroke: #fff2f2;
+  stroke-width: 3;
+}
+
+@keyframes beam {
+  0% {
+    opacity: 0;
+  }
+  10%,
+  55% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.scorch {
+  fill: #ffb347;
+  opacity: 0;
+  animation: scorch 1.6s ease-out both;
+}
+
+@keyframes scorch {
+  10% {
+    opacity: 0.9;
+    fill: #fff3c4;
+  }
+  100% {
+    opacity: 0.35;
+    fill: #2a1010;
+  }
+}
+
+.piece {
+  transition: transform 0.18s ease-out;
+}
+
+.piece.zapped > g {
+  animation: zapped 0.5s steps(2) 0.3s 4;
+}
+
+@keyframes zapped {
+  to {
+    opacity: 0.2;
+  }
+}
+
+.mine-ring {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+
+.stack-more rect {
+  fill: rgba(20, 5, 45, 0.85);
+}
+
+.stack-more text {
+  fill: #fff;
+  font-weight: 900;
+}
+
+.hearts {
+  display: inline-flex;
+  gap: 1px;
+  letter-spacing: 0;
+}
+
+.hearts i {
+  font-style: normal;
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.hearts i.full {
+  color: #ff4a5c;
+}
