@@ -168,6 +168,17 @@ A two-team battle: **Red** and **Blue** each defend a castle tower, with a hill 
 
 If the host ends the game early, **the least damaged tower wins**. With equal damage, the team with more correct answers wins; otherwise it's a draw. The podium shows the winning team and awards for **Top gunner** (most hits on the enemy tower), **Master builder** (most rebuilds) and **Most correct answers**. The results CSV lists each player's answers, shots, enemy hits, friendly hits and rebuilds.
 
+## Robot Attack mode
+
+Every player for themselves on a 12×12 checkerboard, with a giant robot looming behind it. Choose **Game mode → 🤖 Robot Attack** in the lobby. Everyone starts with **3 lives** on their own tile, spread out across the board. The game alternates between two phases:
+
+- **Quiz.** Everyone answers questions on their phone at their own pace, and **each correct answer earns 1 move ⚡**. A red bar across the top of the projector drains as time runs out, and the music gets more intense. The first quiz phase lasts **30 seconds**, and each round is **2 seconds shorter**, down to 5 seconds. **5 seconds before the end**, the robot locks its targets: **red Xs cover 3/4 of the board, plus every tile a player is standing on**. The robot announces it in a deep voice ("Targets acquired"); the **🗣 button** in the projector's top bar turns the voice off. Phones keep showing questions, so look up at the projector to plan an escape.
+- **Move (7 seconds).** Phones show **arrow buttons** and a small map of the board with your position and the red Xs. Each step costs 1 move. Moves left over at the end are lost.
+
+Then the robot's three back arms **fire lasers at every red X**. Anyone standing on one loses a life, and a player who loses all 3 is out. The robot then passes judgment: "Only metal endures" if anyone was knocked out, "The flesh is weak" if players were hit, or "zero one one zero one zero zero one" if everyone dodged. Players who are out keep answering questions for fun but can't move. **Only one player can stand on a tile**, so other players can block your way to a safe spot. The arrow toward an occupied tile or the edge of the board is greyed out. Players who are out leave the board and don't block anyone.
+
+**The last player standing wins.** If the last players are all knocked out by the same blast, they share the win. A game with only one player runs until they're out. If the host ends the game early, players still in the game are ranked by lives left. The podium shows the standings and awards for **Most correct answers** and **Fancy footwork** (most moves). The results CSV lists each player's rank, the round they went out in, lives left, answers, moves and laser hits.
+
 ## Music
 
 Every game mode has **built-in background music** on the projector (phones stay quiet). It's composed in code, so it adds nothing to the download and needs no licenses:
@@ -178,6 +189,7 @@ Every game mode has **built-in background music** on the projector (phones stay 
 | Tallest Tower | Retro arcade (chiptune) | Builds up as the game clock runs down |
 | Submarine Squad | Deep-sea suspense | Speeds up and adds layers as the anglerfish closes in; a calmer theme while diving |
 | Tower Fight | Medieval battle | Gets more intense as the towers take damage |
+| Robot Attack | Machine-cult chant: a deep drone, organ and brass | Builds up as each quiz phase's timer runs out; urgent during movement |
 
 The lobby plays the music of whichever game mode is selected. Use the **🎵 button and slider** in the projector's top bar to turn music off or change its volume. The 🔊 button still mutes everything.
 
@@ -191,6 +203,7 @@ Put audio files (MP3, OGG, M4A, WAV, WebM or FLAC) in the **`data/music`** folde
 | `tower-lobby` · `tower-play` · `tower-results` | Tallest Tower |
 | `submarine-lobby` · `submarine-chase` · `submarine-dive` · `submarine-results` | Submarine Squad |
 | `fight-lobby` · `fight-play` · `fight-results` | Tower Fight |
+| `robot-lobby` · `robot-quiz` · `robot-move` · `robot-results` | Robot Attack: lobby, quiz phase, movement and laser attack, final results |
 
 For example, `data/music/submarine-chase.mp3`. Your files loop; they don't speed up with the game like the built-in music does. Only use music you're allowed to play: royalty-free or Creative Commons tracks (e.g. Pixabay Music, OpenGameArt, or incompetech with credit). Delete a file to go back to the built-in track.
 
@@ -262,6 +275,8 @@ src/client/host/    projector screen (Preact)
 src/client/player/  phone screen (Preact)
 tests/              bun test suites
 ```
+
+The robot's voice lines are pre-recorded MP3s in `src/client/shared/voice/`, generated with espeak-ng and ffmpeg. They're committed, so building doesn't need either tool. To add or change a line, edit `src/shared/voice-lines.ts` and run `bun scripts/voice.ts` (needs `espeak-ng` and `ffmpeg`).
 
 The server is authoritative. It runs the game state machine and timers, scores answers by server time, and pushes a complete view snapshot to each screen after every change, so a reconnecting screen always gets the full picture.
 

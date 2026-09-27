@@ -11,6 +11,7 @@ import { loadCustomMusic, useMusic } from "../shared/music/index.ts";
 import { ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
 import { musicFor } from "./music-cues.ts";
 import { FightStage } from "./fight.tsx";
+import { RobotStage } from "./robot.tsx";
 import { SubStage } from "./submarine.tsx";
 import { TowerStage } from "./tower.tsx";
 
@@ -83,6 +84,8 @@ function App() {
     body = <SubStage view={view} send={send} />;
   } else if (view.kind === "fight") {
     body = <FightStage view={view} send={send} />;
+  } else if (view.kind === "robot") {
+    body = <RobotStage view={view} send={send} />;
   } else {
     body = <Game view={view} send={send} />;
   }
@@ -315,6 +318,7 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
               <option value="tower">🏗 Tallest Tower</option>
               <option value="submarine">🐟 Submarine Squad</option>
               <option value="fight">🏰 Tower Fight</option>
+              <option value="robot">🤖 Robot Attack</option>
             </select>
           </label>
           {tower ? (
@@ -363,6 +367,8 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
               </label>
               <span class="opt mode-hint">Red vs Blue: knock down the other team's tower. The game runs until a tower falls or you end it.</span>
             </>
+          ) : view.mode === "robot" ? (
+            <span class="opt mode-hint">Answer questions to earn moves, then dodge the robot's lasers. Last one standing wins.</span>
           ) : view.mode === "submarine" ? (
             <span class="opt mode-hint">Everyone works together to outrun the anglerfish. The game ends when it catches you.</span>
           ) : (

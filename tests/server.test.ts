@@ -2,11 +2,12 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { INTRO_MS } from "../src/server/game/game.ts";
 import { COUNTDOWN_MS, DROP_COOLDOWN_MS, FEEDBACK_MS } from "../src/server/game/tower.ts";
 import { COUNTDOWN_MS as FIGHT_COUNTDOWN_MS, RESULT_MS } from "../src/server/game/fight.ts";
+import { COUNTDOWN_MS as ROBOT_COUNTDOWN_MS } from "../src/server/game/robot.ts";
 import { BOOST_MIN_HOLD_MS, COUNTDOWN_MS as SUB_COUNTDOWN_MS } from "../src/server/game/submarine.ts";
 import { startServer, type RunningServer } from "../src/server/http.ts";
 import { isAdminRequest } from "../src/server/network.ts";
 import { QuizStore } from "../src/server/quiz/store.ts";
-import type { ClientMsg, HostView, PlayerView, ServerMsg } from "../src/shared/protocol.ts";
+import { ROBOT_MOVE_MS, robotQuizMs, type ClientMsg, type HostView, type PlayerView, type ServerMsg } from "../src/shared/protocol.ts";
 import { FakeClock, tempDir } from "./helpers.ts";
 
 class TestSocket {
@@ -466,6 +467,83 @@ describe("Tower Fight over WebSockets", () => {
     // Play again keeps Tower Fight and the hill.
     host.send({ type: "host.open", quizId: quiz.id });
     await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "fight" && v.fight.hill === "low");
+    host.send({ type: "host.close" });
+    [host, ...players].forEach((s) => s.close());
+  });
+});
+
+describe("Robot Attack over WebSockets", () => {
+  test("lobby → quiz for points → move on the board → lasers → end → results", async () => {
+    const quiz = store.create({
+      title: "Robot E2E",
+      questions: [1, 2].map((n) => ({ type: "multiple_choice", text: `Q${n}`, options: ["right", "wrong"], correct: [0] })),
+    });
+    const wsUrl = `ws://localhost:${srv.port}/ws`;
+    const host = await TestSocket.open(wsUrl);
+    host.send({ type: "host.hello" });
+    await host.hostState((v) => v.kind === "idle");
+    host.send({ type: "host.open", quizId: quiz.id });
+    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
+    host.send({ type: "host.setMode", mode: "robot" });
+    await host.hostState((v) => v.kind === "classic" && v.mode === "robot" && v.teams === null);
+
+    const names = ["Ann", "Bob"];
+    const players = await Promise.all(names.map(() => TestSocket.open(wsUrl)));
+    for (const [i, p] of players.entries()) {
+      await p.playerState((v) => v.kind === "none" && !!v.game);
+      p.send({ type: "join", nickname: names[i]! });
+      await p.waitFor((m) => m.type === "joined");
+    }
+    await host.hostState((v) => v.kind === "classic" && v.players.length === 2);
+
+    host.send({ type: "host.start", pacing: "manual" });
+    await host.hostState((v) => v.kind === "robot" && v.phase === "countdown");
+    clock.advance(ROBOT_COUNTDOWN_MS);
+    srv.hub.broadcast();
+
+    const ann = players[0]!;
+    for (let i = 0; i < 2; i++) {
+      const st = await ann.playerState((v) => v.kind === "robot" && v.phase === "quiz" && !!v.question && !v.feedback);
+      const q = st.view.kind === "robot" ? st.view.question! : null;
+      expect(st.view.kind === "robot" && st.view.board).toBeNull();
+      ann.send({ type: "robot.answer", seq: q!.seq, option: 0 });
+      await ann.playerState((v) => v.kind === "robot" && v.feedback?.seq === q!.seq);
+      clock.advance(FEEDBACK_MS);
+      srv.hub.broadcast();
+    }
+    await ann.playerState((v) => v.kind === "robot" && v.me.points === 2);
+
+    clock.advance(robotQuizMs(1));
+    srv.hub.broadcast();
+    const moving = await ann.playerState((v) => v.kind === "robot" && v.phase === "move" && !!v.board);
+    const start = moving.view.kind === "robot" ? moving.view.me : null;
+    expect(moving.view.kind === "robot" && moving.view.board!.marked.length).toBeGreaterThanOrEqual(108);
+    // Step away from the edge the player is nearest, twice.
+    const dir = start!.x < 6 ? "right" : "left";
+    ann.send({ type: "robot.move", dir });
+    ann.send({ type: "robot.move", dir });
+    const moved = await ann.playerState((v) => v.kind === "robot" && v.me.points === 0);
+    expect(moved.view.kind === "robot" && moved.view.me.x).toBe(start!.x + (dir === "right" ? 2 : -2));
+    await host.hostState((v) => v.kind === "robot" && v.players.some((p) => p.nickname === "Ann" && p.x === start!.x + (dir === "right" ? 2 : -2)));
+
+    // Bob stood still, so the lasers hit him.
+    clock.advance(ROBOT_MOVE_MS);
+    const attack = await host.hostState((v) => v.kind === "robot" && v.phase === "attack");
+    const bob = attack.view.kind === "robot" ? attack.view.players.find((p) => p.nickname === "Bob")! : null;
+    expect(bob!.lives).toBe(2);
+    expect(attack.view.kind === "robot" && attack.view.lastAttack!.hit).toContain(bob!.id);
+
+    host.send({ type: "host.end" });
+    const podium = await host.hostState((v) => v.kind === "robot" && v.phase === "podium");
+    expect(podium.view.kind === "robot" && podium.view.standings!.at(-1)!.nickname).toBe("Bob");
+    await players[1]!.playerState((v) => v.kind === "robot" && v.phase === "podium" && !!v.result);
+    const csv = await (await fetch(`${base}/api/results/latest.csv`)).text();
+    expect(csv).toContain("Rank,Nickname,Status");
+    expect(csv).toContain("Bob,");
+
+    // Play again keeps Robot Attack.
+    host.send({ type: "host.open", quizId: quiz.id });
+    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "robot");
     host.send({ type: "host.close" });
     [host, ...players].forEach((s) => s.close());
   });

@@ -15,7 +15,7 @@ export interface ShuffleOptions {
 
 // ---------- Tallest Tower ----------
 
-export type GameMode = "classic" | "tower" | "submarine" | "fight";
+export type GameMode = "classic" | "tower" | "submarine" | "fight" | "robot";
 export type TowerPhase = "countdown" | "playing" | "podium";
 
 export const TEAMS = [
@@ -92,7 +92,9 @@ export type PlayerMsg =
   | { type: "fight.answer"; seq: number; option: number }
   | { type: "fight.choose"; action: "attack" | "rebuild" }
   /** The slingshot pull in field units (y up); the shot flies the opposite way. */
-  | { type: "fight.fire"; dx: number; dy: number };
+  | { type: "fight.fire"; dx: number; dy: number }
+  | { type: "robot.answer"; seq: number; option: number }
+  | { type: "robot.move"; dir: RobotDir };
 
 export type HostMsg =
   | { type: "host.hello" }
@@ -148,7 +150,7 @@ export interface PlayerResult {
 
 export type PlayerView =
   | { kind: "none"; game: null }
-  | { kind: "none"; game: { title: string; phase: Phase | TowerPhase | SubPhase | FightPhase } }
+  | { kind: "none"; game: { title: string; phase: Phase | TowerPhase | SubPhase | FightPhase | RobotPhase } }
   | {
       kind: "player";
       phase: Phase;
@@ -165,7 +167,8 @@ export type PlayerView =
     }
   | PlayerTowerView
   | PlayerSubView
-  | PlayerFightView;
+  | PlayerFightView
+  | PlayerRobotView;
 
 export interface TowerAwards {
   mostCorrect: { value: number; nicknames: string[] } | null;
@@ -437,12 +440,109 @@ export interface PlayerFightView {
   result: { outcome: FightOutcome; awards: string[] } | null;
 }
 
+// ---------- Robot Attack ----------
+
+export type RobotPhase = "countdown" | "quiz" | "move" | "attack" | "podium";
+export type RobotDir = "up" | "down" | "left" | "right";
+export const ROBOT_DIRS: readonly RobotDir[] = ["up", "down", "left", "right"];
+/** The board is ROBOT_BOARD × ROBOT_BOARD tiles; tile index = y * ROBOT_BOARD + x, with y = 0 the row nearest the robot. */
+export const ROBOT_BOARD = 12;
+export const ROBOT_LIVES = 3;
+/** The first quiz phase is this long; each round is ROBOT_QUIZ_STEP_MS shorter, down to ROBOT_QUIZ_MIN_MS. */
+export const ROBOT_QUIZ_START_MS = 30_000;
+export const ROBOT_QUIZ_STEP_MS = 2000;
+export const ROBOT_QUIZ_MIN_MS = 5000;
+/** The red Xs appear this long before the quiz phase ends. */
+export const ROBOT_WARN_MS = 5000;
+export const ROBOT_MOVE_MS = 7000;
+/** The laser attack plays this long before the next quiz phase. */
+export const ROBOT_ATTACK_MS = 3000;
+/** Share of the board the robot targets (plus every occupied tile). */
+export const ROBOT_HAZARD_FRACTION = 0.75;
+
+/** Length of round n's quiz phase (n starts at 1). */
+export function robotQuizMs(round: number): number {
+  return Math.max(ROBOT_QUIZ_MIN_MS, ROBOT_QUIZ_START_MS - ROBOT_QUIZ_STEP_MS * (round - 1));
+}
+
+export interface RobotAwards {
+  mostCorrect: SubAward | null;
+  mostMoves: SubAward | null;
+}
+
+/** The latest laser blast: who got hit and who was knocked out by it. */
+export interface RobotAttack {
+  seq: number;
+  round: number;
+  hit: string[];
+  eliminated: string[];
+}
+
+export interface HostRobotPlayer {
+  id: string;
+  nickname: string;
+  avatar: AvatarChoice;
+  connected: boolean;
+  x: number;
+  y: number;
+  lives: number;
+  out: boolean;
+  points: number;
+}
+
+export interface RobotStanding {
+  id: string;
+  nickname: string;
+  avatar: AvatarChoice;
+  rank: number;
+  lives: number;
+  /** Round the player was knocked out in, or null for a survivor. */
+  outRound: number | null;
+  correct: number;
+}
+
+export interface HostRobotState {
+  kind: "robot";
+  phase: RobotPhase;
+  quiz: { id: string; title: string; questionCount: number };
+  round: number;
+  phaseRemainingMs: number;
+  /** Full length of the current phase, for the progress bar. */
+  phaseDurationMs: number;
+  /** Targeted tile indices; empty until the warning. */
+  marked: number[];
+  players: HostRobotPlayer[];
+  lastAttack: RobotAttack | null;
+  playerCount: number;
+  /** Final standings, best first (podium only). */
+  standings: RobotStanding[] | null;
+  awards: RobotAwards | null;
+  hasResults: boolean;
+}
+
+export interface PlayerRobotView {
+  kind: "robot";
+  phase: RobotPhase;
+  title: string;
+  round: number;
+  phaseRemainingMs: number;
+  me: { id: string; nickname: string; avatar: AvatarChoice; lives: number; out: boolean; points: number; correct: number; x: number; y: number };
+  question: { seq: number; type: QuestionType; text: string; image?: string; options: string[] } | null;
+  feedback: { seq: number; correct: boolean; remainingMs: number; answers: string[] } | null;
+  /** The board, during movement and the attack only (quiz time is for questions). */
+  board: { marked: number[]; others: { x: number; y: number }[] } | null;
+  /** This player's part in the latest attack. */
+  lastAttack: { seq: number; hit: boolean; eliminated: boolean } | null;
+  result: { rank: number; playerCount: number; won: boolean; outRound: number | null; awards: string[] } | null;
+}
+
 export type HostView =
   | { kind: "idle"; phase: "idle"; join: JoinInfo }
   | (HostGameState & { join: JoinInfo })
   | (HostTowerState & { join: JoinInfo })
   | (HostSubState & { join: JoinInfo })
-  | (HostFightState & { join: JoinInfo });
+  | (HostFightState & { join: JoinInfo })
+  | (HostRobotState & { join: JoinInfo });
 
 export type ServerMsg =
   /** First message on every connection. A new serverId means the server restarted (maybe with new code). */

@@ -1,7 +1,8 @@
 /**
  * The built-in soundtrack: original loops composed for each game mode.
  * Classic = upbeat game show, Tallest Tower = retro chiptune,
- * Submarine Squad = deep-sea suspense, Tower Fight = medieval battle.
+ * Submarine Squad = deep-sea suspense, Tower Fight = medieval battle,
+ * Robot Attack = machine-cult chant over a D drone.
  * Any of these can be replaced by an audio file in data/music/<id>.<ext>.
  */
 import type { MusicTrackId } from "../../../shared/music-tracks.ts";
@@ -365,6 +366,116 @@ const fightResults: Track = {
   ],
 };
 
+// ---------- Robot Attack: machine-cult chant ----------
+// A drone on D; organ chords that swap minor and major (Dm/D) and lean on the dark
+// flat second (E♭); a narrow half-step motif circling D; almost no drums until the pressure builds.
+
+const robotLobby: Track = {
+  id: "robot-lobby",
+  bpm: 60,
+  bars: 8,
+  layers: [
+    { inst: "tribass", bars: [hold("D2"), hold("D2"), hold("D2"), hold("G1"), hold("D2"), hold("Eb2"), hold("A1"), hold("D2")], vol: 0.8 },
+    {
+      inst: "organ",
+      bars: [
+        hold(chord("D3 F3 A3")),
+        hold(chord("D3 F3 A3")),
+        hold(chord("D3 F#3 A3")),
+        hold(chord("G3 Bb3 D4")),
+        hold(chord("D3 F3 A3")),
+        hold(chord("Eb3 G3 Bb3")),
+        hold(chord("A2 C#3 E3")),
+        hold(chord("D3 F3 A3")),
+      ],
+      vol: 0.9,
+    },
+    // The chant: a few slow notes creeping around D, with long silences.
+    {
+      inst: "organ",
+      bars: [
+        rest,
+        seq([".", 8], ["C#4", 2], ["D4", 6]),
+        rest,
+        seq(["D4", 4], ["Eb4", 8], ["D4", 4]),
+        rest,
+        seq(["Eb4", 4], ["D4", 4], ["C#4", 4], ["D4", 4]),
+        seq(["C#4", 8], ["E4", 8]),
+        seq(["D4", 12], [".", 4]),
+      ],
+      vol: 0.7,
+    },
+    { inst: "heart", bars: [drum("x.......x.......")], vol: 0.5 },
+  ],
+};
+
+const robotQuiz: Track = {
+  id: "robot-quiz",
+  bpm: 72,
+  bars: 4,
+  // From the slow chant at the start of the round to a driving ~120 BPM as time runs out.
+  tempoBoost: 0.7,
+  layers: [
+    // The drone stays on D under the chord changes, as in a chant.
+    { inst: "tribass", bars: [hold("D2"), hold("D2"), hold("D2"), hold("A1")], vol: 0.8 },
+    { inst: "organ", bars: [hold(chord("D3 F3 A3")), hold(chord("G3 Bb3 D4")), hold(chord("Eb3 G3 Bb3")), hold(chord("A2 C#3 E3"))], vol: 0.85 },
+    { inst: "heart", bars: [drum("x.......x.......")], vol: 0.55, to: 0.45 },
+    { inst: "tick", bars: [drum("x...x...x...x...")], vol: 0.5, from: 0.2, to: 0.6 },
+    { inst: "pulse", bars: [arp(["D3", "A3", "D4", "A3"], 2), arp(["G2", "D3", "G3", "D3"], 2), arp(["Eb3", "Bb3", "Eb4", "Bb3"], 2), arp(["A2", "E3", "A3", "C#4"], 2)], vol: 0.3, from: 0.35 },
+    { inst: "kick", bars: [drum("x...x...x...x...")], vol: 0.8, from: 0.5 },
+    { inst: "taiko", bars: [drum("o.......o..o....")], vol: 0.55, from: 0.65 },
+    // The brighter layer comes in over the drone, still circling D.
+    {
+      inst: "brass",
+      bars: [
+        seq(["D4", 8], ["C#4", 4], ["D4", 4]),
+        seq(["D4", 4], ["Eb4", 8], ["D4", 4]),
+        seq(["Eb4", 8], ["D4", 4], ["C4", 4]),
+        seq(["C#4", 8], ["E4", 4], ["C#4", 4]),
+      ],
+      vol: 0.7,
+      from: 0.6,
+    },
+    { inst: "hat", bars: [drum("..x...x...x...x.")], vol: 0.35, from: 0.75 },
+    { inst: "snare", bars: [drum("....x.......x..."), drum("....x.......x..."), drum("....x.......x..."), drum("....x...x.x.xxxx")], vol: 0.6, from: 0.85 },
+    { inst: "organ", bars: [hold(chord("D4 F4 A4")), hold(chord("G4 Bb4 D5")), hold(chord("Eb4 G4 Bb4")), hold(chord("E4 A4 C#5"))], vol: 0.45, from: 0.9 },
+  ],
+};
+
+const robotMove: Track = {
+  id: "robot-move",
+  // The chant's pulse doubled: the robot is about to fire.
+  bpm: 123,
+  bars: 2,
+  layers: [
+    { inst: "kick", bars: [drum("x...x...x...x...")] },
+    { inst: "taiko", bars: [drum("o.....o.o.......")], vol: 0.6 },
+    { inst: "bass", bars: [pump("D1", "x.xxx.xxx.xxx.xx")], vol: 0.85 },
+    { inst: "organ", bars: [seq(["D3+F3+A3", 6], [".", 2], ["D3+F3+A3", 6], [".", 2]), seq(["Eb3+G3+Bb3", 6], [".", 2], ["C#3+E3+A3", 8])], vol: 0.8 },
+    { inst: "brass", bars: [seq(["D4", 4], ["Eb4", 4], ["D4", 4], ["C#4", 4]), seq(["D4", 4], ["Eb4", 4], ["E4", 8])], vol: 0.55 },
+    { inst: "hat", bars: [drum("xxxxxxxxxxxxxxxx")], vol: 0.35 },
+    { inst: "snare", bars: [drum("....x.......x..."), drum("....x.......xxxx")], vol: 0.6 },
+  ],
+};
+
+const robotResults: Track = {
+  id: "robot-results",
+  bpm: 66,
+  bars: 4,
+  layers: [
+    // Still a D drone, but the chords resolve to major: a solemn hymn for the survivors.
+    { inst: "tribass", bars: [hold("D2"), hold("G1"), hold("A1"), hold("D2")], vol: 0.8 },
+    { inst: "organ", bars: [hold(chord("D3 F#3 A3")), hold(chord("G3 B3 D4")), hold(chord("A2 C#3 E3")), hold(chord("D3 F#3 A3"))] },
+    {
+      inst: "brass",
+      bars: [seq(["A4", 8], ["F#4", 4], ["A4", 4]), seq(["B4", 8], ["A4", 4], ["G4", 4]), seq(["A4", 4], ["C#5", 4], ["E5", 8]), seq(["D5", 12], [".", 4])],
+      vol: 0.7,
+    },
+    { inst: "taiko", bars: [drum("o.......o.......")], vol: 0.6 },
+    { inst: "bell", bars: [once("D5"), once("D5"), once("C#5"), once("D5")], vol: 0.5 },
+  ],
+};
+
 export const TRACKS: Record<MusicTrackId, Track> = {
   "classic-lobby": classicLobby,
   "classic-question": classicQuestion,
@@ -380,4 +491,8 @@ export const TRACKS: Record<MusicTrackId, Track> = {
   "fight-lobby": fightLobby,
   "fight-play": fightPlay,
   "fight-results": fightResults,
+  "robot-lobby": robotLobby,
+  "robot-quiz": robotQuiz,
+  "robot-move": robotMove,
+  "robot-results": robotResults,
 };
