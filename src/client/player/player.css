@@ -454,6 +454,11 @@ h1 {
   align-items: center;
   justify-content: center;
   gap: 8px;
+}
+
+/* Only the contents pop: the background must cover the screen from the first frame,
+   or the next question shows through while it fades in. */
+.flash > * {
   animation: pop-in 0.15s ease-out;
 }
 
