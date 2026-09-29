@@ -139,19 +139,22 @@ function MonsterNotice({ event, egg }: { event: PlayerTowerView["monsterEvent"];
 
 /** Full-screen ✓/✗ for the second after each answer. */
 export function Feedback({ feedback, rightText }: { feedback: PlayerTowerView["feedback"]; rightText: string }) {
-  const [shown, setShown] = useState<{ correct: boolean; answers: string[] } | null>(null);
-  const seen = useRef(-1);
+  // Decided during render, not in an effect: the snapshot that brings this feedback also brings
+  // the next question, and an effect would let that question paint for a frame before the overlay.
+  const last = useRef(feedback);
+  if (feedback) last.current = feedback;
+  const [hiddenSeq, setHiddenSeq] = useState(-1);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
   useEffect(() => {
-    if (!feedback || feedback.seq === seen.current) return;
-    seen.current = feedback.seq;
-    setShown({ correct: feedback.correct, answers: feedback.answers });
+    if (!feedback) return;
     navigator.vibrate?.(feedback.correct ? 40 : [60, 40, 60]);
+    const seq = feedback.seq;
     clearTimeout(timer.current);
-    timer.current = setTimeout(() => setShown(null), feedback.remainingMs);
+    timer.current = setTimeout(() => setHiddenSeq(seq), feedback.remainingMs);
   }, [feedback?.seq]);
-  if (!shown) return null;
+  const shown = last.current;
+  if (!shown || shown.seq === hiddenSeq) return null;
   return (
     <div class={`flash ${shown.correct ? "good" : "bad"}`} role="status">
       <div class="flash-icon">{shown.correct ? "✓" : "✗"}</div>
