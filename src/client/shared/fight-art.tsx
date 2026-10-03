@@ -22,6 +22,8 @@ import {
 } from "../../shared/fight-physics.ts";
 import { TOWER_MAX_DAMAGE, type FightShot } from "../../shared/protocol.ts";
 import { ACCESSORY_ART, AVATAR_ART } from "./avatar-art.tsx";
+import castleClothImg from "./fight/castle-cloth.webp";
+import castleImg from "./fight/castle.webp";
 import { hash01 } from "./tower-art.tsx";
 
 /** Field height → SVG y. */
@@ -114,49 +116,35 @@ export function Terrain({ terrain }: { terrain: number[] }) {
   );
 }
 
-/** Merlons knocked off at each damage stage (index = merlon, value = stage it falls at). */
-const MERLON_FALLS_AT = [3, 2, 99, 3, 4];
+// Proportions of the castle image, as printed by scripts/fight-castle.py.
+const CASTLE_ASPECT = 0.403;
+/** Share of the image height above the battlements (flagpole and flag). */
+const CASTLE_FLAG_PART = 0.169;
+/** Drawn so the stonework is as tall as the tower's hit box. */
+const CASTLE_H = TOWER_H / (1 - CASTLE_FLAG_PART);
+const CASTLE_W = CASTLE_H * CASTLE_ASPECT;
+const STONE = "#8f9199";
 
-/** A team-colored castle tower; it looks worse with every hit, and is rubble at TOWER_MAX_DAMAGE. */
+/**
+ * A stone castle tower (a generated image, see scripts/fight-castle.py) whose flag and
+ * banners take the team color; it looks worse with every hit, and is rubble at TOWER_MAX_DAMAGE.
+ */
 export function CastleTower({ team, color, damage, collapsing, repairing }: { team: number; color: string; damage: number; collapsing?: boolean; repairing?: boolean }) {
   const cx = TOWER_X[team]!;
   const x = cx - TOWER_W / 2;
   const top = BASE - TOWER_H;
+  const img = { x: cx - CASTLE_W / 2, y: BASE - CASTLE_H, width: CASTLE_W, height: CASTLE_H };
   const destroyed = damage >= TOWER_MAX_DAMAGE;
   const body = (
     <g class="castle-body" transform={damage >= 4 ? `rotate(${team === 0 ? -2.5 : 2.5} ${cx} ${BASE})` : undefined}>
-      <rect x={x} y={top} width={TOWER_W} height={TOWER_H} fill={color} stroke="#1f1633" stroke-width="3" />
-      {/* stone courses */}
-      {Array.from({ length: 9 }, (_, r) => {
-        const y = top + (r + 1) * (TOWER_H / 10);
-        const off = r % 2 ? 20 : 0;
-        return (
-          <g key={r} stroke="rgba(0,0,0,0.22)" stroke-width="2">
-            <line x1={x} x2={x + TOWER_W} y1={y} y2={y} />
-            {[0, 1, 2].map((k) => (
-              <line key={k} x1={x + 10 + off + k * 25} x2={x + 10 + off + k * 25} y1={y - TOWER_H / 10} y2={y} />
-            ))}
-          </g>
-        );
-      })}
-      {/* merlons */}
-      {[0, 1, 2, 3, 4].map((m) =>
-        damage >= MERLON_FALLS_AT[m]! ? null : (
-          <rect key={m} x={x + m * 17} y={top - 16} width={12} height={17} fill={color} stroke="#1f1633" stroke-width="3" />
-        ),
-      )}
-      {/* windows and door */}
-      <rect x={cx - 24} y={top + 40} width="9" height="24" rx="4" fill="#1f1633" />
-      <rect x={cx + 15} y={top + 40} width="9" height="24" rx="4" fill="#1f1633" />
-      <rect x={cx - 4} y={top + 90} width="9" height="24" rx="4" fill="#1f1633" />
-      <path d={`M${cx - 15},${BASE} v-26 a15,15 0 0 1 30,0 v26 Z`} fill="#3b2412" stroke="#1f1633" stroke-width="3" />
-      {/* flag */}
-      {damage < 4 && (
-        <g class="castle-flag">
-          <line x1={cx} x2={cx} y1={top - 16} y2={top - 60} stroke="#1f1633" stroke-width="3" />
-          <path class="flag-cloth" d={`M${cx},${top - 60} l${team === 0 ? 30 : -30},8 l${team === 0 ? -30 : 30},8 Z`} fill={color} stroke="#1f1633" stroke-width="2" />
-        </g>
-      )}
+      {/* The right-hand tower is mirrored, so both banners hang on the outer side. */}
+      <g transform={team === 0 ? undefined : `translate(${2 * cx} 0) scale(-1 1)`}>
+        <mask id={`castle-cloth-${team}`} maskUnits="userSpaceOnUse" {...img}>
+          <image href={castleClothImg} {...img} preserveAspectRatio="none" />
+        </mask>
+        <rect {...img} fill={color} mask={`url(#castle-cloth-${team})`} />
+        <image href={castleImg} {...img} preserveAspectRatio="none" />
+      </g>
       {/* damage */}
       {damage >= 1 && <path d={`M${x + 58},${top + 8} l-8,18 l10,10 l-12,22`} fill="none" stroke="#1f1633" stroke-width="3" stroke-linecap="round" />}
       {damage >= 2 && (
@@ -179,7 +167,7 @@ export function CastleTower({ team, color, damage, collapsing, repairing }: { te
   return (
     <g class={`castle ${collapsing ? "collapsing" : ""}`} data-team={team}>
       {destroyed && !collapsing ? null : collapsing ? <g clip-path="url(#bf-above-ground)">{body}</g> : body}
-      {destroyed && <Rubble team={team} color={color} />}
+      {destroyed && <Rubble team={team} />}
       {damage >= 3 && !destroyed && <Smoke x={cx} y={top - 20} />}
       {collapsing && <Smoke x={cx} y={BASE - 40} big />}
       {repairing && !destroyed && <Scaffold team={team} />}
@@ -208,7 +196,7 @@ function Scaffold({ team }: { team: number }) {
   );
 }
 
-function Rubble({ team, color }: { team: number; color: string }) {
+function Rubble({ team }: { team: number }) {
   const cx = TOWER_X[team]!;
   return (
     <g class="rubble">
@@ -225,7 +213,7 @@ function Rubble({ team, color }: { team: number; color: string }) {
             width={w}
             height={h}
             rx="2"
-            fill={color}
+            fill={hash01(team, i, 6) < 0.5 ? STONE : "#a9abb3"}
             stroke="#1f1633"
             stroke-width="2.5"
             transform={`rotate(${(hash01(team, i, 5) - 0.5) * 50} ${px + w / 2} ${BASE - h / 2})`}

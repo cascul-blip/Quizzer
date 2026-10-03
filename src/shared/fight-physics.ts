@@ -14,7 +14,7 @@ export const GROUND = 60;
 export const COLS = 200;
 export const COL_W = FIELD_W / COLS;
 
-export const TOWER_W = 80;
+export const TOWER_W = 92;
 export const TOWER_H = 190;
 /** Tower centers: Red (team 0) on the left, Blue (team 1) on the right. */
 export const TOWER_X = [90, 910] as const;

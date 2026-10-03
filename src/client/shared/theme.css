@@ -429,12 +429,6 @@ a.btn {
   }
 }
 
-.castle-flag .flag-cloth {
-  transform-box: fill-box;
-  transform-origin: left center;
-  animation: flag-wave 1.6s ease-in-out infinite alternate;
-}
-
 .castle-fire path {
   transform-box: fill-box;
   transform-origin: bottom center;

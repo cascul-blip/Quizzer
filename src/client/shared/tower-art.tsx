@@ -1,23 +1,19 @@
 /**
- * Skyscraper art for Tallest Tower, drawn in SVG so it stays crisp on a
- * projector, weighs a few KB and works offline. Shared by host and phones.
+ * Skyscraper art for Tallest Tower. The building blocks are generated images
+ * (see scripts/tower-blocks.py); everything else is drawn in SVG so it stays
+ * crisp on a projector. Shared by host and phones.
  */
 import { useEffect, useRef, useState } from "preact/hooks";
+import lobbyTile from "./tower/lobby.webp";
+import office1Tile from "./tower/office-1.webp";
+import office2Tile from "./tower/office-2.webp";
+import office3Tile from "./tower/office-3.webp";
+import office4Tile from "./tower/office-4.webp";
+import shopTile from "./tower/shop.webp";
 
-// ---------- color + randomness helpers ----------
+// ---------- randomness helper ----------
 
-/** Lighten (amount > 0) or darken (amount < 0) a #rrggbb color; amount is -1…1. */
-export function shade(hex: string, amount: number): string {
-  const m = /^#?([0-9a-f]{6})$/i.exec(hex);
-  if (!m) return hex;
-  const n = parseInt(m[1]!, 16);
-  const mix = (c: number) => Math.round(amount < 0 ? c * (1 + amount) : c + (255 - c) * amount);
-  const clamp = (c: number) => Math.max(0, Math.min(255, c));
-  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((c) => clamp(mix(c)));
-  return `#${((1 << 24) | (r! << 16) | (g! << 8) | b!).toString(16).slice(1)}`;
-}
-
-/** Deterministic 0…1 hash so windows keep their lights across re-renders. */
+/** Deterministic 0…1 hash so blocks keep their look across re-renders. */
 export function hash01(...parts: number[]): number {
   let h = 2166136261;
   for (const p of parts) {
@@ -27,9 +23,6 @@ export function hash01(...parts: number[]): number {
   }
   return ((h >>> 0) % 10000) / 10000;
 }
-
-/** Whether window i (0–3) of a block is lit: about 60% are. */
-export const isLit = (team: number, col: number, row: number, i: number) => hash01(team, col, row, i) < 0.6;
 
 // ---------- sky ----------
 
@@ -130,54 +123,25 @@ export interface BlockProps {
   fresh?: boolean;
 }
 
-const GLASS_LIT = "#ffe08a";
-const GLASS_DARK = "#1d2a52";
+const OFFICE_TILES = [office1Tile, office2Tile, office3Tile, office4Tile];
 
-/** One cell of the 3-wide tower, drawn as a slice of a skyscraper. */
+/** Which tile a cell shows: "lobby", "shop", or an office variant 0…3. */
+export function blockTile(team: number, col: number, row: number): "lobby" | "shop" | number {
+  if (row === 0) return col === 1 ? "lobby" : "shop";
+  return Math.floor(hash01(team, col, row) * OFFICE_TILES.length);
+}
+
+/**
+ * One cell of the 3-wide tower, drawn as a slice of a skyscraper. The tiles are
+ * translucent over their walls, so the team color underneath shows through.
+ */
 export function BuildingBlock({ x, y, size: s, color, team, col, row, fullFloor, fresh }: BlockProps) {
-  const edge = shade(color, -0.28);
-  const light = shade(color, 0.35);
-  let face;
-  if (row === 0 && col === 1) {
-    // Lobby: glass double doors under a sign.
-    face = (
-      <>
-        <rect x={x + s * 0.2} y={y + s * 0.14} width={s * 0.6} height={s * 0.12} rx={s * 0.02} fill={light} />
-        <rect x={x + s * 0.26} y={y + s * 0.34} width={s * 0.48} height={s * 0.66} fill="#bfe3ff" />
-        <rect x={x + s * 0.49} y={y + s * 0.34} width={s * 0.02} height={s * 0.66} fill={edge} />
-        <rect x={x + s * 0.26} y={y + s * 0.34} width={s * 0.48} height={s * 0.04} fill={edge} />
-      </>
-    );
-  } else if (row === 0) {
-    // Shop front with a striped awning.
-    face = (
-      <>
-        {[0, 1, 2, 3].map((i) => (
-          <rect key={i} x={x + s * (0.08 + i * 0.21)} y={y + s * 0.26} width={s * 0.21} height={s * 0.14} fill={i % 2 ? "#ffffff" : light} />
-        ))}
-        <rect x={x + s * 0.14} y={y + s * 0.46} width={s * 0.62} height={s * 0.38} fill={isLit(team, col, row, 0) ? GLASS_LIT : "#bfe3ff"} />
-        <rect x={x + s * 0.14} y={y + s * 0.84} width={s * 0.62} height={s * 0.06} fill={edge} />
-      </>
-    );
-  } else {
-    // Office floor: a 2×2 grid of windows, some lit.
-    face = [0, 1, 2, 3].map((i) => (
-      <rect
-        key={i}
-        x={x + s * (i % 2 ? 0.52 : 0.14)}
-        y={y + s * (i < 2 ? 0.2 : 0.56)}
-        width={s * 0.26}
-        height={s * 0.26}
-        rx={s * 0.02}
-        fill={isLit(team, col, row, i) ? GLASS_LIT : GLASS_DARK}
-      />
-    ));
-  }
+  const tile = blockTile(team, col, row);
+  const href = tile === "lobby" ? lobbyTile : tile === "shop" ? shopTile : OFFICE_TILES[tile]!;
   return (
     <g class={`bb ${fresh ? "land" : ""}`}>
       <rect x={x} y={y} width={s} height={s} fill={color} />
-      <rect x={x + s * 0.9} y={y} width={s * 0.1} height={s} fill={edge} />
-      {face}
+      <image href={href} x={x} y={y} width={s} height={s} preserveAspectRatio="none" />
       {fullFloor && (
         <>
           <rect x={x - s * 0.02} y={y} width={s * 1.04} height={s * 0.08} fill="rgba(255,255,255,0.7)" />
