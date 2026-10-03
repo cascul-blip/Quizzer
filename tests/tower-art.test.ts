@@ -1,22 +1,12 @@
 import { expect, test } from "bun:test";
-import { hash01, isLit, shade, skyStage, viewBaseRow } from "../src/client/shared/tower-art.tsx";
+import { blockTile, hash01, skyStage, viewBaseRow } from "../src/client/shared/tower-art.tsx";
 
-test("shade lightens, darkens and clamps", () => {
-  expect(shade("#808080", 0)).toBe("#808080");
-  expect(shade("#808080", -0.5)).toBe("#404040");
-  expect(shade("#808080", 0.5)).toBe("#c0c0c0");
-  expect(shade("#123456", -1)).toBe("#000000");
-  expect(shade("#123456", 1)).toBe("#ffffff");
-  expect(shade("not-a-color", 0.5)).toBe("not-a-color");
-});
-
-test("window lights are deterministic with a mix of lit and dark", () => {
-  expect(isLit(1, 2, 3, 0)).toBe(isLit(1, 2, 3, 0));
-  const all = [];
-  for (let r = 0; r < 40; r++) for (let i = 0; i < 4; i++) all.push(isLit(0, 1, r, i));
-  const lit = all.filter(Boolean).length / all.length;
-  expect(lit).toBeGreaterThan(0.4);
-  expect(lit).toBeLessThan(0.8);
+test("block tiles are deterministic, with shops and a lobby at street level", () => {
+  expect([0, 1, 2].map((c) => blockTile(0, c, 0))).toEqual(["shop", "lobby", "shop"]);
+  expect(blockTile(1, 2, 3)).toBe(blockTile(1, 2, 3));
+  const offices = new Set<unknown>();
+  for (let r = 1; r < 40; r++) for (let c = 0; c < 3; c++) offices.add(blockTile(0, c, r));
+  expect([...offices].sort()).toEqual([0, 1, 2, 3]);
   for (let i = 0; i < 100; i++) {
     const v = hash01(i, 5);
     expect(v).toBeGreaterThanOrEqual(0);

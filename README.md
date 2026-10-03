@@ -278,6 +278,10 @@ tests/              bun test suites
 
 The robot's voice lines are pre-recorded MP3s in `src/client/shared/voice/`, generated with espeak-ng and ffmpeg. They're committed, so building doesn't need either tool. To add or change a line, edit `src/shared/voice-lines.ts` and run `bun scripts/voice.ts` (needs `espeak-ng` and `ffmpeg`).
 
+The Tallest Tower building blocks are images in `src/client/shared/tower/`, made from the generated facade tiles in `scripts/tower-blocks/`. They're committed too. To change them, replace a source PNG (the prompts are in the script) and run `python3 scripts/tower-blocks.py` (needs Pillow and numpy).
+
+The Tower Fight castle is made the same way: `python3 scripts/fight-castle.py` turns the intact tower and its four damage stages in `scripts/fight-castle/` into the images in `src/client/shared/fight/`. If the tower's proportions change, copy the numbers the script prints into `CastleTower` in `src/client/shared/fight-art.tsx`.
+
 The server is authoritative. It runs the game state machine and timers, scores answers by server time, and pushes a complete view snapshot to each screen after every change, so a reconnecting screen always gets the full picture.
 
 ### Building
