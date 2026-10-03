@@ -23,7 +23,11 @@ import {
 import { TOWER_MAX_DAMAGE, type FightShot } from "../../shared/protocol.ts";
 import { ACCESSORY_ART, AVATAR_ART } from "./avatar-art.tsx";
 import castleClothImg from "./fight/castle-cloth.webp";
-import castleImg from "./fight/castle.webp";
+import castle0 from "./fight/castle-0.webp";
+import castle1 from "./fight/castle-1.webp";
+import castle2 from "./fight/castle-2.webp";
+import castle3 from "./fight/castle-3.webp";
+import castle4 from "./fight/castle-4.webp";
 import { hash01 } from "./tower-art.tsx";
 
 /** Field height → SVG y. */
@@ -124,15 +128,17 @@ const CASTLE_FLAG_PART = 0.169;
 const CASTLE_H = TOWER_H / (1 - CASTLE_FLAG_PART);
 const CASTLE_W = CASTLE_H * CASTLE_ASPECT;
 const STONE = "#8f9199";
+/** The tower at each damage stage, intact first. */
+const CASTLE_STAGES = [castle0, castle1, castle2, castle3, castle4];
 
 /**
- * A stone castle tower (a generated image, see scripts/fight-castle.py) whose flag and
+ * A stone castle tower (generated images, see scripts/fight-castle.py) whose flag and
  * banners take the team color; it looks worse with every hit, and is rubble at TOWER_MAX_DAMAGE.
  */
 export function CastleTower({ team, color, damage, collapsing, repairing }: { team: number; color: string; damage: number; collapsing?: boolean; repairing?: boolean }) {
   const cx = TOWER_X[team]!;
-  const x = cx - TOWER_W / 2;
   const top = BASE - TOWER_H;
+  const stage = Math.min(damage, CASTLE_STAGES.length - 1);
   const img = { x: cx - CASTLE_W / 2, y: BASE - CASTLE_H, width: CASTLE_W, height: CASTLE_H };
   const destroyed = damage >= TOWER_MAX_DAMAGE;
   const body = (
@@ -143,25 +149,18 @@ export function CastleTower({ team, color, damage, collapsing, repairing }: { te
           <image href={castleClothImg} {...img} preserveAspectRatio="none" />
         </mask>
         <rect {...img} fill={color} mask={`url(#castle-cloth-${team})`} />
-        <image href={castleImg} {...img} preserveAspectRatio="none" />
+        {/* Every stage stays in the page so the next one is already loaded when a hit lands. */}
+        {CASTLE_STAGES.map((href, i) => (
+          <image key={i} href={href} {...img} preserveAspectRatio="none" visibility={i === stage ? "visible" : "hidden"} />
+        ))}
+        {damage >= 4 && (
+          // Burning in the broken-off corner of the last stage.
+          <g class="castle-fire">
+            <path d={`M${cx + 18},${top + 24} q10,-26 4,-44 q18,18 12,44 Z`} fill="#ff8a00" />
+            <path d={`M${cx + 22},${top + 24} q6,-16 2,-28 q10,12 6,28 Z`} fill="#ffd23f" />
+          </g>
+        )}
       </g>
-      {/* damage */}
-      {damage >= 1 && <path d={`M${x + 58},${top + 8} l-8,18 l10,10 l-12,22`} fill="none" stroke="#1f1633" stroke-width="3" stroke-linecap="round" />}
-      {damage >= 2 && (
-        <>
-          <path d={`M${x + 12},${top + 110} l10,14 l-6,12 l12,16`} fill="none" stroke="#1f1633" stroke-width="3" stroke-linecap="round" />
-          <rect x={x + 50} y={top + 132} width="22" height="14" fill="rgba(0,0,0,0.45)" />
-        </>
-      )}
-      {damage >= 3 && (
-        <path d={`M${x + 8},${top + 60} l18,-6 l12,10 l-4,18 l-16,6 l-12,-10 Z`} fill="#2a1b10" stroke="#1f1633" stroke-width="2" />
-      )}
-      {damage >= 4 && (
-        <g class="castle-fire">
-          <path d={`M${cx + 8},${top - 2} q10,-26 4,-44 q18,18 12,44 Z`} fill="#ff8a00" />
-          <path d={`M${cx + 12},${top - 2} q6,-16 2,-28 q10,12 6,28 Z`} fill="#ffd23f" />
-        </g>
-      )}
     </g>
   );
   return (
