@@ -761,3 +761,99 @@ a.btn {
 .hearts i.full {
   color: #ff4a5c;
 }
+
+/* ----- Land Grab board ----- */
+
+.hex-board {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.hex-fill {
+  fill: #4f9a3a;
+}
+
+.hex-edge {
+  fill: none;
+  stroke: rgba(0, 0, 0, 0.45);
+  stroke-width: 0.6;
+  stroke-linejoin: round;
+}
+
+.hex.owned .hex-edge {
+  stroke: rgba(255, 255, 255, 0.7);
+  stroke-width: 0.8;
+}
+
+.hex-body {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.hex.placed .hex-body {
+  animation: hex-pop 0.45s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+
+.hex.flipped .hex-body {
+  animation: hex-flip 0.7s ease-out both;
+}
+
+@keyframes hex-pop {
+  from {
+    transform: scale(0.3);
+    opacity: 0.4;
+  }
+}
+
+@keyframes hex-flip {
+  0% {
+    transform: scaleX(1);
+    filter: brightness(1);
+  }
+  45% {
+    transform: scaleX(0.05);
+    filter: brightness(2.2);
+  }
+  100% {
+    transform: scaleX(1);
+    filter: brightness(1);
+  }
+}
+
+.hex-block {
+  fill: rgba(10, 5, 25, 0.55);
+  pointer-events: none;
+}
+
+.hex-select {
+  fill: rgba(255, 255, 255, 0.25);
+  stroke: #fff;
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+  pointer-events: none;
+  animation: hex-select 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes hex-select {
+  to {
+    stroke: var(--accent);
+    fill: rgba(255, 210, 63, 0.35);
+  }
+}
+
+.start-mark circle {
+  fill: #fff;
+  stroke: rgba(0, 0, 0, 0.5);
+  stroke-width: 0.5;
+}
+
+.start-mark path {
+  fill: none;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+.start-mark.out {
+  opacity: 0.35;
+}

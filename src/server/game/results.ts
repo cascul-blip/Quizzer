@@ -2,6 +2,7 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { FightGame } from "./fight.ts";
 import type { Game } from "./game.ts";
+import type { LandGame } from "./land.ts";
 import type { RobotGame } from "./robot.ts";
 import type { SubGame } from "./submarine.ts";
 import type { TowerGame } from "./tower.ts";
@@ -86,6 +87,21 @@ export function buildRobotResultsCsv(game: RobotGame): string {
     const status = s.rank === 1 ? "Winner" : p.outRound === null ? "Survived" : `Out in round ${p.outRound}`;
     return [s.rank, p.nickname, status, p.lives, p.outRound === null ? game.attacks : p.outRound - 1, p.correct, p.wrong, answered ? Math.round((p.correct / answered) * 100) : "", p.moves, p.hits];
   });
+  return toCsv([header, ...rows]);
+}
+
+/** Land Grab: one row per player, grouped by the team they started on, in final team order. */
+export function buildLandResultsCsv(game: LandGame): string {
+  const header = ["Team", "Team rank", "Team tiles", "Knocked out by", "Nickname", "Correct", "Wrong", "Accuracy %", "Tiles placed", "Tiles stolen", "Tiles surrounded"];
+  const rows: (string | number)[][] = [];
+  for (const t of game.rankedTeams()) {
+    const members = [...game.players.values()].filter((p) => p.firstTeam === t.index).sort((a, b) => b.placed - a.placed || b.correct - a.correct);
+    for (const p of members) {
+      const answered = p.correct + p.wrong;
+      const by = t.conqueredBy === null ? "" : game.teams[t.conqueredBy]!.name;
+      rows.push([t.name, t.rank, t.tiles, by, p.nickname, p.correct, p.wrong, answered ? Math.round((p.correct / answered) * 100) : "", p.placed, p.stolen, p.captured]);
+    }
+  }
   return toCsv([header, ...rows]);
 }
 

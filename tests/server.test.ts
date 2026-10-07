@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { INTRO_MS } from "../src/server/game/game.ts";
 import { COUNTDOWN_MS, DROP_COOLDOWN_MS, FEEDBACK_MS } from "../src/server/game/tower.ts";
 import { COUNTDOWN_MS as FIGHT_COUNTDOWN_MS, RESULT_MS } from "../src/server/game/fight.ts";
+import { COUNTDOWN_MS as LAND_COUNTDOWN_MS } from "../src/server/game/land.ts";
 import { COUNTDOWN_MS as ROBOT_COUNTDOWN_MS } from "../src/server/game/robot.ts";
 import { BOOST_MIN_HOLD_MS, COUNTDOWN_MS as SUB_COUNTDOWN_MS } from "../src/server/game/submarine.ts";
 import { startServer, type RunningServer } from "../src/server/http.ts";
@@ -229,6 +230,10 @@ describe("full game over WebSockets", () => {
     host.send({ type: "host.next" }); // last question → podium
     const podium = await host.hostState((v) => v.phase === "podium");
     expect(podium.view.kind === "classic" && podium.view.hasResults).toBe(true);
+    // Bob got the first question wrong: the "Show errors" table has it.
+    const errors = podium.view.kind === "classic" ? podium.view.errors! : [];
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors.every((e) => e.wrong > 0 && !!e.text && e.answers.length > 0)).toBe(true);
     const annFinal = await players[0]!.playerState((v) => v.kind === "player" && v.phase === "podium");
     expect(annFinal.view.kind === "player" && annFinal.view.me.rank).toBe(1);
 
@@ -544,6 +549,87 @@ describe("Robot Attack over WebSockets", () => {
     // Play again keeps Robot Attack.
     host.send({ type: "host.open", quizId: quiz.id });
     await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "robot");
+    host.send({ type: "host.close" });
+    [host, ...players].forEach((s) => s.close());
+  });
+});
+
+describe("Land Grab over WebSockets", () => {
+  test("lobby → answer 3 → place tiles → done → timer → podium", async () => {
+    const quiz = store.create({
+      title: "Land E2E",
+      questions: [1, 2, 3].map((n) => ({ type: "multiple_choice", text: `Q${n}`, options: ["right", "wrong"], correct: [0] })),
+    });
+    const wsUrl = `ws://localhost:${srv.port}/ws`;
+    const host = await TestSocket.open(wsUrl);
+    host.send({ type: "host.hello" });
+    await host.hostState((v) => v.kind === "idle");
+    host.send({ type: "host.open", quizId: quiz.id });
+    host.send({ type: "host.setMode", mode: "land" });
+    host.send({ type: "host.setLand", teams: 1, minutes: 3 });
+    expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: expect.stringContaining("between 2 and 6") });
+    host.send({ type: "host.setLand", teams: 2, minutes: 3 });
+    await host.hostState((v) => v.kind === "classic" && v.mode === "land" && v.land.minutes === 3);
+
+    const names = ["Ann", "Bob"];
+    const players = await Promise.all(names.map(() => TestSocket.open(wsUrl)));
+    for (const [i, p] of players.entries()) {
+      await p.playerState((v) => v.kind === "none" && !!v.game);
+      p.send({ type: "join", nickname: names[i]! });
+      await p.waitFor((m) => m.type === "joined");
+    }
+    const lobby = await host.hostState((v) => v.kind === "classic" && !!v.teams && v.players.length === 2);
+    expect(lobby.view.kind === "classic" && lobby.view.teams!.map((t) => t.members.map((m) => m.nickname))).toEqual([["Ann"], ["Bob"]]);
+
+    host.send({ type: "host.start", pacing: "manual" });
+    const started = await host.hostState((v) => v.kind === "land" && v.phase === "countdown");
+    expect(started.view.kind === "land" && started.view.board.size).toBe(10);
+    host.send({ type: "host.next" });
+    expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: expect.stringContaining("Land Grab") });
+    clock.advance(LAND_COUNTDOWN_MS);
+    srv.hub.broadcast();
+
+    // Ann answers her three questions correctly, then is on the land with 3 tiles to place.
+    const ann = players[0]!;
+    for (let i = 0; i < 3; i++) {
+      const st = await ann.playerState((v) => v.kind === "land" && v.phase === "playing" && !!v.question && !v.feedback);
+      const q = st.view.kind === "land" ? st.view.question! : null;
+      ann.send({ type: "land.answer", seq: q!.seq, option: 0 });
+      await ann.playerState((v) => v.kind === "land" && v.feedback?.seq === q!.seq);
+      clock.advance(FEEDBACK_MS);
+      srv.hub.broadcast();
+    }
+    const claiming = await ann.playerState((v) => v.kind === "land" && v.state === "claim" && !v.feedback);
+    expect(claiming.view.kind === "land" && [claiming.view.claims, claiming.view.board?.size]).toEqual([3, 10]);
+    await host.hostState((v) => v.kind === "land" && v.teams[0]!.members[0]!.claiming);
+
+    // A tile next to Blue's start is refused; grass is taken.
+    const blueStart = started.view.kind === "land" ? started.view.board.starts[1]!.tile : 0;
+    ann.send({ type: "land.place", tile: blueStart + 1 });
+    await ann.playerState((v) => v.kind === "land" && v.claims === 3);
+    ann.send({ type: "land.place", tile: 0 });
+    await ann.playerState((v) => v.kind === "land" && v.claims === 2 && v.board?.owners[0] === 0);
+    const placed = await host.hostState((v) => v.kind === "land" && v.lastPlace?.tile === 0);
+    expect(placed.view.kind === "land" && placed.view.teams.map((t) => t.tiles)).toEqual([2, 1]);
+    ann.send({ type: "land.done" });
+    const back = await ann.playerState((v) => v.kind === "land" && v.state === "question");
+    expect(back.view.kind === "land" && [back.view.claims, back.view.board]).toEqual([2, null]);
+
+    // Time runs out.
+    clock.advance(3 * 60_000);
+    const podium = await host.hostState((v) => v.kind === "land" && v.phase === "podium");
+    expect(podium.view.kind === "land" && podium.view.teams.map((t) => [t.name, t.rank, t.tiles])).toEqual([
+      ["Red", 1, 2],
+      ["Blue", 2, 1],
+    ]);
+    const bobEnd = await players[1]!.playerState((v) => v.kind === "land" && v.phase === "podium");
+    expect(bobEnd.view.kind === "land" && bobEnd.view.result).toMatchObject({ teamRank: 2, teamCount: 2, tiles: 1, won: false });
+    const csv = await (await fetch(`${base}/api/results/latest.csv`)).text();
+    expect(csv).toContain("Red,1,2,,Ann,3,0,100,1,0,0");
+
+    // Play again keeps Land Grab and its settings.
+    host.send({ type: "host.open", quizId: quiz.id });
+    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "land" && v.land.minutes === 3);
     host.send({ type: "host.close" });
     [host, ...players].forEach((s) => s.close());
   });

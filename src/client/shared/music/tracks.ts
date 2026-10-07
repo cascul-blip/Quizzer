@@ -2,7 +2,8 @@
  * The built-in soundtrack: original loops composed for each game mode.
  * Classic = upbeat game show, Tallest Tower = retro chiptune,
  * Submarine Squad = deep-sea suspense, Tower Fight = medieval battle,
- * Robot Attack = machine-cult chant over a D drone.
+ * Robot Attack = machine-cult chant over a D drone,
+ * Land Grab = bouncy dance-pop.
  * Any of these can be replaced by an audio file in data/music/<id>.<ext>.
  */
 import type { MusicTrackId } from "../../../shared/music-tracks.ts";
@@ -476,6 +477,86 @@ const robotResults: Track = {
   ],
 };
 
+// ---------- Land Grab: bouncy dance-pop ----------
+
+/** Off-beat bass: the root lands between the kicks, with an octave hop at the end of the bar. */
+const offbeat = (low: string, high: string) => seq([".", 2], [low, 2], [".", 2], [low, 2], [".", 2], [low, 2], [high, 1], [".", 1], [low, 2]);
+const LAND_BASS = [offbeat("D2", "D3"), offbeat("A1", "A2"), offbeat("B1", "B2"), offbeat("G1", "G2")];
+const LAND_STABS = ["D4 F#4 A4", "C#4 E4 A4", "D4 F#4 B4", "D4 G4 B4"].map((c) => seq([chord(c), 3], [chord(c), 3], [chord(c), 2], [".", 2], [chord(c), 3], [chord(c), 3]));
+const LAND_HOOK = [
+  seq(["F#5", 2], ["A5", 2], ["D6", 3], ["A5", 1], [".", 2], ["F#5", 2], ["A5", 2], ["F#5", 2]),
+  seq(["E5", 2], ["A5", 2], ["C#6", 3], ["A5", 1], [".", 2], ["E5", 2], ["A5", 2], ["E5", 2]),
+  seq(["F#5", 2], ["B5", 2], ["D6", 3], ["B5", 1], [".", 2], ["D6", 2], ["C#6", 2], ["B5", 2]),
+  seq(["B5", 2], ["G5", 2], ["B5", 2], ["D6", 2], ["E6", 3], ["D6", 1], ["B5", 2], ["A5", 2]),
+];
+
+const landLobby: Track = {
+  id: "land-lobby",
+  bpm: 124,
+  bars: 4,
+  layers: [
+    { inst: "kick", bars: [drum("x...x...x...x...")], vol: 0.85 },
+    { inst: "clap", bars: [drum("....x.......x...")], vol: 0.7 },
+    { inst: "hat", bars: [drum("..x...x...x...x.")], vol: 0.7 },
+    { inst: "bass", bars: LAND_BASS },
+    { inst: "pluck", bars: LAND_STABS, vol: 0.5 },
+    {
+      inst: "lead",
+      bars: [
+        seq(["A5", 4], ["F#5", 2], ["D5", 2], ["F#5", 4], ["A5", 4]),
+        seq(["A5", 4], ["E5", 2], ["C#5", 2], ["E5", 8]),
+        seq(["B5", 4], ["F#5", 2], ["D5", 2], ["F#5", 4], ["B5", 4]),
+        seq(["B5", 2], ["A5", 2], ["G5", 4], ["A5", 8]),
+      ],
+      vol: 0.7,
+    },
+  ],
+};
+
+const landPlay: Track = {
+  id: "land-play",
+  bpm: 138,
+  bars: 4,
+  tempoBoost: 0.08,
+  layers: [
+    { inst: "kick", bars: [drum("o...x...o...x..."), drum("o...x...o...x.x.")] },
+    { inst: "clap", bars: [drum("....x.......x..."), drum("....x.......x..."), drum("....x.......x..."), drum("....x.....x.x.x.")], vol: 0.8 },
+    { inst: "openhat", bars: [drum("..x...x...x...x.")], vol: 0.55 },
+    { inst: "bass", bars: LAND_BASS },
+    { inst: "pluck", bars: LAND_STABS, vol: 0.55 },
+    { inst: "lead", bars: LAND_HOOK, vol: 0.8, from: 0.3 },
+    { inst: "hat", bars: [drum("xxxxxxxxxxxxxxxx")], vol: 0.3, from: 0.5 },
+    { inst: "woodblock", bars: [drum("x..x..x...x..x.."), drum("x..x..x..x.x..x.")], vol: 0.5, from: 0.5 },
+    { inst: "pulse", bars: [arp(["D5", "F#5", "A5", "D6"]), arp(["C#5", "E5", "A5", "C#6"]), arp(["D5", "F#5", "B5", "D6"]), arp(["D5", "G5", "B5", "D6"])], vol: 0.28, from: 0.7 },
+    { inst: "snare", bars: [rest, rest, rest, drum("........x.x.xxxx")], vol: 0.55, from: 0.85 },
+    { inst: "brass", bars: [hold(chord("D4 A4")), hold(chord("C#4 A4")), hold(chord("D4 B4")), hold(chord("D4 B4"))], vol: 0.35, from: 0.85 },
+  ],
+};
+
+const landResults: Track = {
+  id: "land-results",
+  bpm: 130,
+  bars: 4,
+  layers: [
+    { inst: "kick", bars: [drum("x...x...x...x...")], vol: 0.85 },
+    { inst: "clap", bars: [drum("....x.......x...")], vol: 0.75 },
+    { inst: "openhat", bars: [drum("..x...x...x...x.")], vol: 0.5 },
+    { inst: "bass", bars: [offbeat("G1", "G2"), offbeat("A1", "A2"), offbeat("B1", "B2"), offbeat("D2", "D3")] },
+    { inst: "pluck", bars: [arp(["G4", "B4", "D5", "B4"], 2), arp(["A4", "C#5", "E5", "C#5"], 2), arp(["B4", "D5", "F#5", "D5"], 2), arp(["D5", "F#5", "A5", "F#5"], 2)], vol: 0.5 },
+    { inst: "brass", bars: [hold(chord("G3 B3 D4")), hold(chord("A3 C#4 E4")), hold(chord("B3 D4 F#4")), hold(chord("D4 F#4 A4"))], vol: 0.45 },
+    {
+      inst: "lead",
+      bars: [
+        seq(["D5", 2], ["G5", 2], ["B5", 4], ["A5", 2], ["G5", 2], ["B5", 4]),
+        seq(["E5", 2], ["A5", 2], ["C#6", 4], ["B5", 2], ["A5", 2], ["C#6", 4]),
+        seq(["F#5", 2], ["B5", 2], ["D6", 4], ["C#6", 2], ["B5", 2], ["D6", 4]),
+        seq(["F#6", 3], ["E6", 3], ["D6", 2], [".", 2], ["D6", 2], ["D6", 4]),
+      ],
+      vol: 0.8,
+    },
+  ],
+};
+
 export const TRACKS: Record<MusicTrackId, Track> = {
   "classic-lobby": classicLobby,
   "classic-question": classicQuestion,
@@ -495,4 +576,7 @@ export const TRACKS: Record<MusicTrackId, Track> = {
   "robot-quiz": robotQuiz,
   "robot-move": robotMove,
   "robot-results": robotResults,
+  "land-lobby": landLobby,
+  "land-play": landPlay,
+  "land-results": landResults,
 };

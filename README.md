@@ -95,13 +95,15 @@ quizzer mcp [options]       Run the MCP server over stdio (for AI agents)
 | Question | Question text first, then the answer tiles, a countdown and an answered counter. The question ends when time runs out **or** everyone has answered. Press **S** to skip. |
 | Reveal | The correct answer(s) are highlighted and a chart shows how many picked each option. Each phone shows **Correct/Wrong** with the correct answer highlighted. |
 | Leaderboard | Top 5, with points gained on the last question. Players on a streak of 4+ correct answers in a row get a 🔥 badge with the count (e.g. 🔥x4). |
-| Podium | Top 3 plus the rest, with **Download results (CSV)**, **Play again** and **Done**. |
+| Podium | Top 3 plus the rest, with **Show errors**, **Play again** and **Done**. |
 
 - **Pacing**: *Manual* waits for you to press **Next** (or Space/→). *Auto-advance* moves on after 5 seconds on the reveal and leaderboard. You can switch pacing mid-game from the top bar.
 - **Scoring**: a correct answer is worth 1000 points if given instantly, falling to 500 at the time limit. Wrong or missing answers score 0.
 - **Multiple correct answers**: players still tap one option, and any correct option scores.
 - **Shuffling** is chosen in the lobby for each game; the quiz's shuffle settings in the editor are the defaults. Shuffling answer positions moves each answer to a random tile (and color), so the correct answer isn't always in the same place. The order is fixed when you press Start and is the same on the projector and every phone. True/False keeps True before False.
 - **Streaks**: after 4 correct answers in a row, a player gets 🔥x4 (x5, x6, …) next to their name on the leaderboard, the podium and their phone. A wrong or missed answer resets it.
+- **Show errors**: on the final screen of every game mode, this button swaps the results for a table of the **10 questions with the most wrong answers**, each with its correct answer, so you can go over them with the class. Press **Show results** to switch back. Classic counts wrong answers only, not questions a player let time out; in the other modes a question can come up more than once, and every wrong answer counts.
+- **Results file**: a CSV of every finished game is saved in `data/results/`. The latest one is also at `http://localhost:8080/api/results/latest.csv` on the host computer.
 - **Reconnecting**: if a phone locks, refreshes or drops Wi-Fi, it rejoins as the same player with the same score. Players can also join after the game has started.
 - Only one game runs at a time. The admin, host controls and API only work from the host computer itself (`localhost`). Phones can only reach the player page.
 
@@ -179,6 +181,22 @@ Then the robot's three back arms **fire lasers at every red X**. Anyone standing
 
 **The last player standing wins.** If the last players are all knocked out by the same blast, they share the win. A game with only one player runs until they're out. If the host ends the game early, players still in the game are ranked by lives left. The podium shows the standings and awards for **Most correct answers** and **Fancy footwork** (most moves). The results CSV lists each player's rank, the round they went out in, lives left, answers, moves and laser hits.
 
+## Land Grab mode
+
+A team game for **2 to 6 teams** on a shared board of hexagonal grass tiles. Choose **Game mode → 🚩 Land Grab** in the lobby, then pick the number of **Teams** and the **Time** (3, 5, 7 or 10 minutes). The board is 10×10 tiles for 2 teams, 12×12 for 3 or 4, and 14×14 for 5 or 6. Each team starts with one tile, its **starting point**, marked with an X in the team's color. The starting points are spread evenly around the middle of the board.
+
+- **Quiz.** Everyone answers questions on their phone at their own pace. **Each correct answer earns 1 tile.** After every **3 answers**, right or wrong, the player goes to the land. A player with nothing to place sees "You have no tiles to place!" for 4 seconds and goes back to the questions.
+- **Land.** The phone shows the board: drag to move around, **pinch (or use ＋ / −) to zoom**, tap a tile to pick it, then press **Claim**. There is no time limit, but the game clock keeps running.
+  - A **grass tile costs 1**. A tile that belongs to **another team costs 2** (stealing).
+  - Tiles **on or next to another team's starting point** can't be taken. They are darkened on the phone.
+  - **Done** goes back to the questions early. Unused tiles are kept for the next visit, so a player can save up to steal.
+
+**Surrounding.** When a team's tiles form a **complete ring**, everything inside turns that team's color: grass and other teams' tiles alike. The edge of the board doesn't count as part of a ring, so land in a corner or along a side can't be cut off, although a ring may run along the edge tiles.
+
+**Knockouts.** A team whose **starting point is surrounded** is knocked out. All of its land goes to the team that surrounded it, and **its players join that team** and keep playing, with any tiles they had saved. The smallest ring that does it is the 12 tiles two steps away from the starting point.
+
+**The team with the most tiles when time runs out wins**; with equal tiles, the team with more correct answers. If only one team is left, the game ends right away. The podium shows the teams and awards for **Most correct answers**, **Top settler** (most tiles placed) and **Master surrounder** (most tiles won by closing rings). The results CSV lists each player under the team they started on, with their answers and the tiles they placed, stole and surrounded.
+
 ## Music
 
 Every game mode has **built-in background music** on the projector (phones stay quiet). It's composed in code, so it adds nothing to the download and needs no licenses:
@@ -190,6 +208,7 @@ Every game mode has **built-in background music** on the projector (phones stay 
 | Submarine Squad | Deep-sea suspense | Speeds up and adds layers as the anglerfish closes in; a calmer theme while diving |
 | Tower Fight | Medieval battle | Gets more intense as the towers take damage |
 | Robot Attack | Machine-cult chant: a deep drone, organ and brass | Builds up as each quiz phase's timer runs out; urgent during movement |
+| Land Grab | Bouncy dance-pop with a four-on-the-floor beat | Lively from the start; more layers and a little faster as the clock runs down |
 
 The lobby plays the music of whichever game mode is selected. Use the **🎵 button and slider** in the projector's top bar to turn music off or change its volume. The 🔊 button still mutes everything.
 
@@ -204,6 +223,7 @@ Put audio files (MP3, OGG, M4A, WAV, WebM or FLAC) in the **`data/music`** folde
 | `submarine-lobby` · `submarine-chase` · `submarine-dive` · `submarine-results` | Submarine Squad |
 | `fight-lobby` · `fight-play` · `fight-results` | Tower Fight |
 | `robot-lobby` · `robot-quiz` · `robot-move` · `robot-results` | Robot Attack: lobby, quiz phase, movement and laser attack, final results |
+| `land-lobby` · `land-play` · `land-results` | Land Grab |
 
 For example, `data/music/submarine-chase.mp3`. Your files loop; they don't speed up with the game like the built-in music does. Only use music you're allowed to play: royalty-free or Creative Commons tracks (e.g. Pixabay Music, OpenGameArt, or incompetech with credit). Delete a file to go back to the built-in track.
 
@@ -281,6 +301,8 @@ The robot's voice lines are pre-recorded MP3s in `src/client/shared/voice/`, gen
 The Tallest Tower building blocks are images in `src/client/shared/tower/`, made from the generated facade tiles in `scripts/tower-blocks/`. They're committed too. To change them, replace a source PNG (the prompts are in the script) and run `python3 scripts/tower-blocks.py` (needs Pillow and numpy).
 
 The Tower Fight castle is made the same way: `python3 scripts/fight-castle.py` turns the intact tower and its four damage stages in `scripts/fight-castle/` into the images in `src/client/shared/fight/`. If the tower's proportions change, copy the numbers the script prints into `CastleTower` in `src/client/shared/fight-art.tsx`.
+
+The Land Grab tiles in `src/client/shared/land/` come from two generated textures in `scripts/land-tiles/` (grass, and grey paving that takes each team's color): `python3 scripts/land-tiles.py`.
 
 The server is authoritative. It runs the game state machine and timers, scores answers by server time, and pushes a complete view snapshot to each screen after every change, so a reconnecting screen always gets the full picture.
 

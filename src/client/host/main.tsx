@@ -1,6 +1,6 @@
 import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
-import { HILL_SETTINGS, MAX_TEAMS, TOWER_MINUTES, type GameMode, type HillSetting, type HostPlayer, type HostView, type Pacing, type ServerMsg } from "../../shared/protocol.ts";
+import { HILL_SETTINGS, LAND_MINUTES, LAND_MIN_TEAMS, MAX_TEAMS, TOWER_MINUTES, type GameMode, type HillSetting, type HostPlayer, type HostView, type Pacing, type ServerMsg } from "../../shared/protocol.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import type { QuizSummary } from "../../shared/quiz-schema.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
@@ -8,9 +8,10 @@ import { play, unlockAudio } from "../shared/sounds.ts";
 import { connect, type ConnStatus } from "../shared/ws.ts";
 import { ConnBanner, ErrorBoundary, Shape, StreakBadge, Toast, optionColor, ordinal, useCountdown } from "../shared/ui.tsx";
 import { loadCustomMusic, useMusic } from "../shared/music/index.ts";
-import { ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
+import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
 import { musicFor } from "./music-cues.ts";
 import { FightStage } from "./fight.tsx";
+import { LandStage } from "./land.tsx";
 import { RobotStage } from "./robot.tsx";
 import { SubStage } from "./submarine.tsx";
 import { TowerStage } from "./tower.tsx";
@@ -86,6 +87,8 @@ function App() {
     body = <FightStage view={view} send={send} />;
   } else if (view.kind === "robot") {
     body = <RobotStage view={view} send={send} />;
+  } else if (view.kind === "land") {
+    body = <LandStage view={view} send={send} />;
   } else {
     body = <Game view={view} send={send} />;
   }
@@ -319,6 +322,7 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
               <option value="submarine">🐟 Submarine Squad</option>
               <option value="fight">🏰 Tower Fight</option>
               <option value="robot">🤖 Robot Attack</option>
+              <option value="land">🚩 Land Grab</option>
             </select>
           </label>
           {tower ? (
@@ -366,6 +370,30 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
                 </select>
               </label>
               <span class="opt mode-hint">Red vs Blue: knock down the other team's tower. The game runs until a tower falls or you end it.</span>
+            </>
+          ) : view.mode === "land" ? (
+            <>
+              <label class="opt">
+                Teams
+                <select value={view.land.teams} onChange={(e) => send({ type: "host.setLand", teams: Number(e.currentTarget.value), minutes: view.land.minutes })}>
+                  {Array.from({ length: MAX_TEAMS - LAND_MIN_TEAMS + 1 }, (_, i) => (
+                    <option key={i} value={i + LAND_MIN_TEAMS}>
+                      {i + LAND_MIN_TEAMS}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label class="opt">
+                Time
+                <select value={view.land.minutes} onChange={(e) => send({ type: "host.setLand", teams: view.land.teams, minutes: Number(e.currentTarget.value) })}>
+                  {LAND_MINUTES.map((m) => (
+                    <option key={m} value={m}>
+                      {m} min
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <span class="opt mode-hint">Every 3 questions, correct answers become tiles. Surround land to capture it, and another team's starting point to knock them out.</span>
             </>
           ) : view.mode === "robot" ? (
             <span class="opt mode-hint">Answer questions to earn moves, then dodge the robot's lasers. Last one standing wins.</span>
@@ -588,6 +616,7 @@ function PickerAvatars({ avatars, dim }: { avatars: AvatarChoice[]; dim: boolean
 }
 
 function Podium({ view, send }: { view: GameView; send: Send }) {
+  const [showErrors, setShowErrors] = useState(false);
   const lb = view.leaderboard;
   const byPlace = (rankIdx: number) => lb[rankIdx];
   const places = [
@@ -598,44 +627,46 @@ function Podium({ view, send }: { view: GameView; send: Send }) {
   return (
     <main class="podium">
       <h1>🏆 Final results</h1>
-      <div class="podium-blocks">
-        {places.map(({ entry, cls }) =>
-          entry ? (
-            <div key={cls} class={`place ${cls}`}>
-              <div class="place-avatar">
-                <Avatar choice={entry.avatar} title={entry.nickname} />
-              </div>
-              <div class="place-name">
-                {entry.nickname}
-                <StreakBadge streak={entry.streak} />
-              </div>
-              <div class="place-score">{entry.score.toLocaleString()}</div>
-              <div class="place-block">{ordinal(entry.rank)}</div>
-            </div>
-          ) : (
-            <div key={cls} class={`place ${cls} empty`} />
-          ),
-        )}
-      </div>
-      {lb.length > 3 && (
-        <ol class="rest" start={4}>
-          {lb.slice(3).map((p) => (
-            <li key={p.id}>
-              <span class="rest-who">
-                {ordinal(p.rank)} <Avatar choice={p.avatar} class="rest-avatar" /> {p.nickname}
-                <StreakBadge streak={p.streak} />
-              </span>
-              <span>{p.score.toLocaleString()}</span>
-            </li>
-          ))}
-        </ol>
+      {showErrors ? (
+        <ErrorsTable errors={view.errors ?? []} />
+      ) : (
+        <>
+          <div class="podium-blocks">
+            {places.map(({ entry, cls }) =>
+              entry ? (
+                <div key={cls} class={`place ${cls}`}>
+                  <div class="place-avatar">
+                    <Avatar choice={entry.avatar} title={entry.nickname} />
+                  </div>
+                  <div class="place-name">
+                    {entry.nickname}
+                    <StreakBadge streak={entry.streak} />
+                  </div>
+                  <div class="place-score">{entry.score.toLocaleString()}</div>
+                  <div class="place-block">{ordinal(entry.rank)}</div>
+                </div>
+              ) : (
+                <div key={cls} class={`place ${cls} empty`} />
+              ),
+            )}
+          </div>
+          {lb.length > 3 && (
+            <ol class="rest" start={4}>
+              {lb.slice(3).map((p) => (
+                <li key={p.id}>
+                  <span class="rest-who">
+                    {ordinal(p.rank)} <Avatar choice={p.avatar} class="rest-avatar" /> {p.nickname}
+                    <StreakBadge streak={p.streak} />
+                  </span>
+                  <span>{p.score.toLocaleString()}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </>
       )}
       <footer class="controls">
-        {view.hasResults && (
-          <a class="btn ghost" href="/api/results/latest.csv" download>
-            ⬇ Download results (CSV)
-          </a>
-        )}
+        <ErrorsButton shown={showErrors} onToggle={() => setShowErrors(!showErrors)} />
         <button class="btn ghost" onClick={() => send({ type: "host.open", quizId: view.quiz.id })}>
           ↻ Play again
         </button>

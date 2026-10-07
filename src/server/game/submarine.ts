@@ -469,6 +469,7 @@ export class SubGame {
       players: [...this.players.values()].map((p) => ({ id: p.id, nickname: p.nickname, avatar: p.avatar, connected: p.connected, state: p.state })),
       playerCount: this.players.size,
       awards: this.phase === "podium" ? this.awards() : null,
+      errors: this.phase === "podium" ? this.stream.errors() : null,
       hasResults: this.phase === "podium",
     };
   }

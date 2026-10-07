@@ -1,11 +1,11 @@
-import { useEffect, useRef } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import { ROBOT_LIVES, type HostView } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { RobotArena } from "../shared/robot-art.tsx";
 import { play } from "../shared/sounds.ts";
 import { preloadVoice, say } from "../shared/voice.ts";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
-import { ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
+import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
 import { Award } from "./tower.tsx";
 
 type RobotView = Extract<HostView, { kind: "robot" }>;
@@ -172,6 +172,7 @@ function AttackBanner({ hit, out, names }: { hit: number; out: number; names: st
 }
 
 function RobotPodium({ view, send }: { view: RobotView; send: Send }) {
+  const [showErrors, setShowErrors] = useState(false);
   const standings = view.standings ?? [];
   const winners = standings.filter((s) => s.rank === 1);
   const a = view.awards;
@@ -182,26 +183,28 @@ function RobotPodium({ view, send }: { view: RobotView; send: Send }) {
         <RobotArena players={[]} marked={[]} />
       </div>
       <h1>{title}</h1>
-      <ol class="robot-standings">
-        {standings.slice(0, Math.max(5, winners.length)).map((s, i) => (
-          <li key={s.id} class={s.rank === 1 ? "won" : ""} style={{ animationDelay: `${i * 80}ms` }}>
-            <span class="lb-rank">{ordinal(s.rank)}</span>
-            <Avatar choice={s.avatar} />
-            <span class="lb-name">{s.nickname}</span>
-            <span class="robot-status">{s.outRound === null ? <Hearts lives={s.lives} /> : `Out in round ${s.outRound}`}</span>
-          </li>
-        ))}
-      </ol>
-      <div class="awards">
-        <Award icon="✅" title="Most correct answers" award={a?.mostCorrect ?? null} unit="correct" />
-        <Award icon="👟" title="Fancy footwork" award={a?.mostMoves ?? null} unit="moves" />
-      </div>
+      {showErrors ? (
+        <ErrorsTable errors={view.errors ?? []} />
+      ) : (
+        <>
+          <ol class="robot-standings">
+            {standings.slice(0, Math.max(5, winners.length)).map((s, i) => (
+              <li key={s.id} class={s.rank === 1 ? "won" : ""} style={{ animationDelay: `${i * 80}ms` }}>
+                <span class="lb-rank">{ordinal(s.rank)}</span>
+                <Avatar choice={s.avatar} />
+                <span class="lb-name">{s.nickname}</span>
+                <span class="robot-status">{s.outRound === null ? <Hearts lives={s.lives} /> : `Out in round ${s.outRound}`}</span>
+              </li>
+            ))}
+          </ol>
+          <div class="awards">
+            <Award icon="✅" title="Most correct answers" award={a?.mostCorrect ?? null} unit="correct" />
+            <Award icon="👟" title="Fancy footwork" award={a?.mostMoves ?? null} unit="moves" />
+          </div>
+        </>
+      )}
       <footer class="controls">
-        {view.hasResults && (
-          <a class="btn ghost" href="/api/results/latest.csv" download>
-            ⬇ Download results (CSV)
-          </a>
-        )}
+        <ErrorsButton shown={showErrors} onToggle={() => setShowErrors(!showErrors)} />
         <button class="btn ghost" onClick={() => send({ type: "host.open", quizId: view.quiz.id })}>
           ↻ Play again
         </button>

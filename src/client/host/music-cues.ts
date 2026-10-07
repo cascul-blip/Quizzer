@@ -8,6 +8,7 @@ const LOBBY: Record<GameMode, MusicTrackId> = {
   submarine: "submarine-lobby",
   fight: "fight-lobby",
   robot: "robot-lobby",
+  land: "land-lobby",
 };
 
 /** Which track the projector should play for this screen, and how intense. */
@@ -54,6 +55,15 @@ export function musicFor(view: HostView | null): MusicCue {
         return { track: "robot-quiz", intensity: 0.2 + start * 0.8, rampTo: 1, rampMs: view.phaseRemainingMs, key: `robot-q${view.round}` };
       }
       return { track: "robot-quiz", intensity: 0, key: "robot-countdown" };
+    }
+    case "land": {
+      if (view.phase === "podium") return { track: "land-results" };
+      if (view.phase === "conquered") return { track: "land-play", intensity: 1 };
+      // Already lively at the start; everything is in by the last couple of minutes.
+      const start = Math.max(0.35, Math.min(1, 1 - view.remainingMs / 240_000));
+      return view.phase === "playing"
+        ? { track: "land-play", intensity: start, rampTo: 1, rampMs: view.remainingMs, key: "land-playing" }
+        : { track: "land-play", intensity: 0.2, key: "land-countdown" };
     }
   }
 }

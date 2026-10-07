@@ -1,14 +1,18 @@
 import {
   HILL_SETTINGS,
+  LAND_MINUTES,
+  LAND_MIN_TEAMS,
   MAX_TEAMS,
   TOWER_MINUTES,
   type FightSettings,
   type GameMode,
   type HillSetting,
   type HostGameState,
+  type LandSettings,
   type Pacing,
   type Phase,
   type PlayerView,
+  type QuestionError,
   type QuestionView,
   type RankedEntry,
   type ShuffleOptions,
@@ -16,7 +20,7 @@ import {
 } from "../../shared/protocol.ts";
 import { cleanAvatar, randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
-import { GameError, assignTeams, realClock, shuffle, shuffleOptions, teamInfo, type Clock } from "./common.ts";
+import { GameError, assignTeams, realClock, shuffle, shuffleOptions, teamInfo, topErrors, type Clock } from "./common.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
 import { rankScores, scoreAnswer } from "./scoring.ts";
 
@@ -30,6 +34,7 @@ export const GRACE_MS = 500;
 const LEADERBOARD_SIZE = 10;
 export const DEFAULT_TOWER: TowerSettings = { teams: 2, minutes: 5, monster: true };
 export const DEFAULT_FIGHT: FightSettings = { hill: "random" };
+export const DEFAULT_LAND: LandSettings = { teams: 2, minutes: 5 };
 
 export interface Answer {
   option: number;
@@ -65,12 +70,13 @@ export interface GameOptions {
   mode?: GameMode;
   tower?: TowerSettings;
   fight?: FightSettings;
+  land?: LandSettings;
 }
 
 /**
  * A Classic game: lobby → (intro → open → reveal → leaderboard)* → podium.
  * It also serves as the lobby for every mode; in the other modes the hub
- * hands its players to that mode's game (TowerGame, SubGame, FightGame, RobotGame) on start.
+ * hands its players to that mode's game (TowerGame, SubGame, FightGame, RobotGame, LandGame) on start.
  */
 export class Game {
   readonly kind = "classic";
@@ -86,6 +92,7 @@ export class Game {
   mode: GameMode;
   tower: TowerSettings;
   fight: FightSettings;
+  land: LandSettings;
   /** When the current phase's countdown ends (intro/open), for views. */
   phaseEndsAt = 0;
   openedAt = 0;
@@ -114,6 +121,7 @@ export class Game {
     this.mode = opts.mode ?? "classic";
     this.tower = { ...(opts.tower ?? DEFAULT_TOWER) };
     this.fight = { ...(opts.fight ?? DEFAULT_FIGHT) };
+    this.land = { ...(opts.land ?? DEFAULT_LAND) };
   }
 
   get players(): Map<string, Player> {
@@ -200,7 +208,7 @@ export class Game {
 
   setMode(mode: GameMode): void {
     if (this.phase !== "lobby") throw new GameError("The game mode can only be changed before the game starts");
-    if (mode !== "classic" && mode !== "tower" && mode !== "submarine" && mode !== "fight" && mode !== "robot") throw new GameError("Unknown game mode");
+    if (mode !== "classic" && mode !== "tower" && mode !== "submarine" && mode !== "fight" && mode !== "robot" && mode !== "land") throw new GameError("Unknown game mode");
     this.mode = mode;
     this.onChange();
   }
@@ -222,9 +230,19 @@ export class Game {
     this.onChange();
   }
 
-  /** Teams in the lobby preview: Tallest Tower's setting, or Red vs Blue for Tower Fight; null in solo modes. */
+  setLand(settings: LandSettings): void {
+    if (this.phase !== "lobby") throw new GameError("Land Grab settings can only be changed before the game starts");
+    const teams = Math.trunc(Number(settings.teams));
+    const minutes = Number(settings.minutes);
+    if (!(teams >= LAND_MIN_TEAMS && teams <= MAX_TEAMS)) throw new GameError(`Teams must be between ${LAND_MIN_TEAMS} and ${MAX_TEAMS}`);
+    if (!(LAND_MINUTES as readonly number[]).includes(minutes)) throw new GameError("Unsupported game length");
+    this.land = { teams, minutes };
+    this.onChange();
+  }
+
+  /** Teams in the lobby preview: the Tallest Tower or Land Grab setting, or Red vs Blue for Tower Fight; null in solo modes. */
   private get previewTeams(): number | null {
-    return this.mode === "tower" ? this.tower.teams : this.mode === "fight" ? 2 : null;
+    return this.mode === "tower" ? this.tower.teams : this.mode === "land" ? this.land.teams : this.mode === "fight" ? 2 : null;
   }
 
   /** Team index per player (join order) for the team-mode preview. */
@@ -367,6 +385,12 @@ export class Game {
       .map((p) => ({ id: p.id, nickname: p.nickname, avatar: p.avatar, score: p.score, rank: p.rank, delta: p.lastDelta, streak: p.streak }));
   }
 
+  /** The most-missed questions: wrong answers only, a question left unanswered doesn't count. */
+  errors(): QuestionError[] {
+    const wrong = this.questions.map((_, i) => [...this.players.values()].filter((p) => p.answers[i] && !p.answers[i]!.correct).length);
+    return topErrors(this.questions, wrong);
+  }
+
   private questionView(): QuestionView | null {
     const q = this.currentQuestion;
     if (!q || this.phase === "lobby" || this.phase === "podium") return null;
@@ -405,6 +429,7 @@ export class Game {
       mode: this.mode,
       tower: this.tower,
       fight: this.fight,
+      land: this.land,
       teams,
       quiz: { id: this.quizId, title: this.title, questionCount: this.questions.length },
       pacing: this.pacing,
@@ -416,6 +441,7 @@ export class Game {
       answerCounts: this.revealed && q ? q.options.map((_, i) => answered.filter((a) => a.option === i).length) : null,
       answerAvatars: this.revealed && q ? this.answerAvatars(q.options.length) : null,
       leaderboard: this.phase === "lobby" ? [] : this.leaderboard(),
+      errors: this.phase === "podium" ? this.errors() : null,
       hasResults: this.phase === "podium",
     };
   }

@@ -1,5 +1,5 @@
 import { useState } from "preact/hooks";
-import type { HostMsg } from "../../shared/protocol.ts";
+import type { HostMsg, QuestionError } from "../../shared/protocol.ts";
 import { musicEnabled, musicVolume, setMusicEnabled, setMusicVolume } from "../shared/music/index.ts";
 import { isMuted, setMuted } from "../shared/sounds.ts";
 import { setVoiceEnabled, voiceEnabled } from "../shared/voice.ts";
@@ -79,5 +79,47 @@ export function ScreenControls({ voice = false }: { voice?: boolean } = {}) {
         </svg>
       </button>
     </>
+  );
+}
+
+/** The final screen's button that swaps the results for the most-missed questions and back. */
+export function ErrorsButton({ shown, onToggle }: { shown: boolean; onToggle: () => void }) {
+  return (
+    <button class="btn ghost" aria-pressed={shown} onClick={onToggle}>
+      {shown ? "🏆 Show results" : "❓ Show errors"}
+    </button>
+  );
+}
+
+/** The questions answered wrongly most often, worst first. */
+export function ErrorsTable({ errors }: { errors: QuestionError[] }) {
+  if (errors.length === 0) {
+    return (
+      <div class="errors">
+        <p class="errors-none">No wrong answers. Nice work!</p>
+      </div>
+    );
+  }
+  return (
+    <div class="errors">
+      <table class="errors-table">
+        <thead>
+          <tr>
+            <th class="errors-count"># Wrong answers</th>
+            <th>Question</th>
+            <th>Correct answer</th>
+          </tr>
+        </thead>
+        <tbody>
+          {errors.map((e, i) => (
+            <tr key={i}>
+              <td class="errors-count">{e.wrong}</td>
+              <td>{e.text}</td>
+              <td class="errors-answer">{e.answers.join(" / ")}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
