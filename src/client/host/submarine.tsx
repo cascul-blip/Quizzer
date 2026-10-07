@@ -6,7 +6,7 @@ import { Anglerfish, Submarine, oceanGradient, type PortholeFace } from "../shar
 import { play } from "../shared/sounds.ts";
 import { useEventFlash } from "../shared/tower-art.tsx";
 import { useCountdown } from "../shared/ui.tsx";
-import { ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
+import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
 
 type SubView = Extract<HostView, { kind: "sub" }>;
 
@@ -311,25 +311,28 @@ function Seaweed() {
 }
 
 function SubPodium({ view, send }: { view: SubView; send: Send }) {
+  const [showErrors, setShowErrors] = useState(false);
   const a = view.awards;
   return (
     <main class="podium sub-podium" style={{ background: oceanGradient(view.depth) }}>
       <h1>🐟 Caught at {view.depth} m</h1>
-      <div class="sub-final">
-        <div class="sub-final-depth">{view.depth} m</div>
-        <div class="sub-final-level">The squad reached level {view.level}</div>
-      </div>
-      <div class="awards">
-        <Award icon="⚡" title="Top booster" award={a?.topBooster ?? null} unit="boosts" />
-        <Award icon="👀" title="Sharpest eyes" award={a?.sharpestEyes ?? null} unit="symbols found" />
-        <Award icon="🎯" title="Most correct answers" award={a?.mostCorrect ?? null} unit="correct" />
-      </div>
+      {showErrors ? (
+        <ErrorsTable errors={view.errors ?? []} />
+      ) : (
+        <>
+          <div class="sub-final">
+            <div class="sub-final-depth">{view.depth} m</div>
+            <div class="sub-final-level">The squad reached level {view.level}</div>
+          </div>
+          <div class="awards">
+            <Award icon="⚡" title="Top booster" award={a?.topBooster ?? null} unit="boosts" />
+            <Award icon="👀" title="Sharpest eyes" award={a?.sharpestEyes ?? null} unit="symbols found" />
+            <Award icon="🎯" title="Most correct answers" award={a?.mostCorrect ?? null} unit="correct" />
+          </div>
+        </>
+      )}
       <footer class="controls">
-        {view.hasResults && (
-          <a class="btn ghost" href="/api/results/latest.csv" download>
-            ⬇ Download results (CSV)
-          </a>
-        )}
+        <ErrorsButton shown={showErrors} onToggle={() => setShowErrors(!showErrors)} />
         <button class="btn ghost" onClick={() => send({ type: "host.open", quizId: view.quiz.id })}>
           ↻ Play again
         </button>

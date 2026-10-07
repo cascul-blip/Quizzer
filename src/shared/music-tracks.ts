@@ -20,6 +20,9 @@ export const MUSIC_TRACKS = [
   { id: "robot-quiz", mode: "Robot Attack", screen: "Quiz" },
   { id: "robot-move", mode: "Robot Attack", screen: "Movement & laser attack" },
   { id: "robot-results", mode: "Robot Attack", screen: "Final results" },
+  { id: "land-lobby", mode: "Land Grab", screen: "Lobby" },
+  { id: "land-play", mode: "Land Grab", screen: "The land" },
+  { id: "land-results", mode: "Land Grab", screen: "Final podium" },
 ] as const;
 
 export type MusicTrackId = (typeof MUSIC_TRACKS)[number]["id"];

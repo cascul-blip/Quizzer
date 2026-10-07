@@ -486,6 +486,7 @@ export class FightGame {
       outcome: this.phase === "collapse" || this.phase === "podium" ? this.outcome : null,
       playerCount: players.length,
       awards: this.phase === "podium" ? this.awards() : null,
+      errors: this.phase === "podium" ? this.stream.errors() : null,
       hasResults: this.phase === "podium",
     };
   }

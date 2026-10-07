@@ -1,5 +1,6 @@
 import type { AvatarChoice } from "./avatars.ts";
 import type { HillHeight, ShotImpact } from "./fight-physics.ts";
+import type { LandStart } from "./land-board.ts";
 import type { QuestionType } from "./quiz-schema.ts";
 
 export type Phase = "lobby" | "intro" | "open" | "reveal" | "leaderboard" | "podium";
@@ -15,7 +16,7 @@ export interface ShuffleOptions {
 
 // ---------- Tallest Tower ----------
 
-export type GameMode = "classic" | "tower" | "submarine" | "fight" | "robot";
+export type GameMode = "classic" | "tower" | "submarine" | "fight" | "robot" | "land";
 export type TowerPhase = "countdown" | "playing" | "podium";
 
 export const TEAMS = [
@@ -94,7 +95,11 @@ export type PlayerMsg =
   /** The slingshot pull in field units (y up); the shot flies the opposite way. */
   | { type: "fight.fire"; dx: number; dy: number }
   | { type: "robot.answer"; seq: number; option: number }
-  | { type: "robot.move"; dir: RobotDir };
+  | { type: "robot.move"; dir: RobotDir }
+  | { type: "land.answer"; seq: number; option: number }
+  | { type: "land.place"; tile: number }
+  /** Leave the land early; unused claims are kept for next time. */
+  | { type: "land.done" };
 
 export type HostMsg =
   | { type: "host.hello" }
@@ -105,6 +110,7 @@ export type HostMsg =
   | { type: "host.setMode"; mode: GameMode }
   | { type: "host.setTower"; teams: number; minutes: number; monster?: boolean }
   | { type: "host.setFight"; hill: HillSetting }
+  | { type: "host.setLand"; teams: number; minutes: number }
   | { type: "host.next" }
   | { type: "host.skip" }
   | { type: "host.kick"; playerId: string }
@@ -129,6 +135,17 @@ export interface QuestionView {
   remainingMs: number;
 }
 
+/** How many errors the final screen's "Show errors" table lists. */
+export const ERRORS_SHOWN = 10;
+
+/** One row of that table. */
+export interface QuestionError {
+  wrong: number;
+  text: string;
+  /** Text of the correct option(s). */
+  answers: string[];
+}
+
 export interface RankedEntry {
   id: string;
   nickname: string;
@@ -150,7 +167,7 @@ export interface PlayerResult {
 
 export type PlayerView =
   | { kind: "none"; game: null }
-  | { kind: "none"; game: { title: string; phase: Phase | TowerPhase | SubPhase | FightPhase | RobotPhase } }
+  | { kind: "none"; game: { title: string; phase: Phase | TowerPhase | SubPhase | FightPhase | RobotPhase | LandPhase } }
   | {
       kind: "player";
       phase: Phase;
@@ -168,7 +185,8 @@ export type PlayerView =
   | PlayerTowerView
   | PlayerSubView
   | PlayerFightView
-  | PlayerRobotView;
+  | PlayerRobotView
+  | PlayerLandView;
 
 export interface TowerAwards {
   mostCorrect: { value: number; nicknames: string[] } | null;
@@ -226,7 +244,8 @@ export interface HostGameState {
   mode: GameMode;
   tower: TowerSettings;
   fight: FightSettings;
-  /** Team preview while the lobby is in a team mode (Tallest Tower, Tower Fight). */
+  land: LandSettings;
+  /** Team preview while the lobby is in a team mode (Tallest Tower, Tower Fight, Land Grab). */
   teams: (TeamInfo & { members: HostPlayer[] })[] | null;
   quiz: { id: string; title: string; questionCount: number };
   pacing: Pacing;
@@ -241,6 +260,8 @@ export interface HostGameState {
   /** Revealed only: per option, the avatars of the players who picked it, fastest first. */
   answerAvatars: AvatarChoice[][] | null;
   leaderboard: RankedEntry[];
+  /** The questions answered wrongly most often (podium only). */
+  errors: QuestionError[] | null;
   hasResults: boolean;
 }
 
@@ -267,6 +288,8 @@ export interface HostTowerState {
   /** Time until the next egg announcement, or null if none is coming. */
   nextMonsterMs: number | null;
   awards: TowerAwards | null;
+  /** The questions answered wrongly most often (podium only). */
+  errors: QuestionError[] | null;
   hasResults: boolean;
 }
 
@@ -310,6 +333,8 @@ export interface HostSubState {
   players: { id: string; nickname: string; avatar: AvatarChoice; connected: boolean; state: "question" | "boost" | "waiting" }[];
   playerCount: number;
   awards: SubAwards | null;
+  /** The questions answered wrongly most often (podium only). */
+  errors: QuestionError[] | null;
   hasResults: boolean;
 }
 
@@ -410,6 +435,8 @@ export interface HostFightState {
   outcome: FightOutcome | null;
   playerCount: number;
   awards: FightAwards | null;
+  /** The questions answered wrongly most often (podium only). */
+  errors: QuestionError[] | null;
   hasResults: boolean;
 }
 
@@ -517,6 +544,8 @@ export interface HostRobotState {
   /** Final standings, best first (podium only). */
   standings: RobotStanding[] | null;
   awards: RobotAwards | null;
+  /** The questions answered wrongly most often (podium only). */
+  errors: QuestionError[] | null;
   hasResults: boolean;
 }
 
@@ -536,13 +565,114 @@ export interface PlayerRobotView {
   result: { rank: number; playerCount: number; won: boolean; outRound: number | null; awards: string[] } | null;
 }
 
+// ---------- Land Grab ----------
+
+export type LandPhase = "countdown" | "playing" | "conquered" | "podium";
+export const LAND_MINUTES = [3, 5, 7, 10] as const;
+export const LAND_MIN_TEAMS = 2;
+/** Answers (right or wrong) before a player goes to the land. */
+export const LAND_QUESTIONS_PER_ROUND = 3;
+/** Claims it takes to steal a tile from another team; grass costs 1. */
+export const LAND_STEAL_COST = 2;
+/** How long "You have no tiles to place!" shows before the questions come back. */
+export const LAND_EMPTY_MS = 4000;
+
+export interface LandSettings {
+  teams: number;
+  minutes: number;
+}
+
+/** question = answering; claim = placing tiles; empty = the "no tiles to place" message. */
+export type LandState = "question" | "claim" | "empty";
+
+/** The board as the screens draw it: owners[tile] is a team index or -1 for grass. */
+export interface LandBoard {
+  size: number;
+  owners: number[];
+  starts: LandStart[];
+}
+
+/** The latest tile a player placed. */
+export interface LandPlace {
+  seq: number;
+  tile: number;
+  team: number;
+  stolen: boolean;
+}
+
+/** The latest surround: the tiles that changed hands, and any teams knocked out by it. */
+export interface LandCapture {
+  seq: number;
+  team: number;
+  nickname: string;
+  tiles: number[];
+  knockedOut: number[];
+}
+
+export interface LandAwards {
+  mostCorrect: SubAward | null;
+  topSettler: SubAward | null;
+  topSurrounder: SubAward | null;
+}
+
+export interface HostLandTeam extends TeamInfo {
+  tiles: number;
+  correct: number;
+  rank: number;
+  out: boolean;
+  /** The team that surrounded this one's starting point. */
+  conqueredBy: number | null;
+  members: { id: string; nickname: string; avatar: AvatarChoice; connected: boolean; claiming: boolean }[];
+}
+
+export interface HostLandState {
+  kind: "land";
+  phase: LandPhase;
+  quiz: { id: string; title: string; questionCount: number };
+  remainingMs: number;
+  board: LandBoard;
+  teams: HostLandTeam[];
+  lastPlace: LandPlace | null;
+  lastCapture: LandCapture | null;
+  playerCount: number;
+  awards: LandAwards | null;
+  /** The questions answered wrongly most often (podium only). */
+  errors: QuestionError[] | null;
+  hasResults: boolean;
+}
+
+export interface PlayerLandView {
+  kind: "land";
+  phase: LandPhase;
+  title: string;
+  remainingMs: number;
+  me: { id: string; nickname: string; avatar: AvatarChoice; correct: number; placed: number; stolen: number };
+  /** The team this player is on now (it changes if their team is conquered). */
+  team: TeamInfo;
+  teamTiles: number;
+  state: LandState;
+  claims: number;
+  /** Answers given in this round of questions (0 … LAND_QUESTIONS_PER_ROUND-1). */
+  answered: number;
+  /** Time left on the "no tiles to place" message (empty state). */
+  emptyMs: number;
+  question: { seq: number; type: QuestionType; text: string; image?: string; options: string[] } | null;
+  feedback: { seq: number; correct: boolean; remainingMs: number; answers: string[] } | null;
+  /** The land, while this player is placing tiles. */
+  board: LandBoard | null;
+  /** Set once this player's first team was surrounded and they joined the conquerors. */
+  conquered: { seq: number; from: string; by: string } | null;
+  result: { teamRank: number; teamCount: number; tiles: number; won: boolean; awards: string[] } | null;
+}
+
 export type HostView =
   | { kind: "idle"; phase: "idle"; join: JoinInfo }
   | (HostGameState & { join: JoinInfo })
   | (HostTowerState & { join: JoinInfo })
   | (HostSubState & { join: JoinInfo })
   | (HostFightState & { join: JoinInfo })
-  | (HostRobotState & { join: JoinInfo });
+  | (HostRobotState & { join: JoinInfo })
+  | (HostLandState & { join: JoinInfo });
 
 export type ServerMsg =
   /** First message on every connection. A new serverId means the server restarted (maybe with new code). */

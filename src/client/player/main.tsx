@@ -7,6 +7,7 @@ import { connect, type ConnStatus } from "../shared/ws.ts";
 import { ConnBanner, ErrorBoundary, Shape, StreakBadge, Toast, optionColor, ordinal, useCountdown } from "../shared/ui.tsx";
 import { AvatarPicker } from "./avatar-picker.tsx";
 import { FightPlayer } from "./fight.tsx";
+import { LandPlayer } from "./land.tsx";
 import { RobotPlayer } from "./robot.tsx";
 import { SubPlayer } from "./submarine.tsx";
 import { TowerPlayer } from "./tower.tsx";
@@ -142,6 +143,8 @@ function App() {
     body = <FightPlayer view={view} send={send} />;
   } else if (view.kind === "robot") {
     body = <RobotPlayer view={view} send={send} />;
+  } else if (view.kind === "land") {
+    body = <LandPlayer view={view} send={send} />;
   } else {
     body = <Game view={view} send={send} />;
   }

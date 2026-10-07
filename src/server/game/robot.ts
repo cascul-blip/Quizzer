@@ -367,6 +367,7 @@ export class RobotGame {
       playerCount: this.players.size,
       standings: podium ? this.standings() : null,
       awards: podium ? this.awards() : null,
+      errors: podium ? this.stream.errors() : null,
       hasResults: podium,
     };
   }

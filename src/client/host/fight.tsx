@@ -1,10 +1,10 @@
-import { useEffect, useRef } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import { CORRECT_PER_DECISION, TOWER_MAX_DAMAGE, type FightEvent, type FightShot, type HostView } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { Battlefield, HealthBar, ShotLayer } from "../shared/fight-art.tsx";
 import { play } from "../shared/sounds.ts";
 import { useCountdown } from "../shared/ui.tsx";
-import { ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
+import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
 import { Award } from "./tower.tsx";
 
 type FightView = Extract<HostView, { kind: "fight" }>;
@@ -131,6 +131,7 @@ function EventFeed({ events, teams }: { events: FightEvent[]; teams: FightView["
 }
 
 function FightPodium({ view, send }: { view: FightView; send: Send }) {
+  const [showErrors, setShowErrors] = useState(false);
   const o = view.outcome;
   const winner = o && o.winner !== null ? view.teams[o.winner]! : null;
   const loser = winner ? view.teams[1 - winner.index]! : null;
@@ -150,29 +151,31 @@ function FightPodium({ view, send }: { view: FightView; send: Send }) {
         <Battlefield terrain={view.terrain} damage={view.teams.map((t) => t.damage)} colors={view.teams.map((t) => t.color)} />
       </div>
       <h1 style={winner ? { background: winner.color, color: "#fff" } : undefined}>{winner ? `🏆 Team ${winner.name} wins!` : "🤝 It's a draw!"}</h1>
-      <p class="fight-reason">{reason}</p>
-      <div class="fight-scores">
-        {view.teams.map((t) => (
-          <div key={t.index} class={`fight-score ${winner?.index === t.index ? "won" : ""}`} style={{ "--team": t.color }}>
-            <div class="place-name">Team {t.name}</div>
-            <HealthBar damage={t.damage} color={t.color} />
-            <div class="fight-score-line">
-              {t.damage} damage · {t.correct} correct
-            </div>
+      {showErrors ? (
+        <ErrorsTable errors={view.errors ?? []} />
+      ) : (
+        <>
+          <p class="fight-reason">{reason}</p>
+          <div class="fight-scores">
+            {view.teams.map((t) => (
+              <div key={t.index} class={`fight-score ${winner?.index === t.index ? "won" : ""}`} style={{ "--team": t.color }}>
+                <div class="place-name">Team {t.name}</div>
+                <HealthBar damage={t.damage} color={t.color} />
+                <div class="fight-score-line">
+                  {t.damage} damage · {t.correct} correct
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-      <div class="awards">
-        <Award icon="🎯" title="Top gunner" award={a?.topGunner ?? null} unit="tower hits" />
-        <Award icon="🧱" title="Master builder" award={a?.masterBuilder ?? null} unit="rebuilds" />
-        <Award icon="✅" title="Most correct answers" award={a?.mostCorrect ?? null} unit="correct" />
-      </div>
+          <div class="awards">
+            <Award icon="🎯" title="Top gunner" award={a?.topGunner ?? null} unit="tower hits" />
+            <Award icon="🧱" title="Master builder" award={a?.masterBuilder ?? null} unit="rebuilds" />
+            <Award icon="✅" title="Most correct answers" award={a?.mostCorrect ?? null} unit="correct" />
+          </div>
+        </>
+      )}
       <footer class="controls">
-        {view.hasResults && (
-          <a class="btn ghost" href="/api/results/latest.csv" download>
-            ⬇ Download results (CSV)
-          </a>
-        )}
+        <ErrorsButton shown={showErrors} onToggle={() => setShowErrors(!showErrors)} />
         <button class="btn ghost" onClick={() => send({ type: "host.open", quizId: view.quiz.id })}>
           ↻ Play again
         </button>

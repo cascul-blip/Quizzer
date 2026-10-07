@@ -1,4 +1,4 @@
-import { TEAMS, type TeamInfo } from "../../shared/protocol.ts";
+import { ERRORS_SHOWN, TEAMS, type QuestionError, type TeamInfo } from "../../shared/protocol.ts";
 
 // Building blocks shared by every game mode.
 
@@ -41,6 +41,16 @@ export function cleanNickname(raw: unknown): string {
   if (!name) throw new GameError("Please enter a nickname");
   if ([...name].length > MAX_NICKNAME) throw new GameError(`Nickname must be at most ${MAX_NICKNAME} characters`);
   return name;
+}
+
+/** The questions with the most wrong answers, worst first (ties in quiz order); questions nobody got wrong are left out. */
+export function topErrors(questions: { text: string; options: string[]; correct: number[] }[], wrongCounts: number[], limit = ERRORS_SHOWN): QuestionError[] {
+  return questions
+    .map((q, i) => ({ wrong: wrongCounts[i] ?? 0, text: q.text, answers: q.correct.map((c) => q.options[c]!), i }))
+    .filter((e) => e.wrong > 0)
+    .sort((a, b) => b.wrong - a.wrong || a.i - b.i)
+    .slice(0, limit)
+    .map(({ i, ...e }) => e);
 }
 
 export function teamInfo(index: number): TeamInfo {

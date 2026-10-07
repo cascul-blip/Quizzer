@@ -1,5 +1,6 @@
 import type { Question, QuestionType } from "../../shared/quiz-schema.ts";
-import { shuffle, shuffleOptions, type Clock } from "./common.ts";
+import type { QuestionError } from "../../shared/protocol.ts";
+import { shuffle, shuffleOptions, topErrors, type Clock } from "./common.ts";
 
 /** How long the ✓/✗ flash shows before the next question can be answered. */
 export const FEEDBACK_MS = 1000;
@@ -39,12 +40,17 @@ export interface StreamQuestionView {
 
 /** Deals each player their own shuffled, repeating deck of questions and scores their answers. */
 export class QuestionStream {
+  /** Wrong answers given to each question, by everyone, over the whole game. */
+  readonly wrongCounts: number[];
+
   constructor(
     private readonly questions: Question[],
     private readonly shuffleAnswers: boolean,
     private readonly rng: () => number,
     private readonly clock: Clock,
-  ) {}
+  ) {
+    this.wrongCounts = questions.map(() => 0);
+  }
 
   /** Give the player their next question: a personal shuffled deck, reshuffled when used up. */
   deal(p: StreamPlayer): void {
@@ -72,11 +78,19 @@ export class QuestionStream {
     if (!Number.isInteger(option) || option < 0 || option >= cur.options.length) return null;
     const correct = cur.correct.includes(option);
     if (correct) p.correct++;
-    else p.wrong++;
+    else {
+      p.wrong++;
+      this.wrongCounts[cur.qIndex]!++;
+    }
     p.feedback = { seq, correct, answers: correct ? [] : cur.correct.map((i) => cur.options[i]!) };
     p.readyAt = this.clock.now() + FEEDBACK_MS;
     this.deal(p);
     return correct;
+  }
+
+  /** The most-missed questions, for the final screen. */
+  errors(): QuestionError[] {
+    return topErrors(this.questions, this.wrongCounts);
   }
 
   questionView(p: StreamPlayer): StreamQuestionView | null {

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import { EGG_LEVELS_ABOVE, MONSTER_DAMAGE, type HostTowerTeam, type HostView, type MonsterAttack, type MonsterEggs } from "../../shared/protocol.ts";
 import { play } from "../shared/sounds.ts";
 import {
@@ -20,7 +20,7 @@ import {
   useNewFloor,
 } from "../shared/tower-art.tsx";
 import { formatClock, ordinal, useCountdown } from "../shared/ui.tsx";
-import { ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
+import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
 
 type TowerView = Extract<HostView, { kind: "tower" }>;
 
@@ -281,6 +281,7 @@ function TowerSvg({ team, rows, phase, egg, attack }: { team: HostTowerTeam; row
 }
 
 function TowerPodium({ view, send }: { view: TowerView; send: Send }) {
+  const [showErrors, setShowErrors] = useState(false);
   const ranked = [...view.teams].sort((a, b) => a.rank - b.rank || a.index - b.index);
   const places = [
     { team: ranked[1], cls: "second" },
@@ -294,45 +295,47 @@ function TowerPodium({ view, send }: { view: TowerView; send: Send }) {
         <Scene teams={view.teams} phase="podium" />
       </div>
       <h1>🏆 Tallest tower</h1>
-      <div class="podium-blocks">
-        {places.map(({ team, cls }) =>
-          team ? (
-            <div key={cls} class={`place ${cls}`} style={{ "--team": team.color }}>
-              <div class="place-name">Team {team.name}</div>
-              <div class="place-score">
-                {team.floors} floor{team.floors === 1 ? "" : "s"} · {team.placed} blocks
-              </div>
-              <div class="place-block team-block">{ordinal(team.rank)}</div>
-            </div>
-          ) : (
-            <div key={cls} class={`place ${cls} empty`} />
-          ),
-        )}
-      </div>
-      {ranked.length > 3 && (
-        <ol class="rest">
-          {ranked.slice(3).map((t) => (
-            <li key={t.index}>
-              <span>
-                {ordinal(t.rank)} Team {t.name}
-              </span>
-              <span>
-                {t.floors} floors · {t.placed} blocks
-              </span>
-            </li>
-          ))}
-        </ol>
+      {showErrors ? (
+        <ErrorsTable errors={view.errors ?? []} />
+      ) : (
+        <>
+          <div class="podium-blocks">
+            {places.map(({ team, cls }) =>
+              team ? (
+                <div key={cls} class={`place ${cls}`} style={{ "--team": team.color }}>
+                  <div class="place-name">Team {team.name}</div>
+                  <div class="place-score">
+                    {team.floors} floor{team.floors === 1 ? "" : "s"} · {team.placed} blocks
+                  </div>
+                  <div class="place-block team-block">{ordinal(team.rank)}</div>
+                </div>
+              ) : (
+                <div key={cls} class={`place ${cls} empty`} />
+              ),
+            )}
+          </div>
+          {ranked.length > 3 && (
+            <ol class="rest">
+              {ranked.slice(3).map((t) => (
+                <li key={t.index}>
+                  <span>
+                    {ordinal(t.rank)} Team {t.name}
+                  </span>
+                  <span>
+                    {t.floors} floors · {t.placed} blocks
+                  </span>
+                </li>
+              ))}
+            </ol>
+          )}
+          <div class="awards">
+            <Award icon="🎯" title="Most correct answers" award={a?.mostCorrect ?? null} unit="correct" />
+            <Award icon="🧱" title="Master builder" award={a?.masterBuilder ?? null} unit="blocks placed" />
+          </div>
+        </>
       )}
-      <div class="awards">
-        <Award icon="🎯" title="Most correct answers" award={a?.mostCorrect ?? null} unit="correct" />
-        <Award icon="🧱" title="Master builder" award={a?.masterBuilder ?? null} unit="blocks placed" />
-      </div>
       <footer class="controls">
-        {view.hasResults && (
-          <a class="btn ghost" href="/api/results/latest.csv" download>
-            ⬇ Download results (CSV)
-          </a>
-        )}
+        <ErrorsButton shown={showErrors} onToggle={() => setShowErrors(!showErrors)} />
         <button class="btn ghost" onClick={() => send({ type: "host.open", quizId: view.quiz.id })}>
           ↻ Play again
         </button>

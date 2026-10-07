@@ -1348,3 +1348,131 @@ h1 {
 .robot-attack.hit {
   background: radial-gradient(circle, rgba(255, 36, 56, 0.35), transparent 70%);
 }
+
+/* ----- Land Grab ----- */
+
+.land-meter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.land-meter .blocks-meter i {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.land-meter .blocks-meter i.full {
+  background: #fff;
+}
+
+.land-big-icon {
+  font-size: 80px;
+  line-height: 1;
+}
+
+.land-empty h2 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 900;
+}
+
+.land-empty-bar {
+  width: min(70vw, 280px);
+  height: 10px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.2);
+  overflow: hidden;
+}
+
+.land-empty-bar i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left;
+  animation: land-drain linear both;
+}
+
+@keyframes land-drain {
+  to {
+    transform: scaleX(0);
+  }
+}
+
+.land-claim {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.land-area {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  margin: 4px 8px;
+  border-radius: var(--radius);
+  background: #16311a;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: pointer;
+}
+
+.land-pan {
+  position: absolute;
+  inset: 0;
+  padding: 4px;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+.land-zoom {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.land-zoom button {
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(10, 5, 25, 0.75);
+  color: #fff;
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.land-foot {
+  padding: 6px 12px max(12px, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.land-hint {
+  min-height: 1.3em;
+  text-align: center;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.land-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.land-actions .btn {
+  flex: 1;
+}
+
+.land-actions .btn.primary {
+  flex: 2;
+}
