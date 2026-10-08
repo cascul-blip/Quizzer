@@ -177,6 +177,19 @@ function BoostButton({ onBoost }: { onBoost: () => void }) {
   );
 }
 
+/** The red bar that drains while a symbol is up; when it's empty the instructor moves on. */
+function SymbolTimer({ index, remainingMs, totalMs }: { index: number; remainingMs: number; totalMs: number }) {
+  // Catch up once, when the symbol starts. Updating the delay on every snapshot would
+  // count the time already animated twice and empty the bar early.
+  const start = useRef<{ index: number; elapsed: number } | null>(null);
+  if (!start.current || start.current.index !== index) start.current = { index, elapsed: Math.max(0, totalMs - remainingMs) };
+  return (
+    <div class="dive-timer" role="timer" aria-label="Time left for this symbol">
+      <div key={index} class="dive-timer-fill" style={{ animationDuration: `${totalMs}ms`, animationDelay: `-${start.current.elapsed}ms` }} />
+    </div>
+  );
+}
+
 function DiveScreen({ view, send }: { view: PlayerSubView; send: Send }) {
   const dive = view.dive;
   const [, rerender] = useState(0);
@@ -201,6 +214,7 @@ function DiveScreen({ view, send }: { view: PlayerSubView; send: Send }) {
   if (dive.role === "instructor") {
     return (
       <main class="center instructor">
+        {dive.index < dive.total && <SymbolTimer index={dive.index} remainingMs={dive.symbolRemainingMs} totalMs={dive.symbolMs} />}
         <div class="role-tag">📣 You're an INSTRUCTOR</div>
         <p class="muted">Describe this symbol out loud so your divers can find it!</p>
         <div class="big-symbol" key={dive.symbol}>
@@ -218,6 +232,7 @@ function DiveScreen({ view, send }: { view: PlayerSubView; send: Send }) {
         <b>🤿 Listen to the instructors!</b>
         <span>Tap the symbol being described · {Math.min(dive.index + 1, dive.total)} / {dive.total}</span>
       </div>
+      {dive.index < dive.total && <SymbolTimer index={dive.index} remainingMs={dive.symbolRemainingMs} totalMs={dive.symbolMs} />}
       {dive.done ? (
         <div class="center">
           <div class="big-check">✓</div>

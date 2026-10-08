@@ -607,6 +607,44 @@ a.btn {
   }
 }
 
+/* The ring about to be destroyed: solid red, pulsing, then it drops away once the lasers have hit. */
+.robot-arena .tile-collapse,
+.mini-collapse {
+  fill: #ff2438;
+  animation: collapse-pulse 0.7s ease-in-out infinite alternate;
+}
+
+@keyframes collapse-pulse {
+  to {
+    fill: #8f0d1b;
+  }
+}
+
+.robot-arena .tile-collapse.gone {
+  animation: collapse-fall 0.9s ease-in 0.5s both;
+}
+
+@keyframes collapse-fall {
+  from {
+    fill: #ff5a28;
+  }
+  to {
+    fill: #2a1010;
+    opacity: 0;
+    transform: translateY(70px);
+  }
+}
+
+.mini-collapse.gone {
+  animation: collapse-fade 0.6s ease-in 0.3s both;
+}
+
+@keyframes collapse-fade {
+  to {
+    opacity: 0;
+  }
+}
+
 .robot-arena.attacking .tile-danger {
   animation: danger-flash 0.25s steps(2) infinite;
 }
@@ -823,6 +861,15 @@ a.btn {
 
 .hex-block {
   fill: rgba(10, 5, 25, 0.55);
+  pointer-events: none;
+}
+
+/* The ring around another team's start: takeable, but it costs more. */
+.hex-guard {
+  fill: rgba(255, 176, 0, 0.3);
+  stroke: #ffb000;
+  stroke-width: 1.2;
+  stroke-dasharray: 3 2;
   pointer-events: none;
 }
 

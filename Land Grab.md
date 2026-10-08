@@ -18,4 +18,6 @@ If they have no correct answers, it takes them to the land claim mode and gives 
 
 The players are able to place their colors anywhere on the field except directly on or next to an opposing team's starting point.
 
+Tiles that are 2 spots away from an opposing team's starting point cost 2 claims instead of 1.  Stealing one of those tiles from another team also costs 2, the same as any other steal.
+
 If the players are able to surround an area with their claimed land, all tiles that are inside the surrounded area turn that color.  If they are able to surround an enemy starting point, that team is knocked out of the game.

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { EMPTY, START_MARGIN, enclosedBy, hexDistance, isProtected, landBoardSize, neighbors, placementCost, startTiles, type LandStart } from "../src/shared/land-board.ts";
+import { EMPTY, START_MARGIN, enclosedBy, hexDistance, isGuarded, isProtected, landBoardSize, neighbors, placementCost, startTiles, type LandStart } from "../src/shared/land-board.ts";
 
 const at = (size: number, row: number, col: number) => row * size + col;
 const board = (size: number) => Array<number>(size * size).fill(EMPTY);
@@ -60,26 +60,48 @@ describe("placing", () => {
   owners[at(size, 0, 0)] = 1;
 
   test("grass costs 1, enemy land costs the steal price, own land can't be taken", () => {
-    expect(placementCost(owners, size, starts, 0, at(size, 9, 9), 2)).toBe(1);
-    expect(placementCost(owners, size, starts, 0, at(size, 0, 0), 2)).toBe(2);
-    expect(placementCost(owners, size, starts, 1, at(size, 0, 0), 2)).toBeNull();
-    expect(placementCost(owners, size, starts, 0, 100, 2)).toBeNull();
-    expect(placementCost(owners, size, starts, 0, 1.5, 2)).toBeNull();
+    expect(placementCost(owners, size, starts, 0, at(size, 9, 9), 2, 2)).toBe(1);
+    expect(placementCost(owners, size, starts, 0, at(size, 0, 0), 2, 2)).toBe(2);
+    expect(placementCost(owners, size, starts, 1, at(size, 0, 0), 2, 2)).toBeNull();
+    expect(placementCost(owners, size, starts, 0, 100, 2, 2)).toBeNull();
+    expect(placementCost(owners, size, starts, 0, 1.5, 2, 2)).toBeNull();
   });
 
   test("an opposing start and the tiles next to it are off limits; your own aren't", () => {
-    expect(placementCost(owners, size, starts, 0, blue, 2)).toBeNull();
+    expect(placementCost(owners, size, starts, 0, blue, 2, 2)).toBeNull();
     for (const n of neighbors(size, blue)) {
       expect(isProtected(size, starts, 0, n)).toBe(true);
-      expect(placementCost(owners, size, starts, 0, n, 2)).toBeNull();
-      expect(placementCost(owners, size, starts, 1, n, 2)).toBe(1);
+      expect(placementCost(owners, size, starts, 0, n, 2, 2)).toBeNull();
+      expect(placementCost(owners, size, starts, 1, n, 2, 2)).toBe(1);
     }
+  });
+
+  test("the ring 2 steps from an opposing start costs the guard price, grass or stolen; your own ring doesn't", () => {
+    const ring = owners.map((_, t) => t).filter((t) => hexDistance(size, blue, t) === 2);
+    expect(ring).toHaveLength(12);
+    for (const t of ring) {
+      expect(isGuarded(size, starts, 0, t)).toBe(true);
+      expect(isGuarded(size, starts, 1, t)).toBe(false);
+      expect(placementCost(owners, size, starts, 0, t, 2, 2)).toBe(2);
+      expect(placementCost(owners, size, starts, 1, t, 2, 2)).toBe(1);
+    }
+    // Blue holds a ring tile: stealing it is still 2, not 4. The guard price applies when it's the higher one.
+    const held = [...owners];
+    held[ring[0]!] = 1;
+    expect(placementCost(held, size, starts, 0, ring[0]!, 2, 2)).toBe(2);
+    expect(placementCost(held, size, starts, 0, ring[0]!, 2, 3)).toBe(3);
+    expect(placementCost(held, size, starts, 0, ring[0]!, 3, 2)).toBe(3);
+    // One step further out is ordinary grass.
+    const beyond = owners.map((_, t) => t).filter((t) => hexDistance(size, blue, t) === 3 && hexDistance(size, red, t) > 2);
+    for (const t of beyond) expect(placementCost(owners, size, starts, 0, t, 2, 2)).toBe(1);
   });
 
   test("a knocked-out team's start is ordinary land", () => {
     const after = starts.map((s) => (s.team === 1 ? { ...s, out: true } : s));
-    expect(placementCost(owners, size, after, 0, neighbors(size, blue)[0]!, 2)).toBe(1);
-    expect(placementCost(owners, size, after, 0, blue, 2)).toBe(2);
+    const ringTile = owners.findIndex((_, t) => hexDistance(size, blue, t) === 2);
+    expect(placementCost(owners, size, after, 0, ringTile, 2, 2)).toBe(1);
+    expect(placementCost(owners, size, after, 0, neighbors(size, blue)[0]!, 2, 2)).toBe(1);
+    expect(placementCost(owners, size, after, 0, blue, 2, 2)).toBe(2);
   });
 });
 

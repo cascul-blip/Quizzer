@@ -342,10 +342,10 @@ describe("monster", () => {
 
   const egg = (game: TowerGame, team: number) => game.egg?.cells[team] ?? null;
 
-  test("eggs are announced at 1/3 and 2/3 of the game; none without the setting or with one team", () => {
+  test("eggs are announced 4 times per game, evenly spaced; none without the setting or with one team", () => {
     const { game, clock } = play(["A", "B"], { minutes: 3, monster: true, rng: () => 0 });
-    expect(game.hostView().nextMonsterMs).toBe(60_000);
-    clock.advance(60_000 - 1);
+    expect(game.hostView().nextMonsterMs).toBe(36_000);
+    clock.advance(36_000 - 1);
     expect(game.egg).toBeNull();
     clock.advance(1);
     // Empty towers: level 4 (row 3) on each.
@@ -353,10 +353,15 @@ describe("monster", () => {
       { col: 0, row: 3 },
       { col: 0, row: 3 },
     ]);
-    expect(game.hostView().nextMonsterMs).toBe(60_000);
-    // Unhatched eggs stay put; the second announcement doesn't add more.
+    expect(game.hostView().nextMonsterMs).toBe(36_000);
+    // Unhatched eggs stay put; the later announcements don't add more.
     const first = game.egg!.seq;
-    clock.advance(60_000);
+    clock.advance(36_000);
+    expect(game.egg!.seq).toBe(first);
+    expect(game.hostView().nextMonsterMs).toBe(36_000);
+    clock.advance(36_000);
+    expect(game.hostView().nextMonsterMs).toBe(36_000);
+    clock.advance(36_000);
     expect(game.egg!.seq).toBe(first);
     expect(game.hostView().nextMonsterMs).toBeNull();
     // Everyone hears about it and sees their own egg.
@@ -372,7 +377,7 @@ describe("monster", () => {
     expect(solo.game.hostView().monster).toBe(false);
     solo.clock.advance(2 * 60_000);
     expect(solo.game.egg).toBeNull();
-    expect(MONSTER_AT).toEqual([1 / 3, 2 / 3]);
+    expect(MONSTER_AT).toEqual([1 / 5, 2 / 5, 3 / 5, 4 / 5]);
   });
 
   test("each tower's egg is 4 levels above its highest full floor, never on a placed block", () => {

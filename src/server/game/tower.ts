@@ -27,7 +27,7 @@ export const SWEEP_MIN_MS = 1200;
 export const SWEEP_STEP_MS = 130;
 export const DROP_COOLDOWN_MS = 400;
 /** Egg announcements, as fractions of the game length. */
-export const MONSTER_AT = [1 / 3, 2 / 3] as const;
+export const MONSTER_AT = [1 / 5, 2 / 5, 3 / 5, 4 / 5] as const;
 
 export interface TowerTeam {
   index: number;

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "preact/hooks";
-import { ROBOT_BOARD, ROBOT_LIVES, type ClientMsg, type PlayerRobotView, type RobotDir } from "../../shared/protocol.ts";
+import { ROBOT_BOARD, ROBOT_LIVES, robotInBounds, type ClientMsg, type PlayerRobotView, type RobotDir } from "../../shared/protocol.ts";
 import { MiniBoard } from "../shared/robot-art.tsx";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
 import { Feedback, StreamQuestion } from "./tower.tsx";
@@ -73,13 +73,15 @@ function Hearts({ lives }: { lives: number }) {
 
 function MoveScreen({ view, secs, send }: { view: PlayerRobotView; secs: number; send: Send }) {
   const board = view.board;
-  const onTarget = !!board && board.marked.includes(view.me.y * ROBOT_BOARD + view.me.x);
+  const tile = view.me.y * ROBOT_BOARD + view.me.x;
+  const onTarget = !!board && board.marked.includes(tile);
+  const onCollapse = !!board && board.collapsing.includes(tile);
   const canMove = !view.me.out && view.me.points > 0;
   // Another player or the edge of the board is in the way (the server has the final say).
   const blocked = (dir: RobotDir) => {
     const x = view.me.x + STEP[dir][0];
     const y = view.me.y + STEP[dir][1];
-    return x < 0 || y < 0 || x >= ROBOT_BOARD || y >= ROBOT_BOARD || !!board?.others.some((o) => o.x === x && o.y === y);
+    return !robotInBounds(x, y, board?.inset ?? 0) || !!board?.others.some((o) => o.x === x && o.y === y);
   };
   const move = (dir: RobotDir) => {
     if (!canMove || blocked(dir)) return;
@@ -102,18 +104,22 @@ function MoveScreen({ view, secs, send }: { view: PlayerRobotView; secs: number;
 
   const status = view.me.out
     ? "💀 You're out. Watch the robot!"
-    : onTarget
+    : onCollapse
       ? view.me.points > 0
-        ? "⚠ You're on a red X. Move!"
-        : "⚠ On a red X, and no moves left!"
-      : "✓ Safe here";
+        ? "⚠ This tile is about to collapse. Move!"
+        : "⚠ This tile is about to collapse, and no moves left!"
+      : onTarget
+        ? view.me.points > 0
+          ? "⚠ You're on a red X. Move!"
+          : "⚠ On a red X, and no moves left!"
+        : "✓ Safe here";
   return (
     <main class="robot-move">
       <div class="robot-move-head">
         <b class={onTarget && !view.me.out ? "danger" : ""}>{status}</b>
         <span class={`robot-clock ${secs <= 3 ? "urgent" : ""}`}>{secs}</span>
       </div>
-      {board && <MiniBoard me={view.me} others={board.others} marked={board.marked} avatar={view.me.avatar} />}
+      {board && <MiniBoard me={view.me} others={board.others} marked={board.marked} inset={board.inset} collapsing={board.collapsing} avatar={view.me.avatar} />}
       {!view.me.out && (
         <>
           <div class="robot-moves-left">
@@ -159,7 +165,7 @@ function AttackScreen({ view }: { view: PlayerRobotView }) {
       <div class="robot-attack-icon">{icon}</div>
       <h1>{text}</h1>
       {a?.eliminated && <p class="muted">You can keep answering questions for fun.</p>}
-      {view.board && <MiniBoard me={view.me} others={view.board.others} marked={view.board.marked} avatar={view.me.avatar} zapped={a?.hit} />}
+      {view.board && <MiniBoard me={view.me} others={view.board.others} marked={view.board.marked} inset={view.board.inset} collapsing={view.board.collapsing} avatar={view.me.avatar} zapped={a?.hit} />}
     </main>
   );
 }

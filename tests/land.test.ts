@@ -173,6 +173,26 @@ describe("placing tiles", () => {
     expect(game.place(a.id, 1000)).toBe(false);
   });
 
+  test("a tile 2 steps from an opposing start costs 2 claims; around your own start it costs 1", () => {
+    const { game, clock } = play(["A", "B"]);
+    const a = byName(game, "A");
+    const b = byName(game, "B");
+    const [theirs, mine] = [ringAround(game, game.teams[1]!.start, 2), ringAround(game, game.teams[0]!.start, 2)];
+    round(game, clock, a, 1);
+    expect(game.place(a.id, theirs[0]!)).toBe(false);
+    expect(game.place(a.id, mine[0]!)).toBe(true);
+    round(game, clock, a, 3);
+    expect(game.place(a.id, theirs[0]!)).toBe(true);
+    expect(a).toMatchObject({ claims: 1, stolen: 0, state: "claim" });
+    // Taking it back costs Blue the normal steal price; taking it from Blue again is 2, not 4.
+    fund(b, 2);
+    expect(game.place(b.id, theirs[0]!)).toBe(true);
+    expect(b.claims).toBe(0);
+    fund(a, 2);
+    expect(game.place(a.id, theirs[0]!)).toBe(true);
+    expect(a.claims).toBe(0);
+  });
+
   test("a player with claims but nothing affordable goes straight back to questions", () => {
     const { game, clock } = play(["A", "B"]);
     const a = byName(game, "A");

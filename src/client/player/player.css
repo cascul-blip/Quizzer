@@ -842,6 +842,33 @@ h1 {
   color: var(--on-bg-soft);
 }
 
+.dive-timer {
+  flex: none;
+  align-self: stretch;
+  height: 14px;
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+
+.dive-timer-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #8f0f1a, #e21b3c);
+  transform-origin: left center;
+  animation-name: dive-drain;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+}
+
+@keyframes dive-drain {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
 .symbol-grid {
   flex: 1;
   display: grid;

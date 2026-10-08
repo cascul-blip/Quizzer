@@ -347,7 +347,7 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
                   ))}
                 </select>
               </label>
-              <label class="opt check" title={view.tower.teams < 2 ? "The monster needs 2 or more teams" : "Monster eggs appear at 1/3 and 2/3 of the game"}>
+              <label class="opt check" title={view.tower.teams < 2 ? "The monster needs 2 or more teams" : "Monster eggs appear 4 times per game"}>
                 <input
                   type="checkbox"
                   disabled={view.tower.teams < 2}

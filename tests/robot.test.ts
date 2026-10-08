@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { Game } from "../src/server/game/game.ts";
 import { buildRobotResultsCsv } from "../src/server/game/results.ts";
 import { COUNTDOWN_MS, FEEDBACK_MS, RobotGame, spreadTile, type RobotPlayer } from "../src/server/game/robot.ts";
-import { ROBOT_ATTACK_MS, ROBOT_BOARD, ROBOT_LIVES, ROBOT_MOVE_MS, ROBOT_WARN_MS, robotQuizMs } from "../src/shared/protocol.ts";
+import { ROBOT_ATTACK_MS, ROBOT_BOARD, ROBOT_LIVES, ROBOT_MOVE_MS, ROBOT_WARN_MS, robotInBounds, robotQuizMs, robotRing } from "../src/shared/protocol.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
 import { FakeClock, sampleQuiz } from "./helpers.ts";
 
@@ -57,7 +57,7 @@ function toMove(game: RobotGame, clock: FakeClock) {
 /** Put the player on a safe (or targeted) tile during the move phase, bypassing points. */
 function place(game: RobotGame, p: RobotPlayer, safe: boolean) {
   for (let i = 0; i < ROBOT_BOARD * ROBOT_BOARD; i++) {
-    if (game.marked.has(i) !== safe) {
+    if (robotRing(i) >= game.inset && game.marked.has(i) !== safe) {
       p.x = i % ROBOT_BOARD;
       p.y = Math.floor(i / ROBOT_BOARD);
       return;
@@ -67,7 +67,7 @@ function place(game: RobotGame, p: RobotPlayer, safe: boolean) {
 
 /** Play one full round where the listed players end on targeted tiles and everyone else is safe. */
 function round(game: RobotGame, clock: FakeClock, hit: string[]) {
-  toMove(game, clock);
+  if (game.phase !== "move") toMove(game, clock);
   for (const p of game.players.values()) if (p.outRound === null) place(game, p, !hit.includes(p.nickname));
   clock.advance(ROBOT_MOVE_MS);
   expect(game.phase).toBe("attack");
@@ -140,7 +140,9 @@ describe("Robot Attack", () => {
     const { game, clock } = setup(["A", "B"]);
     while (robotQuizMs(game.round) > ROBOT_WARN_MS) round(game, clock, []);
     expect(game.phase).toBe("quiz");
-    expect(game.marked.size).toBeGreaterThanOrEqual(108);
+    // Three rings are gone by now: 3/4 of the 6×6 board that's left.
+    expect(game.inset).toBe(3);
+    expect(game.marked.size).toBe(27);
   });
 
   test("moves spend points, stop at the edges and only happen in the move phase", () => {
@@ -307,6 +309,99 @@ describe("Robot Attack", () => {
     // Joining with no points left to earn: dropped on a safe tile.
     const later = game.join("Later");
     expect(game.marked.has(tile(later))).toBe(false);
+  });
+
+  test("every 4th round the outer ring is targeted, and 1/4 of the board inside it stays safe", () => {
+    const { game, clock } = setup(["A", "B", "C"]);
+    for (let r = 1; r <= 3; r++) {
+      toMove(game, clock);
+      expect(game.collapsing.size).toBe(0);
+      expect(game.hostView().collapsing).toEqual([]);
+      round(game, clock, []);
+    }
+    expect(game.round).toBe(4);
+    toMove(game, clock);
+    expect(game.inset).toBe(0);
+    expect(game.collapsing.size).toBe(44);
+    for (const i of game.collapsing) {
+      expect(robotRing(i)).toBe(0);
+      expect(game.marked.has(i)).toBe(true);
+    }
+    expect(game.marked.size).toBe(44 + 75);
+    const view = game.playerView(byName(game, "A").id)!.board!;
+    expect(view.inset).toBe(0);
+    expect(view.collapsing.length).toBe(44);
+  });
+
+  test("a player left on the destroyed ring loses a life and lands on the closest free tile", () => {
+    const { game, clock } = setup(["A", "B", "C"]);
+    for (let r = 1; r <= 3; r++) round(game, clock, []);
+    toMove(game, clock);
+    const [a, b, c] = [byName(game, "A"), byName(game, "B"), byName(game, "C")];
+    place(game, c, true);
+    // A and B are both closest to (1, 5); only one of them gets it.
+    Object.assign(a, { x: 0, y: 5 });
+    Object.assign(b, { x: 0, y: 6 });
+    game.marked.delete(tile({ x: 1, y: 5 }));
+    const safeAt = { x: c.x, y: c.y };
+    clock.advance(ROBOT_MOVE_MS);
+    expect(game.phase).toBe("attack");
+    expect(game.inset).toBe(1);
+    expect(game.lastAttack!.hit.sort()).toEqual([a.id, b.id].sort());
+    expect([a.lives, b.lives, c.lives]).toEqual([ROBOT_LIVES - 1, ROBOT_LIVES - 1, ROBOT_LIVES]);
+    expect({ x: a.x, y: a.y }).toEqual({ x: 1, y: 5 });
+    expect({ x: b.x, y: b.y }).toEqual({ x: 1, y: 6 });
+    expect({ x: c.x, y: c.y }).toEqual(safeAt);
+    // The ring stays in the views through the attack, for the collapse animation.
+    expect(game.hostView().collapsing.length).toBe(44);
+    expect(game.hostView().inset).toBe(1);
+    clock.advance(ROBOT_ATTACK_MS);
+    expect(game.collapsing.size).toBe(0);
+  });
+
+  test("a player knocked out on the ring is not moved", () => {
+    const { game, clock } = setup(["A", "B", "C"]);
+    for (let r = 1; r <= 3; r++) round(game, clock, []);
+    toMove(game, clock);
+    const a = byName(game, "A");
+    for (const p of game.players.values()) place(game, p, true);
+    Object.assign(a, { x: 0, y: 0, lives: 1 });
+    clock.advance(ROBOT_MOVE_MS);
+    expect(a.outRound).toBe(4);
+    expect({ x: a.x, y: a.y }).toEqual({ x: 0, y: 0 });
+  });
+
+  test("after a ring is gone, moves stop at the new edge and late joiners start inside it", () => {
+    const { game, clock } = setup(["A", "B"]);
+    for (let r = 1; r <= 4; r++) round(game, clock, []);
+    expect(game.inset).toBe(1);
+    const a = byName(game, "A");
+    answer(game, clock, a, true);
+    answer(game, clock, a, true);
+    toMove(game, clock);
+    Object.assign(a, { x: 1, y: 5 });
+    expect(game.move(a.id, "left")).toBe(false);
+    expect(game.move(a.id, "right")).toBe(true);
+    for (let i = 0; i < 20; i++) {
+      const late = game.join(`Late${i}`);
+      expect(robotInBounds(late.x, late.y, 1)).toBe(true);
+    }
+  });
+
+  test("the board stops shrinking at 2×2, with one tile in four still safe", () => {
+    const { game, clock } = setup(["A"]);
+    const a = byName(game, "A");
+    for (let r = 1; r <= 20; r++) round(game, clock, []);
+    expect(game.inset).toBe(5);
+    expect(a.lives).toBe(ROBOT_LIVES);
+    for (let r = 21; r <= 24; r++) {
+      toMove(game, clock);
+      expect(game.collapsing.size).toBe(0);
+      expect(game.marked.size).toBe(3);
+      expect(game.marked.has(tile(a))).toBe(true);
+      round(game, clock, []);
+    }
+    expect(game.inset).toBe(5);
   });
 
   test("kick removes the player", () => {

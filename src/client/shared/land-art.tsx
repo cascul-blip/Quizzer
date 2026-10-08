@@ -1,4 +1,4 @@
-import { EMPTY, boardExtent, hexCenter, isProtected } from "../../shared/land-board.ts";
+import { EMPTY, boardExtent, hexCenter, isGuarded, isProtected } from "../../shared/land-board.ts";
 import { TEAMS, type LandBoard, type LandCapture, type LandPlace } from "../../shared/protocol.ts";
 import claimedTile from "./land/claimed.webp";
 import grass1Tile from "./land/grass-1.webp";
@@ -50,8 +50,10 @@ export function HexBoard({ board, viewer, selected, placed, capture, label }: He
     const c = hexCenter(size, tile);
     const start = startAt.get(tile);
     const blocked = viewer !== undefined && owner !== viewer && isProtected(size, starts, viewer, tile);
+    // Costs this viewer extra: the ring around another team's start.
+    const guarded = viewer !== undefined && owner !== viewer && !blocked && isGuarded(size, starts, viewer, tile);
     const flipIndex = flipped?.get(tile);
-    const cls = ["hex", owner === EMPTY ? "grass" : "owned", placed?.tile === tile ? "placed" : "", flipIndex !== undefined ? "flipped" : "", blocked ? "blocked" : ""].join(" ");
+    const cls = ["hex", owner === EMPTY ? "grass" : "owned", placed?.tile === tile ? "placed" : "", flipIndex !== undefined ? "flipped" : "", blocked ? "blocked" : "", guarded ? "guarded" : ""].join(" ");
     return (
       <g key={tile} data-tile={tile} class={cls} transform={`translate(${(c.x * R).toFixed(2)} ${(c.y * R).toFixed(2)})`}>
         <g class="hex-body" style={flipIndex !== undefined ? { animationDelay: `${Math.min(flipIndex * 25, 600)}ms` } : undefined}>
@@ -61,6 +63,7 @@ export function HexBoard({ board, viewer, selected, placed, capture, label }: He
           {start && <StartMark color={teamColor(start.team)} out={start.out} />}
         </g>
         {blocked && <polygon class="hex-block" points={TILE} />}
+        {guarded && <polygon class="hex-guard" points={TILE} />}
       </g>
     );
   });
