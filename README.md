@@ -128,7 +128,7 @@ How it plays:
 
 **👾 The monster** (lobby option, on by default, needs 2+ teams):
 
-1. At 1/3 and 2/3 of the game, every tower gets a 🥚 **monster egg** placed **4 levels above its highest complete floor** (a tower with 10 full floors gets its egg on level 14), in a random column where that spot is still empty.
+1. Four times per game, evenly spaced (at 1/5, 2/5, 3/5 and 4/5 of the game length), every tower gets a 🥚 **monster egg** placed **4 levels above its highest complete floor** (a tower with 10 full floors gets its egg on level 14), in a random column where that spot is still empty.
 2. Teams race to land a block on their own egg. **The first team to do it hatches the monster** and is safe.
 3. The monster stomps over to the **tallest other tower** and smashes its **top 2 floors**.
 
@@ -150,7 +150,7 @@ A cooperative mode based on Kahoot's Submarine Squad. The whole class is one squ
 **Diving mode** (after each level)
 - One or more players (1 per 6 players, up to 4) become **instructors**. Each sees a symbol, such as "the red octopus", and describes it out loud.
 - Everyone else is secretly assigned to an instructor and must tap that instructor's symbol in a grid of look-alikes. Players have to work out which instructor is describing *their* symbols.
-- An instructor moves on when 70% of their group finds the symbol (or after 20 seconds). Each instructor has 5 symbols.
+- An instructor moves on when 70% of their group finds the symbol (or after 4 seconds, shown as a shrinking red bar on the phones). Each instructor has 5 symbols.
 - Every correct tap takes the sub 2 m deeper. Wrong taps lock the player out for a second.
 - Players who join mid-dive wait for the next level.
 
@@ -174,10 +174,12 @@ If the host ends the game early, **the least damaged tower wins**. With equal da
 
 Every player for themselves on a 12×12 checkerboard, with a giant robot looming behind it. Choose **Game mode → 🤖 Robot Attack** in the lobby. Everyone starts with **3 lives** on their own tile, spread out across the board. The game alternates between two phases:
 
-- **Quiz.** Everyone answers questions on their phone at their own pace, and **each correct answer earns 1 move ⚡**. A red bar across the top of the projector drains as time runs out, and the music gets more intense. The first quiz phase lasts **30 seconds**, and each round is **2 seconds shorter**, down to 5 seconds. **5 seconds before the end**, the robot locks its targets: **red Xs cover 3/4 of the board, plus every tile a player is standing on**. The robot announces it in a deep voice ("Targets acquired"); the **🗣 button** in the projector's top bar turns the voice off. Phones keep showing questions, so look up at the projector to plan an escape.
+- **Quiz.** Everyone answers questions on their phone at their own pace, and **each correct answer earns 1 move ⚡**. A red bar across the top of the projector drains as time runs out, and the music gets more intense. The first quiz phase lasts **30 seconds**, and each round is **2 seconds shorter**, down to 5 seconds. **5 seconds before the end**, the robot locks its targets: **red Xs cover 3/4 of the board, including every tile a player is standing on**. The robot announces it in a deep voice ("Targets acquired"); the **🗣 button** in the projector's top bar turns the voice off. Phones keep showing questions, so look up at the projector to plan an escape.
 - **Move (7 seconds).** Phones show **arrow buttons** and a small map of the board with your position and the red Xs. Each step costs 1 move. Moves left over at the end are lost.
 
 Then the robot's three back arms **fire lasers at every red X**. Anyone standing on one loses a life, and a player who loses all 3 is out. The robot then passes judgment: "Only metal endures" if anyone was knocked out, "The flesh is weak" if players were hit, or "zero one one zero one zero zero one" if everyone dodged. Players who are out keep answering questions for fun but can't move. **Only one player can stand on a tile**, so other players can block your way to a safe spot. The arrow toward an occupied tile or the edge of the board is greyed out. Players who are out leave the board and don't block anyone.
+
+**The board shrinks.** Every 4th round (rounds 4, 8, 12, 16 and 20), the robot destroys the **outer ring of tiles**, taking the board from 12×12 down to 2×2. When the targets are locked, the doomed ring shows as **solid pulsing red** instead of red Xs. Anyone still standing on it when the lasers fire loses a life, as on a red X, and is moved to the closest free tile on what's left of the board. The red Xs always leave **1/4 of the remaining board safe**, so in a shrinking round the safe tiles are all inside the ring.
 
 **The last player standing wins.** If the last players are all knocked out by the same blast, they share the win. A game with only one player runs until they're out. If the host ends the game early, players still in the game are ranked by lives left. The podium shows the standings and awards for **Most correct answers** and **Fancy footwork** (most moves). The results CSV lists each player's rank, the round they went out in, lives left, answers, moves and laser hits.
 
@@ -188,12 +190,13 @@ A team game for **2 to 6 teams** on a shared board of hexagonal grass tiles. Cho
 - **Quiz.** Everyone answers questions on their phone at their own pace. **Each correct answer earns 1 tile.** After every **3 answers**, right or wrong, the player goes to the land. A player with nothing to place sees "You have no tiles to place!" for 4 seconds and goes back to the questions.
 - **Land.** The phone shows the board: drag to move around, **pinch (or use ＋ / −) to zoom**, tap a tile to pick it, then press **Claim**. There is no time limit, but the game clock keeps running.
   - A **grass tile costs 1**. A tile that belongs to **another team costs 2** (stealing).
+  - The **ring of 12 tiles two steps from another team's starting point costs 2**, grass or not (stealing one there is still 2). They are marked in amber on the phone. The ring around your own starting point costs you the normal price.
   - Tiles **on or next to another team's starting point** can't be taken. They are darkened on the phone.
   - **Done** goes back to the questions early. Unused tiles are kept for the next visit, so a player can save up to steal.
 
 **Surrounding.** When a team's tiles form a **complete ring**, everything inside turns that team's color: grass and other teams' tiles alike. The edge of the board doesn't count as part of a ring, so land in a corner or along a side can't be cut off, although a ring may run along the edge tiles.
 
-**Knockouts.** A team whose **starting point is surrounded** is knocked out. All of its land goes to the team that surrounded it, and **its players join that team** and keep playing, with any tiles they had saved. The smallest ring that does it is the 12 tiles two steps away from the starting point.
+**Knockouts.** A team whose **starting point is surrounded** is knocked out. All of its land goes to the team that surrounded it, and **its players join that team** and keep playing, with any tiles they had saved. The smallest ring that does it is the 12 tiles two steps away from the starting point, which cost 2 each, so it takes at least 24 tiles.
 
 **The team with the most tiles when time runs out wins**; with equal tiles, the team with more correct answers. If only one team is left, the game ends right away. The podium shows the teams and awards for **Most correct answers**, **Top settler** (most tiles placed) and **Master surrounder** (most tiles won by closing rings). The results CSV lists each player under the team they started on, with their answers and the tiles they placed, stole and surrounded.
 

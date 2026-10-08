@@ -1,5 +1,6 @@
 import {
   LAND_EMPTY_MS,
+  LAND_GUARD_COST,
   LAND_QUESTIONS_PER_ROUND,
   LAND_STEAL_COST,
   type HostLandState,
@@ -284,7 +285,7 @@ export class LandGame {
   // ---------- the land ----------
 
   costFor(team: number, tile: number): number | null {
-    return placementCost(this.owners, this.size, this.starts, team, tile, LAND_STEAL_COST);
+    return placementCost(this.owners, this.size, this.starts, team, tile, LAND_STEAL_COST, LAND_GUARD_COST);
   }
 
   /** Whether the player can afford any tile at all. */

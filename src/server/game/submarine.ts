@@ -31,7 +31,8 @@ export const BOOSTS_BASE = 3;
 export const BOOST_MIN_HOLD_MS = 1500;
 export const DIVE_SYMBOLS = 5;
 export const DIVE_ADVANCE_FRACTION = 0.7;
-export const DIVE_SYMBOL_TIMEOUT_MS = 20_000;
+/** Time to find each symbol before the instructor moves on to the next one. */
+export const DIVE_SYMBOL_TIMEOUT_MS = 4000;
 export const DIVE_MAX_MS = 100_000;
 export const DIVE_WRONG_LOCK_MS = 1000;
 export const DIVE_METERS_PER_HIT = 2;
@@ -65,6 +66,8 @@ interface Instructor {
   found: Set<string>;
   solo: boolean;
   timer: unknown;
+  /** When the current symbol times out. */
+  endsAt: number;
 }
 
 export interface SubOptions {
@@ -312,6 +315,7 @@ export class SubGame {
         found: new Set<string>(),
         solo,
         timer: null,
+        endsAt: 0,
       };
     });
     for (const p of this.players.values()) p.lockedUntil = 0;
@@ -329,6 +333,7 @@ export class SubGame {
       if (p) p.grid = this.makeGrid(target);
     }
     if (ins.timer !== null) this.clock.clearTimeout(ins.timer);
+    ins.endsAt = this.clock.now() + DIVE_SYMBOL_TIMEOUT_MS;
     ins.timer = this.clock.setTimeout(() => {
       ins.timer = null;
       this.advance(ins);
@@ -476,9 +481,18 @@ export class SubGame {
 
   private diveView(p: SubPlayer): PlayerSubView["dive"] {
     if (this.phase !== "dive") return null;
+    const timer = (i: Instructor) => ({ symbolRemainingMs: i.index >= DIVE_SYMBOLS ? 0 : Math.max(0, i.endsAt - this.clock.now()), symbolMs: DIVE_SYMBOL_TIMEOUT_MS });
     const lead = this.instructors.find((i) => i.playerId === p.id && !i.solo);
     if (lead) {
-      return { role: "instructor", symbol: lead.symbols[Math.min(lead.index, DIVE_SYMBOLS - 1)]!, index: lead.index, total: DIVE_SYMBOLS, found: lead.found.size, groupSize: lead.group.length };
+      return {
+        role: "instructor",
+        symbol: lead.symbols[Math.min(lead.index, DIVE_SYMBOLS - 1)]!,
+        index: lead.index,
+        total: DIVE_SYMBOLS,
+        found: lead.found.size,
+        groupSize: lead.group.length,
+        ...timer(lead),
+      };
     }
     const ins = this.instructorOf(p.id);
     if (!ins) return { role: "waiting" };
@@ -490,6 +504,7 @@ export class SubGame {
       lockedMs: Math.max(0, p.lockedUntil - this.clock.now()),
       done: ins.index >= DIVE_SYMBOLS || ins.found.has(p.id),
       hint: ins.solo ? (ins.symbols[ins.index] ?? null) : null,
+      ...timer(ins),
     };
   }
 

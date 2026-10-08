@@ -37,7 +37,7 @@ export const DROP_ZONES = 5;
 export interface TowerSettings {
   teams: number;
   minutes: number;
-  /** Monster eggs at 1/3 and 2/3 of the game (needs 2+ teams). */
+  /** Monster eggs 4 times per game, evenly spaced (needs 2+ teams). */
   monster: boolean;
 }
 
@@ -352,8 +352,9 @@ export interface PlayerSubView {
   question: { seq: number; type: QuestionType; text: string; image?: string; options: string[] } | null;
   feedback: { seq: number; correct: boolean; remainingMs: number; answers: string[] } | null;
   dive:
-    | { role: "instructor"; symbol: string; index: number; total: number; found: number; groupSize: number }
-    | { role: "diver"; grid: string[]; index: number; total: number; lockedMs: number; done: boolean; hint: string | null }
+    // symbolRemainingMs of symbolMs: time left to find the current symbol before the instructor moves on.
+    | { role: "instructor"; symbol: string; index: number; total: number; found: number; groupSize: number; symbolRemainingMs: number; symbolMs: number }
+    | { role: "diver"; grid: string[]; index: number; total: number; lockedMs: number; done: boolean; hint: string | null; symbolRemainingMs: number; symbolMs: number }
     | { role: "waiting" }
     | null;
   result: { depth: number; level: number; awards: string[] } | null;
@@ -484,12 +485,27 @@ export const ROBOT_WARN_MS = 5000;
 export const ROBOT_MOVE_MS = 7000;
 /** The laser attack plays this long before the next quiz phase. */
 export const ROBOT_ATTACK_MS = 3000;
-/** Share of the board the robot targets (plus every occupied tile). */
+/** Share of the playable board the robot targets (plus every occupied tile). */
 export const ROBOT_HAZARD_FRACTION = 0.75;
+/** Every this many rounds, the outer ring of the board is destroyed, until the board is ROBOT_MIN_BOARD wide. */
+export const ROBOT_SHRINK_EVERY = 4;
+export const ROBOT_MIN_BOARD = 2;
 
 /** Length of round n's quiz phase (n starts at 1). */
 export function robotQuizMs(round: number): number {
   return Math.max(ROBOT_QUIZ_MIN_MS, ROBOT_QUIZ_START_MS - ROBOT_QUIZ_STEP_MS * (round - 1));
+}
+
+/** Which ring a tile is in: 0 for the outer edge of the full board, counting inward. */
+export function robotRing(tile: number): number {
+  const x = tile % ROBOT_BOARD;
+  const y = Math.floor(tile / ROBOT_BOARD);
+  return Math.min(x, y, ROBOT_BOARD - 1 - x, ROBOT_BOARD - 1 - y);
+}
+
+/** Whether (x, y) is still on the board once `inset` rings are gone. */
+export function robotInBounds(x: number, y: number, inset: number): boolean {
+  return x >= inset && y >= inset && x < ROBOT_BOARD - inset && y < ROBOT_BOARD - inset;
 }
 
 export interface RobotAwards {
@@ -538,6 +554,10 @@ export interface HostRobotState {
   phaseDurationMs: number;
   /** Targeted tile indices; empty until the warning. */
   marked: number[];
+  /** Rings of tiles destroyed so far. */
+  inset: number;
+  /** The ring being destroyed this round (all of it targeted); empty in other rounds. Stays up through the attack. */
+  collapsing: number[];
   players: HostRobotPlayer[];
   lastAttack: RobotAttack | null;
   playerCount: number;
@@ -559,7 +579,7 @@ export interface PlayerRobotView {
   question: { seq: number; type: QuestionType; text: string; image?: string; options: string[] } | null;
   feedback: { seq: number; correct: boolean; remainingMs: number; answers: string[] } | null;
   /** The board, during movement and the attack only (quiz time is for questions). */
-  board: { marked: number[]; others: { x: number; y: number }[] } | null;
+  board: { marked: number[]; inset: number; collapsing: number[]; others: { x: number; y: number }[] } | null;
   /** This player's part in the latest attack. */
   lastAttack: { seq: number; hit: boolean; eliminated: boolean } | null;
   result: { rank: number; playerCount: number; won: boolean; outRound: number | null; awards: string[] } | null;
@@ -574,6 +594,8 @@ export const LAND_MIN_TEAMS = 2;
 export const LAND_QUESTIONS_PER_ROUND = 3;
 /** Claims it takes to steal a tile from another team; grass costs 1. */
 export const LAND_STEAL_COST = 2;
+/** Claims it takes to claim a tile 2 steps from another team's starting point (grass or stolen: the two don't add up). */
+export const LAND_GUARD_COST = 2;
 /** How long "You have no tiles to place!" shows before the questions come back. */
 export const LAND_EMPTY_MS = 4000;
 

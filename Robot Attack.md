@@ -20,3 +20,6 @@ Movement mode lasts 7 seconds.  The progress bar at the top of the screen shows 
 At the end of the movement mode, a laser shoots out from the mechanical arms at every tile that has a red X on it.  Every player that is standing in an unsafe location gets hit and loses a life.  Each player starts the game with 3 lives, once they lose all their lives, they are out of the game.
 
 After the attack, it goes back to quiz mode, but the quiz timer is 2 seconds shorter than it was the turn before, the shortest it can go is 5 seconds.
+
+### Shrinking board
+Every 4 turns, the outer ring of tiles is removed, until the board is 2x2.  The ring that is about to be removed is shown when the targets are announced, as solid pulsing red tiles instead of a red X.  A player still standing on a removed tile loses a life, like on a red X, and is moved to the closest available tile.  3/4 of the tiles that remain get a red X, so there are always safe tiles to move to.

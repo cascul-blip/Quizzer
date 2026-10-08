@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import { ROBOT_LIVES, type HostView } from "../../shared/protocol.ts";
+import { ROBOT_LIVES, ROBOT_SHRINK_EVERY, type HostView } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { RobotArena } from "../shared/robot-art.tsx";
 import { play } from "../shared/sounds.ts";
@@ -78,7 +78,7 @@ export function RobotStage({ view, send }: { view: RobotView; send: Send }) {
         <>
           <PhaseBar view={view} secs={secs} />
           <main class={`robot-wrap ${attack ? "shake" : ""}`}>
-            <RobotArena players={alive} marked={view.marked} attack={attack} />
+            <RobotArena players={alive} marked={view.marked} inset={view.inset} collapsing={view.collapsing} attack={attack} />
             <PlayerList view={view} />
             {attack && <AttackBanner key={attack.seq} hit={attack.hit.length} out={attack.eliminated.length} names={view.players.filter((p) => attack.eliminated.includes(p.id)).map((p) => p.nickname)} />}
             {view.phase === "countdown" && (
@@ -87,6 +87,8 @@ export function RobotStage({ view, send }: { view: RobotView; send: Send }) {
                   Answer questions on your phone to earn moves.
                   <br />
                   When the red Xs appear, get ready to run!
+                  <br />
+                  Every {ROBOT_SHRINK_EVERY} rounds, the outer ring of the board is destroyed.
                 </div>
                 <div class="countdown-num" key={secs}>
                   {Math.max(1, secs)}
@@ -113,7 +115,9 @@ function PhaseBar({ view, secs }: { view: RobotView; secs: number }) {
       ? "Get ready…"
       : view.phase === "quiz"
         ? view.marked.length > 0
-          ? `⚠ Targets locked! Plan your escape · ${secs}s`
+          ? view.collapsing.length > 0
+            ? `⚠ Targets locked, and the outer ring is collapsing! · ${secs}s`
+            : `⚠ Targets locked! Plan your escape · ${secs}s`
           : `Answer questions to earn moves · ${secs}s`
         : view.phase === "move"
           ? `🏃 MOVE! · ${secs}s`

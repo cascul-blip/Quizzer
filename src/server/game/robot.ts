@@ -4,9 +4,13 @@ import {
   ROBOT_DIRS,
   ROBOT_HAZARD_FRACTION,
   ROBOT_LIVES,
+  ROBOT_MIN_BOARD,
   ROBOT_MOVE_MS,
+  ROBOT_SHRINK_EVERY,
   ROBOT_WARN_MS,
+  robotInBounds,
   robotQuizMs,
+  robotRing,
   type HostRobotState,
   type PlayerRobotView,
   type RobotAttack,
@@ -98,6 +102,10 @@ export class RobotGame {
   phaseEndsAt = 0;
   phaseDurationMs = COUNTDOWN_MS;
   marked = new Set<number>();
+  /** Rings of tiles destroyed so far. */
+  inset = 0;
+  /** The ring being destroyed this round; set with the targets, kept through the attack. */
+  collapsing = new Set<number>();
   lastAttack: RobotAttack | null = null;
 
   private readonly clock: Clock;
@@ -140,16 +148,21 @@ export class RobotGame {
   }
 
   private newPlayer(base: BasePlayer): RobotPlayer {
-    // Late joiners stay off the red Xs while there's no chance left to earn a way off them.
+    // Late joiners stay off the red Xs while there's no chance left to earn a way off them, and never start on a collapsing tile.
     const lateInDanger = this.phase === "move" || this.phase === "attack";
-    const tile = spreadTile(this.alive(), this.shuffledTiles(), lateInDanger ? (i) => !this.marked.has(i) : undefined);
+    const tile = spreadTile(this.alive(), this.shuffledTiles(), (i) => !this.collapsing.has(i) && !(lateInDanger && this.marked.has(i)));
     const { x, y } = tileXY(tile);
     if (this.phase === "quiz" && this.marked.size > 0) this.marked.add(tile);
     return { ...base, ...newStreamPlayer(), x, y, lives: ROBOT_LIVES, outRound: null, points: 0, moves: 0, hits: 0 };
   }
 
+  /** The tiles still on the board. */
+  private playableTiles(): number[] {
+    return Array.from({ length: TILES }, (_, i) => i).filter((i) => robotRing(i) >= this.inset);
+  }
+
   private shuffledTiles(): number[] {
-    return shuffle(Array.from({ length: TILES }, (_, i) => i), this.rng);
+    return shuffle(this.playableTiles(), this.rng);
   }
 
   // ---------- lifecycle ----------
@@ -173,6 +186,7 @@ export class RobotGame {
   private beginRound(): void {
     this.round++;
     this.marked = new Set();
+    this.collapsing = new Set();
     const ms = robotQuizMs(this.round);
     this.setPhase("quiz", ms, () => this.beginMove());
     for (const p of this.players.values()) if (!p.current) this.stream.deal(p);
@@ -181,13 +195,22 @@ export class RobotGame {
     this.onChange();
   }
 
-  /** The robot picks its targets: a random 3/4 of the board plus every tile someone stands on. */
+  /**
+   * The robot picks its targets: a random 3/4 of the board plus every tile someone stands on.
+   * Every ROBOT_SHRINK_EVERY rounds the outer ring goes too, and the 3/4 is of the board left inside it.
+   * Occupied tiles count toward the 3/4 first, so a quarter of the board stays safe however small it gets.
+   */
   private markTargets(): void {
     this.warnTimer = null;
     if (this.phase !== "quiz") return;
-    const count = Math.round(TILES * ROBOT_HAZARD_FRACTION);
-    this.marked = new Set(this.shuffledTiles().slice(0, count));
-    for (const p of this.alive()) this.marked.add(tileOf(p.x, p.y));
+    const shrink = this.round % ROBOT_SHRINK_EVERY === 0 && ROBOT_BOARD - 2 * this.inset > ROBOT_MIN_BOARD;
+    this.collapsing = new Set(shrink ? this.playableTiles().filter((i) => robotRing(i) === this.inset) : []);
+    const occupied = new Set(this.alive().map((p) => tileOf(p.x, p.y)));
+    const staying = this.shuffledTiles().filter((i) => !this.collapsing.has(i));
+    const count = Math.round(staying.length * ROBOT_HAZARD_FRACTION);
+    const free = staying.filter((i) => !occupied.has(i));
+    const inside = staying.filter((i) => occupied.has(i)).length;
+    this.marked = new Set([...occupied, ...this.collapsing, ...free.slice(0, Math.max(0, count - inside))]);
     this.onChange();
   }
 
@@ -214,9 +237,34 @@ export class RobotGame {
         eliminated.push(p.id);
       }
     }
+    if (this.collapsing.size > 0) {
+      this.inset++;
+      for (const p of this.alive()) if (!robotInBounds(p.x, p.y, this.inset)) this.relocate(p);
+    }
     this.lastAttack = { seq: this.attacks, round: this.round, hit, eliminated };
     this.setPhase("attack", ROBOT_ATTACK_MS, () => (this.isOver() ? this.finish() : this.beginRound()));
     this.onChange();
+  }
+
+  /** Their tile is gone: put the player on the closest free tile (in steps), or the least crowded one once the board is full. */
+  private relocate(p: RobotPlayer): void {
+    const others = this.alive().filter((o) => o !== p);
+    let best = -1;
+    let bestCrowd = Infinity;
+    let bestDist = Infinity;
+    for (const i of this.playableTiles()) {
+      const { x, y } = tileXY(i);
+      const crowd = others.filter((o) => o.x === x && o.y === y).length;
+      const dist = Math.abs(x - p.x) + Math.abs(y - p.y);
+      if (crowd < bestCrowd || (crowd === bestCrowd && dist < bestDist)) {
+        best = i;
+        bestCrowd = crowd;
+        bestDist = dist;
+      }
+    }
+    const to = tileXY(best);
+    p.x = to.x;
+    p.y = to.y;
   }
 
   /** Last one standing: a solo game runs until its player is out. */
@@ -237,6 +285,7 @@ export class RobotGame {
     this.phaseEndsAt = 0;
     this.phaseDurationMs = 0;
     this.marked = new Set();
+    this.collapsing = new Set();
     this.onFinish(this);
     this.onChange();
   }
@@ -299,7 +348,7 @@ export class RobotGame {
     const [dx, dy] = STEP[dir];
     const x = p.x + dx;
     const y = p.y + dy;
-    if (x < 0 || y < 0 || x >= ROBOT_BOARD || y >= ROBOT_BOARD) return false;
+    if (!robotInBounds(x, y, this.inset)) return false;
     // One player per tile: others can block the way to a safe spot.
     if (this.alive().some((o) => o !== p && o.x === x && o.y === y)) return false;
     p.x = x;
@@ -352,6 +401,8 @@ export class RobotGame {
       phaseRemainingMs: this.remainingMs(),
       phaseDurationMs: this.phaseDurationMs,
       marked: [...this.marked].sort((a, b) => a - b),
+      inset: this.inset,
+      collapsing: [...this.collapsing].sort((a, b) => a - b),
       players: [...this.players.values()].map((p) => ({
         id: p.id,
         nickname: p.nickname,
@@ -405,6 +456,8 @@ export class RobotGame {
       board: onBoard
         ? {
             marked: [...this.marked].sort((x, y) => x - y),
+            inset: this.inset,
+            collapsing: [...this.collapsing].sort((x, y) => x - y),
             others: this.alive()
               .filter((o) => o.id !== p.id)
               .map((o) => ({ x: o.x, y: o.y })),

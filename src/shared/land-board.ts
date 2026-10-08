@@ -106,12 +106,24 @@ export function isProtected(size: number, starts: LandStart[], team: number, til
   return starts.some((s) => !s.out && s.team !== team && (s.tile === tile || neighbors(size, s.tile).includes(tile)));
 }
 
-/** Claims needed for `team` to take a tile: 1 for grass, `stealCost` for enemy land, null if it can't be taken. */
-export function placementCost(owners: number[], size: number, starts: LandStart[], team: number, tile: number, stealCost: number): number | null {
+/** How far from a start the guarded ring is: just outside the protected tiles, where the smallest surrounding ring goes. */
+export const GUARD_DISTANCE = 2;
+
+/** In the ring GUARD_DISTANCE steps from the starting point of a team other than `team` that is still in the game. */
+export function isGuarded(size: number, starts: LandStart[], team: number, tile: number): boolean {
+  return starts.some((s) => !s.out && s.team !== team && hexDistance(size, s.tile, tile) === GUARD_DISTANCE);
+}
+
+/**
+ * Claims needed for `team` to take a tile: 1 for grass, `stealCost` for enemy land, null if it can't be taken.
+ * A guarded tile costs at least `guardCost`, whoever holds it.
+ */
+export function placementCost(owners: number[], size: number, starts: LandStart[], team: number, tile: number, stealCost: number, guardCost: number): number | null {
   if (!Number.isInteger(tile) || tile < 0 || tile >= owners.length) return null;
   const owner = owners[tile]!;
   if (owner === team || isProtected(size, starts, team, tile)) return null;
-  return owner === EMPTY ? 1 : stealCost;
+  const cost = owner === EMPTY ? 1 : stealCost;
+  return isGuarded(size, starts, team, tile) ? Math.max(cost, guardCost) : cost;
 }
 
 /**

@@ -1,7 +1,7 @@
 import type { ComponentChildren } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
-import { placementCost } from "../../shared/land-board.ts";
-import { LAND_QUESTIONS_PER_ROUND, LAND_STEAL_COST, type ClientMsg, type LandBoard, type PlayerLandView } from "../../shared/protocol.ts";
+import { EMPTY, placementCost } from "../../shared/land-board.ts";
+import { LAND_GUARD_COST, LAND_QUESTIONS_PER_ROUND, LAND_STEAL_COST, type ClientMsg, type LandBoard, type PlayerLandView } from "../../shared/protocol.ts";
 import { HexBoard } from "../shared/land-art.tsx";
 import { useEventFlash } from "../shared/tower-art.tsx";
 import { formatClock, ordinal, useCountdown } from "../shared/ui.tsx";
@@ -129,7 +129,8 @@ function ConqueredNotice({ event }: { event: PlayerLandView["conquered"] }) {
 function ClaimMode(props: { board: LandBoard; live: boolean; claims: number; team: number; send: Send; onLastTile: (board: LandBoard) => void }) {
   const { board, live, claims, team, send } = props;
   const [selected, setSelected] = useState<number | null>(null);
-  const cost = selected === null ? null : placementCost(board.owners, board.size, board.starts, team, selected, LAND_STEAL_COST);
+  const cost = selected === null ? null : placementCost(board.owners, board.size, board.starts, team, selected, LAND_STEAL_COST, LAND_GUARD_COST);
+  const steal = selected !== null && board.owners[selected] !== EMPTY;
   // The tile went to someone else, or to us, since it was picked.
   useEffect(() => {
     if (selected !== null && board.owners[selected] === team) setSelected(null);
@@ -140,10 +141,13 @@ function ClaimMode(props: { board: LandBoard; live: boolean; claims: number; tea
   if (!live) hint = "Nice one!";
   else if (selected === null) hint = "Tap a tile to pick it";
   else if (cost === null) hint = "Too close to another team's starting point";
-  else if (cost > claims) hint = `Stealing a tile takes ${LAND_STEAL_COST} tiles; you have ${claims}`;
-  else {
-    hint = cost > 1 ? `Take this tile from the other team for ${cost} tiles` : "Claim this tile";
-    action = cost > 1 ? `⚔ Steal (${cost})` : "🚩 Claim";
+  else if (cost > claims) hint = steal ? `Stealing a tile takes ${cost} tiles; you have ${claims}` : `So close to another team's starting point, a tile takes ${cost}; you have ${claims}`;
+  else if (steal) {
+    hint = `Take this tile from the other team for ${cost} tiles`;
+    action = `⚔ Steal (${cost})`;
+  } else {
+    hint = cost > 1 ? `Close to another team's starting point: costs ${cost} tiles` : "Claim this tile";
+    action = cost > 1 ? `🚩 Claim (${cost})` : "🚩 Claim";
   }
 
   function place() {
@@ -162,7 +166,9 @@ function ClaimMode(props: { board: LandBoard; live: boolean; claims: number; tea
     <main class="land-claim">
       <div class="build-head">
         <b>{live ? `Place your tiles! ${claims} left` : "Tile placed!"}</b>
-        <span>Grass costs 1 · another team's tile costs {LAND_STEAL_COST} · pinch to zoom</span>
+        <span>
+          Grass costs 1 · another team's tile {LAND_STEAL_COST} · amber tiles {LAND_GUARD_COST} · pinch to zoom
+        </span>
       </div>
       <PanZoom onTap={(tile) => live && setSelected(tile === selected ? null : tile)}>
         <HexBoard board={board} viewer={team} selected={selected} />

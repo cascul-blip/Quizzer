@@ -5,7 +5,7 @@
  */
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { AvatarChoice } from "../../shared/avatars.ts";
-import { ROBOT_BOARD } from "../../shared/protocol.ts";
+import { ROBOT_BOARD, robotRing } from "../../shared/protocol.ts";
 import { ACCESSORY_ART, AVATAR_ART } from "./avatar-art.tsx";
 
 export const ARENA_W = 1200;
@@ -111,6 +111,10 @@ export interface ArenaPlayer {
 export function RobotArena(props: {
   players: ArenaPlayer[];
   marked: number[];
+  /** Rings of tiles already destroyed. */
+  inset?: number;
+  /** The ring being destroyed this round. */
+  collapsing?: number[];
   /** Laser attack in progress; the key restarts the animation for every attack. */
   attack?: { seq: number; hit: string[] } | null;
   /** Highlighted player (e.g. the one this phone belongs to). */
@@ -154,21 +158,32 @@ export function RobotArena(props: {
       </defs>
       <rect x={-ARENA_W} y={-ARENA_H} width={ARENA_W * 3} height={ARENA_H * 3} fill="url(#ra-bg)" />
       <Robot attacking={!!props.attack} clock={clock} />
-      <Board marked={marked} />
+      <Board marked={marked} inset={props.inset ?? 0} collapsing={new Set(props.collapsing ?? [])} />
       <Pieces players={props.players} hit={hit} me={props.me ?? null} />
       {props.attack && <Lasers key={props.attack.seq} marked={props.marked} tips={tips} />}
     </svg>
   );
 }
 
-function Board({ marked }: { marked: Set<number> }) {
-  const nl = project(0, ROBOT_BOARD);
-  const nr = project(ROBOT_BOARD, ROBOT_BOARD);
+function Board({ marked, inset, collapsing }: { marked: Set<number>; inset: number; collapsing: Set<number> }) {
+  const far = inset;
+  const near = ROBOT_BOARD - inset;
+  const fl = project(far, far);
+  const fr = project(near, far);
+  const nl = project(far, near);
+  const nr = project(near, near);
   const tiles = [];
   const xs = [];
   for (let v = 0; v < ROBOT_BOARD; v++) {
     for (let u = 0; u < ROBOT_BOARD; u++) {
       const i = v * ROBOT_BOARD + u;
+      const gone = robotRing(i) < inset;
+      if (collapsing.has(i)) {
+        // Solid pulsing red until the lasers fire, then the tile drops away.
+        tiles.push(<polygon key={i} points={quad(u, v)} class={`tile tile-collapse ${gone ? "gone" : ""}`} />);
+        continue;
+      }
+      if (gone) continue;
       tiles.push(<polygon key={i} points={quad(u, v)} class={(u + v) % 2 ? "tile dark" : "tile light"} />);
       if (marked.has(i)) {
         const a = project(u + 0.18, v + 0.18);
@@ -189,7 +204,7 @@ function Board({ marked }: { marked: Set<number> }) {
     <g class="board">
       {/* Front edge, for a bit of thickness. */}
       <polygon points={`${nl.x},${nl.y} ${nr.x},${nr.y} ${nr.x},${nr.y + EDGE} ${nl.x},${nl.y + EDGE}`} fill="#231a33" />
-      <polygon points={`${project(0, 0).x},${project(0, 0).y} ${project(ROBOT_BOARD, 0).x},${project(ROBOT_BOARD, 0).y} ${nr.x},${nr.y} ${nl.x},${nl.y}`} fill="none" stroke="#8a7bb0" stroke-width="4" />
+      <polygon points={`${fl.x},${fl.y} ${fr.x},${fr.y} ${nr.x},${nr.y} ${nl.x},${nl.y}`} fill="none" stroke="#8a7bb0" stroke-width="4" />
       {tiles}
       <g class="tile-xs">{xs}</g>
     </g>
@@ -426,15 +441,34 @@ const MINI_RADIUS = 3;
 
 /**
  * Top-down map for the phone: a 7×7 window that follows the player, who stays
- * in the middle. Shows the red Xs, other players as dots, and the robot's edge of the board.
+ * in the middle. Shows the red Xs, the collapsing ring in solid red, other players as dots,
+ * and the robot's edge of the board.
  */
-export function MiniBoard({ me, others, marked, avatar, zapped }: { me: { x: number; y: number }; others: { x: number; y: number }[]; marked: number[]; avatar: AvatarChoice; zapped?: boolean }) {
+export function MiniBoard({
+  me,
+  others,
+  marked,
+  inset,
+  collapsing,
+  avatar,
+  zapped,
+}: {
+  me: { x: number; y: number };
+  others: { x: number; y: number }[];
+  marked: number[];
+  inset: number;
+  collapsing: number[];
+  avatar: AvatarChoice;
+  zapped?: boolean;
+}) {
   const cell = 10;
   const span = (2 * MINI_RADIUS + 1) * cell;
   const set = new Set(marked);
+  const doomed = new Set(collapsing);
   const art = AVATAR_ART[avatar.avatar] ?? AVATAR_ART.cat;
   const extra = ACCESSORY_ART[avatar.accessory] ?? ACCESSORY_ART.none;
-  const size = ROBOT_BOARD * cell;
+  const edge = inset * cell;
+  const size = (ROBOT_BOARD - 2 * inset) * cell;
   // The whole board slides under a fixed window so the player stays centered.
   const shift = { x: (MINI_RADIUS - me.x) * cell, y: (MINI_RADIUS - me.y) * cell };
   return (
@@ -447,16 +481,21 @@ export function MiniBoard({ me, others, marked, avatar, zapped }: { me: { x: num
       <g clip-path="url(#mini-window)">
         <g class="mini-scroll" style={{ transform: `translate(${shift.x}px, ${shift.y}px)` }}>
           {/* The robot stands beyond the top edge, as on the big screen. */}
-          <rect x={0} y={-cell} width={size} height={cell - 1.5} class="mini-robot-edge" />
+          <rect x={edge} y={edge - cell} width={size} height={cell - 1.5} class="mini-robot-edge" />
           {/* Repeated so one is always inside the 7-tile window. */}
-          {Array.from({ length: ROBOT_BOARD / 2 }, (_, k) => (
-            <text key={k} x={(2 * k + 1) * cell} y={-2.4} text-anchor="middle" class="mini-robot-label">
-              🤖
-            </text>
-          ))}
+          {Array.from({ length: ROBOT_BOARD / 2 }, (_, k) => 2 * k + 1)
+            .filter((u) => u >= inset && u <= ROBOT_BOARD - inset)
+            .map((u) => (
+              <text key={u} x={u * cell} y={edge - 2.4} text-anchor="middle" class="mini-robot-label">
+                🤖
+              </text>
+            ))}
           {Array.from({ length: ROBOT_BOARD * ROBOT_BOARD }, (_, i) => {
             const x = (i % ROBOT_BOARD) * cell;
             const y = Math.floor(i / ROBOT_BOARD) * cell;
+            const gone = robotRing(i) < inset;
+            if (doomed.has(i)) return <rect key={i} x={x} y={y} width={cell} height={cell} class={`mini-collapse ${gone ? "gone" : ""}`} />;
+            if (gone) return null;
             return (
               <g key={i}>
                 <rect x={x} y={y} width={cell} height={cell} class={((i % ROBOT_BOARD) + Math.floor(i / ROBOT_BOARD)) % 2 ? "tile dark" : "tile light"} />
@@ -464,7 +503,7 @@ export function MiniBoard({ me, others, marked, avatar, zapped }: { me: { x: num
               </g>
             );
           })}
-          <rect x={0} y={0} width={size} height={size} class="mini-edge" />
+          <rect x={edge} y={edge} width={size} height={size} class="mini-edge" />
           {others.map((o, i) => (
             <circle key={i} cx={o.x * cell + cell / 2} cy={o.y * cell + cell / 2} r={2.6} class="mini-other" />
           ))}
