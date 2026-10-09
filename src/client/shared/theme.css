@@ -659,7 +659,7 @@ a.btn {
   animation: eye-glow 2.4s ease-in-out infinite alternate;
 }
 
-.robot.attacking .eyes ellipse {
+.robot.attacking .eyes circle {
   fill: #ff4a5c;
 }
 

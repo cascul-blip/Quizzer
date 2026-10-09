@@ -2,7 +2,7 @@ There are two modes in this game, the Quiz mode and movement mode.
 
 The main display is an isometric view of what looks like a chess or checkers board (alternating light and dark to help show different positions on the grid).  The board size is 12x12.
 
-Behind the board is a humanoid robot wearing a red robe with a cowl pulled down.  It has glowing blue eyes, holds an electric axe and 3 mechanical arms coming out of its back.
+Behind the board is a robed machine priest: a robot in a red robe with the hood up, its face a metal respirator mask with a cluster of glowing blue lenses.  It holds an electric axe and has 3 mechanical arms coming out of its backpack.
 
 The music for this mode is very synthesized with deep sounds and a synthesized organ in the background.
 
