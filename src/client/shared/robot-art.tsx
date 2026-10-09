@@ -7,6 +7,10 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { ROBOT_BOARD, robotRing } from "../../shared/protocol.ts";
 import { ACCESSORY_ART, AVATAR_ART } from "./avatar-art.tsx";
+import armImg from "./robot/arm.webp";
+import bodyImg from "./robot/body.webp";
+import emitterImg from "./robot/emitter.webp";
+import jointImg from "./robot/joint.webp";
 
 export const ARENA_W = 1200;
 export const ARENA_H = 860;
@@ -37,18 +41,18 @@ const quad = (u: number, v: number) => {
 
 type Pt = { x: number; y: number };
 
-/** The three laser emitters at the tips of the robot's back arms (at rest): left, center, right. */
+/** The three laser emitters at the tips of the robot's back arms (at rest): left, center (over its head), right. */
 export const EMITTERS: Pt[] = [
   { x: 280, y: 215 },
-  { x: CX - 92, y: 44 },
+  { x: CX, y: 38 },
   { x: ARENA_W - 280, y: 215 },
 ];
 
-/** Rest pose of each back arm: shoulder → four joints → emitter tip. */
+/** Rest pose of each back arm: shoulder → four joints → emitter tip. The outer two start at the posts of the backpack, the middle one behind the hood. */
 const ARMS: Pt[][] = [
-  [{ x: 540, y: 215 }, { x: 470, y: 262 }, { x: 400, y: 290 }, { x: 335, y: 282 }, { x: 295, y: 250 }, EMITTERS[0]!],
-  [{ x: 590, y: 200 }, { x: 552, y: 180 }, { x: 526, y: 146 }, { x: 510, y: 110 }, { x: 504, y: 76 }, EMITTERS[1]!],
-  [{ x: 660, y: 215 }, { x: 730, y: 262 }, { x: 800, y: 290 }, { x: 865, y: 282 }, { x: 905, y: 250 }, EMITTERS[2]!],
+  [{ x: 516, y: 108 }, { x: 455, y: 72 }, { x: 385, y: 58 }, { x: 320, y: 80 }, { x: 288, y: 140 }, EMITTERS[0]!],
+  [{ x: 600, y: 170 }, { x: 556, y: 128 }, { x: 540, y: 92 }, { x: 548, y: 60 }, { x: 572, y: 40 }, EMITTERS[1]!],
+  [{ x: 670, y: 108 }, { x: 740, y: 72 }, { x: 812, y: 58 }, { x: 878, y: 80 }, { x: 912, y: 140 }, EMITTERS[2]!],
 ];
 const ARM_SEGMENTS = ARMS.map((pts) => pts.slice(1).map((p, i) => ({ len: Math.hypot(p.x - pts[i]!.x, p.y - pts[i]!.y), ang: Math.atan2(p.y - pts[i]!.y, p.x - pts[i]!.x) })));
 /** One slow sway, back and forth. */
@@ -138,16 +142,6 @@ export function RobotArena(props: {
           <stop offset="0.4" stop-color="#4fd8ff" />
           <stop offset="1" stop-color="#4fd8ff" stop-opacity="0" />
         </radialGradient>
-        <linearGradient id="ra-robe" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" stop-color="#7a0f16" />
-          <stop offset="0.45" stop-color="#c81f2a" />
-          <stop offset="1" stop-color="#6b0c12" />
-        </linearGradient>
-        <linearGradient id="ra-metal" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stop-color="#d4d9e2" />
-          <stop offset="0.5" stop-color="#8c94a3" />
-          <stop offset="1" stop-color="#4b5160" />
-        </linearGradient>
         <filter id="ra-glow" x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur stdDeviation="6" result="b" />
           <feMerge>
@@ -287,95 +281,67 @@ function Lasers({ marked, tips }: { marked: number[]; tips: Pt[] }) {
   );
 }
 
-/** A mechanical arm's segments and joints (the emitter is drawn separately, in front of the body). */
+/** A back arm's segments and joints (the emitter is drawn separately, in front of the body). */
 function MechArm({ pts }: { pts: Pt[] }) {
-  const segs = pts.slice(1).map((b, i) => ({ a: pts[i]!, b, w: 28 - i * 3 }));
   return (
     <g class="mech-arm">
-      {segs.map(({ a, b, w }, i) => (
-        <line key={`o${i}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#2a2d38" stroke-width={w + 10} stroke-linecap="round" />
-      ))}
-      {segs.map(({ a, b, w }, i) => (
-        <line key={`m${i}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="url(#ra-metal)" stroke-width={w} stroke-linecap="round" />
-      ))}
-      {/* hydraulic pistons along every other segment */}
-      {segs.map(({ a, b, w }, i) => {
-        if (i % 2) return null;
+      {pts.slice(1).map((b, i) => {
+        const a = pts[i]!;
         const len = Math.hypot(b.x - a.x, b.y - a.y);
-        const nx = (-(b.y - a.y) / len) * (w / 2 + 3);
-        const ny = ((b.x - a.x) / len) * (w / 2 + 3);
-        return <line key={`p${i}`} x1={a.x + (b.x - a.x) * 0.2 + nx} y1={a.y + (b.y - a.y) * 0.2 + ny} x2={a.x + (b.x - a.x) * 0.85 + nx} y2={a.y + (b.y - a.y) * 0.85 + ny} stroke="#b8bfcc" stroke-width="4" stroke-linecap="round" />;
+        const h = 30 - i * 3;
+        const deg = (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI;
+        return <image key={`s${i}`} href={armImg} x="0" y={-h / 2} width={len} height={h} preserveAspectRatio="none" transform={`translate(${a.x.toFixed(1)},${a.y.toFixed(1)}) rotate(${deg.toFixed(1)})`} />;
       })}
-      {pts.slice(0, -1).map((p, i) => (
-        <g key={`j${i}`}>
-          <circle cx={p.x} cy={p.y} r={17 - i * 1.6} fill="#3a3f4d" stroke="#1a1c24" stroke-width="4" />
-          <circle cx={p.x} cy={p.y} r={6 - i * 0.5} fill="#9aa3b3" />
-        </g>
-      ))}
+      {pts.slice(0, -1).map((p, i) => {
+        const r = 19 - i * 1.6;
+        return <image key={`j${i}`} href={jointImg} x={p.x - r} y={p.y - r} width={r * 2} height={r * 2} />;
+      })}
     </g>
   );
 }
+
+const EMITTER_R = 32;
 
 function Emitter({ at, attacking }: { at: Pt; attacking: boolean }) {
   return (
     <g class={`emitter ${attacking ? "firing" : ""}`}>
-      <circle cx={at.x} cy={at.y} r="26" fill="#2a2d38" stroke="#1a1c24" stroke-width="4" />
-      <circle cx={at.x} cy={at.y} r="15" class="emitter-core" filter="url(#ra-glow)" />
+      <image href={emitterImg} x={at.x - EMITTER_R} y={at.y - EMITTER_R} width={EMITTER_R * 2} height={EMITTER_R * 2} />
+      <circle cx={at.x} cy={at.y} r="12" class="emitter-core" filter="url(#ra-glow)" />
     </g>
   );
 }
 
-const rad = (deg: number) => (deg * Math.PI) / 180;
-const polar = (c: Pt, r: number, deg: number): Pt => ({ x: c.x + r * Math.cos(rad(deg)), y: c.y + r * Math.sin(rad(deg)) });
-const ptsToPath = (pts: Pt[]) => pts.map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+/** Where the square body render sits in the arena. Its bottom fades out behind the board. */
+const BODY = { x: 350, y: 60, size: 500 };
+/** A point of the body render (in pixels of its 1024px source) in arena coordinates. */
+const bodyPt = (px: number, py: number): Pt => ({ x: BODY.x + (px / 1024) * BODY.size, y: BODY.y + (py / 1024) * BODY.size });
+const bodyLen = (px: number) => (px / 1024) * BODY.size;
+/** The mask's lenses: centre and glass radius, in source pixels. The first two are the large ones. */
+const OPTICS = [
+  { x: 464, y: 206, r: 20 },
+  { x: 561, y: 206, r: 20 },
+  { x: 461, y: 268, r: 12 },
+  { x: 564, y: 268, r: 12 },
+].map((o) => ({ ...bodyPt(o.x, o.y), r: bodyLen(o.r) }));
+/** The axe's cutting edge: top tip, outermost point, bottom tip. */
+const [EDGE_TOP, EDGE_MID, EDGE_BOTTOM] = [bodyPt(876, 148), bodyPt(953, 233), bodyPt(904, 336)] as [Pt, Pt, Pt];
+/** Control point of the curve through the three. */
+const EDGE_CTRL = { x: 2 * EDGE_MID.x - (EDGE_TOP.x + EDGE_BOTTOM.x) / 2, y: 2 * EDGE_MID.y - (EDGE_TOP.y + EDGE_BOTTOM.y) / 2 };
+const at = (p: Pt) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`;
 
-/** Outline of a half gear's toothed rim, from angle a0 to a1 (degrees, clockwise on screen). */
-function gearRim(c: Pt, r: number, depth: number, teeth: number, a0: number, a1: number): Pt[] {
-  const pitch = (a1 - a0) / teeth;
-  const out: Pt[] = [];
-  for (let i = 0; i < teeth; i++) {
-    const s = a0 + i * pitch;
-    out.push(polar(c, r, s), polar(c, r, s + pitch * 0.2), polar(c, r + depth, s + pitch * 0.32), polar(c, r + depth, s + pitch * 0.68), polar(c, r, s + pitch * 0.8));
-  }
-  out.push(polar(c, r, a1));
-  return out;
-}
-
-/** The axe head: half a gear, its flat side along the haft. */
-const GEAR_C = { x: 783, y: 118 };
-const GEAR_R = 60;
-const GEAR_DEPTH = 13;
-const GEAR_TEETH = 7;
-/** The haft points this way (degrees), so the half gear spans from it to its opposite. */
-const HAFT_UP = (Math.atan2(95 - 390, 790 - 700) * 180) / Math.PI;
-const GEAR_RIM = gearRim(GEAR_C, GEAR_R, GEAR_DEPTH, GEAR_TEETH, HAFT_UP, HAFT_UP + 180);
-/** Where tooth n's tip is, for the sparks to jump from. */
-const toothTip = (n: number) => polar(GEAR_C, GEAR_R + GEAR_DEPTH, HAFT_UP + ((n + 0.5) * 180) / GEAR_TEETH);
-
-function GearAxe() {
-  const inner = [polar(GEAR_C, GEAR_R * 0.62, HAFT_UP), polar(GEAR_C, GEAR_R * 0.62, HAFT_UP + 180)];
-  const [t1, t3, t5] = [toothTip(2), toothTip(0), toothTip(4)];
+/** The live parts of the axe: its glowing edge and the lightning jumping off it. The axe itself is in the body render. */
+function AxeGlow() {
   return (
     <g class="axe">
-      <line x1="700" y1="390" x2="790" y2="95" stroke="#3a2a1c" stroke-width="12" stroke-linecap="round" />
-      <line x1="700" y1="390" x2="790" y2="95" stroke="#6b5039" stroke-width="5" stroke-linecap="round" />
-      <path d={`${ptsToPath(GEAR_RIM)} Z`} fill="url(#ra-metal)" stroke="#1a1c24" stroke-width="4" stroke-linejoin="round" />
-      <path d={`M${inner[0]!.x.toFixed(1)},${inner[0]!.y.toFixed(1)} A${GEAR_R * 0.62},${GEAR_R * 0.62} 0 0 1 ${inner[1]!.x.toFixed(1)},${inner[1]!.y.toFixed(1)}`} fill="none" stroke="#4b5160" stroke-width="3" />
-      {[30, 90, 150].map((a) => {
-        const h = polar(GEAR_C, GEAR_R * 0.4, HAFT_UP + a);
-        return <circle key={a} cx={h.x} cy={h.y} r="6" fill="#1a1c24" />;
-      })}
-      <circle cx={GEAR_C.x} cy={GEAR_C.y} r="13" fill="#3a3f4d" stroke="#1a1c24" stroke-width="3" />
-      <circle cx={GEAR_C.x} cy={GEAR_C.y} r="4" fill="#9aa3b3" />
-      <path class="axe-edge" d={ptsToPath(GEAR_RIM)} fill="none" stroke="#6ff3ff" stroke-width="3" stroke-linejoin="round" filter="url(#ra-glow)" />
-      <path class="spark s1" d={`M${t1.x.toFixed(1)},${t1.y.toFixed(1)} l18,-14 l-6,16 l20,-10`} fill="none" stroke="#bff8ff" stroke-width="3" stroke-linejoin="round" />
-      <path class="spark s2" d={`M${t5.x.toFixed(1)},${t5.y.toFixed(1)} l22,6 l-14,6 l18,10`} fill="none" stroke="#bff8ff" stroke-width="3" stroke-linejoin="round" />
-      <path class="spark s3" d={`M${t3.x.toFixed(1)},${t3.y.toFixed(1)} l4,-22 l6,14 l10,-18`} fill="none" stroke="#bff8ff" stroke-width="3" stroke-linejoin="round" />
+      <path class="axe-edge" d={`M${at(EDGE_TOP)} Q${at(EDGE_CTRL)} ${at(EDGE_BOTTOM)}`} fill="none" stroke="#6ff3ff" stroke-width="3" stroke-linecap="round" filter="url(#ra-glow)" />
+      <path class="spark s1" d={`M${at(EDGE_MID)} l18,-14 l-6,16 l20,-10`} fill="none" stroke="#bff8ff" stroke-width="3" stroke-linejoin="round" />
+      <path class="spark s2" d={`M${at(EDGE_BOTTOM)} l22,6 l-14,6 l18,10`} fill="none" stroke="#bff8ff" stroke-width="3" stroke-linejoin="round" />
+      <path class="spark s3" d={`M${at(EDGE_TOP)} l4,-22 l6,14 l10,-18`} fill="none" stroke="#bff8ff" stroke-width="3" stroke-linejoin="round" />
     </g>
   );
 }
 
-/** The robot: red robe with the cowl down, glowing blue eyes, a gear axe crackling with lightning, three jointed back arms. */
+/** The robot: a hooded machine priest in a red robe with glowing lenses, an axe crackling with lightning and three jointed back arms. */
 function Robot({ attacking, clock }: { attacking: boolean; clock: SwayClock }) {
   const still = prefersStill();
   const frozen = clock.frozenAt !== null;
@@ -398,36 +364,16 @@ function Robot({ attacking, clock }: { attacking: boolean; clock: SwayClock }) {
       {arms.map((pts, k) => (
         <MechArm key={k} pts={pts} />
       ))}
-      {/* robe */}
-      <path d="M520,205 Q600,190 680,205 L760,400 L440,400 Z" fill="url(#ra-robe)" stroke="#3d0609" stroke-width="5" stroke-linejoin="round" />
-      <path d="M600,215 L600,400" stroke="#5d0a10" stroke-width="5" />
-      <path d="M560,225 L535,400 M640,225 L665,400" stroke="#8f141c" stroke-width="4" opacity="0.7" />
-      {/* rope belt */}
-      <path d="M492,318 Q600,340 708,318" fill="none" stroke="#d9b45a" stroke-width="9" stroke-linecap="round" />
-      <path d="M560,332 l-8,46 M572,334 l2,44" stroke="#d9b45a" stroke-width="6" stroke-linecap="round" />
-      {/* left arm, hanging */}
-      <path d="M522,212 Q470,260 468,330 L500,336 Q506,275 540,232 Z" fill="url(#ra-robe)" stroke="#3d0609" stroke-width="4" />
-      <circle cx="482" cy="345" r="18" fill="url(#ra-metal)" stroke="#1a1c24" stroke-width="3" />
-      {/* electric gear axe in the right hand */}
-      <GearAxe />
-      {/* right arm, gripping the haft */}
-      <path d="M678,212 Q732,250 742,300 L712,312 Q700,268 660,232 Z" fill="url(#ra-robe)" stroke="#3d0609" stroke-width="4" />
-      <circle cx="734" cy="300" r="19" fill="url(#ra-metal)" stroke="#1a1c24" stroke-width="3" />
-      {/* the cowl, pulled down and bunched around the shoulders */}
-      <path d="M520,212 Q530,176 600,172 Q670,176 680,212 Q640,236 600,234 Q560,236 520,212 Z" fill="#a3161f" stroke="#3d0609" stroke-width="5" stroke-linejoin="round" />
-      <path d="M540,210 Q600,226 660,210" fill="none" stroke="#5d0a10" stroke-width="4" />
-      {/* neck and head */}
-      <rect x="586" y="160" width="28" height="24" fill="#4b5160" />
-      <path d="M552,100 Q552,62 600,60 Q648,62 648,100 L644,150 Q600,176 556,150 Z" fill="url(#ra-metal)" stroke="#1a1c24" stroke-width="5" stroke-linejoin="round" />
-      <path d="M566,104 Q600,94 634,104 L630,128 Q600,138 570,128 Z" fill="#161820" />
+      <image href={bodyImg} x={BODY.x} y={BODY.y} width={BODY.size} height={BODY.size} />
+      <AxeGlow />
+      {OPTICS.slice(0, 2).map((o, i) => (
+        <circle key={i} class="eye-halo" cx={o.x} cy={o.y} r={o.r * 3} fill="url(#ra-eye)" opacity="0.55" />
+      ))}
       <g class="eyes" filter="url(#ra-glow)">
-        <ellipse cx="584" cy="114" rx="11" ry="6" fill="#4fd8ff" />
-        <ellipse cx="616" cy="114" rx="11" ry="6" fill="#4fd8ff" />
+        {OPTICS.map((o, i) => (
+          <circle key={i} cx={o.x} cy={o.y} r={o.r * 0.75} fill="#4fd8ff" />
+        ))}
       </g>
-      <circle class="eye-halo" cx="584" cy="114" r="26" fill="url(#ra-eye)" opacity="0.55" />
-      <circle class="eye-halo" cx="616" cy="114" r="26" fill="url(#ra-eye)" opacity="0.55" />
-      <path d="M576,146 h48 M580,154 h40" stroke="#4b5160" stroke-width="3" />
-      <line x1="600" y1="60" x2="600" y2="40" stroke="#4b5160" stroke-width="5" />
       {/* the emitters, in front of the body */}
       {arms.map((pts, k) => (
         <Emitter key={k} at={pts.at(-1)!} attacking={attacking} />
