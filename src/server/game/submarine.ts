@@ -109,21 +109,21 @@ export class SubGame {
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: SubGame) => void;
 
-  constructor(quiz: Quiz, opts: SubOptions & { shuffleAnswers?: boolean } = {}) {
+  constructor(quiz: Quiz, opts: SubOptions & { shuffleAnswers?: boolean; protect?: boolean } = {}) {
     if (quiz.questions.length === 0) throw new GameError("This quiz has no questions");
     this.quizId = quiz.id;
     this.title = quiz.title;
     this.questionCount = quiz.questions.length;
     this.clock = opts.clock ?? realClock;
     this.rng = opts.rng ?? Math.random;
-    this.stream = new QuestionStream(quiz.questions, !!opts.shuffleAnswers, this.rng, this.clock);
+    this.stream = new QuestionStream(quiz.questions, !!opts.shuffleAnswers, this.rng, this.clock, opts.protect);
     this.onChange = opts.onChange ?? (() => {});
     this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
   }
 
   static fromLobby(lobby: Game, opts: SubOptions = {}): SubGame {
-    const game = new SubGame(lobby.quiz, { ...opts, shuffleAnswers: lobby.shuffle.answers });
+    const game = new SubGame(lobby.quiz, { ...opts, shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect });
     for (const p of lobby.players.values()) {
       game.roster.adopt(game.newPlayer({ id: p.id, nickname: p.nickname, token: p.token, connected: p.connected, avatar: p.avatar }));
     }

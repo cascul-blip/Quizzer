@@ -137,7 +137,18 @@ function MonsterNotice({ event, egg }: { event: PlayerTowerView["monsterEvent"];
   );
 }
 
-/** Full-screen ✓/✗ for the second after each answer. */
+/** Shown on the ✗ while a player who keeps answering wrong waits out the extra time. */
+function PenaltyNote({ remainingMs, seq }: { remainingMs: number; seq: number }) {
+  const secs = useCountdown(remainingMs, `penalty${seq}`);
+  return (
+    <div class="flash-penalty">
+      Slow down and read the question!
+      <b>Next question in {secs}s</b>
+    </div>
+  );
+}
+
+/** Full-screen ✓/✗ after each answer: a second, or longer after wrong answers in a row. */
 export function Feedback({ feedback, rightText }: { feedback: PlayerTowerView["feedback"]; rightText: string }) {
   // Decided during render, not in an effect: the snapshot that brings this feedback also brings
   // the next question, and an effect would let that question paint for a frame before the overlay.
@@ -165,6 +176,7 @@ export function Feedback({ feedback, rightText }: { feedback: PlayerTowerView["f
           <b>{shown.answers.join(" / ")}</b>
         </div>
       )}
+      {shown.penaltyMs > 0 && <PenaltyNote remainingMs={shown.remainingMs} seq={shown.seq} />}
     </div>
   );
 }

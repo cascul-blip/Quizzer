@@ -107,6 +107,7 @@ export type HostMsg =
   | { type: "host.start"; pacing: Pacing }
   | { type: "host.setPacing"; pacing: Pacing }
   | { type: "host.setShuffle"; questions: boolean; answers: boolean }
+  | { type: "host.setProtect"; on: boolean }
   | { type: "host.setMode"; mode: GameMode }
   | { type: "host.setTower"; teams: number; minutes: number; monster?: boolean }
   | { type: "host.setFight"; hill: HillSetting }
@@ -205,7 +206,7 @@ export interface PlayerTowerView {
   blocksHeld: number;
   question: { seq: number; type: QuestionType; text: string; image?: string; options: string[] } | null;
   /** Result of the last answer while its 1 s flash is still showing. */
-  feedback: { seq: number; correct: boolean; remainingMs: number; answers: string[] } | null;
+  feedback: { seq: number; correct: boolean; remainingMs: number; answers: string[]; penaltyMs: number } | null;
   egg: MonsterEgg | null;
   /** Latest monster news for this player (shown once per seq). */
   monsterEvent: { seq: number; kind: "egg" | "hatched" | "smashed"; byTeam: string | null; target: string | null } | null;
@@ -251,6 +252,8 @@ export interface HostGameState {
   pacing: Pacing;
   /** Chosen in the lobby; applied when the game starts. */
   shuffle: ShuffleOptions;
+  /** "Protect from abuse": wrong answers in a row make the player wait longer (Tallest Tower, Submarine Squad, Tower Fight, Robot Attack). */
+  protect: boolean;
   players: HostPlayer[];
   question: QuestionView | null;
   /** Revealed only once answering has closed. */
@@ -350,7 +353,7 @@ export interface PlayerSubView {
   /** Correct answers toward the next boost (0 … CORRECT_PER_BOOST-1). */
   towardBoost: number;
   question: { seq: number; type: QuestionType; text: string; image?: string; options: string[] } | null;
-  feedback: { seq: number; correct: boolean; remainingMs: number; answers: string[] } | null;
+  feedback: { seq: number; correct: boolean; remainingMs: number; answers: string[]; penaltyMs: number } | null;
   dive:
     // symbolRemainingMs of symbolMs: time left to find the current symbol before the instructor moves on.
     | { role: "instructor"; symbol: string; index: number; total: number; found: number; groupSize: number; symbolRemainingMs: number; symbolMs: number }
@@ -459,7 +462,7 @@ export interface PlayerFightView {
   /** This player's most recently finished repair; repaired is false if teammates had already fixed the tower. */
   lastRepair: { seq: number; repaired: boolean } | null;
   question: { seq: number; type: QuestionType; text: string; image?: string; options: string[] } | null;
-  feedback: { seq: number; correct: boolean; remainingMs: number; answers: string[] } | null;
+  feedback: { seq: number; correct: boolean; remainingMs: number; answers: string[]; penaltyMs: number } | null;
   /** Damage per team. */
   damage: number[];
   terrain: number[];
@@ -577,7 +580,7 @@ export interface PlayerRobotView {
   phaseRemainingMs: number;
   me: { id: string; nickname: string; avatar: AvatarChoice; lives: number; out: boolean; points: number; correct: number; x: number; y: number };
   question: { seq: number; type: QuestionType; text: string; image?: string; options: string[] } | null;
-  feedback: { seq: number; correct: boolean; remainingMs: number; answers: string[] } | null;
+  feedback: { seq: number; correct: boolean; remainingMs: number; answers: string[]; penaltyMs: number } | null;
   /** The board, during movement and the attack only (quiz time is for questions). */
   board: { marked: number[]; inset: number; collapsing: number[]; others: { x: number; y: number }[] } | null;
   /** This player's part in the latest attack. */
@@ -679,7 +682,7 @@ export interface PlayerLandView {
   /** Time left on the "no tiles to place" message (empty state). */
   emptyMs: number;
   question: { seq: number; type: QuestionType; text: string; image?: string; options: string[] } | null;
-  feedback: { seq: number; correct: boolean; remainingMs: number; answers: string[] } | null;
+  feedback: { seq: number; correct: boolean; remainingMs: number; answers: string[]; penaltyMs: number } | null;
   /** The land, while this player is placing tiles. */
   board: LandBoard | null;
   /** Set once this player's first team was surrounded and they joined the conquerors. */

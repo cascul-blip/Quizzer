@@ -4,6 +4,14 @@ import { shuffle, shuffleOptions, topErrors, type Clock } from "./common.ts";
 
 /** How long the ✓/✗ flash shows before the next question can be answered. */
 export const FEEDBACK_MS = 1000;
+/** Extra time the ✗ stays up after a 2nd wrong answer in a row, and after a 3rd or later one. */
+export const WRONG_PENALTY_2_MS = 3000;
+export const WRONG_PENALTY_3_MS = 4000;
+
+/** How much longer the ✗ shows for a wrong answer that is the streak-th in a row. */
+export function wrongPenaltyMs(streak: number): number {
+  return streak >= 3 ? WRONG_PENALTY_3_MS : streak === 2 ? WRONG_PENALTY_2_MS : 0;
+}
 
 interface CurrentQuestion {
   seq: number;
@@ -16,18 +24,20 @@ interface CurrentQuestion {
 export interface StreamPlayer {
   correct: number;
   wrong: number;
+  /** Current run of consecutive wrong answers. */
+  wrongStreak: number;
   /** Remaining question indices of this player's shuffled deck. */
   deck: number[];
   current: CurrentQuestion | null;
   seq: number;
-  /** answers = text of the correct option(s), shown when the player got it wrong. */
-  feedback: { seq: number; correct: boolean; answers: string[] } | null;
+  /** answers = text of the correct option(s), shown when the player got it wrong; penaltyMs = extra wait for guessing. */
+  feedback: { seq: number; correct: boolean; answers: string[]; penaltyMs: number } | null;
   /** Answers are ignored until the feedback flash is over. */
   readyAt: number;
 }
 
 export function newStreamPlayer(): StreamPlayer {
-  return { correct: 0, wrong: 0, deck: [], current: null, seq: 0, feedback: null, readyAt: 0 };
+  return { correct: 0, wrong: 0, wrongStreak: 0, deck: [], current: null, seq: 0, feedback: null, readyAt: 0 };
 }
 
 export interface StreamQuestionView {
@@ -48,6 +58,8 @@ export class QuestionStream {
     private readonly shuffleAnswers: boolean,
     private readonly rng: () => number,
     private readonly clock: Clock,
+    /** Hold the ✗ longer for wrong answers in a row (the lobby's "Protect from abuse"). */
+    private readonly penalizeGuessing = false,
   ) {
     this.wrongCounts = questions.map(() => 0);
   }
@@ -77,13 +89,17 @@ export class QuestionStream {
     if (!cur || seq !== cur.seq || this.clock.now() < p.readyAt) return null;
     if (!Number.isInteger(option) || option < 0 || option >= cur.options.length) return null;
     const correct = cur.correct.includes(option);
-    if (correct) p.correct++;
-    else {
+    if (correct) {
+      p.correct++;
+      p.wrongStreak = 0;
+    } else {
       p.wrong++;
+      p.wrongStreak++;
       this.wrongCounts[cur.qIndex]!++;
     }
-    p.feedback = { seq, correct, answers: correct ? [] : cur.correct.map((i) => cur.options[i]!) };
-    p.readyAt = this.clock.now() + FEEDBACK_MS;
+    const penaltyMs = this.penalizeGuessing ? wrongPenaltyMs(p.wrongStreak) : 0;
+    p.feedback = { seq, correct, answers: correct ? [] : cur.correct.map((i) => cur.options[i]!), penaltyMs };
+    p.readyAt = this.clock.now() + FEEDBACK_MS + penaltyMs;
     this.deal(p);
     return correct;
   }
@@ -99,7 +115,7 @@ export class QuestionStream {
     return { seq: p.current.seq, type: q.type, text: q.text, ...(q.image ? { image: q.image } : {}), options: p.current.options };
   }
 
-  feedbackView(p: StreamPlayer): { seq: number; correct: boolean; answers: string[]; remainingMs: number } | null {
+  feedbackView(p: StreamPlayer): { seq: number; correct: boolean; answers: string[]; penaltyMs: number; remainingMs: number } | null {
     const now = this.clock.now();
     return p.feedback && now < p.readyAt ? { ...p.feedback, remainingMs: p.readyAt - now } : null;
   }

@@ -74,6 +74,8 @@ export interface FightOptions {
 
 export interface FightGameSettings extends FightSettings {
   shuffleAnswers: boolean;
+  /** Longer waits for wrong answers in a row (the lobby's "Protect from abuse"). */
+  protect?: boolean;
 }
 
 /** Tower Fight: Red vs Blue answer at their own pace; every 4 correct answers they attack the enemy tower or repair their own. */
@@ -118,7 +120,7 @@ export class FightGame {
     const heights = Object.keys(HILL_HEIGHTS) as HillHeight[];
     this.hill = settings.hill === "random" ? heights[Math.min(heights.length - 1, Math.floor(this.rng() * heights.length))]! : settings.hill;
     this.terrain = makeTerrain(this.hill, this.rng);
-    this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock);
+    this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock, settings.protect);
     this.onChange = opts.onChange ?? (() => {});
     this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
@@ -126,7 +128,7 @@ export class FightGame {
 
   /** Take over a lobby's players (same ids and tokens), split Red/Blue by join order. */
   static fromLobby(lobby: Game, opts: FightOptions = {}): FightGame {
-    const game = new FightGame(lobby.quiz, { ...lobby.fight, shuffleAnswers: lobby.shuffle.answers }, opts);
+    const game = new FightGame(lobby.quiz, { ...lobby.fight, shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
     const players = [...lobby.players.values()];
     const teams = assignTeams(players.length, TEAM_COUNT);
     players.forEach((p, i) => {

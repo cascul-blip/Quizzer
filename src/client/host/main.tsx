@@ -426,6 +426,12 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
             />
             Shuffle answer positions
           </label>
+          {(view.mode === "tower" || view.mode === "submarine" || view.mode === "fight" || view.mode === "robot") && (
+            <label class="opt check" title="Wrong answers in a row make a player wait longer before the next question">
+              <input type="checkbox" checked={view.protect} onChange={(e) => send({ type: "host.setProtect", on: e.currentTarget.checked })} />
+              Protect from abuse
+            </label>
+          )}
         </div>
         {connected === 0 ? (
           <div class="waiting">Waiting for players…</div>

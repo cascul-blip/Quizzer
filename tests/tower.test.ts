@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { Game } from "../src/server/game/game.ts";
 import { buildTowerResultsCsv } from "../src/server/game/results.ts";
+import { WRONG_PENALTY_2_MS, WRONG_PENALTY_3_MS } from "../src/server/game/stream.ts";
 import {
   COUNTDOWN_MS,
   MONSTER_AT,
@@ -30,13 +31,14 @@ function quiz(): Quiz {
   });
 }
 
-function setup(names: string[], opts: { teams?: number; minutes?: number; shuffleAnswers?: boolean; monster?: boolean; rng?: () => number } = {}) {
+function setup(names: string[], opts: { teams?: number; minutes?: number; shuffleAnswers?: boolean; monster?: boolean; protect?: boolean; rng?: () => number } = {}) {
   const clock = new FakeClock();
   let finished = 0;
   const lobby = new Game(quiz(), { clock });
   lobby.setMode("tower");
   lobby.setTower({ teams: opts.teams ?? 2, minutes: opts.minutes ?? 5, monster: opts.monster ?? false });
   if (opts.shuffleAnswers) lobby.setShuffle({ questions: false, answers: true });
+  if (opts.protect !== undefined) lobby.setProtect(opts.protect);
   for (const n of names) lobby.join(n);
   const game = TowerGame.fromLobby(lobby, { clock, rng: opts.rng, onFinish: () => finished++ });
   return { clock, game, lobby, finished: () => finished };
@@ -57,7 +59,7 @@ function answer(game: TowerGame, clock: FakeClock, p: TowerPlayer, right: boolea
   const cur = p.current!;
   const option = right ? cur.correct[0]! : cur.options.findIndex((_, i) => !cur.correct.includes(i));
   expect(game.answer(p.id, cur.seq, option)).toBe(true);
-  clock.advance(FEEDBACK_MS);
+  clock.advance(p.readyAt - clock.now());
 }
 
 describe("lobby → tower", () => {
@@ -135,7 +137,7 @@ describe("questions", () => {
     expect(game.answer(a.id, seq, a.current!.correct[0]!)).toBe(true);
     expect(a.blocksHeld).toBe(1);
     const v = game.playerView(a.id)!;
-    expect(v.feedback).toEqual({ seq, correct: true, remainingMs: FEEDBACK_MS, answers: [] });
+    expect(v.feedback).toEqual({ seq, correct: true, remainingMs: FEEDBACK_MS, answers: [], penaltyMs: 0 });
     expect(v.question!.seq).toBe(seq + 1); // next question is already waiting underneath
     // Too soon: still in the feedback window.
     expect(game.answer(a.id, a.current!.seq, 0)).toBe(false);
@@ -153,6 +155,43 @@ describe("questions", () => {
     const wrong = cur.options.findIndex((o) => o !== "yes");
     game.answer(a.id, cur.seq, wrong);
     expect(game.playerView(a.id)!.feedback).toMatchObject({ correct: false, answers: ["yes"] });
+  });
+
+  test("wrong answers in a row hold the flash longer, until a correct answer", () => {
+    const { game, clock } = play(["A"], { teams: 1 });
+    const a = byName(game, "A");
+    const wrong = () => {
+      const cur = a.current!;
+      expect(game.answer(a.id, cur.seq, cur.options.findIndex((_, i) => !cur.correct.includes(i)))).toBe(true);
+      return game.playerView(a.id)!.feedback!;
+    };
+    expect(wrong()).toMatchObject({ remainingMs: FEEDBACK_MS, penaltyMs: 0 });
+    clock.advance(FEEDBACK_MS);
+    expect(wrong()).toMatchObject({ remainingMs: FEEDBACK_MS + WRONG_PENALTY_2_MS, penaltyMs: WRONG_PENALTY_2_MS });
+    clock.advance(FEEDBACK_MS + WRONG_PENALTY_2_MS - 1);
+    // Still waiting: the answer is ignored and the flash is still up.
+    expect(game.answer(a.id, a.current!.seq, a.current!.correct[0]!)).toBe(false);
+    expect(game.playerView(a.id)!.feedback).toMatchObject({ remainingMs: 1 });
+    clock.advance(1);
+    expect(game.playerView(a.id)!.feedback).toBeNull();
+    for (let i = 0; i < 2; i++) {
+      expect(wrong()).toMatchObject({ remainingMs: FEEDBACK_MS + WRONG_PENALTY_3_MS, penaltyMs: WRONG_PENALTY_3_MS });
+      clock.advance(FEEDBACK_MS + WRONG_PENALTY_3_MS);
+    }
+    answer(game, clock, a, true);
+    expect(a.wrongStreak).toBe(0);
+    expect(wrong()).toMatchObject({ remainingMs: FEEDBACK_MS, penaltyMs: 0 });
+  });
+
+  test("with Protect from abuse off, every wrong answer is a 1 s flash", () => {
+    const { game, clock } = play(["A"], { teams: 1, protect: false });
+    const a = byName(game, "A");
+    for (let i = 0; i < 4; i++) {
+      const cur = a.current!;
+      expect(game.answer(a.id, cur.seq, cur.options.findIndex((_, i) => !cur.correct.includes(i)))).toBe(true);
+      expect(game.playerView(a.id)!.feedback).toMatchObject({ remainingMs: FEEDBACK_MS, penaltyMs: 0 });
+      clock.advance(FEEDBACK_MS);
+    }
   });
 
   test("stale or invalid answers are rejected", () => {

@@ -58,7 +58,7 @@ export class GameHub {
   private broadcastQueued = false;
   private activityTimer: ReturnType<typeof setTimeout> | null = null;
   /** Mode and mode settings carry over to the next lobby ("Play again"). */
-  private lastSetup: { mode: GameMode; tower: TowerSettings; fight: FightSettings; land: LandSettings } = { mode: "classic", tower: DEFAULT_TOWER, fight: DEFAULT_FIGHT, land: DEFAULT_LAND };
+  private lastSetup: { mode: GameMode; tower: TowerSettings; fight: FightSettings; land: LandSettings; protect: boolean } = { mode: "classic", tower: DEFAULT_TOWER, fight: DEFAULT_FIGHT, land: DEFAULT_LAND, protect: true };
   private readonly log: (msg: string) => void;
 
   constructor(
@@ -346,6 +346,10 @@ export class GameHub {
         return classic().setPacing(msg.pacing);
       case "host.setShuffle":
         return classic().setShuffle({ questions: !!msg.questions, answers: !!msg.answers });
+      case "host.setProtect":
+        classic().setProtect(!!msg.on);
+        this.lastSetup.protect = classic().protect;
+        return;
       case "host.setMode":
         classic().setMode(msg.mode);
         this.lastSetup.mode = classic().mode;
