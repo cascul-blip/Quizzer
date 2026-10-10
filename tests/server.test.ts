@@ -365,6 +365,55 @@ describe("Tallest Tower over WebSockets", () => {
   });
 });
 
+describe("Lobby teams over WebSockets", () => {
+  test("the host moves a player to another team; the phone follows and the game starts with it", async () => {
+    const quiz = store.create({
+      title: "Teams E2E",
+      questions: [{ type: "multiple_choice", text: "Q1", options: ["right", "wrong"], correct: [0] }],
+    });
+    const wsUrl = `ws://localhost:${srv.port}/ws`;
+    const host = await TestSocket.open(wsUrl);
+    host.send({ type: "host.hello" });
+    await host.hostState((v) => v.kind === "idle");
+    host.send({ type: "host.open", quizId: quiz.id });
+    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
+    host.send({ type: "host.setMode", mode: "tower" });
+    host.send({ type: "host.setTower", teams: 2, minutes: 2 });
+    await host.hostState((v) => v.kind === "classic" && v.mode === "tower" && v.tower.minutes === 2);
+
+    const names = ["Ann", "Bob", "Cy"];
+    const players = await Promise.all(names.map(() => TestSocket.open(wsUrl)));
+    for (const [i, p] of players.entries()) {
+      await p.playerState((v) => v.kind === "none" && !!v.game);
+      p.send({ type: "join", nickname: names[i]! });
+      await p.waitFor((m) => m.type === "joined");
+    }
+    const lobby = await host.hostState((v) => v.kind === "classic" && !!v.teams && v.players.length === 3);
+    const ann = lobby.view.kind === "classic" ? lobby.view.players.find((p) => p.nickname === "Ann")! : null;
+    await players[0]!.playerState((v) => v.kind === "player" && v.team?.name === "Red");
+
+    host.send({ type: "host.setTeam", playerId: ann!.id, team: 1 });
+    const moved = await host.hostState((v) => v.kind === "classic" && !!v.teams && v.teams[1]!.members.length === 2);
+    expect(moved.view.kind === "classic" && moved.view.teams!.map((t) => t.members.map((m) => m.nickname))).toEqual([["Cy"], ["Ann", "Bob"]]);
+    const annLobby = await players[0]!.playerState((v) => v.kind === "player" && v.team?.name === "Blue");
+    expect(annLobby.view.kind === "player" && annLobby.view.team?.index).toBe(1);
+
+    host.send({ type: "host.setTeam", playerId: ann!.id, team: 2 });
+    expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: "Unknown team" });
+
+    host.send({ type: "host.start", pacing: "manual" });
+    const tower = await host.hostState((v) => v.kind === "tower" && v.phase === "countdown");
+    expect(tower.view.kind === "tower" && tower.view.teams.map((t) => t.members.map((m) => m.nickname))).toEqual([["Cy"], ["Ann", "Bob"]]);
+    const annTower = await players[0]!.playerState((v) => v.kind === "tower");
+    expect(annTower.view.kind === "tower" && annTower.view.team.name).toBe("Blue");
+
+    host.send({ type: "host.end" });
+    await host.hostState((v) => v.kind === "tower" && v.phase === "podium");
+    host.send({ type: "host.close" });
+    [host, ...players].forEach((s) => s.close());
+  });
+});
+
 describe("Submarine Squad over WebSockets", () => {
   test("lobby → chase → answer → boost → host sees it → end → results", async () => {
     const quiz = store.create({

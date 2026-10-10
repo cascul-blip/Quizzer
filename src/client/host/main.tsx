@@ -257,11 +257,19 @@ function PhaseView({ view, send }: { view: GameView; send: Send }) {
 
 const HILL_LABELS: Record<HillSetting, string> = { random: "🎲 Random", low: "Low", medium: "Medium", high: "High" };
 
-function PlayerChip({ p, send }: { p: HostPlayer; send: Send }) {
+function PlayerChip({ p, send, draggable }: { p: HostPlayer; send: Send; draggable?: boolean }) {
   return (
     <button
       class={`chip ${p.connected ? "" : "offline"}`}
-      title="Click to remove"
+      title={draggable ? "Drag to another team · click to remove" : "Click to remove"}
+      draggable={draggable}
+      onDragStart={(e) => {
+        if (!e.dataTransfer) return;
+        e.dataTransfer.setData("text/plain", p.id);
+        e.dataTransfer.effectAllowed = "move";
+        e.currentTarget.classList.add("dragging");
+      }}
+      onDragEnd={(e) => e.currentTarget.classList.remove("dragging")}
       onClick={() => confirm(`Remove ${p.nickname} from the game?`) && send({ type: "host.kick", playerId: p.id })}
     >
       <Avatar choice={p.avatar} />
@@ -274,6 +282,8 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
   const { join } = view;
   const connected = view.players.length;
   const tower = view.mode === "tower";
+  const [dragOver, setDragOver] = useState<number | null>(null);
+  const canDrag = (view.teams?.length ?? 0) > 1;
   return (
     <main class="lobby">
       <section class="join-panel">
@@ -438,14 +448,34 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
         ) : view.teams ? (
           <div class={`team-preview n${view.teams.length}`}>
             {view.teams.map((t) => (
-              <section key={t.index} class="team-box" style={{ "--team": t.color }}>
+              <section
+                key={t.index}
+                class={`team-box ${dragOver === t.index ? "drop-target" : ""}`}
+                style={{ "--team": t.color }}
+                {...(canDrag && {
+                  onDragOver: (e: DragEvent) => {
+                    e.preventDefault();
+                    if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+                    setDragOver(t.index);
+                  },
+                  onDragLeave: (e: DragEvent) => {
+                    if (!(e.currentTarget as Element).contains(e.relatedTarget as Node | null)) setDragOver(null);
+                  },
+                  onDrop: (e: DragEvent) => {
+                    e.preventDefault();
+                    const playerId = e.dataTransfer?.getData("text/plain");
+                    setDragOver(null);
+                    if (playerId && !t.members.some((p) => p.id === playerId)) send({ type: "host.setTeam", playerId, team: t.index });
+                  },
+                })}
+              >
                 <h3>
                   Team {t.name} <span>{t.members.length}</span>
                 </h3>
                 <ul class="player-chips">
                   {t.members.map((p) => (
                     <li key={p.id}>
-                      <PlayerChip p={p} send={send} />
+                      <PlayerChip p={p} send={send} draggable={canDrag} />
                     </li>
                   ))}
                 </ul>
@@ -462,7 +492,7 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
           </ul>
         )}
         <p class="hint">
-          {view.quiz.questionCount} questions · {view.teams ? "teams are filled in join order · " : ""}click a name to remove a player · Space to start
+          {view.quiz.questionCount} questions · {canDrag ? "drag a name to move it to another team · " : ""}click a name to remove a player · Space to start
         </p>
       </section>
     </main>

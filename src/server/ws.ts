@@ -372,6 +372,8 @@ export class GameHub {
         return classic().skip();
       case "host.end":
         return game().end();
+      case "host.setTeam":
+        return classic().setTeam(String(msg.playerId), Number(msg.team));
       case "host.kick": {
         const p = game().kick(String(msg.playerId));
         if (!p) return;

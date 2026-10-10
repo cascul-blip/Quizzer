@@ -112,7 +112,7 @@ quizzer mcp [options]       Run the MCP server over stdio (for AI agents)
 
 A team game modeled on Kahoot's Tallest Tower. Choose **Game mode → 🏗 Tallest Tower** in the lobby, then pick:
 
-- **Teams** (1–6). Players are placed automatically in join order; the lobby shows the teams live. Late joiners go to the smallest team.
+- **Teams** (1–6). Players are placed automatically in join order; the lobby shows the teams live, and the host can drag a name to another team there. Late joiners go to the smallest team.
 - **Time**: 2, 3, 5, 7 or 10 minutes. The countdown runs on the projector, and **End game** stops it early.
 - **Shuffle answer positions**: shuffles each player's answers independently.
 
@@ -159,7 +159,7 @@ Each level is worth 100 m. **Deeper levels have a faster fish.** The podium show
 
 ## Tower Fight mode
 
-A two-team battle: **Red** and **Blue** each defend a castle tower, with a hill between them. Choose **Game mode → 🏰 Tower Fight** in the lobby, and pick a **Hill** height: Low, Medium, High or 🎲 Random (the default). Players are split into the two teams by join order, and late joiners go to the smaller team. There's no timer: **the game runs until a tower falls** or the host clicks **End game**.
+A two-team battle: **Red** and **Blue** each defend a castle tower, with a hill between them. Choose **Game mode → 🏰 Tower Fight** in the lobby, and pick a **Hill** height: Low, Medium, High or 🎲 Random (the default). Players are split into the two teams by join order, and the host can drag a name to the other team in the lobby. Late joiners go to the smaller team. There's no timer: **the game runs until a tower falls** or the host clicks **End game**.
 
 - Everyone answers questions on their phone at their own pace, with the correct answer shown after a wrong one. Questions repeat until the game ends.
 - Every 4 correct answers gives that player a move. They have **10 seconds** to choose Attack or Rebuild, or the move is lost:
@@ -186,7 +186,7 @@ Then the robot's three back arms **fire lasers at every red X**. Anyone standing
 
 ## Land Grab mode
 
-A team game for **2 to 6 teams** on a shared board of hexagonal grass tiles. Choose **Game mode → 🚩 Land Grab** in the lobby, then pick the number of **Teams** and the **Time** (3, 5, 7 or 10 minutes). The board is 10×10 tiles for 2 teams, 12×12 for 3 or 4, and 14×14 for 5 or 6. Each team starts with one tile, its **starting point**, marked with an X in the team's color. The starting points are spread evenly around the middle of the board.
+A team game for **2 to 6 teams** on a shared board of hexagonal grass tiles. Choose **Game mode → 🚩 Land Grab** in the lobby, then pick the number of **Teams** and the **Time** (3, 5, 7 or 10 minutes). Players are placed in join order, and the host can drag a name to another team in the lobby. The board is 10×10 tiles for 2 teams, 12×12 for 3 or 4, and 14×14 for 5 or 6. Each team starts with one tile, its **starting point**, marked with an X in the team's color. The starting points are spread evenly around the middle of the board.
 
 - **Quiz.** Everyone answers questions on their phone at their own pace. **Each correct answer earns 1 tile.** After every **3 answers**, right or wrong, the player goes to the land. A player with nothing to place sees "You have no tiles to place!" for 4 seconds and goes back to the questions.
 - **Land.** The phone shows the board: drag to move around, **pinch (or use ＋ / −) to zoom**, tap a tile to pick it, then press **Claim**. There is no time limit, but the game clock keeps running.
