@@ -16,7 +16,7 @@ import {
 import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import { HILL_HEIGHTS, carve, launchVector, makeTerrain, simulate, type HillHeight, type ShotImpact } from "../../shared/fight-physics.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
-import { GameError, assignTeams, realClock, teamInfo, type Clock } from "./common.ts";
+import { GameError, realClock, teamInfo, type Clock } from "./common.ts";
 import type { Game } from "./game.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
 import { QuestionStream, newStreamPlayer, type StreamPlayer } from "./stream.ts";
@@ -126,13 +126,13 @@ export class FightGame {
     this.onFinish = opts.onFinish ?? (() => {});
   }
 
-  /** Take over a lobby's players (same ids and tokens), split Red/Blue by join order. */
+  /** Take over a lobby's players (same ids and tokens), split Red/Blue as shown in the lobby. */
   static fromLobby(lobby: Game, opts: FightOptions = {}): FightGame {
     const game = new FightGame(lobby.quiz, { ...lobby.fight, shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
     const players = [...lobby.players.values()];
-    const teams = assignTeams(players.length, TEAM_COUNT);
-    players.forEach((p, i) => {
-      game.roster.adopt(game.newPlayer({ id: p.id, nickname: p.nickname, token: p.token, connected: p.connected, avatar: p.avatar }, teams[i]!));
+    const teams = lobby.teamAssignment();
+    players.forEach((p) => {
+      game.roster.adopt(game.newPlayer({ id: p.id, nickname: p.nickname, token: p.token, connected: p.connected, avatar: p.avatar }, teams.get(p.id) ?? 0));
     });
     return game;
   }

@@ -837,6 +837,20 @@ select {
   border-top: 6px solid var(--team);
   border-radius: var(--radius);
   padding: 10px 12px 12px;
+  min-height: 96px;
+}
+
+.team-box.drop-target {
+  outline: 3px solid var(--team);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.chip[draggable="true"] {
+  cursor: grab;
+}
+
+.chip.dragging {
+  opacity: 0.4;
 }
 
 .team-box h3 {

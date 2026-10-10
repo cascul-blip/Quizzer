@@ -106,6 +106,8 @@ export class Game {
   private readonly rng: () => number;
   private readonly source: Question[];
   private timer: unknown = null;
+  /** Team per player id once the host has dragged someone in the lobby; null = round-robin by join order. */
+  private manualTeams: Map<string, number> | null = null;
   private readonly onChange: () => void;
   private readonly onFinish: (game: Game) => void;
 
@@ -255,11 +257,40 @@ export class Game {
     return this.mode === "tower" ? this.tower.teams : this.mode === "land" ? this.land.teams : this.mode === "fight" ? 2 : null;
   }
 
-  /** Team index per player (join order) for the team-mode preview. */
-  private teamPreview(): Map<string, number> {
+  /** Team index per player: round-robin by join order until the host moves someone, then the host's arrangement (newcomers join the smallest team). */
+  teamAssignment(): Map<string, number> {
     const ids = [...this.players.keys()];
-    const teams = assignTeams(ids.length, this.previewTeams ?? 1);
-    return new Map(ids.map((id, i) => [id, teams[i]!]));
+    const count = this.previewTeams ?? 1;
+    const manual = this.manualTeams;
+    if (!manual) {
+      const teams = assignTeams(ids.length, count);
+      return new Map(ids.map((id, i) => [id, teams[i]!]));
+    }
+    // Solo modes have no teams: leave the arrangement alone for when a team mode comes back.
+    if (this.previewTeams === null) return new Map(ids.map((id) => [id, 0]));
+    for (const id of [...manual.keys()]) if (!this.players.has(id)) manual.delete(id);
+    const fits = (id: string) => (manual.get(id) ?? count) < count;
+    const sizes = Array<number>(count).fill(0);
+    for (const id of ids) if (fits(id)) sizes[manual.get(id)!]!++;
+    for (const id of ids) {
+      if (fits(id)) continue;
+      const team = sizes.indexOf(Math.min(...sizes));
+      sizes[team]!++;
+      manual.set(id, team);
+    }
+    return new Map(ids.map((id) => [id, manual.get(id)!]));
+  }
+
+  /** Move one player to another team in the lobby; everyone else stays where they are shown. */
+  setTeam(playerId: string, team: number): void {
+    if (this.phase !== "lobby") throw new GameError("Teams can only be changed before the game starts");
+    const count = this.previewTeams;
+    if (count === null) throw new GameError("This game mode has no teams");
+    if (!Number.isInteger(team) || team < 0 || team >= count) throw new GameError("Unknown team");
+    if (!this.players.has(playerId)) throw new GameError("Unknown player");
+    this.manualTeams ??= this.teamAssignment();
+    this.manualTeams.set(playerId, team);
+    this.onChange();
   }
 
   setPacing(pacing: Pacing): void {
@@ -427,7 +458,7 @@ export class Game {
     let teams: HostGameState["teams"] = null;
     const teamCount = this.previewTeams;
     if (this.phase === "lobby" && teamCount !== null) {
-      const preview = this.teamPreview();
+      const preview = this.teamAssignment();
       teams = Array.from({ length: teamCount }, (_, i) => ({
         ...teamInfo(i),
         members: [...this.players.values()].filter((p) => preview.get(p.id) === i).map(hostPlayer),
@@ -476,7 +507,7 @@ export class Game {
           ? { choice: ans?.option ?? null, correct: q.correct, wasCorrect: !!ans?.correct, points: ans?.points ?? 0 }
           : null,
       podium: this.phase === "podium" ? this.leaderboard(5) : null,
-      team: this.phase === "lobby" && this.previewTeams !== null ? teamInfo(this.teamPreview().get(p.id) ?? 0) : null,
+      team: this.phase === "lobby" && this.previewTeams !== null ? teamInfo(this.teamAssignment().get(p.id) ?? 0) : null,
     };
   }
 }

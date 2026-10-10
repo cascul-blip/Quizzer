@@ -115,6 +115,7 @@ export type HostMsg =
   | { type: "host.next" }
   | { type: "host.skip" }
   | { type: "host.kick"; playerId: string }
+  | { type: "host.setTeam"; playerId: string; team: number }
   | { type: "host.end" }
   | { type: "host.close" }
   | { type: "host.setAddress"; address: string };

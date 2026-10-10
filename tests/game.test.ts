@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { AUTO_LEADERBOARD_MS, AUTO_REVEAL_MS, GRACE_MS, Game, GameError, INTRO_MS, preparePlayOrder } from "../src/server/game/game.ts";
+import { FightGame } from "../src/server/game/fight.ts";
+import { LandGame } from "../src/server/game/land.ts";
+import { TowerGame } from "../src/server/game/tower.ts";
 import { FakeClock, sampleQuiz } from "./helpers.ts";
 
 function setup(opts: { pacing?: "manual" | "auto" } = {}) {
@@ -302,6 +305,97 @@ describe("lobby Protect from abuse option", () => {
 
   test("carries over from the previous lobby", () => {
     expect(new Game(sampleQuiz(), { clock: new FakeClock(), protect: false }).hostView().protect).toBe(false);
+  });
+});
+
+describe("lobby teams", () => {
+  function teamLobby(names: string[], teams = 3) {
+    const { game, clock } = setup();
+    game.setMode("tower");
+    game.setTower({ teams, minutes: 5 });
+    const ids = names.map((n) => game.join(n).id);
+    /** Nicknames per team, in join order. */
+    const layout = () => {
+      const a = game.teamAssignment();
+      return Array.from({ length: game.hostView().teams!.length }, (_, i) => [...game.players.values()].filter((p) => a.get(p.id) === i).map((p) => p.nickname));
+    };
+    const badge = (id: string) => {
+      const v = game.playerView(id);
+      return v.kind === "player" ? v.team : null;
+    };
+    return { game, clock, ids, layout, badge };
+  }
+
+  test("round-robin by join order until the host moves someone", () => {
+    const { game, layout } = teamLobby(["A", "B", "C", "D", "E"]);
+    expect(layout()).toEqual([["A", "D"], ["B", "E"], ["C"]]);
+    game.kick([...game.players.keys()][0]!);
+    expect(layout()).toEqual([["B", "E"], ["C"], ["D"]]);
+    game.setTower({ teams: 2, minutes: 5 });
+    expect(layout()).toEqual([["B", "D"], ["C", "E"]]);
+    expect(game.hostView().teams!.map((t) => t.members.map((m) => m.nickname))).toEqual(layout());
+  });
+
+  test("setTeam moves only that player; the phone badge follows", () => {
+    const { game, ids, layout, badge } = teamLobby(["A", "B", "C", "D", "E"]);
+    expect(badge(ids[0]!)?.index).toBe(0);
+    game.setTeam(ids[0]!, 2);
+    expect(layout()).toEqual([["D"], ["B", "E"], ["A", "C"]]);
+    expect(badge(ids[0]!)).toMatchObject({ index: 2, name: "Yellow" });
+    expect(badge(ids[3]!)?.index).toBe(0);
+    expect(game.hostView().teams!.map((t) => t.members.map((m) => m.nickname))).toEqual([["D"], ["B", "E"], ["A", "C"]]);
+  });
+
+  test("after a manual move, joiners go to the smallest team and a kick leaves the rest in place", () => {
+    const { game, ids, layout } = teamLobby(["A", "B", "C", "D", "E"]);
+    game.setTeam(ids[0]!, 2);
+    game.join("F");
+    expect(layout()).toEqual([["D", "F"], ["B", "E"], ["A", "C"]]);
+    game.join("G"); // all equal: lowest index
+    expect(layout()).toEqual([["D", "F", "G"], ["B", "E"], ["A", "C"]]);
+    game.kick(ids[1]!);
+    expect(layout()).toEqual([["D", "F", "G"], ["E"], ["A", "C"]]);
+    game.join("H");
+    expect(layout()).toEqual([["D", "F", "G"], ["E", "H"], ["A", "C"]]);
+  });
+
+  test("shrinking re-homes players of removed teams to the smallest team; growing keeps everyone", () => {
+    const { game, ids, layout } = teamLobby(["A", "B", "C", "D", "E"]);
+    game.setTeam(ids[3]!, 1);
+    expect(layout()).toEqual([["A"], ["B", "D", "E"], ["C"]]);
+    game.setTower({ teams: 2, minutes: 5 });
+    expect(layout()).toEqual([["A", "C"], ["B", "D", "E"]]);
+    game.setTower({ teams: 4, minutes: 5 });
+    expect(layout()).toEqual([["A", "C"], ["B", "D", "E"], [], []]);
+    // Another team mode keeps what fits (Tower Fight has 2 teams).
+    game.setTeam(ids[4]!, 3);
+    game.setMode("fight");
+    expect(layout()).toEqual([["A", "C", "E"], ["B", "D"]]);
+  });
+
+  test("setTeam is rejected outside a team-mode lobby and for bad arguments", () => {
+    const { game, ids, layout, badge } = teamLobby(["A", "B"], 2);
+    expect(() => game.setTeam(ids[0]!, 2)).toThrow(GameError);
+    expect(() => game.setTeam(ids[0]!, -1)).toThrow(GameError);
+    expect(() => game.setTeam(ids[0]!, 0.5)).toThrow(GameError);
+    expect(() => game.setTeam(ids[0]!, NaN)).toThrow(GameError);
+    expect(() => game.setTeam("nope", 1)).toThrow(GameError);
+    expect(layout()).toEqual([["A"], ["B"]]);
+    game.setMode("classic");
+    expect(() => game.setTeam(ids[0]!, 1)).toThrow(/no teams/);
+    expect(badge(ids[0]!)).toBeNull();
+    game.start();
+    expect(() => game.setTeam(ids[0]!, 1)).toThrow(/before the game starts/);
+  });
+
+  test("the team games start with the host's arrangement", () => {
+    const { game, clock, ids } = teamLobby(["A", "B", "C"], 2);
+    game.setTeam(ids[2]!, 1);
+    expect([...TowerGame.fromLobby(game, { clock }).players.values()].map((p) => p.team)).toEqual([0, 1, 1]);
+    game.setMode("fight");
+    expect([...FightGame.fromLobby(game, { clock }).players.values()].map((p) => p.team)).toEqual([0, 1, 1]);
+    game.setMode("land");
+    expect([...LandGame.fromLobby(game, { clock }).players.values()].map((p) => p.team)).toEqual([0, 1, 1]);
   });
 });
 
