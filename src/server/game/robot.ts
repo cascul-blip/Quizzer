@@ -55,6 +55,8 @@ export interface RobotOptions {
 
 export interface RobotGameSettings {
   shuffleAnswers: boolean;
+  /** Longer waits for wrong answers in a row (the lobby's "Protect from abuse"). */
+  protect?: boolean;
 }
 
 const tileOf = (x: number, y: number) => y * ROBOT_BOARD + x;
@@ -124,7 +126,7 @@ export class RobotGame {
     this.questions = quiz.questions;
     this.clock = opts.clock ?? realClock;
     this.rng = opts.rng ?? Math.random;
-    this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock);
+    this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock, settings.protect);
     this.onChange = opts.onChange ?? (() => {});
     this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
@@ -132,7 +134,7 @@ export class RobotGame {
 
   /** Take over a lobby's players (same ids and tokens), spread out across the board. */
   static fromLobby(lobby: Game, opts: RobotOptions = {}): RobotGame {
-    const game = new RobotGame(lobby.quiz, { shuffleAnswers: lobby.shuffle.answers }, opts);
+    const game = new RobotGame(lobby.quiz, { shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
     for (const p of lobby.players.values()) {
       game.roster.adopt(game.newPlayer({ id: p.id, nickname: p.nickname, token: p.token, connected: p.connected, avatar: p.avatar }));
     }

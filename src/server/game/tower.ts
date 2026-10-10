@@ -65,6 +65,8 @@ export interface TowerOptions {
 export interface TowerGameSettings extends TowerSettings {
   /** Shuffle answer positions per player (the lobby's "Shuffle answer positions"). */
   shuffleAnswers: boolean;
+  /** Longer waits for wrong answers in a row (the lobby's "Protect from abuse"). */
+  protect?: boolean;
 }
 
 /** Tallest Tower: teams answer at their own pace; every 4 correct answers are dropped onto the team tower. */
@@ -106,7 +108,7 @@ export class TowerGame {
     this.teams = Array.from({ length: settings.teams }, (_, i) => ({ ...teamInfo(i), columns: [0, 0, 0] }));
     this.clock = opts.clock ?? realClock;
     this.rng = opts.rng ?? Math.random;
-    this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock);
+    this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock, settings.protect);
     this.onChange = opts.onChange ?? (() => {});
     this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
@@ -114,7 +116,7 @@ export class TowerGame {
 
   /** Take over a lobby's players (same ids and tokens), assigned to teams by join order. */
   static fromLobby(lobby: Game, opts: TowerOptions = {}): TowerGame {
-    const game = new TowerGame(lobby.quiz, { ...lobby.tower, shuffleAnswers: lobby.shuffle.answers }, opts);
+    const game = new TowerGame(lobby.quiz, { ...lobby.tower, shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
     const players = [...lobby.players.values()];
     const teams = assignTeams(players.length, lobby.tower.teams);
     players.forEach((p, i) => {

@@ -249,6 +249,26 @@ describe("full game over WebSockets", () => {
     [host, ...players].forEach((s) => s.close());
   });
 
+  test("Protect from abuse is on by default, toggles in the lobby and carries over to the next lobby", async () => {
+    const quiz = store.create({ title: "Protect", questions: [{ type: "true_false", text: "Fire is cold", correct: [1] }] });
+    const host = await TestSocket.open(`ws://localhost:${srv.port}/ws`);
+    host.send({ type: "host.hello" });
+    await host.hostState((v) => v.kind === "idle");
+    host.send({ type: "host.open", quizId: quiz.id });
+    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.protect);
+    host.send({ type: "host.setProtect", on: false });
+    await host.hostState((v) => v.kind === "classic" && !v.protect);
+    host.send({ type: "host.close" });
+    await host.hostState((v) => v.kind === "idle");
+    host.send({ type: "host.open", quizId: quiz.id });
+    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && !v.protect);
+    host.send({ type: "host.setProtect", on: true });
+    await host.hostState((v) => v.kind === "classic" && v.protect);
+    host.send({ type: "host.close" });
+    await host.hostState((v) => v.kind === "idle");
+    host.close();
+  });
+
   test("resume with an unknown token fails cleanly", async () => {
     const s = await TestSocket.open(`ws://localhost:${srv.port}/ws`);
     s.send({ type: "resume", token: "nope" });

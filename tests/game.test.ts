@@ -289,6 +289,22 @@ describe("lobby shuffle options", () => {
   });
 });
 
+describe("lobby Protect from abuse option", () => {
+  test("is on by default and the host can change it in the lobby only", () => {
+    const game = new Game(sampleQuiz(), { clock: new FakeClock() });
+    expect(game.hostView().protect).toBe(true);
+    game.setProtect(false);
+    expect(game.hostView().protect).toBe(false);
+    game.join("A");
+    game.start();
+    expect(() => game.setProtect(true)).toThrow(GameError);
+  });
+
+  test("carries over from the previous lobby", () => {
+    expect(new Game(sampleQuiz(), { clock: new FakeClock(), protect: false }).hostView().protect).toBe(false);
+  });
+});
+
 describe("streaks", () => {
   test("count consecutive correct answers and reset on a wrong or missing answer", () => {
     const clock = new FakeClock();

@@ -71,6 +71,7 @@ export interface GameOptions {
   tower?: TowerSettings;
   fight?: FightSettings;
   land?: LandSettings;
+  protect?: boolean;
 }
 
 /**
@@ -89,6 +90,8 @@ export class Game {
   qIndex = -1;
   pacing: Pacing;
   shuffle: ShuffleOptions;
+  /** "Protect from abuse": Tallest Tower, Submarine Squad, Tower Fight and Robot Attack slow down players who keep answering wrong. */
+  protect: boolean;
   mode: GameMode;
   tower: TowerSettings;
   fight: FightSettings;
@@ -122,6 +125,7 @@ export class Game {
     this.tower = { ...(opts.tower ?? DEFAULT_TOWER) };
     this.fight = { ...(opts.fight ?? DEFAULT_FIGHT) };
     this.land = { ...(opts.land ?? DEFAULT_LAND) };
+    this.protect = opts.protect ?? true;
   }
 
   get players(): Map<string, Player> {
@@ -203,6 +207,12 @@ export class Game {
   setShuffle(opts: ShuffleOptions): void {
     if (this.phase !== "lobby") throw new GameError("Shuffle can only be changed before the game starts");
     this.shuffle = { questions: !!opts.questions, answers: !!opts.answers };
+    this.onChange();
+  }
+
+  setProtect(on: boolean): void {
+    if (this.phase !== "lobby") throw new GameError("Protect from abuse can only be changed before the game starts");
+    this.protect = !!on;
     this.onChange();
   }
 
@@ -434,6 +444,7 @@ export class Game {
       quiz: { id: this.quizId, title: this.title, questionCount: this.questions.length },
       pacing: this.pacing,
       shuffle: this.shuffle,
+      protect: this.protect,
       players: [...this.players.values()].map(hostPlayer),
       question: this.questionView(),
       correct: this.revealed && q ? q.correct : null,
