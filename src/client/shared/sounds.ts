@@ -164,8 +164,8 @@ export interface Rev {
   stop(): void;
 }
 
-/** A continuous engine rev whose pitch and volume follow the boost charge. Call from a press handler. */
-export function startRev(): Rev | null {
+/** A continuous engine rev whose pitch and volume follow the boost charge. Call from a press handler. `volume` scales how loud it is. */
+export function startRev(volume = 1): Rev | null {
   unlockAudio();
   if (muted || !ctx) return null;
   const c = ctx;
@@ -191,7 +191,7 @@ export function startRev(): Rev | null {
       main.frequency.setTargetAtTime(55 + l * 230, t, 0.05);
       grit.frequency.setTargetAtTime(57 + l * 236, t, 0.05);
       filter.frequency.setTargetAtTime(350 + l * 2600, t, 0.05);
-      gain.gain.setTargetAtTime(0.05 + l * 0.14, t, 0.05);
+      gain.gain.setTargetAtTime((0.05 + l * 0.14) * volume, t, 0.05);
     },
     stop() {
       const t = c.currentTime;

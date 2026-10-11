@@ -13,6 +13,8 @@ type RacerView = Extract<HostView, { kind: "racer" }>;
 /** The engine hum is at most this share of a full rev, reached at ENGINE_FULL_MPH. */
 const ENGINE_MAX = 0.5;
 const ENGINE_FULL_MPH = 150;
+/** How loud the hum is next to the Submarine boost rev it borrows. */
+const ENGINE_VOLUME = 0.5;
 /** How long the speed readout takes to reach a new value. */
 const SPEED_COUNT_MS = 1000;
 
@@ -185,7 +187,7 @@ function useEngineHum(on: boolean, level: number) {
       return;
     }
     // Null while muted or before the browser allows audio; later renders try again.
-    rev.current ??= startRev();
+    rev.current ??= startRev(ENGINE_VOLUME);
     rev.current?.set(level);
   }, [on, level, muteSeq]);
   useEffect(
