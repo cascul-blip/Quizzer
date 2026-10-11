@@ -9,6 +9,7 @@ const LOBBY: Record<GameMode, MusicTrackId> = {
   fight: "fight-lobby",
   robot: "robot-lobby",
   land: "land-lobby",
+  racer: "racer-lobby",
 };
 
 /** Which track the projector should play for this screen, and how intense. */
@@ -64,6 +65,13 @@ export function musicFor(view: HostView | null): MusicCue {
       return view.phase === "playing"
         ? { track: "land-play", intensity: start, rampTo: 1, rampMs: view.remainingMs, key: "land-playing" }
         : { track: "land-play", intensity: 0.2, key: "land-countdown" };
+    }
+    case "racer": {
+      if (view.phase === "podium") return { track: "racer-results" };
+      // One continuous drive: tempo and layers follow the car's speed. No key, so the
+      // music never restarts between questions; useMusic glides to each new intensity.
+      const { speed, crashed } = view.car;
+      return { track: "racer-drive", intensity: crashed ? 0.03 : Math.max(0.1, Math.min(1, speed / 150)) };
     }
   }
 }

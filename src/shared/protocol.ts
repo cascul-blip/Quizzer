@@ -2,6 +2,7 @@ import type { AvatarChoice } from "./avatars.ts";
 import type { HillHeight, ShotImpact } from "./fight-physics.ts";
 import type { LandStart } from "./land-board.ts";
 import type { QuestionType } from "./quiz-schema.ts";
+import type { RacerCar, RacerConfidence, RacerTurnResult } from "./racer-rules.ts";
 
 export type Phase = "lobby" | "intro" | "open" | "reveal" | "leaderboard" | "podium";
 export type Pacing = "manual" | "auto";
@@ -16,7 +17,7 @@ export interface ShuffleOptions {
 
 // ---------- Tallest Tower ----------
 
-export type GameMode = "classic" | "tower" | "submarine" | "fight" | "robot" | "land";
+export type GameMode = "classic" | "tower" | "submarine" | "fight" | "robot" | "land" | "racer";
 export type TowerPhase = "countdown" | "playing" | "podium";
 
 export const TEAMS = [
@@ -99,7 +100,13 @@ export type PlayerMsg =
   | { type: "land.answer"; seq: number; option: number }
   | { type: "land.place"; tile: number }
   /** Leave the land early; unused claims are kept for next time. */
-  | { type: "land.done" };
+  | { type: "land.done" }
+  /** Racer, driver only, confidence phase only: move the lever (everyone sees it move). */
+  | { type: "racer.lever"; level: RacerConfidence }
+  /** Racer, driver only, confidence phase only: lock the lever where it is and open the question. */
+  | { type: "racer.go" }
+  /** Racer, open phase: `index` is the question's index (QuestionView.index), as `qIndex` in the classic "answer". One answer per player per question. */
+  | { type: "racer.answer"; index: number; option: number };
 
 export type HostMsg =
   | { type: "host.hello" }
@@ -169,7 +176,7 @@ export interface PlayerResult {
 
 export type PlayerView =
   | { kind: "none"; game: null }
-  | { kind: "none"; game: { title: string; phase: Phase | TowerPhase | SubPhase | FightPhase | RobotPhase | LandPhase } }
+  | { kind: "none"; game: { title: string; phase: Phase | TowerPhase | SubPhase | FightPhase | RobotPhase | LandPhase | RacerPhase } }
   | {
       kind: "player";
       phase: Phase;
@@ -188,7 +195,8 @@ export type PlayerView =
   | PlayerSubView
   | PlayerFightView
   | PlayerRobotView
-  | PlayerLandView;
+  | PlayerLandView
+  | PlayerRacerView;
 
 export interface TowerAwards {
   mostCorrect: { value: number; nicknames: string[] } | null;
@@ -242,7 +250,7 @@ export interface JoinInfo {
 export interface HostGameState {
   kind: "classic";
   phase: Phase;
-  /** Lobby choice; "tower" hands the players over to a Tallest Tower game on start. */
+  /** Lobby choice; anything but "classic" hands the players over to that mode's game on start. */
   mode: GameMode;
   tower: TowerSettings;
   fight: FightSettings;
@@ -691,6 +699,146 @@ export interface PlayerLandView {
   result: { teamRank: number; teamCount: number; tiles: number; won: boolean; awards: string[] } | null;
 }
 
+// ---------- Racer ----------
+//
+// Co-op, paced like Classic: one shared question per turn, every question once, then the podium.
+// The whole class shares one car. The rules (speeds, gains, fails, crash, repair) live in racer-rules.ts.
+//
+// A turn is "confidence" → "open" → "reveal" when the car is running (a driver sets the lever, then everyone answers),
+// or "intro" → "open" → "reveal" when there is no driver (the car is crashed, or nobody is connected).
+// There is no lobby phase: the lobby is the classic game (HostGameState with mode "racer").
+
+/**
+ * intro: 3 s look at the question on a turn without a driver; options hidden.
+ * confidence: the driver sets the lever (20 s at most); everyone sees the question, options hidden.
+ * open: options visible, everyone answers once, the driver too.
+ * reveal: correct answers, counts and what the turn did to the car (`lastTurn`).
+ * podium: the game is over.
+ */
+export type RacerPhase = "intro" | "confidence" | "open" | "reveal" | "podium";
+
+export type { RacerCar, RacerConfidence, RacerTurnResult } from "./racer-rules.ts";
+
+/** The player at the wheel this turn. Kept as it was when the turn started, even if they leave or are removed. */
+export interface RacerDriver {
+  id: string;
+  nickname: string;
+  avatar: AvatarChoice;
+}
+
+/**
+ * Summary of the most recently finished turn: confidence, correct, total, gain, fails, speedBefore,
+ * speedAfter, crashed, repaired and distanceAdded come from RacerTurnResult.
+ */
+export interface RacerTurn extends RacerTurnResult {
+  /** Index of the question this turn was about (QuestionView.index); use it to play the turn's animation once. */
+  index: number;
+  /** Null when the turn had no driver. */
+  driver: RacerDriver | null;
+}
+
+/** The shared final result. */
+export interface RacerResult {
+  /** Miles. */
+  distance: number;
+  /** Mph. */
+  topSpeed: number;
+  crashes: number;
+  /** Turns played to the end (fewer than the quiz has questions if the host ended the game early). */
+  turns: number;
+}
+
+export interface RacerAwards {
+  mostCorrect: SubAward | null;
+  /** Most mph gained while driving. */
+  bestDriver: SubAward | null;
+}
+
+export interface HostRacerPlayer {
+  id: string;
+  nickname: string;
+  avatar: AvatarChoice;
+  connected: boolean;
+  /** Has answered the current question. */
+  answered: boolean;
+  /** Totals over the questions closed so far. A question left unanswered counts as neither. */
+  correct: number;
+  wrong: number;
+  turnsDriven: number;
+  /** Mph gained on the turns this player drove. */
+  mphGained: number;
+  /** Fail points on the turns this player drove. */
+  failsAsDriver: number;
+}
+
+export interface HostRacerState {
+  kind: "racer";
+  phase: RacerPhase;
+  quiz: { id: string; title: string; questionCount: number };
+  /** Manual waits for host.next on the reveal; auto moves on after 5 s. host.setPacing works mid-game. */
+  pacing: Pacing;
+  /** The current question (null at the podium). `options` is empty during intro and confidence; `remainingMs` is the time left in intro, confidence or open, 0 on the reveal. */
+  question: QuestionView | null;
+  /** This turn's driver; null on a turn without one and at the podium. */
+  driver: RacerDriver | null;
+  /** Where the lever is: live during confidence, then where it was locked. Null without a driver. */
+  lever: RacerConfidence | null;
+  /** The locked lever, from the open phase on; null before that and without a driver. */
+  confidence: RacerConfidence | null;
+  /** Players who have answered the current question. */
+  answeredCount: number;
+  playerCount: number;
+  players: HostRacerPlayer[];
+  /** Reveal only: indices of the correct option(s). */
+  correct: number[] | null;
+  /** Reveal only: how many players picked each option. */
+  answerCounts: number[] | null;
+  /** The car as it is now; on the reveal the turn has already been applied (lastTurn.speedBefore has the old speed). */
+  car: RacerCar;
+  /** The latest finished turn: this question's on the reveal, the previous question's before that. Null until the first question closes. */
+  lastTurn: RacerTurn | null;
+  /** Time left in the current phase; 0 when it has no timer (reveal with manual pacing, podium). */
+  phaseRemainingMs: number;
+  /** Full length of the current phase, for a progress bar; 0 when it has no timer. */
+  phaseDurationMs: number;
+  /** Podium only. */
+  result: RacerResult | null;
+  awards: RacerAwards | null;
+  /** The questions answered wrongly most often (podium only). */
+  errors: QuestionError[] | null;
+  hasResults: boolean;
+}
+
+/** A phone's complete snapshot: enough to redraw from scratch after a reconnect in any phase. */
+export interface PlayerRacerView {
+  kind: "racer";
+  phase: RacerPhase;
+  title: string;
+  /** Totals over the questions closed so far (they don't move while a question is open). */
+  me: { id: string; nickname: string; avatar: AvatarChoice; correct: number; wrong: number; turnsDriven: number; mphGained: number; failsAsDriver: number };
+  playerCount: number;
+  /** As HostRacerState.question. */
+  question: QuestionView | null;
+  phaseRemainingMs: number;
+  phaseDurationMs: number;
+  /** This player is at the wheel this turn: in the confidence phase they send racer.lever and racer.go. */
+  isDriver: boolean;
+  driver: RacerDriver | null;
+  /** As HostRacerState.lever; the driver's own lever follows it too. */
+  lever: RacerConfidence | null;
+  /** As HostRacerState.confidence. */
+  confidence: RacerConfidence | null;
+  /** The option this player picked for the current question (open and reveal), if any. */
+  myChoice: number | null;
+  /** Reveal only: how this player did on the question. */
+  reveal: { choice: number | null; correct: number[]; wasCorrect: boolean } | null;
+  car: RacerCar;
+  /** As HostRacerState.lastTurn. */
+  lastTurn: RacerTurn | null;
+  /** Podium only: the shared result and the titles of the awards this player won. Their own numbers are in `me`. */
+  result: (RacerResult & { awards: string[] }) | null;
+}
+
 export type HostView =
   | { kind: "idle"; phase: "idle"; join: JoinInfo }
   | (HostGameState & { join: JoinInfo })
@@ -698,7 +846,8 @@ export type HostView =
   | (HostSubState & { join: JoinInfo })
   | (HostFightState & { join: JoinInfo })
   | (HostRobotState & { join: JoinInfo })
-  | (HostLandState & { join: JoinInfo });
+  | (HostLandState & { join: JoinInfo })
+  | (HostRacerState & { join: JoinInfo });
 
 export type ServerMsg =
   /** First message on every connection. A new serverId means the server restarted (maybe with new code). */

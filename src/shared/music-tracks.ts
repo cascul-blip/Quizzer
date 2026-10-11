@@ -23,6 +23,9 @@ export const MUSIC_TRACKS = [
   { id: "land-lobby", mode: "Land Grab", screen: "Lobby" },
   { id: "land-play", mode: "Land Grab", screen: "The land" },
   { id: "land-results", mode: "Land Grab", screen: "Final podium" },
+  { id: "racer-lobby", mode: "Racer", screen: "Lobby" },
+  { id: "racer-drive", mode: "Racer", screen: "Driving" },
+  { id: "racer-results", mode: "Racer", screen: "Final results" },
 ] as const;
 
 export type MusicTrackId = (typeof MUSIC_TRACKS)[number]["id"];

@@ -97,12 +97,12 @@ quizzer mcp [options]       Run the MCP server over stdio (for AI agents)
 | Leaderboard | Top 5, with points gained on the last question. Players on a streak of 4+ correct answers in a row get a 🔥 badge with the count (e.g. 🔥x4). |
 | Podium | Top 3 plus the rest, with **Show errors**, **Play again** and **Done**. |
 
-- **Pacing**: *Manual* waits for you to press **Next** (or Space/→). *Auto-advance* moves on after 5 seconds on the reveal and leaderboard. You can switch pacing mid-game from the top bar.
+- **Pacing**: *Manual* waits for you to press **Next** (or Space/→). *Auto-advance* moves on after 5 seconds on the reveal and leaderboard. You can switch pacing mid-game from the top bar. **Racer** is paced the same way.
 - **Scoring**: a correct answer is worth 1000 points if given instantly, falling to 500 at the time limit. Wrong or missing answers score 0.
 - **Multiple correct answers**: players still tap one option, and any correct option scores.
 - **Shuffling** is chosen in the lobby for each game; the quiz's shuffle settings in the editor are the defaults. Shuffling answer positions moves each answer to a random tile (and color), so the correct answer isn't always in the same place. The order is fixed when you press Start and is the same on the projector and every phone. True/False keeps True before False.
 - **Streaks**: after 4 correct answers in a row, a player gets 🔥x4 (x5, x6, …) next to their name on the leaderboard, the podium and their phone. A wrong or missed answer resets it.
-- **Show errors**: on the final screen of every game mode, this button swaps the results for a table of the **10 questions with the most wrong answers**, each with its correct answer, so you can go over them with the class. Press **Show results** to switch back. Classic counts wrong answers only, not questions a player let time out; in the other modes a question can come up more than once, and every wrong answer counts.
+- **Show errors**: on the final screen of every game mode, this button swaps the results for a table of the **10 questions with the most wrong answers**, each with its correct answer, so you can go over them with the class. Press **Show results** to switch back. Classic and Racer count wrong answers only, not questions a player let time out; in the other modes a question can come up more than once, and every wrong answer counts.
 - **Protect from abuse**: a lobby checkbox, on by default, for **Tallest Tower**, **Submarine Squad**, **Tower Fight** and **Robot Attack**. It slows down players who tap random answers instead of reading. The ✗ screen normally shows for 1 second; after **2 wrong answers in a row** it stays **3 seconds longer**, and after **3 or more in a row**, **4 seconds longer**, with a countdown on the phone. A correct answer resets it. Reloading the page doesn't skip the wait.
 - **Results file**: a CSV of every finished game is saved in `data/results/`. The latest one is also at `http://localhost:8080/api/results/latest.csv` on the host computer.
 - **Reconnecting**: if a phone locks, refreshes or drops Wi-Fi, it rejoins as the same player with the same score. Players can also join after the game has started.
@@ -201,6 +201,37 @@ A team game for **2 to 6 teams** on a shared board of hexagonal grass tiles. Cho
 
 **The team with the most tiles when time runs out wins**; with equal tiles, the team with more correct answers. If only one team is left, the game ends right away. The podium shows the teams and awards for **Most correct answers**, **Top settler** (most tiles placed) and **Master surrounder** (most tiles won by closing rings). The results CSV lists each player under the team they started on, with their answers and the tiles they placed, stole and surrounded.
 
+## Racer mode
+
+A cooperative mode: the whole class shares one car, a **Porsche 911**, and tries to drive it as far as possible. Choose **Game mode → 🏎 Racer** in the lobby. Questions are asked one at a time, as in Classic, and everyone answers at once. The car starts at **30 mph**. Every question is asked once, **the game ends after the last question**, and the result is the **distance driven**.
+
+How a turn goes:
+
+1. A random player becomes the **driver**. Everyone drives once before anyone drives again.
+2. The question appears on the projector and the phones, without its answers. The driver's phone shows a **lever** with three levels: how confident are they that the class will get this one right? They drag the lever to a level and **hold the Go! button** to lock it in. They have **20 seconds**; after that (or if the driver disconnects) the lever is locked where it is. It starts on "Not confident".
+3. The answers appear and **everyone answers**, the driver included. The question ends when time runs out or everyone has answered. A player who doesn't answer counts as wrong.
+4. The reveal shows the correct answer and what happened to the car.
+
+| Lever | Players who answered right | Result |
+|---|---|---|
+| **Not confident** | At least 1/4 | No change |
+| | Fewer | 1 fail point |
+| **Confident** | At least 2/3 | **+20 mph** |
+| | At least 1/4 | 1 fail point |
+| | Fewer | 2 fail points |
+| **Extremely confident** | Everyone | **+40 mph** |
+| | At least 2/3 | 1 fail point |
+| | At least 1/2 | 2 fail points |
+| | Fewer | 3 fail points |
+
+**Each fail point halves the speed**: 60 mph with one fail point becomes 30 mph, with two, 15 mph. A car that drops **under 20 mph crashes**, and its speed goes to 0. A crashed car has no driver and no lever: the question shows for 3 seconds, then its answers. Once **at least half the class** answers a question right, the car is repaired and back on the road at **30 mph**.
+
+Each turn counts as **10 minutes of driving** at the speed the car has after that turn, so 60 mph adds 10 miles and a crashed car adds nothing.
+
+The projector shows the car driving past a city skyline and palm trees, which go by faster as the car speeds up, with the speed and the miles driven. Pacing works as in Classic: *Manual* waits for **Next** (or Space/→) after each reveal, and *Auto-advance* moves on after 5 seconds. Press **S** to skip a countdown: it locks the lever where it is, or closes the question.
+
+The podium shows the distance, the top speed, the number of crashes and awards for **Most correct answers** and **Best driver** (most mph gained while driving), with **Show errors**, **Play again** and **Done**. The results CSV has one row per player: correct, wrong, accuracy, turns driven, mph gained and fail points as driver, plus the class's distance, top speed and crashes.
+
 ## Music
 
 Every game mode has **built-in background music** on the projector (phones stay quiet). It's composed in code, so it adds nothing to the download and needs no licenses:
@@ -213,6 +244,7 @@ Every game mode has **built-in background music** on the projector (phones stay 
 | Tower Fight | Medieval battle | Gets more intense as the towers take damage |
 | Robot Attack | Machine-cult chant: a deep drone, organ and brass | Builds up as each quiz phase's timer runs out; urgent during movement |
 | Land Grab | Bouncy dance-pop with a four-on-the-floor beat | Lively from the start; more layers and a little faster as the clock runs down |
+| Racer | Sunny late-80s arcade-racing chiptune | Tempo and layers rise with the car's speed; slow and sparse when crashed |
 
 The lobby plays the music of whichever game mode is selected. Use the **🎵 button and slider** in the projector's top bar to turn music off or change its volume. The 🔊 button still mutes everything.
 
@@ -228,6 +260,7 @@ Put audio files (MP3, OGG, M4A, WAV, WebM or FLAC) in the **`data/music`** folde
 | `fight-lobby` · `fight-play` · `fight-results` | Tower Fight |
 | `robot-lobby` · `robot-quiz` · `robot-move` · `robot-results` | Robot Attack: lobby, quiz phase, movement and laser attack, final results |
 | `land-lobby` · `land-play` · `land-results` | Land Grab |
+| `racer-lobby` · `racer-drive` · `racer-results` | Racer |
 
 For example, `data/music/submarine-chase.mp3`. Your files loop; they don't speed up with the game like the built-in music does. Only use music you're allowed to play: royalty-free or Creative Commons tracks (e.g. Pixabay Music, OpenGameArt, or incompetech with credit). Delete a file to go back to the built-in track.
 
@@ -307,6 +340,8 @@ The Tallest Tower building blocks are images in `src/client/shared/tower/`, made
 The Tower Fight castle is made the same way: `python3 scripts/fight-castle.py` turns the intact tower and its four damage stages in `scripts/fight-castle/` into the images in `src/client/shared/fight/`. If the tower's proportions change, copy the numbers the script prints into `CastleTower` in `src/client/shared/fight-art.tsx`.
 
 The Land Grab tiles in `src/client/shared/land/` come from two generated textures in `scripts/land-tiles/` (grass, and grey paving that takes each team's color): `python3 scripts/land-tiles.py`.
+
+The Racer pixel art in `src/client/shared/racer/` (the car, the skyline and the palm tree) is made from the generated images in `scripts/racer-art/` by `python3 scripts/racer-art.py` (needs Pillow and numpy).
 
 The server is authoritative. It runs the game state machine and timers, scores answers by server time, and pushes a complete view snapshot to each screen after every change, so a reconnecting screen always gets the full picture.
 

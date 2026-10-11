@@ -77,7 +77,7 @@ export interface GameOptions {
 /**
  * A Classic game: lobby → (intro → open → reveal → leaderboard)* → podium.
  * It also serves as the lobby for every mode; in the other modes the hub
- * hands its players to that mode's game (TowerGame, SubGame, FightGame, RobotGame, LandGame) on start.
+ * hands its players to that mode's game (TowerGame, SubGame, FightGame, RobotGame, LandGame, RacerGame) on start.
  */
 export class Game {
   readonly kind = "classic";
@@ -220,7 +220,7 @@ export class Game {
 
   setMode(mode: GameMode): void {
     if (this.phase !== "lobby") throw new GameError("The game mode can only be changed before the game starts");
-    if (mode !== "classic" && mode !== "tower" && mode !== "submarine" && mode !== "fight" && mode !== "robot" && mode !== "land") throw new GameError("Unknown game mode");
+    if (mode !== "classic" && mode !== "tower" && mode !== "submarine" && mode !== "fight" && mode !== "robot" && mode !== "land" && mode !== "racer") throw new GameError("Unknown game mode");
     this.mode = mode;
     this.onChange();
   }

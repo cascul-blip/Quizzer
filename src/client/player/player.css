@@ -1519,3 +1519,551 @@ h1 {
 .land-actions .btn.primary {
   flex: 2;
 }
+
+/* ----- Racer ----- */
+
+.racer-game {
+  background: #1b1340;
+}
+
+/* Every Racer screen is locked to the phone's screen: nothing scrolls. */
+.racer-game.fit-screen {
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.racer-game > main {
+  min-height: 0;
+}
+
+.racer-num {
+  font-family: ui-monospace, "Cascadia Mono", "DejaVu Sans Mono", Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.racer-q {
+  margin: 0;
+  font-size: clamp(16px, 4.6vw, 20px);
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.racer-q.long,
+.racer-game .q-head .q-text.long {
+  font-size: 14px;
+  line-height: 1.22;
+}
+
+.racer-ask {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: #ffc04d;
+}
+
+/* the driver's turn */
+
+.racer-drive {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 14px max(12px, env(safe-area-inset-bottom));
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.racer-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+}
+
+.racer-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.racer-head h1 {
+  font-size: clamp(20px, 6vw, 26px);
+  color: #ffc04d;
+}
+
+.racer-head .timer {
+  width: 40px;
+  height: 40px;
+  font-size: 18px;
+}
+
+.racer-q-img {
+  flex: 0 1 14vh;
+  min-height: 0;
+  max-height: 14vh;
+}
+
+.racer-controls {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.racer-lever {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  max-width: 420px;
+  display: grid;
+  grid-template-columns: 68px 1fr;
+  gap: 10px;
+}
+
+.racer-track {
+  position: relative;
+  touch-action: none;
+  cursor: grab;
+}
+
+.racer-slot {
+  position: absolute;
+  left: 50%;
+  top: calc(100% / 6 - 12px);
+  bottom: calc(100% / 6 - 12px);
+  width: 18px;
+  margin-left: -9px;
+  border-radius: 9px;
+  background: #2b4fa8;
+  box-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.35);
+}
+
+.racer-notch {
+  position: absolute;
+  left: 50%;
+  width: 40px;
+  height: 4px;
+  margin: -2px 0 0 -20px;
+  border-radius: 2px;
+  background: #2b4fa8;
+}
+
+.racer-handle {
+  position: absolute;
+  left: 50%;
+  width: 64px;
+  height: 42px;
+  margin: -21px 0 0 -32px;
+  border-radius: 10px;
+  background: linear-gradient(#ffc04d 0 18%, #ff8a1f 18% 100%);
+  box-shadow: 0 5px 0 #9a4a00, 0 8px 14px rgba(0, 0, 0, 0.45);
+  transition: top 0.14s ease-out;
+}
+
+/* Grip lines. */
+.racer-handle::after {
+  content: "";
+  position: absolute;
+  inset: 16px 16px 9px;
+  background: repeating-linear-gradient(#9a4a00 0 3px, transparent 3px 7px);
+  opacity: 0.6;
+}
+
+.racer-lever.dragging .racer-handle {
+  transition: none;
+  transform: scale(1.06);
+}
+
+.racer-lever.dragging .racer-track {
+  cursor: grabbing;
+}
+
+/* Three equal rows without a gap, so each stop's middle lines up with its notch on the track. */
+.racer-stops {
+  display: grid;
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  min-height: 0;
+}
+
+.racer-stop {
+  margin: 3px 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 4px 10px;
+  border: 2px solid transparent;
+  border-radius: var(--radius);
+  background: rgba(43, 79, 168, 0.35);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.racer-stop b {
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.racer-stop small {
+  font-size: 12px;
+  line-height: 1.2;
+  color: var(--on-bg-soft);
+}
+
+.racer-stop.on {
+  background: #2b4fa8;
+  border-color: #ffc04d;
+}
+
+.racer-stop.on b {
+  color: #ffc04d;
+}
+
+/* The read-only copy the rest of the class sees. */
+.racer-lever.small {
+  flex: none;
+  height: clamp(120px, 24dvh, 190px);
+  max-width: 260px;
+  grid-template-columns: 44px 1fr;
+}
+
+.racer-lever.small .racer-track {
+  cursor: default;
+}
+
+.racer-lever.small .racer-slot {
+  width: 12px;
+  margin-left: -6px;
+}
+
+.racer-lever.small .racer-notch {
+  width: 26px;
+  margin-left: -13px;
+}
+
+.racer-lever.small .racer-handle {
+  width: 40px;
+  height: 26px;
+  margin: -13px 0 0 -20px;
+  border-radius: 7px;
+  box-shadow: 0 3px 0 #9a4a00;
+}
+
+.racer-lever.small .racer-handle::after {
+  display: none;
+}
+
+.racer-go-wrap {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.racer-go {
+  --charge: 0;
+  position: relative;
+  height: clamp(76px, 15dvh, 120px);
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 40% 35%, #ffc04d, #ff8a1f 60%, #c85a00);
+  box-shadow: 0 6px 0 #8a3d00, 0 0 calc(8px + var(--charge) * 40px) rgba(255, 192, 77, calc(0.2 + var(--charge) * 0.7));
+  touch-action: none;
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 0.08s;
+}
+
+.racer-go.charging {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 #8a3d00, 0 0 calc(8px + var(--charge) * 40px) rgba(255, 192, 77, calc(0.2 + var(--charge) * 0.7));
+}
+
+.racer-go.fired {
+  background: radial-gradient(circle, #fff3c4, #ffc04d);
+}
+
+.racer-go svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.racer-go-text {
+  position: relative;
+  font-size: 24px;
+  font-weight: 900;
+  color: #3a1500;
+}
+
+.racer-go-label {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--on-bg-soft);
+}
+
+/* someone else drives, and the crashed-car intro */
+
+.racer-watch {
+  gap: 10px;
+  padding: 12px 16px max(12px, env(safe-area-inset-bottom));
+}
+
+.racer-driver {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-height: 0;
+  max-width: 100%;
+}
+
+.racer-driver h1 {
+  overflow-wrap: anywhere;
+}
+
+.racer-driver .racer-lever {
+  width: 260px;
+  max-width: 100%;
+}
+
+.racer-avatar {
+  width: clamp(64px, 14dvh, 96px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--paper-2);
+  box-shadow: var(--shadow);
+  display: grid;
+  place-items: center;
+}
+
+.racer-avatar .avatar {
+  width: 86%;
+  height: 86%;
+}
+
+/* answering */
+
+.racer-game .answering {
+  gap: 8px;
+  padding-top: 10px;
+}
+
+.racer-game .answers {
+  min-height: 0;
+  gap: 8px;
+}
+
+.racer-game .answer {
+  min-height: 0;
+  overflow: hidden;
+  padding: 8px 14px;
+  font-size: clamp(15px, 4.4vw, 20px);
+  line-height: 1.2;
+}
+
+.racer-game .q-img {
+  flex: 0 1 18vh;
+  min-height: 0;
+  max-height: 18vh;
+}
+
+.racer-unarmed {
+  pointer-events: none;
+}
+
+.racer-chip {
+  padding: 6px 10px;
+  border-left: 4px solid #ff8a1f;
+  border-radius: 8px;
+  background: #2b4fa8;
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.racer-chip b {
+  color: #ffc04d;
+  font-weight: 900;
+}
+
+/* reveal */
+
+.racer-reveal {
+  padding: 0;
+  gap: 0;
+}
+
+.racer-reveal-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 14px;
+}
+
+.racer-reveal-mine {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.racer-reveal .verdict {
+  flex: none;
+  padding: 10px 12px 12px;
+  gap: 4px;
+}
+
+.racer-reveal .verdict-icon {
+  font-size: 36px;
+}
+
+.racer-reveal .reveal-item {
+  padding: 8px 12px;
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.racer-card {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 10px 14px;
+  border: 2px solid #2b4fa8;
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.4);
+  text-align: center;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.racer-card-big {
+  font-size: clamp(26px, 8.5vw, 38px);
+  font-weight: 900;
+  line-height: 1.15;
+  color: #ffc04d;
+}
+
+.racer-card-big.up {
+  color: #5fe07f;
+}
+
+.racer-card-big.down {
+  color: #ff8a1f;
+}
+
+.racer-strip {
+  flex: none;
+  height: 22dvh;
+  border-top: 3px solid #ff8a1f;
+}
+
+/* podium */
+
+.racer-podium .final-rank {
+  font-size: clamp(44px, 15vw, 72px);
+  color: #ffc04d;
+}
+
+.racer-podium .big-score {
+  font-size: clamp(17px, 5vw, 22px);
+}
+
+.racer-mine {
+  width: 100%;
+  max-width: 320px;
+}
+
+/* A phone on its side: the two halves of each screen sit next to each other. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .racer-drive {
+    flex-direction: row;
+    gap: 16px;
+  }
+
+  .racer-info {
+    flex: 1;
+  }
+
+  .racer-controls {
+    flex: 1.3;
+    flex-direction: row;
+    align-items: stretch;
+  }
+
+  .racer-go-wrap {
+    justify-content: center;
+  }
+
+  .racer-go {
+    height: clamp(76px, 26dvh, 120px);
+  }
+
+  .racer-watch {
+    flex-flow: row wrap;
+    align-content: center;
+    column-gap: 32px;
+  }
+
+  .racer-watch .racer-driver h1 {
+    font-size: 24px;
+  }
+
+  .racer-watch .racer-q {
+    flex-basis: 100%;
+  }
+
+  .racer-lever.small {
+    height: clamp(110px, 36dvh, 170px);
+  }
+
+  .racer-game .answers.n3,
+  .racer-game .answers.n4 {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .racer-reveal-body {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .racer-reveal-mine,
+  .racer-reveal-body .racer-card {
+    flex: 1;
+  }
+
+  .racer-reveal .verdict {
+    flex-direction: row;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  .racer-podium {
+    gap: 6px;
+    padding: 8px 16px;
+  }
+
+  .racer-podium .final-rank {
+    font-size: 44px;
+  }
+}

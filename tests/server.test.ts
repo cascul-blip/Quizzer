@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { INTRO_MS } from "../src/server/game/game.ts";
+import { AUTO_REVEAL_MS, INTRO_MS } from "../src/server/game/game.ts";
+import { RacerGame } from "../src/server/game/racer.ts";
 import { COUNTDOWN_MS, DROP_COOLDOWN_MS, FEEDBACK_MS } from "../src/server/game/tower.ts";
 import { COUNTDOWN_MS as FIGHT_COUNTDOWN_MS, RESULT_MS } from "../src/server/game/fight.ts";
 import { COUNTDOWN_MS as LAND_COUNTDOWN_MS } from "../src/server/game/land.ts";
@@ -700,6 +701,130 @@ describe("Land Grab over WebSockets", () => {
     host.send({ type: "host.open", quizId: quiz.id });
     await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "land" && v.land.minutes === 3);
     host.send({ type: "host.close" });
+    [host, ...players].forEach((s) => s.close());
+  });
+});
+
+describe("Racer over WebSockets", () => {
+  test("lobby → lever → go → answers → reveal → auto pacing → skip → end → results", async () => {
+    const quiz = store.create({
+      title: "Racer E2E",
+      questions: [1, 2, 3].map((n) => ({ type: "multiple_choice", text: `Q${n}`, options: ["right", "wrong"], correct: [0], timeLimitSec: 10 })),
+    });
+    const wsUrl = `ws://localhost:${srv.port}/ws`;
+    const host = await TestSocket.open(wsUrl);
+    host.send({ type: "host.hello" });
+    await host.hostState((v) => v.kind === "idle");
+    host.send({ type: "host.open", quizId: quiz.id });
+    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
+    host.send({ type: "host.setMode", mode: "racer" });
+    await host.hostState((v) => v.kind === "classic" && v.mode === "racer" && v.teams === null);
+
+    const names = ["Ann", "Bob"];
+    const players = await Promise.all(names.map(() => TestSocket.open(wsUrl)));
+    for (const [i, p] of players.entries()) {
+      await p.playerState((v) => v.kind === "none" && !!v.game);
+      p.send({ type: "join", nickname: names[i]! });
+      await p.waitFor((m) => m.type === "joined");
+    }
+    await host.hostState((v) => v.kind === "classic" && v.players.length === 2);
+
+    // Straight into turn 1: one of them drives, the options are hidden.
+    host.send({ type: "host.start", pacing: "manual" });
+    const started = await host.hostState((v) => v.kind === "racer" && v.phase === "confidence");
+    const first = started.view.kind === "racer" ? started.view : null;
+    expect(first).toMatchObject({ pacing: "manual", lever: "low", confidence: null, playerCount: 2, car: { speed: 30, crashed: false } });
+    expect(first!.question).toMatchObject({ index: 0, total: 3, text: "Q1", options: [] });
+    const driverName = first!.driver!.nickname;
+    const driver = players[names.indexOf(driverName)]!;
+    const other = players[1 - names.indexOf(driverName)]!;
+    await driver.playerState((v) => v.kind === "racer" && v.phase === "confidence" && v.isDriver);
+    await other.playerState((v) => v.kind === "racer" && v.phase === "confidence" && !v.isDriver && v.driver?.nickname === driverName);
+
+    // Only the driver has the lever: the other phone's attempts are rejected and its state is sent again.
+    other.msgs.length = 0;
+    other.send({ type: "racer.lever", level: "high" });
+    other.send({ type: "racer.go" });
+    await other.playerState((v) => v.kind === "racer" && v.phase === "confidence" && v.lever === "low");
+    await other.playerState((v) => v.kind === "racer" && v.phase === "confidence" && v.lever === "low");
+    expect(srv.hub.game instanceof RacerGame && [srv.hub.game.phase, srv.hub.game.lever]).toEqual(["confidence", "low"]);
+
+    driver.send({ type: "racer.lever", level: "mid" });
+    await host.hostState((v) => v.kind === "racer" && v.lever === "mid" && v.confidence === null);
+    await other.playerState((v) => v.kind === "racer" && v.lever === "mid");
+    driver.send({ type: "racer.go" });
+    const open = await host.hostState((v) => v.kind === "racer" && v.phase === "open");
+    expect(open.view.kind === "racer" && [open.view.confidence, open.view.question!.options]).toEqual(["mid", ["right", "wrong"]]);
+
+    // Classic-only host controls say which mode is in the way.
+    host.send({ type: "host.setShuffle", questions: true, answers: true });
+    expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: "Not available in Racer" });
+
+    // Everyone right at "Confident": +20 mph.
+    for (const p of players) {
+      await p.playerState((v) => v.kind === "racer" && v.phase === "open" && v.question!.options.length === 2);
+      p.send({ type: "racer.answer", index: 0, option: 0 });
+    }
+    const reveal = await host.hostState((v) => v.kind === "racer" && v.phase === "reveal");
+    expect(reveal.view.kind === "racer" && reveal.view).toMatchObject({
+      correct: [0],
+      answerCounts: [2, 0],
+      answeredCount: 2,
+      car: { speed: 50, crashed: false, topSpeed: 50 },
+      lastTurn: { index: 0, driver: { nickname: driverName }, confidence: "mid", correct: 2, total: 2, gain: 20, fails: 0, speedBefore: 30, speedAfter: 50 },
+    });
+    const mine = await other.playerState((v) => v.kind === "racer" && v.phase === "reveal");
+    expect(mine.view.kind === "racer" && mine.view).toMatchObject({ reveal: { choice: 0, correct: [0], wasCorrect: true }, me: { correct: 1 }, car: { speed: 50 } });
+
+    // Pacing can change mid-game: on auto the reveal moves on by itself.
+    host.send({ type: "host.setPacing", pacing: "auto" });
+    await host.hostState((v) => v.kind === "racer" && v.phase === "reveal" && v.pacing === "auto");
+    clock.advance(AUTO_REVEAL_MS);
+    srv.hub.broadcast();
+    const second = await host.hostState((v) => v.kind === "racer" && v.phase === "confidence" && v.question?.index === 1);
+    expect(second.view.kind === "racer" && second.view.driver!.nickname).not.toBe(driverName);
+
+    // The host skips the lever (locked on "Not confident"), then closes the question with one wrong answer in.
+    host.send({ type: "host.skip" });
+    await host.hostState((v) => v.kind === "racer" && v.phase === "open" && v.confidence === "low");
+    await players[0]!.playerState((v) => v.kind === "racer" && v.phase === "open");
+    players[0]!.send({ type: "racer.answer", index: 1, option: 1 });
+    await host.hostState((v) => v.kind === "racer" && v.phase === "open" && v.answeredCount === 1);
+    host.send({ type: "host.skip" });
+    const failed = await host.hostState((v) => v.kind === "racer" && v.phase === "reveal" && v.lastTurn?.index === 1);
+    expect(failed.view.kind === "racer" && failed.view).toMatchObject({ car: { speed: 25, crashed: false }, lastTurn: { correct: 0, total: 2, fails: 1, speedBefore: 50, speedAfter: 25 } });
+    // Too late: the answer is rejected and the phone gets its state again.
+    await players[1]!.playerState((v) => v.kind === "racer" && v.phase === "reveal");
+    players[1]!.msgs.length = 0;
+    players[1]!.send({ type: "racer.answer", index: 1, option: 0 });
+    const late = await players[1]!.playerState((v) => v.kind === "racer");
+    expect(late.view.kind === "racer" && late.view).toMatchObject({ phase: "reveal", myChoice: null, reveal: { choice: null, wasCorrect: false } });
+
+    // Next question, then the host ends the game before it opens: that turn is dropped.
+    host.send({ type: "host.next" });
+    await host.hostState((v) => v.kind === "racer" && v.phase === "confidence" && v.question?.index === 2);
+    host.send({ type: "host.end" });
+    const podium = await host.hostState((v) => v.kind === "racer" && v.phase === "podium");
+    expect(podium.view.kind === "racer" && podium.view).toMatchObject({
+      result: { distance: 12.5, topSpeed: 50, crashes: 0, turns: 2 },
+      awards: { mostCorrect: { value: 1, nicknames: ["Ann", "Bob"] }, bestDriver: { value: 20, nicknames: [driverName] } },
+      errors: [{ wrong: 1, text: "Q2", answers: ["right"] }],
+      hasResults: true,
+    });
+    const end = await driver.playerState((v) => v.kind === "racer" && v.phase === "podium" && !!v.result);
+    expect(end.view.kind === "racer" && end.view.result).toEqual({ distance: 12.5, topSpeed: 50, crashes: 0, turns: 2, awards: ["Most correct answers", "Best driver"] });
+    const csv = await (await fetch(`${base}/api/results/latest.csv`)).text();
+    expect(csv).toContain("Nickname,Correct,Wrong,Accuracy %,Turns driven,Mph gained,Fail points as driver");
+    expect(csv).toContain("Ann,1,1,50,1,");
+    expect(csv).toContain(",12.5,50,0");
+
+    // Play again keeps Racer and the pacing.
+    host.send({ type: "host.open", quizId: quiz.id });
+    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "racer" && v.pacing === "auto");
+    host.send({ type: "host.setPacing", pacing: "manual" });
+    await host.hostState((v) => v.kind === "classic" && v.pacing === "manual");
+    host.send({ type: "host.close" });
+    await host.hostState((v) => v.kind === "idle");
     [host, ...players].forEach((s) => s.close());
   });
 });

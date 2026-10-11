@@ -3,6 +3,7 @@ import { join } from "node:path";
 import type { FightGame } from "./fight.ts";
 import type { Game } from "./game.ts";
 import type { LandGame } from "./land.ts";
+import type { RacerGame } from "./racer.ts";
 import type { RobotGame } from "./robot.ts";
 import type { SubGame } from "./submarine.ts";
 import type { TowerGame } from "./tower.ts";
@@ -102,6 +103,19 @@ export function buildLandResultsCsv(game: LandGame): string {
       rows.push([t.name, t.rank, t.tiles, by, p.nickname, p.correct, p.wrong, answered ? Math.round((p.correct / answered) * 100) : "", p.placed, p.stolen, p.captured]);
     }
   }
+  return toCsv([header, ...rows]);
+}
+
+/** Racer: one row per player; the class's shared distance, top speed and crashes are in every row. */
+export function buildRacerResultsCsv(game: RacerGame): string {
+  const header = ["Nickname", "Correct", "Wrong", "Accuracy %", "Turns driven", "Mph gained", "Fail points as driver", "Class distance (miles)", "Top speed (mph)", "Crashes"];
+  const round = (v: number) => Math.round(v * 100) / 100;
+  const rows: (string | number)[][] = [...game.players.values()]
+    .sort((a, b) => b.correct - a.correct || b.mphGained - a.mphGained)
+    .map((p) => {
+      const answered = p.correct + p.wrong;
+      return [p.nickname, p.correct, p.wrong, answered ? Math.round((p.correct / answered) * 100) : "", p.turnsDriven, p.mphGained, p.failsAsDriver, round(game.car.distance), round(game.car.topSpeed), game.car.crashes];
+    });
   return toCsv([header, ...rows]);
 }
 
