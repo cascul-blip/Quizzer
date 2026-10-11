@@ -3,7 +3,8 @@
  * Classic = upbeat game show, Tallest Tower = retro chiptune,
  * Submarine Squad = deep-sea suspense, Tower Fight = medieval battle,
  * Robot Attack = machine-cult chant over a D drone,
- * Land Grab = bouncy dance-pop.
+ * Land Grab = bouncy dance-pop,
+ * Racer = sunny late-80s arcade-racing chiptune (tempo follows the car's speed).
  * Any of these can be replaced by an audio file in data/music/<id>.<ext>.
  */
 import type { MusicTrackId } from "../../../shared/music-tracks.ts";
@@ -557,6 +558,163 @@ const landResults: Track = {
   ],
 };
 
+// ---------- Racer: sunny coastal-drive arcade chiptune ----------
+// A major, in the IV-V-iii-vi mould of late-80s arcade racers: octave-hopping
+// triangle bass, syncopated square lead, pulse stabs and arpeggios, noise drums.
+
+/** Driving eighth-note octave bass: low low HIGH low low HIGH low HIGH. */
+const octaves = (low: string, high: string) => arp([low, low, high, low, low, high, low, high], 2);
+/** Short syncopated chord stabs. */
+const stabs = (notes: string) => pump(chord(notes), "..x..x..x...x.x.");
+
+const RACER_LOBBY_ROOTS = ["A1", "F#1", "D2", "E2"];
+
+const racerLobby: Track = {
+  id: "racer-lobby",
+  bpm: 104,
+  bars: 8,
+  swing: 0.08,
+  layers: [
+    { inst: "kick", bars: [drum("x.....x...x.....")], vol: 0.75 },
+    { inst: "chipnoise", bars: [drum("....o.......o..."), drum("....o.......o.x.")], vol: 0.6 },
+    { inst: "hat", bars: [drum("..x...x...x...x.")], vol: 0.6 },
+    {
+      inst: "tribass",
+      bars: RACER_LOBBY_ROOTS.map((r) => {
+        const up = r.replace(/\d/, (d) => String(Number(d) + 1));
+        return seq([r, 3], [r, 1], [".", 2], [up, 2], [".", 2], [r, 2], [up, 2], [r, 2]);
+      }),
+      vol: 0.9,
+    },
+    { inst: "pulse", bars: [stabs("E4 A4 C#5"), stabs("F#4 A4 C#5"), stabs("F#4 A4 D5"), stabs("E4 G#4 B4")], vol: 0.4 },
+    {
+      inst: "lead",
+      bars: [
+        seq(["E5", 4], ["C#5", 2], ["E5", 2], ["A5", 6], [".", 2]),
+        seq(["A5", 2], ["G#5", 2], ["F#5", 4], ["C#5", 6], [".", 2]),
+        seq(["F#5", 4], ["D5", 2], ["F#5", 2], ["A5", 4], ["F#5", 4]),
+        seq(["G#5", 3], ["F#5", 3], ["E5", 2], ["B4", 6], [".", 2]),
+        seq(["C#6", 4], ["A5", 2], ["E5", 2], ["A5", 6], [".", 2]),
+        seq(["C#6", 2], ["B5", 2], ["A5", 4], ["F#5", 6], [".", 2]),
+        seq(["D6", 3], ["C#6", 3], ["A5", 2], ["F#5", 4], ["A5", 4]),
+        seq(["B5", 4], ["G#5", 4], ["E5", 4], ["G#5", 2], ["B5", 2]),
+      ],
+      vol: 0.7,
+    },
+  ],
+};
+
+// 16 bars: an 8-bar theme (D E C#m F#m / D E A E) and an 8-bar bridge (Bm E A F#m / Bm C#m D E).
+const RACER_ROOTS = ["D2", "E2", "C#2", "F#2", "D2", "E2", "A1", "E2", "B1", "E2", "A1", "F#2", "B1", "C#2", "D2", "E2"];
+const RACER_CHORDS = [
+  "F#4 A4 C#5",
+  "E4 G#4 B4",
+  "E4 G#4 C#5",
+  "F#4 A4 C#5",
+  "F#4 A4 D5",
+  "E4 G#4 B4",
+  "E4 A4 C#5",
+  "E4 G#4 B4",
+  "D4 F#4 B4",
+  "E4 G#4 B4",
+  "E4 A4 C#5",
+  "F#4 A4 C#5",
+  "D4 F#4 B4",
+  "E4 G#4 C#5",
+  "F#4 A4 D5",
+  "E4 G#4 B4",
+];
+const octaveUp = (note: string, by = 1) => note.replace(/\d/, (d) => String(Number(d) + by));
+
+const racerDrive: Track = {
+  id: "racer-drive",
+  // 112 BPM while crawling, about 162 at full speed.
+  bpm: 112,
+  bars: 16,
+  tempoBoost: 0.45,
+  layers: [
+    // Crawling or crashed: just a limping kick and bass.
+    { inst: "kick", bars: [drum("x.......x.......")], vol: 0.8, to: 0.15 },
+    { inst: "tribass", bars: RACER_ROOTS.map((r) => pump(r, "x...x.x.x...x.x.")), vol: 0.85, to: 0.15 },
+    // Rolling: the full rhythm section.
+    { inst: "kick", bars: [drum("x...x...x...x...")], vol: 0.8, from: 0.15 },
+    { inst: "tribass", bars: RACER_ROOTS.map((r) => octaves(r, octaveUp(r))), from: 0.15 },
+    { inst: "chipnoise", bars: [drum("....o.......o...")], vol: 0.8, from: 0.15 },
+    { inst: "pulse", bars: RACER_CHORDS.map(stabs), vol: 0.4, from: 0.15 },
+    { inst: "hat", bars: [drum("..x...x...x...x.")], vol: 0.6, from: 0.3, to: 0.75 },
+    {
+      inst: "lead",
+      bars: [
+        seq(["F#5", 3], ["A5", 3], ["F#5", 2], [".", 2], ["E5", 2], ["F#5", 2], ["A5", 2]),
+        seq(["G#5", 3], ["B5", 3], ["G#5", 2], [".", 2], ["E5", 2], ["G#5", 2], ["B5", 2]),
+        seq(["C#6", 3], ["B5", 3], ["G#5", 2], ["E5", 2], ["G#5", 2], ["B5", 4]),
+        seq(["A5", 6], [".", 2], ["F#5", 2], ["A5", 2], ["C#6", 4]),
+        seq(["D6", 3], ["C#6", 3], ["A5", 2], [".", 2], ["F#5", 2], ["A5", 2], ["D6", 2]),
+        seq(["E6", 3], ["D6", 3], ["B5", 2], [".", 2], ["G#5", 2], ["B5", 2], ["E6", 2]),
+        seq(["C#6", 3], ["B5", 3], ["A5", 2], ["E5", 2], ["A5", 2], ["C#6", 4]),
+        seq(["B5", 4], ["G#5", 2], ["E5", 2], ["F#5", 2], ["G#5", 2], ["B5", 2], ["E5", 2]),
+        seq(["D5", 2], ["F#5", 2], ["B5", 4], ["A5", 2], ["F#5", 2], ["D5", 2], ["F#5", 2]),
+        seq(["E5", 2], ["G#5", 2], ["B5", 4], ["G#5", 2], ["E5", 2], ["G#5", 4]),
+        seq(["C#5", 2], ["E5", 2], ["A5", 4], ["G#5", 2], ["A5", 2], ["C#6", 4]),
+        seq(["C#6", 3], ["A5", 3], ["F#5", 6], [".", 2], ["A5", 2]),
+        seq(["B5", 3], ["D6", 3], ["B5", 2], [".", 2], ["F#5", 2], ["B5", 2], ["D6", 2]),
+        seq(["C#6", 3], ["E6", 3], ["C#6", 2], [".", 2], ["G#5", 2], ["C#6", 2], ["E6", 2]),
+        seq(["F#6", 4], ["E6", 2], ["D6", 2], ["A5", 2], ["D6", 2], ["F#6", 4]),
+        seq(["E6", 3], ["D6", 3], ["B5", 2], ["G#5", 2], ["B5", 2], ["E6", 1], [".", 1], ["E6", 2]),
+      ],
+      vol: 0.85,
+      from: 0.3,
+    },
+    // Cruising: snare with a fill every four bars.
+    { inst: "snare", bars: [drum("....x.......x..."), drum("....x.......x..."), drum("....x.......x..."), drum("....x.....x.x.xx")], vol: 0.55, from: 0.5 },
+    // Fast: sixteenth-note arpeggios.
+    {
+      inst: "pulse",
+      bars: RACER_CHORDS.map((c) => {
+        const [a, b, d] = c.split(" ").map((n) => octaveUp(n)) as [string, string, string];
+        return arp([a, b, d, b]);
+      }),
+      vol: 0.3,
+      from: 0.6,
+    },
+    // Flat out: busy hats and a sparkling top line.
+    { inst: "chipnoise", bars: [drum("xxxxxxxxxxxxxxxx")], vol: 0.28, from: 0.75 },
+    { inst: "openhat", bars: [drum("..x...x...x...x.")], vol: 0.5, from: 0.75 },
+    {
+      inst: "pulse",
+      bars: RACER_CHORDS.map((c) => {
+        const [a, b, d] = c.split(" ").map((n) => octaveUp(n, 2)) as [string, string, string];
+        return arp([d, ".", b, a, ".", b, d, "."]);
+      }),
+      vol: 0.22,
+      from: 0.87,
+    },
+  ],
+};
+
+const racerResults: Track = {
+  id: "racer-results",
+  bpm: 138,
+  bars: 4,
+  layers: [
+    { inst: "kick", bars: [drum("x...x...x...x...")], vol: 0.75 },
+    { inst: "chipnoise", bars: [drum("....o.......o..."), drum("....o.......o..."), drum("....o.......o..."), drum("....o...o.o.oooo")], vol: 0.7 },
+    { inst: "hat", bars: [drum("..x...x...x...x.")], vol: 0.6 },
+    { inst: "tribass", bars: [octaves("A1", "A2"), octaves("D2", "D3"), octaves("E2", "E3"), octaves("A1", "A2")] },
+    { inst: "pulse", bars: [arp(["A4", "C#5", "E5", "C#5"]), arp(["A4", "D5", "F#5", "D5"]), arp(["G#4", "B4", "E5", "B4"]), arp(["A4", "C#5", "E5", "A5"])], vol: 0.35 },
+    {
+      inst: "lead",
+      bars: [
+        seq(["E5", 2], ["A5", 2], ["C#6", 2], ["E6", 6], ["C#6", 2], ["E6", 2]),
+        seq(["F#6", 4], ["D6", 2], ["F#6", 2], ["A6", 8]),
+        seq(["G#6", 2], ["F#6", 2], ["E6", 2], ["D6", 2], ["B5", 4], ["E6", 4]),
+        seq(["A6", 3], ["E6", 3], ["A6", 2], [".", 2], ["A6", 2], ["A6", 4]),
+      ],
+      vol: 0.8,
+    },
+  ],
+};
+
 export const TRACKS: Record<MusicTrackId, Track> = {
   "classic-lobby": classicLobby,
   "classic-question": classicQuestion,
@@ -579,4 +737,7 @@ export const TRACKS: Record<MusicTrackId, Track> = {
   "land-lobby": landLobby,
   "land-play": landPlay,
   "land-results": landResults,
+  "racer-lobby": racerLobby,
+  "racer-drive": racerDrive,
+  "racer-results": racerResults,
 };

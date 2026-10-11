@@ -1,6 +1,6 @@
 /** Tiny synthesized sound effects (WebAudio), so no audio files need to be shipped. */
 
-export type Sfx = "tick" | "tickHigh" | "timeUp" | "reveal" | "join" | "start" | "fanfare" | "thud" | "floor" | "rumble" | "roar" | "whoosh" | "chomp" | "bubble" | "heartbeat" | "laser" | "alarm" | "plant" | "capture" | "conquer";
+export type Sfx = "tick" | "tickHigh" | "timeUp" | "reveal" | "join" | "start" | "fanfare" | "thud" | "floor" | "rumble" | "roar" | "whoosh" | "chomp" | "bubble" | "heartbeat" | "laser" | "alarm" | "plant" | "capture" | "conquer" | "gearUp" | "skid" | "crash" | "repair" | "leverClick";
 
 const MUTE_KEY = "quizzer.muted";
 let ctx: AudioContext | null = null;
@@ -125,6 +125,33 @@ export function play(sfx: Sfx): void {
       tone(65, 0, 0.9, "sawtooth", 0.2);
       [392, 392, 523.25, 659.25, 783.99].forEach((f, i) => tone(f, 0.1 + i * 0.12, i === 4 ? 0.7 : 0.14, "square", 0.09));
       return;
+    case "gearUp":
+      // Speed gained: quick rising square blips, the last one held a little.
+      [330, 440, 554.37, 659.25, 880].forEach((f, i) => tone(f, i * 0.055, i === 4 ? 0.13 : 0.07, "square", 0.07));
+      return;
+    case "skid":
+      // Speed lost: two detuned saws sliding down in small steps, like a tyre screech.
+      [1500, 1380, 1260, 1130, 1010, 900, 800, 720].forEach((f, i) => {
+        tone(f, i * 0.045, 0.09, "sawtooth", 0.04);
+        tone(f * 1.07, i * 0.045, 0.09, "sawtooth", 0.035);
+      });
+      return;
+    case "crash":
+      // A harsh low crunch (clashing squares and saws), then a tone falling away.
+      [47, 61, 83, 113].forEach((f, i) => tone(f, i * 0.015, 0.4 - i * 0.05, i % 2 ? "sawtooth" : "square", 0.16));
+      [1900, 1370].forEach((f) => tone(f, 0, 0.05, "square", 0.05));
+      [392, 330, 262, 196, 147, 98].forEach((f, i) => tone(f, 0.12 + i * 0.08, 0.16, "sawtooth", 0.08));
+      return;
+    case "repair":
+      // Two ratchet clicks, then a bright rising two-note chime.
+      [0, 0.09].forEach((t) => {
+        tone(1700, t, 0.025, "square", 0.07);
+        tone(240, t, 0.04, "square", 0.08);
+      });
+      tone(783.99, 0.2, 0.14, "triangle", 0.16);
+      return tone(1174.66, 0.3, 0.24, "triangle", 0.16);
+    case "leverClick":
+      return tone(1500, 0, 0.025, "square", 0.035);
     case "fanfare":
       [523.25, 523.25, 523.25, 698.46, 880, 1046.5].forEach((f, i) => tone(f, i * 0.14, i === 5 ? 0.9 : 0.16, "triangle", 0.18));
       return;

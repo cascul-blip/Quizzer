@@ -904,3 +904,222 @@ a.btn {
 .start-mark.out {
   opacity: 0.35;
 }
+
+/* ----- Racer scene (shared by projector and phones) ----- */
+
+/* Everything is sized in --racer-u, 1% of the scene's height (set by RacerScene, with the
+   two tile widths in whole pixels). Layers are anchored to the bottom, back to front. */
+.racer-scene {
+  --racer-u: 2px;
+  --racer-skyline-w: calc(var(--racer-u) * 380);
+  --racer-dash-w: calc(var(--racer-u) * 30);
+  --racer-road: calc(var(--racer-u) * 26);
+  /* One pixel of the car sprite: it is 160 wide and drawn 85 units wide. */
+  --racer-px: calc(var(--racer-u) * 85 / 160);
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #24202e;
+}
+
+.racer-scene > div {
+  position: absolute;
+}
+
+.racer-scene img,
+.racer-scene-skyline {
+  image-rendering: pixelated;
+}
+
+.racer-scene-sky {
+  inset: 0 0 var(--racer-road) 0;
+  background: linear-gradient(
+    to bottom,
+    #1b1340 0 14.3%,
+    #28144a 14.3% 28.6%,
+    #351653 28.6% 42.9%,
+    #43175d 42.9% 57.1%,
+    #501867 57.1% 71.4%,
+    #5d1a70 71.4% 85.7%,
+    #6a1b7a 85.7% 100%
+  );
+}
+
+.racer-scene-sun {
+  left: 30%;
+  bottom: var(--racer-road);
+  width: calc(var(--racer-u) * 58);
+  height: calc(var(--racer-u) * 58);
+  margin-left: calc(var(--racer-u) * -29);
+  border-radius: 50%;
+  background: #ff8a1f;
+  --racer-slits: linear-gradient(
+    to bottom,
+    #000 0 40%,
+    transparent 40% 42%,
+    #000 42% 51%,
+    transparent 51% 54%,
+    #000 54% 62%,
+    transparent 62% 66.5%,
+    #000 66.5% 74%,
+    transparent 74% 80%,
+    #000 80% 87%,
+    transparent 87% 94%,
+    #000 94% 100%
+  );
+  -webkit-mask-image: var(--racer-slits);
+  mask-image: var(--racer-slits);
+}
+
+.racer-scene-skyline {
+  left: 0;
+  right: 0;
+  bottom: var(--racer-road);
+  height: calc(var(--racer-u) * 40);
+  background-repeat: repeat-x;
+  background-size: var(--racer-skyline-w) 100%;
+  background-position: 0 100%;
+}
+
+/* Twice the scene's width, starting one width off to the left; RacerScene slides it right. */
+.racer-scene-palms {
+  left: -100%;
+  bottom: var(--racer-road);
+  width: 200%;
+  height: calc(var(--racer-u) * 64);
+  will-change: transform;
+}
+
+.racer-scene-palm-row {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 50%;
+}
+
+.racer-scene-palm-row + .racer-scene-palm-row {
+  left: 50%;
+}
+
+.racer-scene-palm {
+  position: absolute;
+  bottom: 0;
+  height: 100%;
+}
+
+.racer-scene-road {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--racer-road);
+  background: #24202e;
+  border-top: calc(var(--racer-u) * 1.2) solid #ff8a1f;
+  box-sizing: border-box;
+}
+
+.racer-scene-dashes {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 46%;
+  height: calc(var(--racer-u) * 1.6);
+  background: linear-gradient(to right, #ffc23d 0 47%, transparent 47% 100%) repeat-x;
+  background-size: var(--racer-dash-w) 100%;
+}
+
+/* Centred at 60% of the width, wheels on the road below the centre line. */
+.racer-scene-car {
+  left: 60%;
+  bottom: calc(var(--racer-u) * 7);
+  width: calc(var(--racer-u) * 85);
+  margin-left: calc(var(--racer-u) * -42.5);
+}
+
+.racer-scene-car img {
+  display: block;
+  width: 100%;
+}
+
+.racer-scene-car.moving img {
+  animation: racer-bob 0.4s steps(1) infinite;
+}
+
+.racer-scene-car.moving.fast img {
+  animation-duration: 0.2s;
+}
+
+/* Wrecked: tipped onto its nose around the front wheel. */
+.racer-scene.crashed .racer-scene-car img {
+  animation: none;
+  transform: rotate(-1.5deg);
+  transform-origin: 22% 100%;
+}
+
+@keyframes racer-bob {
+  50% {
+    transform: translateY(var(--racer-px));
+  }
+}
+
+/* A column of square puffs from the engine lid, at the back (the right end). */
+.racer-scene-smoke {
+  position: absolute;
+  left: 88%;
+  top: 42%;
+}
+
+.racer-scene-smoke i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(var(--racer-px) * 6);
+  height: calc(var(--racer-px) * 6);
+  background: #a39db0;
+  box-shadow:
+    calc(var(--racer-px) * 3) calc(var(--racer-px) * -3) 0 #6f697c,
+    calc(var(--racer-px) * -3) calc(var(--racer-px) * -2) 0 #d2cddb;
+  opacity: 0;
+  animation: racer-smoke 1.6s steps(8) infinite;
+}
+
+.racer-scene-smoke i:nth-child(2) {
+  --racer-drift: 7;
+  animation-delay: -0.4s;
+}
+
+.racer-scene-smoke i:nth-child(3) {
+  --racer-drift: -1;
+  animation-delay: -0.8s;
+}
+
+.racer-scene-smoke i:nth-child(4) {
+  --racer-drift: 10;
+  animation-delay: -1.2s;
+}
+
+@keyframes racer-smoke {
+  from {
+    opacity: 1;
+    transform: translate(0, 0) scale(0.5);
+  }
+  60% {
+    opacity: 0.85;
+  }
+  to {
+    opacity: 0;
+    transform: translate(calc(var(--racer-u) * var(--racer-drift, 3)), calc(var(--racer-u) * -36)) scale(2.2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .racer-scene-car.moving img {
+    animation: none;
+  }
+
+  /* No rising: the puffs stand still as a column. */
+  .racer-scene-smoke i {
+    animation-play-state: paused;
+  }
+}

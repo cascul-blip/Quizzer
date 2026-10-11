@@ -6,7 +6,8 @@ import { ValidationError } from "../shared/quiz-schema.ts";
 import { FightGame } from "./game/fight.ts";
 import { DEFAULT_FIGHT, DEFAULT_LAND, DEFAULT_TOWER, Game, GameError, type Clock } from "./game/game.ts";
 import { LandGame } from "./game/land.ts";
-import { buildFightResultsCsv, buildLandResultsCsv, buildResultsCsv, buildRobotResultsCsv, buildSubResultsCsv, buildTowerResultsCsv, writeResultsFile } from "./game/results.ts";
+import { RacerGame } from "./game/racer.ts";
+import { buildFightResultsCsv, buildLandResultsCsv, buildRacerResultsCsv, buildResultsCsv, buildRobotResultsCsv, buildSubResultsCsv, buildTowerResultsCsv, writeResultsFile } from "./game/results.ts";
 import { RobotGame } from "./game/robot.ts";
 import { SubGame } from "./game/submarine.ts";
 import { TowerGame } from "./game/tower.ts";
@@ -41,7 +42,7 @@ const PACINGS = new Set<Pacing>(["manual", "auto"]);
 /** In Tallest Tower, answers stream in constantly: the acting player is updated at once, everyone else at most this often. */
 const ACTIVITY_THROTTLE_MS = 100;
 
-export type LiveGame = Game | TowerGame | SubGame | FightGame | RobotGame | LandGame;
+export type LiveGame = Game | TowerGame | SubGame | FightGame | RobotGame | LandGame | RacerGame;
 
 /** Owns the single live game and every connected socket; pushes full view snapshots on each change. */
 export class GameHub {
@@ -57,8 +58,8 @@ export class GameHub {
   private qrCache = new Map<string, string>();
   private broadcastQueued = false;
   private activityTimer: ReturnType<typeof setTimeout> | null = null;
-  /** Mode and mode settings carry over to the next lobby ("Play again"). */
-  private lastSetup: { mode: GameMode; tower: TowerSettings; fight: FightSettings; land: LandSettings; protect: boolean } = { mode: "classic", tower: DEFAULT_TOWER, fight: DEFAULT_FIGHT, land: DEFAULT_LAND, protect: true };
+  /** Mode, mode settings and pacing carry over to the next lobby ("Play again"). */
+  private lastSetup: { mode: GameMode; tower: TowerSettings; fight: FightSettings; land: LandSettings; protect: boolean; pacing: Pacing } = { mode: "classic", tower: DEFAULT_TOWER, fight: DEFAULT_FIGHT, land: DEFAULT_LAND, protect: true, pacing: "manual" };
   private readonly log: (msg: string) => void;
 
   constructor(
@@ -294,6 +295,21 @@ export class GameHub {
         if (!this.game.done(ws.data.playerId)) this.sendState(ws);
         return;
       }
+      case "racer.lever": {
+        if (!(this.game instanceof RacerGame) || !ws.data.playerId) return;
+        if (!this.game.setLever(ws.data.playerId, msg.level)) this.sendState(ws);
+        return;
+      }
+      case "racer.go": {
+        if (!(this.game instanceof RacerGame) || !ws.data.playerId) return;
+        if (!this.game.go(ws.data.playerId)) this.sendState(ws);
+        return;
+      }
+      case "racer.answer": {
+        if (!(this.game instanceof RacerGame) || !ws.data.playerId) return;
+        if (!this.game.answer(ws.data.playerId, Number(msg.index), Number(msg.option))) this.sendState(ws);
+        return;
+      }
       case "tower.drop": {
         if (!(this.game instanceof TowerGame) || !ws.data.playerId) return;
         if (this.game.drop(ws.data.playerId, Number(msg.zone)) === null) this.sendState(ws);
@@ -311,8 +327,13 @@ export class GameHub {
     };
     const classic = () => {
       const g = game();
-      if (!(g instanceof Game)) throw new GameError(`Not available in ${g instanceof TowerGame ? "Tallest Tower" : g instanceof SubGame ? "Submarine Squad" : g instanceof RobotGame ? "Robot Attack" : g instanceof LandGame ? "Land Grab" : "Tower Fight"}`);
+      if (!(g instanceof Game)) throw new GameError(`Not available in ${g instanceof TowerGame ? "Tallest Tower" : g instanceof SubGame ? "Submarine Squad" : g instanceof RobotGame ? "Robot Attack" : g instanceof LandGame ? "Land Grab" : g instanceof RacerGame ? "Racer" : "Tower Fight"}`);
       return g;
+    };
+    /** Classic and Racer are both paced question by question: next, skip and pacing work in either. */
+    const paced = () => {
+      const g = game();
+      return g instanceof RacerGame ? g : classic();
     };
     switch (msg.type) {
       case "host.hello":
@@ -339,11 +360,17 @@ export class GameHub {
         if (lobby.phase === "lobby" && lobby.mode === "fight") return this.startFight(lobby);
         if (lobby.phase === "lobby" && lobby.mode === "robot") return this.startRobot(lobby);
         if (lobby.phase === "lobby" && lobby.mode === "land") return this.startLand(lobby);
-        return lobby.start(PACINGS.has(msg.pacing) ? msg.pacing : undefined);
+        const pacing = PACINGS.has(msg.pacing) ? msg.pacing : undefined;
+        if (lobby.phase === "lobby" && lobby.mode === "racer") return this.startRacer(lobby, pacing);
+        lobby.start(pacing);
+        this.lastSetup.pacing = lobby.pacing;
+        return;
       }
       case "host.setPacing":
         if (!PACINGS.has(msg.pacing)) throw new GameError("Unknown pacing");
-        return classic().setPacing(msg.pacing);
+        paced().setPacing(msg.pacing);
+        this.lastSetup.pacing = msg.pacing;
+        return;
       case "host.setShuffle":
         return classic().setShuffle({ questions: !!msg.questions, answers: !!msg.answers });
       case "host.setProtect":
@@ -367,9 +394,9 @@ export class GameHub {
         this.lastSetup.land = { ...classic().land };
         return;
       case "host.next":
-        return classic().next();
+        return paced().next();
       case "host.skip":
-        return classic().skip();
+        return paced().skip();
       case "host.end":
         return game().end();
       case "host.setTeam":
@@ -472,6 +499,22 @@ export class GameHub {
     this.log(`Land Grab started: ${land.teams.length} teams, ${land.settings.minutes} min`);
   }
 
+  /** Hand the lobby's players to a Racer game, with the lobby's shuffle choices and pacing. */
+  private startRacer(lobby: Game, pacing?: Pacing): void {
+    if (lobby.players.size === 0) throw new GameError("Wait for at least one player to join");
+    const racer = RacerGame.fromLobby(lobby, {
+      clock: this.opts.clock,
+      onChange: () => this.scheduleBroadcast(),
+      onActivity: (pid) => this.onActivity(pid),
+      onFinish: (g) => this.onFinish(g),
+    });
+    lobby.dispose();
+    this.game = racer;
+    racer.start(pacing);
+    this.lastSetup.pacing = racer.pacing;
+    this.log(`Racer started with ${racer.players.size} player(s), ${racer.questions.length} question(s)`);
+  }
+
   private closeGame(): void {
     if (this.activityTimer) clearTimeout(this.activityTimer);
     this.activityTimer = null;
@@ -493,7 +536,9 @@ export class GameHub {
               ? buildRobotResultsCsv(game)
               : game instanceof LandGame
                 ? buildLandResultsCsv(game)
-                : buildResultsCsv(game);
+                : game instanceof RacerGame
+                  ? buildRacerResultsCsv(game)
+                  : buildResultsCsv(game);
     let file: string | null = null;
     try {
       file = writeResultsFile(game, csv, this.store.resultsDir);

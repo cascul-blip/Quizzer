@@ -12,6 +12,7 @@ import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send 
 import { musicFor } from "./music-cues.ts";
 import { FightStage } from "./fight.tsx";
 import { LandStage } from "./land.tsx";
+import { RacerStage } from "./racer.tsx";
 import { RobotStage } from "./robot.tsx";
 import { SubStage } from "./submarine.tsx";
 import { TowerStage } from "./tower.tsx";
@@ -89,6 +90,8 @@ function App() {
     body = <RobotStage view={view} send={send} />;
   } else if (view.kind === "land") {
     body = <LandStage view={view} send={send} />;
+  } else if (view.kind === "racer") {
+    body = <RacerStage view={view} send={send} />;
   } else {
     body = <Game view={view} send={send} />;
   }
@@ -333,6 +336,7 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
               <option value="fight">🏰 Tower Fight</option>
               <option value="robot">🤖 Robot Attack</option>
               <option value="land">🚩 Land Grab</option>
+              <option value="racer">🏎 Racer</option>
             </select>
           </label>
           {tower ? (
@@ -426,6 +430,7 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
                 />
                 Shuffle question order
               </label>
+              {view.mode === "racer" && <span class="opt mode-hint">One car for the whole class. Each turn a driver bets on how well everyone will answer.</span>}
             </>
           )}
           <label class="opt check">

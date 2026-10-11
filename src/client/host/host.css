@@ -2648,3 +2648,433 @@ select {
   font-size: clamp(22px, 2.6vw, 46px);
   font-weight: 900;
 }
+
+/* ----- Racer stage ----- */
+
+.racer-stage {
+  --racer-deep: #1b1340;
+  --racer-blue: #2b4fa8;
+  --racer-orange: #ff8a1f;
+  --racer-amber: #ffc04d;
+  --racer-mono: ui-monospace, "Cascadia Mono", "DejaVu Sans Mono", Menlo, Consolas, monospace;
+  background: var(--racer-deep);
+}
+
+/* The question and this phase's panel share the upper 55%; the scene keeps the rest whatever the text length. */
+.racer-upper {
+  flex: 55 1 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 1.4vh;
+  padding: 1.6vh 3vw 1.4vh;
+}
+
+.racer-lower {
+  flex: 45 1 0;
+  min-height: 0;
+  position: relative;
+  border-top: 0.5vh solid var(--racer-blue);
+}
+
+.racer-question {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2vw;
+  padding: 1.2vh 2vw;
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: var(--radius);
+}
+
+.racer-question h1 {
+  margin: 0;
+  min-width: 0;
+  text-align: center;
+  font-size: min(3vw, 5.2vh);
+  font-weight: 900;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.racer-question.medium h1 {
+  font-size: min(2.3vw, 4vh);
+}
+
+.racer-question.long h1 {
+  font-size: min(1.7vw, 3vh);
+}
+
+.racer-question img {
+  flex: none;
+  max-width: 22vw;
+  max-height: 13vh;
+  border-radius: 6px;
+  object-fit: contain;
+}
+
+.racer-intro {
+  flex: 1;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  font-size: min(3vw, 5vh);
+  font-weight: 900;
+  color: var(--racer-amber);
+}
+
+.racer-countdown {
+  width: 40px;
+  flex: none;
+}
+
+.racer-countdown span {
+  background: var(--racer-deep);
+  font-size: 15px;
+}
+
+/* confidence: driver, lever, time left */
+
+.racer-confidence {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 3vw;
+}
+
+.racer-confidence .racer-countdown {
+  width: min(10vw, 17vh);
+  justify-self: start;
+}
+
+.racer-confidence .racer-countdown span {
+  font-size: min(4.4vw, 7.4vh);
+}
+
+.racer-driver {
+  justify-self: end;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 1.4vw;
+}
+
+.racer-driver .avatar {
+  width: min(8vw, 13vh);
+  height: min(8vw, 13vh);
+  flex: none;
+}
+
+.racer-driver-name {
+  font-size: min(2.6vw, 4.4vh);
+  font-weight: 900;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.racer-driver-ask {
+  margin-top: 0.6vh;
+  font-size: min(1.5vw, 2.6vh);
+  font-weight: 700;
+  color: var(--on-bg-soft);
+}
+
+.racer-lever {
+  display: flex;
+  align-items: stretch;
+  gap: 2.2vw;
+  padding: 1.2vh 1.8vw 1.2vh 2.4vw;
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid var(--racer-blue);
+  border-radius: var(--radius);
+}
+
+.racer-lever-track {
+  position: relative;
+  width: 1.6vh;
+  flex: none;
+  border-radius: 999px;
+  background: var(--racer-blue);
+}
+
+.racer-lever-handle {
+  position: absolute;
+  left: 50%;
+  width: 6vh;
+  height: 3vh;
+  border-radius: 0.8vh;
+  background: var(--racer-orange);
+  box-shadow: 0 0.5vh 0 rgba(0, 0, 0, 0.35), inset 0 0.5vh 0 rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: top 0.25s ease-out;
+}
+
+.racer-lever-stops {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-auto-rows: 1fr;
+}
+
+.racer-lever-stops li {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0.6vh 0;
+  opacity: 0.5;
+  transition: opacity 0.25s;
+}
+
+.racer-lever-stops li.on {
+  opacity: 1;
+}
+
+.racer-lever-stops b {
+  font-size: min(1.9vw, 3.2vh);
+  font-weight: 900;
+}
+
+.racer-lever-stops li.on b {
+  color: var(--racer-orange);
+}
+
+.racer-lever-stops span {
+  font-size: min(1.25vw, 2.1vh);
+  font-weight: 600;
+  color: var(--on-bg-soft);
+}
+
+/* open and reveal: the classic tiles, sized to the room there is */
+
+.racer-tiles {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0;
+  gap: 1vh 0.8vw;
+  grid-auto-rows: 1fr;
+  max-height: 34vh;
+}
+
+.racer-tiles .tile {
+  min-height: 0;
+  padding: 0.8vh 1.2vw;
+  gap: 1vw;
+  font-size: min(2.3vw, 4vh);
+  line-height: 1.12;
+}
+
+.racer-tiles.medium .tile {
+  font-size: min(1.7vw, 3vh);
+}
+
+.racer-tiles.long .tile {
+  font-size: min(1.3vw, 2.3vh);
+}
+
+.racer-tiles .tile .shape {
+  width: min(2.6vw, 4.4vh);
+  height: min(2.6vw, 4.4vh);
+}
+
+.racer-tiles .tile.right {
+  outline-width: 0.6vh;
+  outline-offset: -0.6vh;
+}
+
+/* Dimmed like Classic's wrong tiles, but the count stays readable. */
+.racer-tiles .tile.wrong {
+  opacity: 1;
+  filter: none;
+  background-image: linear-gradient(rgba(27, 19, 64, 0.76), rgba(27, 19, 64, 0.76));
+  box-shadow: none;
+}
+
+.racer-tiles .tile.wrong > :not(.racer-count) {
+  opacity: 0.45;
+}
+
+.racer-count {
+  flex: none;
+  min-width: 1.9em;
+  padding: 0.1em 0.4em;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+  text-align: center;
+  font-size: min(1.8vw, 3.1vh);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.racer-result {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2vw;
+}
+
+.racer-banner {
+  min-width: 0;
+  padding: 0.7vh 2vw;
+  background: rgba(0, 0, 0, 0.35);
+  border-left: 0.8vh solid var(--racer-amber);
+  border-radius: var(--radius);
+  animation: pop-in 0.3s ease-out;
+}
+
+.racer-banner.gain {
+  border-left-color: var(--good);
+}
+
+.racer-banner.fail {
+  border-left-color: var(--racer-orange);
+}
+
+.racer-banner.crash {
+  border-left-color: var(--bad);
+}
+
+.racer-banner-score {
+  font-size: min(1.5vw, 2.6vh);
+  font-weight: 700;
+  color: var(--on-bg-soft);
+}
+
+.racer-banner-outcome {
+  font-size: min(2.2vw, 3.8vh);
+  font-weight: 900;
+  color: var(--racer-amber);
+}
+
+.racer-result .btn.next {
+  flex: none;
+  font-size: min(1.6vw, 2.8vh);
+}
+
+/* the readouts over the scene */
+
+.racer-hud {
+  position: absolute;
+  bottom: 1.6vh;
+  max-width: 44vw;
+  padding: 1vh 1.4vw;
+  background: rgba(10, 8, 20, 0.86);
+  border: 2px solid rgba(255, 255, 255, 0.14);
+  border-radius: 4px;
+  font-family: var(--racer-mono);
+  font-weight: 700;
+  line-height: 1.15;
+  color: #f1edf9;
+}
+
+.racer-hud-car {
+  left: 1.4vw;
+}
+
+.racer-hud-driver {
+  right: 1.4vw;
+  text-align: right;
+}
+
+.racer-hud-speed {
+  font-size: min(4.4vw, 7.4vh);
+  font-weight: 900;
+  color: var(--racer-orange);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.racer-hud-speed.crashed {
+  color: #ff4d5e;
+}
+
+.racer-hud-line {
+  font-size: min(1.5vw, 2.6vh);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.racer-hud-level {
+  margin-top: 0.4vh;
+  font-size: min(1.9vw, 3.2vh);
+  font-weight: 900;
+  color: var(--racer-amber);
+  text-transform: uppercase;
+}
+
+/* podium */
+
+.racer-podium h1 {
+  margin-bottom: 1.6vh;
+  background: var(--racer-orange);
+  color: #1b0d00;
+}
+
+.racer-stats {
+  font-family: var(--racer-mono);
+  font-size: clamp(16px, 1.7vw, 30px);
+  font-weight: 700;
+  color: var(--racer-amber);
+  text-align: center;
+}
+
+.racer-players {
+  list-style: none;
+  margin: 2vh 0 0;
+  padding: 0;
+  width: min(1500px, 100%);
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(330px, 100%), 1fr));
+  align-content: start;
+  gap: 0.8vh 1vw;
+}
+
+.racer-players li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0.6vh 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  font-size: clamp(14px, 1.2vw, 22px);
+  font-weight: 800;
+}
+
+.racer-players .avatar {
+  width: 1.7em;
+  height: 1.7em;
+  flex: none;
+}
+
+.racer-players .n {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.racer-players .s {
+  flex: none;
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--on-bg-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.racer-podium-strip {
+  flex: none;
+  align-self: stretch;
+  height: 15vh;
+  margin: 0 -4vw;
+}
