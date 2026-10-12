@@ -514,6 +514,31 @@ function Editor({ id, notify }: { id: string; notify: (m: string) => void }) {
   );
 }
 
+/** Longest side of a question image; phones never show them bigger, and every phone downloads each one. */
+const MAX_IMAGE_SIDE = 1280;
+/** Images smaller than this are uploaded as they are. */
+const SHRINK_ABOVE_BYTES = 300 * 1024;
+
+/** Scale a large photo down and re-encode it so phones load it quickly. Falls back to the original file. */
+async function shrinkImage(file: File): Promise<Blob> {
+  if (file.size <= SHRINK_ABOVE_BYTES || file.type === "image/gif") return file; // GIFs may be animated
+  try {
+    const bmp = await createImageBitmap(file);
+    const scale = Math.min(1, MAX_IMAGE_SIDE / Math.max(bmp.width, bmp.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bmp.width * scale);
+    canvas.height = Math.round(bmp.height * scale);
+    canvas.getContext("2d")!.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+    bmp.close();
+    const encode = (type: string) => new Promise<Blob | null>((res) => canvas.toBlob(res, type, 0.85));
+    let out = await encode("image/webp");
+    if (out?.type !== "image/webp") out = await encode("image/jpeg"); // Safari can't encode WebP
+    return out && out.size < file.size ? out : file;
+  } catch {
+    return file;
+  }
+}
+
 function QuestionEditor(props: {
   q: Question;
   index: number;
@@ -553,7 +578,8 @@ function QuestionEditor(props: {
   async function upload(file: File) {
     setUploading(true);
     try {
-      const { ref } = await api<{ ref: string }>("/api/media", { method: "POST", headers: { "content-type": file.type }, body: file });
+      const body = await shrinkImage(file);
+      const { ref } = await api<{ ref: string }>("/api/media", { method: "POST", headers: { "content-type": body.type }, body });
       onChange({ ...q, image: ref });
     } catch (e) {
       notify(`Image upload failed: ${(e as Error).message}`);

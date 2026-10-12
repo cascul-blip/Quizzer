@@ -19,6 +19,8 @@ export interface SocketData {
   admin: boolean;
   role: "player" | "host";
   playerId: string | null;
+  /** Comparison key of the last player.state sent, so unchanged snapshots aren't resent. */
+  lastSent: string | null;
 }
 
 type WS = ServerWebSocket<SocketData>;
@@ -41,6 +43,16 @@ export interface LastResults {
 const PACINGS = new Set<Pacing>(["manual", "auto"]);
 /** In Tallest Tower, answers stream in constantly: the acting player is updated at once, everyone else at most this often. */
 const ACTIVITY_THROTTLE_MS = 100;
+/** View fields holding "time left" (relative to when the message arrives). */
+const COUNTDOWN_KEYS = new Set(["remainingMs", "phaseRemainingMs", "decisionMs", "repairMs", "emptyMs", "lockedMs", "symbolRemainingMs", "nextMonsterMs"]);
+
+/**
+ * A player view as JSON with each running countdown replaced by its deadline (to 100 ms),
+ * so two snapshots that differ only by time passing compare equal.
+ */
+function viewKey(view: PlayerView, now: number): string {
+  return JSON.stringify(view, (k, v) => (COUNTDOWN_KEYS.has(k) && typeof v === "number" && v > 0 ? Math.round((now + v) / 100) : v));
+}
 
 export type LiveGame = Game | TowerGame | SubGame | FightGame | RobotGame | LandGame | RacerGame;
 
@@ -56,6 +68,8 @@ export class GameHub {
   private selected: string | null;
   private addressCache: { at: number; list: LanAddress[] } | null = null;
   private qrCache = new Map<string, string>();
+  /** Image refs of the open quiz, sent to phones on join so they can preload them. */
+  private images: string[] = [];
   private broadcastQueued = false;
   private activityTimer: ReturnType<typeof setTimeout> | null = null;
   /** Mode, mode settings and pacing carry over to the next lobby ("Play again"). */
@@ -129,12 +143,19 @@ export class GameHub {
   }
 
   private send(ws: WS, msg: ServerMsg): void {
+    // The page may change what it shows on any other message: make sure the next snapshot goes out.
+    if (msg.type !== "player.state") ws.data.lastSent = null;
     ws.send(JSON.stringify(msg));
   }
 
-  private sendState(ws: WS): void {
-    if (ws.data.role === "host") this.send(ws, { type: "host.state", view: this.hostView() });
-    else this.send(ws, { type: "player.state", view: this.playerView(ws) });
+  /** Push the socket's current view. Unless forced, a player whose view hasn't changed is skipped. */
+  private sendState(ws: WS, force = true): void {
+    if (ws.data.role === "host") return this.send(ws, { type: "host.state", view: this.hostView() });
+    const view = this.playerView(ws);
+    const key = viewKey(view, this.opts.clock?.now() ?? Date.now());
+    if (!force && key === ws.data.lastSent) return;
+    ws.data.lastSent = key;
+    ws.send(JSON.stringify({ type: "player.state", view } satisfies ServerMsg));
   }
 
   /** Coalesce bursts of changes (e.g. many answers) into one push per tick. */
@@ -160,7 +181,7 @@ export class GameHub {
     let hostMsg: string | null = null;
     for (const ws of this.sockets) {
       if (ws.data.role === "host") ws.send((hostMsg ??= JSON.stringify({ type: "host.state", view: this.hostView() } satisfies ServerMsg)));
-      else this.sendState(ws);
+      else this.sendState(ws, false);
     }
   }
 
@@ -210,7 +231,7 @@ export class GameHub {
         if (ws.data.playerId && this.game.players.has(ws.data.playerId)) return this.sendState(ws);
         const p = this.game.join(msg.nickname, cleanAvatar(msg.avatar, msg.accessory));
         ws.data.playerId = p.id;
-        this.send(ws, { type: "joined", token: p.token, playerId: p.id });
+        this.send(ws, { type: "joined", token: p.token, playerId: p.id, images: this.images });
         this.log(`Player joined: ${p.nickname}`);
         return;
       }
@@ -226,7 +247,7 @@ export class GameHub {
           return this.sendState(ws);
         }
         ws.data.playerId = p.id;
-        this.send(ws, { type: "joined", token: p.token, playerId: p.id });
+        this.send(ws, { type: "joined", token: p.token, playerId: p.id, images: this.images });
         this.game!.setConnected(p.id, true);
         return this.sendState(ws);
       }
@@ -343,6 +364,7 @@ export class GameHub {
         const quiz = this.store.get(String(msg.quizId));
         if (quiz.questions.length === 0) throw new GameError("This quiz has no questions yet");
         this.closeGame();
+        this.images = [...new Set(quiz.questions.flatMap((q) => (q.image ? [q.image] : [])))];
         this.game = new Game(quiz, {
           clock: this.opts.clock,
           onChange: () => this.scheduleBroadcast(),
@@ -521,7 +543,10 @@ export class GameHub {
     if (!this.game) return;
     this.game.dispose();
     this.game = null;
-    for (const s of this.sockets) s.data.playerId = null;
+    for (const s of this.sockets) {
+      s.data.playerId = null;
+      s.data.lastSent = null;
+    }
   }
 
   private onFinish(game: LiveGame): void {

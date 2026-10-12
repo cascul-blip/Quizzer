@@ -70,6 +70,8 @@ function App() {
             break;
           case "joined":
             storage.set(TOKEN_KEY, msg.token);
+            // Fetch every question image now so none has to load mid-game (they're cached as immutable).
+            for (const ref of msg.images ?? []) new Image().src = `/${ref}`;
             break;
           case "resumeFailed":
             storage.set(TOKEN_KEY, null);

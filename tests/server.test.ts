@@ -326,12 +326,13 @@ describe("Tallest Tower over WebSockets", () => {
     const building = await ann.playerState((v) => v.kind === "tower" && v.state === "build");
     expect(building.view.kind === "tower" && building.view.build).toEqual({ columns: [0, 0, 0], floors: 0, sweepMs: 2500 });
 
+    let back!: Awaited<ReturnType<typeof ann.playerState>>;
     for (const [i, zone] of [1, 2, 3, 0].entries()) {
       ann.send({ type: "tower.drop", zone });
-      await ann.playerState((v) => v.kind === "tower" && v.blocksHeld === 3 - i);
+      back = await ann.playerState((v) => v.kind === "tower" && v.blocksHeld === 3 - i);
       clock.advance(DROP_COOLDOWN_MS);
     }
-    const back = await ann.playerState((v) => v.kind === "tower" && v.state === "question" && v.me.placed === 3);
+    expect(back.view.kind === "tower" && back.view.state === "question" && back.view.me.placed).toBe(3);
     expect(back.view.kind === "tower" && back.view.blocksHeld).toBe(0);
     const towers = await host.hostState((v) => v.kind === "tower" && v.teams[0]!.floors === 1);
     expect(towers.view.kind === "tower" && towers.view.teams.map((t) => [t.name, t.columns, t.placed])).toEqual([
@@ -826,5 +827,62 @@ describe("Racer over WebSockets", () => {
     host.send({ type: "host.close" });
     await host.hostState((v) => v.kind === "idle");
     [host, ...players].forEach((s) => s.close());
+  });
+});
+
+describe("Only changed player views are pushed", () => {
+  const settle = () => new Promise((r) => setTimeout(r, 250)); // longer than the 100 ms activity throttle
+  const states = (s: TestSocket) => s.msgs.filter((m) => m.type === "player.state").length;
+
+  test("time passing or another player's answer doesn't resend; a rejected action still resyncs", async () => {
+    const image = store.saveMedia(new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]));
+    const quiz = store.create({
+      title: "Dedupe E2E",
+      questions: [1, 2].map((n) => ({ type: "multiple_choice", text: `Q${n}`, image, options: ["right", "wrong"], correct: [0] })),
+    });
+    const wsUrl = `ws://localhost:${srv.port}/ws`;
+    const host = await TestSocket.open(wsUrl);
+    host.send({ type: "host.hello" });
+    host.send({ type: "host.open", quizId: quiz.id });
+    host.send({ type: "host.setMode", mode: "tower" });
+    host.send({ type: "host.setTower", teams: 2, minutes: 2 });
+    await host.hostState((v) => v.kind === "classic" && v.mode === "tower" && v.tower.teams === 2);
+
+    const [ann, bob] = await Promise.all([TestSocket.open(wsUrl), TestSocket.open(wsUrl)]);
+    for (const [p, nickname] of [[ann!, "Ann"], [bob!, "Bob"]] as const) {
+      p.send({ type: "join", nickname });
+      expect(await p.waitFor((m) => m.type === "joined")).toMatchObject({ images: [image] });
+    }
+    host.send({ type: "host.start", pacing: "manual" });
+    await host.hostState((v) => v.kind === "tower" && v.phase === "countdown");
+    clock.advance(COUNTDOWN_MS);
+    srv.hub.broadcast();
+    const annQ = await ann!.playerState((v) => v.kind === "tower" && v.phase === "playing" && !!v.question);
+    await bob!.playerState((v) => v.kind === "tower" && v.phase === "playing" && !!v.question);
+    await settle();
+    ann!.msgs = [];
+    bob!.msgs = [];
+
+    // Only the clock moved: countdowns run on the phone, so nothing is sent.
+    clock.advance(500);
+    srv.hub.broadcast();
+    await settle();
+    expect([states(ann!), states(bob!)]).toEqual([0, 0]);
+
+    // Ann answers: she hears back, Bob's screen is unchanged so he gets nothing.
+    const q = annQ.view.kind === "tower" ? annQ.view.question! : null;
+    ann!.send({ type: "tower.answer", seq: q!.seq, option: 0 });
+    await ann!.playerState((v) => v.kind === "tower" && v.feedback?.seq === q!.seq);
+    await settle();
+    expect(states(bob!)).toBe(0);
+    await host.hostState((v) => v.kind === "tower");
+
+    // A rejected action (dropping without blocks) always resyncs the phone.
+    bob!.send({ type: "tower.drop", zone: 2 });
+    await bob!.playerState((v) => v.kind === "tower" && v.state === "question");
+
+    host.send({ type: "host.close" });
+    await host.hostState((v) => v.kind === "idle");
+    [host, ann!, bob!].forEach((s) => s.close());
   });
 });
