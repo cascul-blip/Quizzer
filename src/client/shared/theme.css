@@ -920,11 +920,42 @@ a.btn {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #24202e;
+  /* Deep space: only seen once the world has slid away. */
+  background: linear-gradient(to bottom, #0b0820, #140d33 60%, #1b1340);
 }
 
-.racer-scene > div {
+.racer-scene > div,
+.racer-scene-world > div {
   position: absolute;
+}
+
+/* Stars behind the world; drawn small by RacerScene and scaled up into chunky pixels. */
+.racer-scene-stars {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+
+/* Above 200 mph the world drops out of view, speeding up as it goes, and eases back on landing. */
+.racer-scene-world {
+  inset: 0;
+  will-change: transform;
+}
+
+.racer-scene[data-ready] .racer-scene-world {
+  transition: transform var(--racer-slide, 1.6s) ease-out;
+}
+
+.racer-scene[data-space="on"] .racer-scene-world {
+  transform: translateY(100%);
+  transition-timing-function: ease-in;
+}
+
+/* Nothing to bob on in space. */
+.racer-scene[data-space="on"] .racer-scene-car img {
+  animation: none;
 }
 
 .racer-scene img,
@@ -1116,6 +1147,10 @@ a.btn {
 @media (prefers-reduced-motion: reduce) {
   .racer-scene-car.moving img {
     animation: none;
+  }
+
+  .racer-scene[data-ready] .racer-scene-world {
+    transition: none;
   }
 
   /* No rising: the puffs stand still as a column. */

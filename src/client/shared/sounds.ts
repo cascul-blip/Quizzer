@@ -1,6 +1,6 @@
 /** Tiny synthesized sound effects (WebAudio), so no audio files need to be shipped. */
 
-export type Sfx = "tick" | "tickHigh" | "timeUp" | "reveal" | "join" | "start" | "fanfare" | "thud" | "floor" | "rumble" | "roar" | "whoosh" | "chomp" | "bubble" | "heartbeat" | "laser" | "alarm" | "plant" | "capture" | "conquer" | "gearUp" | "skid" | "crash" | "repair" | "leverClick";
+export type Sfx = "tick" | "tickHigh" | "timeUp" | "reveal" | "join" | "start" | "fanfare" | "thud" | "floor" | "rumble" | "roar" | "whoosh" | "chomp" | "bubble" | "heartbeat" | "laser" | "alarm" | "plant" | "capture" | "conquer" | "gearUp" | "skid" | "crash" | "repair" | "leverClick" | "land";
 
 const MUTE_KEY = "quizzer.muted";
 let ctx: AudioContext | null = null;
@@ -85,6 +85,11 @@ export function play(sfx: Sfx): void {
       return;
     case "thud":
       return tone(110, 0, 0.18, "sine", 0.3);
+    case "land":
+      // A heavy car hitting the road: a deep thump with a short crunch on top.
+      tone(70, 0, 0.4, "sine", 0.45);
+      tone(45, 0.03, 0.35, "triangle", 0.3);
+      return tone(160, 0, 0.07, "square", 0.1);
     case "floor":
       tone(784, 0, 0.12, "triangle", 0.14);
       return tone(1175, 0.08, 0.25, "triangle", 0.14);
