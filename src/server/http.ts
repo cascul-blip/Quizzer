@@ -122,7 +122,7 @@ export function startServer(opts: ServerOptions): RunningServer {
       const admin = isAdminRequest(srv.requestIP(req)?.address, req.headers);
 
       if (path === "/ws") {
-        if (srv.upgrade(req, { data: { admin, role: "player", playerId: null } })) return undefined;
+        if (srv.upgrade(req, { data: { admin, role: "player", playerId: null, lastSent: null } })) return undefined;
         return new Response("Expected a WebSocket upgrade", { status: 426 });
       }
 

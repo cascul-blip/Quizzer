@@ -854,7 +854,7 @@ export type ServerMsg =
   | { type: "hello"; serverId: string }
   | { type: "player.state"; view: PlayerView }
   | { type: "host.state"; view: HostView }
-  | { type: "joined"; token: string; playerId: string }
+  | { type: "joined"; token: string; playerId: string; /** Question images of the quiz, to preload. */ images?: string[] }
   | { type: "kicked" }
   | { type: "resumeFailed" }
   | { type: "error"; message: string };
