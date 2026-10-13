@@ -491,7 +491,7 @@ export const ROBOT_LIVES = 3;
 /** The first quiz phase is this long; each round is ROBOT_QUIZ_STEP_MS shorter, down to ROBOT_QUIZ_MIN_MS. */
 export const ROBOT_QUIZ_START_MS = 30_000;
 export const ROBOT_QUIZ_STEP_MS = 2000;
-export const ROBOT_QUIZ_MIN_MS = 5000;
+export const ROBOT_QUIZ_MIN_MS = 7000;
 /** The red Xs appear this long before the quiz phase ends. */
 export const ROBOT_WARN_MS = 5000;
 export const ROBOT_MOVE_MS = 7000;
