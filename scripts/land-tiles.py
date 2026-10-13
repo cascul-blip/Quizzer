@@ -41,7 +41,7 @@ HIGHLIGHT = 0.6
 # The grout between the stones, at full strength, would hide most of the team colour.
 SHADE = 0.75
 
-TEAM_COLORS = ["#e21b3c", "#1368ce", "#c98a00", "#26890c", "#864cbf", "#e8710a"]
+TEAM_COLORS = ["#e21b3c", "#1368ce", "#c98a00", "#0fa3b1", "#864cbf", "#e8710a"]
 
 
 def crop(img: Image.Image, box: tuple[int, int, int]) -> Image.Image:

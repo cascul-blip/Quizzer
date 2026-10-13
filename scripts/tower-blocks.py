@@ -48,7 +48,7 @@ SAT_LO, SAT_HI = 0.15, 0.3
 # How strongly wall pixels brighter than the wall itself show up as white.
 HIGHLIGHT = 0.7
 
-TEAM_COLORS = ["#e21b3c", "#1368ce", "#c98a00", "#26890c", "#864cbf", "#e8710a"]
+TEAM_COLORS = ["#e21b3c", "#1368ce", "#c98a00", "#0fa3b1", "#864cbf", "#e8710a"]
 
 
 def crop(img: Image.Image, keep: float) -> Image.Image:
