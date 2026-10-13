@@ -2,10 +2,13 @@
  * Racer's scene: a side scroller in retro pixel art. The car faces left and stays put; the
  * world (skyline, palms, road markings) scrolls past it to the right, faster the faster it
  * drives. Above SPACE_MPH the car takes off: the world slides down out of view and stars
- * streak past instead, their trails lasting longer the faster it goes. Shared by the
- * projector and the phones.
+ * streak past instead, their trails lasting longer the faster it goes. Players who get a
+ * question wrong fall out of the back: on the road they bounce away down it, in space they
+ * drift off. Shared by the projector and the phones.
  */
-import { useEffect, useRef } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
+import type { AvatarChoice } from "../../shared/avatars.ts";
+import { Avatar } from "./avatar-art.tsx";
 import carCrashedImg from "./racer/car-crashed.webp";
 import carImg from "./racer/car.webp";
 import palmImg from "./racer/palm.webp";
@@ -42,6 +45,12 @@ const TRAIL_BANDS = 6;
 const TRAIL_MIN_S = 0.15;
 const TRAIL_MAX_S = 0.8;
 const TRAIL_FULL_MPH = 400;
+/** How long one thrown-out avatar takes to leave, on the road and in space (keep in step with theme.css). */
+const EJECT_ROAD_MS = 2200;
+const EJECT_SPACE_MS = 2600;
+/** Avatars leave one after another, this far apart, but all of them within EJECT_SPREAD_MS. */
+const EJECT_GAP_MS = 140;
+const EJECT_SPREAD_MS = 1400;
 const STAR_COLORS = ["#ffffff", "#ffffff", "#cfe3ff", "#9fc4ff", "#ffc23d", "#ff8a1f"];
 
 /** How long a star's trail lasts at this speed: longer the faster the car goes. */
@@ -71,11 +80,20 @@ export interface RacerSceneProps {
   crashed: boolean;
   /** Called once the car is back on the road after a trip to space (the world has slid back up). */
   onLand?: () => void;
+  /** Avatars thrown out of the back of the car; each new `key` plays it once. */
+  ejected?: { key: string | number; avatars: AvatarChoice[] };
   class?: string;
 }
 
+interface Ejection {
+  key: string | number;
+  /** Frozen when it starts, so a car that drops back to the road mid-flight doesn't change the animation. */
+  mode: "road" | "space";
+  riders: { avatar: AvatarChoice; delay: number; spin: number; lift: number }[];
+}
+
 /** Fills its container; everything is sized from the container's height. */
-export function RacerScene({ speed, crashed, onLand, class: cls }: RacerSceneProps) {
+export function RacerScene({ speed, crashed, onLand, ejected, class: cls }: RacerSceneProps) {
   const target = crashed ? 0 : Math.max(0, speed);
   const root = useRef<HTMLDivElement>(null);
   const skyline = useRef<HTMLDivElement>(null);
@@ -86,6 +104,7 @@ export function RacerScene({ speed, crashed, onLand, class: cls }: RacerScenePro
   // The shown speed starts at the real one: a scene that appears mid-race is already moving.
   const motion = useRef({ target, shown: target, kick: () => {}, onLand });
   motion.current.onLand = onLand;
+  const [ejection, setEjection] = useState<Ejection | null>(null);
 
   useEffect(() => {
     const el = root.current;
@@ -193,6 +212,7 @@ export function RacerScene({ speed, crashed, onLand, class: cls }: RacerScenePro
       skylineW = Math.max(1, Math.round(SKYLINE_TILE * u));
       dashW = Math.max(1, Math.round(DASH_TILE * u));
       el.style.setProperty("--racer-u", `${u}px`);
+      el.style.setProperty("--racer-w", `${width}px`);
       el.style.setProperty("--racer-skyline-w", `${skylineW}px`);
       el.style.setProperty("--racer-dash-w", `${dashW}px`);
       // The stars are drawn at the car sprite's pixel size and scaled up, so they are pixel art too.
@@ -258,6 +278,30 @@ export function RacerScene({ speed, crashed, onLand, class: cls }: RacerScenePro
     motion.current.kick();
   }, [target]);
 
+  // Throw out a new batch of avatars; whoever is still in the air from the last one is cleared.
+  useEffect(() => {
+    if (!ejected?.avatars.length) return;
+    const n = ejected.avatars.length;
+    const gap = Math.min(EJECT_GAP_MS, EJECT_SPREAD_MS / n);
+    setEjection({
+      key: ejected.key,
+      mode: root.current?.dataset.space === "on" ? "space" : "road",
+      riders: ejected.avatars.map((avatar, i) => ({
+        avatar,
+        delay: Math.round(i * gap),
+        spin: Math.random() < 0.5 ? -1 : 1,
+        lift: 0.7 + 0.6 * Math.random(),
+      })),
+    });
+  }, [ejected?.key]);
+
+  useEffect(() => {
+    if (!ejection) return;
+    const last = Math.max(...ejection.riders.map((r) => r.delay));
+    const t = setTimeout(() => setEjection(null), last + (ejection.mode === "space" ? EJECT_SPACE_MS : EJECT_ROAD_MS) + 100);
+    return () => clearTimeout(t);
+  }, [ejection]);
+
   const palmRow = PALMS.map((left) => <img key={left} class="racer-scene-palm" src={palmImg} alt="" style={{ left: `${left}%` }} />);
   return (
     <div ref={root} class={`racer-scene ${crashed ? "crashed" : ""} ${cls ?? ""}`} aria-hidden="true">
@@ -287,6 +331,20 @@ export function RacerScene({ speed, crashed, onLand, class: cls }: RacerScenePro
           </div>
         )}
       </div>
+      {ejection && (
+        // Keyed so a new batch restarts the animations.
+        <div key={ejection.key} class="racer-scene-ejects" data-mode={ejection.mode}>
+          {ejection.riders.map((r, i) => (
+            <div key={i} class="racer-scene-eject" style={{ animationDelay: `${r.delay}ms`, "--racer-spin": r.spin, "--racer-lift": r.lift }}>
+              <div style={{ animationDelay: `${r.delay}ms` }}>
+                <div style={{ animationDelay: `${r.delay}ms` }}>
+                  <Avatar choice={r.avatar} />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

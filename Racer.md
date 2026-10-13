@@ -30,6 +30,8 @@ The graphics will be a retro purple, blue and orange pixel art style.  The game 
 
 Above 200 mph the car takes off into space: the road and background slide down off the screen, and stars streak across instead. Each star leaves a trail that fades over time; the faster the car goes, the longer the trail lasts. When the car drops back to 200 mph or less, the background slides back up from the bottom and lands with a thud.
 
+On each reveal, every player who got the question wrong (or didn't answer) is thrown out of the back of the car: on the road their avatar tumbles out and bounces away down the road behind it; in space it drifts off backwards, spinning slowly, with no bounce. The projector shows everyone who missed; each phone shows only that player's own avatar.
+
 ## Sound
 The sound will be low fidelity arcade replica.  The music will be similar arcade racing game.  The music tempo will increase with the speed of the car.
 

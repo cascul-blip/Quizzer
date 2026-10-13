@@ -85,6 +85,8 @@ export class RacerGame {
   /** The locked lever, once the question is open. */
   confidence: RacerConfidence | null = null;
   lastTurn: RacerTurn | null = null;
+  /** Who got the latest closed question wrong (or didn't answer it): they fall out of the car on the reveal. */
+  ejected: { id: string; avatar: AvatarChoice }[] = [];
   /** Turns played to the end. */
   turns = 0;
   /** When the current phase's countdown ends; 0 when it has none. */
@@ -329,10 +331,12 @@ export class RacerGame {
     const players = [...this.players.values()];
     let correct = 0;
     let total = 0;
+    this.ejected = [];
     for (const p of players) {
       const ans = p.answers[this.qIndex];
       // Everyone here counts, and so does anyone who answered before dropping out; no answer is a wrong answer.
       if (p.connected || ans) total++;
+      if ((p.connected || ans) && !ans?.correct) this.ejected.push({ id: p.id, avatar: p.avatar });
       if (!ans) continue;
       if (ans.correct) {
         correct++;
@@ -459,6 +463,7 @@ export class RacerGame {
       answerCounts: revealed ? q!.options.map((_, i) => answered.filter((a) => a.option === i).length) : null,
       car: { ...this.car },
       lastTurn: this.lastTurn,
+      ejected: revealed ? this.ejected : null,
       phaseRemainingMs: this.remainingMs(),
       phaseDurationMs: this.phaseDurationMs,
       result: podium ? this.result() : null,
