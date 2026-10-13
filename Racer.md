@@ -28,6 +28,8 @@ For distance calculations, assume that each turn takes 10 minutes.
 ## Display
 The graphics will be a retro purple, blue and orange pixel art style.  The game will be a side scroller, so the car will be driving right to left with the camera fixed on the car while the background moves past the camera.  The background will be a city skyline that moves slowly and closer palm trees that zip by.  The faster that the car is moving, the faster the background will zip by.  The car is a Porsche 911.
 
+Above 200 mph the car takes off into space: the road and background slide down off the screen, and stars streak across instead. Each star leaves a trail that fades over time; the faster the car goes, the longer the trail lasts. When the car drops back to 200 mph or less, the background slides back up from the bottom and lands with a thud.
+
 ## Sound
 The sound will be low fidelity arcade replica.  The music will be similar arcade racing game.  The music tempo will increase with the speed of the car.
 
