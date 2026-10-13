@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { Game } from "../src/server/game/game.ts";
 import { buildRobotResultsCsv } from "../src/server/game/results.ts";
 import { COUNTDOWN_MS, FEEDBACK_MS, RobotGame, spreadTile, type RobotPlayer } from "../src/server/game/robot.ts";
-import { ROBOT_ATTACK_MS, ROBOT_BOARD, ROBOT_LIVES, ROBOT_MOVE_MS, ROBOT_WARN_MS, robotInBounds, robotQuizMs, robotRing } from "../src/shared/protocol.ts";
+import { ROBOT_ATTACK_MS, ROBOT_BOARD, ROBOT_LIVES, ROBOT_MOVE_MS, ROBOT_QUIZ_MIN_MS, ROBOT_WARN_MS, robotInBounds, robotQuizMs, robotRing } from "../src/shared/protocol.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
 import { FakeClock, sampleQuiz } from "./helpers.ts";
 
@@ -111,8 +111,8 @@ describe("Robot Attack", () => {
     expect(game.playerView(a.id)!.question).toBeNull();
   });
 
-  test("quiz time starts at 30 s and shrinks by 2 s a round down to 5 s", () => {
-    expect([1, 2, 3, 13, 14, 30].map(robotQuizMs)).toEqual([30_000, 28_000, 26_000, 6000, 5000, 5000]);
+  test("quiz time starts at 30 s and shrinks by 2 s a round down to 7 s", () => {
+    expect([1, 2, 3, 12, 13, 30].map(robotQuizMs)).toEqual([30_000, 28_000, 26_000, 8000, 7000, 7000]);
     const { game, clock } = setup(["A", "B"]);
     expect(game.phaseDurationMs).toBe(30_000);
     round(game, clock, []);
@@ -136,10 +136,12 @@ describe("Robot Attack", () => {
     expect(game.playerView(byName(game, "A").id)!.board!.marked.length).toBe(game.marked.size);
   });
 
-  test("when the quiz phase is 5 s or shorter, the Xs are up from the start", () => {
+  test("at the shortest quiz time, the Xs still appear 5 s before the end", () => {
     const { game, clock } = setup(["A", "B"]);
-    while (robotQuizMs(game.round) > ROBOT_WARN_MS) round(game, clock, []);
+    while (robotQuizMs(game.round) > ROBOT_QUIZ_MIN_MS) round(game, clock, []);
     expect(game.phase).toBe("quiz");
+    expect(game.marked.size).toBe(0);
+    clock.advance(ROBOT_QUIZ_MIN_MS - ROBOT_WARN_MS);
     // Three rings are gone by now: 3/4 of the 6×6 board that's left.
     expect(game.inset).toBe(3);
     expect(game.marked.size).toBe(27);
