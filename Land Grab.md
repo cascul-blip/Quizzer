@@ -1,4 +1,4 @@
-Music should be high energy, "boppy" and has a good beat to it.
+Music should be relaxing, sparse piano, similar to Minecraft's.  As a team gets closer to surrounding an area or an enemy starting point, the music speeds up, adds more instruments and becomes much more dramatic.
 
 The game is timer based, it can last 3, 5, 7 or 10 minutes.  Configurable in the lobby.
 
