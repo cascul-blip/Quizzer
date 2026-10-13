@@ -106,7 +106,7 @@ export function RacerStage({ view, send }: { view: RacerView; send: Send }) {
           👥 {connected}
           {connected < view.players.length && <span class="dim"> / {view.players.length}</span>}
         </div>
-        <ScreenControls />
+        <ScreenControls join={view.join} />
         {!podium && (
           <button class="btn ghost small" onClick={() => confirm("End the game now and show the final results?") && send({ type: "host.end" })}>
             End game

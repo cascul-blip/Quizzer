@@ -223,7 +223,7 @@ function Game({ view, send }: { view: GameView; send: Send }) {
           👥 {view.players.filter((p) => p.connected).length}
           {view.players.some((p) => !p.connected) && <span class="dim"> / {view.players.length}</span>}
         </div>
-        <ScreenControls />
+        <ScreenControls join={view.phase === "lobby" ? undefined : view.join} />
         {view.phase !== "podium" && (
           <button
             class="btn ghost small"
