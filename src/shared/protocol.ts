@@ -797,6 +797,8 @@ export interface HostRacerState {
   car: RacerCar;
   /** The latest finished turn: this question's on the reveal, the previous question's before that. Null until the first question closes. */
   lastTurn: RacerTurn | null;
+  /** Reveal only: the players who got this question wrong or didn't answer it; they fall out of the car. */
+  ejected: { id: string; avatar: AvatarChoice }[] | null;
   /** Time left in the current phase; 0 when it has no timer (reveal with manual pacing, podium). */
   phaseRemainingMs: number;
   /** Full length of the current phase, for a progress bar; 0 when it has no timer. */

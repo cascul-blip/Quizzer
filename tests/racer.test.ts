@@ -264,6 +264,22 @@ describe("Racer", () => {
     expect(game.lastTurn).toMatchObject({ correct: 2, total: 3 });
   });
 
+  test("the reveal lists who got it wrong or didn't answer, to throw out of the car", () => {
+    const { game, clock } = setup(["A", "B", "C"]);
+    expect(game.hostView().ejected).toBeNull();
+    toOpen(game, clock, "low");
+    const [a, b, c] = [byName(game, "A"), byName(game, "B"), byName(game, "C")];
+    answer(game, a, true);
+    answer(game, b, false);
+    expect(game.hostView().ejected).toBeNull();
+    game.skip(); // C never answers
+    expect(game.phase).toBe("reveal");
+    expect(game.hostView().ejected!.map((e) => e.id).sort()).toEqual([b.id, c.id].sort());
+    expect(game.hostView().ejected![0]!.avatar).toBeDefined();
+    game.next();
+    expect(game.hostView().ejected).toBeNull();
+  });
+
   test("a disconnect or a kick can complete the question", () => {
     for (const leave of ["disconnect", "kick"] as const) {
       const { game, clock } = setup(["A", "B", "C"]);

@@ -119,7 +119,12 @@ export function RacerStage({ view, send }: { view: RacerView; send: Send }) {
         <>
           <main class="racer-upper">{q && <Turn view={view} send={send} secs={secs} />}</main>
           <section class="racer-lower">
-            <RacerScene speed={view.car.speed} crashed={view.car.crashed} onLand={() => play("land")} />
+            <RacerScene
+              speed={view.car.speed}
+              crashed={view.car.crashed}
+              onLand={() => play("land")}
+              ejected={view.phase === "reveal" && view.lastTurn && view.ejected?.length ? { key: view.lastTurn.index, avatars: view.ejected.map((e) => e.avatar) } : undefined}
+            />
             <div class="racer-hud racer-hud-car">
               {view.car.crashed ? <div class="racer-hud-speed crashed">CRASHED</div> : <div class="racer-hud-speed">{Math.round(shownSpeed)} mph</div>}
               <div class="racer-hud-line">{view.car.distance.toFixed(1)} miles driven</div>

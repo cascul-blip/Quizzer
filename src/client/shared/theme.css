@@ -1144,6 +1144,154 @@ a.btn {
   }
 }
 
+/* Players who got the question wrong, thrown out of the back of the car (its right end). Three
+   layers: the outer one carries an avatar back along the road, the middle one does the
+   ups and downs, the inner one tumbles. Durations match EJECT_*_MS in racer-art.tsx. */
+.racer-scene-ejects {
+  inset: 0;
+  pointer-events: none;
+}
+
+.racer-scene-eject {
+  position: absolute;
+  left: calc(60% + var(--racer-u) * 26);
+  bottom: calc(var(--racer-u) * 20);
+  width: calc(var(--racer-u) * 16);
+  margin-left: calc(var(--racer-u) * -8);
+  opacity: 0;
+  animation: racer-eject-back 2.2s linear both;
+}
+
+.racer-scene-eject > div {
+  animation: racer-eject-bounce 2.2s both;
+}
+
+.racer-scene-eject > div > div {
+  animation: racer-eject-tumble 2.2s linear both;
+}
+
+.racer-scene-eject .avatar {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.racer-scene-ejects[data-mode="space"] .racer-scene-eject {
+  animation: racer-eject-drift 2.6s cubic-bezier(0.3, 0, 0.7, 1) both;
+}
+
+.racer-scene-ejects[data-mode="space"] .racer-scene-eject > div {
+  animation: racer-eject-float 2.6s ease-out both;
+}
+
+.racer-scene-ejects[data-mode="space"] .racer-scene-eject > div > div {
+  animation: racer-eject-spin 2.6s linear both;
+}
+
+/* Back along the road and off the right edge. */
+@keyframes racer-eject-back {
+  0% {
+    opacity: 0;
+    transform: translateX(0);
+  }
+  3% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(calc(var(--racer-w, 1000px) * 0.4 - var(--racer-u) * 10));
+  }
+}
+
+/* Up out of the engine lid, down onto the road, then three bounces, each lower than the last. */
+@keyframes racer-eject-bounce {
+  0% {
+    transform: translateY(0);
+    animation-timing-function: ease-out;
+  }
+  13% {
+    transform: translateY(calc(var(--racer-u) * -12 * var(--racer-lift, 1)));
+    animation-timing-function: ease-in;
+  }
+  32% {
+    transform: translateY(calc(var(--racer-u) * 16));
+    animation-timing-function: ease-out;
+  }
+  46% {
+    transform: translateY(calc(var(--racer-u) * (16 - 9 * var(--racer-lift, 1))));
+    animation-timing-function: ease-in;
+  }
+  60% {
+    transform: translateY(calc(var(--racer-u) * 16));
+    animation-timing-function: ease-out;
+  }
+  70% {
+    transform: translateY(calc(var(--racer-u) * (16 - 4.5 * var(--racer-lift, 1))));
+    animation-timing-function: ease-in;
+  }
+  80% {
+    transform: translateY(calc(var(--racer-u) * 16));
+    animation-timing-function: ease-out;
+  }
+  86% {
+    transform: translateY(calc(var(--racer-u) * (16 - 1.8 * var(--racer-lift, 1))));
+    animation-timing-function: ease-in;
+  }
+  92%,
+  100% {
+    transform: translateY(calc(var(--racer-u) * 16));
+  }
+}
+
+@keyframes racer-eject-tumble {
+  to {
+    transform: rotate(calc(var(--racer-spin, 1) * 900deg));
+  }
+}
+
+/* In space: no road to hit, just a slow drift back, falling further behind as it goes. */
+@keyframes racer-eject-drift {
+  0% {
+    opacity: 0;
+    transform: translateX(0);
+  }
+  4% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(calc(var(--racer-w, 1000px) * 0.4 - var(--racer-u) * 10));
+  }
+}
+
+@keyframes racer-eject-float {
+  to {
+    transform: translateY(calc(var(--racer-u) * -10 * var(--racer-spin, 1) * var(--racer-lift, 1)));
+  }
+}
+
+@keyframes racer-eject-spin {
+  to {
+    transform: rotate(calc(var(--racer-spin, 1) * 240deg)) scale(0.6);
+  }
+}
+
+@keyframes racer-eject-fade {
+  0%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .racer-scene-car.moving img {
     animation: none;
@@ -1151,6 +1299,16 @@ a.btn {
 
   .racer-scene[data-ready] .racer-scene-world {
     transition: none;
+  }
+
+  /* Thrown-out avatars just stand behind the car a moment and fade. */
+  .racer-scene-ejects[data-mode] .racer-scene-eject {
+    animation: racer-eject-fade 2.2s linear both;
+  }
+
+  .racer-scene-ejects[data-mode] .racer-scene-eject > div,
+  .racer-scene-ejects[data-mode] .racer-scene-eject > div > div {
+    animation: none;
   }
 
   /* No rising: the puffs stand still as a column. */
