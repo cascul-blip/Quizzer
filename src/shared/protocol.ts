@@ -24,7 +24,7 @@ export const TEAMS = [
   { name: "Red", color: "#e21b3c" },
   { name: "Blue", color: "#1368ce" },
   { name: "Yellow", color: "#c98a00" },
-  { name: "Green", color: "#26890c" },
+  { name: "Cyan", color: "#0fa3b1" },
   { name: "Purple", color: "#864cbf" },
   { name: "Orange", color: "#e8710a" },
 ] as const;
