@@ -242,8 +242,8 @@ Every game mode has **built-in background music** on the projector (phones stay 
 | Tallest Tower | Retro arcade (chiptune) | Builds up as the game clock runs down |
 | Submarine Squad | Deep-sea suspense | Speeds up and adds layers as the anglerfish closes in; a calmer theme while diving |
 | Tower Fight | Medieval battle | Gets more intense as the towers take damage |
-| Robot Attack | Machine-cult chant: a deep drone, organ and brass | Builds up as each quiz phase's timer runs out; urgent during movement |
-| Land Grab | Bouncy dance-pop with a four-on-the-floor beat | Lively from the start; more layers and a little faster as the clock runs down |
+| Robot Attack | Romantic orchestral: Beethoven and Grieg arranged for synth (*In the Hall of the Mountain King* during the quiz) | Speeds up and adds instruments as each quiz phase's timer runs out; Beethoven's Fifth during movement |
+| Land Grab | Calm ambient piano | Speeds up and adds an orchestra as a team gets close to closing a ring; calms down again if the ring is broken |
 | Racer | Sunny late-80s arcade-racing chiptune | Tempo and layers rise with the car's speed; slow and sparse when crashed |
 
 The lobby plays the music of whichever game mode is selected. Use the **🎵 button and slider** in the projector's top bar to turn music off or change its volume. The 🔊 button still mutes everything.

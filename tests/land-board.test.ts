@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { EMPTY, START_MARGIN, enclosedBy, hexDistance, isGuarded, isProtected, landBoardSize, neighbors, placementCost, startTiles, type LandStart } from "../src/shared/land-board.ts";
+import { EMPTY, START_MARGIN, captureThreat, enclosedBy, hexDistance, isGuarded, isProtected, landBoardSize, neighbors, placementCost, startTiles, type LandStart } from "../src/shared/land-board.ts";
 
 const at = (size: number, row: number, col: number) => row * size + col;
 const board = (size: number) => Array<number>(size * size).fill(EMPTY);
@@ -142,5 +142,66 @@ describe("surrounding", () => {
     const inner = at(size, 1, 1);
     for (const t of neighbors(size, inner)) owners[t] = 0;
     expect(enclosedBy(owners, size, 0)).toEqual([inner]);
+  });
+});
+
+describe("capture threat", () => {
+  const size = 10;
+  const [red, blue] = startTiles(2) as [number, number];
+  const starts: LandStart[] = [
+    { team: 0, tile: red, out: false },
+    { team: 1, tile: blue, out: false },
+  ];
+  const fresh = () => {
+    const owners = board(size);
+    owners[red] = 0;
+    owners[blue] = 1;
+    return owners;
+  };
+  const ring = fresh()
+    .map((_, t) => t)
+    .filter((t) => hexDistance(size, blue, t) === 2);
+  /** Red holds the first `count` tiles of the ring around blue's start. */
+  const withRing = (count: number) => {
+    const owners = fresh();
+    for (const t of ring.slice(0, count)) owners[t] = 0;
+    return owners;
+  };
+  const threat = (owners: number[], s = starts) => captureThreat(owners, size, s, 2, 2);
+
+  test("nothing is brewing on a fresh board", () => {
+    expect(threat(fresh())).toBe(0);
+  });
+
+  test("it rises as a ring around a starting point is built, up to 1 when one tile closes it", () => {
+    const levels = [2, 6, 8, 10, 11].map((n) => threat(withRing(n)));
+    expect(levels[0]).toBe(0);
+    for (let i = 1; i < levels.length; i++) expect(levels[i]!).toBeGreaterThan(levels[i - 1]!);
+    expect(levels[4]).toBe(1);
+  });
+
+  test("it drops when a ring tile is stolen back", () => {
+    const owners = withRing(11);
+    owners[ring[0]!] = 1;
+    const after = threat(owners);
+    expect(after).toBeLessThan(1);
+    expect(after).toBeGreaterThan(0);
+  });
+
+  test("a small area one tile from capture gives a middling threat", () => {
+    const owners = fresh();
+    const pocket = at(size, 8, 4);
+    for (const t of neighbors(size, pocket).slice(1)) owners[t] = 0;
+    const level = threat(owners);
+    expect(level).toBeGreaterThan(0.3);
+    expect(level).toBeLessThan(0.6);
+  });
+
+  test("a knocked-out team threatens nothing, and its start is not a target", () => {
+    const out = starts.map((s) => (s.team === 1 ? { ...s, out: true } : s));
+    const owners = fresh();
+    for (const t of neighbors(size, at(size, 8, 4)).slice(1)) owners[t] = 1;
+    expect(threat(owners, out)).toBe(0);
+    expect(threat(withRing(11), out)).toBeLessThan(1);
   });
 });

@@ -1,4 +1,5 @@
-import { TOWER_MAX_DAMAGE, type GameMode, type HostView } from "../../shared/protocol.ts";
+import { captureThreat } from "../../shared/land-board.ts";
+import { LAND_GUARD_COST, LAND_STEAL_COST, TOWER_MAX_DAMAGE, type GameMode, type HostView, type LandBoard } from "../../shared/protocol.ts";
 import type { MusicTrackId } from "../../shared/music-tracks.ts";
 import type { MusicCue } from "../shared/music/index.ts";
 
@@ -11,6 +12,19 @@ const LOBBY: Record<GameMode, MusicTrackId> = {
   land: "land-lobby",
   racer: "racer-lobby",
 };
+
+let landKey = "";
+let landValue = 0;
+
+/** captureThreat for this board, worked out again only when a tile or a start changes. */
+function landThreat(board: LandBoard): number {
+  const key = `${board.owners.join()}|${board.starts.map((s) => (s.out ? 1 : 0)).join("")}`;
+  if (key !== landKey) {
+    landKey = key;
+    landValue = captureThreat(board.owners, board.size, board.starts, LAND_STEAL_COST, LAND_GUARD_COST);
+  }
+  return landValue;
+}
 
 /** Which track the projector should play for this screen, and how intense. */
 export function musicFor(view: HostView | null): MusicCue {
@@ -60,11 +74,9 @@ export function musicFor(view: HostView | null): MusicCue {
     case "land": {
       if (view.phase === "podium") return { track: "land-results" };
       if (view.phase === "conquered") return { track: "land-play", intensity: 1 };
-      // Already lively at the start; everything is in by the last couple of minutes.
-      const start = Math.max(0.35, Math.min(1, 1 - view.remainingMs / 240_000));
-      return view.phase === "playing"
-        ? { track: "land-play", intensity: start, rampTo: 1, rampMs: view.remainingMs, key: "land-playing" }
-        : { track: "land-play", intensity: 0.2, key: "land-countdown" };
+      // Calm until a team gets close to closing a ring. No key, so the music glides
+      // up as the ring grows and back down if it is broken.
+      return { track: "land-play", intensity: view.phase === "playing" ? landThreat(view.board) : 0 };
     }
     case "racer": {
       if (view.phase === "podium") return { track: "racer-results" };

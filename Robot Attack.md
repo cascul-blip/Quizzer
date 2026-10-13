@@ -4,7 +4,7 @@ The main display is an isometric view of what looks like a chess or checkers boa
 
 Behind the board is a robed machine priest: a robot in a red robe with the hood up, its face a metal respirator mask with a cluster of glowing blue lenses.  It holds an electric axe and has 3 mechanical arms coming out of its backpack.
 
-The music for this mode is very synthesized with deep sounds and a synthesized organ in the background.
+The music for this mode is Romantic orchestral: famous public-domain themes by Beethoven and Grieg, arranged for a synthesized orchestra.
 
 ### Quiz Mode
 The first time that the players go into quiz mode, it starts with a 20 second timer.  This timer is at the top of the screen shown as a dwindling red progress bar.  The lower the time is, the more intesne the music gets.

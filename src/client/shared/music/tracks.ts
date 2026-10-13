@@ -1,9 +1,9 @@
 /**
- * The built-in soundtrack: original loops composed for each game mode.
+ * The built-in soundtrack: loops composed or arranged for each game mode.
  * Classic = upbeat game show, Tallest Tower = retro chiptune,
  * Submarine Squad = deep-sea suspense, Tower Fight = medieval battle,
- * Robot Attack = machine-cult chant over a D drone,
- * Land Grab = bouncy dance-pop,
+ * Robot Attack = Romantic orchestra (public-domain Beethoven and Grieg themes),
+ * Land Grab = calm ambient piano that grows into an orchestra as rings close,
  * Racer = sunny late-80s arcade-racing chiptune (tempo follows the car's speed).
  * Any of these can be replaced by an audio file in data/music/<id>.<ext>.
  */
@@ -368,193 +368,299 @@ const fightResults: Track = {
   ],
 };
 
-// ---------- Robot Attack: machine-cult chant ----------
-// A drone on D; organ chords that swap minor and major (Dm/D) and lean on the dark
-// flat second (E♭); a narrow half-step motif circling D; almost no drums until the pressure builds.
+// ---------- Robot Attack: Romantic orchestra ----------
+// Famous public-domain themes arranged for a synth orchestra: strings, brass, flute,
+// pizzicato (pluck), double bass (tribass), timpani and cymbals.
+
+/** Move every note in these bars up (or down) by whole octaves. */
+const shift = (bars: string[], by: number) => bars.map((b) => b.replace(/\d/g, (d) => String(Number(d) + by)));
+/** Four quarter notes. */
+const quarters = (a: string, b: string, c: string, d: string) => seq([a, 4], [b, 4], [c, 4], [d, 4]);
+/** An 8-bar form: four bars of one pattern, then four of another. */
+const halves = (a: string, b: string) => [a, a, a, a, b, b, b, b];
+
+// Lobby: Beethoven, Symphony No. 7, Allegretto. The solemn long-short-short-long-long march in A minor.
+const march = (first: string, second = first) => seq([first, 4], [first, 2], [first, 2], [second, 4], [second, 4]);
 
 const robotLobby: Track = {
   id: "robot-lobby",
-  bpm: 60,
+  bpm: 72,
   bars: 8,
   layers: [
-    { inst: "tribass", bars: [hold("D2"), hold("D2"), hold("D2"), hold("G1"), hold("D2"), hold("Eb2"), hold("A1"), hold("D2")], vol: 0.8 },
     {
-      inst: "organ",
+      inst: "strings",
       bars: [
-        hold(chord("D3 F3 A3")),
-        hold(chord("D3 F3 A3")),
-        hold(chord("D3 F#3 A3")),
-        hold(chord("G3 Bb3 D4")),
-        hold(chord("D3 F3 A3")),
-        hold(chord("Eb3 G3 Bb3")),
-        hold(chord("A2 C#3 E3")),
-        hold(chord("D3 F3 A3")),
+        march(chord("A2 E3 C4 E4")),
+        march(chord("G#2 E3 B3 E4")),
+        march(chord("G#2 E3 B3 E4"), chord("A2 E3 C4 E4")),
+        march(chord("C3 G3 E4 G4")),
+        march(chord("B2 G3 D4 G4")),
+        march(chord("B2 G3 D4 G4"), chord("C3 G3 E4 G4")),
+        march(chord("B2 F#3 D#4 F#4")),
+        march(chord("E3 G#3 B3 E4")),
       ],
-      vol: 0.9,
+      vol: 0.8,
     },
-    // The chant: a few slow notes creeping around D, with long silences.
+    { inst: "tribass", bars: [march("A1"), march("E2"), march("E2", "A1"), march("C2"), march("G2"), march("G2", "C2"), march("B1"), march("E2")], vol: 0.7 },
+    { inst: "timpani", bars: [once("A2"), once("E3"), once("E3"), once("C3"), once("G2"), once("G2"), once("B2"), once("E3")], vol: 0.35 },
+    // A flute line floats over the second half.
     {
-      inst: "organ",
-      bars: [
-        rest,
-        seq([".", 8], ["C#4", 2], ["D4", 6]),
-        rest,
-        seq(["D4", 4], ["Eb4", 8], ["D4", 4]),
-        rest,
-        seq(["Eb4", 4], ["D4", 4], ["C#4", 4], ["D4", 4]),
-        seq(["C#4", 8], ["E4", 8]),
-        seq(["D4", 12], [".", 4]),
-      ],
-      vol: 0.7,
+      inst: "flute",
+      bars: [rest, rest, rest, rest, seq(["D5", 8], ["B4", 4], ["D5", 4]), seq(["D5", 8], ["E5", 8]), seq(["F#5", 8], ["D#5", 4], ["F#5", 4]), seq(["E5", 12], [".", 4])],
+      vol: 0.6,
     },
-    { inst: "heart", bars: [drum("x.......x.......")], vol: 0.5 },
   ],
 };
+
+// Quiz: Grieg, In the Hall of the Mountain King. Like the original, it starts as tiptoeing
+// pizzicato and ends as the full orchestra at about twice the speed.
+const MOUNTAIN_KING = [
+  seq(["B2", 2], ["C#3", 2], ["D3", 2], ["E3", 2], ["F#3", 2], ["D3", 2], ["F#3", 4]),
+  seq(["F3", 2], ["C#3", 2], ["F3", 4], ["E3", 2], ["C3", 2], ["E3", 4]),
+  seq(["B2", 2], ["C#3", 2], ["D3", 2], ["E3", 2], ["F#3", 2], ["D3", 2], ["F#3", 2], ["B3", 2]),
+  seq(["A3", 2], ["F#3", 2], ["D3", 2], ["F#3", 2], ["A3", 8]),
+  seq(["F#3", 2], ["G#3", 2], ["A#3", 2], ["B3", 2], ["C#4", 2], ["A#3", 2], ["C#4", 4]),
+  seq(["D4", 2], ["A#3", 2], ["D4", 4], ["C#4", 2], ["A#3", 2], ["C#4", 4]),
+  seq(["F#3", 2], ["G#3", 2], ["A#3", 2], ["B3", 2], ["C#4", 2], ["A#3", 2], ["C#4", 4]),
+  seq(["D4", 2], ["A#3", 2], ["D4", 4], ["C#4", 8]),
+];
 
 const robotQuiz: Track = {
   id: "robot-quiz",
-  bpm: 72,
-  bars: 4,
-  // From the slow chant at the start of the round to a driving ~120 BPM as time runs out.
-  tempoBoost: 0.7,
+  bpm: 80,
+  bars: 8,
+  // From a creeping 80 BPM at the start of the round to a frantic 160 as time runs out.
+  tempoBoost: 1,
   layers: [
-    // The drone stays on D under the chord changes, as in a chant.
-    { inst: "tribass", bars: [hold("D2"), hold("D2"), hold("D2"), hold("A1")], vol: 0.8 },
-    { inst: "organ", bars: [hold(chord("D3 F3 A3")), hold(chord("G3 Bb3 D4")), hold(chord("Eb3 G3 Bb3")), hold(chord("A2 C#3 E3"))], vol: 0.85 },
-    { inst: "heart", bars: [drum("x.......x.......")], vol: 0.55, to: 0.45 },
-    { inst: "tick", bars: [drum("x...x...x...x...")], vol: 0.5, from: 0.2, to: 0.6 },
-    { inst: "pulse", bars: [arp(["D3", "A3", "D4", "A3"], 2), arp(["G2", "D3", "G3", "D3"], 2), arp(["Eb3", "Bb3", "Eb4", "Bb3"], 2), arp(["A2", "E3", "A3", "C#4"], 2)], vol: 0.3, from: 0.35 },
-    { inst: "kick", bars: [drum("x...x...x...x...")], vol: 0.8, from: 0.5 },
-    { inst: "taiko", bars: [drum("o.......o..o....")], vol: 0.55, from: 0.65 },
-    // The brighter layer comes in over the drone, still circling D.
-    {
-      inst: "brass",
-      bars: [
-        seq(["D4", 8], ["C#4", 4], ["D4", 4]),
-        seq(["D4", 4], ["Eb4", 8], ["D4", 4]),
-        seq(["Eb4", 8], ["D4", 4], ["C4", 4]),
-        seq(["C#4", 8], ["E4", 4], ["C#4", 4]),
-      ],
-      vol: 0.7,
-      from: 0.6,
-    },
-    { inst: "hat", bars: [drum("..x...x...x...x.")], vol: 0.35, from: 0.75 },
-    { inst: "snare", bars: [drum("....x.......x..."), drum("....x.......x..."), drum("....x.......x..."), drum("....x...x.x.xxxx")], vol: 0.6, from: 0.85 },
-    { inst: "organ", bars: [hold(chord("D4 F4 A4")), hold(chord("G4 Bb4 D5")), hold(chord("Eb4 G4 Bb4")), hold(chord("E4 A4 C#5"))], vol: 0.45, from: 0.9 },
+    { inst: "pluck", bars: MOUNTAIN_KING, vol: 0.9 },
+    { inst: "tribass", bars: halves(arp(["B1", "F#2"], 4), arp(["F#1", "C#2"], 4)), vol: 0.8 },
+    { inst: "strings", bars: shift(MOUNTAIN_KING, 1), vol: 0.8, from: 0.3 },
+    { inst: "timpani", bars: halves(pump("B2", "x.......x......."), pump("F#2", "x.......x.......")), vol: 0.5, from: 0.45, to: 0.8 },
+    { inst: "brass", bars: halves(pump(chord("B3 D4 F#4"), "..x...x...x...x."), pump(chord("A#3 C#4 F#4"), "..x...x...x...x.")), vol: 0.5, from: 0.55 },
+    { inst: "flute", bars: shift(MOUNTAIN_KING, 2), vol: 0.6, from: 0.7 },
+    { inst: "timpani", bars: halves(pump("B2", "x...x...x...x..."), pump("F#2", "x...x...x...x...")), vol: 0.55, from: 0.8 },
+    { inst: "cymbal", bars: [drum("x.......x.......")], vol: 0.6, from: 0.85 },
   ],
 };
+
+// Movement and attack: Beethoven, Symphony No. 5. Fate knocks at the door just before the lasers fire.
+const FATE = [
+  seq([".", 1], ["G4", 1], ["G4", 1], ["G4", 1], ["Eb4", 8], [".", 1], ["F4", 1], ["F4", 1], ["F4", 1]),
+  seq(["D4", 8], [".", 1], ["G4", 1], ["G4", 1], ["G4", 1], ["Eb4", 1], ["Ab4", 1], ["Ab4", 1], ["Ab4", 1]),
+  seq(["G4", 1], ["Eb5", 1], ["Eb5", 1], ["Eb5", 1], ["C5", 8], [".", 1], ["G4", 1], ["G4", 1], ["G4", 1]),
+  seq(["D4", 1], ["Ab4", 1], ["Ab4", 1], ["Ab4", 1], ["G4", 1], ["F5", 1], ["F5", 1], ["F5", 1], ["D5", 8]),
+];
 
 const robotMove: Track = {
   id: "robot-move",
-  // The chant's pulse doubled: the robot is about to fire.
-  bpm: 123,
-  bars: 2,
+  bpm: 108,
+  bars: 4,
   layers: [
-    { inst: "kick", bars: [drum("x...x...x...x...")] },
-    { inst: "taiko", bars: [drum("o.....o.o.......")], vol: 0.6 },
-    { inst: "bass", bars: [pump("D1", "x.xxx.xxx.xxx.xx")], vol: 0.85 },
-    { inst: "organ", bars: [seq(["D3+F3+A3", 6], [".", 2], ["D3+F3+A3", 6], [".", 2]), seq(["Eb3+G3+Bb3", 6], [".", 2], ["C#3+E3+A3", 8])], vol: 0.8 },
-    { inst: "brass", bars: [seq(["D4", 4], ["Eb4", 4], ["D4", 4], ["C#4", 4]), seq(["D4", 4], ["Eb4", 4], ["E4", 8])], vol: 0.55 },
-    { inst: "hat", bars: [drum("xxxxxxxxxxxxxxxx")], vol: 0.35 },
-    { inst: "snare", bars: [drum("....x.......x..."), drum("....x.......xxxx")], vol: 0.6 },
+    { inst: "strings", bars: FATE },
+    { inst: "strings", bars: shift(FATE, -1), vol: 0.9 },
+    { inst: "brass", bars: shift(FATE, -1), vol: 0.6 },
+    {
+      inst: "tribass",
+      bars: [
+        seq([".", 4], ["Eb2", 8], [".", 4]),
+        seq(["D2", 8], ["C2", 2], ["C2", 2], ["C2", 2], ["C2", 2]),
+        seq(["C2", 2], ["C2", 2], ["C2", 8], ["B1", 2], ["B1", 2]),
+        seq(["B1", 2], ["B1", 2], ["B1", 2], ["B1", 2], ["G1", 8]),
+      ],
+      vol: 0.8,
+    },
+    { inst: "timpani", bars: [seq([".", 4], ["G2", 1], [".", 11]), once("G2"), seq([".", 4], ["C3", 1], [".", 11]), seq([".", 8], ["G2", 1], [".", 7])], vol: 0.7 },
   ],
 };
+
+// Final results: Beethoven, Symphony No. 9, Ode to Joy, for the survivors.
+const ODE_OPENING = [quarters("F#4", "F#4", "G4", "A4"), quarters("A4", "G4", "F#4", "E4"), quarters("D4", "D4", "E4", "F#4")];
+const ODE = [...ODE_OPENING, seq(["F#4", 6], ["E4", 2], ["E4", 8]), ...ODE_OPENING, seq(["E4", 6], ["D4", 2], ["D4", 8])];
+const ODE_D = chord("D3 F#3 A3");
+const ODE_A = chord("C#3 E3 A3");
 
 const robotResults: Track = {
   id: "robot-results",
-  bpm: 66,
-  bars: 4,
+  bpm: 104,
+  bars: 8,
   layers: [
-    // Still a D drone, but the chords resolve to major: a solemn hymn for the survivors.
-    { inst: "tribass", bars: [hold("D2"), hold("G1"), hold("A1"), hold("D2")], vol: 0.8 },
-    { inst: "organ", bars: [hold(chord("D3 F#3 A3")), hold(chord("G3 B3 D4")), hold(chord("A2 C#3 E3")), hold(chord("D3 F#3 A3"))] },
+    { inst: "strings", bars: shift(ODE, 1), vol: 0.9 },
+    { inst: "brass", bars: ODE, vol: 0.7 },
     {
-      inst: "brass",
-      bars: [seq(["A4", 8], ["F#4", 4], ["A4", 4]), seq(["B4", 8], ["A4", 4], ["G4", 4]), seq(["A4", 4], ["C#5", 4], ["E5", 8]), seq(["D5", 12], [".", 4])],
-      vol: 0.7,
+      inst: "strings",
+      bars: [hold(ODE_D), seq([ODE_D, 8], [ODE_A, 8]), hold(ODE_D), hold(ODE_A), hold(ODE_D), seq([ODE_D, 8], [ODE_A, 8]), hold(ODE_D), seq([ODE_A, 8], [ODE_D, 8])],
+      vol: 0.6,
     },
-    { inst: "taiko", bars: [drum("o.......o.......")], vol: 0.6 },
-    { inst: "bell", bars: [once("D5"), once("D5"), once("C#5"), once("D5")], vol: 0.5 },
+    {
+      inst: "tribass",
+      bars: [
+        quarters("D2", "A2", "D2", "A2"),
+        quarters("D2", "D2", "A1", "A1"),
+        quarters("D2", "A2", "D2", "A2"),
+        quarters("A1", "A1", "A1", "A1"),
+        quarters("D2", "A2", "D2", "A2"),
+        quarters("D2", "D2", "A1", "A1"),
+        quarters("D2", "A2", "D2", "A2"),
+        quarters("A1", "A1", "D2", "D2"),
+      ],
+      vol: 0.8,
+    },
+    { inst: "timpani", bars: [once("D3"), once("D3"), once("D3"), once("A2"), once("D3"), once("D3"), once("D3"), seq(["A2", 1], [".", 7], ["D3", 1], [".", 7])], vol: 0.5 },
+    { inst: "cymbal", bars: [drum("x..............."), rest, rest, rest], vol: 0.5 },
   ],
 };
 
-// ---------- Land Grab: bouncy dance-pop ----------
+// ---------- Land Grab: calm ambient piano that grows into an orchestra ----------
+// Sparse piano in a big hall while the land is quiet. As a team gets close to closing
+// a ring the same four chords (Am F C G) speed up and gather strings, brass and drums.
 
-/** Off-beat bass: the root lands between the kicks, with an octave hop at the end of the bar. */
-const offbeat = (low: string, high: string) => seq([".", 2], [low, 2], [".", 2], [low, 2], [".", 2], [low, 2], [high, 1], [".", 1], [low, 2]);
-const LAND_BASS = [offbeat("D2", "D3"), offbeat("A1", "A2"), offbeat("B1", "B2"), offbeat("G1", "G2")];
-const LAND_STABS = ["D4 F#4 A4", "C#4 E4 A4", "D4 F#4 B4", "D4 G4 B4"].map((c) => seq([chord(c), 3], [chord(c), 3], [chord(c), 2], [".", 2], [chord(c), 3], [chord(c), 3]));
-const LAND_HOOK = [
-  seq(["F#5", 2], ["A5", 2], ["D6", 3], ["A5", 1], [".", 2], ["F#5", 2], ["A5", 2], ["F#5", 2]),
-  seq(["E5", 2], ["A5", 2], ["C#6", 3], ["A5", 1], [".", 2], ["E5", 2], ["A5", 2], ["E5", 2]),
-  seq(["F#5", 2], ["B5", 2], ["D6", 3], ["B5", 1], [".", 2], ["D6", 2], ["C#6", 2], ["B5", 2]),
-  seq(["B5", 2], ["G5", 2], ["B5", 2], ["D6", 2], ["E6", 3], ["D6", 1], ["B5", 2], ["A5", 2]),
-];
+/** One note every eighth, up through the chord and back down. */
+const rolled = (notes: string) => arp(notes.split(" "), 2);
+/** Steady eighth notes. */
+const eighths = (tok: string) => pump(tok, "x.x.x.x.x.x.x.x.");
 
 const landLobby: Track = {
   id: "land-lobby",
-  bpm: 124,
-  bars: 4,
+  bpm: 62,
+  bars: 8,
+  reverb: 0.4,
   layers: [
-    { inst: "kick", bars: [drum("x...x...x...x...")], vol: 0.85 },
-    { inst: "clap", bars: [drum("....x.......x...")], vol: 0.7 },
-    { inst: "hat", bars: [drum("..x...x...x...x.")], vol: 0.7 },
-    { inst: "bass", bars: LAND_BASS },
-    { inst: "pluck", bars: LAND_STABS, vol: 0.5 },
     {
-      inst: "lead",
+      inst: "piano",
       bars: [
-        seq(["A5", 4], ["F#5", 2], ["D5", 2], ["F#5", 4], ["A5", 4]),
-        seq(["A5", 4], ["E5", 2], ["C#5", 2], ["E5", 8]),
-        seq(["B5", 4], ["F#5", 2], ["D5", 2], ["F#5", 4], ["B5", 4]),
-        seq(["B5", 2], ["A5", 2], ["G5", 4], ["A5", 8]),
+        seq(["F3+C4", 4], ["E4", 4], ["A4", 8]),
+        seq(["C3+G3", 4], ["E4", 4], ["B4", 4], ["G4", 4]),
+        seq(["F3+C4", 4], ["A4", 4], ["C5", 4], ["E5", 4]),
+        seq(["G3+D4", 4], [".", 4], ["D5", 8]),
+        seq(["F3+C4", 4], ["E5", 4], ["C5", 8]),
+        seq(["E3+B3", 4], ["G4", 4], ["B4", 4], ["D5", 4]),
+        seq(["D3+A3", 4], ["F4", 4], ["A4", 4], ["C5", 4]),
+        seq(["G3+D4", 4], ["B4", 4], ["G4", 8]),
       ],
-      vol: 0.7,
+    },
+    // A few high notes, far apart.
+    { inst: "piano", bars: [rest, seq([".", 10], ["G5", 2], ["E5", 4]), rest, seq([".", 8], ["B5", 4], ["G5", 4]), rest, rest, seq([".", 12], ["E5", 4]), rest], vol: 0.4 },
+    {
+      inst: "pad",
+      bars: [
+        hold(chord("F3 A3 C4")),
+        hold(chord("E3 G3 C4")),
+        hold(chord("F3 A3 C4")),
+        hold(chord("G3 B3 D4")),
+        hold(chord("F3 A3 C4")),
+        hold(chord("E3 G3 B3")),
+        hold(chord("D3 F3 A3")),
+        hold(chord("G3 B3 D4")),
+      ],
+      vol: 0.5,
     },
   ],
 };
 
+const LAND_THEME = [
+  seq(["E5", 6], ["C5", 2], ["B4", 4], ["C5", 4]),
+  seq(["A4", 8], ["C5", 4], ["F5", 4]),
+  seq(["E5", 6], ["D5", 2], ["C5", 4], ["G4", 4]),
+  seq(["D5", 12], [".", 4]),
+  seq(["E5", 6], ["C5", 2], ["B4", 4], ["C5", 4]),
+  seq(["A5", 8], ["G5", 4], ["F5", 4]),
+  seq(["G5", 6], ["E5", 2], ["C5", 4], ["E5", 4]),
+  seq(["D5", 8], ["B4", 8]),
+];
+
 const landPlay: Track = {
   id: "land-play",
-  bpm: 138,
-  bars: 4,
-  tempoBoost: 0.08,
+  // 66 BPM while the land is quiet, about 109 when a ring is about to close.
+  bpm: 66,
+  bars: 8,
+  tempoBoost: 0.65,
+  reverb: 0.35,
   layers: [
-    { inst: "kick", bars: [drum("o...x...o...x..."), drum("o...x...o...x.x.")] },
-    { inst: "clap", bars: [drum("....x.......x..."), drum("....x.......x..."), drum("....x.......x..."), drum("....x.....x.x.x.")], vol: 0.8 },
-    { inst: "openhat", bars: [drum("..x...x...x...x.")], vol: 0.55 },
-    { inst: "bass", bars: LAND_BASS },
-    { inst: "pluck", bars: LAND_STABS, vol: 0.55 },
-    { inst: "lead", bars: LAND_HOOK, vol: 0.8, from: 0.3 },
-    { inst: "hat", bars: [drum("xxxxxxxxxxxxxxxx")], vol: 0.3, from: 0.5 },
-    { inst: "woodblock", bars: [drum("x..x..x...x..x.."), drum("x..x..x..x.x..x.")], vol: 0.5, from: 0.5 },
-    { inst: "pulse", bars: [arp(["D5", "F#5", "A5", "D6"]), arp(["C#5", "E5", "A5", "C#6"]), arp(["D5", "F#5", "B5", "D6"]), arp(["D5", "G5", "B5", "D6"])], vol: 0.28, from: 0.7 },
-    { inst: "snare", bars: [rest, rest, rest, drum("........x.x.xxxx")], vol: 0.55, from: 0.85 },
-    { inst: "brass", bars: [hold(chord("D4 A4")), hold(chord("C#4 A4")), hold(chord("D4 B4")), hold(chord("D4 B4"))], vol: 0.35, from: 0.85 },
+    // Quiet land: a chord, a long gap, a few notes.
+    {
+      inst: "piano",
+      bars: [
+        seq(["A3+E4", 4], [".", 4], ["C5", 4], ["B4", 4]),
+        seq(["F3+C4", 4], [".", 4], ["A4", 8]),
+        seq(["C3+G3", 4], [".", 2], ["E4", 2], ["G4", 4], ["E5", 4]),
+        seq(["G3+D4", 4], [".", 4], ["D5", 6], [".", 2]),
+        seq(["A3+E4", 4], [".", 2], ["E5", 2], ["C5", 4], ["B4", 4]),
+        seq(["F3+C4", 4], ["A4", 4], ["C5", 8]),
+        seq(["C3+G3", 4], [".", 4], ["G4", 4], ["E4", 4]),
+        seq(["G3+D4", 4], [".", 4], ["B4", 8]),
+      ],
+      to: 0.25,
+    },
+    { inst: "pad", bars: [hold(chord("A3 C4 E4")), hold(chord("F3 A3 C4")), hold(chord("G3 C4 E4")), hold(chord("G3 B3 D4"))], vol: 0.5 },
+    // Something is stirring: the piano starts to flow and picks up the theme.
+    { inst: "piano", bars: [rolled("A3 E4 A4 C5 E5 C5 A4 E4"), rolled("F3 C4 F4 A4 C5 A4 F4 C4"), rolled("C3 G3 C4 E4 G4 E4 C4 G3"), rolled("G3 D4 G4 B4 D5 B4 G4 D4")], vol: 0.6, from: 0.25, to: 0.85 },
+    { inst: "piano", bars: LAND_THEME, from: 0.25, to: 0.45 },
+    { inst: "tribass", bars: [hold("A2"), hold("F2"), hold("C2"), hold("G2")], vol: 0.6, from: 0.25, to: 0.65 },
+    // A ring is taking shape: strings take the theme over a heartbeat.
+    { inst: "strings", bars: LAND_THEME, vol: 0.9, from: 0.45 },
+    { inst: "strings", bars: [hold(chord("A3 C4 E4")), hold(chord("F3 A3 C4")), hold(chord("G3 C4 E4")), hold(chord("G3 B3 D4"))], vol: 0.55, from: 0.45, to: 0.65 },
+    { inst: "heart", bars: [drum("x.......x.......")], vol: 0.6, from: 0.45, to: 0.65 },
+    // Nearly closed: driving low strings, brass and timpani.
+    { inst: "strings", bars: [eighths(chord("A2 E3")), eighths(chord("F2 C3")), eighths(chord("C3 G3")), eighths(chord("G2 D3"))], vol: 0.75, from: 0.65 },
+    { inst: "tribass", bars: [eighths("A1"), eighths("F1"), eighths("C2"), eighths("G1")], vol: 0.7, from: 0.65 },
+    { inst: "brass", bars: shift(LAND_THEME, -1), vol: 0.8, from: 0.65 },
+    { inst: "timpani", bars: [pump("A2", "x...x...x...x..."), pump("F2", "x...x...x...x..."), pump("C3", "x...x...x...x..."), pump("G2", "x...x...x...x...")], vol: 0.5, from: 0.65 },
+    // One tile from closing: everything at once.
+    { inst: "piano", bars: [arp(["A4", "C5", "E5", "A5"]), arp(["F4", "A4", "C5", "F5"]), arp(["G4", "C5", "E5", "G5"]), arp(["G4", "B4", "D5", "G5"])], vol: 0.5, from: 0.85 },
+    { inst: "strings", bars: shift(LAND_THEME, 1), vol: 0.6, from: 0.85 },
+    { inst: "taiko", bars: [drum("o..x..x.o..x.x..")], vol: 0.6, from: 0.85 },
+    { inst: "cymbal", bars: [drum("x..............."), rest], vol: 0.6, from: 0.85 },
   ],
 };
 
 const landResults: Track = {
   id: "land-results",
-  bpm: 130,
-  bars: 4,
+  bpm: 72,
+  bars: 8,
+  reverb: 0.3,
   layers: [
-    { inst: "kick", bars: [drum("x...x...x...x...")], vol: 0.85 },
-    { inst: "clap", bars: [drum("....x.......x...")], vol: 0.75 },
-    { inst: "openhat", bars: [drum("..x...x...x...x.")], vol: 0.5 },
-    { inst: "bass", bars: [offbeat("G1", "G2"), offbeat("A1", "A2"), offbeat("B1", "B2"), offbeat("D2", "D3")] },
-    { inst: "pluck", bars: [arp(["G4", "B4", "D5", "B4"], 2), arp(["A4", "C#5", "E5", "C#5"], 2), arp(["B4", "D5", "F#5", "D5"], 2), arp(["D5", "F#5", "A5", "F#5"], 2)], vol: 0.5 },
-    { inst: "brass", bars: [hold(chord("G3 B3 D4")), hold(chord("A3 C#4 E4")), hold(chord("B3 D4 F#4")), hold(chord("D4 F#4 A4"))], vol: 0.45 },
     {
-      inst: "lead",
+      inst: "piano",
       bars: [
-        seq(["D5", 2], ["G5", 2], ["B5", 4], ["A5", 2], ["G5", 2], ["B5", 4]),
-        seq(["E5", 2], ["A5", 2], ["C#6", 4], ["B5", 2], ["A5", 2], ["C#6", 4]),
-        seq(["F#5", 2], ["B5", 2], ["D6", 4], ["C#6", 2], ["B5", 2], ["D6", 4]),
-        seq(["F#6", 3], ["E6", 3], ["D6", 2], [".", 2], ["D6", 2], ["D6", 4]),
+        seq(["E5", 4], ["G5", 4], ["C6", 8]),
+        seq(["B5", 4], ["G5", 4], ["D5", 8]),
+        seq(["C5", 4], ["E5", 4], ["A5", 8]),
+        seq(["A5", 4], ["G5", 4], ["F5", 8]),
+        seq(["E5", 4], ["G5", 4], ["C6", 8]),
+        seq(["D6", 6], ["B5", 2], ["G5", 8]),
+        seq(["A5", 4], ["F5", 4], ["C5", 4], ["D5", 4]),
+        seq(["C5", 12], [".", 4]),
       ],
-      vol: 0.8,
     },
+    {
+      inst: "piano",
+      bars: [
+        rolled("C3 G3 C4 E4 G4 E4 C4 G3"),
+        rolled("B2 G3 B3 D4 G4 D4 B3 G3"),
+        rolled("A2 E3 A3 C4 E4 C4 A3 E3"),
+        rolled("F2 C3 F3 A3 C4 A3 F3 C3"),
+        rolled("C3 G3 C4 E4 G4 E4 C4 G3"),
+        rolled("G2 D3 G3 B3 D4 B3 G3 D3"),
+        rolled("F2 C3 F3 A3 C4 A3 F3 C3"),
+        rolled("C3 G3 C4 E4 G4 E4 C4 G3"),
+      ],
+      vol: 0.6,
+    },
+    {
+      inst: "strings",
+      bars: [
+        hold(chord("E3 G3 C4")),
+        hold(chord("D3 G3 B3")),
+        hold(chord("E3 A3 C4")),
+        hold(chord("F3 A3 C4")),
+        hold(chord("E3 G3 C4")),
+        hold(chord("D3 G3 B3")),
+        hold(chord("F3 A3 C4")),
+        hold(chord("E3 G3 C4")),
+      ],
+      vol: 0.55,
+    },
+    { inst: "tribass", bars: [hold("C2"), hold("B1"), hold("A1"), hold("F1"), hold("C2"), hold("G1"), hold("F1"), hold("C2")], vol: 0.6 },
   ],
 };
 

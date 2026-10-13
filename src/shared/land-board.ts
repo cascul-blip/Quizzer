@@ -149,3 +149,95 @@ export function enclosedBy(owners: number[], size: number, team: number): number
   for (let t = 0; t < owners.length; t++) if (!open[t] && owners[t] !== team) enclosed.push(t);
   return enclosed;
 }
+
+/** With this many claims (or more) still needed to ring a starting point, nothing is brewing yet. */
+const THREAT_CALM_CLAIMS = 12;
+/** With this many claims (or fewer) still needed, the ring is as good as closed. */
+const THREAT_CLOSE_CLAIMS = 2;
+/** Threat when one more tile would capture an area: a base, plus a bit per tile captured, up to a cap. */
+const THREAT_CAPTURE_BASE = 0.35;
+const THREAT_CAPTURE_PER_TILE = 0.05;
+const THREAT_CAPTURE_MAX = 0.75;
+
+/**
+ * The fewest claims `team` still needs to wall `target` off from the board edge, counted up to `limit`.
+ * A minimum cut: the team's own tiles are walls already, tiles it can't take can't be cut,
+ * and every other tile costs what it costs to claim.
+ */
+function claimsToEnclose(owners: number[], size: number, starts: LandStart[], team: number, target: number, stealCost: number, guardCost: number, limit: number): number {
+  // Each tile is two nodes (in = 2t, out = 2t + 1) joined by an edge of its cost; the sink is past the board edge.
+  const n = owners.length;
+  const sink = 2 * n;
+  const head = Array<number>(2 * n + 1).fill(-1);
+  const next: number[] = [];
+  const to: number[] = [];
+  const cap: number[] = [];
+  const link = (a: number, b: number, c: number) => {
+    to.push(b, a);
+    cap.push(c, 0);
+    next.push(head[a]!, head[b]!);
+    head[a] = to.length - 2;
+    head[b] = to.length - 1;
+  };
+  for (let t = 0; t < n; t++) {
+    if (owners[t] === team) continue;
+    link(2 * t, 2 * t + 1, t === target ? Infinity : (placementCost(owners, size, starts, team, t, stealCost, guardCost) ?? Infinity));
+    for (const nb of neighbors(size, t)) if (owners[nb] !== team) link(2 * t + 1, 2 * nb, Infinity);
+    const row = Math.floor(t / size);
+    const col = t % size;
+    if (row === 0 || col === 0 || row === size - 1 || col === size - 1) link(2 * t + 1, sink, Infinity);
+  }
+  let flow = 0;
+  while (flow < limit) {
+    // Shortest augmenting path from the target to the edge.
+    const via = Array<number>(2 * n + 1).fill(-1);
+    const queue = [2 * target];
+    const seen = new Uint8Array(2 * n + 1);
+    seen[2 * target] = 1;
+    for (let h = 0; h < queue.length && !seen[sink]; h++) {
+      for (let e = head[queue[h]!]!; e !== -1; e = next[e]!) {
+        if (cap[e]! <= 0 || seen[to[e]!]) continue;
+        seen[to[e]!] = 1;
+        via[to[e]!] = e;
+        queue.push(to[e]!);
+      }
+    }
+    if (!seen[sink]) break;
+    let push = Infinity;
+    for (let v = sink; v !== 2 * target; v = to[via[v]! ^ 1]!) push = Math.min(push, cap[via[v]!]!);
+    if (push === Infinity) return limit;
+    for (let v = sink; v !== 2 * target; v = to[via[v]! ^ 1]!) {
+      cap[via[v]!]! -= push;
+      cap[via[v]! ^ 1]! += push;
+    }
+    flow += push;
+  }
+  return Math.min(flow, limit);
+}
+
+/**
+ * How close any team is to closing a ring, 0 (nothing brewing) … 1 (about to happen). The larger of:
+ * how few claims a team still needs to surround an opposing starting point, and how much land
+ * a team would capture by placing just one more tile.
+ */
+export function captureThreat(owners: number[], size: number, starts: LandStart[], stealCost: number, guardCost: number): number {
+  const alive = starts.filter((s) => !s.out);
+  const trial = [...owners];
+  let threat = 0;
+  for (const { team } of alive) {
+    for (const s of alive) {
+      if (s.team === team || owners[s.tile] === team) continue;
+      const claims = claimsToEnclose(owners, size, starts, team, s.tile, stealCost, guardCost, THREAT_CALM_CLAIMS);
+      threat = Math.max(threat, (THREAT_CALM_CLAIMS - claims) / (THREAT_CALM_CLAIMS - THREAT_CLOSE_CLAIMS));
+    }
+    let captured = 0;
+    for (let t = 0; t < owners.length; t++) {
+      if (placementCost(owners, size, starts, team, t, stealCost, guardCost) === null) continue;
+      trial[t] = team;
+      captured = Math.max(captured, enclosedBy(trial, size, team).length);
+      trial[t] = owners[t]!;
+    }
+    if (captured > 0) threat = Math.max(threat, Math.min(THREAT_CAPTURE_MAX, THREAT_CAPTURE_BASE + captured * THREAT_CAPTURE_PER_TILE));
+  }
+  return Math.max(0, Math.min(1, threat));
+}

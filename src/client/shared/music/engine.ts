@@ -24,6 +24,11 @@ export type Instrument =
   | "bell"
   | "brass"
   | "organ"
+  | "piano"
+  | "strings"
+  | "flute"
+  | "timpani"
+  | "cymbal"
   | "woodblock"
   | "sonar"
   | "taiko"
@@ -31,7 +36,7 @@ export type Instrument =
   | "heart"
   | "chipnoise";
 
-export const DRUMS = new Set<Instrument>(["kick", "snare", "hat", "openhat", "clap", "tick", "woodblock", "sonar", "taiko", "bubble", "heart", "chipnoise"]);
+export const DRUMS = new Set<Instrument>(["kick", "snare", "hat", "openhat", "clap", "tick", "cymbal", "woodblock", "sonar", "taiko", "bubble", "heart", "chipnoise"]);
 
 export interface Layer {
   inst: Instrument;
@@ -52,6 +57,8 @@ export interface Track {
   tempoBoost?: number;
   /** Delay every other 16th by this fraction of a step (shuffle feel). */
   swing?: number;
+  /** How much of the track is also sent through a hall reverb (0…1). */
+  reverb?: number;
   layers: Layer[];
 }
 
@@ -167,6 +174,8 @@ export function playInstrument(ctx: Ctx, dest: AudioNode, inst: Instrument, t: n
       return noiseHit(ctx, dest, t, 0.13 * v, 0.2, "highpass", 6500);
     case "chipnoise":
       return noiseHit(ctx, dest, t, 0.22 * v, 0.06, "highpass", 3000);
+    case "cymbal":
+      return noiseHit(ctx, dest, t, 0.14 * v, 1.2, "highpass", 5000);
     case "tick":
       osc(ctx, dest, "square", 2400, t, 0.08 * v, 0.001, 0.004, 0.02);
       return;
@@ -288,6 +297,85 @@ export function playInstrument(ctx: Ctx, dest: AudioNode, inst: Instrument, t: n
       }
       return;
     }
+    case "piano": {
+      // Soft piano: a quick hammer, then a long decay that is shorter for higher and for quicker notes.
+      const ring = Math.min(Math.max(0.5, Math.min(3, 1.8 * Math.sqrt(262 / freq))), 0.6 + len * 2);
+      osc(ctx, dest, "triangle", freq, t, 0.26 * v, 0.004, 0.01, ring);
+      osc(ctx, dest, "sine", freq, t, 0.08 * v, 0.004, 0.01, ring, 4);
+      osc(ctx, dest, "sine", freq * 2, t, 0.07 * v, 0.004, 0.01, ring * 0.5);
+      osc(ctx, dest, "sine", freq * 3, t, 0.025 * v, 0.004, 0.005, ring * 0.25);
+      return;
+    }
+    case "strings": {
+      // String section: detuned saws with a bowed attack and a little vibrato.
+      const g = ctx.createGain();
+      const f = ctx.createBiquadFilter();
+      f.type = "lowpass";
+      f.frequency.value = 2200;
+      g.connect(f).connect(dest);
+      const attack = Math.min(0.06, len * 0.3);
+      env(g, t, 0.07 * v, attack, Math.max(0, len - attack - 0.02), 0.14);
+      const lfo = ctx.createOscillator();
+      const depth = ctx.createGain();
+      lfo.frequency.value = 5.2;
+      depth.gain.value = 5;
+      lfo.connect(depth);
+      lfo.start(t);
+      lfo.stop(t + len + 0.3);
+      for (const det of [-8, 0, 8]) {
+        const o = ctx.createOscillator();
+        o.type = "sawtooth";
+        o.frequency.value = freq;
+        o.detune.value = det;
+        depth.connect(o.detune);
+        o.connect(g);
+        o.start(t);
+        o.stop(t + len + 0.3);
+      }
+      return;
+    }
+    case "flute": {
+      // Nearly a pure tone: a sine with faint overtones, a soft attack and vibrato.
+      const g = ctx.createGain();
+      g.connect(dest);
+      env(g, t, 0.16 * v, Math.min(0.04, len * 0.3), Math.max(0, len - 0.06), 0.1);
+      const lfo = ctx.createOscillator();
+      const depth = ctx.createGain();
+      lfo.frequency.value = 5;
+      depth.gain.value = 8;
+      lfo.connect(depth);
+      lfo.start(t);
+      lfo.stop(t + len + 0.2);
+      for (const [mult, level] of [
+        [1, 1],
+        [2, 0.18],
+        [3, 0.06],
+      ] as const) {
+        const o = ctx.createOscillator();
+        const og = ctx.createGain();
+        o.type = "sine";
+        o.frequency.value = freq * mult;
+        depth.connect(o.detune);
+        og.gain.value = level;
+        o.connect(og).connect(g);
+        o.start(t);
+        o.stop(t + len + 0.2);
+      }
+      return;
+    }
+    case "timpani": {
+      // A tuned drum: the pitch settles onto the note just after the stroke.
+      const o = ctx.createOscillator();
+      o.frequency.setValueAtTime(freq * 1.12, t);
+      o.frequency.exponentialRampToValueAtTime(freq, t + 0.06);
+      const g = ctx.createGain();
+      env(g, t, 0.7 * v, 0.003, 0.04, 0.6);
+      o.connect(g).connect(dest);
+      o.start(t);
+      o.stop(t + 0.7);
+      noiseHit(ctx, dest, t, 0.25 * v, 0.1, "lowpass", 400);
+      return;
+    }
     case "brass": {
       const g = ctx.createGain();
       const f = ctx.createBiquadFilter();
@@ -362,6 +450,7 @@ export function renderInto(ctx: Ctx, dest: AudioNode, track: Track, seconds: num
 const LOOKAHEAD_S = 0.12;
 const TICK_MS = 25;
 const FADE_S = 1.2;
+const REVERB_S = 2.8;
 
 interface Playing {
   kind: "synth" | "file";
@@ -375,6 +464,7 @@ interface Playing {
 
 export class MusicPlayer {
   private master: GainNode | null = null;
+  private reverb: ConvolverNode | null = null;
   private current: Playing | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
   private intensity = 0;
@@ -440,6 +530,22 @@ export class MusicPlayer {
     return this.master;
   }
 
+  /** A hall reverb shared by every track that asks for one: a few seconds of decaying noise as the impulse response. */
+  private ensureReverb(ctx: AudioContext, master: GainNode): ConvolverNode {
+    if (!this.reverb) {
+      const length = Math.floor(ctx.sampleRate * REVERB_S);
+      const impulse = ctx.createBuffer(2, length, ctx.sampleRate);
+      for (let ch = 0; ch < 2; ch++) {
+        const d = impulse.getChannelData(ch);
+        for (let i = 0; i < length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / length) ** 3;
+      }
+      this.reverb = ctx.createConvolver();
+      this.reverb.buffer = impulse;
+      this.reverb.connect(master);
+    }
+    return this.reverb;
+  }
+
   private tick(): void {
     const ctx = this.getCtx();
     if (!ctx || ctx.state !== "running") return; // waits for the first click/keypress (browser autoplay rules)
@@ -497,6 +603,12 @@ export class MusicPlayer {
       return;
     }
     // An unknown id plays silence (but still counts as "current", so we don't retry every tick).
-    this.current = { kind: "synth", id, gain, track: this.tracks[id], step: 0, nextTime: now + 0.05 };
+    const track = this.tracks[id];
+    if (track?.reverb) {
+      const send = ctx.createGain();
+      send.gain.value = track.reverb;
+      gain.connect(send).connect(this.ensureReverb(ctx, master));
+    }
+    this.current = { kind: "synth", id, gain, track, step: 0, nextTime: now + 0.05 };
   }
 }
