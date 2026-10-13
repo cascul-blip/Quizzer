@@ -1,5 +1,5 @@
-import { useState } from "preact/hooks";
-import type { HostMsg, QuestionError } from "../../shared/protocol.ts";
+import { useEffect, useState } from "preact/hooks";
+import type { HostMsg, JoinInfo, QuestionError } from "../../shared/protocol.ts";
 import { musicEnabled, musicVolume, setMusicEnabled, setMusicVolume } from "../shared/music/index.ts";
 import { isMuted, setMuted } from "../shared/sounds.ts";
 import { setVoiceEnabled, voiceEnabled } from "../shared/voice.ts";
@@ -11,12 +11,31 @@ export function toggleFullscreen() {
   else void document.documentElement.requestFullscreen?.().catch(() => {});
 }
 
-/** Music, voice, mute and fullscreen buttons for the projector's top bar. `voice` shows the announcer toggle (modes that speak). */
-export function ScreenControls({ voice = false }: { voice?: boolean } = {}) {
+/**
+ * Music, voice, join QR, mute and fullscreen buttons for the projector's top bar.
+ * `voice` shows the announcer toggle (modes that speak); `join` shows the button that pops up the join QR so players can get back in mid-game.
+ */
+export function ScreenControls({ voice = false, join }: { voice?: boolean; join?: JoinInfo } = {}) {
   const [muted, setMutedState] = useState(isMuted());
   const [musicOn, setMusicOn] = useState(musicEnabled());
   const [volume, setVolume] = useState(musicVolume());
   const [voiceOn, setVoiceOn] = useState(voiceEnabled());
+  const [qrOpen, setQrOpen] = useState(false);
+
+  // Keyboard: Q = toggle the join QR, Escape = close it.
+  useEffect(() => {
+    if (!join) {
+      setQrOpen(false);
+      return;
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.target as HTMLElement)?.closest?.("input, select, textarea")) return;
+      if (e.key === "q" || e.key === "Q") setQrOpen((o) => !o);
+      else if (e.key === "Escape") setQrOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [!join]);
   return (
     <>
       <div class={`music-ctl ${musicOn ? "" : "off"}`}>
@@ -62,6 +81,14 @@ export function ScreenControls({ voice = false }: { voice?: boolean } = {}) {
           🗣
         </button>
       )}
+      {join && (
+        <button class="icon-btn" title="Show join QR code (Q)" aria-label="Show join QR code" aria-pressed={qrOpen} onClick={() => setQrOpen(!qrOpen)}>
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+            <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z" />
+            <path d="M14 14h2.5v2.5H14zM17.5 17.5H20V20h-2.5z" fill="currentColor" stroke-width="1" />
+          </svg>
+        </button>
+      )}
       <button
         class="icon-btn"
         title={muted ? "Unmute sounds" : "Mute sounds"}
@@ -78,6 +105,16 @@ export function ScreenControls({ voice = false }: { voice?: boolean } = {}) {
           <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
         </svg>
       </button>
+      {join && qrOpen && (
+        <div class="join-qr-overlay" onClick={() => setQrOpen(false)}>
+          <div class="join-qr-card">
+            <div class="join-qr-title">Scan to join or rejoin</div>
+            <div class="qr" dangerouslySetInnerHTML={{ __html: join.qrSvg }} aria-label={`QR code for ${join.url}`} role="img" />
+            <div class="join-url">{join.url.replace(/^http:\/\//, "").replace(/\/$/, "")}</div>
+            <div class="join-qr-hint">Click anywhere or press Esc to close</div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

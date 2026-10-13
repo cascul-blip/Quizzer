@@ -85,7 +85,7 @@ export function TowerStage({ view, send }: { view: TowerView; send: Send }) {
         )}
         <div class="spacer" />
         <div class="pill">👥 {view.playerCount}</div>
-        <ScreenControls />
+        <ScreenControls join={view.join} />
         {view.phase !== "podium" && (
           <button class="btn ghost small" onClick={() => confirm("End the game now and show the final results?") && send({ type: "host.end" })}>
             End game

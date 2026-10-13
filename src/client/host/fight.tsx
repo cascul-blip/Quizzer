@@ -53,7 +53,7 @@ export function FightStage({ view, send }: { view: FightView; send: Send }) {
         <div class="pill">⛰ {HILL_NAME[view.hill]}</div>
         <div class="spacer" />
         <div class="pill">👥 {view.playerCount}</div>
-        <ScreenControls />
+        <ScreenControls join={view.join} />
         {view.phase !== "podium" && (
           <button class="btn ghost small" onClick={() => confirm("End the game now? The least damaged tower wins.") && send({ type: "host.end" })}>
             End game

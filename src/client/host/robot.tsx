@@ -65,7 +65,7 @@ export function RobotStage({ view, send }: { view: RobotView; send: Send }) {
         <div class="pill">
           ❤️ {alive.length} / {view.playerCount}
         </div>
-        <ScreenControls voice />
+        <ScreenControls voice join={view.join} />
         {view.phase !== "podium" && (
           <button class="btn ghost small" onClick={() => confirm("End the game now? Players still standing are ranked by lives left.") && send({ type: "host.end" })}>
             End game
