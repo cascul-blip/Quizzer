@@ -65,5 +65,5 @@ test("examples/sample-quiz.json is a valid quiz", async () => {
   const { QuizDraft } = await import("../src/shared/quiz-schema.ts");
   const sample = await Bun.file(new URL("../examples/sample-quiz.json", import.meta.url)).json();
   expect(QuizDraft.safeParse(sample).success).toBe(true);
-  expect(normalizeQuestions(sample.questions)).toHaveLength(8);
+  expect(normalizeQuestions(sample.questions)).toHaveLength(9);
 });

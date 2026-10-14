@@ -26,7 +26,7 @@ export function RobotPlayer({ view, send }: { view: PlayerRobotView; send: Send 
     body = <RobotResult view={view} />;
   } else if (view.phase === "quiz") {
     body = view.question ? (
-      <StreamQuestion question={view.question} onAnswer={(seq, option) => send({ type: "robot.answer", seq, option })} />
+      <StreamQuestion question={view.question} onAnswer={(seq, option, text) => send({ type: "robot.answer", seq, option, text })} />
     ) : (
       <main class="center">
         <div class="spinner" />

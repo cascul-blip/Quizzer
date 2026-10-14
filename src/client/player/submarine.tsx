@@ -59,7 +59,7 @@ export function SubPlayer({ view, send }: { view: PlayerSubView; send: Send }) {
   } else if (view.state === "boost" || afterBoost) {
     body = <BoostButton onBoost={onBoost} />;
   } else if (view.question) {
-    body = <StreamQuestion question={view.question} onAnswer={(seq, option) => send({ type: "sub.answer", seq, option })} />;
+    body = <StreamQuestion question={view.question} onAnswer={(seq, option, text) => send({ type: "sub.answer", seq, option, text })} />;
   } else {
     body = (
       <main class="center">

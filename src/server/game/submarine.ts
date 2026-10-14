@@ -1,3 +1,4 @@
+import type { AnswerValue } from "../../shared/answer-match.ts";
 import {
   CORRECT_PER_BOOST,
   type HostSubState,
@@ -236,7 +237,7 @@ export class SubGame {
     this.onChange();
   }
 
-  answer(playerId: string, seq: number, option: number): boolean {
+  answer(playerId: string, seq: number, option: AnswerValue): boolean {
     const p = this.players.get(playerId);
     if (!p || this.phase !== "chase" || p.state !== "question") return false;
     const correct = this.stream.answer(p, seq, option);

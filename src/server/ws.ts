@@ -1,6 +1,7 @@
 import type { ServerWebSocket } from "bun";
 import QRCode from "qrcode";
 import type { ClientMsg, FightSettings, GameMode, HostView, JoinInfo, LandSettings, Pacing, PlayerView, ServerMsg, TowerSettings } from "../shared/protocol.ts";
+import { answerOf } from "../shared/answer-match.ts";
 import { cleanAvatar } from "../shared/avatars.ts";
 import { ValidationError } from "../shared/quiz-schema.ts";
 import { FightGame } from "./game/fight.ts";
@@ -253,17 +254,17 @@ export class GameHub {
       }
       case "answer": {
         if (!(this.game instanceof Game) || !ws.data.playerId) return;
-        this.game.answer(ws.data.playerId, Number(msg.qIndex), Number(msg.option));
+        this.game.answer(ws.data.playerId, Number(msg.qIndex), answerOf(msg));
         return;
       }
       case "tower.answer": {
         if (!(this.game instanceof TowerGame) || !ws.data.playerId) return;
-        if (!this.game.answer(ws.data.playerId, Number(msg.seq), Number(msg.option))) this.sendState(ws);
+        if (!this.game.answer(ws.data.playerId, Number(msg.seq), answerOf(msg))) this.sendState(ws);
         return;
       }
       case "sub.answer": {
         if (!(this.game instanceof SubGame) || !ws.data.playerId) return;
-        if (!this.game.answer(ws.data.playerId, Number(msg.seq), Number(msg.option))) this.sendState(ws);
+        if (!this.game.answer(ws.data.playerId, Number(msg.seq), answerOf(msg))) this.sendState(ws);
         return;
       }
       case "sub.boost": {
@@ -278,7 +279,7 @@ export class GameHub {
       }
       case "fight.answer": {
         if (!(this.game instanceof FightGame) || !ws.data.playerId) return;
-        if (!this.game.answer(ws.data.playerId, Number(msg.seq), Number(msg.option))) this.sendState(ws);
+        if (!this.game.answer(ws.data.playerId, Number(msg.seq), answerOf(msg))) this.sendState(ws);
         return;
       }
       case "fight.choose": {
@@ -293,7 +294,7 @@ export class GameHub {
       }
       case "robot.answer": {
         if (!(this.game instanceof RobotGame) || !ws.data.playerId) return;
-        if (!this.game.answer(ws.data.playerId, Number(msg.seq), Number(msg.option))) this.sendState(ws);
+        if (!this.game.answer(ws.data.playerId, Number(msg.seq), answerOf(msg))) this.sendState(ws);
         return;
       }
       case "robot.move": {
@@ -303,7 +304,7 @@ export class GameHub {
       }
       case "land.answer": {
         if (!(this.game instanceof LandGame) || !ws.data.playerId) return;
-        if (!this.game.answer(ws.data.playerId, Number(msg.seq), Number(msg.option))) this.sendState(ws);
+        if (!this.game.answer(ws.data.playerId, Number(msg.seq), answerOf(msg))) this.sendState(ws);
         return;
       }
       case "land.place": {
@@ -328,7 +329,7 @@ export class GameHub {
       }
       case "racer.answer": {
         if (!(this.game instanceof RacerGame) || !ws.data.playerId) return;
-        if (!this.game.answer(ws.data.playerId, Number(msg.index), Number(msg.option))) this.sendState(ws);
+        if (!this.game.answer(ws.data.playerId, Number(msg.index), answerOf(msg))) this.sendState(ws);
         return;
       }
       case "tower.drop": {

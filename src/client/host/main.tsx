@@ -546,7 +546,7 @@ function QuestionScreen({ view, send }: { view: GameView; send: Send }) {
           )}
         </div>
         <div class="center-media">
-          {!open ? (
+          {!open && q.type !== "text" ? (
             <div class="bars" role="img" aria-label="Answer distribution">
               {q.options.map((_, i) => {
                 const c = optionColor(q.type, i);
@@ -578,6 +578,7 @@ function QuestionScreen({ view, send }: { view: GameView; send: Send }) {
           </div>
         </div>
       </div>
+      {q.type === "text" && open && <p class="typing-note">Type your answer on your phone</p>}
       <div class={`tiles n${q.options.length}`}>
         {q.options.map((text, i) => {
           const c = optionColor(q.type, i);

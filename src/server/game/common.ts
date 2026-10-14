@@ -30,7 +30,7 @@ export function shuffle<T>(arr: T[], rng: () => number): T[] {
 
 /** Shuffle a question's options; correct indices are remapped. True/False keeps its familiar order. */
 export function shuffleOptions<Q extends { type: string; options: string[]; correct: number[] }>(q: Q, rng: () => number): Q {
-  if (q.type === "true_false") return q;
+  if (q.type === "true_false" || q.type === "text") return q;
   const order = shuffle(q.options.map((_, i) => i), rng);
   return { ...q, options: order.map((i) => q.options[i]!), correct: q.correct.map((c) => order.indexOf(c)).sort((a, b) => a - b) };
 }

@@ -8,7 +8,7 @@ Requirements:
 * Quizzes can be created and edited by an AI agent through an MCP or skill that will be created.
 
 Quiz Requirements:
-* Quizzes need to have the following question types:  Multiple choice and True/False
+* Quizzes need to have the following question types:  Multiple choice, True/False and Type the answer (the quiz creator lists one or more accepted answers; typed answers ignore case and plural endings, so "Airplanes" matches "Airplane")
 * Once all answers are in, each client screen needs to show If they got it wrong or right.  If they got it wrong, the correct answer needs to be highlighted.
 
 Host Requirements:

@@ -74,7 +74,7 @@ export function FightPlayer({ view, send }: { view: PlayerFightView; send: Send 
   } else if (view.state === "watch" && view.shot) {
     body = <WatchScreen view={view} shot={view.shot} />;
   } else if (view.question) {
-    body = <StreamQuestion question={view.question} onAnswer={(seq, option) => send({ type: "fight.answer", seq, option })} />;
+    body = <StreamQuestion question={view.question} onAnswer={(seq, option, text) => send({ type: "fight.answer", seq, option, text })} />;
   } else {
     body = (
       <main class="center">
