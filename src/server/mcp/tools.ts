@@ -8,11 +8,12 @@ import { MAX_MEDIA_BYTES, NotFoundError, type QuizStore } from "../quiz/store.ts
 export const SERVER_INSTRUCTIONS = `Quizzer stores Kahoot-style quizzes that are played live on a projector with players answering on their phones.
 
 Quiz format rules:
-- Question types: "multiple_choice" (2–4 options) and "true_false" (options are always ["True","False"]; omit options).
+- Question types: "multiple_choice" (2–4 options), "true_false" (options are always ["True","False"]; omit options) and "text"
+  (players type the answer; "options" lists 1–4 accepted answers, omit "correct". Case and plural endings are ignored, so "Airplanes" matches "Airplane").
 - "correct" is a list of 0-based option indices. For true_false use [0] for True or [1] for False.
   A multiple_choice question may list several correct indices; picking ANY of them counts as correct.
 - timeLimitSec is 5–120 (default 20). Keep question text under 300 chars and each option under 120 chars (shorter reads better on phones).
-- Players tap a single option. Speed matters for scoring, so keep questions readable in a few seconds.
+- Players tap a single option (or type the answer for text questions). Speed matters for scoring, so keep questions readable in a few seconds.
 
 Workflow tips: call list_quizzes first to find ids; get_quiz returns question ids for per-question edits.
 Prefer create_quiz with the full question list when authoring a new quiz.`;

@@ -61,7 +61,7 @@ export function LandPlayer({ view, send }: { view: PlayerLandView; send: Send })
   } else if (view.state === "empty") {
     body = <EmptyNotice ms={view.emptyMs} />;
   } else if (view.question) {
-    body = <StreamQuestion question={view.question} onAnswer={(seq, option) => send({ type: "land.answer", seq, option })} />;
+    body = <StreamQuestion question={view.question} onAnswer={(seq, option, text) => send({ type: "land.answer", seq, option, text })} />;
   } else {
     body = (
       <main class="center">

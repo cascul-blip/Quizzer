@@ -1,3 +1,4 @@
+import { checkAnswer, type AnswerValue } from "../../shared/answer-match.ts";
 import type { Question, QuestionType } from "../../shared/quiz-schema.ts";
 import type { QuestionError } from "../../shared/protocol.ts";
 import { shuffle, shuffleOptions, topErrors, type Clock } from "./common.ts";
@@ -84,11 +85,11 @@ export class QuestionStream {
    * Returns whether it was correct, or null if the answer was rejected
    * (stale seq, still in the feedback flash, or an invalid option).
    */
-  answer(p: StreamPlayer, seq: number, option: number): boolean | null {
+  answer(p: StreamPlayer, seq: number, answer: AnswerValue): boolean | null {
     const cur = p.current;
     if (!cur || seq !== cur.seq || this.clock.now() < p.readyAt) return null;
-    if (!Number.isInteger(option) || option < 0 || option >= cur.options.length) return null;
-    const correct = cur.correct.includes(option);
+    const correct = checkAnswer({ type: this.questions[cur.qIndex]!.type, options: cur.options, correct: cur.correct }, answer);
+    if (correct === null) return null;
     if (correct) {
       p.correct++;
       p.wrongStreak = 0;
@@ -112,7 +113,7 @@ export class QuestionStream {
   questionView(p: StreamPlayer): StreamQuestionView | null {
     if (!p.current) return null;
     const q = this.questions[p.current.qIndex]!;
-    return { seq: p.current.seq, type: q.type, text: q.text, ...(q.image ? { image: q.image } : {}), options: p.current.options };
+    return { seq: p.current.seq, type: q.type, text: q.text, ...(q.image ? { image: q.image } : {}), options: q.type === "text" ? [] : p.current.options };
   }
 
   feedbackView(p: StreamPlayer): { seq: number; correct: boolean; answers: string[]; penaltyMs: number; remainingMs: number } | null {

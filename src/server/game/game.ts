@@ -19,6 +19,7 @@ import {
   type TowerSettings,
 } from "../../shared/protocol.ts";
 import { cleanAvatar, randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
+import { MAX_TYPED_ANSWER, checkAnswer, type AnswerValue } from "../../shared/answer-match.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import { GameError, assignTeams, realClock, shuffle, shuffleOptions, teamInfo, topErrors, type Clock } from "./common.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
@@ -37,7 +38,10 @@ export const DEFAULT_FIGHT: FightSettings = { hill: "random" };
 export const DEFAULT_LAND: LandSettings = { teams: 2, minutes: 5 };
 
 export interface Answer {
+  /** Chosen option index; -1 for a typed answer. */
   option: number;
+  /** What the player typed, for a typed question. */
+  text?: string;
   correct: boolean;
   points: number;
   ms: number;
@@ -179,17 +183,18 @@ export class Game {
     return p;
   }
 
-  answer(playerId: string, qIndex: number, option: number): boolean {
+  answer(playerId: string, qIndex: number, answer: AnswerValue): boolean {
     const p = this.players.get(playerId);
     const q = this.currentQuestion;
     if (!p || !q || this.phase !== "open" || qIndex !== this.qIndex) return false;
     if (p.answers[qIndex]) return false;
-    if (!Number.isInteger(option) || option < 0 || option >= q.options.length) return false;
+    const correct = checkAnswer(q, answer);
+    if (correct === null) return false;
     const now = this.clock.now();
     if (now > this.phaseEndsAt + GRACE_MS) return false;
     const ms = Math.max(0, now - this.openedAt);
-    const correct = q.correct.includes(option);
-    p.answers[qIndex] = { option, correct, points: scoreAnswer(correct, ms, q.timeLimitSec), ms };
+    const choice = typeof answer === "string" ? { option: -1, text: answer.slice(0, MAX_TYPED_ANSWER) } : { option: answer };
+    p.answers[qIndex] = { ...choice, correct, points: scoreAnswer(correct, ms, q.timeLimitSec), ms };
     this.onChange();
     this.maybeCloseEarly();
     return true;
@@ -442,7 +447,8 @@ export class Game {
       text: q.text,
       ...(q.image ? { image: q.image } : {}),
       timeLimitSec: q.timeLimitSec,
-      options: this.phase === "intro" ? [] : q.options,
+      // A typed question's accepted answers stay hidden until the reveal.
+      options: this.phase === "intro" || (q.type === "text" && !this.revealed) ? [] : q.options,
       remainingMs: this.phaseEndsAt ? Math.max(0, this.phaseEndsAt - this.clock.now()) : 0,
     };
   }
@@ -501,10 +507,11 @@ export class Game {
       me: { id: p.id, nickname: p.nickname, avatar: p.avatar, score: p.score, rank: me.rank, streak: p.streak },
       playerCount: this.players.size,
       question: this.questionView(),
-      myChoice: this.phase === "open" || this.revealed ? (ans?.option ?? null) : null,
+      myChoice: this.phase === "open" || this.revealed ? (ans && ans.option >= 0 ? ans.option : null) : null,
+      myText: this.phase === "open" || this.revealed ? (ans?.text ?? null) : null,
       result:
         this.revealed && q
-          ? { choice: ans?.option ?? null, correct: q.correct, wasCorrect: !!ans?.correct, points: ans?.points ?? 0 }
+          ? { choice: ans && ans.option >= 0 ? ans.option : null, correct: q.correct, wasCorrect: !!ans?.correct, points: ans?.points ?? 0 }
           : null,
       podium: this.phase === "podium" ? this.leaderboard(5) : null,
       team: this.phase === "lobby" && this.previewTeams !== null ? teamInfo(this.teamAssignment().get(p.id) ?? 0) : null,

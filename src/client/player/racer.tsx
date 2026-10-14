@@ -4,7 +4,7 @@ import { RACER_CONFIDENCE, RACER_CONFIDENCE_LEVELS } from "../../shared/racer-ru
 import { Avatar } from "../shared/avatar-art.tsx";
 import { RacerScene } from "../shared/racer-art.tsx";
 import { play } from "../shared/sounds.ts";
-import { Shape, optionColor, useCountdown } from "../shared/ui.tsx";
+import { Shape, TextAnswer, optionColor, useCountdown } from "../shared/ui.tsx";
 
 type Send = (m: ClientMsg) => void;
 
@@ -312,15 +312,21 @@ function RacerAnswering({ view, send }: { view: PlayerRacerView; send: Send }) {
     const t = setTimeout(() => setArmed(true), AFTER_GO_MS);
     return () => clearTimeout(t);
   }, []);
+  const [pendingText, setPendingText] = useState<string | null>(null);
   const chosen = view.myChoice ?? pending;
+  const typed = view.myText ?? pendingText;
 
-  if (chosen !== null) {
+  if (chosen !== null || typed !== null) {
     return (
       <main class="center">
-        <div class={`locked opt-${optionColor(q.type, chosen)}`}>
-          <Shape index={optionColor(q.type, chosen)} />
-          <span>{q.options[chosen]}</span>
-        </div>
+        {typed !== null ? (
+          <div class="locked-text">{typed}</div>
+        ) : (
+          <div class={`locked opt-${optionColor(q.type, chosen!)}`}>
+            <Shape index={optionColor(q.type, chosen!)} />
+            <span>{q.options[chosen!]}</span>
+          </div>
+        )}
         <h1>Answer locked in</h1>
         <p class="muted">Waiting for the others…</p>
       </main>
@@ -347,6 +353,15 @@ function RacerAnswering({ view, send }: { view: PlayerRacerView; send: Send }) {
           <b>Repair the car: at least half must be right</b>
         )}
       </div>
+      {q.type === "text" ? (
+        <TextAnswer
+          disabled={!armed}
+          onSubmit={(text) => {
+            setPendingText(text);
+            send({ type: "racer.answer", index: q.index, option: 0, text });
+          }}
+        />
+      ) : (
       <div class={`answers n${q.options.length} ${armed ? "" : "racer-unarmed"}`}>
         {q.options.map((text, i) => {
           const c = optionColor(q.type, i);
@@ -367,6 +382,7 @@ function RacerAnswering({ view, send }: { view: PlayerRacerView; send: Send }) {
           );
         })}
       </div>
+      )}
     </main>
   );
 }
@@ -386,7 +402,7 @@ function RacerReveal({ view }: { view: PlayerRacerView }) {
   const r = view.reveal;
   const t = view.lastTurn;
   const good = !!r?.wasCorrect;
-  const heading = !r || r.choice === null ? "No answer" : good ? "Correct!" : "Wrong";
+  const heading = !r || (r.choice === null && view.myText === null) ? "No answer" : good ? "Correct!" : "Wrong";
   const tone = t ? (t.gain > 0 || t.repaired ? "up" : t.crashed || t.fails > 0 ? "down" : "") : "";
   return (
     <main class={`result racer-reveal ${good ? "good" : "bad"}`}>

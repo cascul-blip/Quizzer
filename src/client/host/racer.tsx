@@ -240,6 +240,7 @@ function Turn({ view, send, secs }: { view: RacerView; send: Send; secs: number 
           <Countdown secs={secs} totalMs={view.phaseDurationMs} />
         </div>
       )}
+      {view.phase === "open" && q.type === "text" && <p class="typing-note">Type your answer on your phone</p>}
       {(view.phase === "open" || reveal) && (
         <div class={`tiles racer-tiles n${q.options.length} ${longest > 60 ? "long" : longest > 30 ? "medium" : ""}`}>
           {q.options.map((text, i) => {
@@ -250,7 +251,7 @@ function Turn({ view, send, secs }: { view: RacerView; send: Send; secs: number 
                 <Shape index={c} />
                 <span class="tile-text">{text}</span>
                 {state === "right" && <span class="tick">✓</span>}
-                {reveal && <span class="racer-count">{counts[i] ?? 0}</span>}
+                {reveal && q.type !== "text" && <span class="racer-count">{counts[i] ?? 0}</span>}
               </div>
             );
           })}

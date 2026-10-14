@@ -2067,3 +2067,34 @@ h1 {
     font-size: 44px;
   }
 }
+
+.text-answer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.text-answer input {
+  font-size: 22px;
+  padding: 16px;
+  border-radius: var(--radius);
+  border: 3px solid rgba(255, 255, 255, 0.5);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.text-answer button {
+  font-size: 22px;
+  padding: 16px;
+  font-weight: 800;
+}
+
+.locked-text {
+  font-size: 26px;
+  font-weight: 800;
+  padding: 16px 24px;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.2);
+  overflow-wrap: anywhere;
+}

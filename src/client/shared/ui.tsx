@@ -115,3 +115,38 @@ export class ErrorBoundary extends Component<{ children: ComponentChildren }, { 
     );
   }
 }
+
+/** A typed answer: a text box and a Send button (Enter also sends). Disabled once an answer is on its way. */
+export function TextAnswer({ onSubmit, disabled = false }: { onSubmit: (text: string) => void; disabled?: boolean }) {
+  const [text, setText] = useState("");
+  const ready = text.trim() !== "" && !disabled;
+  const send = () => ready && onSubmit(text.trim());
+  return (
+    <form
+      class="text-answer"
+      onSubmit={(e) => {
+        e.preventDefault();
+        send();
+      }}
+    >
+      <input
+        type="text"
+        value={text}
+        maxLength={100}
+        autoFocus
+        autoComplete="off"
+        autoCapitalize="off"
+        autoCorrect="off"
+        spellcheck={false}
+        enterkeyhint="send"
+        placeholder="Type your answer"
+        aria-label="Your answer"
+        disabled={disabled}
+        onInput={(e) => setText(e.currentTarget.value)}
+      />
+      <button class="btn primary" type="submit" disabled={!ready}>
+        Send
+      </button>
+    </form>
+  );
+}

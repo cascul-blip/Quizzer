@@ -1,3 +1,4 @@
+import type { AnswerValue } from "../../shared/answer-match.ts";
 import {
   ROBOT_ATTACK_MS,
   ROBOT_BOARD,
@@ -333,7 +334,7 @@ export class RobotGame {
   // ---------- actions ----------
 
   /** Answer during the quiz phase; a correct answer earns a movement point (players still in the game only). */
-  answer(playerId: string, seq: number, option: number): boolean {
+  answer(playerId: string, seq: number, option: AnswerValue): boolean {
     const p = this.players.get(playerId);
     if (!p || !p.current || this.phase !== "quiz") return false;
     const correct = this.stream.answer(p, seq, option);

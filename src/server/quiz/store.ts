@@ -184,6 +184,9 @@ export class QuizStore {
       delete merged.options;
       if (patch.correct === undefined) merged.correct = [0];
     }
+    // Switching to typed answers: the old options are not answers; the editor sends fresh ones.
+    if (merged.type === "text" && current.type !== "text" && patch.options === undefined) delete merged.options;
+    if (merged.type === "text") delete merged.correct;
     if (merged.image === null) delete merged.image;
     const others = new Set(quiz.questions.filter((_, i) => i !== idx).map((x) => x.id));
     const q = normalizeQuestion(merged, others);

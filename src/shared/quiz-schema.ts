@@ -12,7 +12,7 @@ import {
 
 export * from "./quiz-constants.ts";
 
-export const QuestionType = z.enum(["multiple_choice", "true_false"]);
+export const QuestionType = z.enum(["multiple_choice", "true_false", "text"]);
 export type QuestionType = z.infer<typeof QuestionType>;
 
 /**
@@ -21,7 +21,7 @@ export type QuestionType = z.infer<typeof QuestionType>;
  */
 export const QuestionDraft = z.object({
   id: z.string().regex(QUESTION_ID_RE).optional().describe("Stable question id. Omit to have one generated."),
-  type: QuestionType.describe('"multiple_choice" (2–4 options) or "true_false" (options are always ["True","False"]).'),
+  type: QuestionType.describe('"multiple_choice" (2–4 options), "true_false" (options are always ["True","False"]) or "text" (players type the answer; options are the accepted answers).'),
   text: z.string().trim().min(1).max(300).describe("The question text shown on the projector and phones."),
   image: z
     .string()
@@ -32,14 +32,15 @@ export const QuestionDraft = z.object({
   timeLimitSec: z.number().int().min(5).max(120).optional().describe(`Seconds to answer, 5–120. Default ${DEFAULT_TIME_LIMIT}.`),
   options: z
     .array(z.string().trim().min(1).max(120))
-    .min(MIN_OPTIONS)
+    .min(1)
     .max(MAX_OPTIONS)
     .optional()
-    .describe("Answer texts. 2–4 for multiple_choice; omit for true_false."),
+    .describe("Answer texts. 2–4 for multiple_choice; 1–4 accepted answers for text (case and plural endings are ignored); omit for true_false."),
   correct: z
     .array(z.number().int().min(0))
     .min(1)
-    .describe("0-based indices into options that count as correct. More than one = any of them is accepted. For true_false: [0] = True, [1] = False."),
+    .optional()
+    .describe("0-based indices into options that count as correct. More than one = any of them is accepted. For true_false: [0] = True, [1] = False. Omit for text (every accepted answer counts)."),
 });
 export type QuestionDraft = z.infer<typeof QuestionDraft>;
 
@@ -50,7 +51,7 @@ export const Question = z
     text: z.string().trim().min(1).max(300),
     image: z.string().regex(MEDIA_REF_RE).optional(),
     timeLimitSec: z.number().int().min(5).max(120),
-    options: z.array(z.string().trim().min(1).max(120)).min(MIN_OPTIONS).max(MAX_OPTIONS),
+    options: z.array(z.string().trim().min(1).max(120)).min(1).max(MAX_OPTIONS),
     correct: z.array(z.number().int().min(0)).min(1),
   })
   .superRefine((q, ctx) => {
@@ -59,6 +60,12 @@ export const Question = z
     }
     if (new Set(q.correct).size !== q.correct.length) {
       ctx.addIssue({ code: "custom", path: ["correct"], message: "correct contains duplicate indices" });
+    }
+    if (q.type === "multiple_choice" && q.options.length < MIN_OPTIONS) {
+      ctx.addIssue({ code: "custom", path: ["options"], message: `multiple_choice needs ${MIN_OPTIONS}–${MAX_OPTIONS} options` });
+    }
+    if (q.type === "text" && q.correct.length !== q.options.length) {
+      ctx.addIssue({ code: "custom", path: ["correct"], message: "text questions accept every listed answer, so correct must list all of them" });
     }
     if (q.type === "true_false") {
       if (q.options.length !== 2 || q.options[0] !== TF_OPTIONS[0] || q.options[1] !== TF_OPTIONS[1]) {
@@ -145,11 +152,15 @@ export function normalizeQuestion(draft: unknown, takenIds: Set<string> = new Se
     ...(d.image ? { image: d.image } : {}),
     timeLimitSec: d.timeLimitSec ?? DEFAULT_TIME_LIMIT,
     options: d.type === "true_false" ? [...TF_OPTIONS] : d.options,
-    correct: d.correct,
+    correct: d.type === "text" && d.options ? d.options.map((_, i) => i) : d.correct,
   };
   if (d.type === "multiple_choice" && !d.options) {
     throw new ValidationError("options: multiple_choice questions need 2–4 options");
   }
+  if (d.type === "text" && !d.options) {
+    throw new ValidationError("options: text questions need 1–4 accepted answers");
+  }
+  if (!candidate.correct) throw new ValidationError("correct: required");
   const parsed = Question.safeParse(candidate);
   if (!parsed.success) throw new ValidationError(formatZodError(parsed.error));
   return parsed.data;

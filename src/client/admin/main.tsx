@@ -330,6 +330,7 @@ function blankQuestion(type: Question["type"], taken: Set<string>): Question {
   let id: string;
   do id = "q" + newId(5);
   while (taken.has(id));
+  if (type === "text") return { id, type, text: "", timeLimitSec: DEFAULT_TIME_LIMIT, options: [""], correct: [0] };
   return type === "true_false"
     ? { id, type, text: "", timeLimitSec: DEFAULT_TIME_LIMIT, options: [...TF_OPTIONS], correct: [0] }
     : { id, type, text: "", timeLimitSec: DEFAULT_TIME_LIMIT, options: ["", "", "", ""], correct: [] };
@@ -339,7 +340,7 @@ function questionIssues(q: Question): string[] {
   const issues: string[] = [];
   if (!q.text.trim()) issues.push("Question text is empty");
   if (q.options.some((o) => !o.trim())) issues.push("Fill in every answer option (or remove empty ones)");
-  if (q.correct.length === 0) issues.push("Mark at least one correct answer");
+  if (q.type !== "text" && q.correct.length === 0) issues.push("Mark at least one correct answer");
   return issues;
 }
 
@@ -509,6 +510,9 @@ function Editor({ id, notify }: { id: string; notify: (m: string) => void }) {
         <button class="btn" onClick={() => set({ questions: [...draft.questions, blankQuestion("true_false", taken)] })}>
           + True / False
         </button>
+        <button class="btn" onClick={() => set({ questions: [...draft.questions, blankQuestion("text", taken)] })}>
+          + Type the answer
+        </button>
       </div>
     </div>
   );
@@ -558,6 +562,7 @@ function QuestionEditor(props: {
   function setType(type: Question["type"]) {
     if (type === q.type) return;
     if (type === "true_false") onChange({ ...q, type, options: [...TF_OPTIONS], correct: [0] });
+    else if (type === "text") onChange({ ...q, type, options: [""], correct: [0] });
     else onChange({ ...q, type, options: ["", "", "", ""], correct: [] });
   }
 
@@ -571,7 +576,7 @@ function QuestionEditor(props: {
 
   function removeOption(i: number) {
     const options = q.options.filter((_, j) => j !== i);
-    const correct = q.correct.filter((c) => c !== i).map((c) => (c > i ? c - 1 : c));
+    const correct = q.type === "text" ? options.map((_, j) => j) : q.correct.filter((c) => c !== i).map((c) => (c > i ? c - 1 : c));
     onChange({ ...q, options, correct });
   }
 
@@ -595,6 +600,7 @@ function QuestionEditor(props: {
         <select value={q.type} onChange={(e) => setType(e.currentTarget.value as Question["type"])} aria-label="Question type">
           <option value="multiple_choice">Multiple choice</option>
           <option value="true_false">True / False</option>
+          <option value="text">Type the answer</option>
         </select>
         <label class="inline">
           ⏱
@@ -658,23 +664,25 @@ function QuestionEditor(props: {
         />
       </div>
 
+      {q.type === "text" && <div class="note">Accepted answers. Case and plural endings (Airplanes / airplane) are ignored.</div>}
       <div class="options">
         {q.options.map((opt, i) => {
           const c = optionColor(q.type, i);
           const isCorrect = q.correct.includes(i);
           return (
             <div key={i} class={`option opt-${c} ${isCorrect ? "correct" : ""}`}>
-              <Shape index={c} />
+              {q.type !== "text" && <Shape index={c} />}
               {q.type === "true_false" ? (
                 <span class="tf-label">{opt}</span>
               ) : (
                 <input
                   value={opt}
                   maxLength={120}
-                  placeholder={`Answer ${i + 1}`}
+                  placeholder={q.type === "text" ? (i === 0 ? "Correct answer" : "Another accepted answer") : `Answer ${i + 1}`}
                   onInput={(e) => onChange({ ...q, options: q.options.map((o, j) => (j === i ? e.currentTarget.value : o)) })}
                 />
               )}
+              {q.type !== "text" && (
               <label class="correct-toggle" title={q.type === "true_false" ? "Correct answer" : "Counts as correct"}>
                 <input
                   type={q.type === "true_false" ? "radio" : "checkbox"}
@@ -684,7 +692,8 @@ function QuestionEditor(props: {
                 />
                 <span>✓</span>
               </label>
-              {q.type === "multiple_choice" && q.options.length > MIN_OPTIONS && (
+              )}
+              {(q.type === "text" ? q.options.length > 1 : q.type === "multiple_choice" && q.options.length > MIN_OPTIONS) && (
                 <button class="opt-remove" title="Remove answer" aria-label={`Remove answer ${i + 1}`} onClick={() => removeOption(i)}>
                   ×
                 </button>
@@ -694,9 +703,12 @@ function QuestionEditor(props: {
         })}
       </div>
       <div class="q-foot">
-        {q.type === "multiple_choice" && q.options.length < MAX_OPTIONS && (
-          <button class="btn tiny" onClick={() => onChange({ ...q, options: [...q.options, ""] })}>
-            + Add answer
+        {q.type !== "true_false" && q.options.length < MAX_OPTIONS && (
+          <button
+            class="btn tiny"
+            onClick={() => onChange({ ...q, options: [...q.options, ""], ...(q.type === "text" ? { correct: [...q.options, ""].map((_, j) => j) } : {}) })}
+          >
+            {q.type === "text" ? "+ Add accepted answer" : "+ Add answer"}
           </button>
         )}
         {multi && <span class="note">{q.correct.length} correct answers: picking any of them counts.</span>}

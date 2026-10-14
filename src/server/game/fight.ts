@@ -1,3 +1,4 @@
+import type { AnswerValue } from "../../shared/answer-match.ts";
 import {
   CORRECT_PER_DECISION,
   DECISION_MS,
@@ -284,7 +285,7 @@ export class FightGame {
 
   // ---------- questions ----------
 
-  answer(playerId: string, seq: number, option: number): boolean {
+  answer(playerId: string, seq: number, option: AnswerValue): boolean {
     const p = this.players.get(playerId);
     if (!p || !p.current || this.phase !== "playing" || p.state !== "question") return false;
     const correct = this.stream.answer(p, seq, option);
