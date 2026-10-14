@@ -3225,6 +3225,14 @@ select {
   transform-origin: center;
 }
 
+.saloon .saloon-sign {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  fill: #f2c46b;
+}
+
 .saloon .seat {
   transition: transform 0.8s ease-in-out;
 }
@@ -3435,10 +3443,6 @@ select {
   to {
     opacity: 0.55;
   }
-}
-
-.saloon .batwing {
-  transform-box: fill-box;
 }
 
 .cup-countdown {

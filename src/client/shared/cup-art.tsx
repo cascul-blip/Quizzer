@@ -1,6 +1,7 @@
 /**
  * Cup of Death: a round wooden table in a western saloon, seen from above at an
- * angle, with every living player seated around it behind their cups. Also the
+ * angle, with every living player seated around it behind their cups. The room
+ * and the table are pictures (scripts/cup-saloon.py); everything on them is SVG. Also the
  * dice and the bubbling cups the phones show.
  */
 import type { ComponentChildren } from "preact";
@@ -8,20 +9,32 @@ import { useEffect, useState } from "preact/hooks";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { CUP_DIE_SIDES, type CupDrinkView } from "../../shared/protocol.ts";
 import { ACCESSORY_ART, AVATAR_ART } from "./avatar-art.tsx";
+import saloonImg from "./cup/saloon.webp";
+import tableImg from "./cup/table.webp";
 
 export const SALOON_W = 1200;
 export const SALOON_H = 800;
 /** Table centre and radii; the seats sit on a wider ring around it. */
 const CX = 600;
-const CY = 470;
+const CY = 440;
 const TABLE_RX = 330;
-const TABLE_RY = 172;
+const TABLE_RY = 140;
 const SEAT_RX = 440;
-const SEAT_RY = 238;
+const SEAT_RY = 228;
 /** Where the cups stand, as a share of the way from the table centre to the seat. */
 const CUP_RING = 0.62;
 /** The backdrop runs this far past the sides of the view box, so wide screens show more saloon instead of black bars. */
 const BLEED = 700;
+/** The room picture (scripts/cup-saloon.py): its height in the scene and where its top edge goes, which puts the floor's back edge just behind the far seats. */
+const ROOM_H = 960;
+const ROOM_Y = -150;
+const ROOM_W = ROOM_H * (1344 / 768);
+/** The table picture: width / height, and its tabletop ellipse as fractions of the picture (printed by scripts/cup-saloon.py). */
+const TABLE_ASPECT = 1.5177;
+const TOP_FX = 0.4995;
+const TOP_FY = 0.2692;
+const TOP_FRX = 0.4995;
+const TOP_FRY = 0.2692;
 
 export interface SeatPlayer {
   id: string;
@@ -174,119 +187,36 @@ export function CupArt({ class: cls }: { class?: string }) {
 
 // ---------- the saloon ----------
 
+/** The room behind the table, fading into the dark on screens wider than the picture. */
 function Backdrop() {
-  const bottles = [
-    [70, "#8a4b12"],
-    [100, "#2f6b2a"],
-    [128, "#6e1d1d"],
-    [160, "#a86d1c"],
-    [190, "#2f6b2a"],
-    [250, "#4b2a12"],
-    [282, "#a86d1c"],
-    [312, "#6e1d1d"],
-    [345, "#2f6b2a"],
-    [380, "#8a4b12"],
-    [412, "#3a3a6e"],
-    [450, "#a86d1c"],
-  ] as const;
+  const x0 = CX - ROOM_W / 2;
+  const fade = 160;
   return (
     <g class="saloon-backdrop">
-      {/* Plank walls */}
-      <rect x={-BLEED} y="-200" width={SALOON_W + 2 * BLEED} height="450" fill="url(#saloon-wall)" />
-      {Array.from({ length: Math.ceil((SALOON_W + 2 * BLEED) / 60) + 1 }, (_, i) => (
-        <line key={i} x1={i * 60 - BLEED} y1="-200" x2={i * 60 - BLEED} y2="250" stroke="rgba(0,0,0,0.28)" stroke-width="3" />
-      ))}
-      <rect x={-BLEED} y="210" width={SALOON_W + 2 * BLEED} height="40" fill="#3b1d0c" />
-      <rect x={-BLEED} y="206" width={SALOON_W + 2 * BLEED} height="6" fill="#7b4a22" />
-      {/* Back bar: shelves of bottles over the counter */}
-      <rect x="40" y="18" width="460" height="104" fill="#2b1408" stroke="#6b3d1a" stroke-width="6" />
-      {[64, 114].map((y) => (
-        <rect key={y} x="40" y={y} width="460" height="7" fill="#7b4a22" />
-      ))}
-      {bottles.map(([x, color], i) => {
-        const shelf = i % 2 === 0 ? 64 : 114;
-        const h = 30 + (i % 3) * 6;
-        return (
-          <g key={x} transform={`translate(${x} ${shelf})`}>
-            <rect x="-8" y={-h} width="16" height={h} rx="3" fill={color} />
-            <rect x="-3.5" y={-h - 12} width="7" height="13" fill={color} />
-            <rect x="-5" y={-h + 8} width="10" height="9" fill="#e8d6a8" opacity="0.8" />
-            <rect x="-6" y={-h + 2} width="3" height={h - 6} fill="rgba(255,255,255,0.25)" />
-          </g>
-        );
-      })}
-      <rect x="20" y="150" width="500" height="20" rx="4" fill="#9a6331" />
-      <rect x="28" y="168" width="484" height="82" fill="#5a2f12" />
-      {[60, 180, 300, 420].map((x) => (
-        <rect key={x} x={x} y="180" width="90" height="56" rx="4" fill="none" stroke="#3b1d0c" stroke-width="4" />
-      ))}
-      {/* Wanted poster */}
-      <g transform="translate(630 34) rotate(-3)">
-        <rect width="92" height="118" fill="#e9d6a4" stroke="#a88a50" stroke-width="2" />
-        <text x="46" y="24" text-anchor="middle" font-size="19" font-weight="900" fill="#3b2412" font-family="Georgia, serif">
-          WANTED
-        </text>
-        <text x="46" y="78" text-anchor="middle" font-size="44">
-          ☠
-        </text>
-        <text x="46" y="106" text-anchor="middle" font-size="12" font-weight="700" fill="#3b2412" font-family="Georgia, serif">
-          $500 REWARD
-        </text>
-      </g>
-      {/* Batwing doors with the desert outside */}
-      <rect x="880" y="22" width="220" height="200" fill="url(#saloon-sky)" />
-      <rect x="880" y="160" width="220" height="62" fill="#e0a35a" />
-      <path d="M1040,160 v-46 a8,8 0 0 1 16,0 v46 M1040,140 h-14 v-16 a6,6 0 0 1 12,0 M1056,132 h12 v-14 a6,6 0 0 1 12,0 v14" fill="none" stroke="#4d6b2a" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" />
-      <circle cx="935" cy="70" r="20" fill="#fff3c4" />
-      <rect x="870" y="14" width="240" height="14" fill="#5a2f12" />
-      <rect x="870" y="14" width="14" height="236" fill="#5a2f12" />
-      <rect x="1096" y="14" width="14" height="236" fill="#5a2f12" />
-      {[
-        [884, 990, 1],
-        [1096, 990, -1],
-      ].map(([from, to, dir]) => (
-        <g key={from} class="batwing">
-          <path d={`M${from},96 Q${(from + to) / 2},${86} ${to - dir * 2},92 L${to - dir * 2},206 L${from},206 Z`} fill="#8a5426" stroke="#3b1d0c" stroke-width="4" />
-          {[0.25, 0.5, 0.75].map((f) => (
-            <line key={f} x1={from + (to - from) * f} y1="100" x2={from + (to - from) * f} y2="200" stroke="#5a2f12" stroke-width="5" />
-          ))}
-        </g>
-      ))}
-      {/* Floorboards */}
-      <rect x={-BLEED} y="250" width={SALOON_W + 2 * BLEED} height={SALOON_H} fill="url(#saloon-floor)" />
-      {Array.from({ length: 20 }, (_, i) => (
-        <line key={i} x1={-BLEED} y1={250 + i * 38} x2={SALOON_W + BLEED} y2={250 + i * 38} stroke="rgba(0,0,0,0.3)" stroke-width="2.5" />
-      ))}
-      {Array.from({ length: 20 }, (_, i) =>
-        Array.from({ length: 12 }, (_, k) => {
-          const x = k * 230 + (i % 2) * 115 + (i % 3) * 40 - BLEED;
-          return <line key={`${i}-${k}`} x1={x} y1={250 + i * 38} x2={x} y2={250 + (i + 1) * 38} stroke="rgba(0,0,0,0.25)" stroke-width="2" />;
-        }),
-      )}
-      {/* Hanging oil lamps */}
-      {[320, 760].map((x) => (
-        <g key={x} class="saloon-lamp">
-          <circle cx={x} cy="78" r="190" fill="url(#saloon-lamp-glow)" />
-          <line x1={x} y1="0" x2={x} y2="50" stroke="#1d0f06" stroke-width="3" />
-          <path d={`M${x - 16},52 h32 l-6,10 h-20 Z`} fill="#3b2a1a" />
-          <ellipse cx={x} cy="76" rx="14" ry="18" fill="#ffd77a" stroke="#6b4a22" stroke-width="3" />
-          <path d={`M${x - 18},94 h36 l-8,10 h-20 Z`} fill="#3b2a1a" />
-        </g>
-      ))}
+      <rect x={-BLEED} y="-200" width={SALOON_W + 2 * BLEED} height={SALOON_H + 400} fill="#1d0d04" />
+      <image href={saloonImg} x={x0} y={ROOM_Y} width={ROOM_W} height={ROOM_H} preserveAspectRatio="none" />
+      {/* The sign over the door (blanked in the picture, at 677, 196 of its 1344×768 pixels). */}
+      <text class="saloon-sign" x={x0 + (677 / 1344) * ROOM_W} y={ROOM_Y + (196 / 768) * ROOM_H + 9} text-anchor="middle">
+        SALOON
+      </text>
+      <rect x={x0} y={ROOM_Y} width={fade} height={ROOM_H} fill="url(#saloon-fade-l)" />
+      <rect x={x0 + ROOM_W - fade} y={ROOM_Y} width={fade} height={ROOM_H} fill="url(#saloon-fade-r)" />
     </g>
   );
 }
 
+/** The table picture, stretched so its tabletop lands on the table ellipse. */
 function Table({ children }: { children?: ComponentChildren }) {
+  const w = TABLE_RX / TOP_FRX;
+  const h = TABLE_RY / TOP_FRY;
+  const x = CX - TOP_FX * w;
+  const y = CY - TOP_FY * h;
+  // The tabletop is drawn about this far above the floor; its shadow falls straight down under the lamps.
+  const lift = h * 0.62;
   return (
     <g class="saloon-table">
-      <ellipse cx={CX} cy={CY + 40} rx={TABLE_RX + 30} ry={TABLE_RY + 26} fill="rgba(0,0,0,0.4)" />
-      <ellipse cx={CX} cy={CY + 22} rx={TABLE_RX} ry={TABLE_RY} fill="#3f1f0b" />
-      <ellipse cx={CX} cy={CY} rx={TABLE_RX} ry={TABLE_RY} fill="url(#saloon-tabletop)" stroke="#2b1408" stroke-width="5" />
-      {[0.82, 0.62, 0.42, 0.22].map((f) => (
-        <ellipse key={f} cx={CX + (1 - f) * 18} cy={CY - (1 - f) * 6} rx={TABLE_RX * f} ry={TABLE_RY * f} fill="none" stroke="rgba(60,28,8,0.22)" stroke-width="2.5" />
-      ))}
-      <ellipse cx={CX} cy={CY} rx={TABLE_RX - 10} ry={TABLE_RY - 7} fill="none" stroke="rgba(255,220,160,0.18)" stroke-width="3" />
+      <ellipse cx={CX} cy={CY + lift} rx={TABLE_RX * 0.95} ry={TABLE_RY * 0.9} fill="url(#saloon-table-shadow)" />
+      <image href={tableImg} x={x} y={y} width={w} height={h} preserveAspectRatio="none" />
       <g class="table-center">{children}</g>
     </g>
   );
@@ -501,26 +431,17 @@ export function SaloonScene({
   return (
     <svg class={`saloon mode-${mode}`} viewBox={`0 0 ${SALOON_W} ${SALOON_H}`} preserveAspectRatio="xMidYMid meet" role="img" aria-label="Players around the saloon table">
       <defs>
-        <linearGradient id="saloon-wall" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#5a2e13" />
-          <stop offset="1" stop-color="#7a4520" />
+        <linearGradient id="saloon-fade-l">
+          <stop offset="0" stop-color="#1d0d04" />
+          <stop offset="1" stop-color="#1d0d04" stop-opacity="0" />
         </linearGradient>
-        <linearGradient id="saloon-floor" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#6b3d1c" />
-          <stop offset="1" stop-color="#8a5429" />
+        <linearGradient id="saloon-fade-r">
+          <stop offset="0" stop-color="#1d0d04" stop-opacity="0" />
+          <stop offset="1" stop-color="#1d0d04" />
         </linearGradient>
-        <linearGradient id="saloon-sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#ffb35c" />
-          <stop offset="1" stop-color="#ffe2a6" />
-        </linearGradient>
-        <radialGradient id="saloon-lamp-glow">
-          <stop offset="0" stop-color="rgba(255,210,120,0.55)" />
-          <stop offset="1" stop-color="rgba(255,210,120,0)" />
-        </radialGradient>
-        <radialGradient id="saloon-tabletop" cx="0.45" cy="0.4">
-          <stop offset="0" stop-color="#b8763a" />
-          <stop offset="0.7" stop-color="#94572a" />
-          <stop offset="1" stop-color="#6e3c18" />
+        <radialGradient id="saloon-table-shadow">
+          <stop offset="0" stop-color="rgba(20,8,0,0.55)" />
+          <stop offset="1" stop-color="rgba(20,8,0,0)" />
         </radialGradient>
         <radialGradient id="saloon-vignette">
           <stop offset="0.55" stop-color="rgba(0,0,0,0)" />
