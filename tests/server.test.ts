@@ -5,11 +5,12 @@ import { COUNTDOWN_MS, DROP_COOLDOWN_MS, FEEDBACK_MS } from "../src/server/game/
 import { COUNTDOWN_MS as FIGHT_COUNTDOWN_MS, RESULT_MS } from "../src/server/game/fight.ts";
 import { COUNTDOWN_MS as LAND_COUNTDOWN_MS } from "../src/server/game/land.ts";
 import { COUNTDOWN_MS as ROBOT_COUNTDOWN_MS } from "../src/server/game/robot.ts";
+import { COUNTDOWN_MS as CUP_COUNTDOWN_MS } from "../src/server/game/cup.ts";
 import { BOOST_MIN_HOLD_MS, COUNTDOWN_MS as SUB_COUNTDOWN_MS } from "../src/server/game/submarine.ts";
 import { startServer, type RunningServer } from "../src/server/http.ts";
 import { isAdminRequest } from "../src/server/network.ts";
 import { QuizStore } from "../src/server/quiz/store.ts";
-import { ROBOT_MOVE_MS, robotQuizMs, type ClientMsg, type HostView, type PlayerView, type ServerMsg } from "../src/shared/protocol.ts";
+import { CUP_ROLL_MS, CUP_SIP_MS, ROBOT_MOVE_MS, cupQuizMs, robotQuizMs, type ClientMsg, type HostView, type PlayerView, type ServerMsg } from "../src/shared/protocol.ts";
 import { FakeClock, tempDir } from "./helpers.ts";
 
 class TestSocket {
@@ -620,6 +621,78 @@ describe("Robot Attack over WebSockets", () => {
     // Play again keeps Robot Attack.
     host.send({ type: "host.open", quizId: quiz.id });
     await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "robot");
+    host.send({ type: "host.close" });
+    [host, ...players].forEach((s) => s.close());
+  });
+});
+
+describe("Cup of Death over WebSockets", () => {
+  test("lobby → roll → answer to safety → the other picks a cup → reveal → end → results", async () => {
+    const quiz = store.create({
+      title: "Cup E2E",
+      questions: [1, 2].map((n) => ({ type: "multiple_choice", text: `Q${n}`, options: ["right", "wrong"], correct: [0] })),
+    });
+    const wsUrl = `ws://localhost:${srv.port}/ws`;
+    const host = await TestSocket.open(wsUrl);
+    host.send({ type: "host.hello" });
+    await host.hostState((v) => v.kind === "idle");
+    host.send({ type: "host.open", quizId: quiz.id });
+    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
+    host.send({ type: "host.setMode", mode: "cup" });
+    await host.hostState((v) => v.kind === "classic" && v.mode === "cup" && v.teams === null);
+
+    const names = ["Ann", "Bob"];
+    const players = await Promise.all(names.map(() => TestSocket.open(wsUrl)));
+    for (const [i, p] of players.entries()) {
+      await p.playerState((v) => v.kind === "none" && !!v.game);
+      p.send({ type: "join", nickname: names[i]! });
+      await p.waitFor((m) => m.type === "joined");
+    }
+    await host.hostState((v) => v.kind === "classic" && v.players.length === 2);
+
+    host.send({ type: "host.start", pacing: "manual" });
+    await host.hostState((v) => v.kind === "cup" && v.phase === "countdown");
+    clock.advance(CUP_COUNTDOWN_MS);
+    srv.hub.broadcast();
+    const rolled = await host.hostState((v) => v.kind === "cup" && v.phase === "roll");
+    for (const p of rolled.view.kind === "cup" ? rolled.view.players : []) expect(p.target).toBeGreaterThanOrEqual(1);
+    clock.advance(CUP_ROLL_MS);
+    srv.hub.broadcast();
+
+    // Ann answers until she's safe; Bob does nothing.
+    const [ann, bob] = players as [TestSocket, TestSocket];
+    for (;;) {
+      const st = await ann.playerState((v) => v.kind === "cup" && v.phase === "quiz" && (v.me.safe || (!!v.question && !v.feedback)));
+      if (st.view.kind !== "cup" || st.view.me.safe) break;
+      const q = st.view.question!;
+      ann.send({ type: "cup.answer", seq: q.seq, option: 0 });
+      await ann.playerState((v) => v.kind === "cup" && v.feedback?.seq === q.seq);
+      clock.advance(FEEDBACK_MS);
+      srv.hub.broadcast();
+    }
+    clock.advance(cupQuizMs(1));
+    srv.hub.broadcast();
+    await bob.playerState((v) => v.kind === "cup" && v.phase === "drink" && v.drink?.picked === null);
+    await ann.playerState((v) => v.kind === "cup" && v.phase === "drink" && v.drink === null);
+    bob.send({ type: "cup.pick", cup: 2 });
+    const reveal = await host.hostState((v) => v.kind === "cup" && v.phase === "reveal");
+    expect(reveal.view.kind === "cup" && reveal.view.reveal!.drinks.map((d) => d.cup)).toEqual([2]);
+    await bob.playerState((v) => v.kind === "cup" && v.myDrink?.turn === true && v.myDrink.verdict === null);
+    clock.advance(CUP_SIP_MS);
+    srv.hub.broadcast();
+    await bob.playerState((v) => v.kind === "cup" && v.myDrink?.verdict !== null);
+
+    host.send({ type: "host.end" });
+    const podium = await host.hostState((v) => v.kind === "cup" && v.phase === "podium");
+    expect(podium.view.kind === "cup" && podium.view.standings![0]!.nickname).toBe("Ann");
+    await bob.playerState((v) => v.kind === "cup" && v.phase === "podium" && !!v.result);
+    const csv = await (await fetch(`${base}/api/results/latest.csv`)).text();
+    expect(csv).toContain("Rank,Nickname,Status,Cups left");
+    expect(csv).toContain("Bob,");
+
+    // Play again keeps Cup of Death.
+    host.send({ type: "host.open", quizId: quiz.id });
+    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "cup");
     host.send({ type: "host.close" });
     [host, ...players].forEach((s) => s.close());
   });

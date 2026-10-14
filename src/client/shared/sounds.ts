@@ -1,6 +1,6 @@
 /** Tiny synthesized sound effects (WebAudio), so no audio files need to be shipped. */
 
-export type Sfx = "tick" | "tickHigh" | "timeUp" | "reveal" | "join" | "start" | "fanfare" | "thud" | "floor" | "rumble" | "roar" | "whoosh" | "chomp" | "bubble" | "heartbeat" | "laser" | "alarm" | "plant" | "capture" | "conquer" | "gearUp" | "skid" | "crash" | "repair" | "leverClick" | "land";
+export type Sfx = "tick" | "tickHigh" | "timeUp" | "reveal" | "join" | "start" | "fanfare" | "thud" | "floor" | "rumble" | "roar" | "whoosh" | "chomp" | "bubble" | "heartbeat" | "laser" | "alarm" | "plant" | "capture" | "conquer" | "gearUp" | "skid" | "crash" | "repair" | "leverClick" | "land" | "diceRoll" | "diceLand" | "clink" | "gulp" | "poison" | "survive" | "gunshot";
 
 const MUTE_KEY = "quizzer.muted";
 let ctx: AudioContext | null = null;
@@ -157,6 +157,39 @@ export function play(sfx: Sfx): void {
       return tone(1174.66, 0.3, 0.24, "triangle", 0.16);
     case "leverClick":
       return tone(1500, 0, 0.025, "square", 0.035);
+    case "diceRoll":
+      // Dice rattling across a wooden table.
+      [0, 0.07, 0.13, 0.22, 0.28, 0.37, 0.45, 0.56, 0.66, 0.8].forEach((t, i) => tone(500 + ((i * 337) % 600), t, 0.035, "square", 0.05));
+      return;
+    case "diceLand":
+      tone(180, 0, 0.09, "triangle", 0.25);
+      return tone(900, 0, 0.03, "square", 0.05);
+    case "clink":
+      // A tin cup set down.
+      tone(2093, 0, 0.18, "sine", 0.08);
+      return tone(3136, 0.01, 0.12, "sine", 0.05);
+    case "gulp":
+      // Three swallows, each a little lower.
+      [0, 0.32, 0.64].forEach((t, i) => {
+        tone(320 - i * 40, t, 0.07, "sine", 0.3);
+        tone(140 - i * 15, t + 0.04, 0.12, "sine", 0.3);
+      });
+      return;
+    case "poison":
+      // A low thud, then a wail falling away.
+      tone(70, 0, 0.5, "sine", 0.45);
+      [660, 587, 523, 466, 415, 370, 330, 277, 233].forEach((f, i) => tone(f, 0.2 + i * 0.09, 0.16, "sawtooth", 0.07));
+      return tone(55, 1.05, 0.8, "triangle", 0.3);
+    case "survive":
+      // A relieved twang up the scale.
+      [220, 277.18, 329.63, 440].forEach((f, i) => tone(f, i * 0.07, 0.35, "sawtooth", 0.07));
+      return tone(880, 0.3, 0.4, "triangle", 0.1);
+    case "gunshot":
+      // A pistol crack with a ricochet.
+      tone(120, 0, 0.12, "square", 0.3);
+      tone(60, 0, 0.3, "sine", 0.35);
+      [2400, 2000, 1600, 1250].forEach((f, i) => tone(f, 0.12 + i * 0.05, 0.06, "sine", 0.06));
+      return;
     case "fanfare":
       [523.25, 523.25, 523.25, 698.46, 880, 1046.5].forEach((f, i) => tone(f, i * 0.14, i === 5 ? 0.9 : 0.16, "triangle", 0.18));
       return;

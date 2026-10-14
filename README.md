@@ -104,7 +104,7 @@ quizzer mcp [options]       Run the MCP server over stdio (for AI agents)
 - **Shuffling** is chosen in the lobby for each game; the quiz's shuffle settings in the editor are the defaults. Shuffling answer positions moves each answer to a random tile (and color), so the correct answer isn't always in the same place. The order is fixed when you press Start and is the same on the projector and every phone. True/False keeps True before False.
 - **Streaks**: after 4 correct answers in a row, a player gets 🔥x4 (x5, x6, …) next to their name on the leaderboard, the podium and their phone. A wrong or missed answer resets it.
 - **Show errors**: on the final screen of every game mode, this button swaps the results for a table of the **10 questions with the most wrong answers**, each with its correct answer, so you can go over them with the class. Press **Show results** to switch back. Classic and Racer count wrong answers only, not questions a player let time out; in the other modes a question can come up more than once, and every wrong answer counts.
-- **Protect from abuse**: a lobby checkbox, on by default, for **Tallest Tower**, **Submarine Squad**, **Tower Fight** and **Robot Attack**. It slows down players who tap random answers instead of reading. The ✗ screen normally shows for 1 second; after **2 wrong answers in a row** it stays **3 seconds longer**, and after **3 or more in a row**, **4 seconds longer**, with a countdown on the phone. A correct answer resets it. Reloading the page doesn't skip the wait.
+- **Protect from abuse**: a lobby checkbox, on by default, for **Tallest Tower**, **Submarine Squad**, **Tower Fight**, **Robot Attack** and **Cup of Death**. It slows down players who tap random answers instead of reading. The ✗ screen normally shows for 1 second; after **2 wrong answers in a row** it stays **3 seconds longer**, and after **3 or more in a row**, **4 seconds longer**, with a countdown on the phone. A correct answer resets it. Reloading the page doesn't skip the wait.
 - **Results file**: a CSV of every finished game is saved in `data/results/`. The latest one is also at `http://localhost:8080/api/results/latest.csv` on the host computer.
 - **Reconnecting**: if a phone locks, refreshes or drops Wi-Fi, it rejoins as the same player with the same score. Players can also join after the game has started.
 - Only one game runs at a time. The admin, host controls and API only work from the host computer itself (`localhost`). Phones can only reach the player page.
@@ -233,6 +233,17 @@ The projector shows the car driving past a city skyline and palm trees, which go
 
 The podium shows the distance, the top speed, the number of crashes and awards for **Most correct answers** and **Best driver** (most mph gained while driving), with **Show errors**, **Play again** and **Done**. The results CSV has one row per player: correct, wrong, accuracy, turns driven, mph gained and fail points as driver, plus the class's distance, top speed and crashes.
 
+## Cup of Death mode
+
+Every player for themselves around a round wooden table in a western saloon. Choose **Game mode → ☠️ Cup of Death** in the lobby. Everyone starts with **3 cups** of bubbling green liquid in front of them. Each round has two parts:
+
+- **Dice and quiz.** Every player still alive **rolls a die (1–6)** on their phone and on the projector. That's how many questions they must **answer correctly before the red timer bar runs out**. A wrong answer just moves on to the next question. A player who reaches their number is **SAFE** and waits for the others. The projector shows each player's die and progress (e.g. 2/5) above their head. The first quiz lasts **30 seconds**, and each round is **2 seconds shorter**, down to 10 seconds. The round ends early once everyone is safe.
+- **Drink.** Everyone who fell short must drink: their phone shows their remaining cups, and they have **10 seconds** to tap one; time runs out (or a player is disconnected) and a cup is picked for them. **One of each player's cups is poisoned.** The projector then reveals the drinkers one at a time: they lift the cup, gulp, and either survive or keel over with a green skull.
+
+**Cups run out.** A cup that turns out to be safe is gone, so the odds get worse with every miss: 1 in 3, then 1 in 2, and a player down to **their last cup** drinks it automatically, and it's always poisoned. A poisoned player is out: their avatar leaves the table, and they can **keep answering questions to learn**.
+
+**The last player standing wins.** If everyone left is poisoned in the same round, they share the win. A game with only one player runs until they're poisoned. If the host ends the game early, everyone still alive shares the win. The podium shows the standings and awards for **Most correct answers**, **Luckiest drinker** (most drinks survived), **Never thirsty** (most rounds safe without drinking) and **Unluckiest** (poisoned by their very first cup, earliest). The results CSV lists each player's rank, the round they were poisoned in, cups left, answers, drinks survived and rounds safe.
+
 ## Music
 
 Every game mode has **built-in background music** on the projector (phones stay quiet). It's composed in code, so it adds nothing to the download and needs no licenses:
@@ -246,6 +257,7 @@ Every game mode has **built-in background music** on the projector (phones stay 
 | Robot Attack | Romantic orchestral: Beethoven and Grieg arranged for synth (*In the Hall of the Mountain King* during the quiz) | Speeds up and adds instruments as each quiz phase's timer runs out; Beethoven's Fifth during movement |
 | Land Grab | Calm ambient piano | Speeds up and adds an orchestra as a team gets close to closing a ring; calms down again if the ring is broken |
 | Racer | Sunny late-80s arcade-racing chiptune | Tempo and layers rise with the car's speed; slow and sparse when crashed |
+| Cup of Death | Original spaghetti-western themes: whistle, twangy guitar, galloping hooves; a honky-tonk saloon piano in the lobby | The gallop speeds up and strings, brass and a church bell join as the quiz timer runs out; a heartbeat and a tolling bell while the cups are picked and drunk |
 
 The lobby plays the music of whichever game mode is selected. Use the **🎵 button and slider** in the projector's top bar to turn music off or change its volume. The 🔊 button still mutes everything.
 
@@ -262,6 +274,7 @@ Put audio files (MP3, OGG, M4A, WAV, WebM or FLAC) in the **`data/music`** folde
 | `robot-lobby` · `robot-quiz` · `robot-move` · `robot-results` | Robot Attack: lobby, quiz phase, movement and laser attack, final results |
 | `land-lobby` · `land-play` · `land-results` | Land Grab |
 | `racer-lobby` · `racer-drive` · `racer-results` | Racer |
+| `cup-lobby` · `cup-quiz` · `cup-drink` · `cup-results` | Cup of Death: lobby, dice and quiz, picking and drinking, final results |
 
 For example, `data/music/submarine-chase.mp3`. Your files loop; they don't speed up with the game like the built-in music does. Only use music you're allowed to play: royalty-free or Creative Commons tracks (e.g. Pixabay Music, OpenGameArt, or incompetech with credit). Delete a file to go back to the built-in track.
 

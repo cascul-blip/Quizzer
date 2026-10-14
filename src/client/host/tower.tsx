@@ -347,7 +347,7 @@ function TowerPodium({ view, send }: { view: TowerView; send: Send }) {
   );
 }
 
-export function Award({ icon, title, award, unit }: { icon: string; title: string; award: { value: number; nicknames: string[] } | null; unit: string }) {
+export function Award({ icon, title, award, unit, valueText }: { icon: string; title: string; award: { value: number; nicknames: string[] } | null; unit: string; valueText?: (value: number) => string }) {
   return (
     <div class="award">
       <div class="award-icon" aria-hidden="true">
@@ -358,7 +358,7 @@ export function Award({ icon, title, award, unit }: { icon: string; title: strin
         <div class="award-who">{award ? award.nicknames.join(", ") : "—"}</div>
         {award && (
           <div class="award-value">
-            {award.value} {unit}
+            {valueText ? valueText(award.value) : `${award.value} ${unit}`}
           </div>
         )}
       </div>

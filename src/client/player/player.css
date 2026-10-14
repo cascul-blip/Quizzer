@@ -2117,3 +2117,209 @@ h1 {
   background: rgba(255, 255, 255, 0.2);
   overflow-wrap: anywhere;
 }
+
+/* ----- Cup of Death ----- */
+
+.cup-game {
+  background: radial-gradient(120% 80% at 50% 0%, #6b3a1a 0%, #2a1206 100%);
+  min-height: 100dvh;
+}
+
+.cup-game.ghost {
+  background: radial-gradient(120% 80% at 50% 0%, #3d4a36 0%, #151a12 100%);
+}
+
+.cup-emoji {
+  font-size: 72px;
+  animation: pop-in 0.4s ease-out;
+}
+
+.cup-stats {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+}
+
+.cup-icons i {
+  font-style: normal;
+  opacity: 0.25;
+}
+
+.cup-icons i.full {
+  opacity: 1;
+}
+
+.cup-need {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.cup-need.done {
+  background: var(--good);
+}
+
+.mini-die {
+  width: 22px;
+  height: 22px;
+}
+
+.cup-phone-bar {
+  height: 10px;
+  background: rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+
+.cup-phone-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #7a0d14, #e21b3c);
+  transform-origin: left center;
+  animation-name: cup-drain;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+}
+
+@keyframes cup-drain {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+.cup-roll .big-die {
+  width: min(46vw, 200px);
+  height: min(46vw, 200px);
+  filter: drop-shadow(0 8px 0 rgba(0, 0, 0, 0.35));
+}
+
+.cup-roll-text {
+  margin: 0;
+  font-size: 30px;
+}
+
+.cup-roll-text b {
+  color: var(--accent);
+  font-size: 1.4em;
+}
+
+.cup-safe h1,
+.cup-verdict h1,
+.cup-drinking h1,
+.cup-pick h1 {
+  margin: 0;
+  font-size: 32px;
+}
+
+.cup-pick {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px;
+  text-align: center;
+}
+
+.cup-pick .muted {
+  margin: 0;
+}
+
+.cup-row {
+  display: flex;
+  justify-content: center;
+  gap: 4vw;
+  width: 100%;
+  margin-top: 16px;
+}
+
+.cup-btn {
+  flex: 0 1 30%;
+  max-width: 150px;
+  padding: 10px 6px 4px;
+  border: 3px solid transparent;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition:
+    transform 0.15s,
+    opacity 0.3s;
+}
+
+.cup-btn:not(:disabled):active {
+  transform: scale(0.94);
+}
+
+.cup-btn.chosen {
+  border-color: var(--accent);
+  background: rgba(255, 210, 63, 0.18);
+  transform: translateY(-10px);
+}
+
+.cup-btn.faded {
+  opacity: 0.35;
+}
+
+.cup-btn:disabled {
+  cursor: default;
+}
+
+.cup-art {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.cup-drinking .cup-art {
+  width: min(40vw, 160px);
+}
+
+.cup-drinking .cup-art.sipping {
+  animation: sip 1.6s ease-in-out forwards;
+}
+
+@keyframes sip {
+  0% {
+    transform: translateY(0) rotate(0);
+  }
+  40% {
+    transform: translateY(-24px) rotate(-35deg);
+  }
+  100% {
+    transform: translateY(-24px) rotate(-70deg);
+  }
+}
+
+.cup-verdict.poison {
+  background: radial-gradient(circle, rgba(130, 255, 60, 0.35), transparent 70%);
+}
+
+.cup-verdict.poison h1 {
+  color: #b6ff6a;
+}
+
+.cup-verdict.safe {
+  background: radial-gradient(circle, rgba(47, 168, 79, 0.35), transparent 70%);
+}
+
+.ghost-note {
+  padding: 6px 12px;
+  text-align: center;
+  font-weight: 800;
+  background: rgba(0, 0, 0, 0.3);
+  color: #cfe8c0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cup-drinking .cup-art.sipping {
+    animation: none;
+  }
+}

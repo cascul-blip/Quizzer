@@ -11,6 +11,7 @@ const LOBBY: Record<GameMode, MusicTrackId> = {
   robot: "robot-lobby",
   land: "land-lobby",
   racer: "racer-lobby",
+  cup: "cup-lobby",
 };
 
 let landKey = "";
@@ -70,6 +71,17 @@ export function musicFor(view: HostView | null): MusicCue {
         return { track: "robot-quiz", intensity: 0.2 + start * 0.8, rampTo: 1, rampMs: view.phaseRemainingMs, key: `robot-q${view.round}` };
       }
       return { track: "robot-quiz", intensity: 0, key: "robot-countdown" };
+    }
+    case "cup": {
+      if (view.phase === "podium") return { track: "cup-results" };
+      // Holding your breath: tenser while the cups are drunk than while they're picked.
+      if (view.phase === "drink" || (view.phase === "reveal" && (view.reveal?.drinks.length ?? 0) > 0)) return { track: "cup-drink", intensity: view.phase === "reveal" ? 0.7 : 0.3 };
+      if (view.phase === "quiz") {
+        // The less time left to answer, the faster the gallop.
+        const start = Math.max(0, Math.min(1, 1 - view.phaseRemainingMs / Math.max(1, view.phaseDurationMs)));
+        return { track: "cup-quiz", intensity: 0.15 + start * 0.85, rampTo: 1, rampMs: view.phaseRemainingMs, key: `cup-q${view.round}` };
+      }
+      return { track: "cup-quiz", intensity: 0, key: `cup-${view.phase}-${view.round}` };
     }
     case "land": {
       if (view.phase === "podium") return { track: "land-results" };

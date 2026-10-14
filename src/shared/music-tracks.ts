@@ -26,6 +26,10 @@ export const MUSIC_TRACKS = [
   { id: "racer-lobby", mode: "Racer", screen: "Lobby" },
   { id: "racer-drive", mode: "Racer", screen: "Driving" },
   { id: "racer-results", mode: "Racer", screen: "Final results" },
+  { id: "cup-lobby", mode: "Cup of Death", screen: "Lobby" },
+  { id: "cup-quiz", mode: "Cup of Death", screen: "Dice & quiz" },
+  { id: "cup-drink", mode: "Cup of Death", screen: "Drinking" },
+  { id: "cup-results", mode: "Cup of Death", screen: "Final results" },
 ] as const;
 
 export type MusicTrackId = (typeof MUSIC_TRACKS)[number]["id"];

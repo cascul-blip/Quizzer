@@ -4,11 +4,12 @@ import type { ClientMsg, FightSettings, GameMode, HostView, JoinInfo, LandSettin
 import { answerOf } from "../shared/answer-match.ts";
 import { cleanAvatar } from "../shared/avatars.ts";
 import { ValidationError } from "../shared/quiz-schema.ts";
+import { CupGame } from "./game/cup.ts";
 import { FightGame } from "./game/fight.ts";
 import { DEFAULT_FIGHT, DEFAULT_LAND, DEFAULT_TOWER, Game, GameError, type Clock } from "./game/game.ts";
 import { LandGame } from "./game/land.ts";
 import { RacerGame } from "./game/racer.ts";
-import { buildFightResultsCsv, buildLandResultsCsv, buildRacerResultsCsv, buildResultsCsv, buildRobotResultsCsv, buildSubResultsCsv, buildTowerResultsCsv, writeResultsFile } from "./game/results.ts";
+import { buildCupResultsCsv, buildFightResultsCsv, buildLandResultsCsv, buildRacerResultsCsv, buildResultsCsv, buildRobotResultsCsv, buildSubResultsCsv, buildTowerResultsCsv, writeResultsFile } from "./game/results.ts";
 import { RobotGame } from "./game/robot.ts";
 import { SubGame } from "./game/submarine.ts";
 import { TowerGame } from "./game/tower.ts";
@@ -55,7 +56,7 @@ function viewKey(view: PlayerView, now: number): string {
   return JSON.stringify(view, (k, v) => (COUNTDOWN_KEYS.has(k) && typeof v === "number" && v > 0 ? Math.round((now + v) / 100) : v));
 }
 
-export type LiveGame = Game | TowerGame | SubGame | FightGame | RobotGame | LandGame | RacerGame;
+export type LiveGame = Game | TowerGame | SubGame | FightGame | RobotGame | LandGame | RacerGame | CupGame;
 
 /** Owns the single live game and every connected socket; pushes full view snapshots on each change. */
 export class GameHub {
@@ -302,6 +303,16 @@ export class GameHub {
         if (!this.game.move(ws.data.playerId, msg.dir)) this.sendState(ws);
         return;
       }
+      case "cup.answer": {
+        if (!(this.game instanceof CupGame) || !ws.data.playerId) return;
+        if (!this.game.answer(ws.data.playerId, Number(msg.seq), answerOf(msg))) this.sendState(ws);
+        return;
+      }
+      case "cup.pick": {
+        if (!(this.game instanceof CupGame) || !ws.data.playerId) return;
+        if (!this.game.pick(ws.data.playerId, Number(msg.cup))) this.sendState(ws);
+        return;
+      }
       case "land.answer": {
         if (!(this.game instanceof LandGame) || !ws.data.playerId) return;
         if (!this.game.answer(ws.data.playerId, Number(msg.seq), answerOf(msg))) this.sendState(ws);
@@ -349,7 +360,7 @@ export class GameHub {
     };
     const classic = () => {
       const g = game();
-      if (!(g instanceof Game)) throw new GameError(`Not available in ${g instanceof TowerGame ? "Tallest Tower" : g instanceof SubGame ? "Submarine Squad" : g instanceof RobotGame ? "Robot Attack" : g instanceof LandGame ? "Land Grab" : g instanceof RacerGame ? "Racer" : "Tower Fight"}`);
+      if (!(g instanceof Game)) throw new GameError(`Not available in ${g instanceof TowerGame ? "Tallest Tower" : g instanceof SubGame ? "Submarine Squad" : g instanceof RobotGame ? "Robot Attack" : g instanceof LandGame ? "Land Grab" : g instanceof RacerGame ? "Racer" : g instanceof CupGame ? "Cup of Death" : "Tower Fight"}`);
       return g;
     };
     /** Classic and Racer are both paced question by question: next, skip and pacing work in either. */
@@ -383,6 +394,7 @@ export class GameHub {
         if (lobby.phase === "lobby" && lobby.mode === "fight") return this.startFight(lobby);
         if (lobby.phase === "lobby" && lobby.mode === "robot") return this.startRobot(lobby);
         if (lobby.phase === "lobby" && lobby.mode === "land") return this.startLand(lobby);
+        if (lobby.phase === "lobby" && lobby.mode === "cup") return this.startCup(lobby);
         const pacing = PACINGS.has(msg.pacing) ? msg.pacing : undefined;
         if (lobby.phase === "lobby" && lobby.mode === "racer") return this.startRacer(lobby, pacing);
         lobby.start(pacing);
@@ -507,6 +519,21 @@ export class GameHub {
     this.log(`Robot Attack started with ${robot.players.size} player(s)`);
   }
 
+  /** Hand the lobby's players to a Cup of Death game. */
+  private startCup(lobby: Game): void {
+    if (lobby.players.size === 0) throw new GameError("Wait for at least one player to join");
+    const cup = CupGame.fromLobby(lobby, {
+      clock: this.opts.clock,
+      onChange: () => this.scheduleBroadcast(),
+      onActivity: (pid) => this.onActivity(pid),
+      onFinish: (g) => this.onFinish(g),
+    });
+    lobby.dispose();
+    this.game = cup;
+    cup.start();
+    this.log(`Cup of Death started with ${cup.players.size} player(s)`);
+  }
+
   /** Hand the lobby's players to a Land Grab game. */
   private startLand(lobby: Game): void {
     if (lobby.players.size === 0) throw new GameError("Wait for at least one player to join");
@@ -564,7 +591,9 @@ export class GameHub {
                 ? buildLandResultsCsv(game)
                 : game instanceof RacerGame
                   ? buildRacerResultsCsv(game)
-                  : buildResultsCsv(game);
+                  : game instanceof CupGame
+                    ? buildCupResultsCsv(game)
+                    : buildResultsCsv(game);
     let file: string | null = null;
     try {
       file = writeResultsFile(game, csv, this.store.resultsDir);

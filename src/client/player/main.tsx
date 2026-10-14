@@ -10,6 +10,7 @@ import { AvatarPicker } from "./avatar-picker.tsx";
 import { FightPlayer } from "./fight.tsx";
 import { LandPlayer } from "./land.tsx";
 import { RacerPlayer } from "./racer.tsx";
+import { CupPlayer } from "./cup.tsx";
 import { RobotPlayer } from "./robot.tsx";
 import { SubPlayer } from "./submarine.tsx";
 import { TowerPlayer } from "./tower.tsx";
@@ -151,6 +152,8 @@ function App() {
     body = <LandPlayer view={view} send={send} />;
   } else if (view.kind === "racer") {
     body = <RacerPlayer view={view} send={send} />;
+  } else if (view.kind === "cup") {
+    body = <CupPlayer view={view} send={send} />;
   } else {
     body = <Game view={view} send={send} />;
   }
