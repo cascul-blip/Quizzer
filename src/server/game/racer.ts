@@ -426,6 +426,7 @@ export class RacerGame {
       ...(q.image ? { image: q.image } : {}),
       timeLimitSec: q.timeLimitSec,
       options: this.phase === "intro" || this.phase === "confidence" ? [] : q.options,
+      ...(q.spots && this.phase !== "intro" && this.phase !== "confidence" ? { spots: q.spots } : {}),
       remainingMs: this.phase === "reveal" ? 0 : this.remainingMs(),
     };
   }

@@ -1,6 +1,7 @@
 import { Component, type ComponentChildren } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { STREAK_MIN } from "../../shared/protocol.ts";
+import { PinIcon } from "./pin.tsx";
 
 /** Kahoot-style option shapes: triangle, diamond, circle, square. */
 export function Shape({ index }: { index: number }) {
@@ -30,6 +31,25 @@ export function StreakBadge({ streak }: { streak: number }) {
 /** For true/false, use blue for True and red for False, as Kahoot does. */
 export function optionColor(type: string, index: number): number {
   return type === "true_false" ? (index === 0 ? 1 : 0) : index;
+}
+
+/** The phone's "Answer locked in" badge: the option's colour and shape, or the pin and its spot. */
+export function LockedChoice({ type, index, label }: { type: string; index: number; label: string }) {
+  if (type === "pin") {
+    return (
+      <div class="locked pin-locked">
+        <PinIcon />
+        <span>Spot {label}</span>
+      </div>
+    );
+  }
+  const c = optionColor(type, index);
+  return (
+    <div class={`locked opt-${c}`}>
+      <Shape index={c} />
+      <span>{label}</span>
+    </div>
+  );
 }
 
 /**

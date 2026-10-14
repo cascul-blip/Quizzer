@@ -8,6 +8,7 @@ import { play, unlockAudio } from "../shared/sounds.ts";
 import { connect, type ConnStatus } from "../shared/ws.ts";
 import { ConnBanner, ErrorBoundary, Shape, StreakBadge, Toast, optionColor, ordinal, useCountdown } from "../shared/ui.tsx";
 import { loadCustomMusic, useMusic } from "../shared/music/index.ts";
+import { PinBoard, PinNote } from "../shared/pin.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
 import { musicFor } from "./music-cues.ts";
 import { FightStage } from "./fight.tsx";
@@ -531,9 +532,10 @@ function QuestionScreen({ view, send }: { view: GameView; send: Send }) {
   const correct = new Set(view.correct ?? []);
   const counts = view.answerCounts ?? [];
   const maxCount = Math.max(1, ...counts);
+  const pin = q.type === "pin" && q.image && q.spots ? { image: q.image, spots: q.spots } : null;
 
   return (
-    <main class={`question ${open ? "is-open" : "is-reveal"}`}>
+    <main class={`question ${open ? "is-open" : "is-reveal"} ${pin ? "is-pin" : ""}`}>
       <h1 class="q-title">{q.text}</h1>
       <div class="q-middle">
         <div class="side">
@@ -546,7 +548,9 @@ function QuestionScreen({ view, send }: { view: GameView; send: Send }) {
           )}
         </div>
         <div class="center-media">
-          {!open ? (
+          {pin ? (
+            <PinBoard image={pin.image} spots={pin.spots} labels={q.options} correct={open ? undefined : [...correct]} counts={open ? undefined : counts} />
+          ) : !open ? (
             <div class="bars" role="img" aria-label="Answer distribution">
               {q.options.map((_, i) => {
                 const c = optionColor(q.type, i);
@@ -578,19 +582,23 @@ function QuestionScreen({ view, send }: { view: GameView; send: Send }) {
           </div>
         </div>
       </div>
-      <div class={`tiles n${q.options.length}`}>
-        {q.options.map((text, i) => {
-          const c = optionColor(q.type, i);
-          const state = open ? "" : correct.has(i) ? "right" : "wrong";
-          return (
-            <div key={i} class={`tile opt-${c} ${state}`}>
-              <Shape index={c} />
-              <span class="tile-text">{text}</span>
-              {state === "right" && <span class="tick">✓</span>}
-            </div>
-          );
-        })}
-      </div>
+      {pin ? (
+        <PinNote open={open} labels={[...correct].map((i) => q.options[i]!)} />
+      ) : (
+        <div class={`tiles n${q.options.length}`}>
+          {q.options.map((text, i) => {
+            const c = optionColor(q.type, i);
+            const state = open ? "" : correct.has(i) ? "right" : "wrong";
+            return (
+              <div key={i} class={`tile opt-${c} ${state}`}>
+                <Shape index={c} />
+                <span class="tile-text">{text}</span>
+                {state === "right" && <span class="tick">✓</span>}
+              </div>
+            );
+          })}
+        </div>
+      )}
       <footer class="controls">
         {open ? (
           <button class="btn ghost" onClick={() => send({ type: "host.skip" })}>

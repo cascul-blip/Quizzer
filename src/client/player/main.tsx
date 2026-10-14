@@ -4,7 +4,8 @@ import { cleanAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import { STREAK_MIN, type ClientMsg, type PlayerView, type ServerMsg } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { connect, type ConnStatus } from "../shared/ws.ts";
-import { ConnBanner, ErrorBoundary, Shape, StreakBadge, Toast, optionColor, ordinal, useCountdown } from "../shared/ui.tsx";
+import { PinBoard, PinDragger } from "../shared/pin.tsx";
+import { ConnBanner, ErrorBoundary, LockedChoice, Shape, StreakBadge, Toast, optionColor, ordinal, useCountdown } from "../shared/ui.tsx";
 import { AvatarPicker } from "./avatar-picker.tsx";
 import { FightPlayer } from "./fight.tsx";
 import { LandPlayer } from "./land.tsx";
@@ -299,22 +300,36 @@ function Answering({ view, send }: { view: Joined; send: (m: ClientMsg) => void 
   if (chosen !== null) {
     return (
       <Center>
-        <div class={`locked opt-${optionColor(q.type, chosen)}`}>
-          <Shape index={optionColor(q.type, chosen)} />
-          <span>{q.options[chosen]}</span>
-        </div>
+        <LockedChoice type={q.type} index={chosen} label={q.options[chosen] ?? ""} />
         <h1>Answer locked in</h1>
         <p class="muted">Waiting for the others…</p>
       </Center>
     );
   }
 
+  const choose = (i: number) => {
+    if (navigator.vibrate) navigator.vibrate(30);
+    setPending(i);
+    send({ type: "answer", qIndex: q.index, option: i });
+  };
+  const head = (
+    <div class="q-head">
+      <div class={`timer ${secs <= 5 ? "urgent" : ""}`}>{secs}</div>
+      <h2 class="q-text">{q.text}</h2>
+    </div>
+  );
+  if (q.type === "pin" && q.image && q.spots) {
+    return (
+      <main class="answering">
+        {head}
+        <PinDragger key={q.index} image={q.image} spots={q.spots} labels={q.options} onSubmit={choose} />
+      </main>
+    );
+  }
+
   return (
     <main class="answering">
-      <div class="q-head">
-        <div class={`timer ${secs <= 5 ? "urgent" : ""}`}>{secs}</div>
-        <h2 class="q-text">{q.text}</h2>
-      </div>
+      {head}
       {q.image && <img class="q-img" src={`/${q.image}`} alt="" />}
       <div class={`answers n${q.options.length}`}>
         {q.options.map((text, i) => {
@@ -323,11 +338,7 @@ function Answering({ view, send }: { view: Joined; send: (m: ClientMsg) => void 
             <button
               key={i}
               class={`answer opt-${c}`}
-              onClick={() => {
-                if (navigator.vibrate) navigator.vibrate(30);
-                setPending(i);
-                send({ type: "answer", qIndex: q.index, option: i });
-              }}
+              onClick={() => choose(i)}
             >
               <Shape index={c} />
               <span>{text}</span>
@@ -353,21 +364,34 @@ function Result({ view }: { view: Joined }) {
         {r.wasCorrect && view.me.streak >= STREAK_MIN && <div class="streak-note">🔥 {view.me.streak} in a row!</div>}
       </div>
       <p class="q-text small-q">{q.text}</p>
-      <ul class="reveal-list">
-        {q.options.map((text, i) => {
-          const isCorrect = correctSet.has(i);
-          const isMine = r.choice === i;
-          const c = optionColor(q.type, i);
-          return (
-            <li key={i} class={`reveal-item opt-${c} ${isCorrect ? "is-correct" : "is-other"} ${isMine && !isCorrect ? "is-wrong-pick" : ""}`}>
-              <Shape index={c} />
-              <span class="t">{text}</span>
-              {isCorrect && <span class="tag">✓ {r.correct.length > 1 ? "Correct" : "Answer"}</span>}
-              {isMine && <span class="tag mine">{isCorrect ? "Your pick" : "✗ Your pick"}</span>}
-            </li>
-          );
-        })}
-      </ul>
+      {q.type === "pin" && q.image && q.spots ? (
+        <div class="pin-result">
+          <PinBoard
+            image={q.image}
+            spots={q.spots}
+            labels={q.options}
+            correct={r.correct}
+            pinAt={r.choice}
+            wrong={r.choice !== null && !correctSet.has(r.choice) ? r.choice : null}
+          />
+        </div>
+      ) : (
+        <ul class="reveal-list">
+          {q.options.map((text, i) => {
+            const isCorrect = correctSet.has(i);
+            const isMine = r.choice === i;
+            const c = optionColor(q.type, i);
+            return (
+              <li key={i} class={`reveal-item opt-${c} ${isCorrect ? "is-correct" : "is-other"} ${isMine && !isCorrect ? "is-wrong-pick" : ""}`}>
+                <Shape index={c} />
+                <span class="t">{text}</span>
+                {isCorrect && <span class="tag">✓ {r.correct.length > 1 ? "Correct" : "Answer"}</span>}
+                {isMine && <span class="tag mine">{isCorrect ? "Your pick" : "✗ Your pick"}</span>}
+              </li>
+            );
+          })}
+        </ul>
+      )}
       <p class="standing">
         {view.me.score.toLocaleString()} points · {ordinal(view.me.rank)} of {view.playerCount}
       </p>

@@ -3,6 +3,7 @@ import type { HostView, RacerTurn } from "../../shared/protocol.ts";
 import { RACER_CONFIDENCE, RACER_CONFIDENCE_LEVELS, RACER_REPAIR_MPH } from "../../shared/racer-rules.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { RacerScene } from "../shared/racer-art.tsx";
+import { PinBoard, PinNote } from "../shared/pin.tsx";
 import { onMuteChange, play, startRev, type Rev } from "../shared/sounds.ts";
 import { Shape, optionColor, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
@@ -220,11 +221,16 @@ function Turn({ view, send, secs }: { view: RacerView; send: Send; secs: number 
   const counts = view.answerCounts ?? [];
   const longest = Math.max(0, ...q.options.map((o) => o.length));
   const turn = reveal && view.lastTurn?.index === q.index ? view.lastTurn : null;
+  const pin = q.type === "pin" && q.image && q.spots ? { image: q.image, spots: q.spots } : null;
   return (
     <>
-      <div class={`racer-question ${q.text.length > 160 ? "long" : q.text.length > 80 ? "medium" : ""}`}>
+      <div class={`racer-question ${q.text.length > 160 ? "long" : q.text.length > 80 ? "medium" : ""} ${pin ? "is-pin" : ""}`}>
         <h1>{q.text}</h1>
-        {q.image && <img src={`/${q.image}`} alt="" />}
+        {pin ? (
+          <PinBoard image={pin.image} spots={pin.spots} labels={q.options} correct={reveal ? [...correct] : undefined} counts={reveal ? counts : undefined} />
+        ) : (
+          q.image && <img src={`/${q.image}`} alt="" />
+        )}
       </div>
       {view.phase === "intro" && <p class="racer-intro">The car has crashed. Get at least half right to repair it.</p>}
       {view.phase === "confidence" && view.driver && (
@@ -240,7 +246,8 @@ function Turn({ view, send, secs }: { view: RacerView; send: Send; secs: number 
           <Countdown secs={secs} totalMs={view.phaseDurationMs} />
         </div>
       )}
-      {(view.phase === "open" || reveal) && (
+      {(view.phase === "open" || reveal) && pin && <PinNote open={!reveal} labels={[...correct].map((i) => q.options[i]!)} />}
+      {(view.phase === "open" || reveal) && !pin && (
         <div class={`tiles racer-tiles n${q.options.length} ${longest > 60 ? "long" : longest > 30 ? "medium" : ""}`}>
           {q.options.map((text, i) => {
             const c = optionColor(q.type, i);

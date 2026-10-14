@@ -1,7 +1,7 @@
 import type { AvatarChoice } from "./avatars.ts";
 import type { HillHeight, ShotImpact } from "./fight-physics.ts";
 import type { LandStart } from "./land-board.ts";
-import type { QuestionType } from "./quiz-schema.ts";
+import type { PinSpot, QuestionType } from "./quiz-schema.ts";
 import type { RacerCar, RacerConfidence, RacerTurnResult } from "./racer-rules.ts";
 
 export type Phase = "lobby" | "intro" | "open" | "reveal" | "leaderboard" | "podium";
@@ -140,8 +140,20 @@ export interface QuestionView {
   timeLimitSec: number;
   /** Empty during the intro phase so phones can't answer early. */
   options: string[];
+  /** Pin questions: where each option's spot sits on the image (sent together with options). */
+  spots?: PinSpot[];
   /** Milliseconds left when the message was sent (clients add it to their own clock). */
   remainingMs: number;
+}
+
+/** A self-paced mode's current question for one player. */
+export interface StreamQuestionView {
+  seq: number;
+  type: QuestionType;
+  text: string;
+  image?: string;
+  options: string[];
+  spots?: PinSpot[];
 }
 
 /** How many errors the final screen's "Show errors" table lists. */
@@ -213,7 +225,7 @@ export interface PlayerTowerView {
   team: TeamInfo;
   state: "question" | "build";
   blocksHeld: number;
-  question: { seq: number; type: QuestionType; text: string; image?: string; options: string[] } | null;
+  question: StreamQuestionView | null;
   /** Result of the last answer while its 1 s flash is still showing. */
   feedback: { seq: number; correct: boolean; remainingMs: number; answers: string[]; penaltyMs: number } | null;
   egg: MonsterEgg | null;
@@ -361,7 +373,7 @@ export interface PlayerSubView {
   state: "question" | "boost" | "waiting";
   /** Correct answers toward the next boost (0 … CORRECT_PER_BOOST-1). */
   towardBoost: number;
-  question: { seq: number; type: QuestionType; text: string; image?: string; options: string[] } | null;
+  question: StreamQuestionView | null;
   feedback: { seq: number; correct: boolean; remainingMs: number; answers: string[]; penaltyMs: number } | null;
   dive:
     // symbolRemainingMs of symbolMs: time left to find the current symbol before the instructor moves on.
@@ -470,7 +482,7 @@ export interface PlayerFightView {
   repairMs: number;
   /** This player's most recently finished repair; repaired is false if teammates had already fixed the tower. */
   lastRepair: { seq: number; repaired: boolean } | null;
-  question: { seq: number; type: QuestionType; text: string; image?: string; options: string[] } | null;
+  question: StreamQuestionView | null;
   feedback: { seq: number; correct: boolean; remainingMs: number; answers: string[]; penaltyMs: number } | null;
   /** Damage per team. */
   damage: number[];
@@ -588,7 +600,7 @@ export interface PlayerRobotView {
   round: number;
   phaseRemainingMs: number;
   me: { id: string; nickname: string; avatar: AvatarChoice; lives: number; out: boolean; points: number; correct: number; x: number; y: number };
-  question: { seq: number; type: QuestionType; text: string; image?: string; options: string[] } | null;
+  question: StreamQuestionView | null;
   feedback: { seq: number; correct: boolean; remainingMs: number; answers: string[]; penaltyMs: number } | null;
   /** The board, during movement and the attack only (quiz time is for questions). */
   board: { marked: number[]; inset: number; collapsing: number[]; others: { x: number; y: number }[] } | null;
@@ -690,7 +702,7 @@ export interface PlayerLandView {
   answered: number;
   /** Time left on the "no tiles to place" message (empty state). */
   emptyMs: number;
-  question: { seq: number; type: QuestionType; text: string; image?: string; options: string[] } | null;
+  question: StreamQuestionView | null;
   feedback: { seq: number; correct: boolean; remainingMs: number; answers: string[]; penaltyMs: number } | null;
   /** The land, while this player is placing tiles. */
   board: LandBoard | null;

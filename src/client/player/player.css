@@ -2067,3 +2067,22 @@ h1 {
     font-size: 44px;
   }
 }
+
+/* pin questions */
+.pin-locked {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.pin-locked .pin-icon {
+  width: 26px;
+  height: 36px;
+}
+
+.pin-result {
+  --pin-max-h: 42vh;
+}
+
+.racer-game {
+  --pin-max-h: 36vh;
+}

@@ -1,5 +1,5 @@
-import type { Question, QuestionType } from "../../shared/quiz-schema.ts";
-import type { QuestionError } from "../../shared/protocol.ts";
+import type { Question } from "../../shared/quiz-schema.ts";
+import type { QuestionError, StreamQuestionView } from "../../shared/protocol.ts";
 import { shuffle, shuffleOptions, topErrors, type Clock } from "./common.ts";
 
 /** How long the ✓/✗ flash shows before the next question can be answered. */
@@ -40,13 +40,6 @@ export function newStreamPlayer(): StreamPlayer {
   return { correct: 0, wrong: 0, wrongStreak: 0, deck: [], current: null, seq: 0, feedback: null, readyAt: 0 };
 }
 
-export interface StreamQuestionView {
-  seq: number;
-  type: QuestionType;
-  text: string;
-  image?: string;
-  options: string[];
-}
 
 /** Deals each player their own shuffled, repeating deck of questions and scores their answers. */
 export class QuestionStream {
@@ -112,7 +105,14 @@ export class QuestionStream {
   questionView(p: StreamPlayer): StreamQuestionView | null {
     if (!p.current) return null;
     const q = this.questions[p.current.qIndex]!;
-    return { seq: p.current.seq, type: q.type, text: q.text, ...(q.image ? { image: q.image } : {}), options: p.current.options };
+    return {
+      seq: p.current.seq,
+      type: q.type,
+      text: q.text,
+      ...(q.image ? { image: q.image } : {}),
+      options: p.current.options,
+      ...(q.spots ? { spots: q.spots } : {}),
+    };
   }
 
   feedbackView(p: StreamPlayer): { seq: number; correct: boolean; answers: string[]; penaltyMs: number; remainingMs: number } | null {

@@ -2,18 +2,22 @@ import { z } from "zod";
 import {
   DEFAULT_TIME_LIMIT,
   MAX_OPTIONS,
+  MAX_PIN_SPOTS,
   MEDIA_REF_RE,
   MIN_OPTIONS,
   QUESTION_ID_RE,
   QUIZ_ID_RE,
   TF_OPTIONS,
   newId,
+  pinLabel,
 } from "./quiz-constants.ts";
 
 export * from "./quiz-constants.ts";
 
-export const QuestionType = z.enum(["multiple_choice", "true_false"]);
+export const QuestionType = z.enum(["multiple_choice", "true_false", "pin"]);
 export type QuestionType = z.infer<typeof QuestionType>;
+
+const PinSpotSchema = z.object({ x: z.number().min(0).max(1), y: z.number().min(0).max(1) });
 
 /**
  * Loose question shape used for input (REST, MCP, editor). Missing fields get
@@ -21,7 +25,9 @@ export type QuestionType = z.infer<typeof QuestionType>;
  */
 export const QuestionDraft = z.object({
   id: z.string().regex(QUESTION_ID_RE).optional().describe("Stable question id. Omit to have one generated."),
-  type: QuestionType.describe('"multiple_choice" (2–4 options) or "true_false" (options are always ["True","False"]).'),
+  type: QuestionType.describe(
+    '"multiple_choice" (2–4 options), "true_false" (options are always ["True","False"]) or "pin" (players drag a pin onto one of several labelled spots on the image; needs image and spots).',
+  ),
   text: z.string().trim().min(1).max(300).describe("The question text shown on the projector and phones."),
   image: z
     .string()
@@ -33,13 +39,25 @@ export const QuestionDraft = z.object({
   options: z
     .array(z.string().trim().min(1).max(120))
     .min(MIN_OPTIONS)
-    .max(MAX_OPTIONS)
+    .max(MAX_PIN_SPOTS)
     .optional()
-    .describe("Answer texts. 2–4 for multiple_choice; omit for true_false."),
+    .describe(
+      `Answer texts. 2–4 for multiple_choice; omit for true_false. For pin: the spot labels shown on the image, one per spot (omit for A, B, C, …).`,
+    ),
+  spots: z
+    .array(PinSpotSchema)
+    .min(MIN_OPTIONS)
+    .max(MAX_PIN_SPOTS)
+    .optional()
+    .describe(
+      `pin only: 2–${MAX_PIN_SPOTS} target spots on the image as {x, y} fractions (0 = left/top, 1 = right/bottom). Extra spots act as distractors.`,
+    ),
   correct: z
     .array(z.number().int().min(0))
     .min(1)
-    .describe("0-based indices into options that count as correct. More than one = any of them is accepted. For true_false: [0] = True, [1] = False."),
+    .describe(
+      "0-based indices into options that count as correct. More than one = any of them is accepted. For true_false: [0] = True, [1] = False. For pin: exactly one spot index.",
+    ),
 });
 export type QuestionDraft = z.infer<typeof QuestionDraft>;
 
@@ -50,10 +68,23 @@ export const Question = z
     text: z.string().trim().min(1).max(300),
     image: z.string().regex(MEDIA_REF_RE).optional(),
     timeLimitSec: z.number().int().min(5).max(120),
-    options: z.array(z.string().trim().min(1).max(120)).min(MIN_OPTIONS).max(MAX_OPTIONS),
+    options: z.array(z.string().trim().min(1).max(120)).min(MIN_OPTIONS).max(MAX_PIN_SPOTS),
+    spots: z.array(PinSpotSchema).optional(),
     correct: z.array(z.number().int().min(0)).min(1),
   })
   .superRefine((q, ctx) => {
+    if (q.type === "pin") {
+      if (!q.image) ctx.addIssue({ code: "custom", path: ["image"], message: "pin questions need an image" });
+      if (!q.spots || q.spots.length !== q.options.length) {
+        ctx.addIssue({ code: "custom", path: ["spots"], message: "pin questions need one spot per option label" });
+      }
+      if (q.correct.length !== 1) ctx.addIssue({ code: "custom", path: ["correct"], message: "pin needs exactly one correct spot" });
+    } else {
+      if (q.options.length > MAX_OPTIONS) {
+        ctx.addIssue({ code: "custom", path: ["options"], message: `at most ${MAX_OPTIONS} options` });
+      }
+      if (q.spots) ctx.addIssue({ code: "custom", path: ["spots"], message: "spots are only for pin questions" });
+    }
     if (q.correct.some((i) => i >= q.options.length)) {
       ctx.addIssue({ code: "custom", path: ["correct"], message: `correct index out of range (question has ${q.options.length} options)` });
     }
@@ -144,11 +175,15 @@ export function normalizeQuestion(draft: unknown, takenIds: Set<string> = new Se
     text: d.text,
     ...(d.image ? { image: d.image } : {}),
     timeLimitSec: d.timeLimitSec ?? DEFAULT_TIME_LIMIT,
-    options: d.type === "true_false" ? [...TF_OPTIONS] : d.options,
+    options: d.type === "true_false" ? [...TF_OPTIONS] : d.type === "pin" && !d.options ? d.spots?.map((_, i) => pinLabel(i)) : d.options,
+    ...(d.spots ? { spots: d.spots } : {}),
     correct: d.correct,
   };
   if (d.type === "multiple_choice" && !d.options) {
     throw new ValidationError("options: multiple_choice questions need 2–4 options");
+  }
+  if (d.type === "pin" && !d.spots) {
+    throw new ValidationError(`spots: pin questions need 2–${MAX_PIN_SPOTS} spots`);
   }
   const parsed = Question.safeParse(candidate);
   if (!parsed.success) throw new ValidationError(formatZodError(parsed.error));

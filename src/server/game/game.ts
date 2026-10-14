@@ -443,6 +443,7 @@ export class Game {
       ...(q.image ? { image: q.image } : {}),
       timeLimitSec: q.timeLimitSec,
       options: this.phase === "intro" ? [] : q.options,
+      ...(q.spots && this.phase !== "intro" ? { spots: q.spots } : {}),
       remainingMs: this.phaseEndsAt ? Math.max(0, this.phaseEndsAt - this.clock.now()) : 0,
     };
   }
