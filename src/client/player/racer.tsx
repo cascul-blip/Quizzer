@@ -4,7 +4,8 @@ import { RACER_CONFIDENCE, RACER_CONFIDENCE_LEVELS } from "../../shared/racer-ru
 import { Avatar } from "../shared/avatar-art.tsx";
 import { RacerScene } from "../shared/racer-art.tsx";
 import { play } from "../shared/sounds.ts";
-import { Shape, TextAnswer, optionColor, useCountdown } from "../shared/ui.tsx";
+import { PinDragger } from "../shared/pin.tsx";
+import { LockedChoice, Shape, TextAnswer, optionColor, useCountdown } from "../shared/ui.tsx";
 
 type Send = (m: ClientMsg) => void;
 
@@ -322,10 +323,7 @@ function RacerAnswering({ view, send }: { view: PlayerRacerView; send: Send }) {
         {typed !== null ? (
           <div class="locked-text">{typed}</div>
         ) : (
-          <div class={`locked opt-${optionColor(q.type, chosen!)}`}>
-            <Shape index={optionColor(q.type, chosen!)} />
-            <span>{q.options[chosen!]}</span>
-          </div>
+          <LockedChoice type={q.type} index={chosen!} label={q.options[chosen!] ?? ""} />
         )}
         <h1>Answer locked in</h1>
         <p class="muted">Waiting for the others…</p>
@@ -334,13 +332,20 @@ function RacerAnswering({ view, send }: { view: PlayerRacerView; send: Send }) {
   }
 
   const locked = view.confidence ?? view.lever;
+  const choose = (i: number) => {
+    if (!armed) return;
+    if (navigator.vibrate) navigator.vibrate(30);
+    setPending(i);
+    send({ type: "racer.answer", index: q.index, option: i });
+  };
+  const pin = q.type === "pin" && q.image && q.spots ? { image: q.image, spots: q.spots } : null;
   return (
     <main class="answering">
       <div class="q-head">
         <div class={`timer ${secs <= 5 ? "urgent" : ""}`}>{secs}</div>
         <h2 class={`q-text ${qClass(q.text)}`}>{q.text}</h2>
       </div>
-      {q.image && <img class="q-img" src={`/${q.image}`} alt="" />}
+      {q.image && !pin && <img class="q-img" src={`/${q.image}`} alt="" />}
       <div class="racer-chip">
         {view.driver && locked ? (
           <>
@@ -353,7 +358,9 @@ function RacerAnswering({ view, send }: { view: PlayerRacerView; send: Send }) {
           <b>Repair the car: at least half must be right</b>
         )}
       </div>
-      {q.type === "text" ? (
+      {pin ? (
+        <PinDragger key={q.index} image={pin.image} spots={pin.spots} labels={q.options} disabled={!armed} onSubmit={choose} />
+      ) : q.type === "text" ? (
         <TextAnswer
           disabled={!armed}
           onSubmit={(text) => {
@@ -362,26 +369,17 @@ function RacerAnswering({ view, send }: { view: PlayerRacerView; send: Send }) {
           }}
         />
       ) : (
-      <div class={`answers n${q.options.length} ${armed ? "" : "racer-unarmed"}`}>
-        {q.options.map((text, i) => {
-          const c = optionColor(q.type, i);
-          return (
-            <button
-              key={i}
-              class={`answer opt-${c}`}
-              onClick={() => {
-                if (!armed) return;
-                if (navigator.vibrate) navigator.vibrate(30);
-                setPending(i);
-                send({ type: "racer.answer", index: q.index, option: i });
-              }}
-            >
-              <Shape index={c} />
-              <span>{text}</span>
-            </button>
-          );
-        })}
-      </div>
+        <div class={`answers n${q.options.length} ${armed ? "" : "racer-unarmed"}`}>
+          {q.options.map((text, i) => {
+            const c = optionColor(q.type, i);
+            return (
+              <button key={i} class={`answer opt-${c}`} onClick={() => choose(i)}>
+                <Shape index={c} />
+                <span>{text}</span>
+              </button>
+            );
+          })}
+        </div>
       )}
     </main>
   );

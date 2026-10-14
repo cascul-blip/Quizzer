@@ -449,6 +449,7 @@ export class Game {
       timeLimitSec: q.timeLimitSec,
       // A typed question's accepted answers stay hidden until the reveal.
       options: this.phase === "intro" || (q.type === "text" && !this.revealed) ? [] : q.options,
+      ...(q.spots && this.phase !== "intro" ? { spots: q.spots } : {}),
       remainingMs: this.phaseEndsAt ? Math.max(0, this.phaseEndsAt - this.clock.now()) : 0,
     };
   }

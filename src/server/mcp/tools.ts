@@ -8,12 +8,18 @@ import { MAX_MEDIA_BYTES, NotFoundError, type QuizStore } from "../quiz/store.ts
 export const SERVER_INSTRUCTIONS = `Quizzer stores Kahoot-style quizzes that are played live on a projector with players answering on their phones.
 
 Quiz format rules:
-- Question types: "multiple_choice" (2–4 options), "true_false" (options are always ["True","False"]; omit options) and "text"
-  (players type the answer; "options" lists 1–4 accepted answers, omit "correct". Case and plural endings are ignored, so "Airplanes" matches "Airplane").
+- Question types: "multiple_choice" (2–4 options), "true_false" (options are always ["True","False"]; omit options), "text"
+  (players type the answer; "options" lists 1–4 accepted answers, omit "correct". Case and plural endings are ignored, so "Airplanes" matches "Airplane")
+  and "pin" (players drag a pin onto one of several labelled spots on the question's image).
 - "correct" is a list of 0-based option indices. For true_false use [0] for True or [1] for False.
   A multiple_choice question may list several correct indices; picking ANY of them counts as correct.
+- pin questions need an image and "spots": 2–20 {x, y} positions as fractions of the image (0,0 = top-left).
+  "options" are the spot labels (omit for A, B, C…), "correct" is exactly one spot index; the other spots are distractors.
+  Ask one location per question: e.g. a labelled diagram becomes "Where is the deltoid?", "Where is the biceps?", … sharing image and spots.
+  A pin question needs its image first: add it as multiple_choice, call set_question_image, then update_question with type "pin", spots and correct.
+  Later questions can reuse the returned image ref ("media/….png") directly in add_question.
 - timeLimitSec is 5–120 (default 20). Keep question text under 300 chars and each option under 120 chars (shorter reads better on phones).
-- Players tap a single option (or type the answer for text questions). Speed matters for scoring, so keep questions readable in a few seconds.
+- Players tap a single option (or type the answer for text questions, or drop one pin and press Submit for pin questions). Speed matters for scoring, so keep questions readable in a few seconds.
 
 Workflow tips: call list_quizzes first to find ids; get_quiz returns question ids for per-question edits.
 Prefer create_quiz with the full question list when authoring a new quiz.`;
@@ -144,6 +150,7 @@ export function createMcpServer(store: QuizStore, version: string): McpServer {
         type: QuestionDraft.shape.type.optional(),
         text: QuestionDraft.shape.text.optional(),
         options: QuestionDraft.shape.options,
+        spots: QuestionDraft.shape.spots,
         correct: QuestionDraft.shape.correct.optional(),
         timeLimitSec: QuestionDraft.shape.timeLimitSec,
         image: QuestionDraft.shape.image,

@@ -3118,6 +3118,59 @@ select {
   margin: 0 -4vw;
 }
 
+/* pin questions */
+.question.is-pin {
+  --pin-max-h: 64vh;
+}
+
+.question.is-pin .q-middle {
+  grid-template-columns: 1fr minmax(0, 5fr) 1fr;
+}
+
+.question.is-pin .pin-spot,
+.racer-question.is-pin .pin-spot {
+  min-width: 2.2em;
+  height: 2.2em;
+  border-radius: 1.1em;
+  line-height: calc(2.2em - 4px);
+  font-size: clamp(14px, 1.4vw, 26px);
+}
+
+.question.is-pin .pin-count,
+.racer-question.is-pin .pin-count {
+  min-width: 1.3em;
+  height: 1.3em;
+  border-radius: 0.65em;
+  font-size: 0.85em;
+  line-height: 1.3em;
+  top: -0.8em;
+  right: -0.9em;
+}
+
+.pin-note {
+  margin: 0 3vw 1vh;
+  padding: 1.4vh 2vw;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.1);
+  text-align: center;
+  font-size: clamp(18px, 2vw, 34px);
+  font-weight: 800;
+}
+
+.pin-note.right {
+  background: var(--good);
+}
+
+.racer-question.is-pin {
+  --pin-max-h: 34vh;
+}
+
+.racer-question.is-pin .pin-board {
+  flex: none;
+  margin: 0;
+  max-width: 60%;
+}
+
 .typing-note {
   text-align: center;
   font-size: clamp(22px, 3vw, 40px);

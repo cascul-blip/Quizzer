@@ -5,7 +5,7 @@ A self-hosted, Kahoot-style quiz game for classrooms and events on a local netwo
 - **One program** runs on the host computer (Linux or Windows) and serves everything.
 - The **projector screen** shows the join QR code and URL, the questions and answer tiles, the answer reveal, a leaderboard, and a podium.
 - **Players join from their phone's browser** by scanning the QR code or typing the URL. They don't install anything, and no domain name or internet connection is needed.
-- Quizzes support **multiple choice (2–4 options)** and **true/false** questions. You can add images, allow several correct answers, shuffle questions and answers, and export results to CSV.
+- Quizzes support **multiple choice (2–4 options)**, **true/false** and **pin on picture** questions. You can add images, allow several correct answers, shuffle questions and answers, and export results to CSV.
 - **AI agents** can create and edit quizzes through the built-in **MCP server**.
 
 ## Quick start
@@ -100,6 +100,7 @@ quizzer mcp [options]       Run the MCP server over stdio (for AI agents)
 - **Pacing**: *Manual* waits for you to press **Next** (or Space/→). *Auto-advance* moves on after 5 seconds on the reveal and leaderboard. You can switch pacing mid-game from the top bar. **Racer** is paced the same way.
 - **Scoring**: a correct answer is worth 1000 points if given instantly, falling to 500 at the time limit. Wrong or missing answers score 0.
 - **Multiple correct answers**: players still tap one option, and any correct option scores.
+- **Pin on picture**: the question has a picture with 2–20 labelled spots, such as the numbered lines of a labelled diagram. Players drag a pin onto the picture. Dropped near a label, it snaps onto that spot, and they press **Submit** to lock it in. One spot is the answer and the others are distractors. In the editor, click the picture to add a spot, drag a spot to move it, click it to make it the answer, and rename it in the list (e.g. "56"). To ask about every spot of a diagram, make one question and duplicate it (⧉) for each location. The reveal shows the right spot and how many players picked each one. Pin questions work in every game mode.
 - **Shuffling** is chosen in the lobby for each game; the quiz's shuffle settings in the editor are the defaults. Shuffling answer positions moves each answer to a random tile (and color), so the correct answer isn't always in the same place. The order is fixed when you press Start and is the same on the projector and every phone. True/False keeps True before False.
 - **Streaks**: after 4 correct answers in a row, a player gets 🔥x4 (x5, x6, …) next to their name on the leaderboard, the podium and their phone. A wrong or missed answer resets it.
 - **Show errors**: on the final screen of every game mode, this button swaps the results for a table of the **10 questions with the most wrong answers**, each with its correct answer, so you can go over them with the class. Press **Show results** to switch back. Classic and Racer count wrong answers only, not questions a player let time out; in the other modes a question can come up more than once, and every wrong answer counts.
@@ -306,7 +307,11 @@ Edits made over MCP appear in the admin page right away. A game that is already 
       "options": ["Sydney", "Canberra", "Melbourne", "Perth"],   // 2–4
       "correct": [1],                                             // 0-based; several = any counts
       "timeLimitSec": 20 },                                       // 5–120, default 20
-    { "type": "true_false", "text": "Paris is in France", "correct": [0] }  // [0]=True, [1]=False
+    { "type": "true_false", "text": "Paris is in France", "correct": [0] },  // [0]=True, [1]=False
+    { "type": "pin", "text": "Where is the deltoid?", "image": "media/ab12cd.png",
+      "spots": [{ "x": 0.42, "y": 0.18 }, { "x": 0.35, "y": 0.3 }],  // 2–20, fractions of the image (0,0 = top-left)
+      "options": ["56", "57"],                                      // spot labels; omit for A, B, C…
+      "correct": [0] }                                              // exactly one spot
   ]
 }
 ```

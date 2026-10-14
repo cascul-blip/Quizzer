@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { BLOCKS_PER_BUILD, DROP_ZONES, MONSTER_DAMAGE, type ClientMsg, type MonsterEgg, type PlayerTowerView } from "../../shared/protocol.ts";
 import { BuildingBlock, COLUMN_NAMES, EggCell, useEventFlash, viewBaseRow, DustPuff, FloorSparkle, SKY_STAGES, SkylineSvg, skyStage, useFreshKeys, useNewFloor } from "../shared/tower-art.tsx";
+import { PinDragger } from "../shared/pin.tsx";
 import { Shape, TextAnswer, formatClock, optionColor, ordinal, useCountdown } from "../shared/ui.tsx";
 
 type Send = (m: ClientMsg) => void;
@@ -86,6 +87,24 @@ export function TowerPlayer({ view, send }: { view: PlayerTowerView; send: Send 
 export function StreamQuestion({ question, onAnswer }: { question: NonNullable<PlayerTowerView["question"]>; onAnswer: (seq: number, option: number, text?: string) => void }) {
   const [sentSeq, setSentSeq] = useState<number | null>(null);
   const locked = sentSeq === question.seq;
+  if (question.type === "pin" && question.image && question.spots) {
+    return (
+      <main class="answering">
+        <h2 class="q-text tower-q">{question.text}</h2>
+        <PinDragger
+          key={question.seq}
+          image={question.image}
+          spots={question.spots}
+          labels={question.options}
+          disabled={locked}
+          onSubmit={(i) => {
+            setSentSeq(question.seq);
+            onAnswer(question.seq, i);
+          }}
+        />
+      </main>
+    );
+  }
   return (
     <main class="answering">
       <h2 class="q-text tower-q">{question.text}</h2>

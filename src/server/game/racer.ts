@@ -431,6 +431,7 @@ export class RacerGame {
       timeLimitSec: q.timeLimitSec,
       // A typed question's accepted answers stay hidden until the reveal.
       options: this.phase === "intro" || this.phase === "confidence" || (q.type === "text" && this.phase !== "reveal") ? [] : q.options,
+      ...(q.spots && this.phase !== "intro" && this.phase !== "confidence" ? { spots: q.spots } : {}),
       remainingMs: this.phase === "reveal" ? 0 : this.remainingMs(),
     };
   }

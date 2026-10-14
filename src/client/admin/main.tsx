@@ -1,8 +1,9 @@
 import { render } from "preact";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
-import { DEFAULT_TIME_LIMIT, MAX_OPTIONS, MIN_OPTIONS, TF_OPTIONS, TIME_LIMITS, newId } from "../../shared/quiz-constants.ts";
+import { DEFAULT_TIME_LIMIT, MAX_OPTIONS, MAX_PIN_SPOTS, MIN_OPTIONS, TF_OPTIONS, TIME_LIMITS, newId, pinLabel } from "../../shared/quiz-constants.ts";
 import { MUSIC_TRACKS } from "../../shared/music-tracks.ts";
 import type { Question, Quiz, QuizSettings, QuizSummary } from "../../shared/quiz-schema.ts";
+import { PinBoard } from "../shared/pin.tsx";
 import { Shape, Toast, optionColor } from "../shared/ui.tsx";
 
 // ---------- api ----------
@@ -330,15 +331,26 @@ function blankQuestion(type: Question["type"], taken: Set<string>): Question {
   let id: string;
   do id = "q" + newId(5);
   while (taken.has(id));
+  if (type === "true_false") return { id, type, text: "", timeLimitSec: DEFAULT_TIME_LIMIT, options: [...TF_OPTIONS], correct: [0] };
   if (type === "text") return { id, type, text: "", timeLimitSec: DEFAULT_TIME_LIMIT, options: [""], correct: [0] };
-  return type === "true_false"
-    ? { id, type, text: "", timeLimitSec: DEFAULT_TIME_LIMIT, options: [...TF_OPTIONS], correct: [0] }
-    : { id, type, text: "", timeLimitSec: DEFAULT_TIME_LIMIT, options: ["", "", "", ""], correct: [] };
+  if (type === "pin") return { id, type, text: "", timeLimitSec: PIN_TIME_LIMIT, options: [], spots: [], correct: [] };
+  return { id, type, text: "", timeLimitSec: DEFAULT_TIME_LIMIT, options: ["", "", "", ""], correct: [] };
 }
+
+/** Pin questions take a little longer: find the spot, drag, submit. */
+const PIN_TIME_LIMIT = 30;
 
 function questionIssues(q: Question): string[] {
   const issues: string[] = [];
   if (!q.text.trim()) issues.push("Question text is empty");
+  if (q.type === "pin") {
+    if (!q.image) issues.push("Add the picture to pin on");
+    if (q.options.length < MIN_OPTIONS) issues.push(`Click the picture to add at least ${MIN_OPTIONS} spots`);
+    if (q.options.some((o) => !o.trim())) issues.push("Give every spot a label");
+    if (new Set(q.options.map((o) => o.trim())).size !== q.options.length) issues.push("Spot labels must be different");
+    if (q.correct.length !== 1) issues.push("Mark the spot that is the answer");
+    return issues;
+  }
   if (q.options.some((o) => !o.trim())) issues.push("Fill in every answer option (or remove empty ones)");
   if (q.type !== "text" && q.correct.length === 0) issues.push("Mark at least one correct answer");
   return issues;
@@ -513,6 +525,9 @@ function Editor({ id, notify }: { id: string; notify: (m: string) => void }) {
         <button class="btn" onClick={() => set({ questions: [...draft.questions, blankQuestion("text", taken)] })}>
           + Type the answer
         </button>
+        <button class="btn" onClick={() => set({ questions: [...draft.questions, blankQuestion("pin", taken)] })}>
+          + Pin on picture
+        </button>
       </div>
     </div>
   );
@@ -561,9 +576,11 @@ function QuestionEditor(props: {
 
   function setType(type: Question["type"]) {
     if (type === q.type) return;
-    if (type === "true_false") onChange({ ...q, type, options: [...TF_OPTIONS], correct: [0] });
-    else if (type === "text") onChange({ ...q, type, options: [""], correct: [0] });
-    else onChange({ ...q, type, options: ["", "", "", ""], correct: [] });
+    const { spots: _, ...rest } = q;
+    if (type === "true_false") onChange({ ...rest, type, options: [...TF_OPTIONS], correct: [0] });
+    else if (type === "text") onChange({ ...rest, type, options: [""], correct: [0] });
+    else if (type === "pin") onChange({ ...rest, type, options: [], spots: [], correct: [], timeLimitSec: Math.max(q.timeLimitSec, PIN_TIME_LIMIT) });
+    else onChange({ ...rest, type, options: ["", "", "", ""], correct: [] });
   }
 
   function toggleCorrect(i: number) {
@@ -577,7 +594,7 @@ function QuestionEditor(props: {
   function removeOption(i: number) {
     const options = q.options.filter((_, j) => j !== i);
     const correct = q.type === "text" ? options.map((_, j) => j) : q.correct.filter((c) => c !== i).map((c) => (c > i ? c - 1 : c));
-    onChange({ ...q, options, correct });
+    onChange({ ...q, options, correct, ...(q.spots ? { spots: q.spots.filter((_, j) => j !== i) } : {}) });
   }
 
   async function upload(file: File) {
@@ -601,6 +618,7 @@ function QuestionEditor(props: {
           <option value="multiple_choice">Multiple choice</option>
           <option value="true_false">True / False</option>
           <option value="text">Type the answer</option>
+          <option value="pin">Pin on picture</option>
         </select>
         <label class="inline">
           ⏱
@@ -639,7 +657,11 @@ function QuestionEditor(props: {
       />
 
       <div class="image-row">
-        {q.image ? (
+        {q.image && q.type === "pin" ? (
+          <button class="btn tiny" disabled={uploading} onClick={() => fileRef.current?.click()}>
+            {uploading ? "Uploading…" : "🖼 Replace picture"}
+          </button>
+        ) : q.image ? (
           <div class="thumb">
             <img src={`/${q.image}`} alt="" />
             <button class="btn tiny" onClick={() => onChange({ ...q, image: undefined })}>
@@ -648,7 +670,7 @@ function QuestionEditor(props: {
           </div>
         ) : (
           <button class="btn tiny" disabled={uploading} onClick={() => fileRef.current?.click()}>
-            {uploading ? "Uploading…" : "🖼 Add image"}
+            {uploading ? "Uploading…" : q.type === "pin" ? "🖼 Add the picture to pin on" : "🖼 Add image"}
           </button>
         )}
         <input
@@ -665,45 +687,49 @@ function QuestionEditor(props: {
       </div>
 
       {q.type === "text" && <div class="note">Accepted answers. Case and plural endings (Airplanes / airplane) are ignored.</div>}
-      <div class="options">
-        {q.options.map((opt, i) => {
-          const c = optionColor(q.type, i);
-          const isCorrect = q.correct.includes(i);
-          return (
-            <div key={i} class={`option opt-${c} ${isCorrect ? "correct" : ""}`}>
-              {q.type !== "text" && <Shape index={c} />}
-              {q.type === "true_false" ? (
-                <span class="tf-label">{opt}</span>
-              ) : (
-                <input
-                  value={opt}
-                  maxLength={120}
-                  placeholder={q.type === "text" ? (i === 0 ? "Correct answer" : "Another accepted answer") : `Answer ${i + 1}`}
-                  onInput={(e) => onChange({ ...q, options: q.options.map((o, j) => (j === i ? e.currentTarget.value : o)) })}
-                />
-              )}
-              {q.type !== "text" && (
-              <label class="correct-toggle" title={q.type === "true_false" ? "Correct answer" : "Counts as correct"}>
-                <input
-                  type={q.type === "true_false" ? "radio" : "checkbox"}
-                  name={`correct-${q.id}`}
-                  checked={isCorrect}
-                  onChange={() => toggleCorrect(i)}
-                />
-                <span>✓</span>
-              </label>
-              )}
-              {(q.type === "text" ? q.options.length > 1 : q.type === "multiple_choice" && q.options.length > MIN_OPTIONS) && (
-                <button class="opt-remove" title="Remove answer" aria-label={`Remove answer ${i + 1}`} onClick={() => removeOption(i)}>
-                  ×
-                </button>
-              )}
-            </div>
-          );
-        })}
-      </div>
+      {q.type === "pin" ? (
+        <PinSpotsEditor q={q} onChange={onChange} onRemove={removeOption} />
+      ) : (
+        <div class="options">
+          {q.options.map((opt, i) => {
+            const c = optionColor(q.type, i);
+            const isCorrect = q.correct.includes(i);
+            return (
+              <div key={i} class={`option opt-${c} ${isCorrect ? "correct" : ""}`}>
+                {q.type !== "text" && <Shape index={c} />}
+                {q.type === "true_false" ? (
+                  <span class="tf-label">{opt}</span>
+                ) : (
+                  <input
+                    value={opt}
+                    maxLength={120}
+                    placeholder={q.type === "text" ? (i === 0 ? "Correct answer" : "Another accepted answer") : `Answer ${i + 1}`}
+                    onInput={(e) => onChange({ ...q, options: q.options.map((o, j) => (j === i ? e.currentTarget.value : o)) })}
+                  />
+                )}
+                {q.type !== "text" && (
+                  <label class="correct-toggle" title={q.type === "true_false" ? "Correct answer" : "Counts as correct"}>
+                    <input
+                      type={q.type === "true_false" ? "radio" : "checkbox"}
+                      name={`correct-${q.id}`}
+                      checked={isCorrect}
+                      onChange={() => toggleCorrect(i)}
+                    />
+                    <span>✓</span>
+                  </label>
+                )}
+                {(q.type === "text" ? q.options.length > 1 : q.type === "multiple_choice" && q.options.length > MIN_OPTIONS) && (
+                  <button class="opt-remove" title="Remove answer" aria-label={`Remove answer ${i + 1}`} onClick={() => removeOption(i)}>
+                    ×
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
       <div class="q-foot">
-        {q.type !== "true_false" && q.options.length < MAX_OPTIONS && (
+        {q.type !== "true_false" && q.type !== "pin" && q.options.length < MAX_OPTIONS && (
           <button
             class="btn tiny"
             onClick={() => onChange({ ...q, options: [...q.options, ""], ...(q.type === "text" ? { correct: [...q.options, ""].map((_, j) => j) } : {}) })}
@@ -715,6 +741,83 @@ function QuestionEditor(props: {
         {issues.length > 0 && <span class="issues">⚠ {issues.join(" · ")}</span>}
       </div>
     </li>
+  );
+}
+
+/**
+ * A pin question's spots: click the picture to add one, drag a spot to move it, click a spot to
+ * make it the answer. The list below renames (e.g. "56" instead of "A") and removes spots.
+ */
+function PinSpotsEditor({ q, onChange, onRemove }: { q: Question; onChange: (q: Question) => void; onRemove: (i: number) => void }) {
+  const board = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ i: number; x0: number; y0: number; moved: boolean } | null>(null);
+  const spots = q.spots ?? [];
+  const full = spots.length >= MAX_PIN_SPOTS;
+
+  const setAnswer = (i: number) => onChange({ ...q, correct: [i] });
+  function addSpot(x: number, y: number) {
+    if (full) return;
+    let n = 0;
+    while (q.options.includes(pinLabel(n))) n++;
+    onChange({ ...q, spots: [...spots, { x, y }], options: [...q.options, pinLabel(n)] });
+  }
+
+  const onDown = (e: PointerEvent) => {
+    const el = (e.target as Element).closest?.("[data-spot]");
+    if (!el) return;
+    e.preventDefault();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    drag.current = { i: Number(el.getAttribute("data-spot")), x0: e.clientX, y0: e.clientY, moved: false };
+  };
+  const onMove = (e: PointerEvent) => {
+    const d = drag.current;
+    const rect = board.current?.getBoundingClientRect();
+    if (!d || !rect || rect.width <= 0) return;
+    if (!d.moved && Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 4) return;
+    d.moved = true;
+    const clamp = (v: number) => Math.round(Math.max(0, Math.min(1, v)) * 1000) / 1000;
+    const at = { x: clamp((e.clientX - rect.left) / rect.width), y: clamp((e.clientY - rect.top) / rect.height) };
+    onChange({ ...q, spots: spots.map((s, j) => (j === d.i ? at : s)) });
+  };
+  const onUp = () => {
+    const d = drag.current;
+    drag.current = null;
+    if (d && !d.moved) setAnswer(d.i);
+  };
+
+  if (!q.image) return <p class="note">Add the picture first, then click on it to place the spots players can pin.</p>;
+  return (
+    <div class="pin-editor">
+      <div class="pin-editor-board" onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={() => (drag.current = null)}>
+        <PinBoard image={q.image} spots={spots} labels={q.options} correct={q.correct} boardRef={board} onImageClick={addSpot} />
+      </div>
+      <p class="note">
+        {full ? `That's the most spots (${MAX_PIN_SPOTS}). ` : "Click the picture to add a spot. "}
+        Drag a spot to move it; click it to make it the answer. Extra spots are distractors. To ask about another spot on the same picture, duplicate
+        this question (⧉).
+      </p>
+      {spots.length > 0 && (
+        <ol class="pin-spot-list">
+          {q.options.map((label, i) => (
+            <li key={i} class={q.correct.includes(i) ? "correct" : ""}>
+              <input
+                value={label}
+                maxLength={20}
+                aria-label={`Label of spot ${i + 1}`}
+                onInput={(e) => onChange({ ...q, options: q.options.map((o, j) => (j === i ? e.currentTarget.value : o)) })}
+              />
+              <label class="pin-answer">
+                <input type="radio" name={`correct-${q.id}`} checked={q.correct.includes(i)} onChange={() => setAnswer(i)} />
+                Answer
+              </label>
+              <button class="pin-remove" title="Remove spot" aria-label={`Remove spot ${label}`} onClick={() => onRemove(i)}>
+                ×
+              </button>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
   );
 }
 
