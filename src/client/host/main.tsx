@@ -550,7 +550,7 @@ function QuestionScreen({ view, send }: { view: GameView; send: Send }) {
         <div class="center-media">
           {pin ? (
             <PinBoard image={pin.image} spots={pin.spots} labels={q.options} correct={open ? undefined : [...correct]} counts={open ? undefined : counts} />
-          ) : !open ? (
+          ) : !open && q.type !== "text" ? (
             <div class="bars" role="img" aria-label="Answer distribution">
               {q.options.map((_, i) => {
                 const c = optionColor(q.type, i);
@@ -582,6 +582,7 @@ function QuestionScreen({ view, send }: { view: GameView; send: Send }) {
           </div>
         </div>
       </div>
+      {q.type === "text" && open && <p class="typing-note">Type your answer on your phone</p>}
       {pin ? (
         <PinNote open={open} labels={[...correct].map((i) => q.options[i]!)} />
       ) : (

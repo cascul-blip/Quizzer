@@ -85,19 +85,20 @@ export type PlayerMsg =
   | { type: "join"; nickname: string; avatar?: string; accessory?: string }
   | { type: "setAvatar"; avatar: string; accessory: string }
   | { type: "resume"; token: string }
-  | { type: "answer"; qIndex: number; option: number }
-  | { type: "tower.answer"; seq: number; option: number }
+  /** Typed questions send `text` (the typed answer) and ignore `option`. */
+  | { type: "answer"; qIndex: number; option: number; text?: string }
+  | { type: "tower.answer"; seq: number; option: number; text?: string }
   | { type: "tower.drop"; zone: number }
-  | { type: "sub.answer"; seq: number; option: number }
+  | { type: "sub.answer"; seq: number; option: number; text?: string }
   | { type: "sub.boost" }
   | { type: "sub.tap"; symbol: string }
-  | { type: "fight.answer"; seq: number; option: number }
+  | { type: "fight.answer"; seq: number; option: number; text?: string }
   | { type: "fight.choose"; action: "attack" | "rebuild" }
   /** The slingshot pull in field units (y up); the shot flies the opposite way. */
   | { type: "fight.fire"; dx: number; dy: number }
-  | { type: "robot.answer"; seq: number; option: number }
+  | { type: "robot.answer"; seq: number; option: number; text?: string }
   | { type: "robot.move"; dir: RobotDir }
-  | { type: "land.answer"; seq: number; option: number }
+  | { type: "land.answer"; seq: number; option: number; text?: string }
   | { type: "land.place"; tile: number }
   /** Leave the land early; unused claims are kept for next time. */
   | { type: "land.done" }
@@ -106,7 +107,7 @@ export type PlayerMsg =
   /** Racer, driver only, confidence phase only: lock the lever where it is and open the question. */
   | { type: "racer.go" }
   /** Racer, open phase: `index` is the question's index (QuestionView.index), as `qIndex` in the classic "answer". One answer per player per question. */
-  | { type: "racer.answer"; index: number; option: number };
+  | { type: "racer.answer"; index: number; option: number; text?: string };
 
 export type HostMsg =
   | { type: "host.hello" }
@@ -198,6 +199,8 @@ export type PlayerView =
       question: QuestionView | null;
       /** The option chosen for the current question, if any. */
       myChoice: number | null;
+      /** What was typed for the current question, if it is a typed one and answered. */
+      myText: string | null;
       result: PlayerResult | null;
       podium: RankedEntry[] | null;
       /** In the lobby with a team mode selected: the team this player will be on. */
@@ -844,6 +847,8 @@ export interface PlayerRacerView {
   confidence: RacerConfidence | null;
   /** The option this player picked for the current question (open and reveal), if any. */
   myChoice: number | null;
+  /** What this player typed, for a typed question (open and reveal), if they answered. */
+  myText: string | null;
   /** Reveal only: how this player did on the question. */
   reveal: { choice: number | null; correct: number[]; wasCorrect: boolean } | null;
   car: RacerCar;

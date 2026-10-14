@@ -5,7 +5,7 @@ import { STREAK_MIN, type ClientMsg, type PlayerView, type ServerMsg } from "../
 import { Avatar } from "../shared/avatar-art.tsx";
 import { connect, type ConnStatus } from "../shared/ws.ts";
 import { PinBoard, PinDragger } from "../shared/pin.tsx";
-import { ConnBanner, ErrorBoundary, LockedChoice, Shape, StreakBadge, Toast, optionColor, ordinal, useCountdown } from "../shared/ui.tsx";
+import { ConnBanner, ErrorBoundary, LockedChoice, Shape, StreakBadge, TextAnswer, Toast, optionColor, ordinal, useCountdown } from "../shared/ui.tsx";
 import { AvatarPicker } from "./avatar-picker.tsx";
 import { FightPlayer } from "./fight.tsx";
 import { LandPlayer } from "./land.tsx";
@@ -295,12 +295,19 @@ function Answering({ view, send }: { view: Joined; send: (m: ClientMsg) => void 
   const [pending, setPending] = useState<number | null>(null);
   const secs = useCountdown(q.remainingMs, `open:${q.index}`);
   useEffect(() => setPending(null), [q.index]);
+  const [pendingText, setPendingText] = useState<string | null>(null);
+  useEffect(() => setPendingText(null), [q.index]);
   const chosen = view.myChoice ?? pending;
+  const typed = view.myText ?? pendingText;
 
-  if (chosen !== null) {
+  if (chosen !== null || typed !== null) {
     return (
       <Center>
-        <LockedChoice type={q.type} index={chosen} label={q.options[chosen] ?? ""} />
+        {typed !== null ? (
+          <div class="locked-text">{typed}</div>
+        ) : (
+          <LockedChoice type={q.type} index={chosen!} label={q.options[chosen!] ?? ""} />
+        )}
         <h1>Answer locked in</h1>
         <p class="muted">Waiting for the others…</p>
       </Center>
@@ -331,21 +338,27 @@ function Answering({ view, send }: { view: Joined; send: (m: ClientMsg) => void 
     <main class="answering">
       {head}
       {q.image && <img class="q-img" src={`/${q.image}`} alt="" />}
-      <div class={`answers n${q.options.length}`}>
-        {q.options.map((text, i) => {
-          const c = optionColor(q.type, i);
-          return (
-            <button
-              key={i}
-              class={`answer opt-${c}`}
-              onClick={() => choose(i)}
-            >
-              <Shape index={c} />
-              <span>{text}</span>
-            </button>
-          );
-        })}
-      </div>
+      {q.type === "text" ? (
+        <TextAnswer
+          onSubmit={(text) => {
+            if (navigator.vibrate) navigator.vibrate(30);
+            setPendingText(text);
+            send({ type: "answer", qIndex: q.index, option: 0, text });
+          }}
+        />
+      ) : (
+        <div class={`answers n${q.options.length}`}>
+          {q.options.map((text, i) => {
+            const c = optionColor(q.type, i);
+            return (
+              <button key={i} class={`answer opt-${c}`} onClick={() => choose(i)}>
+                <Shape index={c} />
+                <span>{text}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </main>
   );
 }
@@ -354,7 +367,7 @@ function Result({ view }: { view: Joined }) {
   const q = view.question!;
   const r = view.result!;
   const correctSet = new Set(r.correct);
-  const heading = r.choice === null ? "Time's up!" : r.wasCorrect ? "Correct!" : "Wrong";
+  const heading = r.choice === null && view.myText === null ? "Time's up!" : r.wasCorrect ? "Correct!" : "Wrong";
   return (
     <main class={`result ${r.wasCorrect ? "good" : "bad"}`}>
       <div class="verdict">
@@ -364,6 +377,7 @@ function Result({ view }: { view: Joined }) {
         {r.wasCorrect && view.me.streak >= STREAK_MIN && <div class="streak-note">🔥 {view.me.streak} in a row!</div>}
       </div>
       <p class="q-text small-q">{q.text}</p>
+      {view.myText !== null && <p class="muted">You typed: <b>{view.myText}</b></p>}
       {q.type === "pin" && q.image && q.spots ? (
         <div class="pin-result">
           <PinBoard

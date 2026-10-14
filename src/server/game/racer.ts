@@ -12,6 +12,7 @@ import type {
   ShuffleOptions,
 } from "../../shared/protocol.ts";
 import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
+import { MAX_TYPED_ANSWER, checkAnswer, type AnswerValue } from "../../shared/answer-match.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import { RACER_CONFIDENCE_LEVELS, applyRacerTurn, newRacerCar, type RacerCar, type RacerConfidence } from "../../shared/racer-rules.ts";
 import { GameError, realClock, shuffle, topErrors, type Clock } from "./common.ts";
@@ -29,7 +30,9 @@ export const AWARD_MOST_CORRECT = "Most correct answers";
 export const AWARD_BEST_DRIVER = "Best driver";
 
 export interface RacerAnswer {
+  /** Chosen option index; -1 for a typed answer. */
   option: number;
+  text?: string;
   correct: boolean;
 }
 
@@ -210,14 +213,15 @@ export class RacerGame {
   }
 
   /** One answer per player per question, the driver included. Returns whether it was accepted. */
-  answer(playerId: string, qIndex: number, option: number): boolean {
+  answer(playerId: string, qIndex: number, answer: AnswerValue): boolean {
     const p = this.players.get(playerId);
     const q = this.currentQuestion;
     if (!p || !q || this.phase !== "open" || qIndex !== this.qIndex) return false;
     if (p.answers[qIndex]) return false;
-    if (!Number.isInteger(option) || option < 0 || option >= q.options.length) return false;
+    const correct = checkAnswer(q, answer);
+    if (correct === null) return false;
     if (this.clock.now() > this.phaseEndsAt + GRACE_MS) return false;
-    p.answers[qIndex] = { option, correct: q.correct.includes(option) };
+    p.answers[qIndex] = { ...(typeof answer === "string" ? { option: -1, text: answer.slice(0, MAX_TYPED_ANSWER) } : { option: answer }), correct };
     if (!this.maybeCloseEarly()) this.onActivity(p.id);
     return true;
   }
@@ -425,7 +429,8 @@ export class RacerGame {
       text: q.text,
       ...(q.image ? { image: q.image } : {}),
       timeLimitSec: q.timeLimitSec,
-      options: this.phase === "intro" || this.phase === "confidence" ? [] : q.options,
+      // A typed question's accepted answers stay hidden until the reveal.
+      options: this.phase === "intro" || this.phase === "confidence" || (q.type === "text" && this.phase !== "reveal") ? [] : q.options,
       ...(q.spots && this.phase !== "intro" && this.phase !== "confidence" ? { spots: q.spots } : {}),
       remainingMs: this.phase === "reveal" ? 0 : this.remainingMs(),
     };
@@ -503,8 +508,9 @@ export class RacerGame {
       driver: this.driver,
       lever: this.lever,
       confidence: this.confidence,
-      myChoice: ans?.option ?? null,
-      reveal: this.phase === "reveal" && q ? { choice: ans?.option ?? null, correct: q.correct, wasCorrect: !!ans?.correct } : null,
+      myChoice: ans && ans.option >= 0 ? ans.option : null,
+      myText: ans?.text ?? null,
+      reveal: this.phase === "reveal" && q ? { choice: ans && ans.option >= 0 ? ans.option : null, correct: q.correct, wasCorrect: !!ans?.correct } : null,
       car: { ...this.car },
       lastTurn: this.lastTurn,
       result,

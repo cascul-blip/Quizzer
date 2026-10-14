@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { BLOCKS_PER_BUILD, DROP_ZONES, MONSTER_DAMAGE, type ClientMsg, type MonsterEgg, type PlayerTowerView } from "../../shared/protocol.ts";
 import { BuildingBlock, COLUMN_NAMES, EggCell, useEventFlash, viewBaseRow, DustPuff, FloorSparkle, SKY_STAGES, SkylineSvg, skyStage, useFreshKeys, useNewFloor } from "../shared/tower-art.tsx";
 import { PinDragger } from "../shared/pin.tsx";
-import { Shape, formatClock, optionColor, ordinal, useCountdown } from "../shared/ui.tsx";
+import { Shape, TextAnswer, formatClock, optionColor, ordinal, useCountdown } from "../shared/ui.tsx";
 
 type Send = (m: ClientMsg) => void;
 type Build = NonNullable<PlayerTowerView["build"]>;
@@ -52,7 +52,7 @@ export function TowerPlayer({ view, send }: { view: PlayerTowerView; send: Send 
             🥚 Monster egg at level {view.egg.row + 1} ({COLUMN_NAMES[view.egg.col]}): build to it first!
           </div>
         )}
-        <StreamQuestion question={view.question} onAnswer={(seq, option) => send({ type: "tower.answer", seq, option })} />
+        <StreamQuestion question={view.question} onAnswer={(seq, option, text) => send({ type: "tower.answer", seq, option, text })} />
       </>
     );
   } else {
@@ -84,7 +84,7 @@ export function TowerPlayer({ view, send }: { view: PlayerTowerView; send: Send 
 }
 
 /** A self-paced question (Tallest Tower, Submarine Squad). */
-export function StreamQuestion({ question, onAnswer }: { question: NonNullable<PlayerTowerView["question"]>; onAnswer: (seq: number, option: number) => void }) {
+export function StreamQuestion({ question, onAnswer }: { question: NonNullable<PlayerTowerView["question"]>; onAnswer: (seq: number, option: number, text?: string) => void }) {
   const [sentSeq, setSentSeq] = useState<number | null>(null);
   const locked = sentSeq === question.seq;
   if (question.type === "pin" && question.image && question.spots) {
@@ -109,6 +109,15 @@ export function StreamQuestion({ question, onAnswer }: { question: NonNullable<P
     <main class="answering">
       <h2 class="q-text tower-q">{question.text}</h2>
       {question.image && <img class="q-img" src={`/${question.image}`} alt="" />}
+      {question.type === "text" ? (
+        <TextAnswer
+          disabled={locked}
+          onSubmit={(text) => {
+            setSentSeq(question.seq);
+            onAnswer(question.seq, 0, text);
+          }}
+        />
+      ) : (
       <div class={`answers n${question.options.length}`}>
         {question.options.map((text, i) => {
           const c = optionColor(question.type, i);
@@ -128,6 +137,7 @@ export function StreamQuestion({ question, onAnswer }: { question: NonNullable<P
           );
         })}
       </div>
+      )}
     </main>
   );
 }

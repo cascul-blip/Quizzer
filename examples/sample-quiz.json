@@ -40,6 +40,12 @@
       "options": ["106", "206", "306", "406"],
       "correct": [1],
       "timeLimitSec": 20
+    },
+    {
+      "type": "text",
+      "text": "Which flying machine has fixed wings and a propeller or jet engine?",
+      "options": ["Airplane", "Aeroplane"],
+      "timeLimitSec": 20
     }
   ]
 }

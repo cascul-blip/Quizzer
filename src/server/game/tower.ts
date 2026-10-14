@@ -1,3 +1,4 @@
+import type { AnswerValue } from "../../shared/answer-match.ts";
 import {
   BLOCKS_PER_BUILD,
   DROP_ZONES,
@@ -284,7 +285,7 @@ export class TowerGame {
     this.stream.deal(p);
   }
 
-  answer(playerId: string, seq: number, option: number): boolean {
+  answer(playerId: string, seq: number, option: AnswerValue): boolean {
     const p = this.players.get(playerId);
     const cur = p?.current;
     if (!p || !cur || this.phase !== "playing" || p.state !== "question") return false;

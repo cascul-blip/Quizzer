@@ -26,7 +26,7 @@ export function buildResultsCsv(game: Game): string {
     const row: (string | number)[] = [p.rank, p.nickname, p.score, p.answers.filter((a) => a?.correct).length];
     game.questions.forEach((q, i) => {
       const a = p.answers[i];
-      if (a) row.push(q.options[a.option] ?? "", a.correct ? "yes" : "no", a.points, (a.ms / 1000).toFixed(2));
+      if (a) row.push((q.type === "text" ? a.text : q.options[a.option]) ?? "", a.correct ? "yes" : "no", a.points, (a.ms / 1000).toFixed(2));
       else row.push("", "no answer", 0, "");
     });
     return row;

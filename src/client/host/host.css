@@ -3170,3 +3170,11 @@ select {
   margin: 0;
   max-width: 60%;
 }
+
+.typing-note {
+  text-align: center;
+  font-size: clamp(22px, 3vw, 40px);
+  font-weight: 800;
+  opacity: 0.85;
+  margin: 12px 0;
+}
