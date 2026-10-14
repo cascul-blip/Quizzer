@@ -27,6 +27,8 @@ export type Instrument =
   | "piano"
   | "strings"
   | "flute"
+  | "twang"
+  | "whistle"
   | "timpani"
   | "cymbal"
   | "woodblock"
@@ -361,6 +363,55 @@ export function playInstrument(ctx: Ctx, dest: AudioNode, inst: Instrument, t: n
         o.start(t);
         o.stop(t + len + 0.2);
       }
+      return;
+    }
+    case "twang": {
+      // Twangy electric guitar: a bright saw and square that bend down onto the note, with a closing filter.
+      const g = ctx.createGain();
+      const f = ctx.createBiquadFilter();
+      f.type = "lowpass";
+      f.Q.value = 4;
+      f.frequency.setValueAtTime(4200, t);
+      f.frequency.exponentialRampToValueAtTime(700, t + 0.35);
+      g.connect(f).connect(dest);
+      const ring = Math.min(1.1, len + 0.45);
+      env(g, t, 0.12 * v, 0.002, 0.02, ring);
+      for (const [type, level] of [
+        ["sawtooth", 1],
+        ["square", 0.45],
+      ] as const) {
+        const o = ctx.createOscillator();
+        const og = ctx.createGain();
+        o.type = type;
+        o.frequency.setValueAtTime(freq * 1.03, t);
+        o.frequency.exponentialRampToValueAtTime(freq, t + 0.05);
+        og.gain.value = level;
+        o.connect(og).connect(g);
+        o.start(t);
+        o.stop(t + ring + 0.1);
+      }
+      return;
+    }
+    case "whistle": {
+      // A lonely whistle: a pure tone that scoops up into the note, with a wide vibrato and a breath of air.
+      const g = ctx.createGain();
+      g.connect(dest);
+      env(g, t, 0.15 * v, Math.min(0.05, len * 0.3), Math.max(0, len - 0.08), 0.12);
+      const o = ctx.createOscillator();
+      o.type = "sine";
+      o.frequency.setValueAtTime(freq * 0.93, t);
+      o.frequency.exponentialRampToValueAtTime(freq, t + 0.07);
+      const lfo = ctx.createOscillator();
+      const depth = ctx.createGain();
+      lfo.frequency.value = 6;
+      depth.gain.value = 14;
+      lfo.connect(depth).connect(o.detune);
+      o.connect(g);
+      o.start(t);
+      lfo.start(t);
+      o.stop(t + len + 0.2);
+      lfo.stop(t + len + 0.2);
+      noiseHit(ctx, dest, t, 0.03 * v, Math.min(0.4, len), "bandpass", freq * 2, 6);
       return;
     }
     case "timpani": {

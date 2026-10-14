@@ -4,7 +4,8 @@
  * Submarine Squad = deep-sea suspense, Tower Fight = medieval battle,
  * Robot Attack = Romantic orchestra (public-domain Beethoven and Grieg themes),
  * Land Grab = calm ambient piano that grows into an orchestra as rings close,
- * Racer = sunny late-80s arcade-racing chiptune (tempo follows the car's speed).
+ * Racer = sunny late-80s arcade-racing chiptune (tempo follows the car's speed),
+ * Cup of Death = original spaghetti-western themes: whistle, twangy guitar, galloping hooves.
  * Any of these can be replaced by an audio file in data/music/<id>.<ext>.
  */
 import type { MusicTrackId } from "../../../shared/music-tracks.ts";
@@ -821,6 +822,121 @@ const racerResults: Track = {
   ],
 };
 
+
+// ---------- Cup of Death: spaghetti western (original themes) ----------
+
+/** Boom-chick bass: the root on the beat, the fifth in between. */
+const boomChick = (root: string, fifth: string) => seq([root, 4], [fifth, 4], [root, 4], [fifth, 4]);
+const GALLOP = drum("x.xxx.xxx.xxx.xx");
+const AM = chord("A3 C4 E4");
+const G_ = chord("G3 B3 D4");
+const F_ = chord("F3 A3 C4");
+const E_ = chord("E3 G#3 B3");
+
+const cupLobby: Track = {
+  id: "cup-lobby",
+  bpm: 120,
+  bars: 4,
+  swing: 0.15,
+  layers: [
+    // A honky-tonk saloon piano, oom-pah in the left hand.
+    {
+      inst: "piano",
+      bars: [
+        seq(["G2", 4], [chord("B3 D4"), 4], ["D2", 4], [chord("B3 D4"), 4]),
+        seq(["C3", 4], [chord("C4 E4"), 4], ["G2", 4], [chord("C4 E4"), 4]),
+        seq(["G2", 4], [chord("B3 D4"), 4], ["D2", 4], [chord("B3 D4"), 4]),
+        seq(["D2", 4], [chord("C4 F#4"), 4], ["A2", 4], [chord("C4 F#4"), 4]),
+      ],
+      vol: 0.8,
+    },
+    {
+      inst: "piano",
+      bars: [
+        seq(["D5", 2], ["E5", 2], ["D5", 2], ["B4", 2], ["G4", 4], ["B4", 2], ["D5", 2]),
+        seq(["E5", 2], ["G5", 2], ["E5", 2], ["C5", 2], ["E5", 4], ["D5", 2], ["C5", 2]),
+        seq(["B4", 2], ["D5", 2], ["G5", 4], ["F#5", 2], ["E5", 2], ["D5", 4]),
+        seq(["C5", 2], ["A4", 2], ["F#4", 2], ["A4", 2], ["D5", 6], [".", 2]),
+      ],
+    },
+    { inst: "woodblock", bars: [drum("x...x...x...x...")], vol: 0.35 },
+  ],
+};
+
+const CUP_THEME = [
+  seq(["A4", 2], ["E5", 6], ["D5", 2], ["E5", 2], ["C5", 4]),
+  seq(["B4", 2], ["D5", 6], ["C5", 2], ["B4", 2], ["G4", 4]),
+  seq(["A4", 2], ["C5", 2], ["F5", 8], ["E5", 2], ["D5", 2]),
+  seq(["E5", 12], [".", 4]),
+  seq(["A5", 4], ["G5", 2], ["E5", 2], ["A5", 4], ["G5", 2], ["E5", 2]),
+  seq(["D5", 2], ["E5", 2], ["G5", 8], ["E5", 2], ["D5", 2]),
+  seq(["C5", 4], ["D5", 4], ["B4", 4], ["G#4", 4]),
+  seq(["A4", 12], [".", 4]),
+];
+const CUP_CHORDS = [AM, G_, F_, E_, AM, G_, E_, AM];
+const CUP_BASS = [boomChick("A2", "E2"), boomChick("G2", "D2"), boomChick("F2", "C3"), boomChick("E2", "B2"), boomChick("A2", "E2"), boomChick("G2", "D2"), boomChick("E2", "B2"), boomChick("A2", "E2")];
+const CUP_ROOTS = ["A2", "G2", "F2", "E2", "A2", "G2", "E2", "A2"];
+
+const cupQuiz: Track = {
+  id: "cup-quiz",
+  bpm: 96,
+  bars: 8,
+  // From a dusty trot at the start of the round to a full gallop as time runs out.
+  tempoBoost: 0.7,
+  reverb: 0.25,
+  layers: [
+    { inst: "whistle", bars: CUP_THEME },
+    { inst: "twang", bars: CUP_BASS, vol: 0.8 },
+    { inst: "twang", bars: CUP_CHORDS.map((c) => pump(c, "..x...x...x...x.")), vol: 0.45, from: 0.2 },
+    { inst: "woodblock", bars: [GALLOP], vol: 0.5, from: 0.25 },
+    { inst: "strings", bars: CUP_CHORDS.map(hold), vol: 0.7, from: 0.4 },
+    { inst: "timpani", bars: CUP_ROOTS.map((r) => pump(r, "x.......x.......")), vol: 0.5, from: 0.5 },
+    { inst: "brass", bars: CUP_CHORDS.map((c) => pump(c, "x.......x.x.....")), vol: 0.45, from: 0.65 },
+    { inst: "bell", bars: [once("E4"), rest], vol: 0.7, from: 0.75 },
+    { inst: "snare", bars: [drum("....x.......x..."), drum("....x.......x..."), drum("....x.......x..."), drum("....x...x.x.xxxx")], vol: 0.6, from: 0.85 },
+  ],
+};
+
+const cupDrink: Track = {
+  id: "cup-drink",
+  bpm: 66,
+  bars: 4,
+  tempoBoost: 0.3,
+  reverb: 0.35,
+  layers: [
+    { inst: "heart", bars: [drum("x.......x.......")], vol: 0.9 },
+    { inst: "strings", bars: [AM, F_, chord("D3 F3 A3"), E_].map((c) => pump(c, "xxxxxxxxxxxxxxxx")), vol: 0.35 },
+    { inst: "twang", bars: [seq(["A2", 8], [".", 8]), seq(["F2", 8], [".", 8]), seq(["D2", 8], [".", 8]), seq(["E2", 8], [".", 8])], vol: 0.8 },
+    { inst: "whistle", bars: [seq([".", 8], ["E5", 8]), seq(["F5", 8], ["E5", 8]), seq(["D5", 12], [".", 4]), seq(["G#4", 8], ["B4", 8])], vol: 0.7 },
+    { inst: "bell", bars: [once("A3")], vol: 0.6 },
+    { inst: "timpani", bars: [pump("A2", "x...x...x...x..."), pump("F2", "x...x...x...x..."), pump("D2", "x...x...x...x..."), pump("E2", "x.x.x.x.xxxxxxxx")], vol: 0.45, from: 0.6 },
+  ],
+};
+
+const cupResults: Track = {
+  id: "cup-results",
+  bpm: 104,
+  bars: 4,
+  reverb: 0.25,
+  layers: [
+    {
+      inst: "brass",
+      bars: [
+        seq(["E4", 2], ["A4", 2], ["C#5", 4], ["E5", 6], ["C#5", 2]),
+        seq(["D5", 4], ["F#5", 4], ["A5", 6], ["F#5", 2]),
+        seq(["E5", 2], ["F#5", 2], ["G#5", 2], ["A5", 2], ["B5", 4], ["G#5", 4]),
+        seq(["A5", 12], [".", 4]),
+      ],
+    },
+    { inst: "whistle", bars: [seq([".", 8], ["A5", 8]), seq([".", 8], ["F#5", 8]), seq([".", 8], ["E5", 8]), seq([".", 4], ["E5", 4], ["A5", 8])], vol: 0.5 },
+    { inst: "strings", bars: [hold(chord("A3 C#4 E4")), hold(chord("D4 F#4 A4")), hold(chord("E3 G#3 B3")), hold(chord("A3 C#4 E4"))], vol: 0.8 },
+    { inst: "twang", bars: [boomChick("A2", "E2"), boomChick("D2", "A2"), boomChick("E2", "B2"), boomChick("A2", "E2")], vol: 0.8 },
+    { inst: "timpani", bars: [pump("A2", "x.......x.x....."), pump("D2", "x.......x.x....."), pump("E2", "x.......x.x....."), pump("A2", "x...x...x.x.x...")], vol: 0.5 },
+    { inst: "woodblock", bars: [GALLOP], vol: 0.45 },
+    { inst: "cymbal", bars: [rest, rest, rest, once("x")], vol: 0.6 },
+  ],
+};
+
 export const TRACKS: Record<MusicTrackId, Track> = {
   "classic-lobby": classicLobby,
   "classic-question": classicQuestion,
@@ -846,4 +962,8 @@ export const TRACKS: Record<MusicTrackId, Track> = {
   "racer-lobby": racerLobby,
   "racer-drive": racerDrive,
   "racer-results": racerResults,
+  "cup-lobby": cupLobby,
+  "cup-quiz": cupQuiz,
+  "cup-drink": cupDrink,
+  "cup-results": cupResults,
 };

@@ -1517,3 +1517,80 @@ a.btn {
 .pin-grab-placed {
   margin-top: -12px;
 }
+
+/* ----- Cup of Death: dice and bubbling cups (projector and phones) ----- */
+
+.cup-bubbles circle {
+  fill: #c9ff7a;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: cup-bubble 1.2s ease-out infinite;
+}
+
+@keyframes cup-bubble {
+  0% {
+    opacity: 0;
+    transform: translateY(4px) scale(0.4);
+  }
+  25% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-22px) scale(1.1);
+  }
+}
+
+.cup-liquid {
+  animation: cup-glow 1.6s ease-in-out infinite alternate;
+}
+
+@keyframes cup-glow {
+  from {
+    filter: brightness(0.9);
+  }
+  to {
+    filter: brightness(1.25);
+  }
+}
+
+.die.rolling {
+  animation: die-tumble 0.32s linear infinite;
+}
+
+.die.landed {
+  animation: die-land 0.35s ease-out;
+}
+
+@keyframes die-tumble {
+  0% {
+    transform: rotate(0deg) translateY(0);
+  }
+  50% {
+    transform: rotate(180deg) translateY(-8%);
+  }
+  100% {
+    transform: rotate(360deg) translateY(0);
+  }
+}
+
+@keyframes die-land {
+  0% {
+    transform: scale(1.35) rotate(-12deg);
+  }
+  70% {
+    transform: scale(0.92) rotate(3deg);
+  }
+  100% {
+    transform: scale(1) rotate(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cup-bubbles circle,
+  .cup-liquid,
+  .die.rolling {
+    animation: none;
+  }
+}

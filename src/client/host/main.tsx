@@ -14,6 +14,7 @@ import { musicFor } from "./music-cues.ts";
 import { FightStage } from "./fight.tsx";
 import { LandStage } from "./land.tsx";
 import { RacerStage } from "./racer.tsx";
+import { CupStage } from "./cup.tsx";
 import { RobotStage } from "./robot.tsx";
 import { SubStage } from "./submarine.tsx";
 import { TowerStage } from "./tower.tsx";
@@ -93,6 +94,8 @@ function App() {
     body = <LandStage view={view} send={send} />;
   } else if (view.kind === "racer") {
     body = <RacerStage view={view} send={send} />;
+  } else if (view.kind === "cup") {
+    body = <CupStage view={view} send={send} />;
   } else {
     body = <Game view={view} send={send} />;
   }
@@ -338,6 +341,7 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
               <option value="robot">🤖 Robot Attack</option>
               <option value="land">🚩 Land Grab</option>
               <option value="racer">🏎 Racer</option>
+              <option value="cup">☠️ Cup of Death</option>
             </select>
           </label>
           {tower ? (
@@ -412,6 +416,8 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
             </>
           ) : view.mode === "robot" ? (
             <span class="opt mode-hint">Answer questions to earn moves, then dodge the robot's lasers. Last one standing wins.</span>
+          ) : view.mode === "cup" ? (
+            <span class="opt mode-hint">Roll the die, then answer that many questions before time runs out, or drink from a cup. One is poisoned. Last one standing wins.</span>
           ) : view.mode === "submarine" ? (
             <span class="opt mode-hint">Everyone works together to outrun the anglerfish. The game ends when it catches you.</span>
           ) : (
@@ -442,7 +448,7 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
             />
             Shuffle answer positions
           </label>
-          {(view.mode === "tower" || view.mode === "submarine" || view.mode === "fight" || view.mode === "robot") && (
+          {(view.mode === "tower" || view.mode === "submarine" || view.mode === "fight" || view.mode === "robot" || view.mode === "cup") && (
             <label class="opt check" title="Wrong answers in a row make a player wait longer before the next question">
               <input type="checkbox" checked={view.protect} onChange={(e) => send({ type: "host.setProtect", on: e.currentTarget.checked })} />
               Protect from abuse

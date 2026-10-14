@@ -17,7 +17,7 @@ export interface ShuffleOptions {
 
 // ---------- Tallest Tower ----------
 
-export type GameMode = "classic" | "tower" | "submarine" | "fight" | "robot" | "land" | "racer";
+export type GameMode = "classic" | "tower" | "submarine" | "fight" | "robot" | "land" | "racer" | "cup";
 export type TowerPhase = "countdown" | "playing" | "podium";
 
 export const TEAMS = [
@@ -107,7 +107,10 @@ export type PlayerMsg =
   /** Racer, driver only, confidence phase only: lock the lever where it is and open the question. */
   | { type: "racer.go" }
   /** Racer, open phase: `index` is the question's index (QuestionView.index), as `qIndex` in the classic "answer". One answer per player per question. */
-  | { type: "racer.answer"; index: number; option: number; text?: string };
+  | { type: "racer.answer"; index: number; option: number; text?: string }
+  | { type: "cup.answer"; seq: number; option: number; text?: string }
+  /** Cup of Death, drink phase, drinkers only: pick one of your remaining cups (0-based, left to right). Final once sent. */
+  | { type: "cup.pick"; cup: number };
 
 export type HostMsg =
   | { type: "host.hello" }
@@ -189,7 +192,7 @@ export interface PlayerResult {
 
 export type PlayerView =
   | { kind: "none"; game: null }
-  | { kind: "none"; game: { title: string; phase: Phase | TowerPhase | SubPhase | FightPhase | RobotPhase | LandPhase | RacerPhase } }
+  | { kind: "none"; game: { title: string; phase: Phase | TowerPhase | SubPhase | FightPhase | RobotPhase | LandPhase | RacerPhase | CupPhase } }
   | {
       kind: "player";
       phase: Phase;
@@ -211,7 +214,8 @@ export type PlayerView =
   | PlayerFightView
   | PlayerRobotView
   | PlayerLandView
-  | PlayerRacerView;
+  | PlayerRacerView
+  | PlayerCupView;
 
 export interface TowerAwards {
   mostCorrect: { value: number; nicknames: string[] } | null;
@@ -612,6 +616,129 @@ export interface PlayerRobotView {
   result: { rank: number; playerCount: number; won: boolean; outRound: number | null; awards: string[] } | null;
 }
 
+// ---------- Cup of Death ----------
+
+export type CupPhase = "countdown" | "roll" | "quiz" | "drink" | "reveal" | "podium";
+/** Cups in front of each player at the start; one is drunk (and gone) each time they survive a drink. */
+export const CUP_CUPS = 3;
+export const CUP_DIE_SIDES = 6;
+/** The dice tumble this long before the quiz timer starts. */
+export const CUP_ROLL_MS = 2500;
+/** The first quiz phase is this long; each round is CUP_QUIZ_STEP_MS shorter, down to CUP_QUIZ_MIN_MS. */
+export const CUP_QUIZ_START_MS = 30_000;
+export const CUP_QUIZ_STEP_MS = 2000;
+export const CUP_QUIZ_MIN_MS = 10_000;
+/** Time to pick a cup; anyone who hasn't picked by then gets a random one. */
+export const CUP_DRINK_MS = 10_000;
+/** In the reveal, each drinker raises the cup and gulps for CUP_SIP_MS, then the verdict shows for CUP_VERDICT_MS. */
+export const CUP_SIP_MS = 1800;
+export const CUP_VERDICT_MS = 1800;
+/** How long "Everyone's safe!" shows when nobody has to drink. */
+export const CUP_ALL_SAFE_MS = 2500;
+
+/** Length of round n's quiz phase (n starts at 1). */
+export function cupQuizMs(round: number): number {
+  return Math.max(CUP_QUIZ_MIN_MS, CUP_QUIZ_START_MS - CUP_QUIZ_STEP_MS * (round - 1));
+}
+
+export interface CupAwards {
+  mostCorrect: SubAward | null;
+  /** Most drinks survived. */
+  luckiest: SubAward | null;
+  /** Most rounds made safe without drinking. */
+  neverThirsty: SubAward | null;
+  /** Poisoned by the first cup they ever drank (a 1-in-3 chance), earliest round; value = that round. */
+  unluckiest: SubAward | null;
+}
+
+/** One drinker in the reveal, in the order they are revealed. */
+export interface CupDrinkView {
+  id: string;
+  /** The cup they drank (0-based among the cupsBefore cups in front of them). */
+  cup: number;
+  cupsBefore: number;
+  /** The cup was picked for them (time ran out, or it was their last cup). */
+  auto: boolean;
+  /** Null until this drinker's verdict is shown. */
+  verdict: "poison" | "safe" | null;
+}
+
+export interface CupRevealView {
+  seq: number;
+  round: number;
+  drinks: CupDrinkView[];
+  /** Index of the drinker in the spotlight, or -1 before the first and after the last. */
+  current: number;
+}
+
+export interface HostCupPlayer {
+  id: string;
+  nickname: string;
+  avatar: AvatarChoice;
+  connected: boolean;
+  /** Cups still in front of them. */
+  cups: number;
+  out: boolean;
+  /** This round's dice roll: correct answers needed (0 before the first roll). */
+  target: number;
+  /** Correct answers so far this round. */
+  progress: number;
+  safe: boolean;
+  /** Drink phase: has to drink this round. */
+  drinker: boolean;
+  /** Drink phase: has picked a cup. */
+  picked: boolean;
+}
+
+export interface CupStanding {
+  id: string;
+  nickname: string;
+  avatar: AvatarChoice;
+  rank: number;
+  cups: number;
+  /** Round the player was poisoned in, or null for a survivor. */
+  outRound: number | null;
+  correct: number;
+}
+
+export interface HostCupState {
+  kind: "cup";
+  phase: CupPhase;
+  quiz: { id: string; title: string; questionCount: number };
+  round: number;
+  phaseRemainingMs: number;
+  /** Full length of the current phase, for the progress bar. */
+  phaseDurationMs: number;
+  players: HostCupPlayer[];
+  /** The drinks of the current round (reveal phase), or null. */
+  reveal: CupRevealView | null;
+  playerCount: number;
+  standings: CupStanding[] | null;
+  awards: CupAwards | null;
+  errors: QuestionError[] | null;
+  hasResults: boolean;
+}
+
+export interface PlayerCupView {
+  kind: "cup";
+  phase: CupPhase;
+  title: string;
+  round: number;
+  phaseRemainingMs: number;
+  phaseDurationMs: number;
+  me: { id: string; nickname: string; avatar: AvatarChoice; cups: number; out: boolean; target: number; progress: number; safe: boolean; correct: number };
+  /** Questions to answer: living players during the quiz until safe; poisoned players any time, for practice. */
+  question: StreamQuestionView | null;
+  feedback: { seq: number; correct: boolean; remainingMs: number; answers: string[]; penaltyMs: number } | null;
+  /** Drink phase, drinkers only: their pick so far (null until they pick). */
+  drink: { picked: number | null } | null;
+  /** Reveal phase, drinkers only: this player's own drink. `turn` is true while they are in the spotlight. */
+  myDrink: (CupDrinkView & { seq: number; turn: boolean; waiting: boolean }) | null;
+  /** Players still alive. */
+  alive: number;
+  result: { rank: number; playerCount: number; won: boolean; outRound: number | null; awards: string[] } | null;
+}
+
 // ---------- Land Grab ----------
 
 export type LandPhase = "countdown" | "playing" | "conquered" | "podium";
@@ -866,7 +993,8 @@ export type HostView =
   | (HostFightState & { join: JoinInfo })
   | (HostRobotState & { join: JoinInfo })
   | (HostLandState & { join: JoinInfo })
-  | (HostRacerState & { join: JoinInfo });
+  | (HostRacerState & { join: JoinInfo })
+  | (HostCupState & { join: JoinInfo });
 
 export type ServerMsg =
   /** First message on every connection. A new serverId means the server restarted (maybe with new code). */

@@ -5,6 +5,7 @@ import type { Game } from "./game.ts";
 import type { LandGame } from "./land.ts";
 import type { RacerGame } from "./racer.ts";
 import type { RobotGame } from "./robot.ts";
+import type { CupGame } from "./cup.ts";
 import type { SubGame } from "./submarine.ts";
 import type { TowerGame } from "./tower.ts";
 
@@ -87,6 +88,18 @@ export function buildRobotResultsCsv(game: RobotGame): string {
     const answered = p.correct + p.wrong;
     const status = s.rank === 1 ? "Winner" : p.outRound === null ? "Survived" : `Out in round ${p.outRound}`;
     return [s.rank, p.nickname, status, p.lives, p.outRound === null ? game.attacks : p.outRound - 1, p.correct, p.wrong, answered ? Math.round((p.correct / answered) * 100) : "", p.moves, p.hits];
+  });
+  return toCsv([header, ...rows]);
+}
+
+/** Cup of Death: one row per player in final standing order. */
+export function buildCupResultsCsv(game: CupGame): string {
+  const header = ["Rank", "Nickname", "Status", "Cups left", "Rounds survived", "Correct", "Wrong", "Accuracy %", "Drinks survived", "Rounds safe"];
+  const rows: (string | number)[][] = game.standings().map((s) => {
+    const p = game.players.get(s.id)!;
+    const answered = p.correct + p.wrong;
+    const status = s.rank === 1 ? "Winner" : p.outRound === null ? "Survived" : `Poisoned in round ${p.outRound}`;
+    return [s.rank, p.nickname, status, p.cups, p.outRound === null ? game.round : p.outRound - 1, p.correct, p.wrong, answered ? Math.round((p.correct / answered) * 100) : "", p.drinksSurvived, p.safeRounds];
   });
   return toCsv([header, ...rows]);
 }

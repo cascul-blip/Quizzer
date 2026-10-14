@@ -3178,3 +3178,332 @@ select {
   opacity: 0.85;
   margin: 12px 0;
 }
+
+/* ----- Cup of Death stage ----- */
+
+.cup-stage {
+  background: #1d0d04;
+}
+
+.cup-bar .robot-bar-fill {
+  background: linear-gradient(90deg, #7a0d14, #d4192b);
+}
+
+.cup-bar.drink .robot-bar-fill {
+  background: linear-gradient(90deg, #3f7a12, #8fd12d);
+}
+
+.cup-bar.roll,
+.cup-bar.reveal,
+.cup-bar.countdown {
+  background: rgba(40, 18, 5, 0.85);
+}
+
+.cup-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+  background: #1d0d04;
+}
+
+.saloon {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  height: 100%;
+  /* The backdrop bleeds past the view box to fill wide screens. */
+  overflow: visible;
+}
+
+.saloon .table-text,
+.saloon .safe-ribbon,
+.saloon .seat-skull,
+.saloon .pick-badge {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.saloon .saloon-sign {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  fill: #f2c46b;
+}
+
+.saloon .seat {
+  transition: transform 0.8s ease-in-out;
+}
+
+.saloon .seat-glow {
+  fill: transparent;
+}
+
+.saloon .seat-body {
+  transition: transform 0.3s ease-out;
+}
+
+.saloon .seat-name {
+  fill: #fff4dc;
+  font-weight: 800;
+  paint-order: stroke;
+  stroke: rgba(30, 12, 2, 0.85);
+  stroke-width: 4px;
+}
+
+.saloon .seat.offline {
+  opacity: 0.45;
+}
+
+.saloon .seat.safe .seat-glow {
+  fill: rgba(80, 220, 110, 0.45);
+}
+
+.saloon .seat.drinker .seat-glow {
+  fill: rgba(230, 30, 50, 0.55);
+  animation: drinker-pulse 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes drinker-pulse {
+  to {
+    fill: rgba(230, 30, 50, 0.15);
+  }
+}
+
+.saloon .seat.spotlight .seat-glow {
+  fill: rgba(255, 226, 150, 0.7);
+}
+
+.saloon .seat.spotlight .seat-body {
+  transform: scale(1.25);
+}
+
+.saloon .seat.survived .seat-body {
+  animation: survived-hop 0.5s ease-out 2;
+}
+
+@keyframes survived-hop {
+  50% {
+    transform: scale(1.25) translateY(-14%);
+  }
+}
+
+.saloon .seat.dying .seat-body {
+  animation: keel-over 1.4s ease-in forwards;
+}
+
+@keyframes keel-over {
+  0% {
+    filter: none;
+  }
+  30% {
+    transform: scale(1.25) rotate(-8deg);
+    filter: hue-rotate(70deg) saturate(1.6);
+  }
+  100% {
+    transform: scale(1) rotate(85deg);
+    filter: hue-rotate(70deg) saturate(1.6) brightness(0.7);
+    opacity: 0.45;
+  }
+}
+
+.saloon .seat.dying .seat-name {
+  opacity: 0.4;
+}
+
+.saloon .seat-skull {
+  fill: #b6ff6a;
+  animation: pop-in 0.4s ease-out;
+}
+
+.saloon .table-cup {
+  transition: transform 0.9s cubic-bezier(0.3, 0.7, 0.3, 1);
+}
+
+.saloon .table-cup.chosen:not(.lifted) {
+  filter: drop-shadow(0 0 6px rgba(255, 220, 120, 0.9));
+}
+
+.saloon .table-cup.drained {
+  opacity: 0;
+  transition:
+    transform 0.9s cubic-bezier(0.3, 0.7, 0.3, 1),
+    opacity 0.6s ease-in 0.8s;
+}
+
+.saloon .table-cup.poisoned {
+  filter: drop-shadow(0 0 10px #7dff2a);
+}
+
+.saloon .cup-skull {
+  fill: #b6ff6a;
+}
+
+.saloon .die-tumble {
+  animation: die-shake 0.25s linear infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes die-shake {
+  0%,
+  100% {
+    rotate: -14deg;
+  }
+  50% {
+    rotate: 14deg;
+  }
+}
+
+.saloon .progress-chip {
+  fill: rgba(30, 12, 2, 0.85);
+  stroke: #e9c47a;
+  stroke-width: 2;
+}
+
+.saloon .progress-text {
+  fill: #fff4dc;
+  font-weight: 900;
+}
+
+.saloon .safe-ribbon rect {
+  fill: #2fa84f;
+  stroke: #0f4d22;
+  stroke-width: 3;
+}
+
+.saloon .safe-ribbon text {
+  fill: #fff;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+}
+
+.saloon .safe-ribbon {
+  animation: pop-in 0.35s ease-out;
+}
+
+.saloon .pick-badge circle {
+  fill: #7a0d14;
+  stroke: #ffd6a0;
+  stroke-width: 3;
+}
+
+.saloon .pick-badge.picked circle {
+  fill: #2fa84f;
+}
+
+.saloon .pick-badge text {
+  fill: #fff;
+  font-weight: 900;
+}
+
+.saloon .table-text {
+  animation: pop-in 0.35s ease-out;
+}
+
+.saloon .table-big {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 64px;
+  font-weight: 900;
+  fill: #fff0cf;
+  paint-order: stroke;
+  stroke: rgba(40, 16, 4, 0.9);
+  stroke-width: 8px;
+}
+
+.saloon .table-small {
+  font-size: 26px;
+  font-weight: 700;
+  fill: #ffe2b0;
+  paint-order: stroke;
+  stroke: rgba(40, 16, 4, 0.9);
+  stroke-width: 6px;
+}
+
+.saloon .table-text.urgent .table-big {
+  fill: #ff5a5a;
+}
+
+/* Poison green. */
+.saloon .table-text.bad .table-big {
+  fill: #b6ff6a;
+}
+
+.saloon .table-text.good .table-big {
+  fill: #8dffa8;
+}
+
+.saloon .table-text.suspense .table-big {
+  animation: suspense 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes suspense {
+  to {
+    opacity: 0.55;
+  }
+}
+
+.cup-countdown {
+  background: rgba(30, 12, 2, 0.72);
+  text-align: center;
+}
+
+.cup-countdown .countdown-label {
+  max-width: 80vw;
+  padding: 2vh 2vw;
+  border-radius: var(--radius);
+  background: rgba(40, 16, 4, 0.85);
+  border: 3px solid #a8743a;
+  font-size: clamp(18px, 2vw, 36px);
+}
+
+.cup-podium .podium-bg {
+  opacity: 0.3;
+}
+
+.cup-podium .podium-bg .saloon {
+  width: 100%;
+  height: 100%;
+}
+
+.cup-count {
+  letter-spacing: 0.08em;
+}
+
+.cup-count i {
+  font-style: normal;
+  opacity: 0.25;
+}
+
+.cup-count i.full {
+  opacity: 1;
+}
+
+/* Four awards: keep them on one row. */
+.cup-awards {
+  flex-wrap: nowrap;
+  width: min(1700px, 96vw);
+}
+
+.cup-awards .award {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .saloon .seat,
+  .saloon .table-cup {
+    transition: none;
+  }
+  .saloon .seat.drinker .seat-glow,
+  .saloon .die-tumble,
+  .saloon .table-text.suspense .table-big {
+    animation: none;
+  }
+}
+
+.cup-awards .award-who {
+  font-size: clamp(16px, 1.5vw, 28px);
+}
