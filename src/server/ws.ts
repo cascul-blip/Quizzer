@@ -1,12 +1,12 @@
 import type { ServerWebSocket } from "bun";
 import QRCode from "qrcode";
-import type { ClientMsg, FightSettings, GameMode, HostView, JoinInfo, LandSettings, Pacing, PlayerView, ServerMsg, TowerSettings } from "../shared/protocol.ts";
+import type { ClientMsg, CupSettings, FightSettings, GameMode, HostView, JoinInfo, LandSettings, Pacing, PlayerView, ServerMsg, TowerSettings } from "../shared/protocol.ts";
 import { answerOf } from "../shared/answer-match.ts";
 import { cleanAvatar } from "../shared/avatars.ts";
 import { ValidationError } from "../shared/quiz-schema.ts";
 import { CupGame } from "./game/cup.ts";
 import { FightGame } from "./game/fight.ts";
-import { DEFAULT_FIGHT, DEFAULT_LAND, DEFAULT_TOWER, Game, GameError, type Clock } from "./game/game.ts";
+import { DEFAULT_CUP, DEFAULT_FIGHT, DEFAULT_LAND, DEFAULT_TOWER, Game, GameError, type Clock } from "./game/game.ts";
 import { LandGame } from "./game/land.ts";
 import { RacerGame } from "./game/racer.ts";
 import { buildCupResultsCsv, buildFightResultsCsv, buildLandResultsCsv, buildRacerResultsCsv, buildResultsCsv, buildRobotResultsCsv, buildSubResultsCsv, buildTowerResultsCsv, writeResultsFile } from "./game/results.ts";
@@ -75,7 +75,7 @@ export class GameHub {
   private broadcastQueued = false;
   private activityTimer: ReturnType<typeof setTimeout> | null = null;
   /** Mode, mode settings and pacing carry over to the next lobby ("Play again"). */
-  private lastSetup: { mode: GameMode; tower: TowerSettings; fight: FightSettings; land: LandSettings; protect: boolean; pacing: Pacing } = { mode: "classic", tower: DEFAULT_TOWER, fight: DEFAULT_FIGHT, land: DEFAULT_LAND, protect: true, pacing: "manual" };
+  private lastSetup: { mode: GameMode; tower: TowerSettings; fight: FightSettings; land: LandSettings; cup: CupSettings; protect: boolean; pacing: Pacing } = { mode: "classic", tower: DEFAULT_TOWER, fight: DEFAULT_FIGHT, land: DEFAULT_LAND, cup: DEFAULT_CUP, protect: true, pacing: "manual" };
   private readonly log: (msg: string) => void;
 
   constructor(
@@ -427,6 +427,10 @@ export class GameHub {
       case "host.setLand":
         classic().setLand({ teams: Number(msg.teams), minutes: Number(msg.minutes) });
         this.lastSetup.land = { ...classic().land };
+        return;
+      case "host.setCup":
+        classic().setCup({ cups: Number(msg.cups) });
+        this.lastSetup.cup = { ...classic().cup };
         return;
       case "host.next":
         return paced().next();

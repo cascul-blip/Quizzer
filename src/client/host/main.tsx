@@ -1,6 +1,6 @@
 import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
-import { HILL_SETTINGS, LAND_MINUTES, LAND_MIN_TEAMS, MAX_TEAMS, TOWER_MINUTES, type GameMode, type HillSetting, type HostPlayer, type HostView, type Pacing, type ServerMsg } from "../../shared/protocol.ts";
+import { CUP_MAX_CUPS, CUP_MIN_CUPS, HILL_SETTINGS, LAND_MINUTES, LAND_MIN_TEAMS, MAX_TEAMS, TOWER_MINUTES, type GameMode, type HillSetting, type HostPlayer, type HostView, type Pacing, type ServerMsg } from "../../shared/protocol.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import type { QuizSummary } from "../../shared/quiz-schema.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
@@ -417,7 +417,19 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
           ) : view.mode === "robot" ? (
             <span class="opt mode-hint">Answer questions to earn moves, then dodge the robot's lasers. Last one standing wins.</span>
           ) : view.mode === "cup" ? (
-            <span class="opt mode-hint">Roll the die, then answer that many questions before time runs out, or drink from a cup. One is poisoned. Last one standing wins.</span>
+            <>
+              <label class="opt">
+                Cups
+                <select value={view.cup.cups} onChange={(e) => send({ type: "host.setCup", cups: Number(e.currentTarget.value) })}>
+                  {Array.from({ length: CUP_MAX_CUPS - CUP_MIN_CUPS + 1 }, (_, i) => (
+                    <option key={i} value={i + CUP_MIN_CUPS}>
+                      {i + CUP_MIN_CUPS}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <span class="opt mode-hint">Roll the die, then answer that many questions before time runs out, or drink from a cup. One is poisoned. Last one standing wins.</span>
+            </>
           ) : view.mode === "submarine" ? (
             <span class="opt mode-hint">Everyone works together to outrun the anglerfish. The game ends when it catches you.</span>
           ) : (

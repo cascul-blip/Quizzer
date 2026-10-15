@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import { CUP_CUPS, type HostView } from "../../shared/protocol.ts";
+import { type HostView } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { SaloonScene, TABLE_CENTER, type SaloonMode } from "../shared/cup-art.tsx";
 import { play } from "../shared/sounds.ts";
@@ -84,7 +84,7 @@ export function CupStage({ view, send }: { view: CupView; send: Send }) {
         <>
           <TimerBar view={view} secs={secs} />
           <main class="cup-wrap">
-            <SaloonScene players={seated} mode={mode} drinks={r?.drinks ?? []} current={r?.current ?? -1} rollKey={`r${view.round}`}>
+            <SaloonScene players={seated} mode={mode} drinks={r?.drinks ?? []} current={r?.current ?? -1} startCups={view.startCups} rollKey={`r${view.round}`}>
               <TableText view={view} secs={secs} />
             </SaloonScene>
             {view.phase === "countdown" && (
@@ -92,7 +92,7 @@ export function CupStage({ view, send }: { view: CupView; send: Send }) {
                 <div class="countdown-label">
                   Each round, roll the die and answer that many questions right before time runs out.
                   <br />
-                  Fall short, and you drink one of your {CUP_CUPS} cups. One of them is poisoned.
+                  {view.startCups === 1 ? "Fall short, and you drink your one cup. It is poisoned." : `Fall short, and you drink one of your ${view.startCups} cups. One of them is poisoned.`}
                   <br />
                   Every cup you survive is one fewer to choose from. Last one standing wins!
                 </div>
@@ -178,10 +178,10 @@ function TimerBar({ view, secs }: { view: CupView; secs: number }) {
   );
 }
 
-function Cups({ count }: { count: number }) {
+function Cups({ count, of }: { count: number; of: number }) {
   return (
     <span class="cup-count" aria-label={`${count} cups left`}>
-      {Array.from({ length: CUP_CUPS }, (_, i) => (
+      {Array.from({ length: of }, (_, i) => (
         <i key={i} class={i < count ? "full" : ""}>
           🥃
         </i>
@@ -219,7 +219,7 @@ function CupPodium({ view, send }: { view: CupView; send: Send }) {
                 <span class="lb-rank">{ordinal(s.rank)}</span>
                 <Avatar choice={s.avatar} />
                 <span class="lb-name">{s.nickname}</span>
-                <span class="robot-status">{s.outRound === null ? <Cups count={s.cups} /> : `☠ Poisoned in round ${s.outRound}`}</span>
+                <span class="robot-status">{s.outRound === null ? <Cups count={s.cups} of={view.startCups} /> : `☠ Poisoned in round ${s.outRound}`}</span>
               </li>
             ))}
           </ol>

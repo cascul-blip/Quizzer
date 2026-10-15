@@ -1,7 +1,7 @@
 import type { AnswerValue } from "../../shared/answer-match.ts";
 import {
   CUP_ALL_SAFE_MS,
-  CUP_CUPS,
+  CUP_DEFAULT_CUPS,
   CUP_DIE_SIDES,
   CUP_DRINK_MS,
   CUP_ROLL_MS,
@@ -69,6 +69,8 @@ export interface CupOptions {
 }
 
 export interface CupGameSettings {
+  /** Cups in front of each player at the start (default CUP_DEFAULT_CUPS). */
+  cups?: number;
   shuffleAnswers: boolean;
   /** Longer waits for wrong answers in a row (the lobby's "Protect from abuse"). */
   protect?: boolean;
@@ -80,6 +82,8 @@ export class CupGame {
   readonly quizId: string;
   readonly title: string;
   readonly questions: Question[];
+  /** Cups in front of each player at the start. */
+  readonly startCups: number;
   readonly roster = new Roster<CupPlayer>();
   readonly startedAt = new Date();
   phase: CupPhase = "countdown";
@@ -105,6 +109,7 @@ export class CupGame {
     this.quizId = quiz.id;
     this.title = quiz.title;
     this.questions = quiz.questions;
+    this.startCups = settings.cups ?? CUP_DEFAULT_CUPS;
     this.clock = opts.clock ?? realClock;
     this.rng = opts.rng ?? Math.random;
     this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock, settings.protect);
@@ -115,7 +120,7 @@ export class CupGame {
 
   /** Take over a lobby's players (same ids and tokens). */
   static fromLobby(lobby: Game, opts: CupOptions = {}): CupGame {
-    const game = new CupGame(lobby.quiz, { shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
+    const game = new CupGame(lobby.quiz, { cups: lobby.cup.cups, shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
     for (const p of lobby.players.values()) {
       game.roster.adopt(game.newPlayer({ id: p.id, nickname: p.nickname, token: p.token, connected: p.connected, avatar: p.avatar }));
     }
@@ -140,7 +145,7 @@ export class CupGame {
     return {
       ...base,
       ...newStreamPlayer(),
-      cups: CUP_CUPS,
+      cups: this.startCups,
       outRound: null,
       target: rolling ? this.rollDie() : 0,
       progress: 0,
@@ -412,7 +417,8 @@ export class CupGame {
       const top = Math.max(0, ...players.map(value));
       return top > 0 ? { value: top, nicknames: players.filter((p) => value(p) === top).map((p) => p.nickname) } : null;
     };
-    const unlucky = players.filter((p) => p.poisonedFrom === CUP_CUPS && p.outRound !== null);
+    // With a single cup, every drink is certain death: no luck involved.
+    const unlucky = this.startCups > 1 ? players.filter((p) => p.poisonedFrom === this.startCups && p.outRound !== null) : [];
     const first = Math.min(...unlucky.map((p) => p.outRound!));
     return {
       mostCorrect: best((p) => p.correct),
@@ -469,6 +475,7 @@ export class CupGame {
         drinker: drinking && this.drinkers.includes(p.id),
         picked: drinking && p.pick !== null,
       })),
+      startCups: this.startCups,
       reveal: this.revealView(),
       playerCount: this.players.size,
       standings: podium ? this.standings() : null,
@@ -510,6 +517,7 @@ export class CupGame {
       phaseRemainingMs: this.remainingMs(),
       phaseDurationMs: this.phaseDurationMs,
       me: { id: p.id, nickname: p.nickname, avatar: p.avatar, cups: p.cups, out: p.outRound !== null, target: p.target, progress: p.progress, safe: p.safe, correct: p.correct },
+      startCups: this.startCups,
       question: this.answering(p) ? this.stream.questionView(p) : null,
       feedback: this.stream.feedbackView(p),
       drink: this.phase === "drink" && this.drinkers.includes(p.id) ? { picked: p.pick } : null,

@@ -1,9 +1,13 @@
 import {
+  CUP_DEFAULT_CUPS,
+  CUP_MAX_CUPS,
+  CUP_MIN_CUPS,
   HILL_SETTINGS,
   LAND_MINUTES,
   LAND_MIN_TEAMS,
   MAX_TEAMS,
   TOWER_MINUTES,
+  type CupSettings,
   type FightSettings,
   type GameMode,
   type HillSetting,
@@ -36,6 +40,7 @@ const LEADERBOARD_SIZE = 10;
 export const DEFAULT_TOWER: TowerSettings = { teams: 2, minutes: 5, monster: true };
 export const DEFAULT_FIGHT: FightSettings = { hill: "random" };
 export const DEFAULT_LAND: LandSettings = { teams: 2, minutes: 5 };
+export const DEFAULT_CUP: CupSettings = { cups: CUP_DEFAULT_CUPS };
 
 export interface Answer {
   /** Chosen option index; -1 for a typed answer. */
@@ -75,6 +80,7 @@ export interface GameOptions {
   tower?: TowerSettings;
   fight?: FightSettings;
   land?: LandSettings;
+  cup?: CupSettings;
   protect?: boolean;
 }
 
@@ -100,6 +106,7 @@ export class Game {
   tower: TowerSettings;
   fight: FightSettings;
   land: LandSettings;
+  cup: CupSettings;
   /** When the current phase's countdown ends (intro/open), for views. */
   phaseEndsAt = 0;
   openedAt = 0;
@@ -131,6 +138,7 @@ export class Game {
     this.tower = { ...(opts.tower ?? DEFAULT_TOWER) };
     this.fight = { ...(opts.fight ?? DEFAULT_FIGHT) };
     this.land = { ...(opts.land ?? DEFAULT_LAND) };
+    this.cup = { ...(opts.cup ?? DEFAULT_CUP) };
     this.protect = opts.protect ?? true;
   }
 
@@ -254,6 +262,14 @@ export class Game {
     if (!(teams >= LAND_MIN_TEAMS && teams <= MAX_TEAMS)) throw new GameError(`Teams must be between ${LAND_MIN_TEAMS} and ${MAX_TEAMS}`);
     if (!(LAND_MINUTES as readonly number[]).includes(minutes)) throw new GameError("Unsupported game length");
     this.land = { teams, minutes };
+    this.onChange();
+  }
+
+  setCup(settings: CupSettings): void {
+    if (this.phase !== "lobby") throw new GameError("Cup of Death settings can only be changed before the game starts");
+    const cups = Number(settings.cups);
+    if (!(Number.isInteger(cups) && cups >= CUP_MIN_CUPS && cups <= CUP_MAX_CUPS)) throw new GameError(`Cups must be between ${CUP_MIN_CUPS} and ${CUP_MAX_CUPS}`);
+    this.cup = { cups };
     this.onChange();
   }
 
@@ -478,6 +494,7 @@ export class Game {
       tower: this.tower,
       fight: this.fight,
       land: this.land,
+      cup: this.cup,
       teams,
       quiz: { id: this.quizId, title: this.title, questionCount: this.questions.length },
       pacing: this.pacing,

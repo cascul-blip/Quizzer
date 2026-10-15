@@ -639,7 +639,11 @@ describe("Cup of Death over WebSockets", () => {
     host.send({ type: "host.open", quizId: quiz.id });
     await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
     host.send({ type: "host.setMode", mode: "cup" });
-    await host.hostState((v) => v.kind === "classic" && v.mode === "cup" && v.teams === null);
+    await host.hostState((v) => v.kind === "classic" && v.mode === "cup" && v.teams === null && v.cup.cups === 3);
+    host.send({ type: "host.setCup", cups: 7 });
+    expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: expect.stringContaining("between 1 and 6") });
+    host.send({ type: "host.setCup", cups: 5 });
+    await host.hostState((v) => v.kind === "classic" && v.cup.cups === 5);
 
     const names = ["Ann", "Bob"];
     const players = await Promise.all(names.map(() => TestSocket.open(wsUrl)));
@@ -655,7 +659,10 @@ describe("Cup of Death over WebSockets", () => {
     clock.advance(CUP_COUNTDOWN_MS);
     srv.hub.broadcast();
     const rolled = await host.hostState((v) => v.kind === "cup" && v.phase === "roll");
-    for (const p of rolled.view.kind === "cup" ? rolled.view.players : []) expect(p.target).toBeGreaterThanOrEqual(1);
+    for (const p of rolled.view.kind === "cup" ? rolled.view.players : []) {
+      expect(p.target).toBeGreaterThanOrEqual(1);
+      expect(p.cups).toBe(5);
+    }
     clock.advance(CUP_ROLL_MS);
     srv.hub.broadcast();
 

@@ -123,6 +123,7 @@ export type HostMsg =
   | { type: "host.setTower"; teams: number; minutes: number; monster?: boolean }
   | { type: "host.setFight"; hill: HillSetting }
   | { type: "host.setLand"; teams: number; minutes: number }
+  | { type: "host.setCup"; cups: number }
   | { type: "host.next" }
   | { type: "host.skip" }
   | { type: "host.kick"; playerId: string }
@@ -274,6 +275,7 @@ export interface HostGameState {
   tower: TowerSettings;
   fight: FightSettings;
   land: LandSettings;
+  cup: CupSettings;
   /** Team preview while the lobby is in a team mode (Tallest Tower, Tower Fight, Land Grab). */
   teams: (TeamInfo & { members: HostPlayer[] })[] | null;
   quiz: { id: string; title: string; questionCount: number };
@@ -619,8 +621,14 @@ export interface PlayerRobotView {
 // ---------- Cup of Death ----------
 
 export type CupPhase = "countdown" | "roll" | "quiz" | "drink" | "reveal" | "podium";
-/** Cups in front of each player at the start; one is drunk (and gone) each time they survive a drink. */
-export const CUP_CUPS = 3;
+/** Cups in front of each player at the start (a lobby setting); one is drunk (and gone) each time they survive a drink. */
+export const CUP_MIN_CUPS = 1;
+export const CUP_MAX_CUPS = 6;
+export const CUP_DEFAULT_CUPS = 3;
+
+export interface CupSettings {
+  cups: number;
+}
 export const CUP_DIE_SIDES = 6;
 /** The dice tumble this long before the quiz timer starts. */
 export const CUP_ROLL_MS = 2500;
@@ -647,7 +655,7 @@ export interface CupAwards {
   luckiest: SubAward | null;
   /** Most rounds made safe without drinking. */
   neverThirsty: SubAward | null;
-  /** Poisoned by the first cup they ever drank (a 1-in-3 chance), earliest round; value = that round. */
+  /** Poisoned by the first cup they ever drank (a 1-in-N chance, N = the starting cups), earliest round; value = that round. */
   unluckiest: SubAward | null;
 }
 
@@ -710,6 +718,8 @@ export interface HostCupState {
   /** Full length of the current phase, for the progress bar. */
   phaseDurationMs: number;
   players: HostCupPlayer[];
+  /** Cups each player started with. */
+  startCups: number;
   /** The drinks of the current round (reveal phase), or null. */
   reveal: CupRevealView | null;
   playerCount: number;
@@ -727,6 +737,8 @@ export interface PlayerCupView {
   phaseRemainingMs: number;
   phaseDurationMs: number;
   me: { id: string; nickname: string; avatar: AvatarChoice; cups: number; out: boolean; target: number; progress: number; safe: boolean; correct: number };
+  /** Cups each player started with. */
+  startCups: number;
   /** Questions to answer: living players during the quiz until safe; poisoned players any time, for practice. */
   question: StreamQuestionView | null;
   feedback: { seq: number; correct: boolean; remainingMs: number; answers: string[]; penaltyMs: number } | null;
