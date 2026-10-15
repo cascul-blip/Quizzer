@@ -235,12 +235,12 @@ The podium shows the distance, the top speed, the number of crashes and awards f
 
 ## Cup of Death mode
 
-Every player for themselves around a round wooden table in a western saloon. Choose **Game mode → ☠️ Cup of Death** in the lobby. Everyone starts with **3 cups** of bubbling green liquid in front of them. Each round has two parts:
+Every player for themselves around a round wooden table in a western saloon. Choose **Game mode → ☠️ Cup of Death** in the lobby. Everyone starts with **3 cups** of bubbling green liquid in front of them (the host can choose **1 to 6** with the **Cups** setting in the lobby). Each round has two parts:
 
 - **Dice and quiz.** Every player still alive **rolls a die (1–6)** on their phone and on the projector. That's how many questions they must **answer correctly before the red timer bar runs out**. A wrong answer just moves on to the next question. A player who reaches their number is **SAFE** and waits for the others. The projector shows each player's die and progress (e.g. 2/5) above their head. The first quiz lasts **30 seconds**, and each round is **2 seconds shorter**, down to 10 seconds. The round ends early once everyone is safe.
 - **Drink.** Everyone who fell short must drink: their phone shows their remaining cups, and they have **10 seconds** to tap one; time runs out (or a player is disconnected) and a cup is picked for them. **One of each player's cups is poisoned.** The projector then reveals the drinkers one at a time: they lift the cup, gulp, and either survive or keel over with a green skull.
 
-**Cups run out.** A cup that turns out to be safe is gone, so the odds get worse with every miss: 1 in 3, then 1 in 2, and a player down to **their last cup** drinks it automatically, and it's always poisoned. A poisoned player is out: their avatar leaves the table, and they can **keep answering questions to learn**.
+**Cups run out.** A cup that turns out to be safe is gone, so the odds get worse with every miss: with 3 cups it's 1 in 3, then 1 in 2, and a player down to **their last cup** drinks it automatically, and it's always poisoned. A poisoned player is out: their avatar leaves the table, and they can **keep answering questions to learn**.
 
 **The last player standing wins.** If everyone left is poisoned in the same round, they share the win. A game with only one player runs until they're poisoned. If the host ends the game early, everyone still alive shares the win. The podium shows the standings and awards for **Most correct answers**, **Luckiest drinker** (most drinks survived), **Never thirsty** (most rounds safe without drinking) and **Unluckiest** (poisoned by their very first cup, earliest). The results CSV lists each player's rank, the round they were poisoned in, cups left, answers, drinks survived and rounds safe.
 

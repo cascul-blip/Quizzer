@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { COUNTDOWN_MS, CupGame, FEEDBACK_MS, type CupPlayer } from "../src/server/game/cup.ts";
 import { Game } from "../src/server/game/game.ts";
 import { buildCupResultsCsv } from "../src/server/game/results.ts";
-import { CUP_ALL_SAFE_MS, CUP_CUPS, CUP_DRINK_MS, CUP_QUIZ_MIN_MS, CUP_ROLL_MS, CUP_SIP_MS, CUP_VERDICT_MS, cupQuizMs } from "../src/shared/protocol.ts";
+import { CUP_ALL_SAFE_MS, CUP_DEFAULT_CUPS, CUP_DRINK_MS, CUP_MAX_CUPS, CUP_MIN_CUPS, CUP_QUIZ_MIN_MS, CUP_ROLL_MS, CUP_SIP_MS, CUP_VERDICT_MS, cupQuizMs } from "../src/shared/protocol.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
 import { FakeClock, sampleQuiz } from "./helpers.ts";
 
@@ -31,11 +31,12 @@ function scripted(values: number[]) {
   return { values, rng: () => (values.length > 0 ? values.shift()! : rest()) };
 }
 
-function setup(names: string[], rng: () => number = seeded()) {
+function setup(names: string[], rng: () => number = seeded(), cups = CUP_DEFAULT_CUPS) {
   const clock = new FakeClock();
   let finished = 0;
   const lobby = new Game(quiz(), { clock });
   lobby.setMode("cup");
+  lobby.setCup({ cups });
   for (const n of names) lobby.join(n);
   const game = CupGame.fromLobby(lobby, { clock, rng, onFinish: () => finished++ });
   game.start();
@@ -74,10 +75,10 @@ describe("Cup of Death", () => {
     expect(cupQuizMs(100)).toBe(CUP_QUIZ_MIN_MS);
   });
 
-  test("everyone starts with 3 cups and rolls a die from 1 to 6 each round", () => {
+  test("everyone starts with 3 cups (the default) and rolls a die from 1 to 6 each round", () => {
     const { game, clock } = setup(["A", "B", "C", "D", "E", "F", "G", "H"]);
     for (const p of game.players.values()) {
-      expect(p.cups).toBe(CUP_CUPS);
+      expect(p.cups).toBe(CUP_DEFAULT_CUPS);
       expect(p.target).toBeGreaterThanOrEqual(1);
       expect(p.target).toBeLessThanOrEqual(6);
       expect(p.safe).toBe(false);
@@ -120,7 +121,7 @@ describe("Cup of Death", () => {
     expect(game.phase).toBe("roll");
     expect(game.round).toBe(2);
     expect(byName(game, "A").safeRounds).toBe(1);
-    expect(byName(game, "A").cups).toBe(3);
+    expect(byName(game, "A").cups).toBe(CUP_DEFAULT_CUPS);
   });
 
   test("players who fall short pick a cup; a safe drink costs them that cup", () => {
@@ -138,8 +139,8 @@ describe("Cup of Death", () => {
     expect(game.hostView().players.find((p) => p.id === b.id)).toMatchObject({ drinker: true, picked: false });
     // A's not drinking, and B can only pick a cup that's there.
     expect(game.pick(a.id, 0)).toBe(false);
-    expect(game.pick(b.id, 3)).toBe(false);
-    // The poison goes in cup 2; B drinks cup 1.
+    expect(game.pick(b.id, CUP_DEFAULT_CUPS)).toBe(false);
+    // The poison goes in the last cup; B drinks cup 1.
     values.push(0.9);
     expect(game.pick(b.id, 1)).toBe(true);
     // Everyone has picked: the reveal starts at once.
@@ -147,12 +148,12 @@ describe("Cup of Death", () => {
     expect(game.pick(b.id, 0)).toBe(false);
     let r = game.hostView().reveal!;
     expect(r.current).toBe(0);
-    expect(r.drinks).toEqual([{ id: b.id, cup: 1, cupsBefore: 3, auto: false, verdict: null }]);
+    expect(r.drinks).toEqual([{ id: b.id, cup: 1, cupsBefore: CUP_DEFAULT_CUPS, auto: false, verdict: null }]);
     expect(game.playerView(b.id)!.myDrink).toMatchObject({ turn: true, waiting: false, verdict: null });
     clock.advance(CUP_SIP_MS);
     r = game.hostView().reveal!;
     expect(r.drinks[0]!.verdict).toBe("safe");
-    expect(b.cups).toBe(2);
+    expect(b.cups).toBe(CUP_DEFAULT_CUPS - 1);
     expect(b.drinksSurvived).toBe(1);
     clock.advance(CUP_VERDICT_MS);
     expect(game.phase).toBe("roll");
@@ -173,7 +174,7 @@ describe("Cup of Death", () => {
     game.pick(b.id, 0);
     clock.advance(CUP_SIP_MS);
     expect(b.outRound).toBe(1);
-    expect(b.poisonedFrom).toBe(3);
+    expect(b.poisonedFrom).toBe(CUP_DEFAULT_CUPS);
     expect(game.hostView().players.find((p) => p.id === b.id)!.out).toBe(true);
     clock.advance(CUP_VERDICT_MS);
     expect(game.phase).toBe("roll");
@@ -185,31 +186,47 @@ describe("Cup of Death", () => {
     expect(game.playerView(b.id)!.me.out).toBe(true);
   });
 
-  test("cups run out: the odds go 1/3, 1/2, then the last cup is certain death", () => {
-    const { rng, values } = scripted([]);
-    const { game, clock } = setup(["A", "B"], rng);
-    const a = byName(game, "A");
-    const b = byName(game, "B");
-    for (let round = 1; round <= 3; round++) {
-      toQuiz(game, clock);
-      makeSafe(game, clock, a);
-      endQuiz(game, clock);
-      expect(game.phase).toBe(round < 3 ? "drink" : "reveal");
-      if (round < 3) {
-        // Poison is in the last cup; B drinks the first.
-        values.push(0.999);
-        game.pick(b.id, 0);
-      }
-      const drink = game.hostView().reveal!.drinks[0]!;
-      expect(drink.cupsBefore).toBe(4 - round);
-      expect(drink.auto).toBe(round === 3);
-      clock.advance(CUP_SIP_MS + CUP_VERDICT_MS);
-      if (round < 3) expect(b.cups).toBe(3 - round);
-    }
-    expect(b.outRound).toBe(3);
-    expect(b.poisonedFrom).toBe(1);
-    expect(game.phase).toBe("podium");
+  test("the lobby sets the cups, 1 to 6, 3 by default", () => {
+    const lobby = new Game(quiz(), { clock: new FakeClock() });
+    expect(lobby.cup.cups).toBe(CUP_DEFAULT_CUPS);
+    expect(lobby.hostView().cup).toEqual({ cups: CUP_DEFAULT_CUPS });
+    for (const cups of [0, 7, 2.5, NaN]) expect(() => lobby.setCup({ cups })).toThrow();
+    for (let cups = CUP_MIN_CUPS; cups <= CUP_MAX_CUPS; cups++) lobby.setCup({ cups });
+    expect(lobby.cup.cups).toBe(CUP_MAX_CUPS);
   });
+
+  for (let cups = CUP_MIN_CUPS; cups <= CUP_MAX_CUPS; cups++) {
+    test(`with ${cups} cups, they run out one by one, and the last cup is certain death`, () => {
+      const { rng, values } = scripted([]);
+      const { game, clock } = setup(["A", "B"], rng, cups);
+      const a = byName(game, "A");
+      const b = byName(game, "B");
+      expect(b.cups).toBe(cups);
+      expect(game.hostView().startCups).toBe(cups);
+      expect(game.playerView(b.id)!.startCups).toBe(cups);
+      for (let round = 1; round <= cups; round++) {
+        toQuiz(game, clock);
+        makeSafe(game, clock, a);
+        endQuiz(game, clock);
+        expect(game.phase).toBe(round < cups ? "drink" : "reveal");
+        if (round < cups) {
+          // Poison is in the last cup; B drinks the first.
+          values.push(0.999);
+          game.pick(b.id, 0);
+        }
+        const drink = game.hostView().reveal!.drinks[0]!;
+        expect(drink.cupsBefore).toBe(cups + 1 - round);
+        expect(drink.auto).toBe(round === cups);
+        clock.advance(CUP_SIP_MS + CUP_VERDICT_MS);
+        if (round < cups) expect(b.cups).toBe(cups - round);
+      }
+      expect(b.outRound).toBe(cups);
+      expect(b.poisonedFrom).toBe(1);
+      expect(game.phase).toBe("podium");
+      // B survived their first cup, or (with one cup) there was no luck in it: no "Unluckiest".
+      expect(game.awards().unluckiest).toBeNull();
+    });
+  }
 
   test("anyone who doesn't pick in time gets a random cup", () => {
     const { game, clock } = setup(["A", "B", "C"]);
@@ -225,7 +242,7 @@ describe("Cup of Death", () => {
     for (const d of drinks) {
       expect(d.auto).toBe(d.id !== byName(game, "A").id);
       expect(d.cup).toBeGreaterThanOrEqual(0);
-      expect(d.cup).toBeLessThan(3);
+      expect(d.cup).toBeLessThan(CUP_DEFAULT_CUPS);
     }
     expect(drinks.find((d) => d.id === byName(game, "A").id)!.cup).toBe(2);
     // The reveal lasts one sip and one verdict per drinker.

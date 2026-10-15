@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import { CUP_CUPS, type ClientMsg, type PlayerCupView } from "../../shared/protocol.ts";
+import { type ClientMsg, type PlayerCupView } from "../../shared/protocol.ts";
 import { CupArt, Die, RollingDie } from "../shared/cup-art.tsx";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
 import { Feedback, StreamQuestion } from "./tower.tsx";
@@ -83,7 +83,7 @@ export function CupPlayer({ view, send }: { view: PlayerCupView; send: Send }) {
                 <Die value={me.target} class="mini-die" /> {me.progress}/{me.target}
               </span>
             )}
-            <CupIcons count={me.cups} />
+            <CupIcons count={me.cups} of={view.startCups} />
           </span>
         )}
       </header>
@@ -94,10 +94,10 @@ export function CupPlayer({ view, send }: { view: PlayerCupView; send: Send }) {
   );
 }
 
-function CupIcons({ count }: { count: number }) {
+function CupIcons({ count, of }: { count: number; of: number }) {
   return (
     <span class="cup-icons" aria-label={`${count} cups left`}>
-      {Array.from({ length: CUP_CUPS }, (_, i) => (
+      {Array.from({ length: of }, (_, i) => (
         <i key={i} class={i < count ? "full" : ""}>
           🥃
         </i>

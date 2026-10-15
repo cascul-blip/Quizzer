@@ -7,7 +7,7 @@
 import type { ComponentChildren } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import type { AvatarChoice } from "../../shared/avatars.ts";
-import { CUP_DIE_SIDES, type CupDrinkView } from "../../shared/protocol.ts";
+import { CUP_DEFAULT_CUPS, CUP_DIE_SIDES, type CupDrinkView } from "../../shared/protocol.ts";
 import { ACCESSORY_ART, AVATAR_ART } from "./avatar-art.tsx";
 import saloonImg from "./cup/saloon.webp";
 import tableImg from "./cup/table.webp";
@@ -259,7 +259,7 @@ function seats(players: SeatPlayer[]): Seat[] {
 const farSide = (s: Seat) => Math.sin(s.angle) < -0.3;
 
 /** The cups in front of one seat: screen positions, left to right. */
-function cupSpots(s: Seat, count: number): { x: number; y: number; w: number }[] {
+function cupSpots(s: Seat, count: number, startCups: number): { x: number; y: number; w: number }[] {
   const bx = CX + (s.x - CX) * CUP_RING;
   const by = CY + (s.y - CY) * CUP_RING + 10;
   let tx = -Math.sin(s.angle) * SEAT_RX;
@@ -271,7 +271,8 @@ function cupSpots(s: Seat, count: number): { x: number; y: number; w: number }[]
     tx = -tx;
     ty = -ty;
   }
-  const w = Math.max(16, Math.min(36, s.size * 0.3));
+  // More cups to start with: smaller ones, so the row stays in front of its seat.
+  const w = Math.max(12, Math.min(36, s.size * 0.3) * Math.min(1, 3.5 / startCups));
   const gap = w * 1.2;
   return Array.from({ length: count }, (_, k) => {
     const off = (k - (count - 1) / 2) * gap;
@@ -372,11 +373,14 @@ export function SaloonScene({
   mode,
   drinks = [],
   current = -1,
+  startCups = CUP_DEFAULT_CUPS,
   rollKey,
   children,
 }: {
   players: SeatPlayer[];
   mode: SaloonMode;
+  /** Cups each player started with (sizes the cups). */
+  startCups?: number;
   /** The reveal's drinks (empty otherwise). Players poisoned in it stay seated until it ends, so they can fall. */
   drinks?: CupDrinkView[];
   current?: number;
@@ -419,7 +423,7 @@ export function SaloonScene({
   const renderCups = (s: Seat) => {
     const r = mode === "reveal" ? drinkOf.get(s.p.id) : undefined;
     const before = r ? r.d.cupsBefore : s.p.cups;
-    const spots = cupSpots(s, before);
+    const spots = cupSpots(s, before, startCups);
     return spots.map((c, k) => {
       const drunk = r && r.d.cup === k;
       const lifted = drunk && (r.i === current || r.d.verdict !== null);
