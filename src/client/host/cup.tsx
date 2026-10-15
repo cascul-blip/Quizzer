@@ -231,6 +231,9 @@ function CupPodium({ view, send }: { view: CupView; send: Send }) {
           </div>
         </>
       )}
+      <p class="cup-credits">
+        Idea by <b>Malachi</b> · Design by <b>Brooke</b>
+      </p>
       <footer class="controls">
         <ErrorsButton shown={showErrors} onToggle={() => setShowErrors(!showErrors)} />
         <button class="btn ghost" onClick={() => send({ type: "host.open", quizId: view.quiz.id })}>
