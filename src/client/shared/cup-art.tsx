@@ -109,22 +109,34 @@ export function Die({ value, class: cls }: { value: number; class?: string }) {
   );
 }
 
+/** A random face that changes every 90 ms (never the same twice running) while `spinning`. */
+function useTumblingFace(spinning: boolean): number {
+  const [face, setFace] = useState(() => 1 + Math.floor(Math.random() * CUP_DIE_SIDES));
+  useEffect(() => {
+    if (!spinning) return;
+    const spin = setInterval(() => setFace((f) => 1 + ((f + Math.floor(Math.random() * (CUP_DIE_SIDES - 1))) % CUP_DIE_SIDES)), 90);
+    return () => clearInterval(spin);
+  }, [spinning]);
+  return face;
+}
+
+/** The face a seat badge shows: random faces while the dice roll, the real one once they land. */
+function BadgeDieFace({ value, rolling }: { value: number; rolling: boolean }) {
+  const face = useTumblingFace(rolling);
+  return <DieFace value={rolling ? face : value} />;
+}
+
 /** A die that tumbles through random faces for `rollMs`, then lands on `value`. */
 export function RollingDie({ value, rollMs, class: cls, onLand }: { value: number; rollMs: number; class?: string; onLand?: () => void }) {
-  const [face, setFace] = useState(() => 1 + Math.floor(Math.random() * CUP_DIE_SIDES));
   const [landed, setLanded] = useState(rollMs <= 0);
+  const face = useTumblingFace(!landed);
   useEffect(() => {
     if (rollMs <= 0) return;
-    const spin = setInterval(() => setFace((f) => 1 + ((f + Math.floor(Math.random() * (CUP_DIE_SIDES - 1))) % CUP_DIE_SIDES)), 90);
     const stop = setTimeout(() => {
-      clearInterval(spin);
       setLanded(true);
       onLand?.();
     }, rollMs);
-    return () => {
-      clearInterval(spin);
-      clearTimeout(stop);
-    };
+    return () => clearTimeout(stop);
   }, []);
   return <Die value={landed ? value : face} class={`${cls ?? ""} ${landed ? "landed" : "rolling"}`} />;
 }
@@ -321,7 +333,7 @@ function BadgeContent({ p, size, d, y, mode }: { p: SeatPlayer; size: number; d:
     <g class="die-badge" transform={`translate(0 ${y - d})`}>
       <g class={mode === "roll" ? "die-tumble" : ""} transform={`translate(${-d * 0.95} 0)`}>
         <g transform={`scale(${d / 100})`}>
-          <DieFace value={p.target} />
+          <BadgeDieFace value={p.target} rolling={mode === "roll"} />
         </g>
       </g>
       {mode === "quiz" && (
