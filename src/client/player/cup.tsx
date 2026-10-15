@@ -1,10 +1,24 @@
-import { useEffect, useRef } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import { CUP_CUPS, type ClientMsg, type PlayerCupView } from "../../shared/protocol.ts";
 import { CupArt, Die, RollingDie } from "../shared/cup-art.tsx";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
 import { Feedback, StreamQuestion } from "./tower.tsx";
 
 type Send = (m: ClientMsg) => void;
+
+/** The die tumbling; the target only appears once it lands so the text doesn't give it away. */
+function RollScreen({ round, target, rollMs }: { round: number; target: number; rollMs: number }) {
+  const [landed, setLanded] = useState(rollMs <= 0);
+  return (
+    <main class="center cup-roll">
+      <p class="muted">Round {round}</p>
+      <RollingDie value={target} rollMs={rollMs} class="big-die" onLand={() => setLanded(true)} />
+      <h2 class="cup-roll-text" style={{ visibility: landed ? "visible" : "hidden" }}>
+        Get <b>{target}</b> right!
+      </h2>
+    </main>
+  );
+}
 
 /** Phone screen for Cup of Death: roll, answer, and (if you fall short) pick a cup. */
 export function CupPlayer({ view, send }: { view: PlayerCupView; send: Send }) {
@@ -26,15 +40,7 @@ export function CupPlayer({ view, send }: { view: PlayerCupView; send: Send }) {
   } else if (me.out) {
     body = <GhostScreen view={view} onAnswer={onAnswer} />;
   } else if (view.phase === "roll") {
-    body = (
-      <main class="center cup-roll">
-        <p class="muted">Round {view.round}</p>
-        <RollingDie key={view.round} value={me.target} rollMs={Math.max(0, view.phaseRemainingMs - 600)} class="big-die" />
-        <h2 class="cup-roll-text">
-          Get <b>{me.target}</b> right!
-        </h2>
-      </main>
-    );
+    body = <RollScreen key={view.round} round={view.round} target={me.target} rollMs={Math.max(0, view.phaseRemainingMs - 850)} />;
   } else if (view.phase === "quiz") {
     body = me.safe ? (
       <main class="center cup-safe">
