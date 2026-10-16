@@ -1,8 +1,9 @@
+import type { RefObject } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import type { HostView, SubAward } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
-import { Anglerfish, Submarine, oceanGradient, type PortholeFace } from "../shared/sea-art.tsx";
+import { Anglerfish, SeaBackdrop, Submarine, oceanGradient, seaLook, type PortholeFace } from "../shared/sea-art.tsx";
 import { play } from "../shared/sounds.ts";
 import { useEventFlash } from "../shared/tower-art.tsx";
 import { useCountdown } from "../shared/ui.tsx";
@@ -64,6 +65,23 @@ function useCatchClock(caught: boolean): number {
 }
 
 const easeOut = (t: number) => 1 - (1 - Math.max(0, Math.min(1, t))) ** 3;
+
+/** How far a dive has gone, 0–1, so the water can fade into the next level before the level number ticks up. */
+function diveBlend(view: SubView): number {
+  const ins = view.phase === "dive" ? view.dive?.instructors : null;
+  if (!ins?.length) return 0;
+  return ins.reduce((sum, i) => sum + (i.total ? i.index / i.total : 0), 0) / ins.length;
+}
+
+/** Scroll speed as a multiple of the cruise pace. The host writes this into a ref; the backdrop reads it. */
+function paceFor(phase: SubView["phase"], level: number, boosting: boolean): number {
+  const cruise = 1 + 0.14 * (Math.min(level, 8) - 1);
+  if (phase === "chase") return cruise * (boosting ? 2.5 : 1);
+  if (phase === "escaped") return cruise * 2.8;
+  if (phase === "countdown") return 0.16;
+  if (phase === "dive") return 0.24;
+  return 0;
+}
 
 /** How long a boost notice stays next to the sub, and how many can stack. */
 const POP_MS = 2600;
@@ -159,6 +177,32 @@ export function SubStage({ view, send }: { view: SubView; send: Send }) {
     if (view.phase !== "chase") setPops([]);
   }, [view.phase]);
   const faces = usePortholeFaces(view.players, boost);
+  const blend = diveBlend(view);
+  const look = seaLook(view.level, blend);
+  const paceRef = useRef(0);
+  paceRef.current = paceFor(view.phase, view.level, !!boost);
+  const seaRef = useRef<HTMLElement>(null);
+  const craftRef = useRef<HTMLDivElement>(null);
+  // The headlight mask follows the nose, including while the hull bobs or dashes.
+  useEffect(() => {
+    let raf = 0;
+    const loop = () => {
+      const sea = seaRef.current;
+      const craft = craftRef.current;
+      if (sea && craft) {
+        const s = sea.getBoundingClientRect();
+        const b = craft.getBoundingClientRect();
+        const x = ((b.left + b.width * 0.97 - s.left) / s.width) * 100;
+        const y = ((b.top + b.height * 0.7 - s.top) / s.height) * 100;
+        sea.style.setProperty("--beam-x", `${x}%`);
+        sea.style.setProperty("--beam-y", `${y}%`);
+        sea.style.setProperty("--pool-x", `${Math.min(94, x + 7)}%`);
+      }
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, []);
 
   // Sound cues.
   const prevPhase = useRef(view.phase);
@@ -208,12 +252,16 @@ export function SubStage({ view, send }: { view: SubView; send: Send }) {
       {view.phase === "podium" ? (
         <SubPodium view={view} send={send} />
       ) : (
-        <main class={`sea ${danger ? "danger" : ""}`} style={{ background: oceanGradient(view.depth) }}>
-          <div class="light-rays" style={{ opacity: Math.max(0, 0.5 - view.depth / 600) }} />
-          <Bubbles />
-          <Seaweed />
+        <main
+          ref={seaRef}
+          class={`sea ${danger ? "danger" : ""}`}
+          style={{ background: look.background, "--ambient": String(look.ambient), "--beam": String(look.beam) }}
+        >
+          <SeaBackdrop level={view.level} blend={blend} paceRef={paceRef} />
+          <div class="light-rays" style={{ opacity: look.rays }} />
+          <Bubbles dim={1 - look.ambient} />
           {view.phase === "dive" ? (
-            <Dive view={view} faces={faces} />
+            <Dive view={view} faces={faces} craftRef={craftRef} />
           ) : (
             <>
               <div class="boost-progress" aria-label={`${view.boosts} of ${view.required} boosts`}>
@@ -226,9 +274,9 @@ export function SubStage({ view, send }: { view: SubView; send: Send }) {
               </div>
               <div class={`fish-pos ${caught ? "biting" : ""}`} style={{ left: `${fishLeft}%` }}>
                 {/* Mouth stays nearly shut while far away and gapes as the fish closes in. */}
-                <Anglerfish openness={openness} glow={closeness} />
+                <Anglerfish openness={openness} fish={look.fish} eye={look.eye} glint={look.glint} />
               </div>
-              <div class={`sub-pos ${boost ? "boosting" : ""} ${view.phase === "escaped" ? "escaping" : ""} ${caught ? "in-mouth" : ""} ${swallowed ? "eaten" : ""}`}>
+              <div ref={craftRef} class={`sub-pos ${boost ? "boosting" : ""} ${view.phase === "escaped" ? "escaping" : ""} ${caught ? "in-mouth" : ""} ${swallowed ? "eaten" : ""}`}>
                 {boost && <div class="speed-lines" />}
                 <div class="boost-pops">
                   {pops.map((b, i) => (
@@ -260,7 +308,7 @@ export function SubStage({ view, send }: { view: SubView; send: Send }) {
   );
 }
 
-function Dive({ view, faces }: { view: SubView; faces: (PortholeFace | null)[] }) {
+function Dive({ view, faces, craftRef }: { view: SubView; faces: (PortholeFace | null)[]; craftRef: RefObject<HTMLDivElement> }) {
   const dive = view.dive!;
   return (
     <>
@@ -277,7 +325,7 @@ function Dive({ view, faces }: { view: SubView; faces: (PortholeFace | null)[] }
           </div>
         ))}
       </div>
-      <div class="dive-sub">
+      <div class="dive-sub" ref={craftRef}>
         <Submarine faces={faces} />
       </div>
       <div class="dive-help">
@@ -287,9 +335,9 @@ function Dive({ view, faces }: { view: SubView; faces: (PortholeFace | null)[] }
   );
 }
 
-function Bubbles() {
+function Bubbles({ dim }: { dim: number }) {
   return (
-    <div class="bubbles" aria-hidden="true">
+    <div class="bubbles" aria-hidden="true" style={{ opacity: 1 - dim * 0.85 }}>
       {Array.from({ length: 14 }, (_, i) => (
         <span key={i} style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i * 0.9) % 7}s`, animationDuration: `${6 + (i % 5)}s`, width: `${6 + (i % 4) * 4}px`, height: `${6 + (i % 4) * 4}px` }} />
       ))}
@@ -297,24 +345,11 @@ function Bubbles() {
   );
 }
 
-function Seaweed() {
-  return (
-    <svg class="seaweed" viewBox="0 0 1000 120" preserveAspectRatio="none" aria-hidden="true">
-      {Array.from({ length: 22 }, (_, i) => {
-        const x = i * 46 + 10;
-        const h = 50 + ((i * 29) % 60);
-        return <path key={i} d={`M${x},120 q-12,-${h / 2} 4,-${h} q10,${h / 3} -4,${h}`} class={i % 2 ? "weed a" : "weed b"} />;
-      })}
-      <rect x="0" y="108" width="1000" height="12" class="sand" />
-    </svg>
-  );
-}
-
 function SubPodium({ view, send }: { view: SubView; send: Send }) {
   const [showErrors, setShowErrors] = useState(false);
   const a = view.awards;
   return (
-    <main class="podium sub-podium" style={{ background: oceanGradient(view.depth) }}>
+    <main class="podium sub-podium" style={{ background: oceanGradient(view.level) }}>
       <h1>🐟 Caught at {view.depth} m</h1>
       {showErrors ? (
         <ErrorsTable errors={view.errors ?? []} />

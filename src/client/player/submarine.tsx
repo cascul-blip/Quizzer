@@ -69,7 +69,7 @@ export function SubPlayer({ view, send }: { view: PlayerSubView; send: Send }) {
   }
 
   return (
-    <div class="game sub-game" style={{ background: oceanGradient(view.depth) }}>
+    <div class="game sub-game" style={{ background: oceanGradient(view.level) }}>
       <header class="bar sub-bar">
         <span class="name">{view.me.nickname}</span>
         {view.phase === "chase" && (
