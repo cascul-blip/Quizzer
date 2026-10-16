@@ -30,6 +30,14 @@ export const AVATARS = [
   { id: "kid2", name: "Kid 2" },
   { id: "kid3", name: "Kid 3" },
   { id: "kid4", name: "Kid 4" },
+  { id: "shark", name: "Shark" },
+  { id: "raccoon", name: "Raccoon" },
+  { id: "parrot", name: "Parrot" },
+  { id: "axolotl", name: "Axolotl" },
+  { id: "turtle", name: "Turtle" },
+  { id: "hedgehog", name: "Hedgehog" },
+  { id: "bee", name: "Bee" },
+  { id: "capybara", name: "Capybara" },
 ] as const;
 
 export const ACCESSORIES = [
@@ -45,7 +53,6 @@ export const ACCESSORIES = [
   { id: "viking", name: "Viking helmet" },
   { id: "headphones", name: "Headphones" },
   { id: "flowers", name: "Flower crown" },
-  { id: "halo", name: "Halo" },
   { id: "bow", name: "Bow" },
   { id: "curly", name: "Curly hair" },
   { id: "spiky", name: "Spiky hair" },
@@ -56,6 +63,14 @@ export const ACCESSORIES = [
   { id: "monocle", name: "Monocle" },
   { id: "mustache", name: "Mustache" },
   { id: "bowtie", name: "Bow tie" },
+  { id: "snorkel", name: "Snorkel" },
+  { id: "eyepatch", name: "Eyepatch" },
+  { id: "goggles", name: "Goggles" },
+  { id: "antlers", name: "Antlers" },
+  { id: "propeller", name: "Propeller hat" },
+  { id: "beret", name: "Beret" },
+  { id: "scarf", name: "Scarf" },
+  { id: "tiara", name: "Tiara" },
 ] as const;
 
 export type AvatarId = (typeof AVATARS)[number]["id"];
