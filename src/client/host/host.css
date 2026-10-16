@@ -1510,44 +1510,81 @@ select {
   }
 }
 
-.seaweed {
+/* Two copies of the seabed: the dim one, and the lit one masked to the headlights. */
+.sea-world {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.sea-copy {
+  position: absolute;
+  inset: 0;
+}
+
+.sea-copy.ambient {
+  filter: brightness(var(--ambient, 1));
+}
+
+.sea-copy.lit {
+  opacity: var(--beam, 0);
+  /* A cone from the lamps down onto the sand in front of the nose. */
+  -webkit-mask-image:
+    radial-gradient(ellipse 14vw 11vh at var(--beam-x, 84%) calc(var(--beam-y, 62%) + 2vh), #000 0%, transparent 76%),
+    radial-gradient(ellipse 28vw 20vh at calc(var(--beam-x, 84%) + 2vw) calc(var(--beam-y, 62%) + 14vh), #000 0%, transparent 76%),
+    radial-gradient(ellipse 36vw 28vh at var(--pool-x, 88%) 91%, #000 0%, transparent 76%);
+  -webkit-mask-composite: source-over;
+  mask-image:
+    radial-gradient(ellipse 14vw 11vh at var(--beam-x, 84%) calc(var(--beam-y, 62%) + 2vh), #000 0%, transparent 76%),
+    radial-gradient(ellipse 28vw 20vh at calc(var(--beam-x, 84%) + 2vw) calc(var(--beam-y, 62%) + 14vh), #000 0%, transparent 76%),
+    radial-gradient(ellipse 36vw 28vh at var(--pool-x, 88%) 91%, #000 0%, transparent 76%);
+  mask-composite: add;
+}
+
+.sea-band {
+  position: absolute;
+  inset: 0;
+}
+
+.floor-track,
+.far-track {
   position: absolute;
   left: 0;
-  right: 0;
   bottom: 0;
-  width: 100%;
-  height: 14vh;
+  display: flex;
+  align-items: flex-end;
+  will-change: transform;
 }
 
-.weed {
-  fill: none;
-  stroke-width: 9;
-  stroke-linecap: round;
-  transform-box: fill-box;
-  transform-origin: bottom center;
-  animation: sway 4s ease-in-out infinite alternate;
+/* Distant wrecks stand on the top of the floor strip, so the sand covers their feet. */
+.far-track {
+  bottom: calc(var(--h, 16vh) - 2.5vh);
 }
 
-.weed.a {
-  stroke: #1f7a4d;
+.floor-tile {
+  position: relative;
+  flex: none;
 }
 
-.weed.b {
-  stroke: #2e9460;
-  animation-delay: -2s;
+.floor-fill {
+  position: absolute;
+  inset: 0 -1px 0 0;
+  background-repeat: repeat-x;
+  background-position: bottom left;
+  background-size: auto 100%;
 }
 
-.sand {
-  fill: #c2a36b;
+.sea-prop {
+  position: absolute;
+  bottom: 0;
+  width: auto;
+  transform: translateX(-50%);
+  filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.35));
 }
 
-@keyframes sway {
-  from {
-    transform: rotate(-6deg);
-  }
-  to {
-    transform: rotate(6deg);
-  }
+.sea-prop.flip {
+  transform: translateX(-50%) scaleX(-1);
 }
 
 .boost-progress {
@@ -1595,11 +1632,53 @@ select {
 }
 
 .anglerfish {
+  position: relative;
   width: 100%;
-  display: block;
   overflow: visible;
   filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.5));
   animation: fish-swim 1.6s ease-in-out infinite alternate;
+}
+
+.fish-body {
+  width: 100%;
+  display: block;
+}
+
+.fish-jaw,
+.fish-glint {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.fish-glint {
+  /* Crush the skin to black and leave the teeth, so only the lure's shine remains. */
+  filter: grayscale(1) contrast(7) brightness(0.35);
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+.fish-eye {
+  position: absolute;
+  width: 5.2%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  /* Sits on the painted iris, so depth keeps that eye lit instead of adding a second one. */
+  background: radial-gradient(circle at 50% 48%, #fff 0 16%, #e10600 30% 50%, rgba(74, 0, 8, 0.4) 66%, transparent 74%);
+  pointer-events: none;
+}
+
+.lure-glow {
+  position: absolute;
+  width: 18vw;
+  height: 18vw;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(255, 252, 200, 0.95) 0 4%, rgba(190, 255, 80, 0.55) 16%, rgba(110, 200, 50, 0.16) 40%, transparent 68%);
+  mix-blend-mode: screen;
+  pointer-events: none;
+  animation: lure 1.3s ease-in-out infinite alternate;
 }
 
 @keyframes fish-swim {
@@ -1608,16 +1687,10 @@ select {
   }
 }
 
-.lure-glow {
-  animation: lure 1.3s ease-in-out infinite alternate;
-  transform-box: fill-box;
-  transform-origin: center;
-}
-
 @keyframes lure {
   to {
-    transform: scale(0.8);
-    opacity: 0.4;
+    transform: translate(-50%, -50%) scale(0.9);
+    opacity: 0.72;
   }
 }
 
@@ -1631,13 +1704,102 @@ select {
 }
 
 .submarine {
+  position: relative;
   width: 100%;
-  display: block;
   overflow: visible;
 }
 
-.prop {
-  animation: spin 0.4s linear infinite;
+.sub-hull {
+  width: 100%;
+  display: block;
+}
+
+.sub-prop {
+  position: absolute;
+  left: 0.5%;
+  top: 67.5%;
+  width: 16%;
+  /* An absolute image paints over the in-flow hull. Keep the blades behind the stern. */
+  z-index: -1;
+  transform: translate(-50%, -50%);
+  animation: prop-spin 0.28s linear infinite;
+}
+
+@keyframes prop-spin {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+.lamp-glow {
+  position: absolute;
+  width: 7%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 252, 220, 0.85) 0 18%, rgba(255, 220, 140, 0.28) 46%, transparent 72%);
+  mix-blend-mode: screen;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.lamp-glow-front {
+  width: 8%;
+}
+
+.head-beam {
+  position: absolute;
+  /* The corner of this box is the front lamp. Rotating it aims the cone down onto the sand. */
+  left: 97.5%;
+  top: 69.8%;
+  width: 52vh;
+  height: 13vh;
+  transform-origin: 0 0;
+  transform: rotate(46deg);
+  background: radial-gradient(
+    ellipse 100% 90% at 0% 0%,
+    rgba(255, 252, 230, 0.95) 0%,
+    rgba(255, 236, 180, 0.5) 16%,
+    rgba(255, 220, 140, 0.2) 44%,
+    transparent 76%
+  );
+  filter: blur(3px);
+  mix-blend-mode: screen;
+  opacity: calc(0.42 + 0.58 * var(--beam, 0.4));
+  pointer-events: none;
+  z-index: 4;
+}
+
+.port {
+  position: absolute;
+  width: 6.6%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.port .peek {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 190%;
+  animation: peek 3s ease-in-out both;
+}
+
+.port .avatar {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.port .glass {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.55), rgba(140, 200, 255, 0.12) 42%, transparent 60%);
+  box-shadow: inset 0 0 0 2px rgba(80, 50, 10, 0.35);
+  pointer-events: none;
 }
 
 .sub-pos.boosting .submarine {
@@ -1775,30 +1937,24 @@ select {
 }
 
 /* A player peeking out of a porthole: rises into the window, looks around, ducks back down. */
-.peek {
-  transform-box: fill-box;
-  transform-origin: 50% 100%;
-  animation: peek 3s ease-in-out both;
-}
-
 @keyframes peek {
   0% {
-    transform: translateY(95%);
+    transform: translate(-50%, 90%);
   }
   18% {
-    transform: translateY(8%) rotate(0deg);
+    transform: translate(-50%, 6%) rotate(0deg);
   }
   40% {
-    transform: translateY(8%) rotate(-10deg);
+    transform: translate(-50%, 6%) rotate(-8deg);
   }
   62% {
-    transform: translateY(8%) rotate(10deg);
+    transform: translate(-50%, 6%) rotate(8deg);
   }
   82% {
-    transform: translateY(8%) rotate(0deg);
+    transform: translate(-50%, 6%) rotate(0deg);
   }
   100% {
-    transform: translateY(95%);
+    transform: translate(-50%, 90%);
   }
 }
 

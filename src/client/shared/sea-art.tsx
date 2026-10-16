@@ -1,81 +1,120 @@
 /**
- * Submarine Squad art, drawn in SVG so it works offline and stays crisp:
- * the anglerfish, the submarine, ocean colors by depth, and the dive symbols.
+ * Submarine Squad art. The submarine, the anglerfish and the seabed are painted
+ * pictures (scripts/sea-art.py). Dive symbols stay SVG: players have to match them.
  */
-import { useId } from "preact/hooks";
+import { useEffect, useRef } from "preact/hooks";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { GLYPH_SIZES, GLYPH_SLOTS, parseGlyph, type GlyphShape } from "../../shared/glyphs.ts";
-import { ACCESSORY_ART, AVATAR_ART } from "./avatar-art.tsx";
+import { Avatar } from "./avatar-art.tsx";
+import boatImg from "./sea/boat.webp";
+import caveImg from "./sea/cave.webp";
+import bodyImg from "./sea/fish-body.webp";
+import jawImg from "./sea/fish-jaw.webp";
+import floor1 from "./sea/floor-1.webp";
+import floor2 from "./sea/floor-2.webp";
+import floor3 from "./sea/floor-3.webp";
+import floor4 from "./sea/floor-4.webp";
+import floor5 from "./sea/floor-5.webp";
+import hulkImg from "./sea/hulk.webp";
+import kelpImg from "./sea/kelp.webp";
+import linerImg from "./sea/liner.webp";
+import pirateImg from "./sea/pirate.webp";
+import ringImg from "./sea/ring.webp";
+import hullImg from "./sea/sub-hull.webp";
+import propImg from "./sea/sub-prop.webp";
+
+// ---------- how deep it looks ----------
+
+interface Look {
+  top: [number, number, number];
+  bottom: [number, number, number];
+  /** Surface light, fading out as the water goes dark. */
+  rays: number;
+  /** Brightness of everything the headlights are not touching. */
+  ambient: number;
+  /** How much of the fully lit scenery shows through the headlight mask. */
+  beam: number;
+  /** Brightness of the fish's skin. */
+  fish: number;
+  /** The eye overlay. The painted eye shows on its own while this is near 0. */
+  eye: number;
+  /** A bright copy of the teeth, so they glint once the skin has gone black. */
+  glint: number;
+}
+
+/** One entry per level. Level 5 and everything past it stay on the last entry. */
+const LOOKS: Look[] = [
+  { top: [126, 200, 227], bottom: [47, 126, 181], rays: 0.5, ambient: 1, beam: 0.16, fish: 1, eye: 0, glint: 0 },
+  { top: [30, 111, 168], bottom: [12, 61, 102], rays: 0.2, ambient: 0.68, beam: 0.55, fish: 0.76, eye: 0.28, glint: 0.16 },
+  { top: [12, 44, 92], bottom: [6, 24, 51], rays: 0.03, ambient: 0.34, beam: 0.82, fish: 0.48, eye: 0.5, glint: 0.42 },
+  { top: [3, 8, 16], bottom: [0, 0, 0], rays: 0, ambient: 0, beam: 1, fish: 0.18, eye: 0.62, glint: 0.88 },
+  { top: [0, 0, 0], bottom: [0, 0, 0], rays: 0, ambient: 0, beam: 1, fish: 0.08, eye: 0.48, glint: 1 },
+];
+
+const mix = (a: number[], b: number[], t: number) => a.map((v, i) => Math.round(v + (b[i]! - v) * t));
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
+export interface SeaLook {
+  background: string;
+  rays: number;
+  ambient: number;
+  beam: number;
+  fish: number;
+  eye: number;
+  glint: number;
+}
+
+/** Water, headlights and fish shading for a level. `blend` fades toward the next level during a dive. */
+export function seaLook(level: number, blend = 0): SeaLook {
+  const i = Math.max(0, Math.min(LOOKS.length - 1, Math.floor(level) - 1));
+  const j = Math.min(LOOKS.length - 1, i + 1);
+  const t = i === j ? 0 : Math.max(0, Math.min(1, blend));
+  const a = LOOKS[i]!;
+  const b = LOOKS[j]!;
+  const top = mix(a.top, b.top, t);
+  const bottom = mix(a.bottom, b.bottom, t);
+  return {
+    background: `linear-gradient(rgb(${top.join(",")}), rgb(${bottom.join(",")}))`,
+    rays: lerp(a.rays, b.rays, t),
+    ambient: lerp(a.ambient, b.ambient, t),
+    beam: lerp(a.beam, b.beam, t),
+    fish: lerp(a.fish, b.fish, t),
+    eye: lerp(a.eye, b.eye, t),
+    glint: lerp(a.glint, b.glint, t),
+  };
+}
+
+/** Phone and podium water. Keyed off the level, so a big class's dive taps can't skip ahead to black. */
+export function oceanGradient(level: number, blend = 0): string {
+  return seaLook(level, blend).background;
+}
 
 // ---------- anglerfish ----------
 
+/** Hinge, lure bulb and eye, as percentages of the fish picture (scripts/sea-art.py prints these). */
+const HINGE = { x: 64, y: 75.1 };
+const LURE = { x: 89, y: 20.9 };
+const EYE = { x: 69.9, y: 34.7 };
+
 /**
- * Anglerfish facing right (viewBox 0 0 300 220). `openness` 0…1 swings the
- * lower jaw open; `glow` 0…1 brightens the lure at the tip of its antenna.
+ * Anglerfish facing right. `openness` 0…1 swings the lower jaw from nearly shut
+ * to wide open. The lure stays lit at every depth; `fish`/`eye`/`glint` are the
+ * depth treatment from `seaLook`.
  */
-export function Anglerfish({ openness, glow = 0.6 }: { openness: number; glow?: number }) {
-  const angle = 4 + Math.max(0, Math.min(1, openness)) * 38;
-  // The mouth's inside is the wedge between the upper lip and the lower jaw at its current angle,
-  // so nothing red shows outside the jaw however far it's open.
-  const hinge = { x: 150, y: 118 };
-  const rot = (x: number, y: number) => {
-    const a = (angle * Math.PI) / 180;
-    const dx = x - hinge.x;
-    const dy = y - hinge.y;
-    return { x: hinge.x + dx * Math.cos(a) - dy * Math.sin(a), y: hinge.y + dx * Math.sin(a) + dy * Math.cos(a) };
-  };
-  const jawTip = rot(282, 120);
-  const jawMid = rot(220, 121);
-  const mouth = `M${hinge.x},${hinge.y} L276,113 L${jawTip.x.toFixed(1)},${jawTip.y.toFixed(1)} L${jawMid.x.toFixed(1)},${jawMid.y.toFixed(1)} Z`;
-  const tongueEnd = rot(236, 116);
-  const upperTeeth = [172, 186, 200, 214, 228, 242, 256];
-  const lowerTeeth = [178, 194, 210, 226, 242, 258];
+export function Anglerfish({ openness, fish = 1, eye = 0, glint = 0 }: { openness: number; fish?: number; eye?: number; glint?: number }) {
+  // The painted mouth is already a little open, and that composite is seamless.
+  // Opening swings the jaw down from there. Closing past the painting leaves a dark gap.
+  const angle = Math.max(0, Math.min(1, openness)) * 32;
+  const origin = `${HINGE.x}% ${HINGE.y}%`;
   return (
-    <svg class="anglerfish" viewBox="0 0 300 220" aria-hidden="true">
-      <defs>
-        <radialGradient id="lureGlow">
-          <stop offset="0%" stop-color="#fffbd0" stop-opacity="1" />
-          <stop offset="35%" stop-color="#f7ff8a" stop-opacity="0.75" />
-          <stop offset="100%" stop-color="#b8ff5a" stop-opacity="0" />
-        </radialGradient>
-        <linearGradient id="fishBody" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#3b2a52" />
-          <stop offset="100%" stop-color="#1d1330" />
-        </linearGradient>
-      </defs>
-      {/* tail + fins */}
-      <path d="M40,105 L2,70 Q14,108 2,146 Z" fill="#2a1d3d" />
-      <path d="M120,40 Q135,10 160,30 Q140,32 132,48 Z" fill="#2a1d3d" />
-      <path d="M110,175 Q120,205 150,196 Q128,188 126,170 Z" fill="#2a1d3d" />
-      {/* mouth interior, seen when the jaw drops */}
-      <path d={mouth} fill="#5a0c1e" />
-      <path d={`M158,${hinge.y + 4} Q200,${(hinge.y + tongueEnd.y) / 2 + 8} ${tongueEnd.x.toFixed(1)},${tongueEnd.y.toFixed(1)}`} stroke="#8a1a33" stroke-width="6" fill="none" stroke-linecap="round" />
-      {/* body with the upper jaw */}
-      <path d="M36,108 C34,44 104,22 168,30 C228,38 272,74 278,114 L150,118 C142,150 122,178 92,180 C56,182 38,152 36,108 Z" fill="url(#fishBody)" />
-      <circle cx="96" cy="86" r="6" fill="#4d3a68" />
-      <circle cx="120" cy="130" r="4" fill="#4d3a68" />
-      <circle cx="74" cy="126" r="5" fill="#4d3a68" />
-      {/* upper teeth */}
-      {upperTeeth.map((x, i) => (
-        <path key={x} d={`M${x - 5},${115} L${x},${115 + 16 + (i % 2) * 7} L${x + 5},${115} Z`} fill="#f4f1e6" stroke="#b9b2a0" stroke-width="1" />
-      ))}
-      {/* eye */}
-      <circle cx="196" cy="74" r="13" fill="#f7f3e0" />
-      <circle cx="199" cy="75" r="7" fill="#d7263d" />
-      <circle cx="200" cy="74" r="3" fill="#120818" />
-      <path d="M180,58 L212,64" stroke="#120818" stroke-width="5" stroke-linecap="round" />
-      {/* antenna + lure */}
-      <path d="M160,34 C170,0 228,-4 252,26" stroke="#3b2a52" stroke-width="5" fill="none" stroke-linecap="round" />
-      <circle class="lure-glow" cx="254" cy="32" r={22 + glow * 18} fill="url(#lureGlow)" style={{ opacity: 0.45 + glow * 0.55 }} />
-      <circle cx="254" cy="32" r="7" fill="#fffbc2" stroke="#e8f06a" stroke-width="2" />
-      {/* lower jaw, hinged at the back of the mouth */}
-      <g style={{ transform: `rotate(${angle}deg)`, transformOrigin: "150px 118px" }}>
-        <path d="M150,118 L282,120 Q284,146 262,156 L168,168 Q150,160 150,118 Z" fill="#3b2a52" />
-        {lowerTeeth.map((x, i) => (
-          <path key={x} d={`M${x - 5},${121} L${x},${121 - 15 - (i % 2) * 7} L${x + 5},${121} Z`} fill="#f4f1e6" stroke="#b9b2a0" stroke-width="1" />
-        ))}
-      </g>
-    </svg>
+    <div class="anglerfish">
+      <img class="fish-body" src={bodyImg} alt="" style={{ filter: `brightness(${fish})` }} />
+      <img class="fish-jaw" src={jawImg} alt="" style={{ filter: `brightness(${fish})`, transform: `rotate(${angle}deg)`, transformOrigin: origin }} />
+      <img class="fish-glint" src={bodyImg} alt="" style={{ opacity: glint }} />
+      <img class="fish-glint fish-jaw" src={jawImg} alt="" style={{ opacity: glint, transform: `rotate(${angle}deg)`, transformOrigin: origin }} />
+      <div class="fish-eye" style={{ left: `${EYE.x}%`, top: `${EYE.y}%`, opacity: eye }} />
+      <div class="lure-glow" style={{ left: `${LURE.x}%`, top: `${LURE.y}%` }} />
+    </div>
   );
 }
 
@@ -87,73 +126,209 @@ export interface PortholeFace {
   choice: AvatarChoice;
 }
 
-const PORTHOLES = [70, 118, 166];
-/** Porthole glass radius, and the size of an avatar looking out of it. */
-const GLASS_R = 11.5;
-const FACE = 27;
+/** Porthole centres, as percentages of the hull picture. */
+const PORTS = [
+  { x: 33.6, y: 69.7 },
+  { x: 46.2, y: 70.2 },
+  { x: 59.4, y: 70.8 },
+];
 
-/** Yellow submarine facing right (viewBox 0 0 240 130). `faces[i]` peeks out of porthole i. */
+/** Research submarine facing right. `faces[i]` peeks out of porthole i. */
 export function Submarine({ faces = [] }: { faces?: (PortholeFace | null)[] }) {
-  const uid = useId();
   return (
-    <svg class="submarine" viewBox="0 0 240 130" aria-hidden="true">
-      {/* propeller */}
-      <rect x="4" y="62" width="18" height="8" rx="3" fill="#8a8f9b" />
-      <g class="prop" style={{ transformOrigin: "12px 66px" }}>
-        <ellipse cx="12" cy="50" rx="5" ry="15" fill="#b7bcc8" />
-        <ellipse cx="12" cy="82" rx="5" ry="15" fill="#b7bcc8" />
-      </g>
-      {/* hull */}
-      <rect x="20" y="40" width="200" height="62" rx="31" fill="#ffc933" stroke="#c98a00" stroke-width="3" />
-      <rect x="30" y="82" width="180" height="10" rx="5" fill="#e8ad10" />
-      {/* tower + periscope */}
-      <path d="M92,42 L98,16 L150,16 L156,42 Z" fill="#ffc933" stroke="#c98a00" stroke-width="3" />
-      <path d="M136,16 L136,2 L156,2" stroke="#8a8f9b" stroke-width="5" fill="none" stroke-linecap="round" />
-      <rect x="152" y="-2" width="10" height="9" rx="2" fill="#8a8f9b" />
-      {/* portholes, sometimes with a player looking out */}
-      {PORTHOLES.map((x, i) => {
+    <div class="submarine">
+      <div class="head-beam" />
+      <span class="lamp-glow" style={{ left: "84.4%", top: "71.6%" }} />
+      <span class="lamp-glow lamp-glow-front" style={{ left: "97.5%", top: "69.8%" }} />
+      <img class="sub-prop" src={propImg} alt="" />
+      <img class="sub-hull" src={hullImg} alt="" />
+      {PORTS.map((p, i) => {
         const face = faces[i];
-        const clip = `port-${uid}-${i}`;
-        const body = face ? (AVATAR_ART[face.choice.avatar] ?? AVATAR_ART.cat) : null;
-        const extra = face ? (ACCESSORY_ART[face.choice.accessory] ?? ACCESSORY_ART.none) : null;
         return (
-          <g key={x}>
-            <clipPath id={clip}>
-              <circle cx={x} cy="64" r={GLASS_R} />
-            </clipPath>
-            <circle cx={x} cy="64" r={GLASS_R + 4} fill="#c98a00" />
-            <circle cx={x} cy="64" r={GLASS_R} fill="#8fd3ff" />
-            {face && body && extra && (
-              <g clip-path={`url(#${clip})`}>
-                <g class="peek" key={face.key}>
-                  <svg x={x - FACE / 2} y={64 - FACE * 0.56} width={FACE} height={FACE} viewBox="0 0 100 100">
-                    {body()}
-                    {extra()}
-                  </svg>
-                </g>
-              </g>
+          <div key={i} class="port" style={{ left: `${p.x}%`, top: `${p.y}%` }}>
+            {face && (
+              <div class="peek" key={face.key}>
+                <Avatar choice={face.choice} />
+              </div>
             )}
-            {/* glass: a light tint and a shine on top, so faces look like they're behind the window */}
-            {face && <circle cx={x} cy="64" r={GLASS_R} fill="#8fd3ff" opacity="0.25" />}
-            <path d={`M${x - 6},${57} q5,-3.5 10,0`} stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round" opacity={face ? 0.7 : 1} />
-          </g>
+            <span class="glass" />
+          </div>
         );
       })}
-      {/* headlight */}
-      <circle cx="216" cy="66" r="6" fill="#fffbd0" stroke="#c98a00" stroke-width="2" />
-    </svg>
+    </div>
   );
 }
 
-// ---------- ocean ----------
+// ---------- the scrolling seabed ----------
 
-/** Water color at a depth: bright blue at the surface, near-black deep down. */
-export function oceanGradient(depth: number): string {
-  const t = Math.max(0, Math.min(1, depth / 800));
-  const mix = (a: number[], b: number[]) => a.map((v, i) => Math.round(v + (b[i]! - v) * t));
-  const top = mix([38, 150, 214], [6, 14, 38]);
-  const bottom = mix([10, 70, 140], [2, 4, 14]);
-  return `linear-gradient(rgb(${top.join(",")}), rgb(${bottom.join(",")}))`;
+interface Sprite {
+  src: string;
+  /** Position along one loop of the floor, 0–100. */
+  x: number;
+  /** Height in vh. */
+  h: number;
+  flip?: boolean;
+}
+
+interface Band {
+  floor: string;
+  /** How tall the strip is drawn, in vh. */
+  floorH: number;
+  /** How many copies of the floor fill one loop. Keeps the repeat on the loop boundary. */
+  repeats?: number;
+  props: Sprite[];
+  far: Sprite[];
+}
+
+/** One loop of the seabed, wide enough that a landmark isn't on screen twice. */
+const LOOP = "240vw";
+
+const BANDS: Band[] = [
+  {
+    floor: floor1,
+    floorH: 17,
+    repeats: 9,
+    props: [
+      { src: kelpImg, x: 6, h: 18 },
+      { src: kelpImg, x: 14, h: 14, flip: true },
+      { src: ringImg, x: 22, h: 8 },
+      { src: kelpImg, x: 32, h: 20 },
+      { src: kelpImg, x: 44, h: 13, flip: true },
+      { src: kelpImg, x: 56, h: 17 },
+      { src: ringImg, x: 68, h: 7 },
+      { src: kelpImg, x: 80, h: 15, flip: true },
+      { src: kelpImg, x: 92, h: 19 },
+    ],
+    far: [],
+  },
+  {
+    floor: floor2,
+    floorH: 16,
+    props: [
+      { src: kelpImg, x: 8, h: 13 },
+      { src: boatImg, x: 24, h: 15 },
+      { src: kelpImg, x: 40, h: 11, flip: true },
+      { src: kelpImg, x: 62, h: 14 },
+      { src: boatImg, x: 84, h: 13 },
+    ],
+    far: [{ src: hulkImg, x: 52, h: 12 }],
+  },
+  {
+    floor: floor3,
+    floorH: 15,
+    props: [
+      { src: boatImg, x: 10, h: 11 },
+      { src: pirateImg, x: 36, h: 32 },
+      { src: kelpImg, x: 68, h: 12 },
+    ],
+    far: [{ src: hulkImg, x: 78, h: 13 }],
+  },
+  {
+    floor: floor4,
+    floorH: 20,
+    props: [],
+    far: [
+      { src: caveImg, x: 16, h: 32 },
+      { src: hulkImg, x: 34, h: 16 },
+      { src: caveImg, x: 62, h: 36 },
+      { src: hulkImg, x: 88, h: 18 },
+    ],
+  },
+  {
+    floor: floor5,
+    floorH: 22,
+    props: [
+      { src: linerImg, x: 32, h: 26 },
+      { src: hulkImg, x: 58, h: 14 },
+      { src: linerImg, x: 84, h: 30 },
+    ],
+    far: [
+      { src: caveImg, x: 20, h: 30 },
+      { src: hulkImg, x: 46, h: 12 },
+      { src: caveImg, x: 74, h: 34 },
+    ],
+  },
+];
+
+function Tiles({ band, sprites, showFloor }: { band: Band; sprites: Sprite[]; showFloor: boolean }) {
+  return (
+    <>
+      {[0, 1].map((copy) => (
+        <div key={copy} class="floor-tile" style={{ width: LOOP, height: `${band.floorH}vh` }}>
+          {showFloor && (
+            <div
+              class="floor-fill"
+              style={{
+                backgroundImage: `url("${band.floor}")`,
+                backgroundSize: band.repeats ? `calc(100% / ${band.repeats}) 100%` : undefined,
+              }}
+            />
+          )}
+          {sprites.map((s, n) => (
+            <img key={n} class={`sea-prop${s.flip ? " flip" : ""}`} src={s.src} alt="" draggable={false} style={{ left: `${s.x}%`, height: `${s.h}vh` }} />
+          ))}
+        </div>
+      ))}
+    </>
+  );
+}
+
+function BandView({ band, fade }: { band: Band; fade: number }) {
+  return (
+    <div class="sea-band" style={{ opacity: fade, "--h": `${band.floorH}vh` }}>
+      <div class="far-track" data-rate="0.36">
+        <Tiles band={band} sprites={band.far} showFloor={false} />
+      </div>
+      <div class="floor-track" data-rate="1">
+        <Tiles band={band} sprites={band.props} showFloor={true} />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The seabed scrolling past the submarine. Two copies stay in step: a dim
+ * ambient one, and a fully lit one revealed only inside the headlight mask.
+ * `paceRef` is pixels-per-second as a fraction of the scene width (the host
+ * writes it every render; the scroll itself does not re-render).
+ */
+export function SeaBackdrop({ level, blend, paceRef }: { level: number; blend: number; paceRef: { current: number } }) {
+  const root = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const rootEl = root.current;
+    if (!rootEl) return;
+    let x = 0;
+    let last = performance.now();
+    let raf = 0;
+    const loop = (now: number) => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      x += paceRef.current * dt * (rootEl.clientWidth || 1000) * 0.14;
+      for (const track of rootEl.querySelectorAll<HTMLElement>("[data-rate]")) {
+        const tile = track.querySelector<HTMLElement>(".floor-tile");
+        const w = tile?.offsetWidth ?? 0;
+        if (w > 0) track.style.transform = `translate3d(${-(x * (Number(track.dataset.rate) || 1) % w)}px,0,0)`;
+      }
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [paceRef]);
+
+  const i = Math.max(0, Math.min(BANDS.length - 1, Math.floor(level) - 1));
+  const next = blend > 0.01 && i < BANDS.length - 1 ? i + 1 : -1;
+  return (
+    <div class="sea-world" ref={root} aria-hidden="true">
+      <div class="sea-copy ambient">
+        <BandView band={BANDS[i]!} fade={1} />
+        {next >= 0 && <BandView band={BANDS[next]!} fade={blend} />}
+      </div>
+      <div class="sea-copy lit">
+        <BandView band={BANDS[i]!} fade={1} />
+        {next >= 0 && <BandView band={BANDS[next]!} fade={blend} />}
+      </div>
+    </div>
+  );
 }
 
 // ---------- dive symbols ----------
