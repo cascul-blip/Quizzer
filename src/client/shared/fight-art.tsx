@@ -28,6 +28,8 @@ import castle1 from "./fight/castle-1.webp";
 import castle2 from "./fight/castle-2.webp";
 import castle3 from "./fight/castle-3.webp";
 import castle4 from "./fight/castle-4.webp";
+import grassImg from "./fight/ground-grass.webp";
+import soilImg from "./fight/ground-soil.webp";
 import { hash01 } from "./tower-art.tsx";
 
 /** Field height → SVG y. */
@@ -62,12 +64,17 @@ export function Battlefield(props: {
           <stop offset="0.5" stop-color="#5fb4ff" />
           <stop offset="1" stop-color="#cdeaff" />
         </linearGradient>
-        {/* In field units, so the extended ground keeps the same grass-to-dirt bands as the hill. */}
-        <linearGradient id="bf-grass" gradientUnits="userSpaceOnUse" x1="0" y1={sy(Math.max(...terrain))} x2="0" y2={FIELD_H + 20}>
-          <stop offset="0" stop-color="#5cbf3a" />
-          <stop offset="0.12" stop-color="#3f9a2a" />
-          <stop offset="0.45" stop-color="#8a5a2b" />
-          <stop offset="1" stop-color="#5e3a1a" />
+        {/* Generated textures (see scripts/fight-ground.py), tiled in field units so they don't stretch with the terrain. */}
+        <pattern id="bf-soil" patternUnits="userSpaceOnUse" width={SOIL_TILE} height={SOIL_TILE}>
+          <image href={soilImg} width={SOIL_TILE} height={SOIL_TILE} />
+        </pattern>
+        <pattern id="bf-grass" patternUnits="userSpaceOnUse" width={GRASS_TILE} height={GRASS_TILE}>
+          <image href={grassImg} width={GRASS_TILE} height={GRASS_TILE} />
+        </pattern>
+        {/* The soil darkens with depth; in field units, so the extended ground matches the hill. */}
+        <linearGradient id="bf-depth" gradientUnits="userSpaceOnUse" x1="0" y1={sy(Math.max(...terrain))} x2="0" y2={FIELD_H + 20}>
+          <stop offset="0" stop-color="#2a1608" stop-opacity="0" />
+          <stop offset="1" stop-color="#2a1608" stop-opacity="0.55" />
         </linearGradient>
         {/* A collapsing tower sinks out of sight at ground level. */}
         <clipPath id="bf-above-ground">
@@ -108,14 +115,30 @@ function Clouds() {
   );
 }
 
+/** Size of one texture tile in field units. */
+const SOIL_TILE = 150;
+const GRASS_TILE = 56;
+/** Depth of the grass band below the surface, in field units. */
+const GRASS_DEPTH = 13;
+
 export function Terrain({ terrain }: { terrain: number[] }) {
   // Flat ground continues past both edges, for screens wider than the field.
   const edge = FIELD_W;
   const pts = [`${-edge},${sy(terrain[0]!)}`, ...terrain.map((h, i) => `${i * COL_W},${sy(h).toFixed(1)}`), `${FIELD_W + edge},${sy(terrain.at(-1)!)}`].join(" L");
+  const ground = `M${-edge},${FIELD_H * 2} L${pts} L${FIELD_W + edge},${FIELD_H * 2} Z`;
   return (
     <g class="bf-terrain">
-      <path d={`M${-edge},${FIELD_H * 2} L${pts} L${FIELD_W + edge},${FIELD_H * 2} Z`} fill="url(#bf-grass)" />
-      <path d={`M${pts}`} fill="none" stroke="#2f7a1f" stroke-width="4" stroke-linejoin="round" />
+      {/* The grass is a thick stroke along the surface, clipped so only its lower half shows, so it follows craters. */}
+      <clipPath id="bf-ground">
+        <path d={ground} />
+      </clipPath>
+      <path d={ground} fill="url(#bf-soil)" />
+      <path d={ground} fill="url(#bf-depth)" />
+      <g clip-path="url(#bf-ground)" fill="none" stroke-linejoin="round">
+        <path d={`M${pts}`} stroke="#2a1608" stroke-opacity="0.35" stroke-width={GRASS_DEPTH * 2 + 8} />
+        <path d={`M${pts}`} stroke="url(#bf-grass)" stroke-width={GRASS_DEPTH * 2} />
+      </g>
+      <path d={`M${pts}`} fill="none" stroke="#24561a" stroke-width="3" stroke-linejoin="round" />
     </g>
   );
 }
