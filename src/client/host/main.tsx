@@ -1,9 +1,10 @@
 import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
-import { CUP_MAX_CUPS, CUP_MIN_CUPS, HILL_SETTINGS, LAND_MINUTES, LAND_MIN_TEAMS, MAX_TEAMS, TOWER_MINUTES, type GameMode, type HillSetting, type HostPlayer, type HostView, type Pacing, type ServerMsg } from "../../shared/protocol.ts";
+import { CUP_MAX_CUPS, CUP_MIN_CUPS, DRAGON_BATTLE_MINUTES, DRAGON_FIRE_SECONDS, DRAGON_MIN_TEAMS, DRAGON_SCRAMBLE_MINUTES, DRAGON_TOUGHNESS, HILL_SETTINGS, type DragonSettings, type DragonToughness, LAND_MINUTES, LAND_MIN_TEAMS, MAX_TEAMS, TOWER_MINUTES, type GameMode, type HillSetting, type HostPlayer, type HostView, type Pacing, type ServerMsg } from "../../shared/protocol.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import type { QuizSummary } from "../../shared/quiz-schema.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
+import { Dragon } from "../shared/dragon-art.tsx";
 import { play, unlockAudio } from "../shared/sounds.ts";
 import { connect, type ConnStatus } from "../shared/ws.ts";
 import { ConnBanner, ErrorBoundary, Shape, StreakBadge, Toast, optionColor, ordinal, useCountdown } from "../shared/ui.tsx";
@@ -15,6 +16,7 @@ import { FightStage } from "./fight.tsx";
 import { LandStage } from "./land.tsx";
 import { RacerStage } from "./racer.tsx";
 import { CupStage } from "./cup.tsx";
+import { DragonStage } from "./dragon.tsx";
 import { RobotStage } from "./robot.tsx";
 import { SubStage } from "./submarine.tsx";
 import { TowerStage } from "./tower.tsx";
@@ -96,6 +98,8 @@ function App() {
     body = <RacerStage view={view} send={send} />;
   } else if (view.kind === "cup") {
     body = <CupStage view={view} send={send} />;
+  } else if (view.kind === "dragon") {
+    body = <DragonStage view={view} send={send} />;
   } else {
     body = <Game view={view} send={send} />;
   }
@@ -342,6 +346,7 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
               <option value="land">🚩 Land Grab</option>
               <option value="racer">🏎 Racer</option>
               <option value="cup">☠️ Cup of Death</option>
+              <option value="dragon">🐉 Dragon's Hoard</option>
             </select>
           </label>
           {tower ? (
@@ -430,6 +435,8 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
               </label>
               <span class="opt mode-hint">Roll the die, then answer that many questions before time runs out, or drink from a cup. One is poisoned. Last one standing wins.</span>
             </>
+          ) : view.mode === "dragon" ? (
+            <DragonOptions view={view} send={send} />
           ) : view.mode === "submarine" ? (
             <span class="opt mode-hint">Everyone works together to outrun the anglerfish. The game ends when it catches you.</span>
           ) : (
@@ -460,13 +467,18 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
             />
             Shuffle answer positions
           </label>
-          {(view.mode === "tower" || view.mode === "submarine" || view.mode === "fight" || view.mode === "robot" || view.mode === "cup") && (
+          {(view.mode === "tower" || view.mode === "submarine" || view.mode === "fight" || view.mode === "robot" || view.mode === "cup" || view.mode === "dragon") && (
             <label class="opt check" title="Wrong answers in a row make a player wait longer before the next question">
               <input type="checkbox" checked={view.protect} onChange={(e) => send({ type: "host.setProtect", on: e.currentTarget.checked })} />
               Protect from abuse
             </label>
           )}
         </div>
+        {view.mode === "dragon" && (
+          <div class="dragon-lobby-lair" aria-hidden="true">
+            <Dragon stage={0} asleep class="asleep" />
+          </div>
+        )}
         {connected === 0 ? (
           <div class="waiting">Waiting for players…</div>
         ) : view.teams ? (
@@ -520,6 +532,68 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
         </p>
       </section>
     </main>
+  );
+}
+
+const TOUGHNESS_LABELS: Record<DragonToughness, string> = { easy: "Easy", normal: "Normal", hard: "Hard" };
+
+function DragonOptions({ view, send }: { view: GameView; send: Send }) {
+  const d = view.dragon;
+  const set = (change: Partial<DragonSettings>) => send({ type: "host.setDragon", ...d, ...change });
+  return (
+    <>
+      <label class="opt" title="Never more teams than players">
+        Teams
+        <select value={d.teams} onChange={(e) => set({ teams: Number(e.currentTarget.value) })}>
+          {Array.from({ length: MAX_TEAMS - DRAGON_MIN_TEAMS + 1 }, (_, i) => (
+            <option key={i} value={i + DRAGON_MIN_TEAMS}>
+              {i + DRAGON_MIN_TEAMS}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label class="opt">
+        Dragon toughness
+        <select value={d.toughness} onChange={(e) => set({ toughness: e.currentTarget.value as DragonToughness })}>
+          {DRAGON_TOUGHNESS.map((t) => (
+            <option key={t} value={t}>
+              {TOUGHNESS_LABELS[t]}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label class="opt">
+        Battle time
+        <select value={d.battleMinutes} onChange={(e) => set({ battleMinutes: Number(e.currentTarget.value) })}>
+          {DRAGON_BATTLE_MINUTES.map((m) => (
+            <option key={m} value={m}>
+              {m} min
+            </option>
+          ))}
+        </select>
+      </label>
+      <label class="opt">
+        Fire breath
+        <select value={d.fireSec} onChange={(e) => set({ fireSec: Number(e.currentTarget.value) })}>
+          {DRAGON_FIRE_SECONDS.map((s) => (
+            <option key={s} value={s}>
+              every {s} s
+            </option>
+          ))}
+        </select>
+      </label>
+      <label class="opt">
+        Scramble time
+        <select value={d.scrambleMinutes} onChange={(e) => set({ scrambleMinutes: Number(e.currentTarget.value) })}>
+          {DRAGON_SCRAMBLE_MINUTES.map((m) => (
+            <option key={m} value={m}>
+              {m} min
+            </option>
+          ))}
+        </select>
+      </label>
+      <span class="opt mode-hint">The whole class fights the dragon together, then the teams race to grab its hoard. Teams only matter after the dragon falls.</span>
+    </>
   );
 }
 

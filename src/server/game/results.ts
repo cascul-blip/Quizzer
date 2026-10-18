@@ -6,6 +6,7 @@ import type { LandGame } from "./land.ts";
 import type { RacerGame } from "./racer.ts";
 import type { RobotGame } from "./robot.ts";
 import type { CupGame } from "./cup.ts";
+import type { DragonGame } from "./dragon.ts";
 import type { SubGame } from "./submarine.ts";
 import type { TowerGame } from "./tower.ts";
 
@@ -129,6 +130,74 @@ export function buildRacerResultsCsv(game: RacerGame): string {
       const answered = p.correct + p.wrong;
       return [p.nickname, p.correct, p.wrong, answered ? Math.round((p.correct / answered) * 100) : "", p.turnsDriven, p.mphGained, p.failsAsDriver, round(game.car.distance), round(game.car.topSpeed), game.car.crashes];
     });
+  return toCsv([header, ...rows]);
+}
+
+/** 222000 → "3:42" */
+function minutesSeconds(ms: number): string {
+  const secs = Math.round(ms / 1000);
+  return `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}`;
+}
+
+/**
+ * Dragon's Hoard: one row per player, grouped by team in final team order. The class's
+ * Act 1 result is in every row. A grab hits a team, not a player, so "Team gold lost to grabs" is the team's.
+ */
+export function buildDragonResultsCsv(game: DragonGame): string {
+  const header = [
+    "Team",
+    "Team rank",
+    "Team gold",
+    "Nickname",
+    "Correct",
+    "Wrong",
+    "Accuracy %",
+    "Dragon hits",
+    "Rune questions right",
+    "Rune questions wrong",
+    "Chests opened",
+    "Gold found",
+    "Gold grabbed",
+    "Team gold lost to grabs",
+    "Gold lost to traps",
+    "Jackpots won",
+    "Dragon",
+    "Time to slay",
+    "Rune rounds held",
+    "Rune rounds failed",
+  ];
+  const r = game.result();
+  const dragon = r.slain ? "Slain" : "Escaped";
+  const slay = r.slain && r.slainMs !== null ? minutesSeconds(r.slainMs) : "";
+  const rows: (string | number)[][] = [];
+  for (const t of game.rankedTeams()) {
+    const members = [...game.players.values()].filter((p) => p.team === t.index).sort((a, b) => b.goldFound + b.goldGrabbed - (a.goldFound + a.goldGrabbed) || b.correct - a.correct);
+    for (const p of members) {
+      const answered = p.correct + p.wrong;
+      rows.push([
+        t.name,
+        t.rank,
+        t.gold,
+        p.nickname,
+        p.correct,
+        p.wrong,
+        answered ? Math.round((p.correct / answered) * 100) : "",
+        p.hits,
+        p.runeRight,
+        p.runeWrong,
+        p.chestsOpened,
+        p.goldFound,
+        p.goldGrabbed,
+        t.lostToGrabs,
+        p.lostToTraps,
+        p.jackpots,
+        dragon,
+        slay,
+        r.runeHeld,
+        r.runeFailed,
+      ]);
+    }
+  }
   return toCsv([header, ...rows]);
 }
 

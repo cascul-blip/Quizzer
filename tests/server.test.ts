@@ -6,11 +6,12 @@ import { COUNTDOWN_MS as FIGHT_COUNTDOWN_MS, RESULT_MS } from "../src/server/gam
 import { COUNTDOWN_MS as LAND_COUNTDOWN_MS } from "../src/server/game/land.ts";
 import { COUNTDOWN_MS as ROBOT_COUNTDOWN_MS } from "../src/server/game/robot.ts";
 import { COUNTDOWN_MS as CUP_COUNTDOWN_MS } from "../src/server/game/cup.ts";
+import { COUNTDOWN_MS as DRAGON_COUNTDOWN_MS } from "../src/server/game/dragon.ts";
 import { BOOST_MIN_HOLD_MS, COUNTDOWN_MS as SUB_COUNTDOWN_MS } from "../src/server/game/submarine.ts";
 import { startServer, type RunningServer } from "../src/server/http.ts";
 import { isAdminRequest } from "../src/server/network.ts";
 import { QuizStore } from "../src/server/quiz/store.ts";
-import { CUP_ROLL_MS, CUP_SIP_MS, ROBOT_MOVE_MS, cupQuizMs, robotQuizMs, type ClientMsg, type HostView, type PlayerView, type ServerMsg } from "../src/shared/protocol.ts";
+import { CUP_ROLL_MS, CUP_SIP_MS, DRAGON_TRANSITION_MS, ROBOT_MOVE_MS, cupQuizMs, robotQuizMs, type ClientMsg, type HostView, type PlayerView, type ServerMsg } from "../src/shared/protocol.ts";
 import { applyPatch } from "../src/shared/view-patch.ts";
 import { FakeClock, tempDir } from "./helpers.ts";
 
@@ -738,6 +739,80 @@ describe("Cup of Death over WebSockets", () => {
     await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "cup");
     host.send({ type: "host.close" });
     [host, ...players].forEach((s) => s.close());
+  });
+});
+
+describe("Dragon's Hoard over WebSockets", () => {
+  test("lobby teams → battle hit → the dragon escapes → open a chest → end → results → play again", async () => {
+    const quiz = store.create({
+      title: "Dragon E2E",
+      questions: [1, 2, 3].map((n) => ({ type: "multiple_choice", text: `Q${n}`, options: ["right", "wrong"], correct: [0] })),
+    });
+    const wsUrl = `ws://localhost:${srv.port}/ws`;
+    const host = await TestSocket.open(wsUrl);
+    host.send({ type: "host.hello" });
+    await host.hostState((v) => v.kind === "idle");
+    host.send({ type: "host.open", quizId: quiz.id });
+    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
+    host.send({ type: "host.setMode", mode: "dragon" });
+    await host.hostState((v) => v.kind === "classic" && v.mode === "dragon" && v.dragon.toughness === "normal");
+    host.send({ type: "host.setDragon", teams: 1, toughness: "easy", battleMinutes: 3, fireSec: 30, scrambleMinutes: 2 });
+    expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: expect.stringContaining("between 2 and 6") });
+    host.send({ type: "host.setDragon", teams: 6, toughness: "easy", battleMinutes: 3, fireSec: 30, scrambleMinutes: 2 });
+    await host.hostState((v) => v.kind === "classic" && v.dragon.teams === 6 && v.dragon.battleMinutes === 3);
+
+    const names = ["Ann", "Bob", "Cy"];
+    const players = await Promise.all(names.map(() => TestSocket.open(wsUrl)));
+    for (const [i, p] of players.entries()) {
+      await p.playerState((v) => v.kind === "none" && !!v.game);
+      p.send({ type: "join", nickname: names[i]! });
+      await p.waitFor((m) => m.type === "joined");
+    }
+    // 6 teams chosen, 3 players: the lobby shows 3 teams of one.
+    await host.hostState((v) => v.kind === "classic" && v.teams?.length === 3 && v.teams.every((t) => t.members.length === 1));
+
+    host.send({ type: "host.start", pacing: "manual" });
+    await host.hostState((v) => v.kind === "dragon" && v.phase === "countdown" && v.maxHealth === 30 && v.teams.length === 3);
+    clock.advance(DRAGON_COUNTDOWN_MS);
+    srv.hub.broadcast();
+    const [ann, bob] = players as [TestSocket, TestSocket, TestSocket];
+    const st = await ann.playerState((v) => v.kind === "dragon" && v.phase === "battle" && !!v.question);
+    expect(st.view.kind === "dragon" && st.view.team).toBeNull();
+    const q = st.view.kind === "dragon" ? st.view.question! : null;
+    ann.send({ type: "dragon.answer", seq: q!.seq, option: 0 });
+    await host.hostState((v) => v.kind === "dragon" && v.health === 29 && v.hits.length === 1);
+    await bob.playerState((v) => v.kind === "dragon" && v.healthPct === 97);
+    await expectInSync(bob, wsUrl);
+
+    // Nobody else answers: the battle clock runs out (fire breath comes and goes) and the dragon escapes.
+    clock.advance(3 * 60_000);
+    srv.hub.broadcast();
+    await host.hostState((v) => v.kind === "dragon" && v.phase === "transition" && v.escaped);
+    await bob.playerState((v) => v.kind === "dragon" && v.phase === "transition" && v.team !== null);
+    clock.advance(DRAGON_TRANSITION_MS);
+    srv.hub.broadcast();
+    // A right answer opens the chests.
+    const s = await bob.playerState((v) => v.kind === "dragon" && v.phase === "scramble" && !!v.question && !v.feedback);
+    bob.send({ type: "dragon.answer", seq: s.view.kind === "dragon" ? s.view.question!.seq : 0, option: 0 });
+    await bob.playerState((v) => v.kind === "dragon" && v.state === "chest" && !!v.chest);
+    bob.send({ type: "dragon.chest", chest: 1 });
+    const loot = await bob.playerState((v) => v.kind === "dragon" && v.state === "loot" && !!v.loot);
+    expect(loot.view.kind === "dragon" && loot.view.loot!.seq).toBeGreaterThan(0);
+
+    host.send({ type: "host.end" });
+    const podium = await host.hostState((v) => v.kind === "dragon" && v.phase === "podium");
+    expect(podium.view.kind === "dragon" && podium.view.result).toMatchObject({ slain: false });
+    await ann.playerState((v) => v.kind === "dragon" && v.phase === "podium" && !!v.result);
+    const csv = await (await fetch(`${base}/api/results/latest.csv`)).text();
+    expect(csv).toContain("Team,Team rank,Team gold,Nickname");
+    expect(csv).toContain(",Escaped,");
+
+    // Play again keeps Dragon's Hoard and its settings.
+    host.send({ type: "host.open", quizId: quiz.id });
+    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "dragon" && v.dragon.toughness === "easy" && v.dragon.scrambleMinutes === 2);
+    host.send({ type: "host.close" });
+    players.forEach((s) => s.close());
+    host.close();
   });
 });
 

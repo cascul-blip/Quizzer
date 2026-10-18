@@ -30,6 +30,11 @@ export const MUSIC_TRACKS = [
   { id: "cup-quiz", mode: "Cup of Death", screen: "Dice & quiz" },
   { id: "cup-drink", mode: "Cup of Death", screen: "Drinking" },
   { id: "cup-results", mode: "Cup of Death", screen: "Final results" },
+  { id: "dragon-lobby", mode: "Dragon's Hoard", screen: "Lobby" },
+  { id: "dragon-battle", mode: "Dragon's Hoard", screen: "Battle" },
+  { id: "dragon-fire", mode: "Dragon's Hoard", screen: "Fire breath" },
+  { id: "dragon-scramble", mode: "Dragon's Hoard", screen: "Hoard scramble" },
+  { id: "dragon-results", mode: "Dragon's Hoard", screen: "Final podium" },
 ] as const;
 
 export type MusicTrackId = (typeof MUSIC_TRACKS)[number]["id"];

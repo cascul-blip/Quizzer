@@ -5,7 +5,8 @@
  * Robot Attack = Romantic orchestra (public-domain Beethoven and Grieg themes),
  * Land Grab = calm ambient piano that grows into an orchestra as rings close,
  * Racer = sunny late-80s arcade-racing chiptune (tempo follows the car's speed),
- * Cup of Death = original spaghetti-western themes: whistle, twangy guitar, galloping hooves.
+ * Cup of Death = original spaghetti-western themes: whistle, twangy guitar, galloping hooves,
+ * Dragon's Hoard = a dark cave, a heroic battle with brass and choir, war drums under the fire, a plucky scramble.
  * Any of these can be replaced by an audio file in data/music/<id>.<ext>.
  */
 import type { MusicTrackId } from "../../../shared/music-tracks.ts";
@@ -937,6 +938,142 @@ const cupResults: Track = {
   ],
 };
 
+// ---------- Dragon's Hoard: deep in a mountain cave ----------
+
+const DRAGON_DM = chord("D3 F3 A3");
+const DRAGON_BB = chord("Bb2 D3 F3");
+const DRAGON_F = chord("F3 A3 C4");
+const DRAGON_C = chord("C3 E3 G3");
+const DRAGON_GM = chord("G2 Bb2 D3");
+const DRAGON_A = chord("A2 C#3 E3");
+
+const dragonLobby: Track = {
+  id: "dragon-lobby",
+  bpm: 58,
+  bars: 4,
+  reverb: 0.45,
+  layers: [
+    // Slow, deep strings.
+    { inst: "strings", bars: [hold(chord("D2 A2 D3")), hold(chord("Bb1 F2 D3")), hold(chord("G1 D2 Bb2")), hold(chord("A1 E2 C#3"))], vol: 0.7 },
+    // The dragon breathing in and out in its sleep.
+    { inst: "pad", bars: [seq([DRAGON_DM, 6], [".", 2], [DRAGON_DM, 6], [".", 2]), seq([DRAGON_BB, 6], [".", 2], [DRAGON_BB, 6], [".", 2]), seq([DRAGON_GM, 6], [".", 2], [DRAGON_GM, 6], [".", 2]), seq([DRAGON_A, 6], [".", 2], [DRAGON_A, 6], [".", 2])], vol: 0.35 },
+    { inst: "heart", bars: [drum("x.......x.......")], vol: 0.3 },
+    // Water dripping somewhere in the dark.
+    { inst: "bell", bars: [once("A4"), rest, once("F4"), rest], vol: 0.3 },
+    {
+      inst: "flute",
+      bars: [seq(["D5", 6], ["E5", 2], ["F5", 8]), seq(["E5", 4], ["D5", 4], ["C#5", 8]), seq(["D5", 6], ["A4", 2], ["Bb4", 8]), seq(["A4", 12], [".", 4])],
+      vol: 0.45,
+    },
+  ],
+};
+
+const DRAGON_CHORDS = [DRAGON_DM, DRAGON_BB, DRAGON_F, DRAGON_C, DRAGON_DM, DRAGON_BB, DRAGON_GM, DRAGON_A];
+const DRAGON_ROOTS = ["D2", "Bb1", "F2", "C2", "D2", "Bb1", "G1", "A1"];
+
+const dragonBattle: Track = {
+  id: "dragon-battle",
+  bpm: 108,
+  bars: 8,
+  // Faster and fuller as the dragon weakens and the battle clock runs down.
+  tempoBoost: 0.35,
+  reverb: 0.25,
+  layers: [
+    {
+      inst: "brass",
+      bars: [
+        seq(["D4", 2], ["A4", 6], ["G4", 2], ["F4", 2], ["E4", 2], ["F4", 2]),
+        seq(["D4", 4], ["F4", 4], ["Bb4", 8]),
+        seq(["A4", 2], ["C5", 6], ["Bb4", 2], ["A4", 2], ["G4", 2], ["A4", 2]),
+        seq(["G4", 4], ["E4", 4], ["C4", 8]),
+        seq(["D4", 2], ["A4", 6], ["G4", 2], ["F4", 2], ["E4", 2], ["F4", 2]),
+        seq(["D5", 4], ["C5", 2], ["Bb4", 2], ["A4", 4], ["F4", 4]),
+        seq(["G4", 2], ["Bb4", 2], ["D5", 8], ["C5", 2], ["Bb4", 2]),
+        seq(["A4", 12], [".", 4]),
+      ],
+    },
+    { inst: "strings", bars: DRAGON_CHORDS.map((c) => pump(c, "x.x.x.x.x.x.x.x.")), vol: 0.4 },
+    { inst: "bass", bars: DRAGON_ROOTS.map((r) => pump(r, "x.x.x.x.x.x.x.x.")), vol: 0.75 },
+    { inst: "taiko", bars: [drum("x.....x.x.......")], vol: 0.8 },
+    // The choir.
+    { inst: "organ", bars: DRAGON_CHORDS.map(hold), vol: 0.4, from: 0.35 },
+    { inst: "timpani", bars: DRAGON_ROOTS.map((r) => pump(r, "x.......x.......")), vol: 0.55, from: 0.3 },
+    { inst: "snare", bars: [drum("....x.......x..."), drum("....x.......x..."), drum("....x.......x..."), drum("....x...x.x.xxxx")], vol: 0.6, from: 0.5 },
+    { inst: "hat", bars: [drum("x.x.x.x.x.x.x.x.")], vol: 0.45, from: 0.6 },
+    { inst: "cymbal", bars: [once("x"), rest, rest, rest], vol: 0.55, from: 0.75 },
+  ],
+};
+
+const dragonFire: Track = {
+  id: "dragon-fire",
+  bpm: 76,
+  bars: 4,
+  // A rumble that rises through the warning, then war drums under the rune question.
+  tempoBoost: 0.5,
+  reverb: 0.35,
+  layers: [
+    { inst: "timpani", bars: [pump("D2", "xxxxxxxxxxxxxxxx")], vol: 0.35 },
+    { inst: "strings", bars: [DRAGON_DM, chord("Eb3 G3 Bb3"), DRAGON_DM, chord("C#3 E3 A3")].map((c) => pump(c, "xxxxxxxxxxxxxxxx")), vol: 0.35 },
+    { inst: "tribass", bars: [hold("D1"), hold("Eb1"), hold("D1"), hold("A0")], vol: 0.6 },
+    { inst: "taiko", bars: [drum("x..x..x.x..x..x.")], vol: 0.9, from: 0.4 },
+    { inst: "taiko", bars: [drum("x.x.x.x.x.x.x.x.")], vol: 0.5, from: 0.7 },
+    { inst: "brass", bars: [DRAGON_DM, chord("Eb3 G3 Bb3"), DRAGON_DM, chord("C#3 E3 A3")].map((c) => pump(c, "x.......x.x.....")), vol: 0.5, from: 0.6 },
+  ],
+};
+
+const dragonScramble: Track = {
+  id: "dragon-scramble",
+  bpm: 132,
+  bars: 4,
+  // Speeds up as the scramble clock runs out.
+  tempoBoost: 0.35,
+  swing: 0.1,
+  layers: [
+    {
+      inst: "pluck",
+      bars: [
+        seq(["F5", 2], ["A5", 2], ["C6", 2], ["A5", 2], ["F5", 2], ["G5", 2], ["A5", 4]),
+        seq(["D5", 2], ["F5", 2], ["A5", 2], ["F5", 2], ["D5", 2], ["E5", 2], ["F5", 4]),
+        seq(["Bb4", 2], ["D5", 2], ["F5", 2], ["D5", 2], ["G5", 2], ["F5", 2], ["D5", 4]),
+        seq(["C5", 2], ["E5", 2], ["G5", 2], ["Bb5", 2], ["A5", 4], ["G5", 4]),
+      ],
+    },
+    { inst: "bass", bars: [bounce("F2", "F3"), bounce("D2", "D3"), bounce("Bb1", "Bb2"), bounce("C2", "C3")], vol: 0.75 },
+    { inst: "woodblock", bars: [drum("x...x...x...x...")], vol: 0.4 },
+    // Coins.
+    { inst: "bell", bars: [pump("A6", "......x.......x."), pump("F6", "......x.......x.")], vol: 0.3 },
+    { inst: "pluck", bars: [chord("F4 A4 C5"), chord("D4 F4 A4"), chord("D4 F4 Bb4"), chord("E4 G4 C5")].map((c) => pump(c, "..x...x...x...x.")), vol: 0.4, from: 0.3 },
+    { inst: "kick", bars: [drum("x...x...x...x...")], vol: 0.7, from: 0.4 },
+    { inst: "hat", bars: [drum("..x...x...x...x.")], vol: 0.5, from: 0.5 },
+    { inst: "snare", bars: [drum("....x.......x..."), drum("....x.......x..."), drum("....x.......x..."), drum("....x...x.x.xxxx")], vol: 0.55, from: 0.7 },
+    { inst: "pulse", bars: [arp(["F5", "A5", "C6", "A5"]), arp(["D5", "F5", "A5", "F5"]), arp(["Bb4", "D5", "F5", "D5"]), arp(["C5", "E5", "G5", "E5"])], vol: 0.35, from: 0.8 },
+  ],
+};
+
+const dragonResults: Track = {
+  id: "dragon-results",
+  bpm: 100,
+  bars: 4,
+  reverb: 0.3,
+  layers: [
+    {
+      inst: "brass",
+      bars: [
+        seq(["D4", 2], ["F#4", 2], ["A4", 4], ["D5", 6], ["A4", 2]),
+        seq(["G4", 2], ["B4", 2], ["D5", 4], ["G5", 6], ["D5", 2]),
+        seq(["A4", 2], ["C#5", 2], ["E5", 4], ["A5", 4], ["G5", 2], ["E5", 2]),
+        seq(["D5", 12], [".", 4]),
+      ],
+    },
+    { inst: "organ", bars: [hold(chord("D3 F#3 A3")), hold(chord("G3 B3 D4")), hold(chord("A3 C#4 E4")), hold(chord("D3 F#3 A3"))], vol: 0.4 },
+    { inst: "strings", bars: [hold(chord("D4 F#4 A4")), hold(chord("D4 G4 B4")), hold(chord("C#4 E4 A4")), hold(chord("D4 F#4 A4"))], vol: 0.6 },
+    { inst: "bass", bars: [bounce("D2", "A2"), bounce("G1", "D2"), bounce("A1", "E2"), bounce("D2", "A2")], vol: 0.7 },
+    { inst: "timpani", bars: [pump("D2", "x.......x.x....."), pump("G2", "x.......x.x....."), pump("A2", "x.......x.x....."), pump("D2", "x...x...x.x.x...")], vol: 0.55 },
+    { inst: "snare", bars: [drum("....x.......x..."), drum("....x.......x..."), drum("....x.......x..."), drum("x.x.x.x.xxxxxxxx")], vol: 0.5 },
+    { inst: "cymbal", bars: [once("x"), rest, rest, once("x")], vol: 0.55 },
+  ],
+};
+
 export const TRACKS: Record<MusicTrackId, Track> = {
   "classic-lobby": classicLobby,
   "classic-question": classicQuestion,
@@ -966,4 +1103,9 @@ export const TRACKS: Record<MusicTrackId, Track> = {
   "cup-quiz": cupQuiz,
   "cup-drink": cupDrink,
   "cup-results": cupResults,
+  "dragon-lobby": dragonLobby,
+  "dragon-battle": dragonBattle,
+  "dragon-fire": dragonFire,
+  "dragon-scramble": dragonScramble,
+  "dragon-results": dragonResults,
 };

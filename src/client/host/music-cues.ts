@@ -12,6 +12,7 @@ const LOBBY: Record<GameMode, MusicTrackId> = {
   land: "land-lobby",
   racer: "racer-lobby",
   cup: "cup-lobby",
+  dragon: "dragon-lobby",
 };
 
 let landKey = "";
@@ -96,6 +97,29 @@ export function musicFor(view: HostView | null): MusicCue {
       // music never restarts between questions; useMusic glides to each new intensity.
       const { speed, crashed } = view.car;
       return { track: "racer-drive", intensity: crashed ? 0.03 : Math.max(0.1, Math.min(1, speed / 150)) };
+    }
+    case "dragon": {
+      if (view.phase === "podium") return { track: "dragon-results" };
+      const clamp = (v: number) => Math.max(0, Math.min(1, v));
+      if (view.phase === "fire") {
+        const step = view.fire?.step;
+        const seq = view.fire?.seq ?? 0;
+        // The rumble rises through the warning; war drums under the rune question as its time runs out.
+        if (step === "warning") return { track: "dragon-fire", intensity: 0.1, rampTo: 0.35, rampMs: view.phaseRemainingMs, key: `fire${seq}-warn` };
+        if (step === "question") return { track: "dragon-fire", intensity: 0.45, rampTo: 1, rampMs: view.phaseRemainingMs, key: `fire${seq}-q` };
+        return { track: "dragon-fire", intensity: 0.3, key: `fire${seq}-reveal` };
+      }
+      if (view.phase === "transition" || view.phase === "scramble") {
+        // Faster as the scramble clock runs out.
+        const total = view.settings.scrambleMinutes * 60_000;
+        if (view.phase === "transition") return { track: "dragon-scramble", intensity: 0, key: "dragon-transition" };
+        return { track: "dragon-scramble", intensity: clamp(1 - view.remainingMs / total), rampTo: 1, rampMs: view.remainingMs, key: "dragon-scramble" };
+      }
+      if (view.phase === "countdown") return { track: "dragon-battle", intensity: 0, key: "dragon-countdown" };
+      // More intense as the dragon weakens and as the battle clock runs out. No key: it glides.
+      const wounds = view.maxHealth > 0 ? 1 - view.health / view.maxHealth : 0;
+      const time = 1 - view.remainingMs / (view.settings.battleMinutes * 60_000);
+      return { track: "dragon-battle", intensity: clamp(0.1 + wounds * 0.6 + time * 0.3) };
     }
   }
 }

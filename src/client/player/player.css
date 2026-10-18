@@ -2334,3 +2334,279 @@ h1 {
     animation: none;
   }
 }
+
+/* ===== Dragon's Hoard ===== */
+
+.dragon-game {
+  background: radial-gradient(ellipse at 50% 100%, rgba(255, 190, 60, 0.18), transparent 60%), #1c0d18;
+}
+
+.dragon-phone-health {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 1 55%;
+  font-variant-numeric: tabular-nums;
+}
+
+.dragon-phone-bar {
+  flex: 1;
+  height: 8px;
+  border-radius: 99px;
+  background: rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.dragon-phone-bar span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #7a0d14, #e21b3c);
+  transition: width 0.4s ease-out;
+}
+
+.dragon-team-gold {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.dragon-team-gold b {
+  color: var(--accent);
+}
+
+.team-chip {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-weight: 900;
+  color: #fff;
+}
+
+.dragon-charm-note {
+  padding: 6px 12px;
+  text-align: center;
+  font-weight: 800;
+  background: rgba(90, 209, 106, 0.2);
+  color: #c8f5cf;
+}
+
+/* A sword slash across the ✓ after a hit. */
+.sword-slash {
+  position: fixed;
+  z-index: 60;
+  left: 50%;
+  top: 50%;
+  width: 6px;
+  height: 70vmin;
+  border-radius: 99px;
+  background: linear-gradient(transparent, #fff, #ffe680, transparent);
+  pointer-events: none;
+  transform: translate(-50%, -50%) rotate(40deg) scaleY(0);
+  animation: phone-slash 0.45s ease-out both;
+}
+
+@keyframes phone-slash {
+  0% {
+    transform: translate(-50%, -50%) rotate(40deg) scaleY(0);
+    opacity: 1;
+  }
+  60% {
+    transform: translate(-50%, -50%) rotate(40deg) scaleY(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(40deg) scaleY(1);
+    opacity: 0;
+  }
+}
+
+.dragon-warn,
+.dragon-wait {
+  gap: 12px;
+  text-align: center;
+}
+
+.dragon-warn h1 {
+  margin: 0;
+  color: #ffb02e;
+}
+
+.dragon-warn p {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 900;
+  color: #7fe0ff;
+}
+
+.dragon-warn .rune-shield {
+  width: 50vw;
+  max-width: 240px;
+}
+
+.rune-tag {
+  color: #7fe0ff;
+  font-weight: 900;
+}
+
+.dragon-rune-result .rune-answer {
+  position: static;
+  margin: 8px 16px;
+}
+
+.rune-outcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.rune-outcome h2 {
+  margin: 0;
+}
+
+.rune-outcome .rune-shield {
+  width: 30vw;
+  max-width: 140px;
+}
+
+.dragon-team-reveal {
+  gap: 12px;
+  text-align: center;
+  color: #fff;
+  animation: pop-in 0.4s ease-out;
+}
+
+.dragon-team-reveal h1 {
+  margin: 0;
+  font-size: 34px;
+}
+
+.dragon-team-reveal p {
+  margin: 0;
+  font-weight: 800;
+}
+
+.dragon-chests,
+.dragon-grab,
+.dragon-loot {
+  gap: 10px;
+  text-align: center;
+  padding: 16px;
+}
+
+.dragon-chests h1,
+.dragon-grab h1,
+.dragon-loot h1 {
+  margin: 0;
+}
+
+.dragon-chests .muted,
+.dragon-grab .muted,
+.dragon-loot .muted {
+  margin: 0;
+}
+
+.chest-row {
+  display: flex;
+  justify-content: center;
+  gap: 3vw;
+  width: 100%;
+  margin-top: 12px;
+}
+
+.chest-btn {
+  flex: 1 1 0;
+  max-width: 160px;
+  padding: 8px;
+  border: 0;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.chest-btn:not(:disabled):active {
+  transform: scale(0.94);
+}
+
+.chest-btn.chosen {
+  background: rgba(255, 210, 63, 0.3);
+}
+
+.chest-btn:disabled:not(.chosen) {
+  opacity: 0.45;
+}
+
+.grab-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 420px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.grab-team {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  border: 3px solid var(--team);
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.grab-team:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.grab-gold {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.grab-note {
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.grab-take {
+  color: var(--accent);
+}
+
+.loot-icon.big {
+  width: 28vw;
+  height: 28vw;
+  max-width: 140px;
+  max-height: 140px;
+  animation: pop-in 0.4s ease-out 0.15s both;
+}
+
+.dragon-loot .loot-chest {
+  width: 36vw;
+  max-width: 160px;
+}
+
+.dragon-loot.good h1 {
+  color: var(--accent);
+}
+
+.dragon-loot.bad h1 {
+  color: #ff9a6b;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sword-slash,
+  .loot-icon.big {
+    animation: none;
+  }
+}

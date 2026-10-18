@@ -2,12 +2,18 @@ import {
   CUP_DEFAULT_CUPS,
   CUP_MAX_CUPS,
   CUP_MIN_CUPS,
+  DRAGON_BATTLE_MINUTES,
+  DRAGON_FIRE_SECONDS,
+  DRAGON_MIN_TEAMS,
+  DRAGON_SCRAMBLE_MINUTES,
+  DRAGON_TOUGHNESS,
   HILL_SETTINGS,
   LAND_MINUTES,
   LAND_MIN_TEAMS,
   MAX_TEAMS,
   TOWER_MINUTES,
   type CupSettings,
+  type DragonSettings,
   type FightSettings,
   type GameMode,
   type HillSetting,
@@ -41,6 +47,7 @@ export const DEFAULT_TOWER: TowerSettings = { teams: 2, minutes: 5, monster: tru
 export const DEFAULT_FIGHT: FightSettings = { hill: "random" };
 export const DEFAULT_LAND: LandSettings = { teams: 2, minutes: 5 };
 export const DEFAULT_CUP: CupSettings = { cups: CUP_DEFAULT_CUPS };
+export const DEFAULT_DRAGON: DragonSettings = { teams: 2, toughness: "normal", battleMinutes: 5, fireSec: 45, scrambleMinutes: 3 };
 
 export interface Answer {
   /** Chosen option index; -1 for a typed answer. */
@@ -81,13 +88,14 @@ export interface GameOptions {
   fight?: FightSettings;
   land?: LandSettings;
   cup?: CupSettings;
+  dragon?: DragonSettings;
   protect?: boolean;
 }
 
 /**
  * A Classic game: lobby → (intro → open → reveal → leaderboard)* → podium.
  * It also serves as the lobby for every mode; in the other modes the hub
- * hands its players to that mode's game (TowerGame, SubGame, FightGame, RobotGame, LandGame, RacerGame, CupGame) on start.
+ * hands its players to that mode's game (TowerGame, SubGame, FightGame, RobotGame, LandGame, RacerGame, CupGame, DragonGame) on start.
  */
 export class Game {
   readonly kind = "classic";
@@ -107,6 +115,7 @@ export class Game {
   fight: FightSettings;
   land: LandSettings;
   cup: CupSettings;
+  dragon: DragonSettings;
   /** When the current phase's countdown ends (intro/open), for views. */
   phaseEndsAt = 0;
   openedAt = 0;
@@ -139,6 +148,7 @@ export class Game {
     this.fight = { ...(opts.fight ?? DEFAULT_FIGHT) };
     this.land = { ...(opts.land ?? DEFAULT_LAND) };
     this.cup = { ...(opts.cup ?? DEFAULT_CUP) };
+    this.dragon = { ...(opts.dragon ?? DEFAULT_DRAGON) };
     this.protect = opts.protect ?? true;
   }
 
@@ -233,7 +243,7 @@ export class Game {
 
   setMode(mode: GameMode): void {
     if (this.phase !== "lobby") throw new GameError("The game mode can only be changed before the game starts");
-    if (mode !== "classic" && mode !== "tower" && mode !== "submarine" && mode !== "fight" && mode !== "robot" && mode !== "land" && mode !== "racer" && mode !== "cup") throw new GameError("Unknown game mode");
+    if (mode !== "classic" && mode !== "tower" && mode !== "submarine" && mode !== "fight" && mode !== "robot" && mode !== "land" && mode !== "racer" && mode !== "cup" && mode !== "dragon") throw new GameError("Unknown game mode");
     this.mode = mode;
     this.onChange();
   }
@@ -273,22 +283,41 @@ export class Game {
     this.onChange();
   }
 
-  /** Teams in the lobby preview: the Tallest Tower or Land Grab setting, or Red vs Blue for Tower Fight; null in solo modes. */
-  private get previewTeams(): number | null {
+  setDragon(settings: DragonSettings): void {
+    if (this.phase !== "lobby") throw new GameError("Dragon's Hoard settings can only be changed before the game starts");
+    const teams = Math.trunc(Number(settings.teams));
+    const battleMinutes = Number(settings.battleMinutes);
+    const fireSec = Number(settings.fireSec);
+    const scrambleMinutes = Number(settings.scrambleMinutes);
+    if (!(teams >= DRAGON_MIN_TEAMS && teams <= MAX_TEAMS)) throw new GameError(`Teams must be between ${DRAGON_MIN_TEAMS} and ${MAX_TEAMS}`);
+    if (!DRAGON_TOUGHNESS.includes(settings.toughness)) throw new GameError("Unknown dragon toughness");
+    if (!(DRAGON_BATTLE_MINUTES as readonly number[]).includes(battleMinutes)) throw new GameError("Unsupported battle time");
+    if (!(DRAGON_FIRE_SECONDS as readonly number[]).includes(fireSec)) throw new GameError("Unsupported fire breath interval");
+    if (!(DRAGON_SCRAMBLE_MINUTES as readonly number[]).includes(scrambleMinutes)) throw new GameError("Unsupported scramble time");
+    this.dragon = { teams, toughness: settings.toughness, battleMinutes, fireSec, scrambleMinutes };
+    this.onChange();
+  }
+
+  /**
+   * Teams in the lobby preview: the Tallest Tower or Land Grab setting, Red vs Blue for Tower Fight,
+   * or the Dragon's Hoard setting (never more teams than players); null in solo modes.
+   */
+  teamCount(): number | null {
+    if (this.mode === "dragon") return Math.max(1, Math.min(this.dragon.teams, this.players.size));
     return this.mode === "tower" ? this.tower.teams : this.mode === "land" ? this.land.teams : this.mode === "fight" ? 2 : null;
   }
 
   /** Team index per player: round-robin by join order until the host moves someone, then the host's arrangement (newcomers join the smallest team). */
   teamAssignment(): Map<string, number> {
     const ids = [...this.players.keys()];
-    const count = this.previewTeams ?? 1;
+    const count = this.teamCount() ?? 1;
     const manual = this.manualTeams;
     if (!manual) {
       const teams = assignTeams(ids.length, count);
       return new Map(ids.map((id, i) => [id, teams[i]!]));
     }
     // Solo modes have no teams: leave the arrangement alone for when a team mode comes back.
-    if (this.previewTeams === null) return new Map(ids.map((id) => [id, 0]));
+    if (this.teamCount() === null) return new Map(ids.map((id) => [id, 0]));
     for (const id of [...manual.keys()]) if (!this.players.has(id)) manual.delete(id);
     const fits = (id: string) => (manual.get(id) ?? count) < count;
     const sizes = Array<number>(count).fill(0);
@@ -305,7 +334,7 @@ export class Game {
   /** Move one player to another team in the lobby; everyone else stays where they are shown. */
   setTeam(playerId: string, team: number): void {
     if (this.phase !== "lobby") throw new GameError("Teams can only be changed before the game starts");
-    const count = this.previewTeams;
+    const count = this.teamCount();
     if (count === null) throw new GameError("This game mode has no teams");
     if (!Number.isInteger(team) || team < 0 || team >= count) throw new GameError("Unknown team");
     if (!this.players.has(playerId)) throw new GameError("Unknown player");
@@ -479,7 +508,7 @@ export class Game {
     const answered = [...this.players.values()].map((p) => p.answers[this.qIndex]).filter((a): a is Answer => !!a);
     const hostPlayer = (p: Player) => ({ id: p.id, nickname: p.nickname, avatar: p.avatar, score: p.score, connected: p.connected });
     let teams: HostGameState["teams"] = null;
-    const teamCount = this.previewTeams;
+    const teamCount = this.teamCount();
     if (this.phase === "lobby" && teamCount !== null) {
       const preview = this.teamAssignment();
       teams = Array.from({ length: teamCount }, (_, i) => ({
@@ -495,6 +524,7 @@ export class Game {
       fight: this.fight,
       land: this.land,
       cup: this.cup,
+      dragon: this.dragon,
       teams,
       quiz: { id: this.quizId, title: this.title, questionCount: this.questions.length },
       pacing: this.pacing,
@@ -532,7 +562,7 @@ export class Game {
           ? { choice: ans && ans.option >= 0 ? ans.option : null, correct: q.correct, wasCorrect: !!ans?.correct, points: ans?.points ?? 0 }
           : null,
       podium: this.phase === "podium" ? this.leaderboard(5) : null,
-      team: this.phase === "lobby" && this.previewTeams !== null ? teamInfo(this.teamAssignment().get(p.id) ?? 0) : null,
+      team: this.phase === "lobby" && this.teamCount() !== null ? teamInfo(this.teamAssignment().get(p.id) ?? 0) : null,
     };
   }
 }
