@@ -302,8 +302,9 @@ export function FireBreath({ class: cls = "" }: { class?: string }) {
         <defs>
           <linearGradient id="fire-grad" x1="1" x2="0">
             <stop offset="0" stop-color="#fff6c2" />
-            <stop offset="0.3" stop-color="#ffb02e" />
-            <stop offset="0.75" stop-color="#e8410f" />
+            <stop offset="0.25" stop-color="#ffb02e" />
+            <stop offset="0.72" stop-color="#e8410f" />
+            <stop offset="0.92" stop-color="#c4320c" />
             <stop offset="1" stop-color="#7a1205" stop-opacity="0" />
           </linearGradient>
         </defs>

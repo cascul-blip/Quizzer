@@ -1828,11 +1828,11 @@ a.btn {
 }
 
 .rune-shield.raised {
-  animation: shield-pulse 1.4s ease-in-out infinite;
+  animation: rune-pulse 1.4s ease-in-out infinite;
 }
 
 .rune-shield.held {
-  filter: drop-shadow(0 0 24px #7fe0ff) brightness(1.4);
+  filter: drop-shadow(0 0 12px #fff1b0) drop-shadow(0 0 28px #ffb02e) brightness(1.2);
   animation: pop-in 0.4s ease-out;
 }
 
@@ -1840,6 +1840,19 @@ a.btn {
   opacity: 0.35;
   filter: grayscale(1);
   animation: shield-crack 0.5s ease-out both;
+}
+
+/* The rune ring is gold; the glow matches it. The grab cooldown keeps the cooler shield-pulse. */
+@keyframes rune-pulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 6px #ffd23f);
+    transform: scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 18px #ffb02e);
+    transform: scale(1.05);
+  }
 }
 
 @keyframes shield-pulse {
@@ -1924,19 +1937,19 @@ a.btn {
   height: 100%;
 }
 
-/* The share written over the grab icon (one picture for Grab 10% and Grab 25%). */
+/* A small corner chip on the grab icon. The picture's bottom-right is empty, so the chip sits there. */
 .loot-badge {
   position: absolute;
-  right: -4%;
-  bottom: -2%;
-  padding: 0 0.25em;
+  right: 0;
+  bottom: 0;
+  padding: 0 0.18em;
   border-radius: 999px;
   background: #8e1330;
-  border: 2px solid #ffd23f;
+  border: 1px solid #ffd23f;
   color: #fff;
   font-weight: 900;
-  font-size: max(9px, 30cqw);
-  line-height: 1.3;
+  font-size: clamp(8px, 18cqw, 20px);
+  line-height: 1.2;
 }
 
 .dragon-head {

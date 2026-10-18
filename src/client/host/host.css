@@ -3771,7 +3771,7 @@ select {
   z-index: 1;
 }
 
-.dragon-wrap.fire .lair {
+.dragon-wrap.phase-fire .lair {
   width: min(44vw, 62vh);
   bottom: 46vh;
 }
@@ -3801,13 +3801,13 @@ select {
   }
 }
 
-/* The blast's right edge sits on the snout tip and it spreads left, towards the rune shield. */
+/* The blast's right edge sits on the snout tip and it spreads left, into the rune shield. */
 .lair .fire-breath {
   position: absolute;
   z-index: 2;
   right: 86.4%;
   top: 20.7%;
-  width: 45%;
+  width: 74%;
   height: 40%;
   transform-origin: 100% 50%;
   animation: fire-out 0.6s ease-out both;
@@ -3864,7 +3864,7 @@ select {
   list-style: none;
 }
 
-.dragon-wrap.fire .dragon-hits {
+.dragon-wrap.phase-fire .dragon-hits {
   display: none;
 }
 
@@ -3947,7 +3947,7 @@ select {
 }
 
 .dragon-warning-sub {
-  color: #7fe0ff;
+  color: #ffd36a;
 }
 
 .rune-panel {
@@ -3963,7 +3963,7 @@ select {
   padding: 1.5vh 1.5vw;
   border-radius: var(--radius);
   background: rgba(15, 8, 25, 0.88);
-  border: 3px solid #7fe0ff;
+  border: 3px solid #f2c14e;
   animation: rise 0.4s ease-out both;
 }
 
@@ -3977,7 +3977,7 @@ select {
 }
 
 .rune-tag {
-  color: #7fe0ff;
+  color: #ffd36a;
 }
 
 .rune-count .urgent {
@@ -3985,7 +3985,7 @@ select {
 }
 
 .rune-verdict.good {
-  color: #7fe0ff;
+  color: #ffd36a;
 }
 
 .rune-verdict.bad {
@@ -4241,6 +4241,11 @@ select {
   font-weight: 900;
   font-size: clamp(14px, 2vh, 28px);
   animation: rise 0.4s ease-out both;
+}
+
+.dragon-event .loot-icon {
+  width: 2.4em;
+  height: 2.4em;
 }
 
 .dragon-event:not(:last-child) {

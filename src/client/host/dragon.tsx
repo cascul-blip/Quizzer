@@ -63,7 +63,7 @@ export function DragonStage({ view, send }: { view: DragonView; send: Send }) {
       {view.phase === "podium" ? (
         <DragonPodium view={view} send={send} />
       ) : (
-        <main class={`dragon-wrap ${view.phase}`}>
+        <main class={`dragon-wrap phase-${view.phase}`}>
           <CaveBackdrop scattered={view.phase === "scramble"} escaped={view.escaped && view.phase === "transition"} />
           {act1 && <Battle view={view} />}
           {view.phase === "transition" && <Transition view={view} />}
