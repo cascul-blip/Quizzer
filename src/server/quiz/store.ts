@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { musicTrackForFile } from "../../shared/music-tracks.ts";
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
+import { MAX_IMAGE_SIDE, MAX_MEDIA_BYTES, SHRINK_ABOVE_BYTES } from "../../shared/quiz-constants.ts";
 import {
   DEFAULT_SETTINGS,
   MEDIA_REF_RE,
@@ -22,7 +23,9 @@ import {
 
 export class NotFoundError extends Error {}
 
-export const MAX_MEDIA_BYTES = 5 * 1024 * 1024;
+export { MAX_MEDIA_BYTES };
+/** Images with more pixels than this are refused rather than decoded. */
+const MAX_IMAGE_PIXELS = 64_000_000;
 export const MEDIA_TYPES: Record<string, string> = {
   "image/png": "png",
   "image/jpeg": "jpg",
@@ -30,6 +33,34 @@ export const MEDIA_TYPES: Record<string, string> = {
   "image/webp": "webp",
 };
 export const MEDIA_MIME: Record<string, string> = Object.fromEntries(Object.entries(MEDIA_TYPES).map(([m, e]) => [e, m]));
+
+/**
+ * Scale an image down to MAX_IMAGE_SIDE and re-encode it as WebP, so phones load it quickly:
+ * lossless for PNG (diagrams and labels stay sharp), quality 85 otherwise. GIFs (maybe animated),
+ * images already small enough, and anything that doesn't decode are kept as they are.
+ */
+export async function shrinkImage(bytes: Uint8Array, mime: string): Promise<{ bytes: Uint8Array; mime: string }> {
+  const keep = { bytes, mime };
+  if (mime === "image/gif") return keep;
+  let meta;
+  try {
+    meta = await new Bun.Image(bytes, { maxPixels: MAX_IMAGE_PIXELS }).metadata();
+  } catch (e) {
+    if ((e as { code?: string }).code === "ERR_IMAGE_TOO_MANY_PIXELS") throw new ValidationError(`Image has more than ${MAX_IMAGE_PIXELS / 1e6} megapixels`);
+    return keep;
+  }
+  const oversized = Math.max(meta.width, meta.height) > MAX_IMAGE_SIDE;
+  if (!oversized && bytes.length <= SHRINK_ABOVE_BYTES) return keep;
+  try {
+    const out = await new Bun.Image(bytes, { maxPixels: MAX_IMAGE_PIXELS })
+      .resize(MAX_IMAGE_SIDE, MAX_IMAGE_SIDE, { fit: "inside", withoutEnlargement: true })
+      .webp(mime === "image/png" ? { lossless: true } : { quality: 85 })
+      .bytes();
+    return oversized || out.length < bytes.length ? { bytes: out, mime: "image/webp" } : keep;
+  } catch {
+    return keep;
+  }
+}
 
 /** Sniff the image type from magic bytes so we never trust a client-supplied type. */
 export function sniffImageType(bytes: Uint8Array): string | null {
@@ -238,15 +269,20 @@ export class QuizStore {
 
   // ----- media -----
 
-  /** Store image bytes content-addressed; returns a reference like "media/abc123.png". */
-  saveMedia(bytes: Uint8Array): string {
+  /**
+   * Store an image, shrunk for phones (see shrinkImage), content-addressed by the uploaded bytes;
+   * returns a reference like "media/abc123.webp".
+   */
+  async saveMedia(bytes: Uint8Array): Promise<string> {
     if (bytes.length > MAX_MEDIA_BYTES) throw new ValidationError(`Image is larger than ${MAX_MEDIA_BYTES / 1024 / 1024} MB`);
     const mime = sniffImageType(bytes);
     if (!mime) throw new ValidationError("Unsupported image type (use PNG, JPEG, GIF or WebP)");
     const hash = createHash("sha256").update(bytes).digest("hex").slice(0, 20);
-    const ref = `media/${hash}.${MEDIA_TYPES[mime]}`;
-    const path = join(this.dataDir, ref);
-    if (!existsSync(path)) writeFileSync(path, bytes);
+    const existing = Object.values(MEDIA_TYPES).map((ext) => `media/${hash}.${ext}`).find((ref) => existsSync(join(this.dataDir, ref)));
+    if (existing) return existing;
+    const out = await shrinkImage(bytes, mime);
+    const ref = `media/${hash}.${MEDIA_TYPES[out.mime]}`;
+    writeFileSync(join(this.dataDir, ref), out.bytes);
     return ref;
   }
 

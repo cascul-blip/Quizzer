@@ -190,7 +190,7 @@ export function createMcpServer(store: QuizStore, version: string): McpServer {
     "set_question_image",
     {
       description:
-        "Attach an image (PNG, JPEG, GIF or WebP, max 5 MB) to a question, shown on the projector. Give exactly one of: path (local file on the host computer), base64 (file contents), or url (http/https to download).",
+        "Attach an image (PNG, JPEG, GIF or WebP, max 5 MB) to a question, shown on the projector and phones. Large images are stored scaled to 1280 px as WebP (lossless for PNG). Give exactly one of: path (local file on the host computer), base64 (file contents), or url (http/https to download).",
       inputSchema: {
         quizId,
         questionId,
@@ -202,7 +202,7 @@ export function createMcpServer(store: QuizStore, version: string): McpServer {
     ({ quizId, questionId, ...src }) =>
       run(async () => {
         store.get(quizId); // fail fast on a bad id before downloading
-        const ref = store.saveMedia(await loadImageBytes(src));
+        const ref = await store.saveMedia(await loadImageBytes(src));
         return store.updateQuestion(quizId, questionId, { image: ref });
       }),
   );

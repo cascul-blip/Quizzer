@@ -304,7 +304,7 @@ If the program isn't next to its `data` folder, add `"--data-dir", "<path to dat
 | `create_quiz` | Create a quiz with all its questions in one call |
 | `update_quiz`, `delete_quiz` | Title, description, default shuffle settings; delete |
 | `add_question`, `update_question`, `delete_question`, `reorder_questions` | Per-question edits |
-| `set_question_image`, `remove_question_image` | Image from a local path, base64 data or an http(s) URL (PNG/JPEG/GIF/WebP, ≤ 5 MB) |
+| `set_question_image`, `remove_question_image` | Image from a local path, base64 data or an http(s) URL (PNG/JPEG/GIF/WebP, ≤ 5 MB). Large images are stored scaled to 1280 px as WebP (lossless for PNG) so phones load them quickly |
 
 Edits made over MCP appear in the admin page right away. A game that is already running keeps the version it started with.
 

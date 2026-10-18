@@ -1,6 +1,6 @@
 import { render } from "preact";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
-import { DEFAULT_TIME_LIMIT, MAX_OPTIONS, MAX_PIN_SPOTS, MIN_OPTIONS, TF_OPTIONS, TIME_LIMITS, newId, pinLabel } from "../../shared/quiz-constants.ts";
+import { DEFAULT_TIME_LIMIT, MAX_IMAGE_SIDE, MAX_MEDIA_BYTES, MAX_OPTIONS, MAX_PIN_SPOTS, MIN_OPTIONS, TF_OPTIONS, TIME_LIMITS, newId, pinLabel } from "../../shared/quiz-constants.ts";
 import { MUSIC_TRACKS } from "../../shared/music-tracks.ts";
 import type { Question, Quiz, QuizSettings, QuizSummary } from "../../shared/quiz-schema.ts";
 import { PinBoard } from "../shared/pin.tsx";
@@ -533,14 +533,12 @@ function Editor({ id, notify }: { id: string; notify: (m: string) => void }) {
   );
 }
 
-/** Longest side of a question image; phones never show them bigger, and every phone downloads each one. */
-const MAX_IMAGE_SIDE = 1280;
-/** Images smaller than this are uploaded as they are. */
-const SHRINK_ABOVE_BYTES = 300 * 1024;
-
-/** Scale a large photo down and re-encode it so phones load it quickly. Falls back to the original file. */
+/**
+ * The server shrinks every image for phones (lossless for PNG). This only scales down and
+ * re-encodes a file too big to upload at all. Falls back to the original file.
+ */
 async function shrinkImage(file: File): Promise<Blob> {
-  if (file.size <= SHRINK_ABOVE_BYTES || file.type === "image/gif") return file; // GIFs may be animated
+  if (file.size <= MAX_MEDIA_BYTES || file.type === "image/gif") return file; // GIFs may be animated
   try {
     const bmp = await createImageBitmap(file);
     const scale = Math.min(1, MAX_IMAGE_SIDE / Math.max(bmp.width, bmp.height));

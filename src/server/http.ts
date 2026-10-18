@@ -74,7 +74,7 @@ export function startServer(opts: ServerOptions): RunningServer {
     if (path === "/api/media" && method === "POST") {
       const len = Number(req.headers.get("content-length") ?? 0);
       if (len > MAX_MEDIA_BYTES) throw new ValidationError("Image is larger than 5 MB");
-      const ref = store.saveMedia(new Uint8Array(await req.arrayBuffer()));
+      const ref = await store.saveMedia(new Uint8Array(await req.arrayBuffer()));
       return json({ ref }, 201);
     }
 
