@@ -37,6 +37,23 @@ const storage = {
   },
 };
 
+let preloadRun = 0;
+
+/**
+ * Fetch images one after another, in quiz order, so a room of phones joining together doesn't
+ * start every download at once. A newer call (e.g. after a reconnect) stops the older one.
+ */
+function preloadImages(refs: string[]): void {
+  const run = ++preloadRun;
+  const next = (i: number) => {
+    if (run !== preloadRun || i >= refs.length) return;
+    const img = new Image();
+    img.onload = img.onerror = () => next(i + 1);
+    img.src = `/${refs[i]}`;
+  };
+  next(0);
+}
+
 /** The look this phone picked last time, so returning players keep it. */
 function savedAvatar(): AvatarChoice | null {
   try {
@@ -72,8 +89,8 @@ function App() {
             break;
           case "joined":
             storage.set(TOKEN_KEY, msg.token);
-            // Fetch every question image now so none has to load mid-game (they're cached as immutable).
-            for (const ref of msg.images ?? []) new Image().src = `/${ref}`;
+            // Fetch the question images now so none has to load mid-game (they're cached as immutable).
+            preloadImages(msg.images ?? []);
             break;
           case "resumeFailed":
             storage.set(TOKEN_KEY, null);

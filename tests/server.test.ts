@@ -922,7 +922,7 @@ describe("Only changed player views are pushed", () => {
   const states = (s: TestSocket) => s.msgs.filter((m) => m.type === "player.state").length;
 
   test("time passing or another player's answer doesn't resend; a rejected action still resyncs", async () => {
-    const image = store.saveMedia(new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]));
+    const image = await store.saveMedia(new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]));
     const quiz = store.create({
       title: "Dedupe E2E",
       questions: [1, 2].map((n) => ({ type: "multiple_choice", text: `Q${n}`, image, options: ["right", "wrong"], correct: [0] })),
