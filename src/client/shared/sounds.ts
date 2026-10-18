@@ -1,6 +1,6 @@
 /** Tiny synthesized sound effects (WebAudio), so no audio files need to be shipped. */
 
-export type Sfx = "tick" | "tickHigh" | "timeUp" | "reveal" | "join" | "start" | "fanfare" | "thud" | "floor" | "rumble" | "roar" | "whoosh" | "chomp" | "bubble" | "heartbeat" | "laser" | "alarm" | "plant" | "capture" | "conquer" | "gearUp" | "skid" | "crash" | "repair" | "leverClick" | "land" | "diceRoll" | "diceLand" | "clink" | "gulp" | "poison" | "survive" | "gunshot" | "dragonRoar" | "sword" | "fireWhoosh" | "shieldClang" | "coins" | "chestOpen" | "trapHiss" | "jackpot";
+export type Sfx = "tick" | "tickHigh" | "timeUp" | "reveal" | "join" | "start" | "fanfare" | "thud" | "floor" | "rumble" | "roar" | "whoosh" | "chomp" | "bubble" | "heartbeat" | "laser" | "alarm" | "plant" | "capture" | "conquer" | "gearUp" | "skid" | "crash" | "repair" | "leverClick" | "land" | "diceRoll" | "diceLand" | "clink" | "gulp" | "poison" | "survive" | "gunshot" | "dragonRoar" | "sword" | "fireWhoosh" | "shieldClang" | "coins" | "chestOpen" | "trapHiss" | "jackpot" | "snip" | "spark" | "wrongWire" | "moduleChime" | "keypad" | "defuse" | "explosion";
 
 const MUTE_KEY = "quizzer.muted";
 let ctx: AudioContext | null = null;
@@ -231,6 +231,28 @@ export function play(sfx: Sfx): void {
       return;
     case "fanfare":
       [523.25, 523.25, 523.25, 698.46, 880, 1046.5].forEach((f, i) => tone(f, i * 0.14, i === 5 ? 0.9 : 0.16, "triangle", 0.18));
+      return;
+    case "snip":
+      tone(1800, 0, 0.04, "square", 0.05);
+      return tone(900, 0.03, 0.06, "triangle", 0.08);
+    case "spark":
+      [2400, 1800, 3200, 1400].forEach((f, i) => tone(f, i * 0.02, 0.05, "sawtooth", 0.04));
+      return;
+    case "wrongWire":
+      tone(140, 0, 0.18, "square", 0.16);
+      return tone(90, 0.12, 0.28, "sawtooth", 0.12);
+    case "moduleChime":
+      [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(f, i * 0.07, 0.22, "triangle", 0.12));
+      return;
+    case "keypad":
+      return tone(880, 0, 0.06, "square", 0.05);
+    case "defuse":
+      [392, 523.25, 659.25, 784, 1046.5].forEach((f, i) => tone(f, i * 0.1, i === 4 ? 0.7 : 0.18, "triangle", 0.14));
+      return;
+    case "explosion":
+      tone(70, 0, 0.7, "sine", 0.45);
+      tone(45, 0.05, 0.9, "triangle", 0.35);
+      [180, 120, 80, 50].forEach((f, i) => tone(f, i * 0.04, 0.4, "sawtooth", 0.12));
       return;
   }
 }

@@ -1,17 +1,18 @@
 import type { ServerWebSocket } from "bun";
 import QRCode from "qrcode";
-import type { ClientMsg, CupSettings, DragonSettings, FightSettings, GameMode, HostView, JoinInfo, LandSettings, Pacing, PlayerView, ServerMsg, TowerSettings } from "../shared/protocol.ts";
+import type { BombSettings, ClientMsg, CupSettings, DragonSettings, FightSettings, GameMode, HostView, JoinInfo, LandSettings, Pacing, PlayerView, ServerMsg, TowerSettings } from "../shared/protocol.ts";
 import { answerOf } from "../shared/answer-match.ts";
 import { cleanAvatar } from "../shared/avatars.ts";
 import { ValidationError } from "../shared/quiz-schema.ts";
 import { diffView } from "../shared/view-patch.ts";
+import { BombGame } from "./game/bomb.ts";
 import { CupGame } from "./game/cup.ts";
 import { DragonGame } from "./game/dragon.ts";
 import { FightGame } from "./game/fight.ts";
-import { DEFAULT_CUP, DEFAULT_DRAGON, DEFAULT_FIGHT, DEFAULT_LAND, DEFAULT_TOWER, Game, GameError, type Clock } from "./game/game.ts";
+import { DEFAULT_BOMB, DEFAULT_CUP, DEFAULT_DRAGON, DEFAULT_FIGHT, DEFAULT_LAND, DEFAULT_TOWER, Game, GameError, type Clock } from "./game/game.ts";
 import { LandGame } from "./game/land.ts";
 import { RacerGame } from "./game/racer.ts";
-import { buildCupResultsCsv, buildDragonResultsCsv, buildFightResultsCsv, buildLandResultsCsv, buildRacerResultsCsv, buildResultsCsv, buildRobotResultsCsv, buildSubResultsCsv, buildTowerResultsCsv, writeResultsFile } from "./game/results.ts";
+import { buildBombResultsCsv, buildCupResultsCsv, buildDragonResultsCsv, buildFightResultsCsv, buildLandResultsCsv, buildRacerResultsCsv, buildResultsCsv, buildRobotResultsCsv, buildSubResultsCsv, buildTowerResultsCsv, writeResultsFile } from "./game/results.ts";
 import { RobotGame } from "./game/robot.ts";
 import { SubGame } from "./game/submarine.ts";
 import { TowerGame } from "./game/tower.ts";
@@ -65,7 +66,7 @@ function viewKey(view: PlayerView, now: number): string {
 /** Compress what goes to phones over Wi-Fi; the host screen is on this machine, so it isn't worth the CPU. */
 const compressFor = (ws: WS) => ws.data.role !== "host";
 
-export type LiveGame = Game | TowerGame | SubGame | FightGame | RobotGame | LandGame | RacerGame | CupGame | DragonGame;
+export type LiveGame = Game | TowerGame | SubGame | FightGame | RobotGame | LandGame | RacerGame | CupGame | DragonGame | BombGame;
 
 /** Owns the single live game and every connected socket; pushes each phone its view (or a patch of it) on every change. */
 export class GameHub {
@@ -84,13 +85,14 @@ export class GameHub {
   private broadcastQueued = false;
   private activityTimer: ReturnType<typeof setTimeout> | null = null;
   /** Mode, mode settings and pacing carry over to the next lobby ("Play again"). */
-  private lastSetup: { mode: GameMode; tower: TowerSettings; fight: FightSettings; land: LandSettings; cup: CupSettings; dragon: DragonSettings; protect: boolean; pacing: Pacing } = {
+  private lastSetup: { mode: GameMode; tower: TowerSettings; fight: FightSettings; land: LandSettings; cup: CupSettings; dragon: DragonSettings; bomb: BombSettings; protect: boolean; pacing: Pacing } = {
     mode: "classic",
     tower: DEFAULT_TOWER,
     fight: DEFAULT_FIGHT,
     land: DEFAULT_LAND,
     cup: DEFAULT_CUP,
     dragon: DEFAULT_DRAGON,
+    bomb: DEFAULT_BOMB,
     protect: true,
     pacing: "manual",
   };
@@ -364,6 +366,21 @@ export class GameHub {
         if (!this.game.chest(ws.data.playerId, Number(msg.chest))) this.sendState(ws);
         return;
       }
+      case "bomb.hold": {
+        if (!(this.game instanceof BombGame) || !ws.data.playerId) return;
+        if (!this.game.hold(ws.data.playerId, String(msg.wireId), msg.holding === true)) this.sendState(ws);
+        return;
+      }
+      case "bomb.cut": {
+        if (!(this.game instanceof BombGame) || !ws.data.playerId) return;
+        if (!this.game.cut(ws.data.playerId, String(msg.wireId))) this.sendState(ws);
+        return;
+      }
+      case "bomb.type": {
+        if (!(this.game instanceof BombGame) || !ws.data.playerId) return;
+        if (!this.game.type(ws.data.playerId, String(msg.text ?? ""))) this.sendState(ws);
+        return;
+      }
       case "dragon.grab": {
         if (!(this.game instanceof DragonGame) || !ws.data.playerId) return;
         if (!this.game.grab(ws.data.playerId, Number(msg.team))) this.sendState(ws);
@@ -416,7 +433,7 @@ export class GameHub {
     };
     const classic = () => {
       const g = game();
-      if (!(g instanceof Game)) throw new GameError(`Not available in ${g instanceof TowerGame ? "Tallest Tower" : g instanceof SubGame ? "Submarine Squad" : g instanceof RobotGame ? "Robot Attack" : g instanceof LandGame ? "Land Grab" : g instanceof RacerGame ? "Racer" : g instanceof CupGame ? "Cup of Death" : g instanceof DragonGame ? "Dragon's Hoard" : "Tower Fight"}`);
+      if (!(g instanceof Game)) throw new GameError(`Not available in ${g instanceof TowerGame ? "Tallest Tower" : g instanceof SubGame ? "Submarine Squad" : g instanceof RobotGame ? "Robot Attack" : g instanceof LandGame ? "Land Grab" : g instanceof RacerGame ? "Racer" : g instanceof CupGame ? "Cup of Death" : g instanceof DragonGame ? "Dragon's Hoard" : g instanceof BombGame ? "Bomb Squad" : "Tower Fight"}`);
       return g;
     };
     /** Classic and Racer are both paced question by question: next, skip and pacing work in either. */
@@ -452,6 +469,7 @@ export class GameHub {
         if (lobby.phase === "lobby" && lobby.mode === "land") return this.startLand(lobby);
         if (lobby.phase === "lobby" && lobby.mode === "cup") return this.startCup(lobby);
         if (lobby.phase === "lobby" && lobby.mode === "dragon") return this.startDragon(lobby);
+        if (lobby.phase === "lobby" && lobby.mode === "bomb") return this.startBomb(lobby);
         const pacing = PACINGS.has(msg.pacing) ? msg.pacing : undefined;
         if (lobby.phase === "lobby" && lobby.mode === "racer") return this.startRacer(lobby, pacing);
         lobby.start(pacing);
@@ -492,6 +510,10 @@ export class GameHub {
       case "host.setDragon":
         classic().setDragon({ teams: Number(msg.teams), toughness: msg.toughness, battleMinutes: Number(msg.battleMinutes), fireSec: Number(msg.fireSec), scrambleMinutes: Number(msg.scrambleMinutes) });
         this.lastSetup.dragon = { ...classic().dragon };
+        return;
+      case "host.setBomb":
+        classic().setBomb({ game: msg.game, squads: Number(msg.squads), modules: Number(msg.modules), wires: Number(msg.wires), minutes: Number(msg.minutes), penaltySec: Number(msg.penaltySec) });
+        this.lastSetup.bomb = { ...classic().bomb };
         return;
       case "host.next":
         return paced().next();
@@ -599,6 +621,21 @@ export class GameHub {
     this.log(`Cup of Death started with ${cup.players.size} player(s)`);
   }
 
+  /** Hand the lobby's players to a Bomb Squad game, on the squads shown in the lobby. */
+  private startBomb(lobby: Game): void {
+    if (lobby.players.size === 0) throw new GameError("Wait for at least one player to join");
+    const bomb = BombGame.fromLobby(lobby, {
+      clock: this.opts.clock,
+      onChange: () => this.scheduleBroadcast(),
+      onActivity: (pid) => this.onActivity(pid),
+      onFinish: (g) => this.onFinish(g),
+    });
+    lobby.dispose();
+    this.game = bomb;
+    bomb.start();
+    this.log(`Bomb Squad started with ${bomb.players.size} player(s), ${bomb.squads.length} squad(s)`);
+  }
+
   /** Hand the lobby's players to a Dragon's Hoard game, on the teams shown in the lobby. */
   private startDragon(lobby: Game): void {
     if (lobby.players.size === 0) throw new GameError("Wait for at least one player to join");
@@ -675,7 +712,9 @@ export class GameHub {
                     ? buildCupResultsCsv(game)
                     : game instanceof DragonGame
                       ? buildDragonResultsCsv(game)
-                      : buildResultsCsv(game);
+                      : game instanceof BombGame
+                        ? buildBombResultsCsv(game)
+                        : buildResultsCsv(game);
     let file: string | null = null;
     try {
       file = writeResultsFile(game, csv, this.store.resultsDir);

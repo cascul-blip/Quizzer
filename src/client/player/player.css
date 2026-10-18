@@ -2615,3 +2615,301 @@ h1 {
     animation: none;
   }
 }
+
+/* ----- Bomb Squad ----- */
+
+.bomb-phone {
+  min-height: 100dvh;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px 20px;
+  background: #1a1c1f;
+  color: #f4f1ea;
+}
+
+.bomb-phone.center {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.bomb-phone h1 {
+  margin: 0;
+  font-size: 28px;
+}
+
+.bw-squad {
+  margin: 0;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.bw-q {
+  font-size: 22px;
+  line-height: 1.25;
+}
+
+.bw-qimg {
+  width: 100%;
+  max-height: 28vh;
+  object-fit: contain;
+  border-radius: 8px;
+  background: #000;
+}
+
+.bw-timebar {
+  position: relative;
+  height: 28px;
+  border-radius: 8px;
+  background: #2c3036;
+  overflow: hidden;
+}
+
+.bw-timebar div {
+  height: 100%;
+  background: #d10f0f;
+}
+
+.bw-timebar.urgent div {
+  background: #ff5a3c;
+}
+
+.bw-timebar span {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+.bw-status {
+  margin: 0;
+  font-weight: 700;
+}
+
+.bw-status.good,
+.bomb-phone .bw-reveal {
+  color: #b6f2a8;
+  font-weight: 800;
+  font-size: 20px;
+}
+
+.bw-wires {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bw-phone-wire {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background: #26221c;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+}
+
+.bw-phone-wire.selected {
+  border-color: #e7c15a;
+}
+
+.bw-phone-wire .bw-wire {
+  width: 36px;
+  height: 84px;
+  flex: none;
+}
+
+.bw-tag {
+  flex: 1;
+  background: #f3e6c4;
+  color: #241c12;
+  border-radius: 4px;
+  padding: 10px 12px;
+  font-weight: 800;
+}
+
+.bw-color {
+  display: block;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.bw-cut {
+  position: relative;
+  align-self: center;
+  width: 148px;
+  height: 148px;
+  margin-top: 8px;
+  border: 0;
+  border-radius: 50%;
+  background: #3a2a28;
+  color: #fff;
+  font-weight: 900;
+  font-size: 22px;
+}
+
+.bw-cut svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.bw-cut .ring-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.2);
+  stroke-width: 6;
+}
+
+.bw-cut .ring {
+  fill: none;
+  stroke: #e7c15a;
+  stroke-width: 6;
+}
+
+.bw-cut .bw-cutters {
+  width: 64px;
+  height: auto;
+  display: block;
+  margin: 0 auto 2px;
+  pointer-events: none;
+}
+
+.bw-cut.locked {
+  opacity: 0.45;
+}
+
+.bw-keypad {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bw-keypad input {
+  font: inherit;
+  font-size: 20px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 2px solid #5a5348;
+  background: #111;
+  color: #fff;
+}
+
+.bw-pin {
+  position: relative;
+  width: 100%;
+}
+
+.bw-pin > img {
+  width: 100%;
+  border-radius: 8px;
+  display: block;
+}
+
+.bw-spot {
+  position: absolute;
+  width: 92px;
+  height: 92px;
+  margin: -46px 0 0 -46px;
+  font-size: 13px;
+}
+
+.bw-spot .bw-cutters {
+  width: 36px;
+}
+
+.bw-phone-flash {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  animation: bw-flash 0.5s ease-out forwards;
+  pointer-events: none;
+}
+
+.bomb-phone.boom.is-shaking {
+  animation: bw-shake 0.55s linear;
+}
+
+.bomb-phone .bw-confetti {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.bw-place {
+  font-size: 28px;
+  font-weight: 900;
+}
+
+.bw-awards {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+}
+
+.bw-awards li {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-top: 6px;
+  font-weight: 800;
+}
+
+.bomb-phone .bw-count {
+  font-size: 120px;
+  font-weight: 900;
+}
+
+@keyframes bw-flash {
+  0% {
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes bw-shake {
+  0%,
+  100% {
+    transform: none;
+  }
+  25% {
+    transform: translate(-8px, 4px);
+  }
+  50% {
+    transform: translate(8px, -4px);
+  }
+  75% {
+    transform: translate(-4px, 2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bw-phone-flash,
+  .bomb-phone.boom.is-shaking {
+    animation: none;
+  }
+  .bomb-phone.boom {
+    background: #fff;
+    color: #111;
+  }
+}

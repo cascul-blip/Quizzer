@@ -6,6 +6,7 @@ import type { LandGame } from "./land.ts";
 import type { RacerGame } from "./racer.ts";
 import type { RobotGame } from "./robot.ts";
 import type { CupGame } from "./cup.ts";
+import type { BombGame } from "./bomb.ts";
 import type { DragonGame } from "./dragon.ts";
 import type { SubGame } from "./submarine.ts";
 import type { TowerGame } from "./tower.ts";
@@ -195,6 +196,59 @@ export function buildDragonResultsCsv(game: DragonGame): string {
         slay,
         r.runeHeld,
         r.runeFailed,
+      ]);
+    }
+  }
+  return toCsv([header, ...rows]);
+}
+
+/**
+ * Bomb Squad: one row per player. Together rows share the class result. Race rank is blank
+ * in Together. "Time lost" is seconds the player's own wrong cuts and wrong keypad entries took off.
+ */
+export function buildBombResultsCsv(game: BombGame): string {
+  const header = [
+    "Squad",
+    "Squad result",
+    "Squad time left",
+    "Squad rank",
+    "Nickname",
+    "Wires held",
+    "Right wires held",
+    "Right cuts",
+    "Wrong cuts",
+    "Keypad right",
+    "Keypad wrong",
+    "Time lost to wrong cuts",
+    "Modules cleared",
+    "Total time lost",
+  ];
+  const race = game.settings.game === "race";
+  const ranks = new Map(game.rankedSquads().map((s) => [s.index, s.rank]));
+  const classResult = game.outcome === "defused" ? "defused" : "exploded";
+  const rows: (string | number)[][] = [];
+  const order = race ? game.rankedSquads() : game.squads.map((s) => ({ ...s, rank: 0 }));
+  for (const s of order) {
+    const members = [...game.players.values()].filter((p) => p.squad === s.index).sort((a, b) => b.rightCuts - a.rightCuts || a.nickname.localeCompare(b.nickname));
+    const result = race ? (s.finished ? "defused" : "exploded") : classResult;
+    const left = minutesSeconds(s.timeLeftMs);
+    const lost = Math.round(s.timeLostMs / 1000);
+    for (const p of members) {
+      rows.push([
+        s.name,
+        result,
+        left,
+        race ? (ranks.get(s.index) ?? "") : "",
+        p.nickname,
+        p.wiresHeld,
+        p.rightHeld,
+        p.rightCuts,
+        p.wrongCuts,
+        p.keypadRight,
+        p.keypadWrong,
+        Math.round(p.timeLostMs / 1000),
+        s.modulesCleared,
+        lost,
       ]);
     }
   }
