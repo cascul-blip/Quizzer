@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun --hot src/server/main.ts --data-dir ./dev-data --no-open",
+    "dev": "bun --hot src/server/main.ts --data-dir ./dev-data --no-open --dev",
     "start": "bun src/server/main.ts",
     "mcp": "bun src/server/main.ts mcp",
     "test": "bun test",

@@ -16,6 +16,7 @@ Options:
   -d, --data-dir <dir>  Where quizzes, images and results are stored
                         (default: "data" folder next to the program)
       --no-open         Don't open the admin page in a browser
+      --dev             Serve the pages with hot reload (running from source only)
   -h, --help            Show this help
   -v, --version         Show the version
 `;
@@ -53,6 +54,7 @@ async function main(): Promise<void> {
         host: { type: "string" },
         "data-dir": { type: "string", short: "d" },
         "no-open": { type: "boolean", default: false },
+        dev: { type: "boolean", default: false },
         help: { type: "boolean", short: "h", default: false },
         version: { type: "boolean", short: "v", default: false },
       },
@@ -85,7 +87,7 @@ async function main(): Promise<void> {
       port,
       version: pkg.version,
       address: values.host,
-      development: !isCompiled() && process.env.NODE_ENV !== "production",
+      development: values.dev && !isCompiled(),
       log: (msg) => console.log(`[${new Date().toLocaleTimeString()}] ${msg}`),
     });
   } catch (e) {
