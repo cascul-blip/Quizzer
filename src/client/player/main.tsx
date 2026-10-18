@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { cleanAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import { STREAK_MIN, type ClientMsg, type PlayerView, type ServerMsg } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
+import { setPhoneArt } from "../shared/phone-art.ts";
 import { connect, type ConnStatus } from "../shared/ws.ts";
 import { PinBoard, PinDragger } from "../shared/pin.tsx";
 import { ConnBanner, ErrorBoundary, LockedChoice, Shape, StreakBadge, TextAnswer, Toast, optionColor, ordinal, useCountdown } from "../shared/ui.tsx";
@@ -416,6 +417,7 @@ function Result({ view }: { view: Joined }) {
   );
 }
 
+setPhoneArt();
 render(
   <ErrorBoundary>
     <App />
