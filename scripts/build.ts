@@ -1,4 +1,5 @@
 // Cross-compiles single-file executables for Linux and Windows into dist/.
+// Only the executables are replaced: dist/data (quizzes, images, results) is kept.
 import { rmSync } from "node:fs";
 import pkg from "../package.json" with { type: "json" };
 
@@ -8,11 +9,11 @@ const targets = [
 ] as const;
 
 const only = process.argv[2];
-rmSync("dist", { recursive: true, force: true });
 
 for (const { target, out } of targets) {
   if (only && !target.includes(only)) continue;
   console.log(`Building ${out} (${target})…`);
+  rmSync(out, { force: true });
   const args = ["build", "src/server/main.ts", "--compile", "--minify", `--target=${target}`, `--outfile=${out}`];
   // Exe metadata flags only work when building on Windows itself.
   if (target.includes("windows") && process.platform === "win32") {

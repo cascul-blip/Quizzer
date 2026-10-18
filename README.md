@@ -335,7 +335,7 @@ Requires [Bun](https://bun.sh). This repo pins it with [mise](https://mise.jdx.d
 
 ```sh
 bun install
-bun run dev        # hot-reloading server on :8080 using ./dev-data
+bun run dev        # hot-reloading server on :8080 using ./dev-data (--dev)
 bun test           # unit + end-to-end tests (game engine, REST, WebSockets, MCP)
 bun run typecheck
 ```
@@ -370,4 +370,4 @@ bun run build            # dist/quizzer-linux-x64 and dist/quizzer-windows-x64.e
 bun run build linux      # only one target
 ```
 
-Both executables are cross-compiled from any OS and embed the web UI. Nothing else needs to be installed on the host.
+Both executables are cross-compiled from any OS and embed the web UI. Nothing else needs to be installed on the host. A rebuild only replaces the executables, so a `dist/data` folder next to them is kept.
