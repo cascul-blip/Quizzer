@@ -277,6 +277,13 @@ describe("full game over WebSockets", () => {
     await s.waitFor((m) => m.type === "resumeFailed");
     s.close();
   });
+
+  test("sockets negotiate permessage-deflate", async () => {
+    const s = await TestSocket.open(`ws://localhost:${srv.port}/ws`);
+    expect(s.ws.extensions).toContain("permessage-deflate");
+    await s.waitFor((m) => m.type === "player.state");
+    s.close();
+  });
 });
 
 describe("Tallest Tower over WebSockets", () => {

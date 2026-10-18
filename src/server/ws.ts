@@ -56,6 +56,9 @@ function viewKey(view: PlayerView, now: number): string {
   return JSON.stringify(view, (k, v) => (COUNTDOWN_KEYS.has(k) && typeof v === "number" && v > 0 ? Math.round((now + v) / 100) : v));
 }
 
+/** Compress what goes to phones over Wi-Fi; the host screen is on this machine, so it isn't worth the CPU. */
+const compressFor = (ws: WS) => ws.data.role !== "host";
+
 export type LiveGame = Game | TowerGame | SubGame | FightGame | RobotGame | LandGame | RacerGame | CupGame;
 
 /** Owns the single live game and every connected socket; pushes full view snapshots on each change. */
@@ -147,7 +150,7 @@ export class GameHub {
   private send(ws: WS, msg: ServerMsg): void {
     // The page may change what it shows on any other message: make sure the next snapshot goes out.
     if (msg.type !== "player.state") ws.data.lastSent = null;
-    ws.send(JSON.stringify(msg));
+    ws.send(JSON.stringify(msg), compressFor(ws));
   }
 
   /** Push the socket's current view. Unless forced, a player whose view hasn't changed is skipped. */
@@ -157,7 +160,7 @@ export class GameHub {
     const key = viewKey(view, this.opts.clock?.now() ?? Date.now());
     if (!force && key === ws.data.lastSent) return;
     ws.data.lastSent = key;
-    ws.send(JSON.stringify({ type: "player.state", view } satisfies ServerMsg));
+    ws.send(JSON.stringify({ type: "player.state", view } satisfies ServerMsg), compressFor(ws));
   }
 
   /** Coalesce bursts of changes (e.g. many answers) into one push per tick. */
