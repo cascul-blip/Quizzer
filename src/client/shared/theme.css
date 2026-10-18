@@ -1685,11 +1685,12 @@ a.btn {
   transform-origin: 80% 95%;
 }
 
-/* Zzz rising off the sleeping head (the asleep picture's head lies at about 14% / 60%). */
+/* Zzz rising off the sleeping head. The asleep picture's head lies low on the left, about 14% / 62%. */
 .dragon-zzz {
   position: absolute;
-  left: 17%;
-  top: 44%;
+  z-index: 2;
+  left: 9%;
+  top: 48%;
   pointer-events: none;
 }
 

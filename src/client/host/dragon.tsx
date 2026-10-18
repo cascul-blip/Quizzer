@@ -132,7 +132,7 @@ function Battle({ view }: { view: DragonView }) {
   ].join(" ");
   return (
     <>
-      <HealthBar view={view} />
+      {view.phase !== "countdown" && <HealthBar view={view} />}
       {view.phase === "battle" && view.nextFireMs !== null && fireSecs <= 10 && <div class="dragon-next-fire">🔥 Fire breath in {fireSecs}s</div>}
       <div class="lair">
         <Dragon stage={view.stage} asleep={view.phase === "countdown"} mouth={rearing ? (f.step === "question" ? 1 : 0.6) : 0} class={dragonCls}>
