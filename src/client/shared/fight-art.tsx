@@ -30,6 +30,15 @@ import castle3 from "./fight/castle-3.webp";
 import castle4 from "./fight/castle-4.webp";
 import grassImg from "./fight/ground-grass.webp";
 import soilImg from "./fight/ground-soil.webp";
+import phoneClothImg from "./fight/phone/castle-cloth.webp";
+import phoneCastle0 from "./fight/phone/castle-0.webp";
+import phoneCastle1 from "./fight/phone/castle-1.webp";
+import phoneCastle2 from "./fight/phone/castle-2.webp";
+import phoneCastle3 from "./fight/phone/castle-3.webp";
+import phoneCastle4 from "./fight/phone/castle-4.webp";
+import phoneGrassImg from "./fight/phone/ground-grass.webp";
+import phoneSoilImg from "./fight/phone/ground-soil.webp";
+import { isPhoneArt, pickArt } from "./phone-art.ts";
 import { hash01 } from "./tower-art.tsx";
 
 /** Field height → SVG y. */
@@ -66,10 +75,10 @@ export function Battlefield(props: {
         </linearGradient>
         {/* Generated textures (see scripts/fight-ground.py), tiled in field units so they don't stretch with the terrain. */}
         <pattern id="bf-soil" patternUnits="userSpaceOnUse" width={SOIL_TILE} height={SOIL_TILE}>
-          <image href={soilImg} width={SOIL_TILE} height={SOIL_TILE} />
+          <image href={pickArt(soilImg, phoneSoilImg)} width={SOIL_TILE} height={SOIL_TILE} />
         </pattern>
         <pattern id="bf-grass" patternUnits="userSpaceOnUse" width={GRASS_TILE} height={GRASS_TILE}>
-          <image href={grassImg} width={GRASS_TILE} height={GRASS_TILE} />
+          <image href={pickArt(grassImg, phoneGrassImg)} width={GRASS_TILE} height={GRASS_TILE} />
         </pattern>
         {/* The soil darkens with depth; in field units, so the extended ground matches the hill. */}
         <linearGradient id="bf-depth" gradientUnits="userSpaceOnUse" x1="0" y1={sy(Math.max(...terrain))} x2="0" y2={FIELD_H + 20}>
@@ -153,6 +162,7 @@ const CASTLE_W = CASTLE_H * CASTLE_ASPECT;
 const STONE = "#8f9199";
 /** The tower at each damage stage, intact first. */
 const CASTLE_STAGES = [castle0, castle1, castle2, castle3, castle4];
+const PHONE_CASTLE_STAGES = [phoneCastle0, phoneCastle1, phoneCastle2, phoneCastle3, phoneCastle4];
 
 /**
  * A stone castle tower (generated images, see scripts/fight-castle.py) whose flag and
@@ -169,11 +179,11 @@ export function CastleTower({ team, color, damage, collapsing, repairing }: { te
       {/* The right-hand tower is mirrored, so both banners hang on the outer side. */}
       <g transform={team === 0 ? undefined : `translate(${2 * cx} 0) scale(-1 1)`}>
         <mask id={`castle-cloth-${team}`} maskUnits="userSpaceOnUse" {...img}>
-          <image href={castleClothImg} {...img} preserveAspectRatio="none" />
+          <image href={pickArt(castleClothImg, phoneClothImg)} {...img} preserveAspectRatio="none" />
         </mask>
         <rect {...img} fill={color} mask={`url(#castle-cloth-${team})`} />
         {/* Every stage stays in the page so the next one is already loaded when a hit lands. */}
-        {CASTLE_STAGES.map((href, i) => (
+        {(isPhoneArt() ? PHONE_CASTLE_STAGES : CASTLE_STAGES).map((href, i) => (
           <image key={i} href={href} {...img} preserveAspectRatio="none" visibility={i === stage ? "visible" : "hidden"} />
         ))}
         {damage >= 4 && (

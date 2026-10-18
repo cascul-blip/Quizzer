@@ -10,6 +10,13 @@ import office2Tile from "./tower/office-2.webp";
 import office3Tile from "./tower/office-3.webp";
 import office4Tile from "./tower/office-4.webp";
 import shopTile from "./tower/shop.webp";
+import phoneLobbyTile from "./tower/phone/lobby.webp";
+import phoneOffice1Tile from "./tower/phone/office-1.webp";
+import phoneOffice2Tile from "./tower/phone/office-2.webp";
+import phoneOffice3Tile from "./tower/phone/office-3.webp";
+import phoneOffice4Tile from "./tower/phone/office-4.webp";
+import phoneShopTile from "./tower/phone/shop.webp";
+import { isPhoneArt } from "./phone-art.ts";
 
 // ---------- randomness helper ----------
 
@@ -124,6 +131,8 @@ export interface BlockProps {
 }
 
 const OFFICE_TILES = [office1Tile, office2Tile, office3Tile, office4Tile];
+const TILES = { lobby: lobbyTile, shop: shopTile, offices: OFFICE_TILES };
+const PHONE_TILES = { lobby: phoneLobbyTile, shop: phoneShopTile, offices: [phoneOffice1Tile, phoneOffice2Tile, phoneOffice3Tile, phoneOffice4Tile] };
 
 /** Which tile a cell shows: "lobby", "shop", or an office variant 0…3. */
 export function blockTile(team: number, col: number, row: number): "lobby" | "shop" | number {
@@ -137,7 +146,8 @@ export function blockTile(team: number, col: number, row: number): "lobby" | "sh
  */
 export function BuildingBlock({ x, y, size: s, color, team, col, row, fullFloor, fresh }: BlockProps) {
   const tile = blockTile(team, col, row);
-  const href = tile === "lobby" ? lobbyTile : tile === "shop" ? shopTile : OFFICE_TILES[tile]!;
+  const tiles = isPhoneArt() ? PHONE_TILES : TILES;
+  const href = tile === "lobby" ? tiles.lobby : tile === "shop" ? tiles.shop : tiles.offices[tile]!;
   return (
     <g class={`bb ${fresh ? "land" : ""}`}>
       <rect x={x} y={y} width={s} height={s} fill={color} />

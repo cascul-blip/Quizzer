@@ -10,7 +10,8 @@
  * scripts/avatar-art.py, so a hat still lands on every head.
  */
 import type { JSX } from "preact";
-import type { AccessoryId, AvatarChoice, AvatarId } from "../../shared/avatars.ts";
+import { ACCESSORIES, AVATARS, type AccessoryId, type AvatarChoice, type AvatarId } from "../../shared/avatars.ts";
+import { isPhoneArt } from "./phone-art.ts";
 import alienImg from "./avatar/alien.webp";
 import antlersImg from "./avatar/antlers.webp";
 import axolotlImg from "./avatar/axolotl.webp";
@@ -59,6 +60,8 @@ import pandaImg from "./avatar/panda.webp";
 import parrotImg from "./avatar/parrot.webp";
 import partyhatImg from "./avatar/partyhat.webp";
 import penguinImg from "./avatar/penguin.webp";
+import facesSheet from "./avatar/phone-faces.webp";
+import gearSheet from "./avatar/phone-gear.webp";
 import pigImg from "./avatar/pig.webp";
 import pigtailsImg from "./avatar/pigtails.webp";
 import pirateImg from "./avatar/pirate.webp";
@@ -78,83 +81,108 @@ import unicornImg from "./avatar/unicorn.webp";
 import vikingImg from "./avatar/viking.webp";
 import wizardImg from "./avatar/wizard.webp";
 
-/** A painted face or accessory, already seated on the shared viewBox. */
-function painted(src: string): () => JSX.Element {
-  return () => <image href={src} x="0" y="0" width="100" height="100" />;
+/** Layout of the phone sheets, as written by scripts/phone-art.py. */
+const CELL = 192;
+const GUTTER = 2;
+const SHEET_COLS = 8;
+const STEP = CELL + 2 * GUTTER;
+
+/**
+ * A painted face or accessory, already seated on the shared viewBox. The projector draws its
+ * own picture; the phone draws cell `index` of one sheet, so the lobby picker is one download.
+ */
+function painted(src: string, sheet: string, index: number, count: number): () => JSX.Element {
+  const box = `${(index % SHEET_COLS) * STEP + GUTTER} ${Math.floor(index / SHEET_COLS) * STEP + GUTTER} ${CELL} ${CELL}`;
+  const size = { width: SHEET_COLS * STEP, height: Math.ceil(count / SHEET_COLS) * STEP };
+  return () =>
+    isPhoneArt() ? (
+      <svg x="0" y="0" width="100" height="100" viewBox={box}>
+        <image href={sheet} {...size} />
+      </svg>
+    ) : (
+      <image href={src} x="0" y="0" width="100" height="100" />
+    );
 }
 
-export const AVATAR_ART: Record<AvatarId, () => JSX.Element> = {
-  cat: painted(catImg),
-  dog: painted(dogImg),
-  fox: painted(foxImg),
-  panda: painted(pandaImg),
-  bear: painted(bearImg),
-  bunny: painted(bunnyImg),
-  frog: painted(frogImg),
-  owl: painted(owlImg),
-  penguin: painted(penguinImg),
-  lion: painted(lionImg),
-  tiger: painted(tigerImg),
-  koala: painted(koalaImg),
-  monkey: painted(monkeyImg),
-  pig: painted(pigImg),
-  cow: painted(cowImg),
-  mouse: painted(mouseImg),
-  unicorn: painted(unicornImg),
-  dragon: painted(dragonImg),
-  dino: painted(dinoImg),
-  octopus: painted(octopusImg),
-  chick: painted(chickImg),
-  robot: painted(robotImg),
-  alien: painted(alienImg),
-  ghost: painted(ghostImg),
-  monster: painted(monsterImg),
-  kid1: painted(kid1Img),
-  kid2: painted(kid2Img),
-  kid3: painted(kid3Img),
-  kid4: painted(kid4Img),
-  shark: painted(sharkImg),
-  raccoon: painted(raccoonImg),
-  parrot: painted(parrotImg),
-  axolotl: painted(axolotlImg),
-  turtle: painted(turtleImg),
-  hedgehog: painted(hedgehogImg),
-  bee: painted(beeImg),
-  capybara: painted(capybaraImg),
+const FACE_IMG: Record<AvatarId, string> = {
+  cat: catImg,
+  dog: dogImg,
+  fox: foxImg,
+  panda: pandaImg,
+  bear: bearImg,
+  bunny: bunnyImg,
+  frog: frogImg,
+  owl: owlImg,
+  penguin: penguinImg,
+  lion: lionImg,
+  tiger: tigerImg,
+  koala: koalaImg,
+  monkey: monkeyImg,
+  pig: pigImg,
+  cow: cowImg,
+  mouse: mouseImg,
+  unicorn: unicornImg,
+  dragon: dragonImg,
+  dino: dinoImg,
+  octopus: octopusImg,
+  chick: chickImg,
+  robot: robotImg,
+  alien: alienImg,
+  ghost: ghostImg,
+  monster: monsterImg,
+  kid1: kid1Img,
+  kid2: kid2Img,
+  kid3: kid3Img,
+  kid4: kid4Img,
+  shark: sharkImg,
+  raccoon: raccoonImg,
+  parrot: parrotImg,
+  axolotl: axolotlImg,
+  turtle: turtleImg,
+  hedgehog: hedgehogImg,
+  bee: beeImg,
+  capybara: capybaraImg,
 };
 
-export const ACCESSORY_ART: Record<AccessoryId, () => JSX.Element | null> = {
-  none: () => null,
-  tophat: painted(tophatImg),
-  cap: painted(capImg),
-  crown: painted(crownImg),
-  beanie: painted(beanieImg),
-  partyhat: painted(partyhatImg),
-  cowboy: painted(cowboyImg),
-  wizard: painted(wizardImg),
-  pirate: painted(pirateImg),
-  viking: painted(vikingImg),
-  headphones: painted(headphonesImg),
-  flowers: painted(flowersImg),
-  bow: painted(bowImg),
-  curly: painted(curlyImg),
-  spiky: painted(spikyImg),
-  pigtails: painted(pigtailsImg),
-  sunglasses: painted(sunglassesImg),
-  hearts: painted(heartsImg),
-  nerd: painted(nerdImg),
-  monocle: painted(monocleImg),
-  mustache: painted(mustacheImg),
-  bowtie: painted(bowtieImg),
-  snorkel: painted(snorkelImg),
-  eyepatch: painted(eyepatchImg),
-  goggles: painted(gogglesImg),
-  antlers: painted(antlersImg),
-  propeller: painted(propellerImg),
-  beret: painted(beretImg),
-  scarf: painted(scarfImg),
-  tiara: painted(tiaraImg),
+const GEAR_IMG: Record<Exclude<AccessoryId, "none">, string> = {
+  tophat: tophatImg,
+  cap: capImg,
+  crown: crownImg,
+  beanie: beanieImg,
+  partyhat: partyhatImg,
+  cowboy: cowboyImg,
+  wizard: wizardImg,
+  pirate: pirateImg,
+  viking: vikingImg,
+  headphones: headphonesImg,
+  flowers: flowersImg,
+  bow: bowImg,
+  curly: curlyImg,
+  spiky: spikyImg,
+  pigtails: pigtailsImg,
+  sunglasses: sunglassesImg,
+  hearts: heartsImg,
+  nerd: nerdImg,
+  monocle: monocleImg,
+  mustache: mustacheImg,
+  bowtie: bowtieImg,
+  snorkel: snorkelImg,
+  eyepatch: eyepatchImg,
+  goggles: gogglesImg,
+  antlers: antlersImg,
+  propeller: propellerImg,
+  beret: beretImg,
+  scarf: scarfImg,
+  tiara: tiaraImg,
 };
+
+export const AVATAR_ART = Object.fromEntries(AVATARS.map((a, i) => [a.id, painted(FACE_IMG[a.id], facesSheet, i, AVATARS.length)])) as Record<AvatarId, () => JSX.Element>;
+
+const GEAR = ACCESSORIES.filter((a): a is Exclude<(typeof ACCESSORIES)[number], { id: "none" }> => a.id !== "none");
+export const ACCESSORY_ART = {
+  none: () => null,
+  ...Object.fromEntries(GEAR.map((a, i) => [a.id, painted(GEAR_IMG[a.id], gearSheet, i, GEAR.length)])),
+} as Record<AccessoryId, () => JSX.Element | null>;
 
 /** A character with its accessory on top. Unknown ids (e.g. from an older page) fall back gracefully. */
 export function Avatar({ choice, class: cls, title }: { choice: AvatarChoice; class?: string; title?: string }) {
