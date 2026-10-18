@@ -1,16 +1,17 @@
 import type { ServerWebSocket } from "bun";
 import QRCode from "qrcode";
-import type { ClientMsg, CupSettings, FightSettings, GameMode, HostView, JoinInfo, LandSettings, Pacing, PlayerView, ServerMsg, TowerSettings } from "../shared/protocol.ts";
+import type { ClientMsg, CupSettings, DragonSettings, FightSettings, GameMode, HostView, JoinInfo, LandSettings, Pacing, PlayerView, ServerMsg, TowerSettings } from "../shared/protocol.ts";
 import { answerOf } from "../shared/answer-match.ts";
 import { cleanAvatar } from "../shared/avatars.ts";
 import { ValidationError } from "../shared/quiz-schema.ts";
 import { diffView } from "../shared/view-patch.ts";
 import { CupGame } from "./game/cup.ts";
+import { DragonGame } from "./game/dragon.ts";
 import { FightGame } from "./game/fight.ts";
-import { DEFAULT_CUP, DEFAULT_FIGHT, DEFAULT_LAND, DEFAULT_TOWER, Game, GameError, type Clock } from "./game/game.ts";
+import { DEFAULT_CUP, DEFAULT_DRAGON, DEFAULT_FIGHT, DEFAULT_LAND, DEFAULT_TOWER, Game, GameError, type Clock } from "./game/game.ts";
 import { LandGame } from "./game/land.ts";
 import { RacerGame } from "./game/racer.ts";
-import { buildCupResultsCsv, buildFightResultsCsv, buildLandResultsCsv, buildRacerResultsCsv, buildResultsCsv, buildRobotResultsCsv, buildSubResultsCsv, buildTowerResultsCsv, writeResultsFile } from "./game/results.ts";
+import { buildCupResultsCsv, buildDragonResultsCsv, buildFightResultsCsv, buildLandResultsCsv, buildRacerResultsCsv, buildResultsCsv, buildRobotResultsCsv, buildSubResultsCsv, buildTowerResultsCsv, writeResultsFile } from "./game/results.ts";
 import { RobotGame } from "./game/robot.ts";
 import { SubGame } from "./game/submarine.ts";
 import { TowerGame } from "./game/tower.ts";
@@ -51,7 +52,7 @@ const PACINGS = new Set<Pacing>(["manual", "auto"]);
 /** In Tallest Tower, answers stream in constantly: the acting player is updated at once, everyone else at most this often. */
 const ACTIVITY_THROTTLE_MS = 100;
 /** View fields holding "time left" (relative to when the message arrives). */
-const COUNTDOWN_KEYS = new Set(["remainingMs", "phaseRemainingMs", "decisionMs", "repairMs", "emptyMs", "lockedMs", "symbolRemainingMs", "nextMonsterMs"]);
+const COUNTDOWN_KEYS = new Set(["remainingMs", "phaseRemainingMs", "decisionMs", "repairMs", "emptyMs", "lockedMs", "symbolRemainingMs", "nextMonsterMs", "protectedMs"]);
 
 /**
  * A player view as JSON with each running countdown replaced by its deadline (to 100 ms),
@@ -64,7 +65,7 @@ function viewKey(view: PlayerView, now: number): string {
 /** Compress what goes to phones over Wi-Fi; the host screen is on this machine, so it isn't worth the CPU. */
 const compressFor = (ws: WS) => ws.data.role !== "host";
 
-export type LiveGame = Game | TowerGame | SubGame | FightGame | RobotGame | LandGame | RacerGame | CupGame;
+export type LiveGame = Game | TowerGame | SubGame | FightGame | RobotGame | LandGame | RacerGame | CupGame | DragonGame;
 
 /** Owns the single live game and every connected socket; pushes each phone its view (or a patch of it) on every change. */
 export class GameHub {
@@ -83,7 +84,16 @@ export class GameHub {
   private broadcastQueued = false;
   private activityTimer: ReturnType<typeof setTimeout> | null = null;
   /** Mode, mode settings and pacing carry over to the next lobby ("Play again"). */
-  private lastSetup: { mode: GameMode; tower: TowerSettings; fight: FightSettings; land: LandSettings; cup: CupSettings; protect: boolean; pacing: Pacing } = { mode: "classic", tower: DEFAULT_TOWER, fight: DEFAULT_FIGHT, land: DEFAULT_LAND, cup: DEFAULT_CUP, protect: true, pacing: "manual" };
+  private lastSetup: { mode: GameMode; tower: TowerSettings; fight: FightSettings; land: LandSettings; cup: CupSettings; dragon: DragonSettings; protect: boolean; pacing: Pacing } = {
+    mode: "classic",
+    tower: DEFAULT_TOWER,
+    fight: DEFAULT_FIGHT,
+    land: DEFAULT_LAND,
+    cup: DEFAULT_CUP,
+    dragon: DEFAULT_DRAGON,
+    protect: true,
+    pacing: "manual",
+  };
   private readonly log: (msg: string) => void;
 
   constructor(
@@ -344,6 +354,21 @@ export class GameHub {
         if (!this.game.pick(ws.data.playerId, Number(msg.cup))) this.sendState(ws);
         return;
       }
+      case "dragon.answer": {
+        if (!(this.game instanceof DragonGame) || !ws.data.playerId) return;
+        if (!this.game.answer(ws.data.playerId, Number(msg.seq), answerOf(msg), msg.rune === true)) this.sendState(ws);
+        return;
+      }
+      case "dragon.chest": {
+        if (!(this.game instanceof DragonGame) || !ws.data.playerId) return;
+        if (!this.game.chest(ws.data.playerId, Number(msg.chest))) this.sendState(ws);
+        return;
+      }
+      case "dragon.grab": {
+        if (!(this.game instanceof DragonGame) || !ws.data.playerId) return;
+        if (!this.game.grab(ws.data.playerId, Number(msg.team))) this.sendState(ws);
+        return;
+      }
       case "land.answer": {
         if (!(this.game instanceof LandGame) || !ws.data.playerId) return;
         if (!this.game.answer(ws.data.playerId, Number(msg.seq), answerOf(msg))) this.sendState(ws);
@@ -391,7 +416,7 @@ export class GameHub {
     };
     const classic = () => {
       const g = game();
-      if (!(g instanceof Game)) throw new GameError(`Not available in ${g instanceof TowerGame ? "Tallest Tower" : g instanceof SubGame ? "Submarine Squad" : g instanceof RobotGame ? "Robot Attack" : g instanceof LandGame ? "Land Grab" : g instanceof RacerGame ? "Racer" : g instanceof CupGame ? "Cup of Death" : "Tower Fight"}`);
+      if (!(g instanceof Game)) throw new GameError(`Not available in ${g instanceof TowerGame ? "Tallest Tower" : g instanceof SubGame ? "Submarine Squad" : g instanceof RobotGame ? "Robot Attack" : g instanceof LandGame ? "Land Grab" : g instanceof RacerGame ? "Racer" : g instanceof CupGame ? "Cup of Death" : g instanceof DragonGame ? "Dragon's Hoard" : "Tower Fight"}`);
       return g;
     };
     /** Classic and Racer are both paced question by question: next, skip and pacing work in either. */
@@ -426,6 +451,7 @@ export class GameHub {
         if (lobby.phase === "lobby" && lobby.mode === "robot") return this.startRobot(lobby);
         if (lobby.phase === "lobby" && lobby.mode === "land") return this.startLand(lobby);
         if (lobby.phase === "lobby" && lobby.mode === "cup") return this.startCup(lobby);
+        if (lobby.phase === "lobby" && lobby.mode === "dragon") return this.startDragon(lobby);
         const pacing = PACINGS.has(msg.pacing) ? msg.pacing : undefined;
         if (lobby.phase === "lobby" && lobby.mode === "racer") return this.startRacer(lobby, pacing);
         lobby.start(pacing);
@@ -462,6 +488,10 @@ export class GameHub {
       case "host.setCup":
         classic().setCup({ cups: Number(msg.cups) });
         this.lastSetup.cup = { ...classic().cup };
+        return;
+      case "host.setDragon":
+        classic().setDragon({ teams: Number(msg.teams), toughness: msg.toughness, battleMinutes: Number(msg.battleMinutes), fireSec: Number(msg.fireSec), scrambleMinutes: Number(msg.scrambleMinutes) });
+        this.lastSetup.dragon = { ...classic().dragon };
         return;
       case "host.next":
         return paced().next();
@@ -569,6 +599,21 @@ export class GameHub {
     this.log(`Cup of Death started with ${cup.players.size} player(s)`);
   }
 
+  /** Hand the lobby's players to a Dragon's Hoard game, on the teams shown in the lobby. */
+  private startDragon(lobby: Game): void {
+    if (lobby.players.size === 0) throw new GameError("Wait for at least one player to join");
+    const dragon = DragonGame.fromLobby(lobby, {
+      clock: this.opts.clock,
+      onChange: () => this.scheduleBroadcast(),
+      onActivity: (pid) => this.onActivity(pid),
+      onFinish: (g) => this.onFinish(g),
+    });
+    lobby.dispose();
+    this.game = dragon;
+    dragon.start();
+    this.log(`Dragon's Hoard started with ${dragon.players.size} player(s), ${dragon.teams.length} team(s)`);
+  }
+
   /** Hand the lobby's players to a Land Grab game. */
   private startLand(lobby: Game): void {
     if (lobby.players.size === 0) throw new GameError("Wait for at least one player to join");
@@ -628,7 +673,9 @@ export class GameHub {
                   ? buildRacerResultsCsv(game)
                   : game instanceof CupGame
                     ? buildCupResultsCsv(game)
-                    : buildResultsCsv(game);
+                    : game instanceof DragonGame
+                      ? buildDragonResultsCsv(game)
+                      : buildResultsCsv(game);
     let file: string | null = null;
     try {
       file = writeResultsFile(game, csv, this.store.resultsDir);

@@ -18,7 +18,7 @@ export interface ShuffleOptions {
 
 // ---------- Tallest Tower ----------
 
-export type GameMode = "classic" | "tower" | "submarine" | "fight" | "robot" | "land" | "racer" | "cup";
+export type GameMode = "classic" | "tower" | "submarine" | "fight" | "robot" | "land" | "racer" | "cup" | "dragon";
 export type TowerPhase = "countdown" | "playing" | "podium";
 
 export const TEAMS = [
@@ -111,7 +111,13 @@ export type PlayerMsg =
   | { type: "racer.answer"; index: number; option: number; text?: string }
   | { type: "cup.answer"; seq: number; option: number; text?: string }
   /** Cup of Death, drink phase, drinkers only: pick one of your remaining cups (0-based, left to right). Final once sent. */
-  | { type: "cup.pick"; cup: number };
+  | { type: "cup.pick"; cup: number }
+  /** Dragon's Hoard: `rune` answers the class-wide rune question (seq = fire.seq) instead of the player's own question. */
+  | { type: "dragon.answer"; seq: number; option: number; text?: string; rune?: boolean }
+  /** Dragon's Hoard, chest state: open one of the DRAGON_CHESTS chests (0-based). */
+  | { type: "dragon.chest"; chest: number }
+  /** Dragon's Hoard, grab state: the team to steal from. */
+  | { type: "dragon.grab"; team: number };
 
 export type HostMsg =
   | { type: "host.hello" }
@@ -125,6 +131,7 @@ export type HostMsg =
   | { type: "host.setFight"; hill: HillSetting }
   | { type: "host.setLand"; teams: number; minutes: number }
   | { type: "host.setCup"; cups: number }
+  | ({ type: "host.setDragon" } & DragonSettings)
   | { type: "host.next" }
   | { type: "host.skip" }
   | { type: "host.kick"; playerId: string }
@@ -194,7 +201,7 @@ export interface PlayerResult {
 
 export type PlayerView =
   | { kind: "none"; game: null }
-  | { kind: "none"; game: { title: string; phase: Phase | TowerPhase | SubPhase | FightPhase | RobotPhase | LandPhase | RacerPhase | CupPhase } }
+  | { kind: "none"; game: { title: string; phase: Phase | TowerPhase | SubPhase | FightPhase | RobotPhase | LandPhase | RacerPhase | CupPhase | DragonPhase } }
   | {
       kind: "player";
       phase: Phase;
@@ -217,7 +224,8 @@ export type PlayerView =
   | PlayerRobotView
   | PlayerLandView
   | PlayerRacerView
-  | PlayerCupView;
+  | PlayerCupView
+  | PlayerDragonView;
 
 export interface TowerAwards {
   mostCorrect: { value: number; nicknames: string[] } | null;
@@ -277,7 +285,8 @@ export interface HostGameState {
   fight: FightSettings;
   land: LandSettings;
   cup: CupSettings;
-  /** Team preview while the lobby is in a team mode (Tallest Tower, Tower Fight, Land Grab). */
+  dragon: DragonSettings;
+  /** Team preview while the lobby is in a team mode (Tallest Tower, Tower Fight, Land Grab, Dragon's Hoard). */
   teams: (TeamInfo & { members: HostPlayer[] })[] | null;
   quiz: { id: string; title: string; questionCount: number };
   pacing: Pacing;
@@ -998,6 +1007,283 @@ export interface PlayerRacerView {
   result: (RacerResult & { awards: string[] }) | null;
 }
 
+// ---------- Dragon's Hoard ----------
+//
+// Two acts. Act 1 (battle, with fire-breath rune rounds) is whole-class co-op against one dragon;
+// Act 2 (scramble) is teams racing to collect the spilled hoard from chests.
+
+/**
+ * countdown: 3 s before the battle.
+ * battle: everyone answers at their own pace; each correct answer is one hit on the dragon.
+ * fire: a rune round (warning → question → reveal; see DragonFireStep); self-paced questions pause.
+ * transition: the dragon falls (or flies off) and the teams are shown.
+ * scramble: correct answers open chests for the team's gold pile.
+ * podium: the game is over.
+ */
+export type DragonPhase = "countdown" | "battle" | "fire" | "transition" | "scramble" | "podium";
+export type DragonFireStep = "warning" | "question" | "reveal";
+export type DragonToughness = "easy" | "normal" | "hard";
+export const DRAGON_TOUGHNESS: readonly DragonToughness[] = ["easy", "normal", "hard"];
+/** Hits the dragon takes per player. */
+export const DRAGON_HITS_PER_PLAYER: Record<DragonToughness, number> = { easy: 6, normal: 10, hard: 15 };
+/** The dragon never has less health than this, however small the class. */
+export const DRAGON_MIN_HEALTH = 30;
+export const DRAGON_MIN_TEAMS = 2;
+export const DRAGON_BATTLE_MINUTES = [3, 5, 7] as const;
+export const DRAGON_FIRE_SECONDS = [30, 45, 60] as const;
+export const DRAGON_SCRAMBLE_MINUTES = [2, 3, 4, 5] as const;
+
+export interface DragonSettings {
+  /** Teams for Act 2 (DRAGON_MIN_TEAMS … MAX_TEAMS), capped at the number of players when the game starts. */
+  teams: number;
+  toughness: DragonToughness;
+  battleMinutes: number;
+  fireSec: number;
+  scrambleMinutes: number;
+}
+
+/** The dragon is "wounded" under this share of its health and "badly wounded" under the next. */
+export const DRAGON_WOUNDED_AT = 0.66;
+export const DRAGON_BADLY_AT = 0.33;
+/** Each new wounded stage brings fire breath this much sooner, down to DRAGON_FIRE_MIN_SEC. */
+export const DRAGON_FIRE_STEP_SEC = 10;
+export const DRAGON_FIRE_MIN_SEC = 20;
+export const DRAGON_FIRE_WARN_MS = 3000;
+/** The rune question's time: its own time limit, kept within these bounds. */
+export const DRAGON_RUNE_MAX_MS = 20_000;
+export const DRAGON_RUNE_MIN_MS = 10_000;
+export const DRAGON_RUNE_REVEAL_MS = 4000;
+/** Share of the connected players who must get the rune question right for the shield to hold. */
+export const DRAGON_SHIELD_SHARE = 2 / 3;
+/** Shield held: bonus damage, as a share of the dragon's full health. Shield broken: the dragon heals this share. */
+export const DRAGON_SHIELD_BONUS = 0.05;
+export const DRAGON_FIRE_HEAL = 0.1;
+export const DRAGON_TRANSITION_MS = 8000;
+/** Chests offered per correct answer in Act 2, and the time to pick one before one is opened at random. */
+export const DRAGON_CHESTS = 3;
+export const DRAGON_CHEST_MS = 10_000;
+/** How long the phone shows what came out of a chest. */
+export const DRAGON_LOOT_MS = 2500;
+/** Time to pick a team to grab from; after that the richest team that can be picked is chosen. */
+export const DRAGON_GRAB_MS = 8000;
+/** A team can only be grabbed from once in this long. */
+export const DRAGON_GRAB_COOLDOWN_MS = 5000;
+export const DRAGON_JACKPOT_START = 100;
+export const DRAGON_JACKPOT_PER_PLAYER = 10;
+/** The Jackpot chest can't come up this early in the scramble. */
+export const DRAGON_JACKPOT_LOCK_MS = 60_000;
+/** Coin chests a Lucky charm doubles. */
+export const DRAGON_CHARM_CHESTS = 3;
+/** Share of a team's gold a trap sends to the Jackpot. */
+export const DRAGON_TRAP_SHARE = 0.1;
+/** Recent hits the projector shows, and Act 2 events it keeps. */
+export const DRAGON_HITS_SHOWN = 12;
+export const DRAGON_EVENTS_SHOWN = 4;
+
+export type DragonLoot = "coins" | "bigPile" | "charm" | "grab10" | "grab25" | "trap" | "scale" | "bats" | "jackpot";
+
+/** The loot table: chance per chest in percent (they add up to 100). */
+export const DRAGON_LOOT_TABLE: readonly { kind: DragonLoot; chance: number }[] = [
+  { kind: "coins", chance: 35 },
+  { kind: "bigPile", chance: 20 },
+  { kind: "charm", chance: 8 },
+  { kind: "grab10", chance: 10 },
+  { kind: "grab25", chance: 4 },
+  { kind: "trap", chance: 10 },
+  { kind: "scale", chance: 4 },
+  { kind: "bats", chance: 8 },
+  { kind: "jackpot", chance: 1 },
+];
+/** Gold in a Coins and a Big pile chest; half (rounded up) if the dragon escaped. */
+export const DRAGON_COINS = 25;
+export const DRAGON_BIG_PILE = 60;
+export const DRAGON_GRAB_SHARE: Partial<Record<DragonLoot, number>> = { grab10: 0.1, grab25: 0.25 };
+
+export function dragonCoinValue(kind: "coins" | "bigPile", escaped: boolean): number {
+  const full = kind === "coins" ? DRAGON_COINS : DRAGON_BIG_PILE;
+  return escaped ? Math.ceil(full / 2) : full;
+}
+
+/** Fire breath interval in seconds once the dragon has reached `stage` (0 healthy, 1 wounded, 2 badly wounded). */
+export function dragonFireSec(fireSec: number, stage: number): number {
+  return Math.max(DRAGON_FIRE_MIN_SEC, fireSec - DRAGON_FIRE_STEP_SEC * stage);
+}
+
+/** 0 healthy, 1 wounded, 2 badly wounded. */
+export function dragonStage(health: number, maxHealth: number): 0 | 1 | 2 {
+  const share = maxHealth > 0 ? health / maxHealth : 0;
+  return share < DRAGON_BADLY_AT ? 2 : share < DRAGON_WOUNDED_AT ? 1 : 0;
+}
+
+export interface DragonAwards {
+  /** Most hits on the dragon. */
+  dragonSlayer: SubAward | null;
+  runeMaster: SubAward | null;
+  /** Most gold grabbed from other teams. */
+  masterThief: SubAward | null;
+  mostCorrect: SubAward | null;
+}
+
+/** One correct answer landing on the dragon. */
+export interface DragonHit {
+  seq: number;
+  nickname: string;
+  avatar: AvatarChoice;
+}
+
+/** The rune question as everyone sees it. Options are empty during the warning. */
+export interface DragonRuneQuestion {
+  type: QuestionType;
+  text: string;
+  image?: string;
+  options: string[];
+  spots?: PinSpot[];
+}
+
+export interface HostDragonFire {
+  seq: number;
+  step: DragonFireStep;
+  /** Null during the warning. */
+  question: DragonRuneQuestion | null;
+  answered: number;
+  /** Players taking part (those in the game when the fire started). */
+  total: number;
+  /** Reveal only. */
+  correct: number[] | null;
+  answerCounts: number[] | null;
+  right: number | null;
+  /** Connected players the 2/3 is counted from. */
+  needed: number | null;
+  held: boolean | null;
+  /** Health taken (shield held) or healed (fire got through). */
+  amount: number | null;
+}
+
+/** Act 2 news for the projector's pop-ups. */
+export interface DragonEvent {
+  seq: number;
+  kind: "grab" | "blocked" | "trap" | "jackpot";
+  nickname: string;
+  team: number;
+  /** The team grabbed from (grab, blocked). */
+  target: number | null;
+  gold: number;
+}
+
+export interface HostDragonTeam extends TeamInfo {
+  gold: number;
+  rank: number;
+  /** Correct answers in Act 2 (the tie-break). */
+  correct: number;
+  /** Dragon scales waiting to block grabs. */
+  scales: number;
+  /** Time until the team can be grabbed from again. */
+  protectedMs: number;
+  members: { id: string; nickname: string; avatar: AvatarChoice; connected: boolean }[];
+}
+
+export interface DragonResult {
+  slain: boolean;
+  /** Time from the start of the battle to the last hit. */
+  slainMs: number | null;
+  runeHeld: number;
+  runeFailed: number;
+}
+
+export interface HostDragonState {
+  kind: "dragon";
+  phase: DragonPhase;
+  quiz: { id: string; title: string; questionCount: number };
+  settings: DragonSettings;
+  /** The act's clock: battle time left (battle, fire) or scramble time left; the step's time in countdown and transition. */
+  remainingMs: number;
+  /** Time left in the current step (countdown, fire step, transition). */
+  phaseRemainingMs: number;
+  phaseDurationMs: number;
+  health: number;
+  maxHealth: number;
+  /** The art stage for the current health. */
+  stage: 0 | 1 | 2;
+  /** The worst stage reached; it goes up once per roar and sets the fire interval. */
+  maxStage: number;
+  slain: boolean;
+  escaped: boolean;
+  /** Time to the next fire breath (battle only). */
+  nextFireMs: number | null;
+  /** The most recent hits, oldest first (at most DRAGON_HITS_SHOWN). */
+  hits: DragonHit[];
+  fire: HostDragonFire | null;
+  teams: HostDragonTeam[];
+  jackpot: number;
+  /** The Jackpot chest can't come up yet. */
+  jackpotLocked: boolean;
+  /** Newest last (at most DRAGON_EVENTS_SHOWN). */
+  events: DragonEvent[];
+  playerCount: number;
+  connectedCount: number;
+  result: DragonResult | null;
+  awards: DragonAwards | null;
+  errors: QuestionError[] | null;
+  hasResults: boolean;
+}
+
+/** question = answering; chest = picking a chest; grab = picking a team to steal from; loot = what came out; waiting = joined during a fire breath. */
+export type DragonPlayerState = "question" | "chest" | "grab" | "loot" | "waiting";
+
+export interface DragonLootView {
+  seq: number;
+  kind: DragonLoot;
+  /** Gold gained (coins, big pile, jackpot, grab) or lost (trap). */
+  gold: number;
+  /** A Lucky charm doubled this chest. */
+  doubled: boolean;
+  /** A grab with nobody to grab from paid as coins instead. */
+  asCoins: boolean;
+  /** Grab: the team picked. */
+  target: TeamInfo | null;
+  /** Grab: stopped by that team's dragon scale. */
+  blocked: boolean;
+  remainingMs: number;
+}
+
+export interface PlayerDragonView {
+  kind: "dragon";
+  phase: DragonPhase;
+  title: string;
+  /** As HostDragonState.remainingMs. */
+  remainingMs: number;
+  phaseRemainingMs: number;
+  phaseDurationMs: number;
+  me: { id: string; nickname: string; avatar: AvatarChoice; correct: number; hits: number; runeRight: number; charm: number };
+  /** Dragon health in whole percent (rounded up), so other players' hits only send an update when it changes. */
+  healthPct: number;
+  stage: 0 | 1 | 2;
+  slain: boolean;
+  escaped: boolean;
+  /** Null during Act 1: the teams only matter from the transition on. */
+  team: TeamInfo | null;
+  /** This player's team's gold (transition onwards). */
+  teamGold: number | null;
+  state: DragonPlayerState;
+  question: StreamQuestionView | null;
+  feedback: { seq: number; correct: boolean; remainingMs: number; answers: string[]; penaltyMs: number } | null;
+  /** The rune round, for players taking part in it. */
+  fire: {
+    seq: number;
+    step: DragonFireStep;
+    question: DragonRuneQuestion | null;
+    myChoice: number | null;
+    myText: string | null;
+    /** Reveal only. */
+    result: { correct: number[]; answers: string[]; wasCorrect: boolean; right: number; needed: number; held: boolean } | null;
+  } | null;
+  chest: { seq: number; remainingMs: number } | null;
+  /** The other teams' gold, only while picking a team to grab from. */
+  grab: { seq: number; share: number; remainingMs: number; teams: { index: number; name: string; color: string; gold: number; protectedMs: number }[] } | null;
+  loot: DragonLootView | null;
+  result: { teamRank: number; teamCount: number; teamGold: number; won: boolean; slain: boolean; slainMs: number | null; awards: string[] } | null;
+}
+
 export type HostView =
   | { kind: "idle"; phase: "idle"; join: JoinInfo }
   | (HostGameState & { join: JoinInfo })
@@ -1007,7 +1293,8 @@ export type HostView =
   | (HostRobotState & { join: JoinInfo })
   | (HostLandState & { join: JoinInfo })
   | (HostRacerState & { join: JoinInfo })
-  | (HostCupState & { join: JoinInfo });
+  | (HostCupState & { join: JoinInfo })
+  | (HostDragonState & { join: JoinInfo });
 
 export type ServerMsg =
   /** First message on every connection. A new serverId means the server restarted (maybe with new code). */

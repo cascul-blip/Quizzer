@@ -104,7 +104,7 @@ quizzer mcp [options]       Run the MCP server over stdio (for AI agents)
 - **Shuffling** is chosen in the lobby for each game; the quiz's shuffle settings in the editor are the defaults. Shuffling answer positions moves each answer to a random tile (and color), so the correct answer isn't always in the same place. The order is fixed when you press Start and is the same on the projector and every phone. True/False keeps True before False.
 - **Streaks**: after 4 correct answers in a row, a player gets 🔥x4 (x5, x6, …) next to their name on the leaderboard, the podium and their phone. A wrong or missed answer resets it.
 - **Show errors**: on the final screen of every game mode, this button swaps the results for a table of the **10 questions with the most wrong answers**, each with its correct answer, so you can go over them with the class. Press **Show results** to switch back. Classic and Racer count wrong answers only, not questions a player let time out; in the other modes a question can come up more than once, and every wrong answer counts.
-- **Protect from abuse**: a lobby checkbox, on by default, for **Tallest Tower**, **Submarine Squad**, **Tower Fight**, **Robot Attack** and **Cup of Death**. It slows down players who tap random answers instead of reading. The ✗ screen normally shows for 1 second; after **2 wrong answers in a row** it stays **3 seconds longer**, and after **3 or more in a row**, **4 seconds longer**, with a countdown on the phone. A correct answer resets it. Reloading the page doesn't skip the wait.
+- **Protect from abuse**: a lobby checkbox, on by default, for **Tallest Tower**, **Submarine Squad**, **Tower Fight**, **Robot Attack**, **Cup of Death** and **Dragon's Hoard**. It slows down players who tap random answers instead of reading. The ✗ screen normally shows for 1 second; after **2 wrong answers in a row** it stays **3 seconds longer**, and after **3 or more in a row**, **4 seconds longer**, with a countdown on the phone. A correct answer resets it. Reloading the page doesn't skip the wait.
 - **Results file**: a CSV of every finished game is saved in `data/results/`. The latest one is also at `http://localhost:8080/api/results/latest.csv` on the host computer.
 - **Reconnecting**: if a phone locks, refreshes or drops Wi-Fi, it rejoins as the same player with the same score. Players can also join after the game has started.
 - Only one game runs at a time. The admin, host controls and API only work from the host computer itself (`localhost`). Phones can only reach the player page.
@@ -244,6 +244,35 @@ Every player for themselves around a round wooden table in a western saloon. Cho
 
 **The last player standing wins.** If everyone left is poisoned in the same round, they share the win. A game with only one player runs until they're poisoned. If the host ends the game early, everyone still alive shares the win. The podium shows the standings and awards for **Most correct answers**, **Luckiest drinker** (most drinks survived), **Never thirsty** (most rounds safe without drinking) and **Unluckiest** (poisoned by their very first cup, earliest). The results CSV lists each player's rank, the round they were poisoned in, cups left, answers, drinks survived and rounds safe.
 
+## Dragon's Hoard mode
+
+A two-act game that starts cooperative and turns competitive. Choose **Game mode → 🐉 Dragon's Hoard** in the lobby. Settings: **Teams** (2–6, default 2, but never more teams than players: with 3 players and 3 teams everyone is their own team), **Dragon toughness** (Easy, Normal, Hard), **Battle time** (3, 5 or 7 minutes), **Fire breath** (every 30, 45 or 60 seconds) and **Scramble time** (2–5 minutes). The teams show in the lobby as in Land Grab, and the host can drag a name to another team. Teams only matter in Act 2. With a single player there is one team.
+
+**Act 1: Slay the Dragon (co-op).** The projector shows a dragon curled around a mountain of gold, with one health bar for the whole class. Everyone answers at their own pace, and **every correct answer is 1 hit**. The dragon has **players × 6 / 10 / 15** health (Easy / Normal / Hard), at least 30; a player who joins during the battle adds their hits (the bar keeps its percentage). Under 66% and under 33% health the dragon roars and the **fire breath comes 10 seconds sooner** (never more often than every 20 seconds).
+
+- **Fire breath.** A 3-second warning, then everyone's own question is paused and the whole class gets the **Shield of Faith** question (Ephesians 6:16): the question the class has gotten wrong most so far (never the same one twice in a row; a random one if nobody has missed anything yet). It has the question's own time limit, between 10 and 20 seconds, and ends early once everyone has answered. If **at least 2/3 of the connected players** get it right, the **Shield of Faith holds** and the dragon takes 5% of its health as bonus damage; otherwise the **fire gets through** and it heals 10%. The answer shows on the projector and every phone for 4 seconds, then the questions go on where they left off. A player who joins during a fire breath waits until it's over.
+- **The end of the battle.** The dragon is **slain** when its health reaches 0. If the battle time runs out, it **escapes with half its hoard**: Act 2 still happens, but Coins and Big pile chests pay half.
+
+**Act 2: The Hoard Scramble (teams).** After an 8-second transition (each phone shows "You're on Team ___!"), everyone keeps answering, and **every correct answer opens 1 of 3 chests** (10 seconds to tap one, or one opens by itself). Gold belongs to the team.
+
+| Chest | Chance | What it does |
+|---|---|---|
+| Coins | 35% | +25 gold (13 if the dragon escaped) |
+| Big pile | 20% | +60 gold (30 if the dragon escaped) |
+| Lucky charm | 8% | The player's next 3 coin chests pay double |
+| Grab 10% / Grab 25% | 10% / 4% | Take that share of another team's gold |
+| Dragon's last breath | 10% | The team loses 10% of its gold into the Jackpot |
+| Dragon scale | 4% | Blocks the next grab against the team |
+| Bats | 8% | Nothing |
+| Jackpot | 1% | The team wins the whole Jackpot |
+
+- **Grabs.** The phone lists the other teams with their gold; the player has 8 seconds, or the richest team is picked. A team with 0 gold can't be picked, and a team can only be grabbed from once every 5 seconds. A dragon scale blocks the grab ("Blocked by a dragon scale!"). With nobody to grab from (a single team, or every other team at 0), the chest pays as Coins.
+- **The Jackpot** starts at 100 gold + 10 per player and grows with every trap. It can't come up in the first 60 seconds of the scramble, or while it is empty, and starts again at 0 once it's won.
+
+**The team with the most gold when the scramble ends wins**; with equal gold, the team with more correct answers in Act 2. A player who joins during the scramble goes to the smallest team. If the host ends the game during Act 1, the dragon counts as escaped. The podium shows the team gold, the Act 1 result ("Dragon slain in 3:42!" or "The dragon escaped!") and awards for **Dragon slayer** (most hits), **Faithful Defender** (most Shield of Faith questions right), **Master thief** (most gold grabbed) and **Most correct answers**. The results CSV has one row per player: team, team rank and gold, correct, wrong, accuracy (Shield of Faith questions included), dragon hits, Shield of Faith right and wrong, chests opened, gold found, gold grabbed, the team's gold lost to grabs, gold lost to traps and jackpots won, plus the class's dragon result, time to slay and Shield of Faith held and failed.
+
+The painted art comes from `scripts/dragon-art.py` (the cave and the dragon) and `scripts/dragon-hoard-art.py` (everything else); the fire breath is drawn in code (`src/client/shared/dragon-art.tsx`).
+
 ## Music
 
 Every game mode has **built-in background music** on the projector (phones stay quiet). It's composed in code, so it adds nothing to the download and needs no licenses:
@@ -258,6 +287,7 @@ Every game mode has **built-in background music** on the projector (phones stay 
 | Land Grab | Calm ambient piano | Speeds up and adds an orchestra as a team gets close to closing a ring; calms down again if the ring is broken |
 | Racer | Sunny late-80s arcade-racing chiptune | Tempo and layers rise with the car's speed; slow and sparse when crashed |
 | Cup of Death | Original spaghetti-western themes: whistle, twangy guitar, galloping hooves; a honky-tonk saloon piano in the lobby | The gallop speeds up and strings, brass and a church bell join as the quiz timer runs out; a heartbeat and a tolling bell while the cups are picked and drunk |
+| Dragon's Hoard | A quiet cave with deep strings and the dragon breathing; a heroic battle theme with brass, drums and choir; a playful plucked scramble with coin sounds | The battle gets more intense as the dragon weakens and the battle clock runs out; a rising rumble, then war drums, during fire breath; the scramble speeds up as its clock runs out |
 
 The lobby plays the music of whichever game mode is selected. Use the **🎵 button and slider** in the projector's top bar to turn music off or change its volume. The 🔊 button still mutes everything.
 
@@ -275,6 +305,7 @@ Put audio files (MP3, OGG, M4A, WAV, WebM or FLAC) in the **`data/music`** folde
 | `land-lobby` · `land-play` · `land-results` | Land Grab |
 | `racer-lobby` · `racer-drive` · `racer-results` | Racer |
 | `cup-lobby` · `cup-quiz` · `cup-drink` · `cup-results` | Cup of Death: lobby, dice and quiz, picking and drinking, final results |
+| `dragon-lobby` · `dragon-battle` · `dragon-fire` · `dragon-scramble` · `dragon-results` | Dragon's Hoard: lobby, battle, fire breath (warning and Shield of Faith question), hoard scramble, final podium |
 
 For example, `data/music/submarine-chase.mp3`. Your files loop; they don't speed up with the game like the built-in music does. Only use music you're allowed to play: royalty-free or Creative Commons tracks (e.g. Pixabay Music, OpenGameArt, or incompetech with credit). Delete a file to go back to the built-in track.
 

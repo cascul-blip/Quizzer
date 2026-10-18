@@ -1594,3 +1594,391 @@ a.btn {
     animation: none;
   }
 }
+
+/* ===== Dragon's Hoard art (dragon-art.tsx) ===== */
+
+.dragon-art {
+  display: block;
+  width: 100%;
+  height: auto;
+  user-select: none;
+}
+
+/* The team color fills the picture's *-cloth mask; the picture (its cloth see-through shading) goes on top in the same box. */
+.dragon-art.tinted {
+  position: relative;
+}
+
+.dragon-art.tinted img {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.dragon-art.tinted .tint {
+  position: absolute;
+  inset: 0;
+  mask-size: 100% 100%;
+  -webkit-mask-size: 100% 100%;
+}
+
+.dragon-cave {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background-color: #160a12;
+  background-size: cover;
+  background-position: center;
+}
+
+/* The hoard-* pictures share one canvas, bottom-centred. */
+.dragon-cave .hoard-scattered {
+  position: absolute;
+  left: 50%;
+  bottom: 1%;
+  width: min(80%, 140vh);
+  transform: translateX(-50%);
+}
+
+.dragon-cave .cave-escaped {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 10%, rgba(180, 210, 255, 0.35), transparent 60%);
+  animation: rise 1.2s ease-out both;
+}
+
+.hoard {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Every dragon-* picture is on this one canvas, facing left. */
+.dragon {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1122 / 686;
+  container-type: inline-size;
+}
+
+.dragon .dragon-body,
+.dragon .dragon-jaw {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.dragon .dragon-jaw {
+  transition: transform 0.4s ease-out;
+}
+
+.dragon.asleep {
+  animation: dragon-breathe 4s ease-in-out infinite;
+  transform-origin: 50% 100%;
+}
+
+/* Rearing up: the head (on the left) lifts, pivoting on the hindquarters. */
+.dragon.rearing {
+  animation: dragon-rear 0.6s ease-out both;
+  transform-origin: 80% 95%;
+}
+
+/* Zzz rising off the sleeping head. The asleep picture's head lies low on the left, about 14% / 62%. */
+.dragon-zzz {
+  position: absolute;
+  z-index: 2;
+  left: 9%;
+  top: 48%;
+  pointer-events: none;
+}
+
+.dragon-zzz i {
+  position: absolute;
+  font-style: normal;
+  font-weight: 900;
+  font-size: clamp(14px, 4.5cqw, 64px);
+  color: #e8dcff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+  opacity: 0;
+  animation: dragon-zzz 3s ease-out infinite;
+}
+
+.dragon-zzz i:nth-child(2) {
+  font-size: 0.8em;
+  animation-delay: 1s;
+}
+
+.dragon-zzz i:nth-child(3) {
+  font-size: 0.6em;
+  animation-delay: 2s;
+}
+
+@keyframes dragon-zzz {
+  0% {
+    transform: translate(0, 0) scale(0.6);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-1.2em, -2.4em) scale(1.2);
+    opacity: 0;
+  }
+}
+
+.dragon.flinch {
+  animation: dragon-flinch 0.5s ease-out 0.3s both;
+}
+
+.dragon.glow {
+  filter: drop-shadow(0 0 30px rgba(90, 255, 120, 0.8)) brightness(1.15);
+  transition: filter 0.6s;
+}
+
+/* The slain picture is already collapsed: it lands with a thump. */
+.dragon.crash {
+  animation: dragon-crash 0.9s cubic-bezier(0.5, 0, 0.8, 0.4) both;
+}
+
+/* The escape: it gathers itself, then slides away up and to the left, fading out. */
+.dragon.fly-away {
+  animation: dragon-fly 2.4s ease-in 0.4s both;
+}
+
+@keyframes dragon-breathe {
+  0%,
+  100% {
+    transform: scale(1, 1);
+  }
+  50% {
+    transform: scale(1.01, 1.03);
+  }
+}
+
+@keyframes dragon-rear {
+  to {
+    transform: rotate(5deg) translateY(-3%);
+  }
+}
+
+/* The fire bounced off the shield (on the left) back into its face. */
+@keyframes dragon-flinch {
+  0%,
+  100% {
+    transform: none;
+  }
+  30% {
+    transform: translateX(3%) rotate(-2deg);
+  }
+  60% {
+    transform: translateX(-1%) rotate(1deg);
+  }
+}
+
+@keyframes dragon-crash {
+  0% {
+    transform: translateY(-6%);
+    opacity: 0.6;
+  }
+  60% {
+    transform: translateY(1.5%);
+    opacity: 1;
+  }
+  80% {
+    transform: translateY(-0.5%);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+@keyframes dragon-fly {
+  0% {
+    transform: none;
+    opacity: 1;
+  }
+  20% {
+    transform: translateY(3%) scale(1.02);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-70%, -60%) scale(0.5) rotate(6deg);
+    opacity: 0;
+  }
+}
+
+.fire-breath {
+  pointer-events: none;
+}
+
+.fire-breath svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.rune-shield {
+  pointer-events: none;
+}
+
+.rune-shield .rune-img {
+  width: 100%;
+}
+
+.rune-shield.raised {
+  animation: rune-pulse 1.4s ease-in-out infinite;
+}
+
+.rune-shield.held {
+  filter: drop-shadow(0 0 8px #fff1b0) brightness(1.06);
+  animation: pop-in 0.4s ease-out;
+}
+
+.rune-shield.broken {
+  opacity: 0.35;
+  filter: grayscale(1);
+  animation: shield-crack 0.5s ease-out both;
+}
+
+/* The picture already has a gold halo. This pulse is only a little extra. The grab cooldown keeps shield-pulse. */
+@keyframes rune-pulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 4px #ffd23f);
+    transform: scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 10px #ffb02e);
+    transform: scale(1.03);
+  }
+}
+
+@keyframes shield-pulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 6px #7fe0ff);
+    transform: scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 18px #7fe0ff);
+    transform: scale(1.04);
+  }
+}
+
+@keyframes shield-crack {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  40% {
+    transform: scale(1.1) rotate(4deg);
+  }
+  100% {
+    transform: scale(0.9) rotate(-6deg);
+    opacity: 0.35;
+  }
+}
+
+.team-banner {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.team-banner .banner-img {
+  width: 100%;
+}
+
+/* Under the gold emblem, on the plain cloth. */
+.team-banner-name {
+  position: absolute;
+  top: 63%;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+  writing-mode: horizontal-tb;
+}
+
+.team-pile {
+  width: calc(100% * var(--grow, 1));
+  margin: 0 auto;
+  transition: width 0.6s ease-out;
+}
+
+.jackpot-pile .jackpot-img {
+  filter: drop-shadow(0 0 24px #ffd23f);
+}
+
+.chest {
+  display: inline-block;
+  width: 100%;
+}
+
+.chest.open {
+  animation: pop-in 0.35s ease-out;
+}
+
+.loot-icon {
+  position: relative;
+  display: inline-block;
+  width: 1.6em;
+  height: 1.6em;
+  vertical-align: middle;
+  container-type: inline-size;
+}
+
+.loot-icon .loot-img {
+  height: 100%;
+}
+
+/* A small corner chip on the grab icon. The picture's bottom-right is empty, so the chip sits there. */
+.loot-badge {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  padding: 0 0.18em;
+  border-radius: 999px;
+  background: #8e1330;
+  border: 1px solid #ffd23f;
+  color: #fff;
+  font-weight: 900;
+  font-size: clamp(8px, 18cqw, 20px);
+  line-height: 1.2;
+}
+
+.dragon-head {
+  display: inline-block;
+  height: 28px;
+  aspect-ratio: 320 / 402;
+}
+
+.dragon-head .head-img {
+  height: 100%;
+}
+
+.dragon-head.stage-2 .head-img {
+  filter: brightness(0.75) saturate(0.8);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dragon.asleep,
+  .dragon.rearing,
+  .dragon.flinch,
+  .dragon.crash,
+  .dragon.fly-away,
+  .dragon-zzz i,
+  .rune-shield.raised {
+    animation: none;
+  }
+
+  .dragon-zzz i {
+    opacity: 1;
+  }
+}
