@@ -119,7 +119,7 @@ export function startServer(opts: ServerOptions): RunningServer {
       const admin = isAdminRequest(srv.requestIP(req)?.address, req.headers);
 
       if (path === "/ws") {
-        if (srv.upgrade(req, { data: { admin, role: "player", playerId: null, lastSent: null } })) return undefined;
+        if (srv.upgrade(req, { data: { admin, role: "player", playerId: null, lastSent: null, lastView: null, behind: false } })) return undefined;
         return new Response("Expected a WebSocket upgrade", { status: 426 });
       }
 
@@ -163,6 +163,7 @@ export function startServer(opts: ServerOptions): RunningServer {
       perMessageDeflate: true,
       open: (ws) => hub.onOpen(ws),
       message: (ws, msg) => hub.onMessage(ws, msg),
+      drain: (ws) => hub.onDrain(ws),
       close: (ws) => hub.onClose(ws),
     },
   });

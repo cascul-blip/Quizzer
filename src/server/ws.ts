@@ -4,6 +4,7 @@ import type { ClientMsg, CupSettings, FightSettings, GameMode, HostView, JoinInf
 import { answerOf } from "../shared/answer-match.ts";
 import { cleanAvatar } from "../shared/avatars.ts";
 import { ValidationError } from "../shared/quiz-schema.ts";
+import { diffView } from "../shared/view-patch.ts";
 import { CupGame } from "./game/cup.ts";
 import { FightGame } from "./game/fight.ts";
 import { DEFAULT_CUP, DEFAULT_FIGHT, DEFAULT_LAND, DEFAULT_TOWER, Game, GameError, type Clock } from "./game/game.ts";
@@ -23,6 +24,10 @@ export interface SocketData {
   playerId: string | null;
   /** Comparison key of the last player.state sent, so unchanged snapshots aren't resent. */
   lastSent: string | null;
+  /** The view the phone holds now (plain JSON), which the next patch is made against. */
+  lastView: unknown;
+  /** A snapshot was held back because the socket hadn't sent the previous one yet. */
+  behind: boolean;
 }
 
 type WS = ServerWebSocket<SocketData>;
@@ -61,7 +66,7 @@ const compressFor = (ws: WS) => ws.data.role !== "host";
 
 export type LiveGame = Game | TowerGame | SubGame | FightGame | RobotGame | LandGame | RacerGame | CupGame;
 
-/** Owns the single live game and every connected socket; pushes full view snapshots on each change. */
+/** Owns the single live game and every connected socket; pushes each phone its view (or a patch of it) on every change. */
 export class GameHub {
   game: LiveGame | null = null;
   lastResults: LastResults | null = null;
@@ -153,14 +158,37 @@ export class GameHub {
     ws.send(JSON.stringify(msg), compressFor(ws));
   }
 
-  /** Push the socket's current view. Unless forced, a player whose view hasn't changed is skipped. */
+  /**
+   * Push the socket's current view, as a patch when that is smaller. Unless forced, a player
+   * whose view hasn't changed is skipped. A phone that is still taking the previous message
+   * is skipped too, and gets the latest view once it drains instead of a backlog of stale ones.
+   */
   private sendState(ws: WS, force = true): void {
     if (ws.data.role === "host") return this.send(ws, { type: "host.state", view: this.hostView() });
+    if (ws.getBufferedAmount() > 0) {
+      ws.data.behind = true;
+      return;
+    }
     const view = this.playerView(ws);
     const key = viewKey(view, this.opts.clock?.now() ?? Date.now());
     if (!force && key === ws.data.lastSent) return;
     ws.data.lastSent = key;
-    ws.send(JSON.stringify({ type: "player.state", view } satisfies ServerMsg), compressFor(ws));
+    const full = JSON.stringify({ type: "player.state", view } satisfies ServerMsg);
+    const plain: unknown = JSON.parse(full).view;
+    let out = full;
+    if (ws.data.lastView !== null) {
+      const patch = JSON.stringify({ type: "player.patch", ops: diffView(ws.data.lastView, plain) } satisfies ServerMsg);
+      if (patch.length < full.length) out = patch;
+    }
+    ws.data.lastView = plain;
+    ws.send(out, compressFor(ws));
+  }
+
+  /** The socket sent everything it had queued: catch up a phone whose snapshot was held back. */
+  onDrain(ws: WS): void {
+    if (!ws.data.behind) return;
+    ws.data.behind = false;
+    this.sendState(ws);
   }
 
   /** Coalesce bursts of changes (e.g. many answers) into one push per tick. */

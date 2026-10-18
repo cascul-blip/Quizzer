@@ -11,14 +11,26 @@ import { startServer, type RunningServer } from "../src/server/http.ts";
 import { isAdminRequest } from "../src/server/network.ts";
 import { QuizStore } from "../src/server/quiz/store.ts";
 import { CUP_ROLL_MS, CUP_SIP_MS, ROBOT_MOVE_MS, cupQuizMs, robotQuizMs, type ClientMsg, type HostView, type PlayerView, type ServerMsg } from "../src/shared/protocol.ts";
+import { applyPatch } from "../src/shared/view-patch.ts";
 import { FakeClock, tempDir } from "./helpers.ts";
 
 class TestSocket {
   msgs: ServerMsg[] = [];
+  /** Raw messages as received, before patches are turned back into player.state. */
+  raw: ServerMsg[] = [];
+  /** The player's view as the phone holds it, built from snapshots and patches. */
+  view: PlayerView | null = null;
+  token: string | null = null;
   private waiters: (() => void)[] = [];
   private constructor(readonly ws: WebSocket) {
     ws.onmessage = (e) => {
-      this.msgs.push(JSON.parse(e.data));
+      const msg: ServerMsg = JSON.parse(e.data);
+      this.raw.push(msg);
+      if (msg.type === "player.state") this.view = msg.view;
+      if (msg.type === "joined") this.token = msg.token;
+      // Tests read whole views, as the phone ends up with them.
+      if (msg.type === "player.patch") this.view = applyPatch(this.view!, msg.ops);
+      this.msgs.push(msg.type === "player.patch" ? { type: "player.state", view: this.view! } : msg);
       this.waiters.splice(0).forEach((w) => w());
     };
   }
@@ -58,6 +70,21 @@ class TestSocket {
   close() {
     this.ws.close();
   }
+}
+
+/** Countdowns are left out: a snapshot where only time passed isn't sent, so the phone's can be older. */
+const withoutCountdowns = (v: unknown): unknown =>
+  JSON.parse(JSON.stringify(v, (k, x) => (/(remaining|decision|repair|locked|empty)Ms$/i.test(k) ? undefined : x)));
+
+/** The view a phone built from patches matches a fresh snapshot of the same player. */
+async function expectInSync(s: TestSocket, wsUrl: string) {
+  await new Promise((r) => setTimeout(r, 150)); // past the activity throttle
+  const fresh = await TestSocket.open(wsUrl);
+  fresh.send({ type: "resume", token: s.token! });
+  const st = await fresh.playerState((v) => v.kind !== "none");
+  expect(s.raw.some((m) => m.type === "player.patch")).toBe(true);
+  expect(withoutCountdowns(s.view)).toEqual(withoutCountdowns(st.view));
+  fresh.close();
 }
 
 let t: ReturnType<typeof tempDir>;
@@ -538,6 +565,7 @@ describe("Tower Fight over WebSockets", () => {
     clock.advance(RESULT_MS);
     srv.hub.broadcast();
     await red.playerState((v) => v.kind === "fight" && v.state === "question");
+    await expectInSync(red, wsUrl);
 
     host.send({ type: "host.end" });
     const podium = await host.hostState((v) => v.kind === "fight" && v.phase === "podium");
@@ -608,6 +636,7 @@ describe("Robot Attack over WebSockets", () => {
     ann.send({ type: "robot.move", dir });
     const moved = await ann.playerState((v) => v.kind === "robot" && v.me.points === 0);
     expect(moved.view.kind === "robot" && moved.view.me.x).toBe(start!.x + (dir === "right" ? 2 : -2));
+    await expectInSync(ann, wsUrl);
     await host.hostState((v) => v.kind === "robot" && v.players.some((p) => p.nickname === "Ann" && p.x === start!.x + (dir === "right" ? 2 : -2)));
 
     // Bob stood still, so the lasers hit him.
@@ -769,6 +798,7 @@ describe("Land Grab over WebSockets", () => {
     await ann.playerState((v) => v.kind === "land" && v.claims === 2 && v.board?.owners[0] === 0);
     const placed = await host.hostState((v) => v.kind === "land" && v.lastPlace?.tile === 0);
     expect(placed.view.kind === "land" && placed.view.teams.map((t) => t.tiles)).toEqual([2, 1]);
+    await expectInSync(ann, wsUrl);
     ann.send({ type: "land.done" });
     const back = await ann.playerState((v) => v.kind === "land" && v.state === "question");
     expect(back.view.kind === "land" && [back.view.claims, back.view.board]).toEqual([2, null]);
