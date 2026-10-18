@@ -147,7 +147,7 @@ function Battle({ view }: { view: DragonView }) {
           <div class="countdown-label">
             A dragon sleeps on a mountain of gold. Wake it and fight it together!
             <br />
-            Every right answer is a hit. When it breathes fire, everyone answers the same question to raise the rune shield.
+            Every right answer is a hit. When it breathes fire, everyone answers the same question to raise the Shield of Faith.
           </div>
           <div class="countdown-num" key={countdown}>
             {Math.max(1, countdown)}
@@ -185,7 +185,7 @@ function FireOverlay({ view }: { view: DragonView }) {
       <div class="dragon-warning" role="alert">
         <div class="dragon-warning-icon">🔥</div>
         <div>The dragon is about to breathe fire!</div>
-        <div class="dragon-warning-sub">Raise the rune shield!</div>
+        <div class="dragon-warning-sub">Raise the Shield of Faith!</div>
       </div>
     );
   }
@@ -196,10 +196,10 @@ function FireOverlay({ view }: { view: DragonView }) {
   return (
     <div class={`rune-panel ${reveal ? "reveal" : ""}`}>
       <div class="rune-head">
-        <span class="rune-tag">ᛟ Rune question</span>
+        <span class="rune-tag">Shield of Faith</span>
         {reveal ? (
           <span class={`rune-verdict ${f.held ? "good" : "bad"}`}>
-            {f.held ? `🛡 Shield held! ${f.right} of ${f.needed} needed got it right. −${f.amount} health` : `🔥 The fire got through! ${f.right} right, ${f.needed} needed. The dragon heals +${f.amount}`}
+            {f.held ? `🛡 Shield held! ${f.right} got it right, ${f.needed} needed. −${f.amount} health` : `🔥 The fire got through! ${f.right} got it right, ${f.needed} needed. The dragon heals +${f.amount}`}
           </span>
         ) : (
           <span class="rune-count">
@@ -371,7 +371,7 @@ function DragonPodium({ view, send }: { view: DragonView; send: Send }) {
         {r && (r.runeHeld > 0 || r.runeFailed > 0) && (
           <span class="dim">
             {" "}
-            · Rune shield held {plural(r.runeHeld, "time")}, failed {plural(r.runeFailed, "time")}
+            · Shield of Faith held {plural(r.runeHeld, "time")}, failed {plural(r.runeFailed, "time")}
           </span>
         )}
       </p>
@@ -408,7 +408,7 @@ function DragonPodium({ view, send }: { view: DragonView; send: Send }) {
           )}
           <div class="awards dragon-awards">
             <Award icon="⚔️" title="Dragon slayer" award={a?.dragonSlayer ?? null} unit="" valueText={(n) => plural(n, "hit")} />
-            <Award icon="ᛟ" title="Rune master" award={a?.runeMaster ?? null} unit="" valueText={(n) => `${plural(n, "rune question")} right`} />
+            <Award icon="🛡" title="Faithful Defender" award={a?.runeMaster ?? null} unit="" valueText={(n) => `${n} Shield of Faith right`} />
             <Award icon="🖐️" title="Master thief" award={a?.masterThief ?? null} unit="gold grabbed" />
             <Award icon="🎯" title="Most correct answers" award={a?.mostCorrect ?? null} unit="correct" />
           </div>

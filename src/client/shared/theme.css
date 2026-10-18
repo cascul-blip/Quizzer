@@ -1832,7 +1832,7 @@ a.btn {
 }
 
 .rune-shield.held {
-  filter: drop-shadow(0 0 12px #fff1b0) drop-shadow(0 0 28px #ffb02e) brightness(1.2);
+  filter: drop-shadow(0 0 8px #fff1b0) brightness(1.06);
   animation: pop-in 0.4s ease-out;
 }
 
@@ -1842,16 +1842,16 @@ a.btn {
   animation: shield-crack 0.5s ease-out both;
 }
 
-/* The rune ring is gold; the glow matches it. The grab cooldown keeps the cooler shield-pulse. */
+/* The picture already has a gold halo. This pulse is only a little extra. The grab cooldown keeps shield-pulse. */
 @keyframes rune-pulse {
   0%,
   100% {
-    filter: drop-shadow(0 0 6px #ffd23f);
+    filter: drop-shadow(0 0 4px #ffd23f);
     transform: scale(1);
   }
   50% {
-    filter: drop-shadow(0 0 18px #ffb02e);
-    transform: scale(1.05);
+    filter: drop-shadow(0 0 10px #ffb02e);
+    transform: scale(1.03);
   }
 }
 

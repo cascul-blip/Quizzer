@@ -3801,14 +3801,15 @@ select {
   }
 }
 
-/* The blast's right edge sits on the snout tip and it spreads left, into the rune shield. */
+/* The blast's right edge sits on the snout tip and it spreads left, into the Shield of Faith.
+   The shield is close, so a held blast is short; a broken one keeps going. */
 .lair .fire-breath {
   position: absolute;
   z-index: 2;
   right: 86.4%;
-  top: 20.7%;
-  width: 74%;
-  height: 40%;
+  top: 29.7%;
+  width: 32%;
+  height: 22%;
   transform-origin: 100% 50%;
   animation: fire-out 0.6s ease-out both;
 }
@@ -3841,13 +3842,14 @@ select {
   }
 }
 
-/* On the left, where the left-facing dragon breathes. */
+/* In front of the snout during fire (the lair is the smaller fire-phase size).
+   The picture is a solid shield plus its own halo, so the metal sits just left of the mouth. */
 .dragon-wrap > .rune-shield {
   position: absolute;
   z-index: 2;
-  left: 6vw;
-  top: 12vh;
-  width: min(22vh, 18vw);
+  width: min(28vh, 22vw);
+  left: calc(50% - min(44vw, 62vh) * 0.92);
+  top: 10.5vh;
 }
 
 .dragon-hits {

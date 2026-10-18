@@ -153,8 +153,8 @@ export function buildDragonResultsCsv(game: DragonGame): string {
     "Wrong",
     "Accuracy %",
     "Dragon hits",
-    "Rune questions right",
-    "Rune questions wrong",
+    "Shield of Faith right",
+    "Shield of Faith wrong",
     "Chests opened",
     "Gold found",
     "Gold grabbed",
@@ -163,8 +163,8 @@ export function buildDragonResultsCsv(game: DragonGame): string {
     "Jackpots won",
     "Dragon",
     "Time to slay",
-    "Rune rounds held",
-    "Rune rounds failed",
+    "Shield of Faith held",
+    "Shield of Faith failed",
   ];
   const r = game.result();
   const dragon = r.slain ? "Slain" : "Escaped";

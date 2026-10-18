@@ -914,7 +914,7 @@ export class DragonGame {
         slainMs: this.slainMs,
         awards: [
           ...(won(a.dragonSlayer) ? ["Dragon slayer"] : []),
-          ...(won(a.runeMaster) ? ["Rune master"] : []),
+          ...(won(a.runeMaster) ? ["Faithful Defender"] : []),
           ...(won(a.masterThief) ? ["Master thief"] : []),
           ...(won(a.mostCorrect) ? ["Most correct answers"] : []),
         ],

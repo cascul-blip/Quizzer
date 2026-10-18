@@ -117,7 +117,7 @@ export const DRAGON_ART_SLOTS: readonly DragonArtSlot[] = [
   { id: "dragon-jaw", projector: DRAGON, phone: null, note: "Lower jaw plus the dark inner mouth, for healthy and wounded. Hinges at JAW_HINGE." },
   { id: "dragon-jaw-badly-wounded", projector: DRAGON, phone: null, note: "The same jaw, darkened to match the badly wounded body." },
   { id: "dragon-head", projector: { w: 320, h: 402 }, phone: { w: 160, h: 201 }, note: "The head alone, mouth shut, for the phone's health bar." },
-  { id: "rune-shield", projector: { w: 640, h: 640 }, phone: { w: 320, h: 320 }, note: "A glowing golden ring of runes. Transparent." },
+  { id: "rune-shield", projector: { w: 640, h: 640 }, phone: { w: 320, h: 320 }, note: "The Shield of Faith: a gold shield with a glowing cross. Transparent." },
   { id: "hoard-full", projector: HOARD, phone: null, note: "The whole hoard. All hoard-* share this canvas, bottom-centred." },
   { id: "hoard-half", projector: HOARD, phone: null, note: "What's left after the dragon escaped with the rest." },
   { id: "hoard-scattered", projector: HOARD, phone: null, note: "The hoard burst across the floor (Act 2)." },
@@ -315,7 +315,7 @@ export function FireBreath({ class: cls = "" }: { class?: string }) {
   );
 }
 
-/** A glowing ring of runes. */
+/** The Shield of Faith (the file is still rune-shield.webp). */
 export function RuneShield({ class: cls = "" }: { class?: string }) {
   return (
     <div class={`rune-shield ${cls}`}>

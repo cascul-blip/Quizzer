@@ -2443,6 +2443,11 @@ h1 {
   max-width: 240px;
 }
 
+.q-head .rune-tag {
+  display: block;
+  font-size: 0.75em;
+}
+
 .rune-tag {
   color: #ffd36a;
   font-weight: 900;

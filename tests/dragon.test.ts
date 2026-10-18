@@ -659,7 +659,7 @@ describe("the end", () => {
     const csv = buildDragonResultsCsv(game);
     const [header, first] = csv.replace("﻿", "").split("\r\n");
     expect(header).toBe(
-      "Team,Team rank,Team gold,Nickname,Correct,Wrong,Accuracy %,Dragon hits,Rune questions right,Rune questions wrong,Chests opened,Gold found,Gold grabbed,Team gold lost to grabs,Gold lost to traps,Jackpots won,Dragon,Time to slay,Rune rounds held,Rune rounds failed",
+      "Team,Team rank,Team gold,Nickname,Correct,Wrong,Accuracy %,Dragon hits,Shield of Faith right,Shield of Faith wrong,Chests opened,Gold found,Gold grabbed,Team gold lost to grabs,Gold lost to traps,Jackpots won,Dragon,Time to slay,Shield of Faith held,Shield of Faith failed",
     );
     expect(first).toMatch(/^Blue,1,25,/);
     expect(csv).toContain(",Slain,");

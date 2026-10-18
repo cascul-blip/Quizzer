@@ -5,9 +5,12 @@ and numpy; reuses the green-screen keyer from dragon-art.py.
 
     python3 scripts/dragon-hoard-art.py [preview.png]
     python3 scripts/dragon-hoard-art.py --src DIR --out DIR [preview.png]
+    python3 scripts/dragon-hoard-art.py --shield-only [preview-shield.png]
 
 This writes (projector, plus phone/ copies at half size where the spec says phone):
-  rune-shield.webp            glowing ring of runes, additive-style alpha        (+ phone)
+  rune-shield.webp            the Shield of Faith (Ephesians 6:16): a gold shield with a
+                              glowing cross and a soft gold halo; the file name stays
+                              rune-shield so the client needs no change          (+ phone)
   hoard-full/half/scattered   the three hoard sizes on ONE shared canvas (same bottom
                               centre), so they swap in place
   team-pile.webp              coins on a cloth with a pennant: the cloth and pennant are
@@ -30,14 +33,16 @@ In HTML/CSS: a div with background:teamColor; mask-image:url(banner-cloth.webp);
 mask-size:100% 100%, with an <img src=banner.webp> stacked on it at the same size.
 
 Sources (Grok Imagine, 1280x720 JPG; flat green #00ff00 backgrounds unless noted). Prompts:
-rune-shield.jpg (pure black background, keyed by brightness):
-  "A big glowing magic shield made of a perfect circle of glowing runes, seen straight on: a
-   thick bright golden-yellow ring of carved ancient runic symbols, an inner thinner ring of
-   smaller runes, a faint glowing hexagonal rune pattern filling the middle, bright white-hot
-   glow on the rune lines with golden yellow (#ffd23f) and soft violet light haze around
-   them, magical energy sparks, centred, the whole circle visible with empty space around it,
-   painted fantasy game effect, on a perfectly plain pure black background, no text, no
-   letters of any real alphabet"
+shield-of-faith.jpg (builds rune-shield.webp; the halo is added here, not generated):
+  "The Shield of Faith: a single large round-topped heater shield seen straight on, polished
+   gold with a raised white-gold cross filling the centre of the shield, soft warm holy light
+   glowing from the cross, a thin ornate gold rim with simple elegant engraved borders,
+   gentle and reverent, protective, not a weapon, no spikes, no swords, centred and fully
+   visible with plenty of empty space around it, bold painted cartoon game asset, soft
+   painterly shading, clean dark outlines, warm golden (#ffd23f) light, isolated on a
+   perfectly flat plain pure green (#00ff00) background, no glow on the background, no
+   shadow, no text, no runes, no letters"
+v1-rune-shield.jpg is the earlier circle of runes (black background), kept for reference.
 hoard-full.jpg:
   "A large mountain of treasure: a big heaped pile of shiny gold coins with goblets, a
    jewelled crown, red rubies, green emeralds and purple amethysts, a few gold chains, seen
@@ -128,7 +133,9 @@ SRC_DEFAULT = HERE / "dragon-art"
 OUT_DEFAULT = HERE.parent / "src/client/shared/dragon"
 
 # ---- names and sizes: change these when the client wants other ones -------------------
-RUNE = ("rune-shield", "rune-shield", 640)  # (source, output, size of the square)
+RUNE = ("shield-of-faith", "rune-shield", 640)  # (source, output, size of the square canvas)
+SHIELD_FILL = 0.80  # the shield's height as a share of the canvas; the rest is halo
+SHIELD_GLOW = [(26, 0.95, "#ffd23f"), (9, 0.6, "#fff4c2")]  # (blur radius px, strength, colour), outer first
 HOARD = [("hoard-full", "hoard-full"), ("hoard-half", "hoard-half"), ("hoard-scattered", "hoard-scattered")]
 HOARD_WIDTH = 1000
 TEAM_PILE = ("team-pile", "team-pile", 640)  # (source, output, max side); mask is <output>-cloth
@@ -295,20 +302,74 @@ def tame_glow(im: Image.Image) -> Image.Image:
     return Image.fromarray(a.astype(np.uint8), "RGBA")
 
 
+def build_shield(src: Path) -> Image.Image:
+    """The shield keyed off green, centred on a square canvas, with a soft gold halo behind it
+    so it reads over the dragon and matches the glow of the treasure."""
+    shield = crop(keyed(src, RUNE[0]), 2)
+    size = RUNE[2]
+    s = size * SHIELD_FILL / shield.height
+    shield = shield.resize((round(shield.width * s), round(shield.height * s)), Image.Resampling.LANCZOS)
+    canvas = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    pos = ((size - shield.width) // 2, (size - shield.height) // 2)
+    sil = Image.new("L", (size, size), 0)
+    sil.paste(shield.getchannel("A"), pos)
+    for radius, strength, colour in SHIELD_GLOW:
+        halo = np.asarray(sil.filter(ImageFilter.GaussianBlur(radius)), np.float32) / 255
+        halo = np.clip(halo * 1.6, 0, 1) * strength
+        layer = Image.new("RGBA", (size, size), colour)
+        layer.putalpha(Image.fromarray((halo * 255).astype(np.uint8)))
+        canvas.alpha_composite(layer)
+    canvas.alpha_composite(shield, pos)
+    return canvas
+
+
+def preview_shield(path: str, shield: Image.Image, out_dir: Path) -> None:
+    """Shield alone at full size on purple | over the dragon in the cave | phone size."""
+    M = 20
+    cave = Image.open(out_dir / "cave.webp").convert("RGBA")
+    d = Image.open(out_dir / "dragon-healthy.webp")
+    jaw = Image.open(out_dir / f"{da.JAW_NAME}.webp")
+    dragon = Image.new("RGBA", d.size, (0, 0, 0, 0))
+    dragon.alpha_composite(jaw)
+    dragon.alpha_composite(d)
+    scene = cave.copy()
+    dw = round(scene.width * 0.72)
+    dragon = dragon.resize((dw, round(dw * d.height / d.width)), Image.Resampling.LANCZOS)
+    scene.alpha_composite(dragon, ((scene.width - dw) // 2, scene.height - dragon.height - 20))
+    # Roughly where the client would raise it: in front of the dragon's head.
+    sh = shield.resize((340, 340), Image.Resampling.LANCZOS)
+    scene.alpha_composite(sh, (150, 120))
+    phone = shield.resize((shield.width // 2, shield.height // 2), Image.Resampling.LANCZOS)
+    W = M + shield.width + M + scene.width + M
+    H = 34 + max(shield.height + 34 + phone.height, scene.height) + 2 * M
+    sheet = da.purple(W, H)
+    dr = ImageDraw.Draw(sheet)
+    dr.text((M, M), "rune-shield.webp 640x640 on purple (actual size)", fill=(255, 210, 63, 255))
+    dr.text((2 * M + shield.width, M), "over dragon-healthy + jaw in cave.webp (1344x768, shield at 340 px)", fill=(255, 210, 63, 255))
+    sheet.alpha_composite(shield, (M, M + 34))
+    dr.text((M, M + 34 + shield.height + 8), "phone/rune-shield.webp 320x320 (actual size)", fill=(255, 210, 63, 255))
+    sheet.alpha_composite(phone, (M, M + 34 + shield.height + 34))
+    sheet.alpha_composite(scene, (2 * M + shield.width, M + 34))
+    sheet.convert("RGB").save(path)
+    print(path)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--src", type=Path, default=SRC_DEFAULT)
     ap.add_argument("--out", type=Path, default=OUT_DEFAULT)
+    ap.add_argument("--shield-only", action="store_true", help="only rebuild rune-shield.webp (+ phone)")
     ap.add_argument("preview", nargs="?")
     args = ap.parse_args()
     src, out = args.src, args.out
     res: dict[str, Image.Image] = {}
 
-    rune = crop(glow_key(Image.open(src / f"{RUNE[0]}.jpg")), 0)
-    side = max(rune.size)
-    sq = Image.new("RGBA", (side, side), (0, 0, 0, 0))
-    sq.alpha_composite(rune, ((side - rune.width) // 2, (side - rune.height) // 2))
-    res[RUNE[1]] = sq.resize((RUNE[2], RUNE[2]), Image.Resampling.LANCZOS)
+    res[RUNE[1]] = build_shield(src)
+    if args.shield_only:
+        save(res[RUNE[1]], out, RUNE[1])
+        if args.preview:
+            preview_shield(args.preview, res[RUNE[1]], out)
+        return
 
     for (stem, name), im in zip(HOARD, shared_canvas([keyed(src, s) for s, _ in HOARD], HOARD_WIDTH)):
         res[name] = im
@@ -381,7 +442,7 @@ def preview(path: str, res: dict[str, Image.Image], src: Path) -> None:
             stand.append(im)
     row("2. Final stages: healthy | wounded | badly wounded | dragon-asleep (lobby)", stand, 260)
 
-    # Rune shield over the dragon in the cave.
+    # The shield (rune-shield.webp) over the dragon in the cave.
     cave = out_dir / "cave.webp"
     if cave.exists() and (out_dir / "dragon-healthy.webp").exists():
         sc = Image.open(cave).convert("RGBA").resize((672, 384))
@@ -390,7 +451,7 @@ def preview(path: str, res: dict[str, Image.Image], src: Path) -> None:
         sc.alpha_composite(d, (96, 384 - d.height - 10))
         r = res[RUNE[1]].resize((230, 230))
         sc.alpha_composite(r, (60, 80))
-        row("3. rune-shield over the dragon in the cave | on purple | on black | hoard full | half | scattered (shared canvas)", [sc, res[RUNE[1]], Image.new("RGBA", (300, 300), (0, 0, 0, 255))], 384)
+        row("3. rune-shield (Shield of Faith) over the dragon in the cave | on purple | on black | hoard full | half | scattered (shared canvas)", [sc, res[RUNE[1]], Image.new("RGBA", (300, 300), (0, 0, 0, 255))], 384)
         row("3b. hoard-full | hoard-half | hoard-scattered (one shared canvas, bottom-centre aligned)", [res["hoard-full"], res["hoard-half"], res["hoard-scattered"]], 240)
         blk = sheet_rows[-2][1][2]
         blk.alpha_composite(res[RUNE[1]].resize((300, 300)))

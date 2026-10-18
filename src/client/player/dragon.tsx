@@ -81,7 +81,7 @@ function Countdown({ view }: { view: PlayerDragonView }) {
   return (
     <main class="center">
       <div class="cup-emoji">🐉</div>
-      <p class="muted">Every right answer is a hit on the dragon. When it breathes fire, everyone gets the same question: get it right to raise the rune shield!</p>
+      <p class="muted">Every right answer is a hit on the dragon. When it breathes fire, everyone gets the same question: get it right to raise the Shield of Faith!</p>
       <div class="tower-count">{Math.max(1, secs)}</div>
     </main>
   );
@@ -102,7 +102,7 @@ function RuneScreen({ view, send }: { view: PlayerDragonView; send: Send }) {
       <main class="center dragon-warn">
         <RuneShield class="raised" />
         <h1>The dragon is about to breathe fire!</h1>
-        <p>Raise the rune shield!</p>
+        <p>Raise the Shield of Faith!</p>
       </main>
     );
   }
@@ -136,7 +136,7 @@ function RuneScreen({ view, send }: { view: PlayerDragonView; send: Send }) {
     return (
       <main class="center">
         {typed !== null ? <div class="locked-text">{typed}</div> : <LockedChoice type={q.type} index={chosen!} label={q.options[chosen!] ?? ""} />}
-        <h1>Shield rune locked in</h1>
+        <h1>Shield of Faith locked in</h1>
         <p class="muted">Waiting for the others…</p>
       </main>
     );
@@ -150,7 +150,7 @@ function RuneScreen({ view, send }: { view: PlayerDragonView; send: Send }) {
     <div class="q-head">
       <div class={`timer ${secs <= 5 ? "urgent" : ""}`}>{secs}</div>
       <h2 class="q-text">
-        <span class="rune-tag">ᛟ Rune</span> {q.text}
+        <span class="rune-tag">Shield of Faith</span> {q.text}
       </h2>
     </div>
   );
