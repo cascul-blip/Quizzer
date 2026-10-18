@@ -2,6 +2,7 @@ import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { cleanAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import { STREAK_MIN, type ClientMsg, type PlayerView, type ServerMsg } from "../../shared/protocol.ts";
+import { applyPatch } from "../../shared/view-patch.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { setPhoneArt } from "../shared/phone-art.ts";
 import { connect, type ConnStatus } from "../shared/ws.ts";
@@ -86,6 +87,10 @@ function App() {
         switch (msg.type) {
           case "player.state":
             setView(msg.view);
+            setJoining(false);
+            break;
+          case "player.patch":
+            setView((v) => (v ? applyPatch(v, msg.ops) : v));
             setJoining(false);
             break;
           case "joined":

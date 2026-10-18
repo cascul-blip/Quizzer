@@ -3,6 +3,7 @@ import type { HillHeight, ShotImpact } from "./fight-physics.ts";
 import type { LandStart } from "./land-board.ts";
 import type { PinSpot, QuestionType } from "./quiz-schema.ts";
 import type { RacerCar, RacerConfidence, RacerTurnResult } from "./racer-rules.ts";
+import type { PatchOp } from "./view-patch.ts";
 
 export type Phase = "lobby" | "intro" | "open" | "reveal" | "leaderboard" | "podium";
 export type Pacing = "manual" | "auto";
@@ -1012,6 +1013,8 @@ export type ServerMsg =
   /** First message on every connection. A new serverId means the server restarted (maybe with new code). */
   | { type: "hello"; serverId: string }
   | { type: "player.state"; view: PlayerView }
+  /** Changes to the last player.state (see view-patch.ts), sent when smaller than a new snapshot. */
+  | { type: "player.patch"; ops: PatchOp[] }
   | { type: "host.state"; view: HostView }
   | { type: "joined"; token: string; playerId: string; /** Question images of the quiz, to preload. */ images?: string[] }
   | { type: "kicked" }
