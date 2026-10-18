@@ -5,6 +5,7 @@ import hostPage from "../client/host/index.html";
 import playerPage from "../client/player/index.html";
 import { MUSIC_EXTENSIONS } from "../shared/music-tracks.ts";
 import { ValidationError } from "../shared/quiz-schema.ts";
+import { pageRoutes } from "./bundles.ts";
 import type { Clock } from "./game/game.ts";
 import { handleMcpRequest } from "./mcp/http.ts";
 import { isAdminRequest } from "./network.ts";
@@ -111,11 +112,7 @@ export function startServer(opts: ServerOptions): RunningServer {
     port: opts.port,
     hostname: "0.0.0.0",
     development: opts.development ?? false,
-    routes: {
-      "/": playerPage,
-      "/admin": adminPage,
-      "/host": hostPage,
-    },
+    routes: pageRoutes({ "/": playerPage, "/admin": adminPage, "/host": hostPage }),
     async fetch(req, srv) {
       const url = new URL(req.url);
       const path = url.pathname;
