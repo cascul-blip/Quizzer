@@ -4437,30 +4437,37 @@ select {
 .bw-bay {
   display: flex;
   flex-direction: column;
-  gap: 3%;
+  justify-content: center;
+  gap: 4%;
 }
 
 .bw-bay-row {
-  flex: 1;
+  flex: 1 1 0;
   min-height: 0;
   display: flex;
+  justify-content: center;
+  align-items: center;
   gap: 2%;
 }
 
 .bw-slot {
-  flex: 1;
-  min-width: 0;
   position: relative;
-  border-radius: 4px;
+  height: 100%;
+  aspect-ratio: 360 / 372;
+  max-width: calc((100% - 6%) / var(--n, 1));
+  flex: 0 1 auto;
+  border-radius: 3px;
 }
 
 .bw-mod {
-  position: relative;
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
 }
 
 .bw-panel {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: fill;

@@ -249,7 +249,7 @@ export function Casing({
       </div>
       <div class="bw-bay" style={box(MODULE_BAY.left, MODULE_BAY.top, MODULE_BAY.width, MODULE_BAY.height)}>
         {rows.map((row, r) => (
-          <div key={r} class="bw-bay-row">
+          <div key={r} class="bw-bay-row" style={{ "--n": String(row.length) }}>
             {row.map((item, i) => (
               <div key={i} class="bw-slot" style={item.color ? { boxShadow: `inset 0 0 0 2px ${item.color}` } : undefined}>
                 <ModuleFace mod={item.mod} image={item.image} spark={item.spark} redLed={item.redLed} />
