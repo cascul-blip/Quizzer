@@ -4329,3 +4329,520 @@ select {
     animation: none;
   }
 }
+
+/* ----- Bomb Squad ----- */
+
+.bomb-room-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.bomb-lobby-preview {
+  position: relative;
+  height: 220px;
+  margin: 8px auto 4px;
+  width: min(720px, 100%);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.bw-room {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #121418;
+}
+
+.bw-bench {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.bw-bench.scorched {
+  opacity: 0;
+}
+
+.bw-room.is-exploded .bw-bench.live {
+  animation: bw-bench-out 0.45s ease 0.15s forwards;
+}
+
+.bw-room.is-exploded .bw-bench.scorched {
+  animation: bw-bench-in 0.8s ease 0.2s forwards;
+}
+
+.bw-room.is-exploded .bw-on-bench {
+  animation: bw-hide-case 0.28s ease forwards;
+}
+
+.bw-room.is-shaking {
+  animation: bw-shake 0.55s linear;
+}
+
+.bw-on-bench {
+  position: absolute;
+  inset: 0;
+}
+
+.bw-on-bench > .bw-casing {
+  position: absolute;
+  left: 50%;
+  top: 26.9%;
+  width: 55.06%;
+  transform: translateX(-50%);
+}
+
+/* The clock digits are sized in cqw, so they scale with whichever casing they sit on. */
+.bw-casing {
+  container-type: inline-size;
+}
+
+.bw-case {
+  width: 100%;
+  height: auto;
+  display: block;
+  pointer-events: none;
+}
+
+.bw-clock,
+.bw-bay,
+.bw-photo,
+.bw-hang,
+.bw-led,
+.bw-sparks,
+.bw-squad-name,
+.bw-pop {
+  position: absolute;
+}
+
+.bw-clock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bw-digits {
+  color: #ff2a1a;
+  font-family: ui-monospace, "Cascadia Mono", "Segoe UI Mono", monospace;
+  font-weight: 700;
+  font-size: 7.5cqw;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-shadow: 0 0 10px rgba(255, 40, 20, 0.75);
+}
+
+.bw-clock.urgent .bw-digits {
+  animation: bw-blink 0.7s steps(2) infinite;
+}
+
+.bw-bay {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4%;
+}
+
+.bw-bay-row {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 2%;
+}
+
+.bw-slot {
+  position: relative;
+  height: 100%;
+  aspect-ratio: 360 / 372;
+  max-width: calc((100% - 6%) / var(--n, 1));
+  flex: 0 1 auto;
+  border-radius: 3px;
+}
+
+.bw-mod {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.bw-panel {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  display: block;
+  pointer-events: none;
+}
+
+.bw-photo {
+  object-fit: cover;
+}
+
+.bw-led {
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.bw-hang .bw-wire {
+  width: 100%;
+  height: 100%;
+}
+
+.bw-sparks {
+  left: 18%;
+  top: 18%;
+  width: 64%;
+  mix-blend-mode: screen;
+  pointer-events: none;
+  animation: bw-spark 0.45s ease-out both;
+}
+
+.bw-squad-name {
+  left: 0;
+  right: 0;
+  top: 96%;
+  text-align: center;
+  color: #fff;
+  font-weight: 800;
+  font-size: clamp(11px, 1.4vw, 20px);
+  text-shadow: 0 1px 4px #000;
+}
+
+.bw-pop {
+  left: 50%;
+  top: 8%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.bw-legend {
+  position: absolute;
+  top: 3%;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  font-weight: 800;
+  text-shadow: 0 1px 3px #000;
+}
+
+.bw-question {
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  bottom: 3%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: rgba(8, 8, 10, 0.82);
+  color: #f4f1ea;
+  text-align: center;
+  font-size: clamp(16px, 2.5vh, 32px);
+  font-weight: 750;
+}
+
+.bw-question img {
+  max-height: 18vh;
+  max-width: 40%;
+  object-fit: contain;
+  border-radius: 6px;
+}
+
+.bw-question p {
+  margin: 0;
+}
+
+.bw-reveal {
+  color: #b6f2a8;
+}
+
+.bw-race {
+  position: absolute;
+  left: 2%;
+  right: 2%;
+  top: 4%;
+  bottom: 3%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2%;
+}
+
+.bw-race-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 2%;
+  min-height: 0;
+}
+
+.bw-race .bw-casing {
+  position: relative;
+  left: auto;
+  top: auto;
+  transform: none;
+}
+
+.bw-race-row.n2 .bw-casing {
+  width: 44%;
+}
+
+.bw-race-row.n3 .bw-casing {
+  width: 31%;
+}
+
+.bw-boom {
+  position: absolute;
+  pointer-events: none;
+}
+
+.bw-boom.smoke {
+  left: 50%;
+  top: 55%;
+  width: 86%;
+  transform: translate(-50%, -50%) scale(0.55);
+  animation: bw-smoke 3s ease-out forwards;
+}
+
+.bw-boom.fireball {
+  left: 50%;
+  top: 55.08%;
+  width: 72%;
+  mix-blend-mode: screen;
+  transform: translate(-50%, -50%) scale(0.2);
+  animation: bw-fire 1.2s ease-out forwards;
+}
+
+.bw-boom.debris {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform-origin: 50% 55%;
+  animation: bw-debris 1.6s ease-out forwards;
+}
+
+.bw-boom.flash {
+  inset: 0;
+  background: #fff;
+  animation: bw-flash 0.5s ease-out forwards;
+}
+
+.bw-confetti {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  animation: bw-drift 6s linear infinite;
+}
+
+.bw-count,
+.bw-boom-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 4px 18px #000;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.bw-count {
+  font-size: clamp(80px, 18vw, 220px);
+}
+
+.bw-boom-text {
+  font-size: clamp(32px, 6vw, 84px);
+  padding: 0 8%;
+  text-align: center;
+}
+
+.bw-boom-text.good {
+  color: #d8ffc8;
+}
+
+.bomb-podium h1 {
+  text-align: center;
+}
+
+.bw-places {
+  list-style: none;
+  margin: 0 auto 12px;
+  padding: 0;
+  width: min(640px, 92%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bw-places li {
+  display: grid;
+  grid-template-columns: 4.5em 1fr auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.28);
+  border-left: 6px solid var(--team);
+}
+
+@keyframes bw-bench-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes bw-bench-in {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes bw-hide-case {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes bw-fire {
+  0% {
+    transform: translate(-50%, -50%) scale(0.2);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.4);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.5);
+    opacity: 0;
+  }
+}
+
+@keyframes bw-smoke {
+  0% {
+    transform: translate(-50%, -50%) scale(0.55);
+    opacity: 0.35;
+  }
+  35% {
+    opacity: 0.95;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.25);
+    opacity: 0;
+  }
+}
+
+@keyframes bw-debris {
+  0% {
+    transform: scale(0.3) rotate(-6deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.3) rotate(8deg);
+    opacity: 0;
+  }
+}
+
+@keyframes bw-flash {
+  0% {
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes bw-shake {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  20% {
+    transform: translate(-14px, 6px);
+  }
+  40% {
+    transform: translate(12px, -8px);
+  }
+  60% {
+    transform: translate(-8px, 4px);
+  }
+  80% {
+    transform: translate(6px, -3px);
+  }
+}
+
+@keyframes bw-spark {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.15);
+  }
+}
+
+@keyframes bw-blink {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@keyframes bw-drift {
+  from {
+    transform: translateY(-8%);
+  }
+  to {
+    transform: translateY(8%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bw-room.is-exploded .bw-bench.live,
+  .bw-room.is-exploded .bw-on-bench {
+    animation: none;
+    opacity: 0;
+  }
+  .bw-room.is-exploded .bw-bench.scorched {
+    animation: none;
+    opacity: 1;
+  }
+  .bw-room.is-shaking,
+  .bw-clock.urgent .bw-digits,
+  .bw-sparks,
+  .bw-confetti,
+  .bw-boom.smoke,
+  .bw-boom.fireball,
+  .bw-boom.debris,
+  .bw-boom.flash {
+    animation: none;
+  }
+}

@@ -35,6 +35,9 @@ export const MUSIC_TRACKS = [
   { id: "dragon-fire", mode: "Dragon's Hoard", screen: "Fire breath" },
   { id: "dragon-scramble", mode: "Dragon's Hoard", screen: "Hoard scramble" },
   { id: "dragon-results", mode: "Dragon's Hoard", screen: "Final podium" },
+  { id: "bomb-lobby", mode: "Bomb Squad", screen: "Lobby" },
+  { id: "bomb-defuse", mode: "Bomb Squad", screen: "Defusing" },
+  { id: "bomb-results", mode: "Bomb Squad", screen: "Defused, exploded, or podium" },
 ] as const;
 
 export type MusicTrackId = (typeof MUSIC_TRACKS)[number]["id"];

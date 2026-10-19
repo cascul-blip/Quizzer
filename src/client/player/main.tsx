@@ -14,6 +14,7 @@ import { LandPlayer } from "./land.tsx";
 import { RacerPlayer } from "./racer.tsx";
 import { CupPlayer } from "./cup.tsx";
 import { DragonPlayer } from "./dragon.tsx";
+import { BombPlayer } from "./bomb.tsx";
 import { RobotPlayer } from "./robot.tsx";
 import { SubPlayer } from "./submarine.tsx";
 import { TowerPlayer } from "./tower.tsx";
@@ -180,6 +181,8 @@ function App() {
     body = <CupPlayer view={view} send={send} />;
   } else if (view.kind === "dragon") {
     body = <DragonPlayer view={view} send={send} />;
+  } else if (view.kind === "bomb") {
+    body = <BombPlayer view={view} send={send} />;
   } else {
     body = <Game view={view} send={send} />;
   }

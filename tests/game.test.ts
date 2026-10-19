@@ -445,3 +445,31 @@ test("answer avatars list pickers in answer order and match the counts", () => {
   expect(v.answerAvatars![1]).toEqual([ps[2]!.avatar, ps[0]!.avatar, ps[3]!.avatar]);
   expect(v.answerAvatars!.map((x) => x.length)).toEqual(v.answerCounts!);
 });
+
+describe("bomb squad lobby", () => {
+  test("switching to Race keeps the squad count automatic", () => {
+    const { game } = setup();
+    game.setMode("bomb");
+    game.join("Ann");
+    expect(game.bomb.squads).toBe(1);
+    // What the projector sends when the host picks Race: the current count, unchanged.
+    game.setBomb({ ...game.bomb, game: "race" });
+    expect(game.bomb.squads).toBe(2);
+    for (let i = 0; i < 12; i++) game.join(`P${i}`);
+    expect(game.bomb.squads).toBe(3);
+    // Picking a number by hand stops the auto-sizing.
+    game.setBomb({ ...game.bomb, squads: 5 });
+    game.join("Late");
+    expect(game.bomb.squads).toBe(5);
+  });
+
+  test("wrong cut offers −10 to −40 seconds", () => {
+    const { game } = setup();
+    game.setMode("bomb");
+    for (const penaltySec of [10, 15, 20, 30, 40]) {
+      game.setBomb({ ...game.bomb, penaltySec });
+      expect(game.bomb.penaltySec).toBe(penaltySec);
+    }
+    expect(() => game.setBomb({ ...game.bomb, penaltySec: 25 })).toThrow("Unsupported wrong-cut penalty");
+  });
+});

@@ -273,6 +273,16 @@ A two-act game that starts cooperative and turns competitive. Choose **Game mode
 
 The painted art comes from `scripts/dragon-art.py` (the cave and the dragon) and `scripts/dragon-hoard-art.py` (everything else); the fire breath is drawn in code (`src/client/shared/dragon-art.tsx`).
 
+## Bomb Squad mode
+
+A co-op defusal quiz for a small class. Choose **Game mode → 💣 Bomb Squad** in the lobby. **Together** (the default) is one bomb and one timer for the class, with each squad clearing its own modules. **Race** gives every squad its own bomb and timer; it needs at least 2 squads. Other settings: **Squads** (1–6; until you pick a number, the fewest that keep every squad at 6 or under — a class of 3 or 6 stays one squad), **Modules** per squad (2, 3 or 4, default 3), **Wires** per module (2, 3 or 4, default 3), **Timer** (3, 5, 7 or 10 minutes, default 5) and **Wrong cut** (−10, −15, −20, −30 or −40 seconds, default −15). There are no strikes, and Protect from abuse does not apply. Squads show in the lobby and a name can be dragged to another squad. A squad of 1 plays like a timed quiz and holds every wire.
+
+Everyone sees the question. The answer choices are split across the squad's phones as coloured wires, and only the phone holding a wire can cut it: tap it, then hold **Cut** for 1.5 seconds (letting go cancels). The other phones see who is cutting. A right wire sparks, lights one more green lamp, and the right answer shows for 2 seconds before the next question. A wrong wire buzzes, flashes red, comes off the timer, and the same question continues. A module chimes when all of its wires are cleared. True/False is only True and False. A typed answer uses the phone's text box (the keypad painted on the bomb is decoration). A picture question shows the photo, and each phone holds its own spots. With more players than choices, the extras are decoys. Together, a squad that finishes waits and cheers the others on; the class defuses the bomb when every squad is done. In a race, the first squad to finish wins and the others keep going until they finish or explode. Rank is finish time, then modules cleared, then fewest wrong cuts.
+
+Running out of time is an explosion: a white flash, a fireball, smoke, debris and a screen shake, with the words "BOOM! The bomb exploded." The host's End game button skips that and opens the podium. The podium awards **Steady Hands** (most right cuts), **Careful Cutter** (fewest wrong cuts, with at least 2 right cuts) and **Team Player** (most right wires the squad cut on the first try). The results CSV has one row per player.
+
+The painted art comes from `scripts/bomb-art.py` (sources in `scripts/bomb-art/`); the clock digits, the flash and the shake are drawn in code (`src/client/shared/bomb-art.tsx`). Phones use the smaller copies and never show the workbench.
+
 ## Music
 
 Every game mode has **built-in background music** on the projector (phones stay quiet). It's composed in code, so it adds nothing to the download and needs no licenses:
@@ -288,6 +298,7 @@ Every game mode has **built-in background music** on the projector (phones stay 
 | Racer | Sunny late-80s arcade-racing chiptune | Tempo and layers rise with the car's speed; slow and sparse when crashed |
 | Cup of Death | Original spaghetti-western themes: whistle, twangy guitar, galloping hooves; a honky-tonk saloon piano in the lobby | The gallop speeds up and strings, brass and a church bell join as the quiz timer runs out; a heartbeat and a tolling bell while the cups are picked and drunk |
 | Dragon's Hoard | A quiet cave with deep strings and the dragon breathing; a heroic battle theme with brass, drums and choir; a playful plucked scramble with coin sounds | The battle gets more intense as the dragon weakens and the battle clock runs out; a rising rumble, then war drums, during fire breath; the scramble speeds up as its clock runs out |
+| Bomb Squad | Spy-jazz: bass, brushes and a vibraphone | The defuse theme adds a tick and more layers, and speeds up, as the bomb runs down (extra urgency under 30 seconds). A fanfare if the bomb is defused; a low boom if it explodes |
 
 The lobby plays the music of whichever game mode is selected. Use the **🎵 button and slider** in the projector's top bar to turn music off or change its volume. The 🔊 button still mutes everything.
 
@@ -306,6 +317,7 @@ Put audio files (MP3, OGG, M4A, WAV, WebM or FLAC) in the **`data/music`** folde
 | `racer-lobby` · `racer-drive` · `racer-results` | Racer |
 | `cup-lobby` · `cup-quiz` · `cup-drink` · `cup-results` | Cup of Death: lobby, dice and quiz, picking and drinking, final results |
 | `dragon-lobby` · `dragon-battle` · `dragon-fire` · `dragon-scramble` · `dragon-results` | Dragon's Hoard: lobby, battle, fire breath (warning and Shield of Faith question), hoard scramble, final podium |
+| `bomb-lobby` · `bomb-defuse` · `bomb-results` | Bomb Squad: lobby, defusing, the defused or exploded ending and the podium |
 
 For example, `data/music/submarine-chase.mp3`. Your files loop; they don't speed up with the game like the built-in music does. Only use music you're allowed to play: royalty-free or Creative Commons tracks (e.g. Pixabay Music, OpenGameArt, or incompetech with credit). Delete a file to go back to the built-in track.
 

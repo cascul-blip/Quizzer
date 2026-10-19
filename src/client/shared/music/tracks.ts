@@ -6,7 +6,8 @@
  * Land Grab = calm ambient piano that grows into an orchestra as rings close,
  * Racer = sunny late-80s arcade-racing chiptune (tempo follows the car's speed),
  * Cup of Death = original spaghetti-western themes: whistle, twangy guitar, galloping hooves,
- * Dragon's Hoard = a dark cave, a heroic battle with brass and choir, war drums under the fire, a plucky scramble.
+ * Dragon's Hoard = a dark cave, a heroic battle with brass and choir, war drums under the fire, a plucky scramble,
+ * Bomb Squad = spy-jazz (bass, brushes, vibraphone) that picks up a tick and more layers as the bomb runs down.
  * Any of these can be replaced by an audio file in data/music/<id>.<ext>.
  */
 import type { MusicTrackId } from "../../../shared/music-tracks.ts";
@@ -1074,6 +1075,75 @@ const dragonResults: Track = {
   ],
 };
 
+// ---------- Bomb Squad: spy jazz in a disposal room ----------
+
+const bombLobby: Track = {
+  id: "bomb-lobby",
+  bpm: 92,
+  bars: 4,
+  swing: 0.14,
+  reverb: 0.28,
+  layers: [
+    { inst: "bass", bars: [bounce("C2", "G2"), bounce("Ab1", "Eb2"), bounce("Bb1", "F2"), bounce("G1", "D2")], vol: 0.8 },
+    // Brushes.
+    { inst: "hat", bars: [drum("x.x.x.x.x.x.x.x.")], vol: 0.32 },
+    { inst: "snare", bars: [drum("..x...x...x...x.")], vol: 0.2 },
+    {
+      inst: "bell",
+      bars: [
+        seq(["Eb5", 2], [".", 2], ["G5", 2], [".", 2], ["Bb5", 2], ["G5", 2], [".", 4]),
+        seq(["C5", 2], [".", 2], ["Eb5", 4], ["D5", 2], [".", 2], ["Bb4", 4]),
+        seq(["F5", 2], ["G5", 2], ["Ab5", 4], ["G5", 2], [".", 2], ["Eb5", 4]),
+        seq(["D5", 4], ["Bb4", 4], ["C5", 8]),
+      ],
+      vol: 0.42,
+    },
+    { inst: "pad", bars: [hold(chord("C3 Eb3 G3")), hold(chord("Ab2 C3 Eb3")), hold(chord("Bb2 D3 F3")), hold(chord("G2 Bb2 D3"))], vol: 0.32 },
+  ],
+};
+
+const bombDefuse: Track = {
+  id: "bomb-defuse",
+  bpm: 104,
+  bars: 4,
+  tempoBoost: 0.48,
+  swing: 0.08,
+  layers: [
+    { inst: "tick", bars: [drum("x.x.x.x.x.x.x.x.")], vol: 0.7 },
+    { inst: "bass", bars: [pump("C2", "x.x.x.x.x.x.x.x."), pump("Ab1", "x.x.x.x.x.x.x.x."), pump("Bb1", "x.x.x.x.x.x.x.x."), pump("G1", "x.x.x.x.x.x.x.x.")], vol: 0.75 },
+    { inst: "hat", bars: [drum("x.x.x.x.x.x.x.x.")], vol: 0.4, from: 0.35 },
+    { inst: "snare", bars: [drum("....x.......x...")], vol: 0.45, from: 0.45 },
+    { inst: "pulse", bars: [arp(["Eb4", "G4", "Bb4", "G4"]), arp(["C4", "Eb4", "Ab4", "Eb4"]), arp(["D4", "F4", "Bb4", "F4"]), arp(["D4", "G4", "Bb4", "G4"])], vol: 0.4, from: 0.62 },
+    { inst: "strings", bars: [hold(chord("C4 Eb4 G4")), hold(chord("Ab3 C4 Eb4")), hold(chord("Bb3 D4 F4")), hold(chord("G3 Bb3 D4"))], vol: 0.4, from: 0.75 },
+  ],
+};
+
+const bombResults: Track = {
+  id: "bomb-results",
+  bpm: 84,
+  bars: 4,
+  reverb: 0.4,
+  layers: [
+    // A deep boom and a ringing low chord when the bomb exploded (low intensity).
+    { inst: "timpani", bars: [pump("C2", "x.......x......."), pump("Ab1", "x.......x......."), pump("Bb1", "x.......x......."), pump("G1", "x...x...x.x.x...")], vol: 0.6, to: 0.45 },
+    { inst: "strings", bars: [hold(chord("C3 Eb3 G3")), hold(chord("Ab2 C3 Eb3")), hold(chord("Bb2 D3 F3")), hold(chord("C3 Eb3 G3"))], vol: 0.55, to: 0.45 },
+    // Fanfare when the class defused it (high intensity).
+    {
+      inst: "bell",
+      bars: [
+        seq(["C5", 2], ["E5", 2], ["G5", 4], ["C6", 8]),
+        seq(["G5", 4], ["E5", 4], ["C5", 8]),
+        seq(["D5", 2], ["F5", 2], ["A5", 4], ["D6", 8]),
+        seq(["C6", 12], [".", 4]),
+      ],
+      vol: 0.5,
+      from: 0.55,
+    },
+    { inst: "piano", bars: [hold(chord("C4 E4 G4")), hold(chord("F3 A3 C4")), hold(chord("G3 B3 D4")), hold(chord("C4 E4 G4"))], vol: 0.45, from: 0.55 },
+    { inst: "cymbal", bars: [once("x"), rest, rest, once("x")], vol: 0.4, from: 0.55 },
+  ],
+};
+
 export const TRACKS: Record<MusicTrackId, Track> = {
   "classic-lobby": classicLobby,
   "classic-question": classicQuestion,
@@ -1108,4 +1178,7 @@ export const TRACKS: Record<MusicTrackId, Track> = {
   "dragon-fire": dragonFire,
   "dragon-scramble": dragonScramble,
   "dragon-results": dragonResults,
+  "bomb-lobby": bombLobby,
+  "bomb-defuse": bombDefuse,
+  "bomb-results": bombResults,
 };

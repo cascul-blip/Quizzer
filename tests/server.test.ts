@@ -7,6 +7,7 @@ import { COUNTDOWN_MS as LAND_COUNTDOWN_MS } from "../src/server/game/land.ts";
 import { COUNTDOWN_MS as ROBOT_COUNTDOWN_MS } from "../src/server/game/robot.ts";
 import { COUNTDOWN_MS as CUP_COUNTDOWN_MS } from "../src/server/game/cup.ts";
 import { COUNTDOWN_MS as DRAGON_COUNTDOWN_MS } from "../src/server/game/dragon.ts";
+import { BOMB_COUNTDOWN_MS, BOMB_HOLD_MS, BOMB_NEXT_MS, BOMB_RESULT_MS } from "../src/shared/protocol.ts";
 import { BOOST_MIN_HOLD_MS, COUNTDOWN_MS as SUB_COUNTDOWN_MS } from "../src/server/game/submarine.ts";
 import { startServer, type RunningServer } from "../src/server/http.ts";
 import { isAdminRequest } from "../src/server/network.ts";
@@ -810,6 +811,97 @@ describe("Dragon's Hoard over WebSockets", () => {
     // Play again keeps Dragon's Hoard and its settings.
     host.send({ type: "host.open", quizId: quiz.id });
     await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "dragon" && v.dragon.toughness === "easy" && v.dragon.scrambleMinutes === 2);
+    host.send({ type: "host.close" });
+    players.forEach((s) => s.close());
+    host.close();
+  });
+});
+
+describe("Bomb Squad over WebSockets", () => {
+  test("lobby settings → wrong cut → clear every module → defused → podium → results → play again", async () => {
+    const quiz = store.create({
+      title: "Bomb E2E",
+      questions: [1, 2].map((n) => ({ type: "multiple_choice", text: `Q${n}`, options: ["right", "wrong", "nope"], correct: [0] })),
+    });
+    const wsUrl = `ws://localhost:${srv.port}/ws`;
+    const host = await TestSocket.open(wsUrl);
+    host.send({ type: "host.hello" });
+    await host.hostState((v) => v.kind === "idle");
+    host.send({ type: "host.open", quizId: quiz.id });
+    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
+    host.send({ type: "host.setMode", mode: "bomb" });
+    await host.hostState((v) => v.kind === "classic" && v.mode === "bomb");
+    host.send({ type: "host.setBomb", game: "together", squads: 1, modules: 9, wires: 2, minutes: 3, penaltySec: 10 });
+    expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: expect.stringContaining("modules") });
+    host.send({ type: "host.setBomb", game: "together", squads: 1, modules: 2, wires: 2, minutes: 3, penaltySec: 10 });
+    await host.hostState((v) => v.kind === "classic" && v.bomb.modules === 2 && v.bomb.penaltySec === 10);
+
+    const names = ["Ann", "Bob"];
+    const players = await Promise.all(names.map(() => TestSocket.open(wsUrl)));
+    for (const [i, p] of players.entries()) {
+      await p.playerState((v) => v.kind === "none" && !!v.game);
+      p.send({ type: "join", nickname: names[i]! });
+      await p.waitFor((m) => m.type === "joined");
+    }
+    await host.hostState((v) => v.kind === "classic" && v.players.length === 2);
+
+    host.send({ type: "host.start", pacing: "manual" });
+    await host.hostState((v) => v.kind === "bomb" && v.phase === "countdown" && v.squads.length === 1);
+    clock.advance(BOMB_COUNTDOWN_MS);
+    srv.hub.broadcast();
+    await host.hostState((v) => v.kind === "bomb" && v.phase === "defuse");
+
+    /** Waits until a phone shows a wire with this label on a question after `after`. */
+    const dealt = async (label: string, after: number) => {
+      const deadline = Date.now() + 2000;
+      for (;;) {
+        for (const socket of players) {
+          const v = socket.view;
+          if (v?.kind !== "bomb" || !v.question || v.question.seq <= after || v.reveal) continue;
+          const wire = v.wires.find((w) => w.label === label);
+          if (wire) return { socket, wireId: wire.id, seq: v.question.seq };
+        }
+        if (Date.now() > deadline) throw new Error(`nobody holds ${label}`);
+        await new Promise((r) => setTimeout(r, 20));
+      }
+    };
+    const snip = async (who: { socket: TestSocket; wireId: string }) => {
+      who.socket.send({ type: "bomb.hold", wireId: who.wireId, holding: true });
+      await who.socket.playerState((v) => v.kind === "bomb" && v.cutting?.mine === true);
+      clock.advance(BOMB_HOLD_MS);
+      who.socket.send({ type: "bomb.cut", wireId: who.wireId });
+    };
+
+    // A wrong cut costs 10 s and leaves the question up.
+    const wrong = await dealt("wrong", 0);
+    await snip(wrong);
+    await host.hostState((v) => v.kind === "bomb" && v.squads[0]!.wrongCuts === 1 && v.squads[0]!.flash?.kind === "wrong");
+
+    let after = wrong.seq - 1;
+    for (let i = 1; i <= 4; i++) {
+      const right = await dealt("right", after);
+      after = right.seq;
+      await snip(right);
+      await host.hostState((v) => v.kind === "bomb" && v.squads[0]!.flash?.seq === i + 1 && v.modulesCleared === Math.floor(i / 2));
+      clock.advance(BOMB_NEXT_MS);
+      srv.hub.broadcast();
+    }
+    const done = await host.hostState((v) => v.kind === "bomb" && v.phase === "defused");
+    expect(done.view.kind === "bomb" && done.view.headline).toMatch(/^Defused with /);
+    clock.advance(BOMB_RESULT_MS);
+    srv.hub.broadcast();
+    const podium = await host.hostState((v) => v.kind === "bomb" && v.phase === "podium");
+    expect(podium.view.kind === "bomb" && podium.view.outcome).toBe("defused");
+    expect(podium.view.kind === "bomb" && podium.view.awards?.steadyHands?.value).toBeGreaterThan(0);
+    await players[1]!.playerState((v) => v.kind === "bomb" && v.phase === "podium" && v.result?.outcome === "defused");
+    const csv = await (await fetch(`${base}/api/results/latest.csv`)).text();
+    expect(csv).toContain("Squad,Squad result,Squad time left,Squad rank,Nickname");
+    expect(csv).toContain("Ann");
+    expect(csv).toContain("Bob");
+
+    // Play again keeps Bomb Squad and its settings.
+    host.send({ type: "host.open", quizId: quiz.id });
+    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "bomb" && v.bomb.modules === 2 && v.bomb.penaltySec === 10);
     host.send({ type: "host.close" });
     players.forEach((s) => s.close());
     host.close();

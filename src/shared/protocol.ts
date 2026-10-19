@@ -18,7 +18,7 @@ export interface ShuffleOptions {
 
 // ---------- Tallest Tower ----------
 
-export type GameMode = "classic" | "tower" | "submarine" | "fight" | "robot" | "land" | "racer" | "cup" | "dragon";
+export type GameMode = "classic" | "tower" | "submarine" | "fight" | "robot" | "land" | "racer" | "cup" | "dragon" | "bomb";
 export type TowerPhase = "countdown" | "playing" | "podium";
 
 export const TEAMS = [
@@ -117,7 +117,13 @@ export type PlayerMsg =
   /** Dragon's Hoard, chest state: open one of the DRAGON_CHESTS chests (0-based). */
   | { type: "dragon.chest"; chest: number }
   /** Dragon's Hoard, grab state: the team to steal from. */
-  | { type: "dragon.grab"; team: number };
+  | { type: "dragon.grab"; team: number }
+  /** Bomb Squad: start or stop holding a wire (or pin spot) you hold. The cut lands only after BOMB_HOLD_MS. */
+  | { type: "bomb.hold"; wireId: string; holding: boolean }
+  /** Bomb Squad: the hold finished. The server checks the wire, the holder and the time. */
+  | { type: "bomb.cut"; wireId: string }
+  /** Bomb Squad keypad module: a typed answer. Checked like every other mode. */
+  | { type: "bomb.type"; text: string };
 
 export type HostMsg =
   | { type: "host.hello" }
@@ -132,6 +138,7 @@ export type HostMsg =
   | { type: "host.setLand"; teams: number; minutes: number }
   | { type: "host.setCup"; cups: number }
   | ({ type: "host.setDragon" } & DragonSettings)
+  | ({ type: "host.setBomb" } & BombSettings)
   | { type: "host.next" }
   | { type: "host.skip" }
   | { type: "host.kick"; playerId: string }
@@ -201,7 +208,7 @@ export interface PlayerResult {
 
 export type PlayerView =
   | { kind: "none"; game: null }
-  | { kind: "none"; game: { title: string; phase: Phase | TowerPhase | SubPhase | FightPhase | RobotPhase | LandPhase | RacerPhase | CupPhase | DragonPhase } }
+  | { kind: "none"; game: { title: string; phase: Phase | TowerPhase | SubPhase | FightPhase | RobotPhase | LandPhase | RacerPhase | CupPhase | DragonPhase | BombPhase } }
   | {
       kind: "player";
       phase: Phase;
@@ -225,7 +232,8 @@ export type PlayerView =
   | PlayerLandView
   | PlayerRacerView
   | PlayerCupView
-  | PlayerDragonView;
+  | PlayerDragonView
+  | PlayerBombView;
 
 export interface TowerAwards {
   mostCorrect: { value: number; nicknames: string[] } | null;
@@ -286,7 +294,8 @@ export interface HostGameState {
   land: LandSettings;
   cup: CupSettings;
   dragon: DragonSettings;
-  /** Team preview while the lobby is in a team mode (Tallest Tower, Tower Fight, Land Grab, Dragon's Hoard). */
+  bomb: BombSettings;
+  /** Team preview while the lobby is in a team mode (Tallest Tower, Tower Fight, Land Grab, Dragon's Hoard, Bomb Squad). */
   teams: (TeamInfo & { members: HostPlayer[] })[] | null;
   quiz: { id: string; title: string; questionCount: number };
   pacing: Pacing;
@@ -1284,6 +1293,158 @@ export interface PlayerDragonView {
   result: { teamRank: number; teamCount: number; teamGold: number; won: boolean; slain: boolean; slainMs: number | null; awards: string[] } | null;
 }
 
+/**
+ * Bomb Squad. countdown: 3, 2, 1. defuse: the squads are cutting wires.
+ * defused / exploded: the bomb's ending, then podium.
+ */
+export type BombPhase = "countdown" | "defuse" | "defused" | "exploded" | "podium";
+export type BombStyle = "together" | "race";
+
+export const BOMB_MODULES = [2, 3, 4] as const;
+export const BOMB_WIRES = [2, 3, 4] as const;
+export const BOMB_MINUTES = [3, 5, 7, 10] as const;
+export const BOMB_PENALTIES = [10, 15, 20, 30, 40] as const;
+/** Squads in the lobby setting. A squad of 1 is allowed and plays like a normal quiz. */
+export const BOMB_MAX_SQUADS = 6;
+/** The default split keeps every squad at or under this many players. */
+export const BOMB_MAX_PER_SQUAD = 6;
+/** Hold the Cut button this long. Letting go early cancels it. */
+export const BOMB_HOLD_MS = 1500;
+/** A cut that arrives this early is still accepted (a phone's clock runs a little fast). */
+export const BOMB_HOLD_GRACE_MS = 250;
+/** Disconnected this long: their wires are dealt to the squad again. */
+export const BOMB_REDEAL_MS = 5000;
+/** After a right cut, the answer stays up this long before the next wire. */
+export const BOMB_NEXT_MS = 2000;
+export const BOMB_COUNTDOWN_MS = 3000;
+/** How long the defused or exploded screen stays up before the podium. */
+export const BOMB_RESULT_MS = 7000;
+
+export interface BombSettings {
+  /** Together: one bomb for the class. Race: one bomb per squad. */
+  game: BombStyle;
+  /** Squads (1–BOMB_MAX_SQUADS). Race needs at least 2 once the game starts. */
+  squads: number;
+  /** Modules each squad has to clear. */
+  modules: number;
+  /** Wires (questions) in each module. */
+  wires: number;
+  /** Bomb timer. */
+  minutes: number;
+  /** Seconds a wrong cut or wrong keypad entry takes off the timer. */
+  penaltySec: number;
+}
+
+/** The six wire colors. One grey wire picture is tinted to these in the client. */
+export const BOMB_WIRE_COLORS = ["red", "blue", "yellow", "green", "white", "black"] as const;
+export type BombWireColor = (typeof BOMB_WIRE_COLORS)[number];
+
+export interface BombAwards {
+  /** Most right cuts. */
+  steadyHands: SubAward | null;
+  /** Fewest wrong cuts, among players with at least 2 right cuts. */
+  carefulCutter: SubAward | null;
+  /** Most right wires the squad cut on the first try. */
+  teamPlayer: SubAward | null;
+}
+
+export type BombPanel = "wire" | "keypad" | "picture";
+
+export interface HostBombModule {
+  lights: number;
+  total: number;
+  cleared: boolean;
+  active: boolean;
+  /** Which painted panel to show. Pending modules use the wire panel. */
+  panel: BombPanel;
+}
+
+export interface HostBombSquad {
+  index: number;
+  name: string;
+  color: string;
+  remainingMs: number;
+  /** Bumps when a wrong cut moves this squad's timer, so phones restart their countdown. */
+  timerRev: number;
+  modules: HostBombModule[];
+  modulesCleared: number;
+  finished: boolean;
+  exploded: boolean;
+  wrongCuts: number;
+  /** Race only; null until the podium. */
+  rank: number | null;
+  /** The question text, and only when the class is a single squad. Never the answers, until reveal. */
+  question: { text: string; image?: string; reveal: string[] | null } | null;
+  /** Latest pop on this squad: a wrong cut, a snip, or a cleared module. */
+  flash: { seq: number; kind: "wrong" | "snip" | "module"; penaltySec: number | null } | null;
+}
+
+export interface HostBombState {
+  kind: "bomb";
+  phase: BombPhase;
+  quiz: { id: string; title: string; questionCount: number };
+  settings: BombSettings;
+  /** Together: the shared timer. Race: the soonest squad still playing. */
+  remainingMs: number;
+  timerRev: number;
+  durationMs: number;
+  /** Countdown or the defused/exploded hold. */
+  phaseRemainingMs: number;
+  squads: HostBombSquad[];
+  outcome: "defused" | "exploded" | null;
+  /** Frozen time left once the bomb is defused (Together, or the winner in Race). */
+  timeLeftMs: number | null;
+  /** "Defused with 1:42 left" or "Exploded with 9 of 12 modules cleared". Null while defusing. */
+  headline: string | null;
+  modulesCleared: number;
+  modulesTotal: number;
+  playerCount: number;
+  connectedCount: number;
+  awards: BombAwards | null;
+  errors: QuestionError[] | null;
+  hasResults: boolean;
+}
+
+export interface PlayerBombWire {
+  id: string;
+  label: string;
+  color: BombWireColor;
+  /** Pin questions: this wire's spot on the picture. */
+  spot?: PinSpot;
+}
+
+export interface PlayerBombView {
+  kind: "bomb";
+  phase: BombPhase;
+  title: string;
+  game: BombStyle;
+  remainingMs: number;
+  timerRev: number;
+  durationMs: number;
+  me: { id: string; nickname: string; avatar: AvatarChoice };
+  squad: TeamInfo | null;
+  /** cheer: Together, your modules are done and the class is still going. waiting: no squad yet (or the podium is all that's left). */
+  squadState: "playing" | "cheer" | "defused" | "exploded" | "waiting";
+  question: { seq: number; type: QuestionType; text: string; image?: string } | null;
+  /** Only the wires this phone holds. Nothing here says which one is right. */
+  wires: PlayerBombWire[];
+  keypad: boolean;
+  /** A teammate (or you) is holding Cut. */
+  cutting: { name: string; detail: string; mine: boolean } | null;
+  /** Someone else is holding, so this phone's Cut button waits. */
+  cutLocked: boolean;
+  status: string | null;
+  /** The right answer, shown for a moment after the squad clears the wire. */
+  reveal: string[] | null;
+  result: {
+    outcome: "defused" | "exploded";
+    headline: string;
+    rank: number | null;
+    squads: number;
+    awards: string[];
+  } | null;
+}
+
 export type HostView =
   | { kind: "idle"; phase: "idle"; join: JoinInfo }
   | (HostGameState & { join: JoinInfo })
@@ -1294,7 +1455,8 @@ export type HostView =
   | (HostLandState & { join: JoinInfo })
   | (HostRacerState & { join: JoinInfo })
   | (HostCupState & { join: JoinInfo })
-  | (HostDragonState & { join: JoinInfo });
+  | (HostDragonState & { join: JoinInfo })
+  | (HostBombState & { join: JoinInfo });
 
 export type ServerMsg =
   /** First message on every connection. A new serverId means the server restarted (maybe with new code). */
