@@ -2627,6 +2627,8 @@ h1 {
   padding: 12px 14px 20px;
   background: #1a1c1f;
   color: #f4f1ea;
+  position: relative;
+  overflow: hidden;
 }
 
 .bomb-phone.center {
@@ -2706,8 +2708,9 @@ h1 {
 
 .bw-phone-wire {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
   padding: 6px;
   border-radius: 10px;
   border: 2px solid transparent;
@@ -2715,16 +2718,28 @@ h1 {
   color: inherit;
   text-align: left;
   font: inherit;
+  overflow: hidden;
 }
 
 .bw-phone-wire.selected {
   border-color: #e7c15a;
 }
 
-.bw-phone-wire .bw-wire {
-  width: 36px;
-  height: 84px;
-  flex: none;
+/* The wire art is tall (81x640); lay it on its side across the top of the choice. */
+.bw-wire-line {
+  position: relative;
+  height: 26px;
+  overflow: hidden;
+  container-type: inline-size;
+}
+
+.bw-wire-line .bw-wire {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 26px;
+  height: 100cqw;
+  transform: translate(-50%, -50%) rotate(-90deg);
 }
 
 .bw-tag {
@@ -2837,6 +2852,34 @@ h1 {
   pointer-events: none;
 }
 
+.bw-phone-flash.red {
+  background: #d10f0f;
+}
+
+.bomb-phone.fx-wrong {
+  animation: bw-shake 0.4s linear;
+}
+
+.bw-phone-sparks {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  width: 220px;
+  margin: -110px 0 0 -110px;
+  mix-blend-mode: screen;
+  pointer-events: none;
+  animation: bw-flash 0.7s ease-out forwards;
+}
+
+.bw-sitout {
+  margin: 12px 0 0;
+  padding: 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  text-align: center;
+  font-weight: 700;
+}
+
 .bomb-phone.boom.is-shaking {
   animation: bw-shake 0.55s linear;
 }
@@ -2905,6 +2948,8 @@ h1 {
 
 @media (prefers-reduced-motion: reduce) {
   .bw-phone-flash,
+  .bw-phone-sparks,
+  .bomb-phone.fx-wrong,
   .bomb-phone.boom.is-shaking {
     animation: none;
   }

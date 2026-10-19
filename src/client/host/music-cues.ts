@@ -127,11 +127,14 @@ export function musicFor(view: HostView | null): MusicCue {
       if (view.phase === "podium" || view.phase === "defused") return { track: "bomb-results", intensity: fanfare ? 0.9 : 0.12, key: `bomb-end-${view.outcome}` };
       if (view.phase === "exploded") return { track: "bomb-results", intensity: 0.12, key: "bomb-exploded" };
       if (view.phase === "countdown") return { track: "bomb-defuse", intensity: 0.05, key: "bomb-count" };
-      // Faster and more layered as the soonest bomb runs down. No key, so it glides.
+      // Faster and more layered as the soonest bomb runs down. The key restarts the ramp from the
+      // right place whenever a wrong cut moves a timer, a Race squad drops out, or the last 30 s begin.
       const total = Math.max(1, view.durationMs);
       const urgency = Math.max(0, Math.min(1, 1 - view.remainingMs / total));
-      const intensity = Math.max(0.12, urgency, view.remainingMs <= 30_000 ? 0.75 : 0);
-      return { track: "bomb-defuse", intensity, rampTo: 1, rampMs: view.remainingMs };
+      const last30 = view.remainingMs <= 30_000;
+      const intensity = Math.max(0.12, urgency, last30 ? 0.75 : 0);
+      const timers = view.squads.map((s) => (s.finished || s.exploded ? "x" : s.timerRev)).join(".");
+      return { track: "bomb-defuse", intensity, rampTo: 1, rampMs: view.remainingMs, key: `bomb-${view.timerRev}-${timers}-${last30 ? "end" : "run"}` };
     }
   }
 }

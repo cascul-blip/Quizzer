@@ -330,8 +330,10 @@ export class Game {
     if (!(BOMB_WIRES as readonly number[]).includes(wires)) throw new GameError("Unsupported wires per module");
     if (!(BOMB_MINUTES as readonly number[]).includes(minutes)) throw new GameError("Unsupported bomb timer");
     if (!(BOMB_PENALTIES as readonly number[]).includes(penaltySec)) throw new GameError("Unsupported wrong-cut penalty");
+    // Only a change to the Squads control itself counts as picking a number: switching to Race
+    // raises a single squad to 2 without turning off auto-sizing.
     const touched = requested !== this.bomb.squads;
-    let squads = settings.game === "race" && requested < 2 ? 2 : requested;
+    const squads = settings.game === "race" && requested < 2 ? 2 : requested;
     this.bomb = { game: settings.game, squads, modules, wires, minutes, penaltySec };
     if (touched) this.bombSquadsManual = true;
     this.refreshBombSquads();

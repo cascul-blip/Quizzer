@@ -207,7 +207,7 @@ function Game({ view, send }: { view: GameView; send: Send }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [view.phase, view.players.length]);
+  }, [view.phase, view.players.length, view.pacing, view.mode, view.bomb.game, view.bomb.squads]);
 
   const inGame = view.phase !== "lobby" && view.phase !== "podium";
 
@@ -621,10 +621,8 @@ function BombOptions({ view, send }: { view: GameView; send: Send }) {
         Game
         <select
           value={b.game}
-          onChange={(e) => {
-            const game = e.currentTarget.value as BombStyle;
-            set({ game, squads: game === "race" ? Math.max(2, b.squads) : b.squads });
-          }}
+          // The server raises Race to 2 squads itself, without counting it as a hand-picked number.
+          onChange={(e) => set({ game: e.currentTarget.value as BombStyle })}
         >
           <option value="together">Together</option>
           <option value="race">Race</option>

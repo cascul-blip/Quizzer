@@ -2,7 +2,7 @@ import type { CSSProperties } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { ClientMsg } from "../../shared/protocol.ts";
 import { BOMB_HOLD_MS, type PlayerBombView, type PlayerBombWire } from "../../shared/protocol.ts";
-import { Confetti, CuttersIcon, WireGraphic } from "../shared/bomb-art.tsx";
+import { bombArt, Confetti, CuttersIcon, WireGraphic } from "../shared/bomb-art.tsx";
 import { play } from "../shared/sounds.ts";
 import { formatClock, ordinal, useCountdown } from "../shared/ui.tsx";
 
@@ -11,18 +11,20 @@ type Send = (m: ClientMsg) => void;
 /** Phone: the question, this player's wires, and the Cut button. The big bomb stays on the projector. */
 export function BombPlayer({ view, send }: { view: PlayerBombView; send: Send }) {
   const [shake, setShake] = useState(false);
+  const boom = view.phase !== "podium" && (view.phase === "exploded" || view.squadState === "exploded");
   useEffect(() => {
-    if (view.phase !== "exploded" && view.squadState !== "exploded") return;
+    // Only on the way into the explosion, not again for the podium.
+    if (!boom) return;
     setShake(true);
     play("explosion");
     navigator.vibrate?.([80, 40, 120, 40, 200]);
     const t = setTimeout(() => setShake(false), 600);
     return () => clearTimeout(t);
-  }, [view.phase, view.squadState]);
+  }, [boom]);
 
   if (view.phase === "countdown") return <Countdown view={view} />;
-  if (view.phase === "exploded" || view.squadState === "exploded") return <Boom shake={shake} />;
   if (view.phase === "podium") return <Podium view={view} />;
+  if (boom) return <Boom shake={shake} />;
   if (view.phase === "defused" || view.squadState === "defused") return <Defused view={view} />;
   if (view.squadState === "cheer") return <Note title="Your modules are done!" body="Cheer on the others." />;
   if (view.squadState === "waiting" || !view.question) return <Note title={view.squad?.name ?? "Bomb Squad"} body={view.status ?? "Hang on — you'll get the next wire."} />;
@@ -100,9 +102,12 @@ function Defusing({ view, send }: { view: PlayerBombView; send: Send }) {
 
   const line = view.cutting ? `${view.cutting.name} is cutting ${view.cutting.detail}…` : view.status;
   const wire = view.wires.find((w) => w.id === selected) ?? null;
+  const fx = useCutFx(view);
 
   return (
-    <main class="bomb-phone">
+    <main class={`bomb-phone ${fx ? `fx-${fx}` : ""}`}>
+      {fx === "wrong" && <div class="bw-phone-flash red" key={`w${view.timerRev}`} />}
+      {fx === "snip" && <img class="bw-phone-sparks" src={bombArt("sparks")} alt="" draggable={false} />}
       <div class={`bw-timebar ${secs > 0 && secs <= 30 ? "urgent" : ""}`}>
         <div style={{ width: `${frac * 100}%` }} />
         <span>{formatClock(secs)}</span>
@@ -117,6 +122,8 @@ function Defusing({ view, send }: { view: PlayerBombView; send: Send }) {
       {line && <p class={`bw-status ${view.reveal ? "good" : ""}`}>{line}</p>}
       {view.reveal ? (
         <p class="bw-reveal">Answer: {view.reveal.join(", ")}</p>
+      ) : view.wires.length === 0 && !view.keypad ? (
+        <p class="bw-sitout">You'll get the next wire. Help your squad talk it out!</p>
       ) : view.keypad ? (
         <Keypad onSubmit={(text) => send({ type: "bomb.type", text })} />
       ) : q.type === "pin" && q.image ? (
@@ -126,7 +133,9 @@ function Defusing({ view, send }: { view: PlayerBombView; send: Send }) {
           <div class="bw-wires">
             {view.wires.map((w) => (
               <button key={w.id} type="button" class={`bw-phone-wire ${selected === w.id ? "selected" : ""}`} onClick={() => setSelected(w.id)}>
-                <WireGraphic color={w.color} />
+                <span class="bw-wire-line">
+                  <WireGraphic color={w.color} />
+                </span>
                 <span class="bw-tag">
                   <span class="bw-color">{w.color}</span>
                   {w.label}
@@ -148,6 +157,35 @@ function Defusing({ view, send }: { view: PlayerBombView; send: Send }) {
       )}
     </main>
   );
+}
+
+/**
+ * Red flash and buzz on a wrong cut or wrong keypad entry, sparks on a right cut.
+ * A wrong answer bumps timerRev and sets a "Wrong …" status on this squad only.
+ */
+function useCutFx(view: PlayerBombView): "wrong" | "snip" | null {
+  const [fx, setFx] = useState<"wrong" | "snip" | null>(null);
+  const prev = useRef({ rev: view.timerRev, reveal: !!view.reveal });
+  useEffect(() => {
+    const p = prev.current;
+    prev.current = { rev: view.timerRev, reveal: !!view.reveal };
+    let next: "wrong" | "snip" | null = null;
+    if (view.timerRev > p.rev && view.status?.startsWith("Wrong")) {
+      next = "wrong";
+      play("wrongWire");
+      navigator.vibrate?.([120, 60, 120]);
+    } else if (view.reveal && !p.reveal) {
+      next = "snip";
+      play("snip");
+      play("spark");
+      navigator.vibrate?.(40);
+    }
+    if (!next) return;
+    setFx(next);
+    const t = setTimeout(() => setFx(null), 700);
+    return () => clearTimeout(t);
+  }, [view.timerRev, view.reveal, view.status]);
+  return fx;
 }
 
 function Keypad({ onSubmit }: { onSubmit: (text: string) => void }) {
@@ -214,6 +252,7 @@ function HoldCut({
   onDone: () => void;
 }) {
   const [charge, setCharge] = useState(0);
+  const [sent, setSent] = useState(false);
   const holding = useRef(false);
   const level = useRef(0);
   const done = useRef(false);
@@ -242,6 +281,7 @@ function HoldCut({
           done.current = true;
           holding.current = false;
           navigator.vibrate?.([40, 30, 80]);
+          setSent(true);
           finish.current();
         }
       }
@@ -261,8 +301,23 @@ function HoldCut({
   const release = () => {
     if (!holding.current || done.current) return;
     holding.current = false;
+    level.current = 0;
+    setCharge(0);
     cancel.current();
   };
+
+  // A landed cut removes this wire (or moves to the next question), which unmounts the button.
+  // Still here a moment later means the server refused it: let the player try again.
+  useEffect(() => {
+    if (!sent) return;
+    const t = setTimeout(() => {
+      done.current = false;
+      level.current = 0;
+      setCharge(0);
+      setSent(false);
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [sent]);
   const r = 42;
   const circ = 2 * Math.PI * r;
   return (

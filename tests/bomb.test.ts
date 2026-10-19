@@ -113,6 +113,36 @@ describe("dealing wires", () => {
     expect(new Set(solo.map((w) => w.playerId))).toEqual(new Set(["a"]));
   });
 
+  test("several right answers go to empty hands first, so every phone gets a wire", () => {
+    const group = players(["a", "b", "c"]);
+    group[1]!.rightHolds = 5;
+    group[2]!.rightHolds = 5;
+    const wires = dealBombWires({
+      players: group,
+      options: [
+        { index: 0, label: "R1", correct: true },
+        { index: 1, label: "R2", correct: true },
+        { index: 2, label: "W", correct: false },
+      ],
+      kind: "multiple_choice",
+      decoys: [],
+      rng,
+    });
+    expect(new Set(wires.map((w) => w.playerId))).toEqual(new Set(["a", "b", "c"]));
+    expect(wires.find((w) => w.label === "R1")!.playerId).toBe("a");
+
+    // More right answers than phones: the extras follow the same rotation as before.
+    const two = dealBombWires({
+      players: players(["a", "b"]),
+      options: [0, 1, 2, 3].map((index) => ({ index, label: `O${index}`, correct: index < 3 })),
+      kind: "multiple_choice",
+      decoys: [],
+      rng,
+    });
+    expect(two.filter((w) => w.playerId === "a")).toHaveLength(2);
+    expect(two.filter((w) => w.playerId === "b")).toHaveLength(2);
+  });
+
   test("a pin extra is a copy of a wrong spot", () => {
     const spots = [
       { x: 0.2, y: 0.3 },
@@ -208,6 +238,35 @@ describe("cutting", () => {
     expect(now[1]).toBe(was[1]! - BOMB_HOLD_MS);
   });
 
+  test("a wrong cut clears every copy of that answer, so it only costs time once", () => {
+    const { game, clock, joined } = boot([mc(0, 2)], ["A", "B", "C", "D", "E", "F"]);
+    const q = question(game);
+    const copies = q.wires.filter((w) => !w.correct);
+    expect(copies).toHaveLength(5);
+    expect(copies.filter((w) => w.copy)).toHaveLength(4);
+    const before = game.hostView().remainingMs;
+    const first = copies[0]!;
+    expect(cut(game, clock, first.playerId, first.id)).toBe(true);
+    expect(q.wires.filter((w) => !w.cut).map((w) => w.correct)).toEqual([true]);
+    expect(game.squads[0]!.wrongCuts).toBe(1);
+    expect(game.hostView().remainingMs).toBe(before - BOMB_HOLD_MS - 15_000);
+    const other = copies[1]!;
+    expect(game.hold(other.playerId, other.id, true)).toBe(false);
+    expect(game.playerView(other.playerId).wires).toEqual([]);
+    expect(joined.every((p) => game.players.get(p.id)!.wrongCuts <= 1)).toBe(true);
+  });
+
+  test("in a race the projector's timerRev moves with any squad's penalty", () => {
+    const { game, clock, joined } = boot([mc(0)], ["Ada", "Ben"], { game: "race", squads: 2 });
+    const rev = game.hostView().timerRev;
+    const bad = question(game, 1).wires.find((w) => !w.correct)!;
+    expect(game.players.get(bad.playerId)!.squad).toBe(1);
+    cut(game, clock, bad.playerId, bad.id);
+    expect(game.hostView().timerRev).toBe(rev + 1);
+    expect(game.hostView().squads[1]!.timerRev).toBe(2);
+    expect(joined).toHaveLength(2);
+  });
+
   test("keypad answers ignore case, a wrong entry locks for 800ms, and it is not a right cut", () => {
     const q: Question = { id: "t1", type: "text", text: "Capital of France?", timeLimitSec: 20, options: ["Paris"], correct: [0] };
     const { game, clock, joined } = boot([q], ["Ada"]);
@@ -216,6 +275,8 @@ describe("cutting", () => {
     expect(game.playerView(id).keypad).toBe(true);
     expect(game.type(id, "nope")).toBe(true);
     expect(p.keypadWrong).toBe(1);
+    expect(p.wrongCuts).toBe(1);
+    expect(game.squads[0]!.wrongCuts).toBe(1);
     expect(game.type(id, "Paris")).toBe(false);
     expect(p.keypadWrong).toBe(1);
     clock.advance(BOMB_KEYPAD_LOCK_MS);
@@ -253,6 +314,42 @@ describe("squads, reconnecting, and the ending", () => {
     const kicked = right().playerId;
     game.kick(kicked);
     expect(right().playerId).not.toBe(kicked);
+  });
+
+  test("a reconnect only moves the wires of players gone for 5 seconds", () => {
+    const { game, clock, joined } = boot([mc(0, 3)], ["Ada", "Ben", "Cara"]);
+    const [a, b] = [joined[0]!.id, joined[1]!.id];
+    const owners = () => question(game).wires.map((w) => w.playerId);
+    const dealt = owners();
+    game.setConnected(a, false);
+    clock.advance(3000);
+    game.setConnected(b, false);
+    game.setConnected(b, true);
+    expect(owners()).toEqual(dealt);
+    clock.advance(BOMB_REDEAL_MS - 3000);
+    expect(owners()).not.toContain(a);
+  });
+
+  test("a re-deal only moves the stranded wires, and a player back with no wire gets a copy", () => {
+    const { game, clock, joined } = boot([mc(0, 4)], ["Ada", "Ben", "Cara", "Dev"]);
+    const q = question(game);
+    const gone = q.wires.find((w) => w.correct)!.playerId;
+    const kept = new Map(q.wires.filter((w) => w.playerId !== gone).map((w) => [w.id, w.playerId]));
+    game.setConnected(gone, false);
+    clock.advance(BOMB_REDEAL_MS);
+    for (const [id, owner] of kept) expect(q.wires.find((w) => w.id === id)!.playerId).toBe(owner);
+    expect(q.wires.find((w) => w.correct)!.playerId).not.toBe(gone);
+    expect(q.wires.filter((w) => !w.cut)).toHaveLength(4);
+
+    game.setConnected(gone, true);
+    const back = game.playerView(gone).wires;
+    expect(back).toHaveLength(1);
+    const copy = question(game).wires.find((w) => w.playerId === gone)!;
+    expect(copy.copy).toBe(true);
+    expect(copy.correct).toBe(false);
+    for (const [id, owner] of kept) expect(q.wires.find((w) => w.id === id)!.playerId).toBe(owner);
+    expect(new Set(q.wires.map((w) => w.id)).size).toBe(q.wires.length);
+    expect(joined).toHaveLength(4);
   });
 
   test("if everyone drops, the wires stay until someone comes back", () => {

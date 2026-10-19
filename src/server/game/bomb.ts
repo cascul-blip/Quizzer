@@ -145,7 +145,8 @@ export interface BombPlayer extends BasePlayer {
  * More players than choices: extras get decoys, or a copy of a wrong answer when the decoy list runs out.
  * True/False: every phone gets True or False, split as evenly as possible. On an odd squad the extra
  * wire is the wrong one, so the right wire stays with the smaller half.
- * The right wire goes to whoever has held it the fewest times (ties follow `rng`).
+ * The right wire goes to whoever has held it the fewest times (ties follow `rng`), and with several
+ * right answers each one goes to a phone that has no wire yet while there is one.
  */
 export function dealBombWires(opts: {
   players: DealPlayer[];
@@ -211,7 +212,11 @@ export function dealBombWires(opts: {
   const wrong = opts.options.filter((o) => !o.correct);
 
   if (players.length <= opts.options.length) {
-    for (const opt of correct) give(fewestRight(players), fromOption(opt));
+    // Right wires go to empty hands first, so several right answers can't all land on one phone.
+    for (const opt of correct) {
+      const bare = players.filter((p) => !assigned.has(p.id));
+      give(fewestRight(bare.length > 0 ? bare : players), fromOption(opt));
+    }
     for (const opt of wrong) give(fewestWires(players), fromOption(opt));
     return wires;
   }
@@ -615,23 +620,34 @@ export class BombGame {
     return out;
   }
 
+  /**
+   * Move stranded wires (held by players gone for BOMB_REDEAL_MS, or kicked) to connected teammates,
+   * and give a copy of a wrong wire to any connected player left with none. Everyone else keeps their wires.
+   */
   private redealSquad(squad: Squad | undefined): void {
     if (!squad || this.phase !== "defuse" || squad.finished || squad.exploded) return;
     const q = squad.question;
     if (!q || q.type === "text" || squad.pauseUntil) return;
-    const stranded = q.wires.some((w) => !w.cut && !this.players.get(w.playerId)?.connected);
-    const active = this.holders(squad);
-    if (!stranded && active.length > 0) return;
-    if (active.length === 0) {
+    const now = this.clock.now();
+    const gone = (id: string) => {
+      const p = this.players.get(id);
+      return !p || (!p.connected && now - p.disconnectedAt >= BOMB_REDEAL_MS);
+    };
+    let players = this.holders(squad);
+    if (players.length === 0) {
       const anyone = this.squadPlayers(squad).filter((p) => p.connected);
       if (anyone.length === 0) return;
       for (const p of anyone) p.satOut = false;
+      players = this.holders(squad);
     }
-    this.undoHeld(q.wires);
-    const players = this.holders(squad);
-    if (players.length === 0) return;
-    const remaining = q.wires.filter((w) => !w.cut);
-    const assigned = new Map<string, number>();
+    const held = new Map<string, number>();
+    for (const w of q.wires) if (!w.cut && !gone(w.playerId)) held.set(w.playerId, (held.get(w.playerId) ?? 0) + 1);
+    const before = new Map(held);
+    const stranded = q.wires.filter((w) => !w.cut && gone(w.playerId));
+    const bareBefore = players.some((p) => !held.get(p.id));
+    if (stranded.length === 0 && !bareBefore) return;
+    this.undoHeld(stranded);
+
     const liveRight = new Map(players.map((p) => [p.id, p.rightHolds]));
     const pick = (score: (p: DealPlayer) => number) => {
       let best = Infinity;
@@ -639,35 +655,41 @@ export class BombGame {
       const tied = players.filter((p) => score(p) === best);
       return tied[Math.floor(this.rng() * tied.length)]!;
     };
-    const give = (wire: LiveWire, id: string, copy: boolean) => {
-      wire.playerId = id;
-      wire.copy = copy;
-      assigned.set(id, (assigned.get(id) ?? 0) + 1);
-      if (wire.correct) liveRight.set(id, (liveRight.get(id) ?? 0) + 1);
+    const given: LiveWire[] = [];
+    const hand = (w: LiveWire, id: string) => {
+      w.playerId = id;
+      held.set(id, (held.get(id) ?? 0) + 1);
+      if (w.correct) liveRight.set(id, (liveRight.get(id) ?? 0) + 1);
+      given.push(w);
     };
-    const fresh: LiveWire[] = [];
-    for (const w of remaining) {
-      if (w.correct) {
-        const p = pick((pl) => liveRight.get(pl.id) ?? 0);
-        give(w, p.id, false);
-      } else {
-        const p = pick((pl) => (assigned.get(pl.id) ?? 0) * 1000 + pl.extras);
-        give(w, p.id, false);
-      }
-      fresh.push(w);
+    for (const w of stranded) if (w.correct) hand(w, pick((p) => liveRight.get(p.id) ?? 0).id);
+    for (const w of stranded) if (!w.correct) hand(w, pick((p) => (held.get(p.id) ?? 0) * 1000 + p.extras).id);
+
+    const uncut = q.wires.filter((w) => !w.cut);
+    const wrongs = uncut.filter((w) => !w.correct);
+    const source = wrongs.length > 0 ? wrongs : uncut;
+    players
+      .filter((p) => !held.get(p.id))
+      .forEach((p, i) => {
+        const src = source[i % Math.max(1, source.length)];
+        if (!src) return;
+        const copy: LiveWire = { ...src, id: `w${q.seq}-x${q.wires.length}`, copy: true, cut: false };
+        q.wires.push(copy);
+        hand(copy, p.id);
+      });
+
+    for (const w of given) {
+      const p = this.players.get(w.playerId)!;
+      p.wiresHeld++;
+      if (w.correct) p.rightHeld++;
     }
-    const bare = players.filter((p) => (assigned.get(p.id) ?? 0) === 0);
-    const wrongs = fresh.filter((w) => !w.correct);
-    const source = wrongs.length > 0 ? wrongs : fresh.filter((w) => w.correct);
-    bare.forEach((p, i) => {
-      const src = source[i % Math.max(1, source.length)];
-      if (!src) return;
-      fresh.push({ ...src, id: `w${q.seq}-x${i}`, playerId: p.id, copy: true, cut: false, decoy: src.decoy });
-      assigned.set(p.id, (assigned.get(p.id) ?? 0) + 1);
-    });
-    q.wires = [...q.wires.filter((w) => w.cut), ...fresh];
+    for (const [id, n] of held) {
+      const was = before.get(id) ?? 0;
+      if (n === was) continue;
+      const p = this.players.get(id);
+      if (p) p.extras += Math.max(0, n - 1) - Math.max(0, was - 1);
+    }
     if (squad.hold && !q.wires.some((w) => w.id === squad.hold!.wireId && !w.cut && w.playerId === squad.hold!.playerId)) squad.hold = null;
-    this.noteHeld(fresh);
   }
 
   // ---------- cuts ----------
@@ -722,6 +744,8 @@ export class BombGame {
     if (correct) this.clearQuestion(squad, p, "keypad");
     else {
       p.keypadWrong++;
+      p.wrongCuts++;
+      squad.wrongCuts++;
       q.wrongOnThis++;
       this.wrongCounts[q.qIndex]!++;
       q.keypadLockUntil = this.clock.now() + BOMB_KEYPAD_LOCK_MS;
@@ -766,6 +790,10 @@ export class BombGame {
   private wrongWire(squad: Squad, p: BombPlayer, wire: LiveWire): void {
     const q = squad.question!;
     wire.cut = true;
+    // Copies of the same wrong answer go too, so one slip can't cost time twice.
+    for (const w of q.wires) {
+      if (!w.cut && !w.correct && w.optionIndex === wire.optionIndex && (w.optionIndex >= 0 || w.label === wire.label)) w.cut = true;
+    }
     p.wrongCuts++;
     squad.wrongCuts++;
     q.wrongOnThis++;
@@ -803,6 +831,8 @@ export class BombGame {
     } else {
       squad.endsAt -= pen;
       squad.timerRev++;
+      // The projector's ticks follow the soonest squad, so they re-sync on any squad's penalty.
+      this.timerRev++;
       if (squad.endsAt <= this.clock.now()) {
         this.markExploded(squad);
         if (this.squads.every((s) => s.finished || s.exploded)) this.enterEnding();

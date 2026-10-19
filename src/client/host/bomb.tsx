@@ -138,8 +138,47 @@ function popText(flash: HostBombSquad["flash"]): string | null {
   return "Snip!";
 }
 
-function latestFlash(squads: HostBombSquad[]): HostBombSquad["flash"] {
-  return squads.reduce<HostBombSquad["flash"]>((best, s) => ((s.flash?.seq ?? 0) > (best?.seq ?? 0) ? s.flash : best), null);
+type Flash = NonNullable<HostBombSquad["flash"]>;
+
+/**
+ * Each squad's newest flash, for 700ms. flashSeq counts per squad, so seqs are only compared within a squad.
+ * The map's last entry is the most recent flash. Flashes already on screen when the projector opens are skipped.
+ */
+function useSquadFlashes(squads: HostBombSquad[]): Map<number, Flash> {
+  const seen = useRef<Map<number, number> | null>(null);
+  const timers = useRef(new Set<ReturnType<typeof setTimeout>>());
+  const [on, setOn] = useState(() => new Map<number, Flash>());
+  const key = squads.map((s) => `${s.index}:${s.flash?.seq ?? 0}`).join(",");
+  useEffect(() => {
+    const first = seen.current === null;
+    const last = (seen.current ??= new Map());
+    const fresh: [number, Flash][] = [];
+    for (const s of squads) {
+      const seq = s.flash?.seq ?? 0;
+      if (!first && s.flash && seq !== last.get(s.index)) fresh.push([s.index, s.flash]);
+      last.set(s.index, seq);
+    }
+    if (fresh.length === 0) return;
+    setOn((prev) => {
+      const next = new Map(prev);
+      for (const [i, f] of fresh) {
+        next.delete(i);
+        next.set(i, f);
+      }
+      return next;
+    });
+    const t = setTimeout(() => {
+      timers.current.delete(t);
+      setOn((prev) => {
+        const next = new Map(prev);
+        for (const [i, f] of fresh) if (next.get(i) === f) next.delete(i);
+        return next;
+      });
+    }, 700);
+    timers.current.add(t);
+  }, [key]);
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  return on;
 }
 
 function TogetherBomb({ view }: { view: BombView }) {
@@ -153,15 +192,16 @@ function TogetherBomb({ view }: { view: BombView }) {
     minutes: view.settings.minutes,
     phase: view.phase,
   });
-  const fx = useFlashFx(latestFlash(view.squads));
+  const flashes = useSquadFlashes(view.squads);
+  const fx = [...flashes.values()].pop() ?? null;
   const single = view.squads.length === 1 ? view.squads[0] : undefined;
   const modules: BayModule[] = view.squads.flatMap((s) =>
     s.modules.map((mod) => ({
       mod,
       color: view.squads.length > 1 ? s.color : undefined,
       image: single && mod.active && mod.panel === "picture" ? single.question?.image : undefined,
-      spark: !!fx && fx.kind !== "wrong" && mod.active && s.flash?.seq === fx.seq,
-      redLed: !!fx && fx.kind === "wrong" && mod.active && s.flash?.seq === fx.seq,
+      spark: mod.active && !!flashes.get(s.index) && flashes.get(s.index)!.kind !== "wrong",
+      redLed: mod.active && flashes.get(s.index)?.kind === "wrong",
     })),
   );
   const q = single?.question;
@@ -241,7 +281,8 @@ function useBombSounds(view: BombView) {
       if (view.phase === "defuse" && p.phase === "countdown") play("start");
       if (view.phase === "defused") play("defuse");
       if (view.phase === "exploded") play("explosion");
-      if (view.phase === "podium") play(view.outcome === "defused" ? "fanfare" : "explosion");
+      // The explosion already played on the exploded screen; only a defused bomb gets the fanfare.
+      if (view.phase === "podium" && view.outcome === "defused") play("fanfare");
     }
     for (const s of view.squads) {
       const was = p.squads.find((o) => o.index === s.index)?.flash?.seq ?? 0;

@@ -1982,3 +1982,25 @@ a.btn {
     opacity: 1;
   }
 }
+
+/* Bomb Squad wire (WireGraphic): the tint fills the mask under the shaded wire picture. */
+.bw-wire {
+  position: relative;
+  display: block;
+}
+
+.bw-wire img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: fill;
+}
+
+.bw-ink {
+  position: absolute;
+  inset: 0;
+  mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+}
