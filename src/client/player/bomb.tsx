@@ -119,7 +119,8 @@ function Defusing({ view, send }: { view: PlayerBombView; send: Send }) {
       )}
       <h1 class="bw-q">{q.text}</h1>
       {q.image && q.type !== "pin" && <img class="bw-qimg" src={`/${q.image}`} alt="" />}
-      {line && <p class={`bw-status ${view.reveal ? "good" : ""}`}>{line}</p>}
+      {/* Always there, so "… is cutting" appearing never pushes the Cut button out from under a finger. */}
+      <p class={`bw-status ${view.reveal ? "good" : ""}`}>{line || "\u00a0"}</p>
       {view.reveal ? (
         <p class="bw-reveal">Answer: {view.reveal.join(", ")}</p>
       ) : view.wires.length === 0 && !view.keypad ? (
