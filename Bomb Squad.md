@@ -17,7 +17,7 @@ Settings:
 * **Modules per squad**: 2, 3 or 4 (default 3).
 * **Wires per module**: 2, 3 or 4 (default 3).
 * **Bomb timer**: 3, 5, 7 or 10 minutes (default 5).
-* **Wrong cut**: −10, −15 or −20 seconds (default −15).
+* **Wrong cut**: −10, −15, −20, −30 or −40 seconds (default −15).
 
 ## Dealing the wires
 For each wire, the squad gets one question from the quiz.  Questions come in a random order and repeat once they run out.  Each squad has its own order.
@@ -111,7 +111,7 @@ These are the starting choices for this mode.  Each one is marked and needs the 
 * Type the answer: a keypad module that anyone in the squad can type into.
 * Pin: each phone only sees its own spots, dealt like wires.
 * Only the holder can cut their own wire, with a 1.5-second hold.  Others see "is cutting…".  One cut at a time per squad.
-* Wrong cut: −15 seconds by default (−10 / −15 / −20 setting).  The wrong wire is removed and the squad keeps going on the same question.  There are no strikes; only time is lost.
+* Wrong cut: −15 seconds by default (−10 / −15 / −20 / −30 / −40 setting).  The wrong wire is removed and the squad keeps going on the same question.  There are no strikes; only time is lost.
 * 3 modules per squad and 3 wires per module by default (2–4 each).  Bomb timer 5 minutes by default (3 / 5 / 7 / 10).
 * In Together mode, finished squads wait and cheer; they don't help other squads.
 * Race places: finish time, then modules cleared, then fewest wrong cuts.

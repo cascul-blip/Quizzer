@@ -1303,7 +1303,7 @@ export type BombStyle = "together" | "race";
 export const BOMB_MODULES = [2, 3, 4] as const;
 export const BOMB_WIRES = [2, 3, 4] as const;
 export const BOMB_MINUTES = [3, 5, 7, 10] as const;
-export const BOMB_PENALTIES = [10, 15, 20] as const;
+export const BOMB_PENALTIES = [10, 15, 20, 30, 40] as const;
 /** Squads in the lobby setting. A squad of 1 is allowed and plays like a normal quiz. */
 export const BOMB_MAX_SQUADS = 6;
 /** The default split keeps every squad at or under this many players. */

@@ -462,4 +462,14 @@ describe("bomb squad lobby", () => {
     game.join("Late");
     expect(game.bomb.squads).toBe(5);
   });
+
+  test("wrong cut offers −10 to −40 seconds", () => {
+    const { game } = setup();
+    game.setMode("bomb");
+    for (const penaltySec of [10, 15, 20, 30, 40]) {
+      game.setBomb({ ...game.bomb, penaltySec });
+      expect(game.bomb.penaltySec).toBe(penaltySec);
+    }
+    expect(() => game.setBomb({ ...game.bomb, penaltySec: 25 })).toThrow("Unsupported wrong-cut penalty");
+  });
 });
