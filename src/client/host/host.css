@@ -4396,6 +4396,11 @@ select {
   transform: translateX(-50%);
 }
 
+/* The clock digits are sized in cqw, so they scale with whichever casing they sit on. */
+.bw-casing {
+  container-type: inline-size;
+}
+
 .bw-case {
   width: 100%;
   height: auto;
@@ -4424,7 +4429,7 @@ select {
   color: #ff2a1a;
   font-family: ui-monospace, "Cascadia Mono", "Segoe UI Mono", monospace;
   font-weight: 700;
-  font-size: clamp(14px, 3.4vw, 58px);
+  font-size: 7.5cqw;
   letter-spacing: 0.04em;
   line-height: 1;
   text-shadow: 0 0 10px rgba(255, 40, 20, 0.75);
@@ -4599,10 +4604,6 @@ select {
 
 .bw-race-row.n3 .bw-casing {
   width: 31%;
-}
-
-.bw-race .bw-digits {
-  font-size: clamp(12px, 1.8vw, 32px);
 }
 
 .bw-boom {
