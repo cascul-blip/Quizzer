@@ -38,6 +38,9 @@ export const MUSIC_TRACKS = [
   { id: "bomb-lobby", mode: "Bomb Squad", screen: "Lobby" },
   { id: "bomb-defuse", mode: "Bomb Squad", screen: "Defusing" },
   { id: "bomb-results", mode: "Bomb Squad", screen: "Defused, exploded, or podium" },
+  { id: "siege-lobby", mode: "Kingdom Siege", screen: "Lobby" },
+  { id: "siege-battle", mode: "Kingdom Siege", screen: "Countdown, build breaks and waves" },
+  { id: "siege-results", mode: "Kingdom Siege", screen: "The kingdom stands, the castle falls, or podium" },
 ] as const;
 
 export type MusicTrackId = (typeof MUSIC_TRACKS)[number]["id"];

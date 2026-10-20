@@ -32,8 +32,10 @@ import {
   type QuestionView,
   type RankedEntry,
   type ShuffleOptions,
+  type SiegeSettings,
   type TowerSettings,
 } from "../../shared/protocol.ts";
+import { SIEGE_WAVE_CHOICES, type SiegeWaves } from "../../shared/siege-rules.ts";
 import { cleanAvatar, randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import { MAX_TYPED_ANSWER, checkAnswer, type AnswerValue } from "../../shared/answer-match.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
@@ -56,6 +58,7 @@ export const DEFAULT_LAND: LandSettings = { teams: 2, minutes: 5 };
 export const DEFAULT_CUP: CupSettings = { cups: CUP_DEFAULT_CUPS };
 export const DEFAULT_DRAGON: DragonSettings = { teams: 2, toughness: "normal", battleMinutes: 5, fireSec: 45, scrambleMinutes: 3 };
 export const DEFAULT_BOMB: BombSettings = { game: "together", squads: 1, modules: 3, wires: 3, minutes: 5, penaltySec: 15 };
+export const DEFAULT_SIEGE: SiegeSettings = { waves: 5 };
 
 export interface Answer {
   /** Chosen option index; -1 for a typed answer. */
@@ -98,13 +101,14 @@ export interface GameOptions {
   cup?: CupSettings;
   dragon?: DragonSettings;
   bomb?: BombSettings;
+  siege?: SiegeSettings;
   protect?: boolean;
 }
 
 /**
  * A Classic game: lobby → (intro → open → reveal → leaderboard)* → podium.
  * It also serves as the lobby for every mode; in the other modes the hub
- * hands its players to that mode's game (TowerGame, SubGame, FightGame, RobotGame, LandGame, RacerGame, CupGame, DragonGame, BombGame) on start.
+ * hands its players to that mode's game (TowerGame, SubGame, FightGame, RobotGame, LandGame, RacerGame, CupGame, DragonGame, BombGame, SiegeGame) on start.
  */
 export class Game {
   readonly kind = "classic";
@@ -117,7 +121,7 @@ export class Game {
   qIndex = -1;
   pacing: Pacing;
   shuffle: ShuffleOptions;
-  /** "Protect from abuse": Tallest Tower, Submarine Squad, Tower Fight, Robot Attack, Cup of Death and Dragon's Hoard slow down players who keep answering wrong. Bomb Squad does not use it. */
+  /** "Protect from abuse": Tallest Tower, Submarine Squad, Tower Fight, Robot Attack, Cup of Death, Dragon's Hoard and Kingdom Siege slow down players who keep answering wrong. Bomb Squad does not use it. */
   protect: boolean;
   mode: GameMode;
   tower: TowerSettings;
@@ -126,6 +130,7 @@ export class Game {
   cup: CupSettings;
   dragon: DragonSettings;
   bomb: BombSettings;
+  siege: SiegeSettings;
   /** When the current phase's countdown ends (intro/open), for views. */
   phaseEndsAt = 0;
   openedAt = 0;
@@ -162,6 +167,7 @@ export class Game {
     this.cup = { ...(opts.cup ?? DEFAULT_CUP) };
     this.dragon = { ...(opts.dragon ?? DEFAULT_DRAGON) };
     this.bomb = { ...(opts.bomb ?? DEFAULT_BOMB) };
+    this.siege = { ...(opts.siege ?? DEFAULT_SIEGE) };
     this.protect = opts.protect ?? true;
   }
 
@@ -258,7 +264,7 @@ export class Game {
 
   setMode(mode: GameMode): void {
     if (this.phase !== "lobby") throw new GameError("The game mode can only be changed before the game starts");
-    if (mode !== "classic" && mode !== "tower" && mode !== "submarine" && mode !== "fight" && mode !== "robot" && mode !== "land" && mode !== "racer" && mode !== "cup" && mode !== "dragon" && mode !== "bomb") throw new GameError("Unknown game mode");
+    if (mode !== "classic" && mode !== "tower" && mode !== "submarine" && mode !== "fight" && mode !== "robot" && mode !== "land" && mode !== "racer" && mode !== "cup" && mode !== "dragon" && mode !== "bomb" && mode !== "siege") throw new GameError("Unknown game mode");
     this.mode = mode;
     if (mode === "bomb") {
       this.bombSquadsManual = false;
@@ -337,6 +343,14 @@ export class Game {
     this.bomb = { game: settings.game, squads, modules, wires, minutes, penaltySec };
     if (touched) this.bombSquadsManual = true;
     this.refreshBombSquads();
+    this.onChange();
+  }
+
+  setSiege(settings: SiegeSettings): void {
+    if (this.phase !== "lobby") throw new GameError("Kingdom Siege settings can only be changed before the game starts");
+    const waves = settings.waves === "endless" ? "endless" : Number(settings.waves);
+    if (!(SIEGE_WAVE_CHOICES as readonly unknown[]).includes(waves)) throw new GameError("Unsupported number of waves");
+    this.siege = { waves: waves as SiegeWaves };
     this.onChange();
   }
 
@@ -576,6 +590,7 @@ export class Game {
       cup: this.cup,
       dragon: this.dragon,
       bomb: this.bomb,
+      siege: this.siege,
       teams,
       quiz: { id: this.quizId, title: this.title, questionCount: this.questions.length },
       pacing: this.pacing,
