@@ -629,6 +629,7 @@ export class Game {
           : null,
       podium: this.phase === "podium" ? this.leaderboard(5) : null,
       team: this.phase === "lobby" && this.teamCount() !== null ? teamInfo(this.teamAssignment().get(p.id) ?? 0) : null,
+      ...(this.phase === "lobby" && this.mode === "siege" ? { siege: true as const } : {}),
     };
   }
 }

@@ -328,16 +328,17 @@ describe("the battle", () => {
     expect(game.defenderAt(4, 3)!.health).toBe(13);
   });
 
-  test("the wolf doesn't leap a knight", () => {
+  test("the wolf doesn't leap a knight, and takes two strikes to fall", () => {
     const { game, clock } = quietWave();
     game.gold = 1000;
     game.place(byName(game, "Ana").id, "knight", 4, 6);
     const wolf = game.spawn("wolf", 4);
-    // Tough enough to survive the knight's first strike.
-    wolf.health = 50;
     clock.advance(1100);
     expect(wolf.state).toBe("attack");
     expect(wolf.x).toBeCloseTo(7, 5);
+    expect(wolf.health).toBe(1);
+    clock.advance(500);
+    expect(game.monsters).not.toContain(wolf);
   });
 
   test("a wolf leaping the wall next to the castle lands on the castle wall", () => {

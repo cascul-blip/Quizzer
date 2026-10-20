@@ -4846,3 +4846,698 @@ select {
     animation: none;
   }
 }
+
+/* ---------- Kingdom Siege ---------- */
+
+.siege-stage {
+  background: #1d2a17;
+}
+
+.siege-treasury {
+  display: flex;
+  align-items: center;
+  gap: 1.4vw;
+}
+
+.siege-gold {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  font-size: 1.5em;
+  font-weight: 800;
+  color: #ffd968;
+  font-variant-numeric: tabular-nums;
+}
+
+.siege-icon {
+  width: 1.3em;
+  height: 1.3em;
+  object-fit: contain;
+  vertical-align: middle;
+}
+
+.siege-hearts {
+  display: flex;
+  gap: 0.15em;
+}
+
+.siege-hearts .siege-icon.lost {
+  filter: grayscale(1) brightness(0.45);
+  opacity: 0.5;
+}
+
+.siege-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  container-type: size;
+}
+
+.siege-board {
+  position: relative;
+  width: min(100cqw, 100cqh * 1.75);
+  container-type: inline-size;
+  overflow: hidden;
+  border-radius: 6px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+}
+
+.siege-board-img,
+.siege-castle img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  user-select: none;
+}
+
+.siege-castle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  z-index: 1;
+}
+
+.siege-figures {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+}
+
+.siege-fig {
+  position: absolute;
+  pointer-events: none;
+}
+
+.siege-move,
+.siege-fig-inner,
+.siege-piece {
+  position: absolute;
+  inset: 0;
+  transform-origin: var(--ox) var(--oy);
+}
+
+.siege-layer {
+  position: absolute;
+  max-width: none;
+  user-select: none;
+}
+
+/* Walking figures bob along; a strike lunges forward (monsters face left). */
+.siege-move.bob {
+  animation: siege-bob 0.55s ease-in-out infinite alternate;
+}
+
+.siege-move.lunge-a {
+  animation: siege-lunge-a 0.35s ease-out;
+}
+
+.siege-move.lunge-b {
+  animation: siege-lunge-b 0.35s ease-out;
+}
+
+@keyframes siege-bob {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-3.5%);
+  }
+}
+
+@keyframes siege-lunge-a {
+  40% {
+    transform: translateX(-10%);
+  }
+}
+
+@keyframes siege-lunge-b {
+  40% {
+    transform: translateX(-10%);
+  }
+}
+
+/* Hit: a quick white flash. */
+.siege-fig-inner.hit-a {
+  animation: siege-hit-a 0.28s ease-out;
+}
+
+.siege-fig-inner.hit-b {
+  animation: siege-hit-b 0.28s ease-out;
+}
+
+@keyframes siege-hit-a {
+  30% {
+    filter: brightness(2.6) saturate(0.2);
+  }
+}
+
+@keyframes siege-hit-b {
+  30% {
+    filter: brightness(2.6) saturate(0.2);
+  }
+}
+
+/* The Lv 3 glow. */
+.siege-fig-inner.lv3-glow {
+  filter: drop-shadow(0 0 0.5cqw rgba(255, 214, 96, 0.95)) drop-shadow(0 0 1.2cqw rgba(255, 200, 60, 0.5));
+}
+
+/* A defender drops onto its square with a small bounce. */
+.siege-fig.dropped .siege-fig-inner {
+  animation: siege-drop 0.6s cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+
+@keyframes siege-drop {
+  0% {
+    transform: translateY(-70%);
+    opacity: 0;
+  }
+  45% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  70% {
+    transform: translateY(-7%);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+/* The knight swings his sword and leans in; the giant raises its club and smashes it down.
+   The -a/-b pairs are the same animation under two names, so each strike restarts it. */
+.knight-sword.swing-a {
+  animation: knight-swing-a 0.4s ease-out;
+}
+.knight-sword.swing-b {
+  animation: knight-swing-b 0.4s ease-out;
+}
+.knight-upper.lean-a {
+  animation: knight-lean-a 0.4s ease-out;
+}
+.knight-upper.lean-b {
+  animation: knight-lean-b 0.4s ease-out;
+}
+.giant-club.club-a {
+  animation: giant-club-a 0.7s ease-in-out;
+}
+.giant-club.club-b {
+  animation: giant-club-b 0.7s ease-in-out;
+}
+.giant-upper.lean-a {
+  animation: giant-lean-a 0.7s ease-in-out;
+}
+.giant-upper.lean-b {
+  animation: giant-lean-b 0.7s ease-in-out;
+}
+@keyframes knight-swing-a {
+  45% {
+    transform: rotate(25deg);
+  }
+}
+@keyframes knight-swing-b {
+  45% {
+    transform: rotate(25deg);
+  }
+}
+@keyframes knight-lean-a {
+  45% {
+    transform: rotate(6deg);
+  }
+}
+@keyframes knight-lean-b {
+  45% {
+    transform: rotate(6deg);
+  }
+}
+@keyframes giant-club-a {
+  35% {
+    transform: rotate(18deg);
+  }
+  70% {
+    transform: rotate(-25deg);
+  }
+}
+@keyframes giant-club-b {
+  35% {
+    transform: rotate(18deg);
+  }
+  70% {
+    transform: rotate(-25deg);
+  }
+}
+@keyframes giant-lean-a {
+  70% {
+    transform: rotate(-6deg);
+  }
+}
+@keyframes giant-lean-b {
+  70% {
+    transform: rotate(-6deg);
+  }
+}
+
+.monster.state-wait .siege-move {
+  animation: siege-giant-wait 1s ease-in-out infinite alternate;
+}
+
+@keyframes siege-giant-wait {
+  to {
+    transform: translateY(-1.5%) rotate(-1.5deg);
+  }
+}
+
+.siege-hp {
+  position: absolute;
+  left: 30%;
+  width: 40%;
+  top: 4%;
+  height: max(3px, 0.35cqw);
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.siege-hp i {
+  display: block;
+  height: 100%;
+  background: #6fd06a;
+}
+
+.monster .siege-hp i {
+  background: #e05a3a;
+}
+
+/* A defeated monster tips over on its base and fades; one that reached the wall fades into dust. */
+.siege-fig.fallen.tipped .siege-fig-inner {
+  animation: siege-tip 1.2s ease-in forwards;
+}
+
+.siege-fig.fallen.at-wall .siege-fig-inner {
+  animation: siege-at-wall 0.8s ease-in forwards;
+}
+
+@keyframes siege-tip {
+  0% {
+    transform: rotate(0);
+    opacity: 1;
+  }
+  45% {
+    transform: rotate(78deg);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(84deg);
+    opacity: 0;
+  }
+}
+
+@keyframes siege-at-wall {
+  to {
+    transform: translateX(-20%) scale(0.9);
+    opacity: 0;
+  }
+}
+
+.siege-dust {
+  position: absolute;
+  left: calc(var(--ox) - 45%);
+  top: calc(var(--oy) - 55%);
+  width: 90%;
+  pointer-events: none;
+  animation: siege-dust 0.9s ease-out forwards;
+}
+
+.siege-dust.loose {
+  left: auto;
+  top: auto;
+  animation: siege-dust 0.9s ease-out forwards;
+}
+
+@keyframes siege-dust {
+  0% {
+    transform: scale(0.4);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.3) translateY(-12%);
+    opacity: 0;
+  }
+}
+
+.siege-arrow {
+  position: absolute;
+  pointer-events: none;
+  animation: siege-arrow 0.38s linear forwards;
+}
+
+@keyframes siege-arrow {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(var(--dx));
+  }
+}
+
+.siege-warning {
+  position: absolute;
+  font-size: 3.4cqw;
+  line-height: 1;
+  color: #ff4a3a;
+  text-shadow:
+    0 0 0.6cqw rgba(0, 0, 0, 0.9),
+    0 0 1.2cqw rgba(255, 60, 40, 0.8);
+  animation: siege-warn 0.5s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes siege-warn {
+  to {
+    transform: translateX(-30%);
+    opacity: 0.55;
+  }
+}
+
+.siege-lane-flash {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 0.4cqw;
+  z-index: 1;
+  animation: siege-flash 0.7s ease-in-out infinite alternate;
+}
+
+.siege-lane-flash.danger {
+  background: rgba(230, 30, 20, 0.28);
+  box-shadow: inset 0 0 1.4cqw rgba(255, 40, 30, 0.8);
+}
+
+.siege-lane-flash.giant {
+  background: rgba(255, 120, 20, 0.3);
+  box-shadow: inset 0 0 1.6cqw rgba(255, 140, 40, 0.9);
+  animation-duration: 0.35s;
+}
+
+@keyframes siege-flash {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* The castle crumbles: it shakes, slides down and fades over the rubble, in a cloud of dust. */
+.siege-castle.crumble .castle-crumbling {
+  animation: castle-crumble 3.6s ease-in forwards;
+}
+
+@keyframes castle-crumble {
+  0%,
+  10% {
+    transform: translate(0, 0);
+  }
+  4%,
+  12%,
+  20% {
+    transform: translate(-0.8%, 0.3%);
+  }
+  8%,
+  16%,
+  24% {
+    transform: translate(0.8%, -0.2%);
+  }
+  60% {
+    transform: translate(0, 14%);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(0, 30%);
+    opacity: 0;
+  }
+}
+
+.castle-dust {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 30%;
+  height: 100%;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.castle-dust img {
+  position: absolute;
+  left: calc(var(--i) * 4%);
+  width: 70%;
+  opacity: 0;
+  animation: castle-dust 3s ease-out forwards;
+  animation-delay: calc(var(--i) * 0.18s + 0.6s);
+}
+
+@keyframes castle-dust {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  20% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.8) translateY(-25%);
+  }
+}
+
+.siege-events {
+  position: absolute;
+  z-index: 5;
+  left: 1.2vw;
+  bottom: 1.4vh;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5vh;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.siege-events li {
+  padding: 0.5vh 1vw;
+  border-radius: 999px;
+  background: rgba(22, 30, 16, 0.82);
+  color: #f6f0dc;
+  font-size: 2.1vh;
+  animation: siege-pop 0.35s ease-out;
+}
+
+.siege-events li b {
+  color: #ffd968;
+}
+
+@keyframes siege-pop {
+  from {
+    transform: translateY(40%);
+    opacity: 0;
+  }
+}
+
+.siege-countdown {
+  background: rgba(16, 26, 10, 0.72);
+}
+
+.siege-break {
+  position: absolute;
+  z-index: 5;
+  top: 2vh;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 36vw;
+  padding: 1.2vh 2vw 1.6vh;
+  border-radius: 14px;
+  background: rgba(22, 30, 16, 0.85);
+  color: #fff;
+  text-align: center;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
+}
+
+.siege-break-title {
+  font-size: 3.6vh;
+  font-weight: 800;
+  margin-bottom: 1vh;
+}
+
+.siege-break-bar {
+  height: 1.4vh;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+}
+
+.siege-break-bar i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #d6a531, #ffe08a);
+  transform-origin: left;
+  animation: siege-drain linear forwards;
+}
+
+@keyframes siege-drain {
+  from {
+    transform: scaleX(var(--start, 1));
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+.siege-banner.giant {
+  position: absolute;
+  z-index: 6;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 1.6vh 3vw;
+  border-radius: 16px;
+  background: rgba(120, 30, 10, 0.88);
+  color: #fff3d6;
+  font-size: 5vh;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  box-shadow: 0 0 40px rgba(255, 90, 30, 0.6);
+  animation: siege-giant-banner 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes siege-giant-banner {
+  to {
+    transform: translate(-50%, -50%) scale(1.05);
+  }
+}
+
+.siege-ending {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #fff;
+  pointer-events: none;
+}
+
+.siege-ending h1 {
+  font-size: 8vh;
+  margin: 0;
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.75);
+  animation: siege-pop 0.8s ease-out;
+}
+
+.siege-ending p {
+  font-size: 3.4vh;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8);
+}
+
+.siege-ending.fallen {
+  background: radial-gradient(ellipse at center, rgba(20, 10, 5, 0.25), rgba(20, 10, 5, 0.65));
+  animation: siege-fade-in 1.4s ease-in;
+}
+
+.siege-ending.fallen h1 {
+  animation-delay: 1.6s;
+  animation-fill-mode: backwards;
+}
+
+@keyframes siege-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.siege-confetti i {
+  position: absolute;
+  top: -4vh;
+  width: 1vw;
+  height: 1.8vh;
+  border-radius: 2px;
+  animation: siege-confetti var(--s) linear var(--d) infinite;
+  transform: rotate(var(--r));
+}
+
+@keyframes siege-confetti {
+  to {
+    transform: translateY(110vh) rotate(calc(var(--r) + 540deg));
+  }
+}
+
+.siege-rising-banners {
+  position: absolute;
+  inset: auto 0 0 0;
+  display: flex;
+  justify-content: space-around;
+}
+
+.siege-rising-banners img {
+  width: 6vw;
+  animation: siege-rise 1.6s ease-out backwards;
+  animation-delay: calc(var(--i) * 0.15s);
+}
+
+@keyframes siege-rise {
+  from {
+    transform: translateY(110%);
+  }
+}
+
+.siege-lobby-preview {
+  width: min(560px, 100%);
+  margin: 8px auto 4px;
+}
+
+.siege-lobby-preview .siege-board {
+  width: 100%;
+}
+
+.siege-podium .podium-bg {
+  opacity: 0.35;
+  align-items: center;
+  justify-content: center;
+}
+
+.siege-podium .podium-bg .siege-board {
+  width: 100%;
+}
+
+.siege-verdict {
+  font-size: 2.8vh;
+  margin: 0.5vh 0 2vh;
+}
+
+.siege-record {
+  margin-left: 1vw;
+  padding: 0.3vh 1vw;
+  border-radius: 999px;
+  background: #d6a531;
+  color: #1d1305;
+  font-weight: 800;
+  animation: siege-pop 0.6s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .siege-move.bob,
+  .siege-confetti i,
+  .siege-warning,
+  .siege-banner.giant,
+  .monster.state-wait .siege-move {
+    animation: none;
+  }
+}

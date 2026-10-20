@@ -110,7 +110,7 @@ export interface SiegeMonsterStats {
 
 export const SIEGE_MONSTERS: Record<SiegeMonsterType, SiegeMonsterStats> = {
   goblin: { label: "Goblin", health: 3, healthPerPlayer: 0, squareMs: 2000, damage: 1, attackMs: 1000, wallFactor: 1, hearts: 1, cost: 1, fromWave: 1 },
-  wolf: { label: "Wolf", health: 2, healthPerPlayer: 0, squareMs: 1000, damage: 1, attackMs: 1000, wallFactor: 1, hearts: 1, cost: 2, fromWave: 2 },
+  wolf: { label: "Wolf", health: 3, healthPerPlayer: 0, squareMs: 1000, damage: 1, attackMs: 1000, wallFactor: 1, hearts: 1, cost: 2, fromWave: 2 },
   troll: { label: "Troll", health: 12, healthPerPlayer: 0, squareMs: 3500, damage: 2, attackMs: 1000, wallFactor: 3, hearts: 2, cost: 4, fromWave: 3 },
   giant: { label: "Giant", health: 40, healthPerPlayer: 5, squareMs: 4000, damage: 6, attackMs: 3000, wallFactor: 1, hearts: 5, cost: 12, fromWave: 5 },
 };
