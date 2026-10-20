@@ -1,6 +1,6 @@
 import type { ServerWebSocket } from "bun";
 import QRCode from "qrcode";
-import type { BombSettings, ClientMsg, CupSettings, DragonSettings, FightSettings, GameMode, HostView, JoinInfo, LandSettings, Pacing, PlayerView, ServerMsg, TowerSettings } from "../shared/protocol.ts";
+import type { BombSettings, ClientMsg, CupSettings, DragonSettings, FightSettings, GameMode, HostView, JoinInfo, LandSettings, Pacing, PlayerView, ServerMsg, SiegeSettings, TowerSettings } from "../shared/protocol.ts";
 import { answerOf } from "../shared/answer-match.ts";
 import { cleanAvatar } from "../shared/avatars.ts";
 import { ValidationError } from "../shared/quiz-schema.ts";
@@ -9,15 +9,17 @@ import { BombGame } from "./game/bomb.ts";
 import { CupGame } from "./game/cup.ts";
 import { DragonGame } from "./game/dragon.ts";
 import { FightGame } from "./game/fight.ts";
-import { DEFAULT_BOMB, DEFAULT_CUP, DEFAULT_DRAGON, DEFAULT_FIGHT, DEFAULT_LAND, DEFAULT_TOWER, Game, GameError, type Clock } from "./game/game.ts";
+import { DEFAULT_BOMB, DEFAULT_CUP, DEFAULT_DRAGON, DEFAULT_FIGHT, DEFAULT_LAND, DEFAULT_SIEGE, DEFAULT_TOWER, Game, GameError, type Clock } from "./game/game.ts";
 import { LandGame } from "./game/land.ts";
 import { RacerGame } from "./game/racer.ts";
-import { buildBombResultsCsv, buildCupResultsCsv, buildDragonResultsCsv, buildFightResultsCsv, buildLandResultsCsv, buildRacerResultsCsv, buildResultsCsv, buildRobotResultsCsv, buildSubResultsCsv, buildTowerResultsCsv, writeResultsFile } from "./game/results.ts";
+import { buildBombResultsCsv, buildCupResultsCsv, buildDragonResultsCsv, buildFightResultsCsv, buildLandResultsCsv, buildRacerResultsCsv, buildResultsCsv, buildRobotResultsCsv, buildSiegeResultsCsv, buildSubResultsCsv, buildTowerResultsCsv, writeResultsFile } from "./game/results.ts";
 import { RobotGame } from "./game/robot.ts";
+import { SiegeGame } from "./game/siege.ts";
 import { SubGame } from "./game/submarine.ts";
 import { TowerGame } from "./game/tower.ts";
 import { lanAddresses, type LanAddress } from "./network.ts";
 import { NotFoundError, type QuizStore } from "./quiz/store.ts";
+import { loadSiegeRecord, saveSiegeRecord } from "./siege-records.ts";
 
 export interface SocketData {
   /** Request came from this machine to a loopback hostname; may use host controls. */
@@ -66,7 +68,7 @@ function viewKey(view: PlayerView, now: number): string {
 /** Compress what goes to phones over Wi-Fi; the host screen is on this machine, so it isn't worth the CPU. */
 const compressFor = (ws: WS) => ws.data.role !== "host";
 
-export type LiveGame = Game | TowerGame | SubGame | FightGame | RobotGame | LandGame | RacerGame | CupGame | DragonGame | BombGame;
+export type LiveGame = Game | TowerGame | SubGame | FightGame | RobotGame | LandGame | RacerGame | CupGame | DragonGame | BombGame | SiegeGame;
 
 /** Owns the single live game and every connected socket; pushes each phone its view (or a patch of it) on every change. */
 export class GameHub {
@@ -85,7 +87,7 @@ export class GameHub {
   private broadcastQueued = false;
   private activityTimer: ReturnType<typeof setTimeout> | null = null;
   /** Mode, mode settings and pacing carry over to the next lobby ("Play again"). */
-  private lastSetup: { mode: GameMode; tower: TowerSettings; fight: FightSettings; land: LandSettings; cup: CupSettings; dragon: DragonSettings; bomb: BombSettings; protect: boolean; pacing: Pacing } = {
+  private lastSetup: { mode: GameMode; tower: TowerSettings; fight: FightSettings; land: LandSettings; cup: CupSettings; dragon: DragonSettings; bomb: BombSettings; siege: SiegeSettings; protect: boolean; pacing: Pacing } = {
     mode: "classic",
     tower: DEFAULT_TOWER,
     fight: DEFAULT_FIGHT,
@@ -93,6 +95,7 @@ export class GameHub {
     cup: DEFAULT_CUP,
     dragon: DEFAULT_DRAGON,
     bomb: DEFAULT_BOMB,
+    siege: DEFAULT_SIEGE,
     protect: true,
     pacing: "manual",
   };
@@ -381,6 +384,28 @@ export class GameHub {
         if (!this.game.type(ws.data.playerId, String(msg.text ?? ""))) this.sendState(ws);
         return;
       }
+      case "siege.answer": {
+        if (!(this.game instanceof SiegeGame) || !ws.data.playerId) return;
+        if (!this.game.answer(ws.data.playerId, Number(msg.seq), answerOf(msg))) this.sendState(ws);
+        return;
+      }
+      case "siege.place": {
+        if (!(this.game instanceof SiegeGame) || !ws.data.playerId) return;
+        const err = this.game.place(ws.data.playerId, msg.defender, msg.lane, msg.square);
+        if (err) throw new GameError(err);
+        return;
+      }
+      case "siege.upgrade": {
+        if (!(this.game instanceof SiegeGame) || !ws.data.playerId) return;
+        const err = this.game.upgrade(ws.data.playerId, msg.lane, msg.square);
+        if (err) throw new GameError(err);
+        return;
+      }
+      case "siege.map": {
+        if (!(this.game instanceof SiegeGame) || !ws.data.playerId) return;
+        this.game.setMap(ws.data.playerId, msg.open === true);
+        return;
+      }
       case "dragon.grab": {
         if (!(this.game instanceof DragonGame) || !ws.data.playerId) return;
         if (!this.game.grab(ws.data.playerId, Number(msg.team))) this.sendState(ws);
@@ -433,7 +458,7 @@ export class GameHub {
     };
     const classic = () => {
       const g = game();
-      if (!(g instanceof Game)) throw new GameError(`Not available in ${g instanceof TowerGame ? "Tallest Tower" : g instanceof SubGame ? "Submarine Squad" : g instanceof RobotGame ? "Robot Attack" : g instanceof LandGame ? "Land Grab" : g instanceof RacerGame ? "Racer" : g instanceof CupGame ? "Cup of Death" : g instanceof DragonGame ? "Dragon's Hoard" : g instanceof BombGame ? "Bomb Squad" : "Tower Fight"}`);
+      if (!(g instanceof Game)) throw new GameError(`Not available in ${g instanceof TowerGame ? "Tallest Tower" : g instanceof SubGame ? "Submarine Squad" : g instanceof RobotGame ? "Robot Attack" : g instanceof LandGame ? "Land Grab" : g instanceof RacerGame ? "Racer" : g instanceof CupGame ? "Cup of Death" : g instanceof DragonGame ? "Dragon's Hoard" : g instanceof BombGame ? "Bomb Squad" : g instanceof SiegeGame ? "Kingdom Siege" : "Tower Fight"}`);
       return g;
     };
     /** Classic and Racer are both paced question by question: next, skip and pacing work in either. */
@@ -470,6 +495,7 @@ export class GameHub {
         if (lobby.phase === "lobby" && lobby.mode === "cup") return this.startCup(lobby);
         if (lobby.phase === "lobby" && lobby.mode === "dragon") return this.startDragon(lobby);
         if (lobby.phase === "lobby" && lobby.mode === "bomb") return this.startBomb(lobby);
+        if (lobby.phase === "lobby" && lobby.mode === "siege") return this.startSiege(lobby);
         const pacing = PACINGS.has(msg.pacing) ? msg.pacing : undefined;
         if (lobby.phase === "lobby" && lobby.mode === "racer") return this.startRacer(lobby, pacing);
         lobby.start(pacing);
@@ -514,6 +540,10 @@ export class GameHub {
       case "host.setBomb":
         classic().setBomb({ game: msg.game, squads: Number(msg.squads), modules: Number(msg.modules), wires: Number(msg.wires), minutes: Number(msg.minutes), penaltySec: Number(msg.penaltySec) });
         this.lastSetup.bomb = { ...classic().bomb };
+        return;
+      case "host.setSiege":
+        classic().setSiege({ waves: msg.waves });
+        this.lastSetup.siege = { ...classic().siege };
         return;
       case "host.next":
         return paced().next();
@@ -636,6 +666,22 @@ export class GameHub {
     this.log(`Bomb Squad started with ${bomb.players.size} player(s), ${bomb.squads.length} squad(s)`);
   }
 
+  /** Hand the lobby's players to a Kingdom Siege game, with the class's best Endless run on this quiz. */
+  private startSiege(lobby: Game): void {
+    if (lobby.players.size === 0) throw new GameError("Wait for at least one player to join");
+    const siege = SiegeGame.fromLobby(lobby, {
+      clock: this.opts.clock,
+      record: lobby.siege.waves === "endless" ? loadSiegeRecord(this.store.dataDir, lobby.quizId) : null,
+      onChange: () => this.scheduleBroadcast(),
+      onActivity: (pid) => this.onActivity(pid),
+      onFinish: (g) => this.onFinish(g),
+    });
+    lobby.dispose();
+    this.game = siege;
+    siege.start();
+    this.log(`Kingdom Siege started with ${siege.players.size} player(s), ${siege.settings.waves === "endless" ? "Endless" : `${siege.settings.waves} waves`}`);
+  }
+
   /** Hand the lobby's players to a Dragon's Hoard game, on the teams shown in the lobby. */
   private startDragon(lobby: Game): void {
     if (lobby.players.size === 0) throw new GameError("Wait for at least one player to join");
@@ -714,7 +760,9 @@ export class GameHub {
                       ? buildDragonResultsCsv(game)
                       : game instanceof BombGame
                         ? buildBombResultsCsv(game)
-                        : buildResultsCsv(game);
+                        : game instanceof SiegeGame
+                          ? buildSiegeResultsCsv(game)
+                          : buildResultsCsv(game);
     let file: string | null = null;
     try {
       file = writeResultsFile(game, csv, this.store.resultsDir);
@@ -723,5 +771,15 @@ export class GameHub {
       this.log(`Could not save results: ${(e as Error).message}`);
     }
     this.lastResults = { quizId: game.quizId, title: game.title, csv, file };
+    if (game instanceof SiegeGame) {
+      const r = game.result();
+      if (r.newRecord && r.record) {
+        try {
+          saveSiegeRecord(this.store.dataDir, game.quizId, r.record);
+        } catch (e) {
+          this.log(`Could not save the Kingdom Siege record: ${(e as Error).message}`);
+        }
+      }
+    }
   }
 }

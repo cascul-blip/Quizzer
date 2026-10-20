@@ -2,6 +2,10 @@ import { describe, expect, test } from "bun:test";
 import { FEEDBACK_MS, SIEGE_NO_GOLD, SiegeGame, type SiegePlayer } from "../src/server/game/siege.ts";
 import { Game } from "../src/server/game/game.ts";
 import { WRONG_PENALTY_2_MS } from "../src/server/game/stream.ts";
+import { buildSiegeResultsCsv } from "../src/server/game/results.ts";
+import { loadSiegeRecord, saveSiegeRecord } from "../src/server/siege-records.ts";
+import { siegeRecordsPath } from "../src/server/paths.ts";
+import { writeFileSync } from "node:fs";
 import {
   SIEGE_BREAK_MS,
   SIEGE_COUNTDOWN_MS,
@@ -25,7 +29,7 @@ import {
   type SiegeWaves,
 } from "../src/shared/siege-rules.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
-import { FakeClock, sampleQuiz } from "./helpers.ts";
+import { FakeClock, sampleQuiz, tempDir } from "./helpers.ts";
 
 function quiz(count = 5): Quiz {
   return sampleQuiz({
@@ -754,5 +758,41 @@ describe("views", () => {
     expect(a.topArcher).toEqual({ value: 3, nicknames: ["Ben"] });
     expect(a.masterMason).toEqual({ value: 3, nicknames: ["Cal"] });
     expect(a.mostCorrect).toEqual({ value: 1, nicknames: ["Ana"] });
+  });
+});
+
+describe("results", () => {
+  test("the CSV has a row per player (kicked players too) with the class result, then the wave log", () => {
+    const { game, clock } = quietWave();
+    game.spawn("troll", 4);
+    const ana = byName(game, "Ana");
+    answer(game, clock, ana, true);
+    answer(game, clock, ana, false);
+    game.place(ana.id, "archer", 0, 1);
+    game.kick(byName(game, "Cal").id);
+    game.hearts = 7;
+    game.end();
+    const csv = buildSiegeResultsCsv(game);
+    const lines = csv.replace("\ufeff", "").trim().split("\r\n");
+    expect(lines[0]).toBe("Nickname,Correct,Wrong,Accuracy %,Gold earned,Gold spent,Archers placed,Knights placed,Walls placed,Upgrades bought,Monsters defeated,Class result,Waves survived,Hearts left,Endless record");
+    expect(lines[1]).toBe("Ana,1,1,50,25,50,1,0,0,0,0,Ended,0,7,");
+    expect(lines.filter((l) => l.startsWith("Cal,"))).toHaveLength(1);
+    expect(lines).toContain("Wave,Difficulty scale %,Monster budget,Monsters sent,Class accuracy %,Hearts lost");
+    expect(lines[lines.length - 1]).toBe(`1,100,${siegeWaveBudget(1, 3, 100)},1,50,0`);
+  });
+
+  test("Endless records are kept per quiz; a missing or broken file means no record", () => {
+    const t = tempDir();
+    try {
+      expect(loadSiegeRecord(t.dir, "quiz-a")).toBeNull();
+      saveSiegeRecord(t.dir, "quiz-a", { waves: 7, avgScale: 104, date: "2026-10-19T00:00:00.000Z" });
+      saveSiegeRecord(t.dir, "quiz-b", { waves: 3, avgScale: 90, date: "2026-10-19T00:00:00.000Z" });
+      expect(loadSiegeRecord(t.dir, "quiz-a")).toEqual({ waves: 7, avgScale: 104, date: "2026-10-19T00:00:00.000Z" });
+      expect(loadSiegeRecord(t.dir, "quiz-b")?.waves).toBe(3);
+      writeFileSync(siegeRecordsPath(t.dir), "{ not json");
+      expect(loadSiegeRecord(t.dir, "quiz-a")).toBeNull();
+    } finally {
+      t.cleanup();
+    }
   });
 });

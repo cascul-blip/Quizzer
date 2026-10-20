@@ -9,3 +9,8 @@ export function isCompiled(): boolean {
 export function defaultDataDir(): string {
   return isCompiled() ? join(dirname(process.execPath), "data") : resolve("data");
 }
+
+/** The classes' best Kingdom Siege Endless runs, keyed by quiz id. */
+export function siegeRecordsPath(dataDir: string): string {
+  return join(dataDir, "siege-records.json");
+}

@@ -8,6 +8,7 @@ import type { RobotGame } from "./robot.ts";
 import type { CupGame } from "./cup.ts";
 import type { BombGame } from "./bomb.ts";
 import type { DragonGame } from "./dragon.ts";
+import type { SiegeGame } from "./siege.ts";
 import type { SubGame } from "./submarine.ts";
 import type { TowerGame } from "./tower.ts";
 
@@ -265,4 +266,59 @@ export function writeResultsFile(game: { quizId: string }, csv: string, resultsD
   const file = join(resultsDir, resultsFileName(game));
   writeFileSync(file, csv);
   return file;
+}
+
+/**
+ * Kingdom Siege: one row per player (kicked players included), each with the class result,
+ * then a wave log with one row per wave.
+ */
+export function buildSiegeResultsCsv(game: SiegeGame): string {
+  const header = [
+    "Nickname",
+    "Correct",
+    "Wrong",
+    "Accuracy %",
+    "Gold earned",
+    "Gold spent",
+    "Archers placed",
+    "Knights placed",
+    "Walls placed",
+    "Upgrades bought",
+    "Monsters defeated",
+    "Class result",
+    "Waves survived",
+    "Hearts left",
+    "Endless record",
+  ];
+  const r = game.result();
+  const result = r.outcome === "stands" ? "Stood" : r.outcome === "fallen" ? "Fell" : "Ended";
+  const record = r.record ? `${r.record.waves} waves, ${r.record.avgScale}% difficulty${r.newRecord ? " (new record)" : ""}` : "";
+  const rows: (string | number)[][] = game.everyone
+    .sort((a, b) => b.goldEarned - a.goldEarned || b.correct - a.correct)
+    .map((p) => {
+      const answered = p.correct + p.wrong;
+      return [
+        p.nickname,
+        p.correct,
+        p.wrong,
+        answered ? Math.round((p.correct / answered) * 100) : "",
+        p.goldEarned,
+        p.goldSpent,
+        p.placed.archer,
+        p.placed.knight,
+        p.placed.wall,
+        p.upgrades,
+        p.defeated,
+        result,
+        r.wavesSurvived,
+        r.hearts,
+        record,
+      ];
+    });
+  const log: (string | number)[][] = [
+    [],
+    ["Wave", "Difficulty scale %", "Monster budget", "Monsters sent", "Class accuracy %", "Hearts lost"],
+    ...game.waveLog.map((w) => [w.wave, w.scale, w.budget, w.sent, w.answered ? Math.round((w.correct / w.answered) * 100) : "", w.heartsLost]),
+  ];
+  return toCsv([header, ...rows, ...log]);
 }
