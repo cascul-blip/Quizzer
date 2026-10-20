@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { FEEDBACK_MS, SIEGE_NO_GOLD, SiegeGame, type SiegePlayer } from "../src/server/game/siege.ts";
+import { FEEDBACK_MS, SIEGE_NO_GOLD, SiegeGame, type SiegeMonster, type SiegePlayer } from "../src/server/game/siege.ts";
 import { Game } from "../src/server/game/game.ts";
 import { WRONG_PENALTY_2_MS } from "../src/server/game/stream.ts";
 import { buildSiegeResultsCsv } from "../src/server/game/results.ts";
@@ -21,6 +21,8 @@ import {
   siegeBaseBudget,
   siegeClassSizeFactor,
   siegeGiants,
+  siegeMaxEntering,
+  siegeMonsterHealth,
   siegeNextScale,
   siegeSpawnWindowMs,
   siegeTargetScale,
@@ -74,6 +76,9 @@ function quietWave(opts: Parameters<typeof setup>[0] = {}) {
   return s;
 }
 
+/** A monster with 12 health and no armor, for timing defenders' hits. */
+const sturdy = (m: SiegeMonster) => Object.assign(m, { health: 12, maxHealth: 12 });
+
 const byName = (game: SiegeGame, name: string) => [...game.players.values()].find((p) => p.nickname === name)!;
 
 function answer(game: SiegeGame, clock: FakeClock, p: SiegePlayer, right: boolean) {
@@ -100,7 +105,20 @@ describe("rules", () => {
     expect([1, 2, 3, 4, 5, 6, 9, 10].map((w) => siegeGiants(w, false))).toEqual([0, 0, 0, 0, 1, 0, 0, 1]);
     expect([5, 10, 15, 20, 21].map((w) => siegeGiants(w, true))).toEqual([1, 1, 2, 2, 0]);
     expect(siegeSpawnWindowMs(1)).toBe(30_000);
-    expect(siegeSpawnWindowMs(50)).toBe(60_000);
+    expect(siegeSpawnWindowMs(2)).toBe(29_000);
+    expect(siegeSpawnWindowMs(11)).toBe(20_000);
+    expect(siegeSpawnWindowMs(50)).toBe(20_000);
+  });
+
+  test("monsters get 10% tougher every wave, and from wave 5 a lane takes 3 monsters coming on at once", () => {
+    expect(siegeMonsterHealth("goblin", 1, 3)).toBe(3);
+    expect(siegeMonsterHealth("goblin", 6, 3)).toBe(5);
+    expect(siegeMonsterHealth("goblin", 11, 3)).toBe(6);
+    expect(siegeMonsterHealth("troll", 3, 3)).toBe(14);
+    expect(siegeMonsterHealth("troll", 10, 3)).toBe(23);
+    expect(siegeMonsterHealth("giant", 1, 4)).toBe(60);
+    expect(siegeMonsterHealth("giant", 5, 4)).toBe(84);
+    expect([1, 4, 5, 20].map(siegeMaxEntering)).toEqual([2, 2, 3, 3]);
   });
 
   test("the adaptive scale: 70% to 130%, at most 20 points per wave, kept without answers", () => {
@@ -235,8 +253,8 @@ describe("the battle", () => {
     const ana = byName(game, "Ana");
     game.gold = 1000;
     game.place(ana.id, "archer", 1, 1);
-    const far = game.spawn("troll", 1, 8);
-    const near = game.spawn("troll", 1, 6);
+    const far = sturdy(game.spawn("goblin", 1, 8));
+    const near = sturdy(game.spawn("goblin", 1, 6));
     clock.advance(SIEGE_TICK_MS);
     expect(near.health).toBe(11);
     expect(far.health).toBe(12);
@@ -264,12 +282,34 @@ describe("the battle", () => {
     game.upgrade(ana.id, 1, 1);
     const near = game.spawn("wolf", 1, 7);
     near.health = 1;
-    const far = game.spawn("troll", 1, 8);
+    const far = sturdy(game.spawn("goblin", 1, 8));
     clock.advance(SIEGE_TICK_MS);
     expect(game.monsters).not.toContain(near);
     expect(far.health).toBe(11);
     expect(ana.defeated).toBe(1);
     expect(ana.archerKills).toBe(1);
+  });
+
+  test("trolls are armored: arrows do half damage, knights full damage", () => {
+    const { game, clock } = quietWave();
+    const ana = byName(game, "Ana");
+    game.gold = 1000;
+    game.place(ana.id, "archer", 0, 1);
+    game.place(ana.id, "knight", 1, 3);
+    const shot = game.spawn("troll", 0, 8);
+    const struck = game.spawn("troll", 1, 4);
+    clock.advance(SIEGE_TICK_MS);
+    expect(shot.health).toBe(11.5);
+    expect(struck.health).toBe(10);
+  });
+
+  test("monsters that come on in later waves are tougher", () => {
+    const { game, clock } = quietWave();
+    game.spawn("troll", 4);
+    clock.advance(SIEGE_TICK_MS);
+    game.wave = 4;
+    expect(game.spawn("goblin", 0).maxHealth).toBe(4);
+    expect(game.spawn("troll", 1).maxHealth).toBe(16);
   });
 
   test("knights strike the monster in front of them; Lv 3 hits harder", () => {
@@ -471,16 +511,24 @@ describe("waves", () => {
     expect(giants[0]!.lane).not.toBe(giants[1]!.lane);
   });
 
-  test("no more than 2 monsters come onto one lane at once", () => {
-    const { game, clock } = setup({ players: 6 });
-    clock.advance(SIEGE_OPENING_MS);
-    const now = clock.now();
-    game.pending = Array.from({ length: 20 }, (_, i) => ({ at: now + SIEGE_WARNING_MS + i * 50, type: "goblin" as const, group: 1000 + i, lane: -1 }));
-    for (let t = 0; t < 8000; t += SIEGE_TICK_MS) {
-      clock.advance(SIEGE_TICK_MS);
-      for (let lane = 0; lane < 5; lane++) expect(game.monsters.filter((m) => m.lane === lane && m.x > 6.5).length).toBeLessThanOrEqual(2);
-    }
-  });
+  for (const [wave, cap] of [
+    [1, 2],
+    [5, 3],
+  ] as const) {
+    test(`no more than ${cap} monsters come onto one lane at once in wave ${wave}`, () => {
+      const { game, clock } = setup({ players: 6 });
+      clock.advance(SIEGE_OPENING_MS);
+      game.wave = wave;
+      const now = clock.now();
+      game.pending = Array.from({ length: 20 }, (_, i) => ({ at: now + SIEGE_WARNING_MS + i * 50, type: "goblin" as const, group: 1000 + i, lane: -1 }));
+      let most = 0;
+      for (let t = 0; t < 8000; t += SIEGE_TICK_MS) {
+        clock.advance(SIEGE_TICK_MS);
+        for (let lane = 0; lane < 5; lane++) most = Math.max(most, game.monsters.filter((m) => m.lane === lane && m.x > 6.5).length);
+      }
+      expect(most).toBe(cap);
+    });
+  }
 
   test("the budget uses the class size factor at the start of the wave and the scale from the last wave's accuracy", () => {
     const { game, clock } = quietWave({ players: 3 });

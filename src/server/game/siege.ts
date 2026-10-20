@@ -29,7 +29,6 @@ import {
   SIEGE_LANES,
   SIEGE_LEAP_MS,
   SIEGE_MAP_DOTS_MS,
-  SIEGE_MAX_ENTERING,
   SIEGE_MAX_LEVEL,
   SIEGE_MONSTERS,
   SIEGE_MONSTER_ODDS,
@@ -43,6 +42,8 @@ import {
   siegeClassSizeFactor,
   siegeGiants,
   siegeNextScale,
+  siegeMaxEntering,
+  siegeMonsterHealth,
   siegeSpawnWindowMs,
   siegeUpgradeCost,
   siegeWaveBudget,
@@ -437,9 +438,10 @@ export class SiegeGame {
     const busy = (lane: number) =>
       this.monsters.filter((m) => m.lane === lane && m.x > ENTERING_X).length + this.pending.filter((p) => p !== s && p.lane === lane).length;
     const mate = this.groupLanes.get(s.group);
-    if (mate !== undefined) return busy(mate) < SIEGE_MAX_ENTERING ? mate : -1;
+    const cap = siegeMaxEntering(this.wave);
+    if (mate !== undefined) return busy(mate) < cap ? mate : -1;
     const giantLanes = s.type === "giant" ? new Set([...this.monsters, ...this.pending].filter((m) => m.type === "giant" && m.lane >= 0).map((m) => m.lane)) : new Set<number>();
-    const open = Array.from({ length: SIEGE_LANES }, (_, i) => i).filter((l) => busy(l) < SIEGE_MAX_ENTERING && !giantLanes.has(l));
+    const open = Array.from({ length: SIEGE_LANES }, (_, i) => i).filter((l) => busy(l) < cap && !giantLanes.has(l));
     if (open.length === 0) return -1;
     const least = Math.min(...open.map(busy));
     const best = open.filter((l) => busy(l) === least);
@@ -449,7 +451,7 @@ export class SiegeGame {
   /** Put a monster on the entry square of a lane (also used by tests). */
   spawn(type: SiegeMonsterType, lane: number, x: number = SIEGE_SQUARES): SiegeMonster {
     const stats = SIEGE_MONSTERS[type];
-    const health = stats.health + stats.healthPerPlayer * this.connectedCount();
+    const health = siegeMonsterHealth(type, this.wave, this.connectedCount());
     const now = this.clock.now();
     const m: SiegeMonster = {
       id: ++this.ids,
@@ -626,7 +628,8 @@ export class SiegeGame {
           const t = this.archerTarget(d);
           if (!t) break;
           this.shots.push({ seq: ++this.seq, lane: d.lane, square: d.square, toX: t.x });
-          this.damageMonster(t, stats.damage[d.level - 1]!, d);
+          // Armored monsters (trolls) take only part of each arrow.
+          this.damageMonster(t, stats.damage[d.level - 1]! * SIEGE_MONSTERS[t.type].arrowFactor, d);
         }
         if (this.shots.length > SIEGE_SHOTS_SHOWN) this.shots.splice(0, this.shots.length - SIEGE_SHOTS_SHOWN);
       } else {

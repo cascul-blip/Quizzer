@@ -31,8 +31,9 @@ export const SIEGE_GIANT_WAIT_MS = 3000;
 export const SIEGE_ENDING_MS = 5000;
 /** A lane is in danger while a monster is within this many squares of the wall. */
 export const SIEGE_DANGER_SQUARES = 2;
-/** At most this many monsters on a lane's last two squares (7 and 8) at once. */
+/** At most this many monsters on a lane's last two squares (7 and 8) at once, and one more from SIEGE_CROWD_FROM_WAVE on. */
 export const SIEGE_MAX_ENTERING = 2;
+export const SIEGE_CROWD_FROM_WAVE = 5;
 /** Goblins in one group come onto the lane this far apart. */
 export const SIEGE_GROUP_GAP_MS = 2500;
 /** How often an open phone lane map gets new monster dots. */
@@ -100,6 +101,8 @@ export interface SiegeMonsterStats {
   attackMs: number;
   /** Damage multiplier against stone walls. */
   wallFactor: number;
+  /** Share of an arrow's damage it takes (armor). */
+  arrowFactor: number;
   /** Hearts taken when it reaches the castle wall. */
   hearts: number;
   /** What it costs from a wave's monster budget (the giant comes on top of the budget). */
@@ -109,11 +112,26 @@ export interface SiegeMonsterStats {
 }
 
 export const SIEGE_MONSTERS: Record<SiegeMonsterType, SiegeMonsterStats> = {
-  goblin: { label: "Goblin", health: 3, healthPerPlayer: 0, squareMs: 2000, damage: 1, attackMs: 1000, wallFactor: 1, hearts: 1, cost: 1, fromWave: 1 },
-  wolf: { label: "Wolf", health: 3, healthPerPlayer: 0, squareMs: 1000, damage: 1, attackMs: 1000, wallFactor: 1, hearts: 1, cost: 2, fromWave: 2 },
-  troll: { label: "Troll", health: 12, healthPerPlayer: 0, squareMs: 3500, damage: 2, attackMs: 1000, wallFactor: 3, hearts: 2, cost: 4, fromWave: 3 },
-  giant: { label: "Giant", health: 40, healthPerPlayer: 5, squareMs: 4000, damage: 6, attackMs: 3000, wallFactor: 1, hearts: 5, cost: 12, fromWave: 5 },
+  goblin: { label: "Goblin", health: 3, healthPerPlayer: 0, squareMs: 2000, damage: 1, attackMs: 1000, wallFactor: 1, arrowFactor: 1, hearts: 1, cost: 1, fromWave: 1 },
+  wolf: { label: "Wolf", health: 3, healthPerPlayer: 0, squareMs: 1000, damage: 1, attackMs: 1000, wallFactor: 1, arrowFactor: 1, hearts: 1, cost: 2, fromWave: 2 },
+  troll: { label: "Troll", health: 12, healthPerPlayer: 0, squareMs: 3500, damage: 2, attackMs: 1000, wallFactor: 3, arrowFactor: 0.5, hearts: 2, cost: 4, fromWave: 3 },
+  giant: { label: "Giant", health: 40, healthPerPlayer: 5, squareMs: 4000, damage: 6, attackMs: 3000, wallFactor: 1, arrowFactor: 1, hearts: 5, cost: 12, fromWave: 5 },
 };
+
+/** Monsters get this much tougher every wave after the first (+10% health per wave). */
+export const SIEGE_HEALTH_PER_WAVE = 0.1;
+
+/** A monster's health in a wave: its base (plus the giant's per-player share), +10% per wave after the first, rounded. */
+export function siegeMonsterHealth(type: SiegeMonsterType, wave: number, players: number): number {
+  const stats = SIEGE_MONSTERS[type];
+  const base = stats.health + stats.healthPerPlayer * Math.max(0, players);
+  return Math.max(1, Math.round(base * (1 + SIEGE_HEALTH_PER_WAVE * (Math.max(1, wave) - 1))));
+}
+
+/** How many monsters may be on a lane's last two squares at once in a wave. */
+export function siegeMaxEntering(wave: number): number {
+  return wave >= SIEGE_CROWD_FROM_WAVE ? SIEGE_MAX_ENTERING + 1 : SIEGE_MAX_ENTERING;
+}
 
 /** The giant's stomp also hits the defenders on the same square in the lanes above and below for this much. */
 export const SIEGE_STOMP_SPLASH = 2;
@@ -146,9 +164,9 @@ export function siegeGiants(wave: number, endless: boolean): number {
   return endless && wave >= 15 ? 2 : 1;
 }
 
-/** How long a wave's monsters take to come in: 30 s, +2 s per wave after the first, at most 60 s. */
+/** How long a wave's monsters take to come in: 30 s, 1 s shorter every wave after the first, at least 20 s, so later waves come packed. */
 export function siegeSpawnWindowMs(wave: number): number {
-  return Math.min(60_000, 30_000 + 2000 * (Math.max(1, wave) - 1));
+  return Math.max(20_000, 30_000 - 1000 * (Math.max(1, wave) - 1));
 }
 
 export const SIEGE_SCALE_MIN = 70;

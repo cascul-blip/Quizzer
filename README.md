@@ -303,10 +303,11 @@ An upgrade adds the extra health to what the defender has left, so upgrading a h
 |---|---|---|---|---|
 | Goblin | 3 | 1 square / 2 s | Comes in groups of 2–3 | 1 |
 | Wolf | 3 | 1 square / 1 s | Leaps the first stone wall in its way | 1 |
-| Troll | 12 | 1 square / 3.5 s | Triple damage to stone walls | 2 |
+| Troll | 12 | 1 square / 3.5 s | Triple damage to stone walls; armored, so arrows do half damage | 2 |
 | Giant | 40 + 5 per player | 1 square / 4 s | Waits 3 s with a horn, then stomps for 6 (and 2 to the squares above and below) | 5 |
 
 - **Waves.** After the countdown there's a **15-second build break** (questions already running), then wave 1 (goblins only). Wolves join in wave 2, trolls in wave 3, and waves 5 and 10 end with a giant. Each wave's monster budget is (6 + 3 × (wave − 1)) × class size factor (0.6 + 0.1 per connected player, between 0.7 and 1.4) × difficulty. Between waves there's a 10-second "Wave N incoming" break.
+- **Later waves hit harder.** The health in the table is for wave 1: every monster gets **10% more health per wave** after that (a wave 6 goblin has 5, a wave 10 troll 23). A wave's monsters come in over 30 seconds in wave 1, **1 second less each wave** (down to 20 seconds), and from **wave 5** a lane can have 3 monsters coming onto it at once instead of 2.
 - **Adaptive difficulty.** The class's accuracy during a wave (and its break) sets the next wave's difficulty: 70% at 40% accuracy or below, 130% at 90% or above, moving at most 20 points per wave. Students don't see it; the results CSV logs it.
 - **Endless** never stops: +4 budget per wave after wave 10, a giant every 5th wave and 2 giants from wave 15 on. The podium shows the waves survived, the average difficulty and the class's best Endless run on this quiz (saved in `data/siege-records.json`), with "New record!" when it's beaten.
 - **Endings.** "The kingdom stands!" (banners, bells and confetti) if the wall has hearts left after the last wave; "The castle has fallen" (it crumbles in a cloud of dust) at 0 hearts. End game opens the podium straight away ("Ended on wave 4 with 6 hearts left.").
