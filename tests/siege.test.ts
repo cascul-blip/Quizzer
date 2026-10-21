@@ -14,6 +14,7 @@ import {
   SIEGE_GIANT_WAIT_MS,
   SIEGE_GOLD_PER_CORRECT,
   SIEGE_HEARTS,
+  SIEGE_MONSTERS,
   SIEGE_OPENING_MS,
   SIEGE_START_GOLD,
   SIEGE_TICK_MS,
@@ -24,10 +25,13 @@ import {
   siegeMaxEntering,
   siegeMonsterHealth,
   siegeNextScale,
+  siegeDefenderGold,
+  siegeGiantPace,
   siegeSpawnWindowMs,
   siegeTargetScale,
   siegeUpgradeCost,
   siegeWaveBudget,
+  siegeWaveStrength,
   type SiegeWaves,
 } from "../src/shared/siege-rules.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
@@ -80,6 +84,10 @@ function quietWave(opts: Parameters<typeof setup>[0] = {}) {
 const sturdy = (m: SiegeMonster) => Object.assign(m, { health: 12, maxHealth: 12 });
 
 const byName = (game: SiegeGame, name: string) => [...game.players.values()].find((p) => p.nickname === name)!;
+/** Give every player plenty of gold. */
+const fund = (game: SiegeGame, gold = 1000) => {
+  for (const p of game.players.values()) p.gold = gold;
+};
 
 function answer(game: SiegeGame, clock: FakeClock, p: SiegePlayer, right: boolean) {
   const cur = p.current!;
@@ -135,6 +143,25 @@ describe("rules", () => {
     expect(siegeNextScale(110, 0, 0)).toBe(110);
   });
 
+  test("a strong board's boost: r² over par, +0.35 a wave at most, none after hearts were lost, 4× at most", () => {
+    expect(siegeDefenderGold("archer", 3, 4, 4)).toBe(250);
+    expect(siegeDefenderGold("knight", 2, 8, 16)).toBe(87.5);
+    expect(siegeDefenderGold("wall", 1, 0, 15)).toBe(0);
+    // Par is 60 gold per budget point: a board at or below it changes nothing.
+    expect(siegeWaveStrength(10, 600)).toEqual({ boost: 1, budget: 10, toughness: 1 });
+    expect(siegeWaveStrength(10, 0, 3)).toEqual({ boost: 1, budget: 10, toughness: 1 });
+    // Twice par calls for 4×, reached 0.35 at a time; mostly as health.
+    expect(siegeWaveStrength(10, 1200)).toEqual({ boost: 1.35, budget: 11, toughness: 1.23 });
+    expect(siegeWaveStrength(10, 1200, 2, false).boost).toBe(2);
+    expect(siegeWaveStrength(10, 1200, 3.9)).toEqual({ boost: 4, budget: 15, toughness: 2.64 });
+    expect(siegeWaveStrength(10, 6000, 4).boost).toBe(4);
+    expect(siegeWaveStrength(10, 900, 3).boost).toBe(2.25);
+    // The giant gets faster instead of tougher: 1× with no boost, 2× at the top boost.
+    expect(siegeGiantPace(1)).toBe(1);
+    expect(siegeGiantPace(2.5)).toBe(1.5);
+    expect(siegeGiantPace(4)).toBe(2);
+  });
+
   test("prices: each upgrade costs more, none past Lv 3", () => {
     expect(SIEGE_DEFENDERS.archer.cost).toEqual([50, 75, 125]);
     expect(SIEGE_DEFENDERS.knight.cost).toEqual([75, 100, 150]);
@@ -146,14 +173,16 @@ describe("rules", () => {
 });
 
 describe("gold and building", () => {
-  test("the treasury starts at 100 and only correct answers add gold", () => {
+  test("every player has their own purse, and only their own correct answers add to it", () => {
     const { game, clock } = setup();
-    expect(game.gold).toBe(SIEGE_START_GOLD);
     const ana = byName(game, "Ana");
+    const ben = byName(game, "Ben");
+    expect(ana.gold).toBe(SIEGE_START_GOLD);
     answer(game, clock, ana, true);
-    expect(game.gold).toBe(SIEGE_START_GOLD + SIEGE_GOLD_PER_CORRECT);
+    expect(ana.gold).toBe(SIEGE_START_GOLD + SIEGE_GOLD_PER_CORRECT);
+    expect(ben.gold).toBe(SIEGE_START_GOLD);
     answer(game, clock, ana, false);
-    expect(game.gold).toBe(SIEGE_START_GOLD + SIEGE_GOLD_PER_CORRECT);
+    expect(ana.gold).toBe(SIEGE_START_GOLD + SIEGE_GOLD_PER_CORRECT);
     expect(ana.goldEarned).toBe(25);
     expect(ana.correct).toBe(1);
     expect(ana.wrong).toBe(1);
@@ -173,27 +202,29 @@ describe("gold and building", () => {
     expect(ana.current).not.toBeNull();
   });
 
-  test("placing and upgrading spend the shared gold; upgrades add the extra health to what is left", () => {
+  test("placing and upgrading spend the player's own gold; upgrades add the extra health to what is left", () => {
     const { game, clock } = setup();
     const ana = byName(game, "Ana");
     const ben = byName(game, "Ben");
+    answer(game, clock, ana, true);
     expect(game.place(ana.id, "knight", 2, 3)).toBeNull();
-    expect(game.gold).toBe(25);
-    for (let i = 0; i < 4; i++) answer(game, clock, ben, true);
-    expect(game.gold).toBe(125);
+    expect(ana.gold).toBe(0);
+    expect(ben.gold).toBe(50);
+    for (let i = 0; i < 2; i++) answer(game, clock, ben, true);
+    expect(ben.gold).toBe(100);
     const knight = game.defenderAt(2, 3)!;
     knight.health = 4;
     expect(game.upgrade(ben.id, 2, 3)).toBeNull();
     expect(knight.level).toBe(2);
     expect(knight.maxHealth).toBe(16);
     expect(knight.health).toBe(10);
-    expect(game.gold).toBe(25);
+    expect(ben.gold).toBe(0);
     expect(game.upgrade(ben.id, 2, 3)).toBe(SIEGE_NO_GOLD);
-    game.gold = 1000;
+    ben.gold = 1000;
     expect(game.upgrade(ben.id, 2, 3)).toBeNull();
     expect(knight.level).toBe(3);
     expect(game.upgrade(ben.id, 2, 3)).toBe("Already at max level.");
-    expect(game.gold).toBe(850);
+    expect(ben.gold).toBe(850);
     expect(ana.goldSpent).toBe(75);
     expect(ben.goldSpent).toBe(250);
     expect(ben.upgrades).toBe(2);
@@ -202,19 +233,24 @@ describe("gold and building", () => {
     expect(game.events.map((e) => `${e.nickname} ${e.text}`)).toEqual(["Ana placed a knight", "Ben upgraded a knight to Lv 2", "Ben upgraded a knight to Lv 3"]);
   });
 
-  test("two purchases racing for the last gold: the first one wins", () => {
+  test("a player can't spend someone else's gold", () => {
     const { game } = setup();
-    game.gold = 60;
-    expect(game.place(byName(game, "Ana").id, "archer", 0, 1)).toBeNull();
-    expect(game.place(byName(game, "Ben").id, "wall", 1, 1)).toBe(SIEGE_NO_GOLD);
-    expect(game.gold).toBe(10);
+    const ana = byName(game, "Ana");
+    const ben = byName(game, "Ben");
+    ana.gold = 1000;
+    ben.gold = 40;
+    expect(game.place(ben.id, "wall", 1, 1)).toBe(SIEGE_NO_GOLD);
+    expect(game.place(ana.id, "archer", 0, 1)).toBeNull();
+    expect(game.upgrade(ben.id, 0, 1)).toBe(SIEGE_NO_GOLD);
+    expect(ana.gold).toBe(950);
+    expect(ben.gold).toBe(40);
     expect(game.defenders).toHaveLength(1);
   });
 
   test("taken squares, monster squares, the entry square and bad input are refused", () => {
     const { game } = setup();
     const ana = byName(game, "Ana").id;
-    game.gold = 1000;
+    fund(game);
     expect(game.place(ana, "wall", 0, 4)).toBeNull();
     expect(game.place(ana, "archer", 0, 4)).toBe("That square is taken.");
     expect(game.place(ana, "archer", 0, 8)).toBe("You can't build on that square.");
@@ -251,7 +287,7 @@ describe("the battle", () => {
   test("archers shoot the nearest monster ahead every 1.5 s, every 1 s at Lv 2, and 2 arrows at Lv 3", () => {
     const { game, clock } = quietWave();
     const ana = byName(game, "Ana");
-    game.gold = 1000;
+    fund(game);
     game.place(ana.id, "archer", 1, 1);
     const far = sturdy(game.spawn("goblin", 1, 8));
     const near = sturdy(game.spawn("goblin", 1, 6));
@@ -276,7 +312,7 @@ describe("the battle", () => {
   test("an archer's second arrow goes to the next monster when the first one falls", () => {
     const { game, clock } = quietWave();
     const ana = byName(game, "Ana");
-    game.gold = 1000;
+    fund(game);
     game.place(ana.id, "archer", 1, 1);
     game.upgrade(ana.id, 1, 1);
     game.upgrade(ana.id, 1, 1);
@@ -293,7 +329,7 @@ describe("the battle", () => {
   test("trolls are armored: arrows do half damage, knights full damage", () => {
     const { game, clock } = quietWave();
     const ana = byName(game, "Ana");
-    game.gold = 1000;
+    fund(game);
     game.place(ana.id, "archer", 0, 1);
     game.place(ana.id, "knight", 1, 3);
     const shot = game.spawn("troll", 0, 8);
@@ -315,7 +351,7 @@ describe("the battle", () => {
   test("knights strike the monster in front of them; Lv 3 hits harder", () => {
     const { game, clock } = quietWave();
     const ana = byName(game, "Ana");
-    game.gold = 1000;
+    fund(game);
     game.place(ana.id, "knight", 2, 3);
     const troll = game.spawn("troll", 2, 4);
     clock.advance(SIEGE_TICK_MS);
@@ -331,7 +367,7 @@ describe("the battle", () => {
   test("a stone wall with spikes hurts whatever hits it", () => {
     const { game, clock } = quietWave();
     const ana = byName(game, "Ana");
-    game.gold = 1000;
+    fund(game);
     game.place(ana.id, "wall", 0, 3);
     game.upgrade(ana.id, 0, 3);
     game.upgrade(ana.id, 0, 3);
@@ -350,7 +386,7 @@ describe("the battle", () => {
   test("the wolf leaps over the first stone wall in its lane, and only the first", () => {
     const { game, clock } = quietWave();
     const ana = byName(game, "Ana");
-    game.gold = 1000;
+    fund(game);
     game.place(ana.id, "wall", 4, 6);
     game.place(ana.id, "wall", 4, 3);
     const wolf = game.spawn("wolf", 4);
@@ -370,7 +406,7 @@ describe("the battle", () => {
 
   test("the wolf doesn't leap a knight, and takes two strikes to fall", () => {
     const { game, clock } = quietWave();
-    game.gold = 1000;
+    fund(game);
     game.place(byName(game, "Ana").id, "knight", 4, 6);
     const wolf = game.spawn("wolf", 4);
     clock.advance(1100);
@@ -391,7 +427,7 @@ describe("the battle", () => {
 
   test("trolls do triple damage to stone walls, normal damage to others", () => {
     const { game, clock } = quietWave();
-    game.gold = 1000;
+    fund(game);
     const ana = byName(game, "Ana").id;
     game.place(ana, "wall", 0, 4);
     game.place(ana, "knight", 1, 4);
@@ -404,7 +440,7 @@ describe("the battle", () => {
 
   test("the giant waits 3 s with a horn, then stomps: 6 to the defender in front, 2 to the squares above and below", () => {
     const { game, clock } = quietWave({ players: 4 });
-    game.gold = 1000;
+    fund(game);
     const ana = byName(game, "Ana").id;
     game.place(ana, "wall", 2, 6);
     game.place(ana, "knight", 1, 6);
@@ -456,6 +492,49 @@ describe("the battle", () => {
 });
 
 describe("waves", () => {
+  test("a giant at double pace walks a square in half the time and swings twice as often", () => {
+    const { game, clock } = quietWave();
+    game.giantPace = 2;
+    fund(game);
+    game.place(byName(game, "Ana").id, "wall", 0, 5);
+    const g = game.spawn("giant", 0, 7);
+    clock.advance(SIEGE_GIANT_WAIT_MS);
+    clock.advance(SIEGE_MONSTERS.giant.squareMs / 2);
+    expect(g.x).toBeCloseTo(6, 1);
+    expect(g.state).toBe("attack");
+    clock.advance(SIEGE_MONSTERS.giant.attackMs);
+    expect(g.attackSeq).toBe(2);
+  });
+
+  test("a board far above par makes the wave tougher (not the giant), and the boost holds after a wave that cost hearts", () => {
+    const { game, clock } = setup();
+    fund(game);
+    clock.advance(SIEGE_OPENING_MS);
+    const first = game.waveLog[0]!;
+    expect(first.defense).toBe(3000);
+    expect(first.boost).toBe(1.35);
+    expect(first.budget).toBe(siegeWaveStrength(siegeWaveBudget(1, 3, 100), 3000).budget);
+    expect(game.spawn("goblin", 0).health).toBe(Math.round(siegeMonsterHealth("goblin", 1, 3) * first.toughness));
+    const giant = game.spawn("giant", 1);
+    expect(giant.health).toBe(siegeMonsterHealth("giant", 1, 3));
+    expect(giant.pace).toBe(siegeGiantPace(1.35));
+    expect(game.spawn("troll", 2).pace).toBe(1);
+    // A goblin gets through: the next wave's boost stays put.
+    game.pending = [];
+    game.monsters = [];
+    game.spawn("goblin", 0, 1);
+    for (let i = 0; i < 100 && game.phase === "wave"; i++) clock.advance(SIEGE_TICK_MS);
+    expect(first.heartsLost).toBe(1);
+    clock.advance(SIEGE_BREAK_MS);
+    expect(game.waveLog[1]!.boost).toBe(1.35);
+    // A clean wave lets it climb.
+    game.pending = [];
+    game.monsters = [];
+    clock.advance(SIEGE_TICK_MS);
+    clock.advance(SIEGE_BREAK_MS);
+    expect(game.waveLog[2]!.boost).toBe(1.7);
+  });
+
   test("warning arrows show 2 s before a monster comes on, and wave 1 is goblins only", () => {
     const { game, clock } = setup({ players: 6 });
     clock.advance(SIEGE_OPENING_MS);
@@ -692,8 +771,9 @@ describe("players", () => {
     const { game, clock } = quietWave({ players: 2 });
     const zed = game.join("Zed");
     expect(zed.current).not.toBeNull();
+    expect(zed.gold).toBe(SIEGE_START_GOLD);
     answer(game, clock, zed, true);
-    expect(game.gold).toBe(SIEGE_START_GOLD + 25);
+    expect(zed.gold).toBe(SIEGE_START_GOLD + 25);
     expect(game.waveLog[0]!.budget).toBe(siegeWaveBudget(1, 2, 100));
     clock.advance(SIEGE_TICK_MS);
     clock.advance(SIEGE_BREAK_MS);
@@ -719,7 +799,7 @@ describe("players", () => {
     expect(game.players.has(ana.id)).toBe(false);
     expect(game.defenderAt(0, 2)?.owner).toBe(ana);
     expect(game.everyone).toContain(ana);
-    expect(game.gold).toBe(50);
+    expect(game.hostView().gold).toBe(2 * SIEGE_START_GOLD);
   });
 
   test("if every phone disconnects, the monsters keep marching", () => {
@@ -771,13 +851,14 @@ describe("views", () => {
     expect(game.playerView(ana.id)!.map).toBeNull();
   });
 
-  test("the phone's gold is rounded to 5, and it sees the hearts, wave and last defender placed", () => {
+  test("the phone sees its own gold, the hearts, wave and last defender placed; the projector sees everyone's gold", () => {
     const { game } = setup();
     const ana = byName(game, "Ana");
     game.place(ana.id, "wall", 0, 1);
-    game.gold = 123;
+    byName(game, "Ben").gold = 123;
     const v = game.playerView(ana.id)!;
-    expect(v.gold).toBe(125);
+    expect(v.gold).toBe(0);
+    expect(game.hostView().gold).toBe(123 + SIEGE_START_GOLD);
     expect(v.hearts).toBe(SIEGE_HEARTS);
     expect(v.wave).toBe(1);
     expect(v.waves).toBe(5);
@@ -826,8 +907,8 @@ describe("results", () => {
     expect(lines[0]).toBe("Nickname,Correct,Wrong,Accuracy %,Gold earned,Gold spent,Archers placed,Knights placed,Walls placed,Upgrades bought,Monsters defeated,Class result,Waves survived,Hearts left,Endless record");
     expect(lines[1]).toBe("Ana,1,1,50,25,50,1,0,0,0,0,Ended,0,7,");
     expect(lines.filter((l) => l.startsWith("Cal,"))).toHaveLength(1);
-    expect(lines).toContain("Wave,Difficulty scale %,Monster budget,Monsters sent,Class accuracy %,Hearts lost");
-    expect(lines[lines.length - 1]).toBe(`1,100,${siegeWaveBudget(1, 3, 100)},1,50,0`);
+    expect(lines).toContain("Wave,Difficulty scale %,Defense gold,Strength boost,Monster budget,Monster health ×,Monsters sent,Class accuracy %,Hearts lost");
+    expect(lines[lines.length - 1]).toBe(`1,100,${game.waveLog[0]!.defense},1,${siegeWaveBudget(1, 3, 100)},1,1,50,0`);
   });
 
   test("Endless records are kept per quiz; a missing or broken file means no record", () => {

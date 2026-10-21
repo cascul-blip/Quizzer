@@ -466,7 +466,7 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
                   ))}
                 </select>
               </label>
-              <span class="opt mode-hint">The whole class defends one castle. Right answers fill a shared treasury; spend it on archers, knights and stone walls before the monsters reach the wall.</span>
+              <span class="opt mode-hint">The whole class defends one castle. Every right answer earns you gold to spend on archers, knights and stone walls before the monsters reach the wall.</span>
             </>
           ) : view.mode === "submarine" ? (
             <span class="opt mode-hint">Everyone works together to outrun the anglerfish. The game ends when it catches you.</span>

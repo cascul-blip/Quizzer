@@ -1567,6 +1567,7 @@ export interface HostSiegeState {
   settings: SiegeSettings;
   /** The wave being fought, or the next one during a build break (0 before the countdown ends). */
   wave: number;
+  /** All the players' unspent gold added up. */
   gold: number;
   hearts: number;
   maxHearts: number;
@@ -1614,7 +1615,7 @@ export interface PlayerSiegeView {
   wave: number;
   waves: SiegeWaves;
   hearts: number;
-  /** The treasury, rounded to the nearest 5. */
+  /** This player's own purse. */
   gold: number;
   danger: number[];
   me: { id: string; nickname: string; avatar: AvatarChoice; correct: number; goldEarned: number };

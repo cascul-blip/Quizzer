@@ -47,6 +47,9 @@ import {
   siegeSpawnWindowMs,
   siegeUpgradeCost,
   siegeWaveBudget,
+  siegeWaveStrength,
+  siegeGiantPace,
+  siegeDefenderGold,
   type SiegeDefenderType,
   type SiegeMonsterType,
 } from "../../shared/siege-rules.ts";
@@ -59,8 +62,8 @@ import { QuestionStream, newStreamPlayer, type StreamPlayer } from "./stream.ts"
 
 export { FEEDBACK_MS } from "./stream.ts";
 
-/** The message a phone shows when the treasury can't pay (usually because someone else just spent it). */
-export const SIEGE_NO_GOLD = "Not enough gold. Someone just spent it.";
+/** The message a phone shows when the player's purse can't pay. */
+export const SIEGE_NO_GOLD = "Not enough gold.";
 
 /** Where a monster that reaches this position has hit the castle wall (the wall face, in squares). */
 const WALL_X = 0.5;
@@ -69,6 +72,8 @@ const ENTERING_X = SIEGE_SQUARES - 1.5;
 const EPS = 1e-6;
 
 export interface SiegePlayer extends BasePlayer, StreamPlayer {
+  /** This player's own purse: only they earn it and only they can spend it. */
+  gold: number;
   goldEarned: number;
   goldSpent: number;
   placed: Record<SiegeDefenderType, number>;
@@ -111,6 +116,8 @@ export interface SiegeMonster {
   cooldown: number;
   /** The giant waits on the entry square until then. */
   waitUntil: number;
+  /** Walk and attack speed multiplier (the giant's goes up with the wave's boost). */
+  pace: number;
   /** Wolves leap only the first stone wall in their way. */
   leapt: boolean;
   leapFrom: number;
@@ -134,7 +141,14 @@ export interface SiegeWaveLog {
   wave: number;
   /** Difficulty scale in %. */
   scale: number;
+  /** The board's worth in gold when the wave began (defenders by health left, plus unspent gold). */
+  defense: number;
+  /** How much stronger than usual a strong board made this wave (1 = not at all). */
+  boost: number;
+  /** The usual budget, raised by the boost. */
   budget: number;
+  /** Monster health multiplier for a strong board (1 = none). */
+  toughness: number;
   sent: number;
   /** Answers given from the wave's start to the next wave's start (or the end of the game). */
   correct: number;
@@ -162,7 +176,7 @@ const DEFENDER_NAMES: Record<SiegeDefenderType, string> = { archer: "an archer",
 
 /**
  * Kingdom Siege: the whole class defends one castle wall against waves of monsters marching
- * down 5 lanes. Correct answers fill a shared treasury that anyone spends on defenders.
+ * down 5 lanes. Each player earns gold with correct answers and spends their own purse on defenders.
  * The battle runs in fixed SIEGE_TICK_MS steps on the game clock.
  */
 export class SiegeGame {
@@ -179,12 +193,15 @@ export class SiegeGame {
   phaseEndsAt = 0;
   phaseDurationMs = SIEGE_COUNTDOWN_MS;
 
-  gold = SIEGE_START_GOLD;
   hearts = SIEGE_HEARTS;
   /** The wave being fought, or the next one during a build break. */
   wave = 0;
   /** Difficulty scale for the current wave, in %. */
   scale = 100;
+  /** The current wave's monster health multiplier for a strong board (not for giants, which already scale with the class). */
+  toughness = 1;
+  /** The current wave's giant pace: a strong board meets a faster giant instead of a tougher one. */
+  giantPace = 1;
   outcome: SiegeResult["outcome"] | null = null;
   readonly waveLog: SiegeWaveLog[] = [];
   defenders: SiegeDefender[] = [];
@@ -261,6 +278,7 @@ export class SiegeGame {
     return {
       ...base,
       ...newStreamPlayer(),
+      gold: SIEGE_START_GOLD,
       goldEarned: 0,
       goldSpent: 0,
       placed: { archer: 0, knight: 0, wall: 0 },
@@ -321,15 +339,25 @@ export class SiegeGame {
     this.periodCorrect = 0;
     this.periodAnswered = 0;
     this.wave = wave;
-    const budget = siegeWaveBudget(wave, this.connectedCount(), this.scale);
+    const defense = Math.round(this.defenseGold());
+    // A board stronger than par makes the wave stronger; the boost only climbs after a wave that cost no hearts.
+    const { boost, budget, toughness } = siegeWaveStrength(siegeWaveBudget(wave, this.connectedCount(), this.scale), defense, prev?.boost ?? 1, !prev || prev.heartsLost === 0);
+    this.toughness = toughness;
+    this.giantPace = siegeGiantPace(boost);
     this.pending = this.planWave(wave, budget);
-    this.waveLog.push({ wave, scale: this.scale, budget, sent: 0, correct: 0, answered: 0, heartsLost: 0 });
+    this.waveLog.push({ wave, scale: this.scale, defense, boost, budget, toughness, sent: 0, correct: 0, answered: 0, heartsLost: 0 });
     if (this.timer !== null) this.clock.clearTimeout(this.timer);
     this.timer = null;
     this.phase = "wave";
     this.phaseEndsAt = 0;
     this.phaseDurationMs = 0;
     this.onChange();
+  }
+
+  /** What the board is worth: the defenders (by health left) plus the gold the players haven't spent yet. */
+  defenseGold(): number {
+    const board = this.defenders.reduce((sum, d) => sum + siegeDefenderGold(d.type, d.level, d.health, d.maxHealth), 0);
+    return board + [...this.players.values()].reduce((sum, p) => sum + p.gold, 0);
   }
 
   /**
@@ -451,7 +479,8 @@ export class SiegeGame {
   /** Put a monster on the entry square of a lane (also used by tests). */
   spawn(type: SiegeMonsterType, lane: number, x: number = SIEGE_SQUARES): SiegeMonster {
     const stats = SIEGE_MONSTERS[type];
-    const health = siegeMonsterHealth(type, this.wave, this.connectedCount());
+    const health = Math.max(1, Math.round(siegeMonsterHealth(type, this.wave, this.connectedCount()) * (type === "giant" ? 1 : this.toughness)));
+    const pace = type === "giant" ? this.giantPace : 1;
     const now = this.clock.now();
     const m: SiegeMonster = {
       id: ++this.ids,
@@ -461,8 +490,9 @@ export class SiegeGame {
       state: type === "giant" ? "wait" : "walk",
       health,
       maxHealth: health,
-      cooldown: stats.attackMs,
+      cooldown: stats.attackMs / pace,
       waitUntil: type === "giant" ? now + SIEGE_GIANT_WAIT_MS : 0,
+      pace,
       leapt: false,
       leapFrom: x,
       leapTo: x,
@@ -523,7 +553,7 @@ export class SiegeGame {
         } else {
           m.cooldown -= SIEGE_TICK_MS;
           if (m.cooldown <= EPS) {
-            m.cooldown += stats.attackMs;
+            m.cooldown += stats.attackMs / m.pace;
             this.strike(m, target);
             changed = true;
           }
@@ -532,7 +562,7 @@ export class SiegeGame {
       }
       // Walking.
       const stopAt = target ? Math.min(m.x, target.square + 1) : WALL_X;
-      const next = m.x - SIEGE_TICK_MS / stats.squareMs;
+      const next = m.x - (SIEGE_TICK_MS * m.pace) / stats.squareMs;
       if (next > stopAt + EPS) {
         m.x = next;
         continue;
@@ -562,7 +592,7 @@ export class SiegeGame {
 
   private startAttack(m: SiegeMonster): void {
     m.state = "attack";
-    m.cooldown = SIEGE_MONSTERS[m.type].attackMs;
+    m.cooldown = SIEGE_MONSTERS[m.type].attackMs / m.pace;
   }
 
   /** One hit from a monster: the giant's stomp also hits the squares just above and below. */
@@ -677,7 +707,7 @@ export class SiegeGame {
 
   // ---------- building ----------
 
-  /** Place a defender. Returns null, or why it couldn't be placed. One request at a time, so the first one wins the gold. */
+  /** Place a defender, paid from the player's own purse. Returns null, or why it couldn't be placed. */
   place(playerId: string, type: unknown, lane: unknown, square: unknown): string | null {
     const p = this.players.get(playerId);
     if (!p) return "You're not in this game.";
@@ -690,8 +720,8 @@ export class SiegeGame {
     if (this.defenderAt(l, s)) return "That square is taken.";
     if (this.monsters.some((m) => m.lane === l && Math.round(this.monsterX(m)) === s)) return "A monster is standing there.";
     const cost = SIEGE_DEFENDERS[t].cost[0];
-    if (this.gold < cost) return SIEGE_NO_GOLD;
-    this.gold -= cost;
+    if (p.gold < cost) return SIEGE_NO_GOLD;
+    p.gold -= cost;
     p.goldSpent += cost;
     p.placed[t]++;
     p.lastPlaced = t;
@@ -711,8 +741,8 @@ export class SiegeGame {
     if (!d) return "That defender is gone.";
     const cost = siegeUpgradeCost(d.type, d.level);
     if (cost === null) return "Already at max level.";
-    if (this.gold < cost) return SIEGE_NO_GOLD;
-    this.gold -= cost;
+    if (p.gold < cost) return SIEGE_NO_GOLD;
+    p.gold -= cost;
     p.goldSpent += cost;
     p.upgrades++;
     if (d.type === "archer") p.archerUpgrades++;
@@ -824,7 +854,7 @@ export class SiegeGame {
     this.onChange();
   }
 
-  /** The player's gold stays in the treasury and their defenders stay on the board. */
+  /** The player's defenders stay on the board; their unspent gold goes with them. */
   kick(playerId: string): SiegePlayer | null {
     const p = this.roster.remove(playerId);
     if (!p) return null;
@@ -845,10 +875,10 @@ export class SiegeGame {
     this.periodAnswered++;
     if (correct) {
       this.periodCorrect++;
-      this.gold += SIEGE_GOLD_PER_CORRECT;
+      p.gold += SIEGE_GOLD_PER_CORRECT;
       p.goldEarned += SIEGE_GOLD_PER_CORRECT;
     }
-    // Everyone's treasury changes on a correct answer; only the answerer's screen otherwise.
+    // The projector's gold total changes on a correct answer; only the answerer's screen otherwise.
     if (correct) this.onChange();
     else this.onActivity(p.id);
     return true;
@@ -929,7 +959,7 @@ export class SiegeGame {
       quiz: { id: this.quizId, title: this.title, questionCount: this.questions.length },
       settings: { waves: this.settings.waves },
       wave: this.wave,
-      gold: this.gold,
+      gold: players.reduce((sum, p) => sum + p.gold, 0),
       hearts: this.hearts,
       maxHearts: SIEGE_HEARTS,
       phaseRemainingMs: this.phase === "wave" || podium ? 0 : this.remaining(this.phaseEndsAt),
@@ -942,7 +972,7 @@ export class SiegeGame {
         if (this.playing && m.state === "walk") {
           const target = this.blocker(m);
           toX = target ? Math.min(x, target.square + 1) : WALL_X;
-          moveMs = Math.round((x - toX) * SIEGE_MONSTERS[m.type].squareMs);
+          moveMs = Math.round(((x - toX) * SIEGE_MONSTERS[m.type].squareMs) / m.pace);
         } else if (this.playing && m.state === "leap") {
           toX = m.leapTo;
           moveMs = Math.max(0, m.leapEndsAt - now);
@@ -1004,7 +1034,7 @@ export class SiegeGame {
       wave: this.wave,
       waves: this.settings.waves,
       hearts: this.hearts,
-      gold: Math.round(this.gold / 5) * 5,
+      gold: p.gold,
       danger: this.playing ? this.danger : [],
       me: { id: p.id, nickname: p.nickname, avatar: p.avatar, correct: p.correct, goldEarned: p.goldEarned },
       question: this.playing ? this.stream.questionView(p) : null,

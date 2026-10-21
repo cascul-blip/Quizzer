@@ -317,8 +317,8 @@ export function buildSiegeResultsCsv(game: SiegeGame): string {
     });
   const log: (string | number)[][] = [
     [],
-    ["Wave", "Difficulty scale %", "Monster budget", "Monsters sent", "Class accuracy %", "Hearts lost"],
-    ...game.waveLog.map((w) => [w.wave, w.scale, w.budget, w.sent, w.answered ? Math.round((w.correct / w.answered) * 100) : "", w.heartsLost]),
+    ["Wave", "Difficulty scale %", "Defense gold", "Strength boost", "Monster budget", "Monster health ×", "Monsters sent", "Class accuracy %", "Hearts lost"],
+    ...game.waveLog.map((w) => [w.wave, w.scale, w.defense, w.boost, w.budget, w.toughness, w.sent, w.answered ? Math.round((w.correct / w.answered) * 100) : "", w.heartsLost]),
   ];
   return toCsv([header, ...rows, ...log]);
 }

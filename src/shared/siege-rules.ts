@@ -13,7 +13,8 @@ export const SIEGE_HEARTS = 10;
 /** The castle wall layer switches to the cracked one at this many hearts or fewer. */
 export const SIEGE_CRACKED_HEARTS = 5;
 
-export const SIEGE_START_GOLD = 100;
+/** Every player has their own purse: this much to start (a late joiner too), plus their own right answers. */
+export const SIEGE_START_GOLD = 50;
 export const SIEGE_GOLD_PER_CORRECT = 25;
 
 /** The battle runs in fixed steps of this many ms. */
@@ -77,7 +78,7 @@ export const SIEGE_DEFENDERS: Record<SiegeDefenderType, SiegeDefenderStats> = {
   wall: { label: "Stone wall", cost: [50, 50, 100], health: [15, 25, 25], damage: [0, 0, 0], arrows: [1, 1, 1], attackMs: [0, 0, 0], thorns: [0, 0, 1] },
 };
 
-/** The cheapest defender: the Build button lights up once the treasury has this much. */
+/** The cheapest defender: the Build button lights up once the player's purse has this much. */
 export const SIEGE_CHEAPEST = Math.min(...SIEGE_DEFENDER_TYPES.map((t) => SIEGE_DEFENDERS[t].cost[0]));
 
 /** The cost to go from `level` to the next level, or null at max level. */
@@ -156,6 +157,54 @@ export function siegeClassSizeFactor(players: number): number {
 /** Budget = base × class size factor × difficulty scale (in %), rounded, and at least 1. */
 export function siegeWaveBudget(wave: number, players: number, scalePct: number): number {
   return Math.max(1, Math.round((siegeBaseBudget(wave) * siegeClassSizeFactor(players) * scalePct) / 100));
+}
+
+// A board stronger than the waves: when the class builds faster than the waves grow, the waves catch up.
+/** Par: an ordinary class's board is worth about this much gold per point of the wave's usual budget. */
+export const SIEGE_PAR_GOLD_PER_POINT = 60;
+/** A board r times par calls for waves r^this times stronger: a big board is stronger than its gold says. */
+export const SIEGE_STRENGTH_EXPONENT = 2;
+/** The boost climbs at most this much per wave, and only after a wave the wall came through untouched; it can drop any amount. */
+export const SIEGE_STRENGTH_STEP = 0.35;
+export const SIEGE_MAX_BOOST = 4;
+/**
+ * The share of the boost that comes as more monsters; the rest is extra health. Mostly health, because a lane
+ * only lets so many monsters on at once, so extra monsters just trickle in.
+ */
+export const SIEGE_STRENGTH_COUNT_SHARE = 0.3;
+
+/** The gold a defender is worth: what it cost to place and upgrade, times the share of its health left. */
+export function siegeDefenderGold(type: SiegeDefenderType, level: number, health: number, maxHealth: number): number {
+  let paid = 0;
+  for (let l = 0; l < Math.min(level, SIEGE_MAX_LEVEL); l++) paid += SIEGE_DEFENDERS[type].cost[l]!;
+  return maxHealth > 0 ? (paid * Math.max(0, health)) / maxHealth : 0;
+}
+
+/** At the top boost the giant walks and swings this many times faster; with no boost it keeps its normal pace. */
+export const SIEGE_GIANT_MAX_PACE = 2;
+
+/** The giant's pace for a wave's boost: 1× at no boost up to SIEGE_GIANT_MAX_PACE at SIEGE_MAX_BOOST, in proportion between. */
+export function siegeGiantPace(boost: number): number {
+  const share = Math.min(1, Math.max(0, (boost - 1) / (SIEGE_MAX_BOOST - 1)));
+  return Math.round((1 + (SIEGE_GIANT_MAX_PACE - 1) * share) * 100) / 100;
+}
+
+/**
+ * A wave sized to the board. A board worth r times par for the wave's usual budget calls for a boost of r^SIEGE_STRENGTH_EXPONENT,
+ * reached at most SIEGE_STRENGTH_STEP per wave (none after a wave that cost hearts) and capped at SIEGE_MAX_BOOST.
+ * The boost multiplies the budget by boost^SIEGE_STRENGTH_COUNT_SHARE and monster health by the rest; the giant
+ * keeps its health and gets faster instead (siegeGiantPace).
+ * A board at or below par gets no boost.
+ */
+export function siegeWaveStrength(budget: number, defenseGold: number, lastBoost = 1, grow = true): { boost: number; budget: number; toughness: number } {
+  const r = Math.max(1, Math.max(0, defenseGold) / (SIEGE_PAR_GOLD_PER_POINT * Math.max(1, budget)));
+  const ceiling = Math.min(SIEGE_MAX_BOOST, Math.max(1, lastBoost) + (grow ? SIEGE_STRENGTH_STEP : 0));
+  const boost = Math.round(Math.min(r ** SIEGE_STRENGTH_EXPONENT, ceiling) * 100) / 100;
+  return {
+    boost,
+    budget: Math.round(budget * boost ** SIEGE_STRENGTH_COUNT_SHARE),
+    toughness: Math.round(boost ** (1 - SIEGE_STRENGTH_COUNT_SHARE) * 100) / 100,
+  };
 }
 
 /** Giants at the end of a wave: one every 5th wave, two from wave 15 on in Endless. */
