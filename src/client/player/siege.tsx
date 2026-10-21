@@ -57,7 +57,7 @@ export function SiegePlayer({ view, send }: { view: PlayerSiegeView; send: Send 
         <span class="siege-bar-hearts" aria-label={`${view.hearts} of ${SIEGE_HEARTS} hearts`}>
           <SiegeIcon kind="heart" /> <b>{view.hearts}</b>
         </span>
-        <span class="siege-bar-gold" aria-label={`${view.gold} gold in the treasury`}>
+        <span class="siege-bar-gold" aria-label={`${view.gold} gold in your purse`}>
           <SiegeIcon kind="coin" /> <b>{view.gold}</b>
         </span>
         <span class="siege-bar-wave">{view.wave > 0 ? (view.waves === "endless" ? `Wave ${view.wave}` : `Wave ${view.wave}/${view.waves}`) : view.title}</span>
@@ -104,13 +104,13 @@ function Countdown({ view }: { view: PlayerSiegeView }) {
   return (
     <main class="center">
       <div class="cup-emoji">🛡️</div>
-      <p class="muted">Every right answer adds {SIEGE_GOLD_PER_CORRECT} gold to the class treasury. Tap Build to spend it on defenders. The monsters won't wait!</p>
+      <p class="muted">Every right answer adds {SIEGE_GOLD_PER_CORRECT} gold to your own purse. Tap Build to spend it on defenders. The monsters won't wait!</p>
       <div class="tower-count">{Math.max(1, secs)}</div>
     </main>
   );
 }
 
-/** The pre-selected defender: the last one this player placed if the class can afford it, else the cheapest it can. */
+/** The pre-selected defender: the last one this player placed if they can afford it, else the cheapest it can. */
 function defaultPick(view: PlayerSiegeView): SiegeDefenderType {
   const can = (t: SiegeDefenderType) => view.gold >= SIEGE_DEFENDERS[t].cost[0];
   if (view.lastPlaced && can(view.lastPlaced)) return view.lastPlaced;

@@ -70,7 +70,7 @@ export function SiegeStage({ view, send }: { view: SiegeView; send: Send }) {
 function Treasury({ gold, hearts }: { gold: number; hearts: number }) {
   return (
     <div class="siege-treasury">
-      <span class="siege-gold" title="The class treasury">
+      <span class="siege-gold" title="Everyone's unspent gold">
         <SiegeIcon kind="coin" /> {gold}
       </span>
       <span class="siege-hearts" title={`${hearts} of ${SIEGE_HEARTS} hearts`}>
@@ -258,7 +258,7 @@ function Countdown({ view }: { view: SiegeView }) {
       <div class="countdown-label">
         Defend the kingdom together!
         <br />
-        Every right answer adds 25 gold to the class treasury. Spend it on archers, knights and stone walls.
+        Every right answer adds 25 gold to your own purse. Spend it on archers, knights and stone walls.
       </div>
       <div class="countdown-num" key={n}>
         {Math.max(1, n)}

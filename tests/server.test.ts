@@ -854,17 +854,24 @@ describe("Kingdom Siege over WebSockets", () => {
     const st = await ann.playerState((v) => v.kind === "siege" && v.phase === "build" && !!v.question);
     const q = st.view.kind === "siege" ? st.view.question! : null;
     ann.send({ type: "siege.answer", seq: q!.seq, option: 0 });
-    await bob.playerState((v) => v.kind === "siege" && v.gold === 125);
+    await ann.playerState((v) => v.kind === "siege" && v.gold === 75);
+    await host.hostState((v) => v.kind === "siege" && v.gold === 125);
+    // Bob's own purse doesn't change when Ann answers.
+    expect(bob.view?.kind === "siege" && bob.view.gold).toBe(50);
 
     // The map's contents only come while it is open.
     expect(bob.view?.kind === "siege" && bob.view.map).toBeNull();
     bob.send({ type: "siege.map", open: true });
     await bob.playerState((v) => v.kind === "siege" && !!v.map && v.map.defenders.length === 0);
+    // Bob's 50 gold can't buy a knight; Ann's 75 can.
     bob.send({ type: "siege.place", defender: "knight", lane: 2, square: 3 });
+    expect(await bob.waitFor((m) => m.type === "error")).toMatchObject({ message: "Not enough gold." });
+    ann.send({ type: "siege.place", defender: "knight", lane: 2, square: 3 });
     await host.hostState((v) => v.kind === "siege" && v.defenders.length === 1 && v.gold === 50 && v.events[0]?.text === "placed a knight");
-    await bob.playerState((v) => v.kind === "siege" && v.map?.defenders.length === 1 && v.lastPlaced === "knight");
-    ann.send({ type: "siege.upgrade", lane: 2, square: 3 });
-    expect(await ann.waitFor((m) => m.type === "error")).toMatchObject({ message: "Not enough gold. Someone just spent it." });
+    await bob.playerState((v) => v.kind === "siege" && v.map?.defenders.length === 1);
+    await ann.playerState((v) => v.kind === "siege" && v.gold === 0 && v.lastPlaced === "knight");
+    bob.send({ type: "siege.upgrade", lane: 2, square: 3 });
+    expect(await bob.waitFor((m) => m.type === "error")).toMatchObject({ message: "Not enough gold." });
     bob.send({ type: "siege.place", defender: "archer", lane: 2, square: 8 });
     expect(await bob.waitFor((m) => m.type === "error")).toMatchObject({ message: "You can't build on that square." });
     bob.send({ type: "siege.map", open: false });
@@ -889,7 +896,7 @@ describe("Kingdom Siege over WebSockets", () => {
     await ann.playerState((v) => v.kind === "siege" && v.phase === "podium" && !!v.result);
     const csv = await (await fetch(`${base}/api/results/latest.csv`)).text();
     expect(csv).toContain("Nickname,Correct,Wrong,Accuracy %,Gold earned,Gold spent");
-    expect(csv).toContain("Wave,Difficulty scale %,Monster budget,Monsters sent,Class accuracy %,Hearts lost");
+    expect(csv).toContain("Wave,Difficulty scale %,Defense gold,Strength boost,Monster budget,Monster health ×,Monsters sent,Class accuracy %,Hearts lost");
     expect(csv).toContain(",Ended,1,");
     const records = JSON.parse(await Bun.file(`${t.dir}/siege-records.json`).text());
     expect(records[quiz.id]).toMatchObject({ waves: 1, avgScale: 100 });
