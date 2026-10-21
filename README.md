@@ -104,7 +104,7 @@ quizzer mcp [options]       Run the MCP server over stdio (for AI agents)
 - **Shuffling** is chosen in the lobby for each game; the quiz's shuffle settings in the editor are the defaults. Shuffling answer positions moves each answer to a random tile (and color), so the correct answer isn't always in the same place. The order is fixed when you press Start and is the same on the projector and every phone. True/False keeps True before False.
 - **Streaks**: after 4 correct answers in a row, a player gets 🔥x4 (x5, x6, …) next to their name on the leaderboard, the podium and their phone. A wrong or missed answer resets it.
 - **Show errors**: on the final screen of every game mode, this button swaps the results for a table of the **10 questions with the most wrong answers**, each with its correct answer, so you can go over them with the class. Press **Show results** to switch back. Classic and Racer count wrong answers only, not questions a player let time out; in the other modes a question can come up more than once, and every wrong answer counts.
-- **Protect from abuse**: a lobby checkbox, on by default, for **Tallest Tower**, **Submarine Squad**, **Tower Fight**, **Robot Attack**, **Cup of Death** and **Dragon's Hoard**. It slows down players who tap random answers instead of reading. The ✗ screen normally shows for 1 second; after **2 wrong answers in a row** it stays **3 seconds longer**, and after **3 or more in a row**, **4 seconds longer**, with a countdown on the phone. A correct answer resets it. Reloading the page doesn't skip the wait.
+- **Protect from abuse**: a lobby checkbox, on by default, for **Tallest Tower**, **Submarine Squad**, **Tower Fight**, **Robot Attack**, **Cup of Death**, **Dragon's Hoard** and **Kingdom Siege**. It slows down players who tap random answers instead of reading. The ✗ screen normally shows for 1 second; after **2 wrong answers in a row** it stays **3 seconds longer**, and after **3 or more in a row**, **4 seconds longer**, with a countdown on the phone. A correct answer resets it. Reloading the page doesn't skip the wait.
 - **Results file**: a CSV of every finished game is saved in `data/results/`. The latest one is also at `http://localhost:8080/api/results/latest.csv` on the host computer.
 - **Reconnecting**: if a phone locks, refreshes or drops Wi-Fi, it rejoins as the same player with the same score. Players can also join after the game has started.
 - Only one game runs at a time. The admin, host controls and API only work from the host computer itself (`localhost`). Phones can only reach the player page.
@@ -283,6 +283,39 @@ Running out of time is an explosion: a white flash, a fireball, smoke, debris an
 
 The painted art comes from `scripts/bomb-art.py` (sources in `scripts/bomb-art/`); the clock digits, the flash and the shake are drawn in code (`src/client/shared/bomb-art.tsx`). Phones use the smaller copies and never show the workbench.
 
+## Kingdom Siege mode
+
+A co-op lane-defense game in the style of Plants vs. Zombies. Choose **Game mode → 🛡️ Kingdom Siege** in the lobby. Settings: **Waves** (5, 10 or ♾ Endless, default 5) and Protect from abuse. There are no teams: the whole class defends one castle wall against waves of goblins, wolves, trolls and giants marching across a tabletop diorama.
+
+- **The board.** 5 lanes of 8 squares, whatever the class size. The castle wall is on the left with **10 hearts** that never heal. Defenders go on squares 1–7; square 8 is where monsters come on, and a small red arrow shows at a lane's right edge 2 seconds before one does. A lane flashes red when a monster is within 2 squares of the wall.
+- **Gold.** The treasury starts at 100 gold and **every correct answer adds 25**. Wrong answers add nothing. Anyone can spend the class's gold on any lane, and the server takes one purchase at a time ("Not enough gold. Someone just spent it.").
+- **Building on the phone.** The question is always the phone's main screen. **Build** at the bottom lights up once the treasury can afford a defender. It opens the lane map (live, with the defenders, red monster dots and danger lanes). Tap an empty square to place the selected defender (the last one you placed, or the cheapest affordable one). Tap a placed defender to see its upgrade cost, and tap it again to buy. The map closes after 8 seconds without a tap.
+
+| Defender | Place / Lv 2 / Lv 3 | What it does |
+|---|---|---|
+| 🏹 Archer | 50 / 75 / 125 | 4 health. Shoots the nearest monster ahead in its lane, 1 damage every 1.5 s; every 1 s at Lv 2; 2 arrows per shot at Lv 3 |
+| ⚔️ Knight | 75 / 100 / 150 | 10 health (16 at Lv 2). Strikes the monster in front of it, 2 damage a second (3 at Lv 3) |
+| 🧱 Stone wall | 50 / 50 / 100 | 15 health (25 at Lv 2). Doesn't attack; at Lv 3 its spikes do 1 damage to a monster every time it hits the wall |
+
+An upgrade adds the extra health to what the defender has left, so upgrading a hurt defender partly repairs it. Defenders can't be sold or moved, and nothing heals.
+
+| Monster | Health | Speed | Special | Hearts |
+|---|---|---|---|---|
+| Goblin | 3 | 1 square / 2 s | Comes in groups of 2–3 | 1 |
+| Wolf | 3 | 1 square / 1 s | Leaps the first stone wall in its way | 1 |
+| Troll | 12 | 1 square / 3.5 s | Triple damage to stone walls; armored, so arrows do half damage | 2 |
+| Giant | 40 + 5 per player | 1 square / 4 s | Waits 3 s with a horn, then stomps for 6 (and 2 to the squares above and below) | 5 |
+
+- **Waves.** After the countdown there's a **15-second build break** (questions already running), then wave 1 (goblins only). Wolves join in wave 2, trolls in wave 3, and waves 5 and 10 end with a giant. Each wave's monster budget is (6 + 3 × (wave − 1)) × class size factor (0.6 + 0.1 per connected player, between 0.7 and 1.4) × difficulty. Between waves there's a 10-second "Wave N incoming" break.
+- **Later waves hit harder.** The health in the table is for wave 1: every monster gets **10% more health per wave** after that (a wave 6 goblin has 5, a wave 10 troll 23). A wave's monsters come in over 30 seconds in wave 1, **1 second less each wave** (down to 20 seconds), and from **wave 5** a lane can have 3 monsters coming onto it at once instead of 2.
+- **Adaptive difficulty.** The class's accuracy during a wave (and its break) sets the next wave's difficulty: 70% at 40% accuracy or below, 130% at 90% or above, moving at most 20 points per wave. Students don't see it; the results CSV logs it.
+- **Endless** never stops: +4 budget per wave after wave 10, a giant every 5th wave and 2 giants from wave 15 on. The podium shows the waves survived, the average difficulty and the class's best Endless run on this quiz (saved in `data/siege-records.json`), with "New record!" when it's beaten.
+- **Endings.** "The kingdom stands!" (banners, bells and confetti) if the wall has hearts left after the last wave; "The castle has fallen" (it crumbles in a cloud of dust) at 0 hearts. End game opens the podium straight away ("Ended on wave 4 with 6 hearts left.").
+
+Awards: **Top Archer Captain** (most monsters defeated by archers the player placed), **Master Mason** (most walls placed plus wall upgrades) and **Most correct answers**. The results CSV has one row per player (kicked players included): correct, wrong, accuracy, gold earned and spent, archers, knights and walls placed, upgrades, monsters defeated, plus the class result, waves survived, hearts left and the Endless record. Below it is a wave log: wave, difficulty, monster budget, monsters sent, class accuracy and hearts lost. Late joiners start answering right away; kicked players' defenders stay on the board.
+
+The painted art comes from `scripts/siege-art.py` (sources in `scripts/siege-art/`, positions in `src/client/shared/siege/manifest.md`); the motion, warning arrows, lane flashes, glow, dust and confetti are drawn in code (`src/client/shared/siege-art.tsx`). Phones only get the small defender icons, the coin and the heart; the lane map is drawn in code.
+
 ## Music
 
 Every game mode has **built-in background music** on the projector (phones stay quiet). It's composed in code, so it adds nothing to the download and needs no licenses:
@@ -299,6 +332,7 @@ Every game mode has **built-in background music** on the projector (phones stay 
 | Cup of Death | Original spaghetti-western themes: whistle, twangy guitar, galloping hooves; a honky-tonk saloon piano in the lobby | The gallop speeds up and strings, brass and a church bell join as the quiz timer runs out; a heartbeat and a tolling bell while the cups are picked and drunk |
 | Dragon's Hoard | A quiet cave with deep strings and the dragon breathing; a heroic battle theme with brass, drums and choir; a playful plucked scramble with coin sounds | The battle gets more intense as the dragon weakens and the battle clock runs out; a rising rumble, then war drums, during fire breath; the scramble speeds up as its clock runs out |
 | Bomb Squad | Spy-jazz: bass, brushes and a vibraphone | The defuse theme adds a tick and more layers, and speeds up, as the bomb runs down (extra urgency under 30 seconds). A fanfare if the bomb is defused; a low boom if it explodes |
+| Kingdom Siege | A pastoral lobby with recorder, lute and tabor; a marching battle theme with snare, recorders and brass | The march adds layers as monsters fill the board and as hearts are lost; low brass and timpani for a giant; drums and a held chord during breaks. Church bells and a fanfare if the kingdom stands; a low brass lament if the castle falls |
 
 The lobby plays the music of whichever game mode is selected. Use the **🎵 button and slider** in the projector's top bar to turn music off or change its volume. The 🔊 button still mutes everything.
 
@@ -318,6 +352,7 @@ Put audio files (MP3, OGG, M4A, WAV, WebM or FLAC) in the **`data/music`** folde
 | `cup-lobby` · `cup-quiz` · `cup-drink` · `cup-results` | Cup of Death: lobby, dice and quiz, picking and drinking, final results |
 | `dragon-lobby` · `dragon-battle` · `dragon-fire` · `dragon-scramble` · `dragon-results` | Dragon's Hoard: lobby, battle, fire breath (warning and Shield of Faith question), hoard scramble, final podium |
 | `bomb-lobby` · `bomb-defuse` · `bomb-results` | Bomb Squad: lobby, defusing, the defused or exploded ending and the podium |
+| `siege-lobby` · `siege-battle` · `siege-results` | Kingdom Siege: lobby; countdown, build breaks and waves; the kingdom stands or the castle falls, and the podium |
 
 For example, `data/music/submarine-chase.mp3`. Your files loop; they don't speed up with the game like the built-in music does. Only use music you're allowed to play: royalty-free or Creative Commons tracks (e.g. Pixabay Music, OpenGameArt, or incompetech with credit). Delete a file to go back to the built-in track.
 

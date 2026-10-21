@@ -8,6 +8,8 @@
  * Cup of Death = original spaghetti-western themes: whistle, twangy guitar, galloping hooves,
  * Dragon's Hoard = a dark cave, a heroic battle with brass and choir, war drums under the fire, a plucky scramble,
  * Bomb Squad = spy-jazz (bass, brushes, vibraphone) that picks up a tick and more layers as the bomb runs down.
+ * Kingdom Siege = a pastoral recorder-and-lute lobby, a marching battle with snare, tabor, recorders and brass,
+ *   church bells for a victory and a low brass lament for a fallen castle.
  * Any of these can be replaced by an audio file in data/music/<id>.<ext>.
  */
 import type { MusicTrackId } from "../../../shared/music-tracks.ts";
@@ -1144,6 +1146,116 @@ const bombResults: Track = {
   ],
 };
 
+// ---------- Kingdom Siege: a tabletop kingdom under siege ----------
+
+const SIEGE_G = chord("G3 B3 D4");
+const SIEGE_C = chord("C4 E4 G4");
+const SIEGE_D = chord("D4 F#4 A4");
+const SIEGE_EM = chord("E3 G3 B3");
+
+const siegeLobby: Track = {
+  id: "siege-lobby",
+  bpm: 84,
+  bars: 4,
+  swing: 0.12,
+  reverb: 0.3,
+  layers: [
+    // The lute.
+    { inst: "pluck", bars: [arp(["G3", "D4", "B4", "D4"], 2), arp(["C4", "G4", "E5", "G4"], 2), arp(["E3", "B3", "G4", "B3"], 2), arp(["D4", "A4", "F#5", "A4"], 2)], vol: 0.5 },
+    { inst: "bass", bars: [pump("G2", "x.......x......."), pump("C2", "x.......x......."), pump("E2", "x.......x......."), pump("D2", "x.......x.......")], vol: 0.5 },
+    // A soft tabor.
+    { inst: "woodblock", bars: [drum("x.....x.x.......")], vol: 0.25 },
+    // The recorder.
+    {
+      inst: "flute",
+      bars: [
+        seq(["B4", 4], ["A4", 2], ["G4", 2], ["A4", 4], ["B4", 4]),
+        seq(["C5", 4], ["E5", 4], ["D5", 4], ["C5", 4]),
+        seq(["B4", 2], ["A4", 2], ["G4", 4], ["E4", 4], ["G4", 4]),
+        seq(["A4", 6], ["F#4", 2], ["D4", 8]),
+      ],
+      vol: 0.5,
+    },
+    { inst: "pad", bars: [hold(SIEGE_G), hold(SIEGE_C), hold(SIEGE_EM), hold(SIEGE_D)], vol: 0.25 },
+  ],
+};
+
+const SIEGE_MARCH = [chord("Bb3 D4 F4"), chord("Eb4 G4 Bb4"), chord("F3 A3 C4"), chord("G3 Bb3 D4"), chord("Bb3 D4 F4"), chord("Eb4 G4 Bb4"), chord("C4 Eb4 G4"), chord("F3 A3 C4")];
+const SIEGE_ROOTS = ["Bb1", "Eb2", "F2", "G1", "Bb1", "Eb2", "C2", "F2"];
+
+const siegeBattle: Track = {
+  id: "siege-battle",
+  bpm: 112,
+  bars: 8,
+  // Below 0.15 is a build break: drums and a held chord. More layers as monsters fill the
+  // board and hearts are lost; low brass and timpani for a giant (0.85 and up).
+  tempoBoost: 0.3,
+  reverb: 0.22,
+  layers: [
+    // The marching snare and tabor, always there.
+    { inst: "snare", bars: [drum("x..xx.x.x..xx.x."), drum("x..xx.x.x..xx.x."), drum("x..xx.x.x..xx.x."), drum("x..xx.x.x.xxxxxx")], vol: 0.45 },
+    { inst: "woodblock", bars: [drum("x...x...x...x...")], vol: 0.3 },
+    { inst: "pad", bars: SIEGE_MARCH.map(hold), vol: 0.35, to: 0.15 },
+    { inst: "bass", bars: SIEGE_ROOTS.map((r) => pump(r, "x...x...x...x...")), vol: 0.7, from: 0.15 },
+    {
+      inst: "flute",
+      bars: [
+        seq(["F5", 3], ["F5", 1], ["Bb5", 4], ["A5", 2], ["G5", 2], ["F5", 4]),
+        seq(["G5", 3], ["G5", 1], ["Eb5", 4], ["G5", 4], ["Bb5", 4]),
+        seq(["A5", 3], ["G5", 1], ["F5", 4], ["C5", 4], ["F5", 4]),
+        seq(["D5", 4], ["G5", 4], ["F5", 2], ["Eb5", 2], ["D5", 4]),
+        seq(["F5", 3], ["F5", 1], ["Bb5", 4], ["A5", 2], ["G5", 2], ["F5", 4]),
+        seq(["Eb5", 2], ["F5", 2], ["G5", 4], ["Bb5", 4], ["G5", 4]),
+        seq(["G5", 3], ["F5", 1], ["Eb5", 4], ["C5", 4], ["G5", 4]),
+        seq(["F5", 12], [".", 4]),
+      ],
+      vol: 0.5,
+      from: 0.15,
+    },
+    { inst: "strings", bars: SIEGE_MARCH.map((c) => pump(c, "x.x.x.x.x.x.x.x.")), vol: 0.3, from: 0.35 },
+    { inst: "brass", bars: SIEGE_MARCH.map((c) => pump(c, "x.......x.x.....")), vol: 0.45, from: 0.5 },
+    { inst: "hat", bars: [drum("..x...x...x...x.")], vol: 0.35, from: 0.6 },
+    { inst: "cymbal", bars: [once("x"), rest, rest, rest], vol: 0.45, from: 0.7 },
+    // The giant.
+    { inst: "tribass", bars: SIEGE_ROOTS.map((r) => pump(r.replace(/\d/, (n) => String(Number(n) - 1)), "x.......x.......")), vol: 0.6, from: 0.85 },
+    { inst: "timpani", bars: SIEGE_ROOTS.map((r) => pump(r.replace("1", "2"), "x.....x.x.......")), vol: 0.6, from: 0.85 },
+  ],
+};
+
+const siegeResults: Track = {
+  id: "siege-results",
+  bpm: 92,
+  bars: 4,
+  reverb: 0.42,
+  layers: [
+    // A slow, low brass lament for a fallen castle (low intensity).
+    {
+      inst: "brass",
+      bars: [seq(["G3", 8], ["F3", 4], ["Eb3", 4]), seq(["D3", 12], [".", 4]), seq(["C3", 8], ["D3", 4], ["Eb3", 4]), seq(["D3", 12], [".", 4])],
+      vol: 0.5,
+      to: 0.45,
+    },
+    { inst: "strings", bars: [hold(chord("G2 Bb2 D3")), hold(chord("D2 F#2 A2")), hold(chord("C2 Eb2 G2")), hold(chord("D2 F#2 A2"))], vol: 0.45, to: 0.45 },
+    { inst: "timpani", bars: [once("G1"), rest, once("C2"), once("D2")], vol: 0.4, to: 0.45 },
+    // A bright fanfare with church bells when the kingdom stands (high intensity).
+    {
+      inst: "brass",
+      bars: [
+        seq(["G4", 2], ["B4", 2], ["D5", 4], ["G5", 6], ["D5", 2]),
+        seq(["C5", 2], ["E5", 2], ["G5", 4], ["C6", 6], ["G5", 2]),
+        seq(["D5", 2], ["F#5", 2], ["A5", 4], ["D6", 4], ["C6", 2], ["A5", 2]),
+        seq(["G5", 12], [".", 4]),
+      ],
+      vol: 0.55,
+      from: 0.55,
+    },
+    { inst: "bell", bars: [seq(["G4", 8], ["D4", 8]), seq(["C5", 8], ["G4", 8]), seq(["D5", 8], ["A4", 8]), seq(["G4", 8], ["G3", 8])], vol: 0.45, from: 0.55 },
+    { inst: "organ", bars: [hold(SIEGE_G), hold(SIEGE_C), hold(SIEGE_D), hold(SIEGE_G)], vol: 0.35, from: 0.55 },
+    { inst: "snare", bars: [drum("....x.......x..."), drum("....x.......x..."), drum("....x.......x..."), drum("x.x.x.x.xxxxxxxx")], vol: 0.45, from: 0.55 },
+    { inst: "cymbal", bars: [once("x"), rest, rest, once("x")], vol: 0.45, from: 0.55 },
+  ],
+};
+
 export const TRACKS: Record<MusicTrackId, Track> = {
   "classic-lobby": classicLobby,
   "classic-question": classicQuestion,
@@ -1181,4 +1293,7 @@ export const TRACKS: Record<MusicTrackId, Track> = {
   "bomb-lobby": bombLobby,
   "bomb-defuse": bombDefuse,
   "bomb-results": bombResults,
+  "siege-lobby": siegeLobby,
+  "siege-battle": siegeBattle,
+  "siege-results": siegeResults,
 };

@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { AUTO_REVEAL_MS, INTRO_MS } from "../src/server/game/game.ts";
 import { RacerGame } from "../src/server/game/racer.ts";
+import type { SiegeGame } from "../src/server/game/siege.ts";
 import { COUNTDOWN_MS, DROP_COOLDOWN_MS, FEEDBACK_MS } from "../src/server/game/tower.ts";
 import { COUNTDOWN_MS as FIGHT_COUNTDOWN_MS, RESULT_MS } from "../src/server/game/fight.ts";
 import { COUNTDOWN_MS as LAND_COUNTDOWN_MS } from "../src/server/game/land.ts";
@@ -8,6 +9,7 @@ import { COUNTDOWN_MS as ROBOT_COUNTDOWN_MS } from "../src/server/game/robot.ts"
 import { COUNTDOWN_MS as CUP_COUNTDOWN_MS } from "../src/server/game/cup.ts";
 import { COUNTDOWN_MS as DRAGON_COUNTDOWN_MS } from "../src/server/game/dragon.ts";
 import { BOMB_COUNTDOWN_MS, BOMB_HOLD_MS, BOMB_NEXT_MS, BOMB_RESULT_MS } from "../src/shared/protocol.ts";
+import { SIEGE_COUNTDOWN_MS, SIEGE_OPENING_MS } from "../src/shared/siege-rules.ts";
 import { BOOST_MIN_HOLD_MS, COUNTDOWN_MS as SUB_COUNTDOWN_MS } from "../src/server/game/submarine.ts";
 import { startServer, type RunningServer } from "../src/server/http.ts";
 import { isAdminRequest } from "../src/server/network.ts";
@@ -811,6 +813,99 @@ describe("Dragon's Hoard over WebSockets", () => {
     // Play again keeps Dragon's Hoard and its settings.
     host.send({ type: "host.open", quizId: quiz.id });
     await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "dragon" && v.dragon.toughness === "easy" && v.dragon.scrambleMinutes === 2);
+    host.send({ type: "host.close" });
+    players.forEach((s) => s.close());
+    host.close();
+  });
+});
+
+describe("Kingdom Siege over WebSockets", () => {
+  test("Endless lobby → build → lane map → wave 1 → end → results and record → play again", async () => {
+    const quiz = store.create({
+      title: "Siege E2E",
+      questions: [1, 2, 3].map((n) => ({ type: "multiple_choice", text: `Q${n}`, options: ["right", "wrong"], correct: [0] })),
+    });
+    const wsUrl = `ws://localhost:${srv.port}/ws`;
+    const host = await TestSocket.open(wsUrl);
+    host.send({ type: "host.hello" });
+    await host.hostState((v) => v.kind === "idle");
+    host.send({ type: "host.open", quizId: quiz.id });
+    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
+    host.send({ type: "host.setMode", mode: "siege" });
+    await host.hostState((v) => v.kind === "classic" && v.mode === "siege" && v.siege.waves === 5 && v.teams === null);
+    host.send({ type: "host.setSiege", waves: 7 as never });
+    expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: expect.stringContaining("waves") });
+    host.send({ type: "host.setSiege", waves: "endless" });
+    await host.hostState((v) => v.kind === "classic" && v.siege.waves === "endless");
+
+    const names = ["Ann", "Bob"];
+    const players = await Promise.all(names.map(() => TestSocket.open(wsUrl)));
+    for (const [i, p] of players.entries()) {
+      await p.playerState((v) => v.kind === "none" && !!v.game);
+      p.send({ type: "join", nickname: names[i]! });
+      await p.waitFor((m) => m.type === "joined");
+    }
+    const [ann, bob] = players as [TestSocket, TestSocket];
+
+    host.send({ type: "host.start", pacing: "manual" });
+    await host.hostState((v) => v.kind === "siege" && v.phase === "countdown" && v.gold === 100);
+    clock.advance(SIEGE_COUNTDOWN_MS);
+    srv.hub.broadcast();
+    const st = await ann.playerState((v) => v.kind === "siege" && v.phase === "build" && !!v.question);
+    const q = st.view.kind === "siege" ? st.view.question! : null;
+    ann.send({ type: "siege.answer", seq: q!.seq, option: 0 });
+    await bob.playerState((v) => v.kind === "siege" && v.gold === 125);
+
+    // The map's contents only come while it is open.
+    expect(bob.view?.kind === "siege" && bob.view.map).toBeNull();
+    bob.send({ type: "siege.map", open: true });
+    await bob.playerState((v) => v.kind === "siege" && !!v.map && v.map.defenders.length === 0);
+    bob.send({ type: "siege.place", defender: "knight", lane: 2, square: 3 });
+    await host.hostState((v) => v.kind === "siege" && v.defenders.length === 1 && v.gold === 50 && v.events[0]?.text === "placed a knight");
+    await bob.playerState((v) => v.kind === "siege" && v.map?.defenders.length === 1 && v.lastPlaced === "knight");
+    ann.send({ type: "siege.upgrade", lane: 2, square: 3 });
+    expect(await ann.waitFor((m) => m.type === "error")).toMatchObject({ message: "Not enough gold. Someone just spent it." });
+    bob.send({ type: "siege.place", defender: "archer", lane: 2, square: 8 });
+    expect(await bob.waitFor((m) => m.type === "error")).toMatchObject({ message: "You can't build on that square." });
+    bob.send({ type: "siege.map", open: false });
+    await bob.playerState((v) => v.kind === "siege" && v.map === null);
+    await expectInSync(bob, wsUrl);
+
+    // Wave 1 marches in; nobody defends lanes other than lane 3, so some goblins reach the wall. Then the break before wave 2.
+    clock.advance(SIEGE_OPENING_MS);
+    srv.hub.broadcast();
+    await host.hostState((v) => v.kind === "siege" && v.phase === "wave" && v.wave === 1);
+    const siege = srv.hub.game as SiegeGame;
+    for (let i = 0; i < 120 && !(siege.phase === "build" && siege.wave === 2); i++) clock.advance(500);
+    srv.hub.broadcast();
+    const wave2 = await host.hostState((v) => v.kind === "siege" && v.phase === "build" && v.wave === 2);
+    expect(wave2.view.kind === "siege" && wave2.view.hearts).toBeLessThan(10);
+    // Phones never get monster positions.
+    expect(JSON.stringify(ann.raw.filter((m) => m.type === "player.state" || m.type === "player.patch"))).not.toContain("goblin");
+
+    host.send({ type: "host.end" });
+    const podium = await host.hostState((v) => v.kind === "siege" && v.phase === "podium");
+    expect(podium.view.kind === "siege" && podium.view.result).toMatchObject({ outcome: "ended", wavesSurvived: 1, newRecord: true });
+    await ann.playerState((v) => v.kind === "siege" && v.phase === "podium" && !!v.result);
+    const csv = await (await fetch(`${base}/api/results/latest.csv`)).text();
+    expect(csv).toContain("Nickname,Correct,Wrong,Accuracy %,Gold earned,Gold spent");
+    expect(csv).toContain("Wave,Difficulty scale %,Monster budget,Monsters sent,Class accuracy %,Hearts lost");
+    expect(csv).toContain(",Ended,1,");
+    const records = JSON.parse(await Bun.file(`${t.dir}/siege-records.json`).text());
+    expect(records[quiz.id]).toMatchObject({ waves: 1, avgScale: 100 });
+
+    // Play again keeps Kingdom Siege and Endless, and the next run knows the record.
+    host.send({ type: "host.open", quizId: quiz.id });
+    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "siege" && v.siege.waves === "endless");
+    for (const [i, p] of players.entries()) {
+      p.send({ type: "join", nickname: names[i]! });
+      await p.waitFor((m) => m.type === "joined");
+    }
+    host.send({ type: "host.start", pacing: "manual" });
+    await host.hostState((v) => v.kind === "siege" && v.phase === "countdown");
+    host.send({ type: "host.end" });
+    const again = await host.hostState((v) => v.kind === "siege" && v.phase === "podium");
+    expect(again.view.kind === "siege" && again.view.result).toMatchObject({ newRecord: false, record: { waves: 1 } });
     host.send({ type: "host.close" });
     players.forEach((s) => s.close());
     host.close();

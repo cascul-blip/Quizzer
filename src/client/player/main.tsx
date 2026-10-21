@@ -15,6 +15,7 @@ import { RacerPlayer } from "./racer.tsx";
 import { CupPlayer } from "./cup.tsx";
 import { DragonPlayer } from "./dragon.tsx";
 import { BombPlayer } from "./bomb.tsx";
+import { SiegePlayer } from "./siege.tsx";
 import { RobotPlayer } from "./robot.tsx";
 import { SubPlayer } from "./submarine.tsx";
 import { TowerPlayer } from "./tower.tsx";
@@ -183,6 +184,8 @@ function App() {
     body = <DragonPlayer view={view} send={send} />;
   } else if (view.kind === "bomb") {
     body = <BombPlayer view={view} send={send} />;
+  } else if (view.kind === "siege") {
+    body = <SiegePlayer view={view} send={send} />;
   } else {
     body = <Game view={view} send={send} />;
   }
@@ -299,10 +302,11 @@ function Lobby({ view, send }: { view: Joined; send: (m: ClientMsg) => void }) {
   const look = picked ?? server;
   return (
     <main class="center lobby-wait">
-      <div class="me-avatar">
+      <div class={`me-avatar ${view.siege ? "siege-banner-avatar" : ""}`}>
         <Avatar choice={look} />
       </div>
       <h1>You're in!</h1>
+      {view.siege && <p class="siege-lobby-line">🛡️ Defend the kingdom! Watch the projector.</p>}
       {view.team && (
         <div class="team-badge" style={{ background: view.team.color }}>
           Team {view.team.name}

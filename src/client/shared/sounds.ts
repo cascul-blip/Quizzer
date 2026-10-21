@@ -1,6 +1,6 @@
 /** Tiny synthesized sound effects (WebAudio), so no audio files need to be shipped. */
 
-export type Sfx = "tick" | "tickHigh" | "timeUp" | "reveal" | "join" | "start" | "fanfare" | "thud" | "floor" | "rumble" | "roar" | "whoosh" | "chomp" | "bubble" | "heartbeat" | "laser" | "alarm" | "plant" | "capture" | "conquer" | "gearUp" | "skid" | "crash" | "repair" | "leverClick" | "land" | "diceRoll" | "diceLand" | "clink" | "gulp" | "poison" | "survive" | "gunshot" | "dragonRoar" | "sword" | "fireWhoosh" | "shieldClang" | "coins" | "chestOpen" | "trapHiss" | "jackpot" | "snip" | "spark" | "wrongWire" | "moduleChime" | "keypad" | "defuse" | "explosion";
+export type Sfx = "tick" | "tickHigh" | "timeUp" | "reveal" | "join" | "start" | "fanfare" | "thud" | "floor" | "rumble" | "roar" | "whoosh" | "chomp" | "bubble" | "heartbeat" | "laser" | "alarm" | "plant" | "capture" | "conquer" | "gearUp" | "skid" | "crash" | "repair" | "leverClick" | "land" | "diceRoll" | "diceLand" | "clink" | "gulp" | "poison" | "survive" | "gunshot" | "dragonRoar" | "sword" | "fireWhoosh" | "shieldClang" | "coins" | "chestOpen" | "trapHiss" | "jackpot" | "snip" | "spark" | "wrongWire" | "moduleChime" | "keypad" | "defuse" | "explosion" | "bowTwang" | "arrowHit" | "swordClang" | "stoneThud" | "placeClack" | "upgradeChime" | "heartLost" | "giantHorn" | "drumRoll" | "wolfHowl" | "trollRoar" | "giantStomp" | "castleCrumble" | "victoryBells";
 
 const MUTE_KEY = "quizzer.muted";
 let ctx: AudioContext | null = null;
@@ -253,6 +253,67 @@ export function play(sfx: Sfx): void {
       tone(70, 0, 0.7, "sine", 0.45);
       tone(45, 0.05, 0.9, "triangle", 0.35);
       [180, 120, 80, 50].forEach((f, i) => tone(f, i * 0.04, 0.4, "sawtooth", 0.12));
+      return;
+    // ---------- Kingdom Siege ----------
+    case "bowTwang":
+      // A plucked bowstring bending down.
+      tone(330, 0, 0.12, "triangle", 0.1);
+      return tone(196, 0.02, 0.18, "sawtooth", 0.04);
+    case "arrowHit":
+      tone(900, 0, 0.03, "square", 0.04);
+      return tone(140, 0.01, 0.07, "triangle", 0.1);
+    case "swordClang":
+      // Steel on steel: a bright ring with a low knock.
+      tone(1760, 0, 0.3, "triangle", 0.07);
+      tone(2637, 0, 0.18, "sine", 0.04);
+      return tone(180, 0, 0.06, "square", 0.08);
+    case "stoneThud":
+      tone(90, 0, 0.18, "sine", 0.3);
+      return tone(60, 0.02, 0.12, "triangle", 0.2);
+    case "placeClack":
+      // A miniature set down on the board: a wooden clack and a little bounce.
+      tone(1200, 0, 0.03, "square", 0.06);
+      tone(600, 0.01, 0.05, "triangle", 0.1);
+      return tone(900, 0.09, 0.03, "square", 0.03);
+    case "upgradeChime":
+      [783.99, 1046.5, 1318.5].forEach((f, i) => tone(f, i * 0.06, 0.25, "triangle", 0.1));
+      return;
+    case "heartLost":
+      // Stones crashing from the castle wall.
+      tone(70, 0, 0.5, "sine", 0.35);
+      [160, 120, 95, 140, 80].forEach((f, i) => tone(f, i * 0.05, 0.12, "square", 0.08));
+      return;
+    case "giantHorn":
+      // A long, low war horn with a swell.
+      tone(110, 0, 1.6, "sawtooth", 0.12);
+      tone(164.8, 0.05, 1.5, "sawtooth", 0.06);
+      return tone(55, 0, 1.7, "triangle", 0.15);
+    case "drumRoll":
+      for (let i = 0; i < 18; i++) tone(180 + (i % 2) * 20, i * 0.055, 0.05, "square", 0.03 + i * 0.004);
+      return tone(70, 1.0, 0.35, "sine", 0.35);
+    case "wolfHowl":
+      // A rising then falling howl.
+      [440, 520, 600, 660, 640, 580, 500].forEach((f, i) => tone(f, i * 0.11, 0.2, "sine", 0.06));
+      return;
+    case "trollRoar":
+      [90, 110, 80].forEach((f, i) => tone(f, i * 0.07, 0.8, "sawtooth", 0.12));
+      return tone(45, 0.1, 0.7, "sine", 0.25);
+    case "giantStomp":
+      tone(48, 0, 0.6, "sine", 0.5);
+      tone(36, 0.03, 0.7, "triangle", 0.35);
+      return tone(120, 0, 0.1, "square", 0.12);
+    case "castleCrumble":
+      // Stone giving way: a long rumble with tumbling blocks.
+      tone(45, 0, 2.2, "sine", 0.45);
+      tone(60, 0.1, 1.8, "triangle", 0.3);
+      for (let i = 0; i < 14; i++) tone(70 + ((i * 37) % 120), 0.15 + i * 0.12, 0.14, "square", 0.07);
+      return;
+    case "victoryBells":
+      // Church bells pealing down the scale.
+      [1046.5, 880, 784, 659.25, 784, 880, 1046.5, 784].forEach((f, i) => {
+        tone(f, i * 0.28, 1.2, "sine", 0.1);
+        tone(f * 2.4, i * 0.28, 0.6, "sine", 0.03);
+      });
       return;
   }
 }

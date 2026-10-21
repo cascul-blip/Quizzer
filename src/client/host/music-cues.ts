@@ -14,6 +14,7 @@ const LOBBY: Record<GameMode, MusicTrackId> = {
   cup: "cup-lobby",
   dragon: "dragon-lobby",
   bomb: "bomb-lobby",
+  siege: "siege-lobby",
 };
 
 let landKey = "";
@@ -135,6 +136,22 @@ export function musicFor(view: HostView | null): MusicCue {
       const intensity = Math.max(0.12, urgency, last30 ? 0.75 : 0);
       const timers = view.squads.map((s) => (s.finished || s.exploded ? "x" : s.timerRev)).join(".");
       return { track: "bomb-defuse", intensity, rampTo: 1, rampMs: view.remainingMs, key: `bomb-${view.timerRev}-${timers}-${last30 ? "end" : "run"}` };
+    }
+    case "siege": {
+      const outcome = view.result?.outcome;
+      // Bells and a fanfare when the kingdom stands; the low lament when the castle falls (or the host ends it).
+      if (view.phase === "stands" || view.phase === "fallen" || view.phase === "podium") {
+        return { track: "siege-results", intensity: outcome === "stands" ? 0.9 : 0.12, key: `siege-end-${outcome}` };
+      }
+      if (view.phase === "countdown") return { track: "siege-battle", intensity: 0.05, key: "siege-count" };
+      // Build break: drums and a held chord, rising into a drum roll before the next wave.
+      if (view.phase === "build") return { track: "siege-battle", intensity: 0.05, rampTo: 0.14, rampMs: view.phaseRemainingMs, key: `siege-break-${view.wave}` };
+      // A wave: more layers as monsters fill the board and as hearts are lost; a giant brings low brass and timpani.
+      const lost = 1 - view.hearts / Math.max(1, view.maxHearts);
+      const giant = view.monsters.some((m) => m.type === "giant");
+      const busy = Math.min(1, view.monsterCount / 10);
+      const intensity = Math.max(0.2, Math.min(giant ? 1 : 0.84, 0.2 + busy * 0.35 + lost * 0.45), giant ? 0.85 : 0);
+      return { track: "siege-battle", intensity, key: `siege-wave-${view.wave}` };
     }
   }
 }
