@@ -225,7 +225,7 @@ export function WarningArrow({ lane }: { lane: number }) {
   );
 }
 
-/** A thin health bar over a hurt figure. */
+/** A thin health bar at a hurt figure's feet. */
 function healthBar(health: number, max: number) {
   if (health >= max) return null;
   return (

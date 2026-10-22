@@ -5117,7 +5117,8 @@ select {
   position: absolute;
   left: 30%;
   width: 40%;
-  top: 4%;
+  /* Just under the figure's feet, so figures in the top lane don't push it off the board. */
+  top: calc(var(--oy) + 2%);
   height: max(3px, 0.35cqw);
   background: rgba(0, 0, 0, 0.55);
   border-radius: 2px;
