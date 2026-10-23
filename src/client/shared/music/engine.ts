@@ -7,10 +7,10 @@
  * "Bb2", chords as "C4+E4+G4"), "-" holds the previous note, "." is a rest.
  * Drum steps are "x" (hit), "o" (accent) or ".".
  *
- * A track with `rich: true` is played with the fuller sound in rich.ts instead; every other track
- * sounds exactly as it always has.
+ * A track with `rich: true` (or `rich: "arcade"`) is played with the fuller sound in rich.ts instead;
+ * every other track sounds exactly as it always has.
  */
-import { STRUM_S, createRichBus, humanize, panFor, playRich, type RichBus } from "./rich.ts";
+import { STRUM_S, createEcho, createRichBus, humanize, panFor, playRich, richStyle, type Echo, type RichBus, type RichStyle } from "./rich.ts";
 
 export type Instrument =
   | "kick"
@@ -53,6 +53,8 @@ export interface Layer {
   from?: number;
   /** Only plays while intensity is below this. */
   to?: number;
+  /** In a rich track, how much goes to the tempo-synced echo (0…1). */
+  echo?: number;
 }
 
 export interface Track {
@@ -68,9 +70,10 @@ export interface Track {
   /**
    * Play with the fuller sound in rich.ts: humanised timing and velocity, stereo spread, filter
    * envelopes, plucked/FM instruments, saturation, compression and a convolution reverb.
+   * `true` is the acoustic style (Kingdom Siege), "arcade" the arcade-racer style (Racer).
    * Leave it off (or set it to false) for the original plain oscillators.
    */
-  rich?: boolean;
+  rich?: boolean | RichStyle;
   layers: Layer[];
 }
 
@@ -471,11 +474,17 @@ export function stepSeconds(track: Track, intensity: number): number {
   return 60 / (track.bpm * (1 + (track.tempoBoost ?? 0) * intensity)) / 4;
 }
 
+/** Where rich tracks can send layers besides `dest`. */
+export interface Sends {
+  echo?: AudioNode;
+}
+
 /** Schedule everything that starts on `step` (0 … bars*16-1) at time t. */
-export function scheduleStep(ctx: Ctx, dest: AudioNode, track: Track, step: number, t: number, intensity: number): void {
+export function scheduleStep(ctx: Ctx, dest: AudioNode, track: Track, step: number, t: number, intensity: number, sends: Sends = {}): void {
   const dur = stepSeconds(track, intensity);
   const bar = Math.floor(step / STEPS_PER_BAR) % track.bars;
   const s = step % STEPS_PER_BAR;
+  const style = richStyle(track.rich);
   track.layers.forEach((layer, li) => {
     if (!layerActive(layer, intensity)) return;
     const toks = tokens(layer.bars[bar % layer.bars.length]!);
@@ -485,21 +494,27 @@ export function scheduleStep(ctx: Ctx, dest: AudioNode, track: Track, step: numb
     let at = t;
     let out = dest;
     let detune = 0;
-    if (track.rich) {
+    if (style) {
       // A player's small unevenness, the same each time round; and the instrument's place in the stereo field.
-      const h = humanize(step, li);
+      const h = humanize(step, li, style);
       at = Math.max(ctx.currentTime, t + h.dt);
       vol *= h.gain;
       detune = h.detune;
       const pan = ctx.createStereoPanner();
-      pan.pan.value = panFor(layer.inst);
+      pan.pan.value = panFor(layer.inst, style);
       pan.connect(dest);
+      if (layer.echo && sends.echo) {
+        const send = ctx.createGain();
+        send.gain.value = layer.echo;
+        pan.connect(send).connect(sends.echo);
+      }
       out = pan;
     }
     if (DRUMS.has(layer.inst)) {
       // Drums may carry a pitch (e.g. woodblock "E5") or just "x"/"o".
       const pitch = noteFreq(tok) ?? 0;
-      playInstrument(ctx, out, layer.inst, at, pitch, dur, vol, tok === "o");
+      const accent = tok === "o";
+      if (!(style && playRich(ctx, out, layer.inst, at, pitch, dur, vol, detune, style, accent))) playInstrument(ctx, out, layer.inst, at, pitch, dur, vol, accent);
       return;
     }
     let held = 1;
@@ -508,9 +523,9 @@ export function scheduleStep(ctx: Ctx, dest: AudioNode, track: Track, step: numb
       const f = noteFreq(n);
       if (!f) return;
       const len = held * dur * 0.95;
-      if (!track.rich) return playInstrument(ctx, out, layer.inst, at, f, len, vol);
+      if (!style) return playInstrument(ctx, out, layer.inst, at, f, len, vol);
       const start = layer.inst === "pluck" ? at + i * STRUM_S : at;
-      if (!playRich(ctx, out, layer.inst, start, f, len, vol, detune)) playInstrument(ctx, out, layer.inst, start, f, len, vol);
+      if (!playRich(ctx, out, layer.inst, start, f, len, vol, detune, style)) playInstrument(ctx, out, layer.inst, start, f, len, vol);
     });
   });
 }
@@ -539,6 +554,8 @@ interface Playing {
   step: number;
   nextTime: number;
   audio?: HTMLAudioElement;
+  /** A rich track's echo, if any of its layers use one. */
+  echo?: Echo;
 }
 
 export class MusicPlayer {
@@ -647,8 +664,9 @@ export class MusicPlayer {
       return;
     }
     if (cur.nextTime < ctx.currentTime) cur.nextTime = ctx.currentTime + 0.02; // fell behind (tab was hidden)
+    cur.echo?.setStep(stepSeconds(cur.track, this.intensity), ctx.currentTime);
     while (cur.nextTime < ctx.currentTime + LOOKAHEAD_S) {
-      scheduleStep(ctx, cur.gain, cur.track, cur.step, cur.nextTime, this.intensity);
+      scheduleStep(ctx, cur.gain, cur.track, cur.step, cur.nextTime, this.intensity, { echo: cur.echo?.input });
       const swing = cur.track.swing ?? 0;
       cur.nextTime += stepSeconds(cur.track, this.intensity) * (cur.step % 2 === 0 ? 1 + swing : 1 - swing);
       cur.step = (cur.step + 1) % (cur.track.bars * STEPS_PER_BAR);
@@ -665,6 +683,7 @@ export class MusicPlayer {
       const audio = old.audio;
       setTimeout(() => {
         old.gain.disconnect();
+        old.echo?.dispose();
         audio?.pause();
         if (!this.current?.track?.rich && this.rich) {
           this.rich.dispose();
@@ -695,8 +714,13 @@ export class MusicPlayer {
       this.rich ??= createRichBus(ctx, master);
       gain.connect(this.rich.input);
       const send = ctx.createGain();
-      send.gain.value = track.reverb ?? 0.3;
+      // Tracks without their own reverb amount get a hall (acoustic) or a tighter room's worth (arcade).
+      send.gain.value = track.reverb ?? (richStyle(track.rich) === "arcade" ? 0.18 : 0.3);
       gain.connect(send).connect(this.rich.reverb);
+      // The echo hangs off the track's own gain, so it fades out with the track.
+      const echo = track.layers.some((l) => l.echo) ? createEcho(ctx, gain, stepSeconds(track, this.intensity)) : undefined;
+      this.current = { kind: "synth", id, gain, track, step: 0, nextTime: now + 0.05, echo };
+      return;
     } else if (track?.reverb) {
       const send = ctx.createGain();
       send.gain.value = track.reverb;

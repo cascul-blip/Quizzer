@@ -4,7 +4,7 @@
  * Submarine Squad = deep-sea suspense, Tower Fight = medieval battle,
  * Robot Attack = Romantic orchestra (public-domain Beethoven and Grieg themes),
  * Land Grab = calm ambient piano that grows into an orchestra as rings close,
- * Racer = sunny late-80s arcade-racing chiptune (tempo follows the car's speed),
+ * Racer = sunny late-80s arcade-racing chiptune (tempo follows the car's speed), in the rich arcade sound (see rich.ts),
  * Cup of Death = original spaghetti-western themes: whistle, twangy guitar, galloping hooves,
  * Dragon's Hoard = a dark cave, a heroic battle with brass and choir, war drums under the fire, a plucky scramble,
  * Bomb Squad = spy-jazz (bass, brushes, vibraphone) that picks up a tick and more layers as the bomb runs down.
@@ -682,6 +682,7 @@ const RACER_LOBBY_ROOTS = ["A1", "F#1", "D2", "E2"];
 
 const racerLobby: Track = {
   id: "racer-lobby",
+  rich: "arcade",
   bpm: 104,
   bars: 8,
   swing: 0.08,
@@ -711,6 +712,7 @@ const racerLobby: Track = {
         seq(["B5", 4], ["G#5", 4], ["E5", 4], ["G#5", 2], ["B5", 2]),
       ],
       vol: 0.7,
+      echo: 0.3,
     },
   ],
 };
@@ -739,6 +741,7 @@ const octaveUp = (note: string, by = 1) => note.replace(/\d/, (d) => String(Numb
 
 const racerDrive: Track = {
   id: "racer-drive",
+  rich: "arcade",
   // 112 BPM while crawling, about 162 at full speed.
   bpm: 112,
   bars: 16,
@@ -775,6 +778,7 @@ const racerDrive: Track = {
       ],
       vol: 0.85,
       from: 0.3,
+      echo: 0.25,
     },
     // Cruising: snare with a fill every four bars.
     { inst: "snare", bars: [drum("....x.......x..."), drum("....x.......x..."), drum("....x.......x..."), drum("....x.....x.x.xx")], vol: 0.55, from: 0.5 },
@@ -805,6 +809,7 @@ const racerDrive: Track = {
 
 const racerResults: Track = {
   id: "racer-results",
+  rich: "arcade",
   bpm: 138,
   bars: 4,
   layers: [
@@ -822,6 +827,7 @@ const racerResults: Track = {
         seq(["A6", 3], ["E6", 3], ["A6", 2], [".", 2], ["A6", 2], ["A6", 4]),
       ],
       vol: 0.8,
+      echo: 0.25,
     },
   ],
 };
