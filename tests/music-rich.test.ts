@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { STEPS_PER_BAR, renderInto, scheduleStep, stepSeconds, type Track } from "../src/client/shared/music/engine.ts";
-import { HUMAN_GAIN, HUMAN_TIME_S, STRUM_S, createRichBus, humanize, impulseResponse, saturationCurve, seeded } from "../src/client/shared/music/rich.ts";
+import { ARCADE_TIGHTNESS, ECHO_STEPS, HUMAN_GAIN, HUMAN_TIME_S, STRUM_S, createEcho, createRichBus, humanize, impulseResponse, playRich, richStyle, saturationCurve, seeded } from "../src/client/shared/music/rich.ts";
 import { TRACKS } from "../src/client/shared/music/tracks.ts";
 
 // A stand-in for an AudioContext (tests have none): it records every node made and every source started.
@@ -16,6 +16,8 @@ class FakeParam {
 
 class FakeNode {
   connections = 0;
+  /** How many nodes were connected into this one. */
+  inputs = 0;
   disconnected = false;
   constructor(
     readonly kind: string,
@@ -23,6 +25,7 @@ class FakeNode {
   ) {}
   connect<T>(n: T): T {
     this.connections++;
+    if (n instanceof FakeNode) n.inputs++;
     return n;
   }
   disconnect() {
@@ -53,6 +56,7 @@ class FakeCtx {
   createWaveShaper = () => Object.assign(this.node("shaper", []), { curve: null, oversample: "none" });
   createConvolver = () => Object.assign(this.node("convolver", []), { buffer: null });
   createDynamicsCompressor = () => this.node("compressor", ["threshold", "knee", "ratio", "attack", "release"]);
+  createDelay = () => this.node("delay", ["delayTime"]);
   createPeriodicWave = () => ({});
   createBuffer = (channels: number, length: number, sampleRate: number) => {
     const data = Array.from({ length: channels }, () => new Float32Array(length));
@@ -65,12 +69,12 @@ const fake = () => new FakeCtx() as FakeCtx & BaseAudioContext;
 const dest = (ctx: FakeCtx) => new FakeNode("dest", ctx) as unknown as AudioNode;
 
 /** Schedule every step of the track's loop, one step every stepSeconds, and return the grid times. */
-function playLoop(ctx: FakeCtx & BaseAudioContext, track: Track, intensity: number): number[] {
+function playLoop(ctx: FakeCtx & BaseAudioContext, track: Track, intensity: number, echo?: AudioNode): number[] {
   const grid: number[] = [];
   let t = 1;
   for (let step = 0; step < track.bars * STEPS_PER_BAR; step++) {
     grid.push(t);
-    scheduleStep(ctx, dest(ctx), track, step, t, intensity);
+    scheduleStep(ctx, dest(ctx), track, step, t, intensity, { echo });
     t += stepSeconds(track, intensity);
   }
   return grid;
@@ -79,12 +83,20 @@ function playLoop(ctx: FakeCtx & BaseAudioContext, track: Track, intensity: numb
 const nearestGap = (t: number, grid: number[]) => Math.min(...grid.map((g) => Math.abs(t - g)));
 
 describe("rich sound is opt-in", () => {
-  test("only the Kingdom Siege tracks use it", () => {
-    const rich = Object.values(TRACKS)
-      .filter((t) => t.rich)
-      .map((t) => t.id)
-      .sort();
-    expect(rich).toEqual(["siege-battle", "siege-lobby", "siege-results"]);
+  test("only the Kingdom Siege (acoustic) and Racer (arcade) tracks use it", () => {
+    const rich = Object.fromEntries(Object.values(TRACKS).filter((t) => t.rich).map((t) => [t.id, richStyle(t.rich)]));
+    expect(rich).toEqual({
+      "siege-lobby": "acoustic",
+      "siege-battle": "acoustic",
+      "siege-results": "acoustic",
+      "racer-lobby": "arcade",
+      "racer-drive": "arcade",
+      "racer-results": "arcade",
+    });
+  });
+
+  test("the flag's values map to styles", () => {
+    expect([undefined, false, true, "arcade" as const].map(richStyle)).toEqual([null, null, "acoustic", "arcade"]);
   });
 
   test("other tracks get no rich nodes and play exactly on the grid", () => {
@@ -92,7 +104,7 @@ describe("rich sound is opt-in", () => {
       for (const intensity of [0, 1]) {
         const ctx = fake();
         const grid = playLoop(ctx, track, intensity);
-        for (const kind of ["panner", "shaper", "convolver", "compressor"]) expect(ctx.kinds().has(kind), `${track.id}: ${kind}`).toBe(false);
+        for (const kind of ["panner", "shaper", "convolver", "compressor", "delay"]) expect(ctx.kinds().has(kind), `${track.id}: ${kind}`).toBe(false);
         // Every source starts on a step, or a fixed offset after it (claps, sonar echoes, the second heartbeat).
         const onGrid = new Set(grid.map((g) => g.toFixed(9)));
         expect(ctx.starts.some((s) => onGrid.has(s.toFixed(9))), track.id).toBe(true);
@@ -130,7 +142,9 @@ describe("rich Kingdom Siege tracks", () => {
         const grid = playLoop(ctx, track, intensity);
         expect(ctx.starts.length).toBeGreaterThan(0);
         // Strummed lute chords and the plain drums' built-in offsets (a clap's three hits) can add a little.
-        for (const s of ctx.starts) expect(nearestGap(s, grid)).toBeLessThanOrEqual(HUMAN_TIME_S + 3 * STRUM_S + 1e-9);
+        // Arcade tracks are tighter, and none of their instruments have offsets of their own.
+        const window = richStyle(track.rich) === "arcade" ? HUMAN_TIME_S * ARCADE_TIGHTNESS : HUMAN_TIME_S + 3 * STRUM_S;
+        for (const s of ctx.starts) expect(nearestGap(s, grid)).toBeLessThanOrEqual(window + 1e-9);
         expect(ctx.kinds().has("panner")).toBe(true);
       }
     });
@@ -146,6 +160,64 @@ describe("rich Kingdom Siege tracks", () => {
     scheduleStep(ctx, dest(ctx), lute, 0, 1, 0);
     expect(ctx.made.filter((n) => n.kind === "source")).toHaveLength(1);
     expect(ctx.made.some((n) => n.kind === "osc")).toBe(false);
+  });
+});
+
+describe("arcade style (Racer)", () => {
+  const racer = Object.values(TRACKS).filter((t) => richStyle(t.rich) === "arcade");
+
+  test("has a rich version of every instrument the Racer tracks use, drums included", () => {
+    const insts = new Set(racer.flatMap((t) => t.layers.map((l) => l.inst)));
+    for (const inst of insts) expect(playRich(fake(), dest(new FakeCtx()), inst, 1, 220, 0.2, 1, 0, "arcade"), inst).toBe(true);
+  });
+
+  test("the acoustic style still leaves drums to the plain sound, so Kingdom Siege's drums are unchanged", () => {
+    for (const inst of ["snare", "hat", "kick", "woodblock", "timpani", "cymbal"]) expect(playRich(fake(), dest(new FakeCtx()), inst, 1, 220, 0.2, 1, 0, "acoustic"), inst).toBe(false);
+  });
+
+  test("leads go to the echo when there is one; nothing else does", () => {
+    for (const track of racer) {
+      const ctx = fake();
+      const echo = new FakeNode("echo", ctx);
+      playLoop(ctx, track, 1, echo as unknown as AudioNode);
+      // One send per lead note: count the lead's notes over the loop.
+      const leadNotes = track.layers
+        .filter((l) => l.echo)
+        .flatMap((l) => Array.from({ length: track.bars }, (_, b) => l.bars[b % l.bars.length]!.split(/\s+/)))
+        .flat()
+        .filter((tok) => tok !== "." && tok !== "-").length;
+      expect(track.layers.filter((l) => l.echo).map((l) => l.inst), track.id).toEqual(["lead"]);
+      expect(leadNotes).toBeGreaterThan(0);
+      expect(echo.inputs, track.id).toBe(leadNotes);
+      // Without the lead's echo amount, nothing reaches the echo.
+      const dry = fake();
+      const dryEcho = new FakeNode("echo", dry);
+      playLoop(dry, { ...track, layers: track.layers.map((l) => ({ ...l, echo: undefined })) }, 1, dryEcho as unknown as AudioNode);
+      expect(dryEcho.inputs).toBe(0);
+    }
+  });
+
+  test("the echo stays three steps behind as the tempo changes, ignoring tiny changes, and disposes cleanly", () => {
+    const ctx = fake();
+    const echo = createEcho(ctx, dest(ctx), 0.12);
+    const delays = ctx.made.filter((n) => n.kind === "delay") as unknown as { delayTime: FakeParam }[];
+    expect(delays).toHaveLength(2);
+    for (const d of delays) expect(d.delayTime.value).toBeCloseTo(ECHO_STEPS * 0.12);
+    let targets = 0;
+    for (const d of delays) d.delayTime.setTargetAtTime = () => void targets++;
+    echo.setStep(0.1201, 1);
+    expect(targets).toBe(0);
+    echo.setStep(0.09, 1);
+    expect(targets).toBe(2);
+    echo.dispose();
+    expect(ctx.made.every((n) => n.disconnected)).toBe(true);
+  });
+
+  test("timing is tighter than the acoustic style", () => {
+    for (let step = 0; step < 128; step++) {
+      expect(Math.abs(humanize(step, 3, "arcade").dt)).toBeLessThanOrEqual(HUMAN_TIME_S * ARCADE_TIGHTNESS);
+      expect(humanize(step, 3, "arcade").dt).toBeCloseTo(humanize(step, 3).dt * ARCADE_TIGHTNESS, 12);
+    }
   });
 });
 
