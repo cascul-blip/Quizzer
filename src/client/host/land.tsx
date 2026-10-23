@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { HostLandTeam, HostView } from "../../shared/protocol.ts";
-import { HexBoard } from "../shared/land-art.tsx";
+import { BANNER_CAPTURE, BANNER_KNOCKOUT, HexBoard, LandShape, Plinth, landArt, useBanner, useTeamCard } from "../shared/land-art.tsx";
 import { play } from "../shared/sounds.ts";
-import { TeamShapeIcon } from "../shared/team-shape.tsx";
 import { useEventFlash } from "../shared/tower-art.tsx";
-import { formatClock, ordinal, useCountdown } from "../shared/ui.tsx";
+import { formatClock, ordinal, teamInk, teamVars, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
 import { Award } from "./tower.tsx";
 
@@ -45,10 +44,11 @@ export function LandStage({ view, send }: { view: LandView; send: Send }) {
 
   const teamName = (i: number) => `Team ${view.teams[i]?.name ?? "?"}`;
   const alive = view.teams.filter((t) => !t.out);
-  let banner: string | null = null;
-  if (view.phase === "conquered" && alive[0]) banner = `👑 ${teamName(alive[0].index)} rules the whole land!`;
-  else if (capture?.knockedOut.length) banner = `💥 ${teamName(capture.team)} surrounded ${capture.knockedOut.map(teamName).join(" and ")}! Their players switch sides`;
-  else if (capture) banner = `🚩 ${capture.nickname} closed the ring: ${teamName(capture.team)} takes ${plural(capture.tiles.length, "tile")}`;
+  let banner: { text: string; color: string } | null = null;
+  if (view.phase === "conquered" && alive[0]) banner = { text: `👑 ${teamName(alive[0].index)} rules the whole land!`, color: alive[0].color };
+  else if (capture?.knockedOut.length)
+    banner = { text: `💥 ${teamName(capture.team)} surrounded ${capture.knockedOut.map(teamName).join(" and ")}! Their players switch sides`, color: BANNER_KNOCKOUT };
+  else if (capture) banner = { text: `🚩 ${capture.nickname} closed the ring: ${teamName(capture.team)} takes ${plural(capture.tiles.length, "tile")}`, color: BANNER_CAPTURE };
 
   return (
     <div class="stage">
@@ -69,7 +69,7 @@ export function LandStage({ view, send }: { view: LandView; send: Send }) {
       {view.phase === "podium" ? (
         <LandPodium view={view} send={send} />
       ) : (
-        <main class="land-wrap">
+        <main class="land-wrap" style={{ backgroundImage: `url(${landArt("background")})` }}>
           <div class="land-board">
             <HexBoard board={view.board} placed={placed} capture={capture} />
           </div>
@@ -78,11 +78,7 @@ export function LandStage({ view, send }: { view: LandView; send: Send }) {
               <TeamCard key={t.index} team={t} leading={!t.out && t.rank === 1 && t.tiles > 1} by={t.conqueredBy === null ? null : teamName(t.conqueredBy)} />
             ))}
           </aside>
-          {banner && (
-            <div class={`monster-banner land-banner ${capture?.knockedOut.length || view.phase === "conquered" ? "attack" : ""}`} key={banner}>
-              {banner}
-            </div>
-          )}
+          {banner && <LandBanner key={banner.text} text={banner.text} color={banner.color} />}
           {view.phase === "countdown" && (
             <div class="countdown-overlay">
               <div class="countdown-label">Answer questions on your phone to earn tiles. Surround land to capture it!</div>
@@ -97,13 +93,23 @@ export function LandStage({ view, send }: { view: LandView; send: Send }) {
   );
 }
 
+/** The event ribbon across the top of the board, in the event's colour. */
+function LandBanner({ text, color }: { text: string; color: string }) {
+  return (
+    <div class="monster-banner land-banner" style={{ borderImageSource: useBanner(color), color: teamInk(color) }}>
+      <span>{text}</span>
+    </div>
+  );
+}
+
+/** A walnut plaque with a ribbon in the team colour; the team's shape sits on the ribbon. */
 function TeamCard({ team, leading, by }: { team: HostLandTeam; leading: boolean; by: string | null }) {
   return (
-    <section class={`land-team ${team.out ? "out" : ""}`} style={{ "--team": team.color }}>
+    <section class={`land-team ${team.out ? "out" : ""}`} style={{ ...teamVars(team.color), borderImageSource: useTeamCard(team.color) }}>
+      <LandShape team={team.index} class="land-team-shape" />
       <header>
         <span class="land-team-name">
           {leading && <span aria-label="Leading">👑 </span>}
-          <TeamShapeIcon team={team.index} color={team.color} />
           Team {team.name}
         </span>
         {team.out ? (
@@ -135,7 +141,7 @@ function LandPodium({ view, send }: { view: LandView; send: Send }) {
     { team: ranked[1], cls: "second" },
     { team: ranked[0], cls: "first" },
     { team: ranked[2], cls: "third" },
-  ];
+  ] as const;
   const score = (t: HostLandTeam) => (t.out ? `surrounded by Team ${view.teams[t.conqueredBy ?? 0]?.name}` : plural(t.tiles, "tile"));
   const a = view.awards;
   return (
@@ -151,13 +157,10 @@ function LandPodium({ view, send }: { view: LandView; send: Send }) {
           <div class="podium-blocks">
             {places.map(({ team, cls }) =>
               team ? (
-                <div key={cls} class={`place ${cls}`} style={{ "--team": team.color }}>
-                  <div class="place-name">
-                    <TeamShapeIcon team={team.index} color={team.color} />
-                    Team {team.name}
-                  </div>
+                <div key={cls} class={`place ${cls}`} style={teamVars(team.color)}>
+                  <div class="place-name">Team {team.name}</div>
                   <div class="place-score">{score(team)}</div>
-                  <div class="place-block team-block">{ordinal(team.rank)}</div>
+                  <Plinth place={cls} team={team.index} color={team.color} rank={ordinal(team.rank)} />
                 </div>
               ) : (
                 <div key={cls} class={`place ${cls} empty`} />

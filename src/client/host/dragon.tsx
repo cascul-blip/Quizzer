@@ -4,7 +4,7 @@ import { Avatar } from "../shared/avatar-art.tsx";
 import { CaveBackdrop, Dragon, FireBreath, Hoard, JackpotPile, LootIcon, RuneShield, TeamBanner, TeamPile } from "../shared/dragon-art.tsx";
 import { PinBoard } from "../shared/pin.tsx";
 import { play } from "../shared/sounds.ts";
-import { Shape, formatClock, optionColor, ordinal, useCountdown } from "../shared/ui.tsx";
+import { Shape, formatClock, optionColor, ordinal, teamVars, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
 import { Award } from "./tower.tsx";
 
@@ -290,7 +290,7 @@ function Scramble({ view }: { view: DragonView }) {
       {view.escaped && <div class="dragon-half-note">The dragon escaped: Coins and Big pile pay half</div>}
       <ul class="dragon-events">
         {view.events.map((e) => (
-          <li key={e.seq} class={`dragon-event ${e.kind}`} style={{ "--team": view.teams[e.team]?.color ?? "#888" }}>
+          <li key={e.seq} class={`dragon-event ${e.kind}`} style={teamVars(view.teams[e.team]?.color ?? "#888")}>
             <LootIcon kind={e.kind === "jackpot" ? "jackpot" : e.kind === "trap" ? "trap" : e.kind === "blocked" ? "scale" : "grab10"} />
             {eventText(view, e)}
           </li>
@@ -316,7 +316,7 @@ function eventText(view: DragonView, e: DragonView["events"][number]): string {
 
 function TeamColumn({ team, leading }: { team: HostDragonTeam; leading: boolean }) {
   return (
-    <section class="scramble-team" style={{ "--team": team.color }}>
+    <section class="scramble-team" style={teamVars(team.color)}>
       <TeamBanner color={team.color} name={`${leading ? "👑 " : ""}Team ${team.name}`} />
       <div class="scramble-gold">
         <b>{team.gold}</b> gold
@@ -383,7 +383,7 @@ function DragonPodium({ view, send }: { view: DragonView; send: Send }) {
             <div class="podium-blocks">
               {places.map(({ team, cls }) =>
                 team ? (
-                  <div key={cls} class={`place ${cls}`} style={{ "--team": team.color }}>
+                  <div key={cls} class={`place ${cls}`} style={teamVars(team.color)}>
                     <div class="place-name">Team {team.name}</div>
                     <div class="place-score">{team.gold} gold</div>
                     <div class="place-block team-block">{ordinal(team.rank)}</div>

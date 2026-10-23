@@ -2,6 +2,10 @@
 """Turns the generated textures in scripts/land-tiles/ into the Land Grab tile art in
 src/client/shared/land/. Needs Pillow and numpy; the WebPs are committed, so builds don't.
 
+Superseded: the board now uses the painted tabletop art described in
+src/client/shared/land/manifest.md (grass-1..4, claimed-1..3). Running this overwrites
+grass-1..3 with the first-generation tiles, so only run it to compare against them.
+
     python3 scripts/land-tiles.py [preview.png]
 
 Each tile is a hex-shaped crop (the board clips it to the exact hexagon). Grass tiles keep
@@ -41,7 +45,8 @@ HIGHLIGHT = 0.6
 # The grout between the stones, at full strength, would hide most of the team colour.
 SHADE = 0.75
 
-TEAM_COLORS = ["#e21b3c", "#1368ce", "#c98a00", "#0fa3b1", "#864cbf", "#e8710a"]
+# TEAMS in src/shared/protocol.ts.
+TEAM_COLORS = ["#d81e3a", "#1f5ee0", "#f5c400", "#12b5cb", "#7d3cc8", "#f0559e"]
 
 
 def crop(img: Image.Image, box: tuple[int, int, int]) -> Image.Image:

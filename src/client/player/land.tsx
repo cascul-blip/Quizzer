@@ -2,10 +2,9 @@ import type { ComponentChildren } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { EMPTY, placementCost } from "../../shared/land-board.ts";
 import { LAND_GUARD_COST, LAND_QUESTIONS_PER_ROUND, LAND_STEAL_COST, type ClientMsg, type LandBoard, type PlayerLandView } from "../../shared/protocol.ts";
-import { HexBoard } from "../shared/land-art.tsx";
-import { TeamShapeIcon } from "../shared/team-shape.tsx";
+import { HexBoard, LandShape, landArt } from "../shared/land-art.tsx";
 import { useEventFlash } from "../shared/tower-art.tsx";
-import { formatClock, ordinal, useCountdown } from "../shared/ui.tsx";
+import { formatClock, ordinal, teamInk, teamVars, useCountdown } from "../shared/ui.tsx";
 import { Feedback, StreamQuestion } from "./tower.tsx";
 
 type Send = (m: ClientMsg) => void;
@@ -38,8 +37,8 @@ export function LandPlayer({ view, send }: { view: PlayerLandView; send: Send })
   if (view.phase === "countdown") {
     body = (
       <main class="center">
-        <div class="team-badge big" style={{ background: view.team.color }}>
-          <TeamShapeIcon team={view.team.index} color="#fff" />
+        <div class="team-badge big" style={{ background: view.team.color, color: teamInk(view.team.color) }}>
+          <LandShape team={view.team.index} />
           Team {view.team.name}
         </div>
         <p class="muted">
@@ -54,8 +53,8 @@ export function LandPlayer({ view, send }: { view: PlayerLandView; send: Send })
     body = (
       <main class="center">
         <div class="land-big-icon">👑</div>
-        <div class="team-badge big" style={{ background: view.team.color }}>
-          <TeamShapeIcon team={view.team.index} color="#fff" />
+        <div class="team-badge big" style={{ background: view.team.color, color: teamInk(view.team.color) }}>
+          <LandShape team={view.team.index} />
           Team {view.team.name}
         </div>
         <p class="big-score">rules the whole land!</p>
@@ -76,7 +75,7 @@ export function LandPlayer({ view, send }: { view: PlayerLandView; send: Send })
   }
 
   return (
-    <div class="game tower-game land-game" style={{ "--team": view.team.color }}>
+    <div class="game tower-game land-game" style={teamVars(view.team.color)}>
       <header class="bar team-bar">
         <span class="name">{view.me.nickname}</span>
         {playing && (
@@ -94,7 +93,7 @@ export function LandPlayer({ view, send }: { view: PlayerLandView; send: Send })
             formatClock(secs)
           ) : (
             <>
-              <TeamShapeIcon team={view.team.index} color={view.team.color} />
+              <LandShape team={view.team.index} />
               Team {view.team.name}
             </>
           )}
@@ -313,7 +312,7 @@ function PanZoom({ children, focus, onTap }: { children: ComponentChildren; focu
   };
 
   return (
-    <div class="land-area" ref={box} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} onPointerLeave={onUp}>
+    <div class="land-area" style={{ backgroundImage: `url(${landArt("felt-tile")})` }} ref={box} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} onPointerLeave={onUp}>
       <div class="land-pan" ref={inner}>
         {children}
       </div>
@@ -334,8 +333,8 @@ function LandResult({ view }: { view: PlayerLandView }) {
   if (!r) return null;
   return (
     <main class="center">
-      <div class="team-badge big" style={{ background: view.team.color }}>
-        <TeamShapeIcon team={view.team.index} color="#fff" />
+      <div class="team-badge big" style={{ background: view.team.color, color: teamInk(view.team.color) }}>
+        <LandShape team={view.team.index} />
         Team {view.team.name}
       </div>
       <p class="muted">

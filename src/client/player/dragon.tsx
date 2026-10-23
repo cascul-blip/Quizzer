@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { DRAGON_CHESTS, DRAGON_CHARM_CHESTS, type ClientMsg, type PlayerDragonView } from "../../shared/protocol.ts";
 import { Chest, DragonHead, LOOT_LABEL, LootIcon, RuneShield } from "../shared/dragon-art.tsx";
 import { PinDragger } from "../shared/pin.tsx";
-import { LockedChoice, Shape, TextAnswer, formatClock, optionColor, ordinal, useCountdown } from "../shared/ui.tsx";
+import { LockedChoice, Shape, TextAnswer, formatClock, optionColor, ordinal, teamInk, teamVars, useCountdown } from "../shared/ui.tsx";
 import { Feedback, StreamQuestion } from "./tower.tsx";
 
 type Send = (m: ClientMsg) => void;
@@ -46,7 +46,7 @@ export function DragonPlayer({ view, send }: { view: PlayerDragonView; send: Sen
   }
 
   return (
-    <div class="game dragon-game" style={view.team ? { "--team": view.team.color } : undefined}>
+    <div class="game dragon-game" style={view.team ? teamVars(view.team.color) : undefined}>
       <header class="bar">
         <span class="name">{view.me.nickname}</span>
         {act1 ? (
@@ -60,7 +60,7 @@ export function DragonPlayer({ view, send }: { view: PlayerDragonView; send: Sen
         ) : (
           view.team && (
             <span class="dragon-team-gold">
-              <span class="team-chip" style={{ background: view.team.color }}>
+              <span class="team-chip" style={{ background: view.team.color, color: teamInk(view.team.color) }}>
                 {view.team.name}
               </span>
               💰 <b>{view.teamGold ?? 0}</b>
@@ -188,7 +188,7 @@ function RuneScreen({ view, send }: { view: PlayerDragonView; send: Send }) {
 function TeamReveal({ view }: { view: PlayerDragonView }) {
   useEffect(() => void navigator.vibrate?.([80, 40, 80]), []);
   return (
-    <main class="center dragon-team-reveal" style={{ background: view.team?.color }}>
+    <main class="center dragon-team-reveal" style={{ background: view.team?.color, color: teamInk(view.team?.color) }}>
       <p>{view.slain ? "⚔️ The dragon is slain!" : "🐉 The dragon flew away with half its hoard!"}</p>
       <h1>You're on Team {view.team?.name}!</h1>
       <p>Grab as much gold as you can. Every right answer opens a chest.</p>
@@ -252,14 +252,14 @@ function GrabPicker({ view, send }: { view: PlayerDragonView; send: Send }) {
             <li key={t.index}>
               <button
                 class="grab-team"
-                style={{ "--team": t.color }}
+                style={teamVars(t.color)}
                 disabled={empty || guarded}
                 onClick={() => {
                   navigator.vibrate?.(30);
                   send({ type: "dragon.grab", team: t.index });
                 }}
               >
-                <span class="team-chip" style={{ background: t.color }}>
+                <span class="team-chip" style={{ background: t.color, color: teamInk(t.color) }}>
                   Team {t.name}
                 </span>
                 <span class="grab-gold">💰 {t.gold}</span>

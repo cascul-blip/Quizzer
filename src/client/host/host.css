@@ -902,6 +902,7 @@ select {
 
 .team-box h3 span {
   background: var(--team);
+  color: var(--team-ink, #fff);
   border-radius: 999px;
   padding: 0 10px;
   font-size: 0.8em;
@@ -1178,6 +1179,7 @@ select {
 
 .tower-members li.building {
   background: var(--team);
+  color: var(--team-ink, #fff);
 }
 
 .tower-members li.offline {
@@ -1235,7 +1237,7 @@ select {
 
 .tower-podium .place .team-block {
   background: var(--team);
-  color: #fff;
+  color: var(--team-ink, #fff);
 }
 
 .tower-podium .place-name {
@@ -2678,7 +2680,7 @@ select {
   display: flex;
   gap: 1.5vw;
   padding: 1.5vh 1.5vw;
-  background: radial-gradient(90% 90% at 40% 50%, #2c5a2a 0%, #16311a 100%);
+  background: #16311a center / cover no-repeat;
   overflow: hidden;
 }
 
@@ -2689,22 +2691,37 @@ select {
 }
 
 .land-side {
-  width: clamp(220px, 23vw, 460px);
+  /* The cards are drawn from an 800 px wide plaque: --card is how many px one of its px is here. */
+  --card-w: clamp(220px, 23vw, 460px);
+  --card: calc(var(--card-w) / 800);
+  width: var(--card-w);
   display: flex;
   flex-direction: column;
   gap: 1vh;
   min-height: 0;
 }
 
+/* The plaque is a 9-slice: 40 px corners, and a 112 px left edge that holds the ribbon (tinted in code). */
 .land-team {
-  --team: #888;
+  position: relative;
   flex: 0 1 auto;
   min-height: 0;
-  overflow: hidden;
-  padding: 0.8vh 0.8vw;
-  border-radius: var(--radius);
-  background: rgba(10, 5, 25, 0.6);
-  border-left: 8px solid var(--team);
+  border-style: solid;
+  border-width: calc(40 * var(--card)) calc(40 * var(--card)) calc(40 * var(--card)) calc(112 * var(--card));
+  border-image-slice: 40 40 40 112 fill;
+  border-image-repeat: stretch;
+  padding: 0.4vh 0.4vw;
+  color: #fff4e1;
+}
+
+/* The team's shape on the ribbon, near the top. */
+.land-team .land-team-shape {
+  position: absolute;
+  top: calc(-14 * var(--card));
+  left: calc(-35 * var(--card) - 33 * var(--card));
+  width: calc(66 * var(--card));
+  height: calc(66 * var(--card));
+  margin: 0;
 }
 
 .land-team header {
@@ -2728,17 +2745,17 @@ select {
 .land-team-tiles b {
   font-size: clamp(22px, 2.2vw, 42px);
   font-variant-numeric: tabular-nums;
+  color: color-mix(in srgb, var(--team) 60%, #fff);
 }
 
 .land-team-out {
   font-size: clamp(12px, 1vw, 18px);
-  color: var(--on-bg-soft);
+  color: rgba(255, 244, 225, 0.7);
   white-space: nowrap;
 }
 
 .land-team.out {
   opacity: 0.55;
-  border-left-style: dashed;
 }
 
 .land-team .tower-members {
@@ -2747,15 +2764,72 @@ select {
   max-height: none;
 }
 
+/* The event ribbon is a 3-slice: fixed 177 px and 162 px ends, a stretched middle (tinted in code). */
 .land-banner {
-  background: #1d6a2a;
-  border-color: #a8e6a0;
+  --h: clamp(64px, 9vh, 120px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: var(--h);
+  padding: calc(var(--h) * 0.124) calc(var(--h) * 20 / 185) calc(var(--h) * 0.173) calc(var(--h) * 15 / 185);
+  border-radius: 0;
+  border-style: solid;
+  border-width: 0 calc(var(--h) * 162 / 185) 0 calc(var(--h) * 177 / 185);
+  border-image-slice: 0 162 0 177 fill;
+  border-image-repeat: stretch;
+  background: none;
+  box-shadow: none;
+  white-space: nowrap;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
 }
 
 .land-podium .podium-bg {
   align-items: center;
   justify-content: center;
   opacity: 0.3;
+}
+
+/* Stone plinths in place of the CSS blocks, all at one scale so they step down 1st > 2nd > 3rd. */
+.land-plinth {
+  --plinth: calc(32vh / 534);
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+.land-plinth img {
+  display: block;
+  height: calc(534 * var(--plinth));
+}
+
+.land-plinth.second img {
+  height: calc(434 * var(--plinth));
+}
+
+.land-plinth.third img {
+  height: calc(369 * var(--plinth));
+}
+
+/* The shape and the rank on the drape. */
+.land-plinth-label {
+  position: absolute;
+  top: 26%;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6vh;
+  font-size: clamp(22px, 3vw, 54px);
+  font-weight: 900;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+}
+
+.land-plinth-label .land-shape {
+  width: 1.3em;
+  height: 1.3em;
+  margin: 0;
 }
 
 /* "surrounded by Team …" is too long for two columns. */

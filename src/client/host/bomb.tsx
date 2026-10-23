@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import type { BombPhase, BombSettings, HostBombSquad, HostView } from "../../shared/protocol.ts";
 import { BombRoom, Casing, Confetti, type BayModule } from "../shared/bomb-art.tsx";
 import { play } from "../shared/sounds.ts";
-import { formatClock, ordinal, useCountdown } from "../shared/ui.tsx";
+import { formatClock, ordinal, teamVars, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
 import { Award } from "./tower.tsx";
 
@@ -310,7 +310,7 @@ function BombPodium({ view, send }: { view: BombView; send: Send }) {
       {race && (
         <ol class="bw-places">
           {ranked.map((s) => (
-            <li key={s.index} style={{ "--team": s.color }}>
+            <li key={s.index} style={teamVars(s.color)}>
               <span>{s.rank ? ordinal(s.rank) : ""}</span>
               <b>{s.name}</b>
               <span>{s.finished ? `defused · ${formatClock(Math.round(s.remainingMs / 1000))} left` : "exploded"}</span>

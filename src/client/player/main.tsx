@@ -7,7 +7,7 @@ import { Avatar } from "../shared/avatar-art.tsx";
 import { setPhoneArt } from "../shared/phone-art.ts";
 import { connect, type ConnStatus } from "../shared/ws.ts";
 import { PinBoard, PinDragger } from "../shared/pin.tsx";
-import { ConnBanner, ErrorBoundary, LockedChoice, Shape, StreakBadge, TextAnswer, Toast, optionColor, ordinal, useCountdown } from "../shared/ui.tsx";
+import { ConnBanner, ErrorBoundary, LockedChoice, Shape, StreakBadge, TextAnswer, Toast, optionColor, ordinal, teamInk, useCountdown } from "../shared/ui.tsx";
 import { AvatarPicker } from "./avatar-picker.tsx";
 import { FightPlayer } from "./fight.tsx";
 import { LandPlayer } from "./land.tsx";
@@ -308,7 +308,7 @@ function Lobby({ view, send }: { view: Joined; send: (m: ClientMsg) => void }) {
       <h1>You're in!</h1>
       {view.siege && <p class="siege-lobby-line">🛡️ Defend the kingdom! Watch the projector.</p>}
       {view.team && (
-        <div class="team-badge" style={{ background: view.team.color }}>
+        <div class="team-badge" style={{ background: view.team.color, color: teamInk(view.team.color) }}>
           Team {view.team.name}
         </div>
       )}

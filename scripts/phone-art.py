@@ -11,6 +11,7 @@ once over the host's Wi-Fi. This writes:
   avatar/phone-gear.webp   every accessory in ACCESSORIES order (minus "none"), one sheet
   fight/phone/*.webp       the castles and ground at half size
   tower/phone/*.webp       the building tiles at half size
+  land/phone/*.webp        the Land Grab board art at half size
 
 The sheets are a grid of SHEET_COLS cells of CELL pixels, each with GUTTER transparent
 pixels around it so a neighbour never bleeds in when the browser scales the sheet. The
@@ -32,6 +33,13 @@ QUALITY = 80
 HALF_SIZE = {
     "fight": ["castle-0", "castle-1", "castle-2", "castle-3", "castle-4", "castle-cloth", "ground-grass", "ground-soil"],
     "tower": ["lobby", "shop", "office-1", "office-2", "office-3", "office-4"],
+    # Board, states, effects, keeps and shapes; the team card, banner and plinths are projector only.
+    "land": [
+        "background", "felt-tile", "tray-wood", "grass-1", "grass-2", "grass-3", "grass-4", "claimed-1",
+        "claimed-2", "claimed-3", "state-blocked", "state-guarded", "state-selected", "cost-2", "cost-blank", "keep",
+        "keep-flag-tint", "keep-red", "keep-blue", "keep-yellow", "keep-cyan", "keep-purple", "keep-pink", "keep-out",
+        "place-pop", "capture-flash", "shape-circle", "shape-square", "shape-triangle", "shape-diamond", "shape-star", "shape-heart",
+    ],
 }
 
 

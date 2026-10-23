@@ -262,16 +262,14 @@ export function neighborAcross(size: number, tile: number, side: number): number
   return r! >= 0 && r! < size && c! >= 0 && c! < size ? r! * size + c! : null;
 }
 
-/** A side of an owned tile where the land changes hands: next to grass or to another team's tile. */
+/** A side of an owned tile where the land changes hands: next to grass, another team's tile, or the board edge. */
 export interface BorderEdge {
   tile: number;
   side: number;
   owner: number;
-  /** The neighbour is another team's tile, not grass. */
-  rival: boolean;
 }
 
-/** Every side where an owned tile meets a tile with a different owner. The board edge is never a border. */
+/** Every side of an owned tile whose neighbour has a different owner, or that is on the board edge. */
 export function borderEdges(owners: number[], size: number): BorderEdge[] {
   const edges: BorderEdge[] = [];
   for (let tile = 0; tile < owners.length; tile++) {
@@ -279,8 +277,7 @@ export function borderEdges(owners: number[], size: number): BorderEdge[] {
     if (owner === EMPTY) continue;
     for (let side = 0; side < 6; side++) {
       const n = neighborAcross(size, tile, side);
-      if (n === null || owners[n] === owner) continue;
-      edges.push({ tile, side, owner, rival: owners[n] !== EMPTY });
+      if (n === null || owners[n] !== owner) edges.push({ tile, side, owner });
     }
   }
   return edges;

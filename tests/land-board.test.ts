@@ -224,14 +224,13 @@ describe("borders", () => {
     expect(neighborAcross(10, 0, 5)).toBeNull();
   });
 
-  test("a lone tile is bordered on every side, but not along the board edge", () => {
+  test("a lone tile is bordered on every side, the board edge included", () => {
     const owners = board(10);
     owners[at(10, 4, 4)] = 0;
     owners[0] = 1;
     const edges = borderEdges(owners, 10);
     expect(edges.filter((e) => e.tile === at(10, 4, 4)).map((e) => e.side)).toEqual([0, 1, 2, 3, 4, 5]);
-    expect(edges.filter((e) => e.tile === 0).map((e) => e.side)).toEqual([1, 2]);
-    expect(edges.every((e) => !e.rival)).toBe(true);
+    expect(edges.filter((e) => e.tile === 0).map((e) => e.side)).toEqual([0, 1, 2, 3, 4, 5]);
   });
 
   test("two teams side by side each draw their own line on the shared side; a team's own tiles don't", () => {
@@ -241,9 +240,10 @@ describe("borders", () => {
     owners[at(10, 4, 6)] = 1;
     const edges = borderEdges(owners, 10);
     expect(edges.some((e) => e.tile === at(10, 4, 4) && e.side === 1)).toBe(false);
-    expect(edges.find((e) => e.tile === at(10, 4, 5) && e.side === 1)).toEqual({ tile: at(10, 4, 5), side: 1, owner: 0, rival: true });
-    expect(edges.find((e) => e.tile === at(10, 4, 6) && e.side === 4)).toEqual({ tile: at(10, 4, 6), side: 4, owner: 1, rival: true });
-    expect(edges.filter((e) => e.rival)).toHaveLength(2);
+    expect(edges.some((e) => e.tile === at(10, 4, 5) && e.side === 4)).toBe(false);
+    expect(edges.find((e) => e.tile === at(10, 4, 5) && e.side === 1)).toEqual({ tile: at(10, 4, 5), side: 1, owner: 0 });
+    expect(edges.find((e) => e.tile === at(10, 4, 6) && e.side === 4)).toEqual({ tile: at(10, 4, 6), side: 4, owner: 1 });
+    expect(edges).toHaveLength(5 + 5 + 6);
   });
 
   test("an empty board has no borders", () => {
