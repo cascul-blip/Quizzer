@@ -7,10 +7,10 @@
  * "Bb2", chords as "C4+E4+G4"), "-" holds the previous note, "." is a rest.
  * Drum steps are "x" (hit), "o" (accent) or ".".
  *
- * A track with `rich: true` (or `rich: "arcade"`) is played with the fuller sound in rich.ts instead;
+ * A track with `rich: true` (or `rich: "arcade"` / `"orchestral"`) is played with the fuller sound in rich.ts instead;
  * every other track sounds exactly as it always has.
  */
-import { STRUM_S, createEcho, createRichBus, humanize, panFor, playRich, richStyle, type Echo, type RichBus, type RichStyle } from "./rich.ts";
+import { createEcho, createRichBus, humanize, panFor, playRich, richStyle, strumFor, type Echo, type RichBus, type RichStyle } from "./rich.ts";
 
 export type Instrument =
   | "kick"
@@ -70,7 +70,8 @@ export interface Track {
   /**
    * Play with the fuller sound in rich.ts: humanised timing and velocity, stereo spread, filter
    * envelopes, plucked/FM instruments, saturation, compression and a convolution reverb.
-   * `true` is the acoustic style (Kingdom Siege), "arcade" the arcade-racer style (Racer).
+   * `true` is the acoustic style (Kingdom Siege), "arcade" the arcade-racer style (Racer),
+   * "orchestral" the piano and orchestra (Land Grab).
    * Leave it off (or set it to false) for the original plain oscillators.
    */
   rich?: boolean | RichStyle;
@@ -524,7 +525,7 @@ export function scheduleStep(ctx: Ctx, dest: AudioNode, track: Track, step: numb
       if (!f) return;
       const len = held * dur * 0.95;
       if (!style) return playInstrument(ctx, out, layer.inst, at, f, len, vol);
-      const start = layer.inst === "pluck" ? at + i * STRUM_S : at;
+      const start = at + i * strumFor(layer.inst, style);
       if (!playRich(ctx, out, layer.inst, start, f, len, vol, detune, style)) playInstrument(ctx, out, layer.inst, start, f, len, vol);
     });
   });
