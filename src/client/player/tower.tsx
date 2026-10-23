@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { BLOCKS_PER_BUILD, DROP_ZONES, MONSTER_DAMAGE, type ClientMsg, type MonsterEgg, type PlayerTowerView } from "../../shared/protocol.ts";
 import { BuildingBlock, COLUMN_NAMES, EggCell, useEventFlash, viewBaseRow, DustPuff, FloorSparkle, SKY_STAGES, SkylineSvg, skyStage, useFreshKeys, useNewFloor } from "../shared/tower-art.tsx";
 import { PinDragger } from "../shared/pin.tsx";
-import { Shape, TextAnswer, formatClock, optionColor, ordinal, useCountdown } from "../shared/ui.tsx";
+import { Shape, TextAnswer, formatClock, optionColor, ordinal, teamInk, teamVars, useCountdown } from "../shared/ui.tsx";
 
 type Send = (m: ClientMsg) => void;
 type Build = NonNullable<PlayerTowerView["build"]>;
@@ -33,7 +33,7 @@ export function TowerPlayer({ view, send }: { view: PlayerTowerView; send: Send 
   if (view.phase === "countdown") {
     body = (
       <main class="center">
-        <div class="team-badge big" style={{ background: view.team.color }}>
+        <div class="team-badge big" style={{ background: view.team.color, color: teamInk(view.team.color) }}>
           Team {view.team.name}
         </div>
         <p class="muted">Answer questions to earn blocks. Every {BLOCKS_PER_BUILD} correct answers, you get to build!</p>
@@ -64,7 +64,7 @@ export function TowerPlayer({ view, send }: { view: PlayerTowerView; send: Send 
   }
 
   return (
-    <div class="game tower-game" style={{ "--team": view.team.color }}>
+    <div class="game tower-game" style={teamVars(view.team.color)}>
       <header class="bar team-bar">
         <span class="name">{view.me.nickname}</span>
         {view.phase === "playing" && (
@@ -357,7 +357,7 @@ function TowerResult({ view }: { view: PlayerTowerView }) {
   if (!r) return null;
   return (
     <main class="center">
-      <div class="team-badge big" style={{ background: view.team.color }}>
+      <div class="team-badge big" style={{ background: view.team.color, color: teamInk(view.team.color) }}>
         Team {view.team.name}
       </div>
       <p class="muted">

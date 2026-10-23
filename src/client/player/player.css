@@ -1456,7 +1456,8 @@ h1 {
   min-height: 0;
   margin: 4px 8px;
   border-radius: var(--radius);
-  background: #16311a;
+  background: #16311a repeat;
+  background-size: 256px;
   overflow: hidden;
   touch-action: none;
   user-select: none;

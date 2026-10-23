@@ -8,7 +8,7 @@ import { Avatar } from "../shared/avatar-art.tsx";
 import { Dragon } from "../shared/dragon-art.tsx";
 import { play, unlockAudio } from "../shared/sounds.ts";
 import { connect, type ConnStatus } from "../shared/ws.ts";
-import { ConnBanner, ErrorBoundary, Shape, StreakBadge, Toast, optionColor, ordinal, useCountdown } from "../shared/ui.tsx";
+import { ConnBanner, ErrorBoundary, Shape, StreakBadge, Toast, optionColor, ordinal, teamVars, useCountdown } from "../shared/ui.tsx";
 import { loadCustomMusic, useMusic } from "../shared/music/index.ts";
 import { PinBoard, PinNote } from "../shared/pin.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
@@ -520,7 +520,7 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
               <section
                 key={t.index}
                 class={`team-box ${dragOver === t.index ? "drop-target" : ""}`}
-                style={{ "--team": t.color }}
+                style={teamVars(t.color)}
                 {...(canDrag && {
                   onDragOver: (e: DragEvent) => {
                     e.preventDefault();

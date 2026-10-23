@@ -19,7 +19,7 @@ import {
   useFreshKeys,
   useNewFloor,
 } from "../shared/tower-art.tsx";
-import { formatClock, ordinal, useCountdown } from "../shared/ui.tsx";
+import { formatClock, ordinal, teamVars, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
 
 type TowerView = Extract<HostView, { kind: "tower" }>;
@@ -135,7 +135,7 @@ function Scene({ teams, phase, egg, attack }: { teams: HostTowerTeam[]; phase: T
         <div class="street" aria-hidden="true" />
         <div class="members-row">
           {teams.map((t) => (
-            <ul key={t.index} class="tower-members" style={{ "--team": t.color }}>
+            <ul key={t.index} class="tower-members" style={teamVars(t.color)}>
               {t.members.map((m) => (
                 <li key={m.id} class={`${m.connected ? "" : "offline"} ${m.building ? "building" : ""}`}>
                   {m.building && <span aria-label="building">🔨</span>}
@@ -183,7 +183,7 @@ function Towers({ teams, phase, egg, attack }: { teams: HostTowerTeam[]; phase: 
     <div class={`towers n${teams.length}`}>
       <SkylineSvg />
       {teams.map((t) => (
-        <section key={t.index} class="tower-col" style={{ "--team": t.color }}>
+        <section key={t.index} class="tower-col" style={teamVars(t.color)}>
           <header class="tower-chip">
             <div class="tower-name">
               {t.floors > 0 && t.floors === leader && <span aria-label="Leading">👑 </span>}
@@ -302,7 +302,7 @@ function TowerPodium({ view, send }: { view: TowerView; send: Send }) {
           <div class="podium-blocks">
             {places.map(({ team, cls }) =>
               team ? (
-                <div key={cls} class={`place ${cls}`} style={{ "--team": team.color }}>
+                <div key={cls} class={`place ${cls}`} style={teamVars(team.color)}>
                   <div class="place-name">Team {team.name}</div>
                   <div class="place-score">
                     {team.floors} floor{team.floors === 1 ? "" : "s"} · {team.placed} blocks

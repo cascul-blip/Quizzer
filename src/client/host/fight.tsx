@@ -3,7 +3,7 @@ import { CORRECT_PER_DECISION, TOWER_MAX_DAMAGE, type FightEvent, type FightShot
 import { Avatar } from "../shared/avatar-art.tsx";
 import { Battlefield, HealthBar, ShotLayer } from "../shared/fight-art.tsx";
 import { play } from "../shared/sounds.ts";
-import { useCountdown } from "../shared/ui.tsx";
+import { teamInk, teamVars, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
 import { Award } from "./tower.tsx";
 
@@ -68,7 +68,7 @@ export function FightStage({ view, send }: { view: FightView; send: Send }) {
             <ShotLayer shots={view.shots} onLand={onLand} />
           </Battlefield>
           {view.teams.map((t) => (
-            <section key={t.index} class={`fight-team side-${t.index}`} style={{ "--team": t.color }}>
+            <section key={t.index} class={`fight-team side-${t.index}`} style={teamVars(t.color)}>
               <h2>Team {t.name}</h2>
               <HealthBar damage={t.damage} color={t.color} />
               <ul>
@@ -122,7 +122,7 @@ function EventFeed({ events, teams }: { events: FightEvent[]; teams: FightView["
   return (
     <ol class="fight-feed" aria-live="polite">
       {events.slice(-4).map((e) => (
-        <li key={e.seq} class={e.kind} style={{ "--team": teams[e.team]?.color }}>
+        <li key={e.seq} class={e.kind} style={teamVars(teams[e.team]?.color)}>
           {text(e)}
         </li>
       ))}
@@ -150,7 +150,7 @@ function FightPodium({ view, send }: { view: FightView; send: Send }) {
       <div class="podium-bg" aria-hidden="true">
         <Battlefield terrain={view.terrain} damage={view.teams.map((t) => t.damage)} colors={view.teams.map((t) => t.color)} />
       </div>
-      <h1 style={winner ? { background: winner.color, color: "#fff" } : undefined}>{winner ? `🏆 Team ${winner.name} wins!` : "🤝 It's a draw!"}</h1>
+      <h1 style={winner ? { background: winner.color, color: teamInk(winner.color) } : undefined}>{winner ? `🏆 Team ${winner.name} wins!` : "🤝 It's a draw!"}</h1>
       {showErrors ? (
         <ErrorsTable errors={view.errors ?? []} />
       ) : (
@@ -158,7 +158,7 @@ function FightPodium({ view, send }: { view: FightView; send: Send }) {
           <p class="fight-reason">{reason}</p>
           <div class="fight-scores">
             {view.teams.map((t) => (
-              <div key={t.index} class={`fight-score ${winner?.index === t.index ? "won" : ""}`} style={{ "--team": t.color }}>
+              <div key={t.index} class={`fight-score ${winner?.index === t.index ? "won" : ""}`} style={teamVars(t.color)}>
                 <div class="place-name">Team {t.name}</div>
                 <HealthBar damage={t.damage} color={t.color} />
                 <div class="fight-score-line">

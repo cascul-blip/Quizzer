@@ -56,6 +56,7 @@ import runeShieldImg from "./dragon/rune-shield.webp";
 import teamPileClothImg from "./dragon/team-pile-cloth.webp";
 import teamPileImg from "./dragon/team-pile.webp";
 import { isPhoneArt } from "./phone-art.ts";
+import { teamVars } from "./ui.tsx";
 
 export type DragonArtId =
   | "cave"
@@ -328,7 +329,7 @@ export function RuneShield({ class: cls = "" }: { class?: string }) {
 
 export function TeamBanner({ color, name, class: cls = "" }: { color: string; name?: string; class?: string }) {
   return (
-    <div class={`team-banner ${cls}`} style={{ "--team": color }}>
+    <div class={`team-banner ${cls}`} style={teamVars(color)}>
       <Tinted id="banner" cloth="banner-cloth" color={color} class="banner-img" />
       {name && <span class="team-banner-name">{name}</span>}
     </div>

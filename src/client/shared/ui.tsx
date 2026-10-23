@@ -1,7 +1,13 @@
 import { Component, type ComponentChildren } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
-import { STREAK_MIN } from "../../shared/protocol.ts";
+import { STREAK_MIN, TEAMS } from "../../shared/protocol.ts";
 import { PinIcon } from "./pin.tsx";
+
+/** Text colour on a team-coloured background: white, but dark on the bright yellow team. */
+export const teamInk = (color: string | undefined): string => (color?.toLowerCase() === TEAMS[2].color ? "#2b2100" : "#fff");
+
+/** CSS variables for a team-coloured element: --team, and --team-ink for text on it. */
+export const teamVars = (color: string | undefined) => ({ "--team": color, "--team-ink": teamInk(color) });
 
 /** Kahoot-style option shapes: triangle, diamond, circle, square. */
 export function Shape({ index }: { index: number }) {

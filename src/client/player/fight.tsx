@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { CATAPULT_X, LAUNCH_Y, MAX_PULL, launchVector, shotPos, simulate } from "../../shared/fight-physics.ts";
 import { CORRECT_PER_DECISION, REPAIR_MS, TOWER_MAX_DAMAGE, type ClientMsg, type FightShot, type PlayerFightView } from "../../shared/protocol.ts";
 import { AvatarSprite, Battlefield, HealthBar, ShotLayer, sy } from "../shared/fight-art.tsx";
-import { useCountdown } from "../shared/ui.tsx";
+import { teamInk, teamVars, useCountdown } from "../shared/ui.tsx";
 import { Feedback, StreamQuestion } from "./tower.tsx";
 
 type Send = (m: ClientMsg) => void;
@@ -44,7 +44,7 @@ export function FightPlayer({ view, send }: { view: PlayerFightView; send: Send 
   if (view.phase === "countdown") {
     body = (
       <main class="center">
-        <div class="team-badge big" style={{ background: view.team.color }}>
+        <div class="team-badge big" style={{ background: view.team.color, color: teamInk(view.team.color) }}>
           Team {view.team.name}
         </div>
         <p class="muted">
@@ -85,7 +85,7 @@ export function FightPlayer({ view, send }: { view: PlayerFightView; send: Send 
 
   const [me, them] = [view.team.index, 1 - view.team.index];
   return (
-    <div class="game fight-game" style={{ "--team": view.team.color }}>
+    <div class="game fight-game" style={teamVars(view.team.color)}>
       <header class="bar team-bar">
         <span class="name">{view.me.nickname}</span>
         {view.phase === "playing" && (
@@ -273,7 +273,7 @@ function RepairWall({ color, repairMs, done }: { color: string; repairMs: number
   }
   const label = !done ? `🧱 Repairing your tower… ${Math.round(progress * 100)}%` : done.repaired ? "✓ Tower repaired!" : "Already repaired by a teammate";
   return (
-    <main class={`repair-wall ${done ? "clearing" : ""}`} style={{ "--team": color }}>
+    <main class={`repair-wall ${done ? "clearing" : ""}`} style={teamVars(color)}>
       <div class="wall" aria-hidden="true">
         {rows}
       </div>
@@ -334,7 +334,7 @@ function FightResult({ view }: { view: PlayerFightView }) {
           : "Equal damage and equal correct answers.";
   return (
     <main class="center">
-      <div class="team-badge big" style={{ background: view.team.color }}>
+      <div class="team-badge big" style={{ background: view.team.color, color: teamInk(view.team.color) }}>
         Team {view.team.name}
       </div>
       <div class={`final-rank ${won ? "top" : ""}`}>{title}</div>

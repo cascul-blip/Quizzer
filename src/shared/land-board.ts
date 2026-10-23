@@ -241,3 +241,44 @@ export function captureThreat(owners: number[], size: number, starts: LandStart[
   }
   return Math.max(0, Math.min(1, threat));
 }
+
+/**
+ * The neighbour across side `side` of a tile, or null past the board edge. Sides run clockwise
+ * from the top-right one: 0 NE, 1 E, 2 SE, 3 SW, 4 W, 5 NW; side k joins corners k and k + 1
+ * when the corners are numbered clockwise from the top.
+ */
+export function neighborAcross(size: number, tile: number, side: number): number | null {
+  const row = Math.floor(tile / size);
+  const col = tile % size;
+  const shift = row & 1;
+  const [r, c] = [
+    [row - 1, col + shift],
+    [row, col + 1],
+    [row + 1, col + shift],
+    [row + 1, col - 1 + shift],
+    [row, col - 1],
+    [row - 1, col - 1 + shift],
+  ][side]!;
+  return r! >= 0 && r! < size && c! >= 0 && c! < size ? r! * size + c! : null;
+}
+
+/** A side of an owned tile where the land changes hands: next to grass, another team's tile, or the board edge. */
+export interface BorderEdge {
+  tile: number;
+  side: number;
+  owner: number;
+}
+
+/** Every side of an owned tile whose neighbour has a different owner, or that is on the board edge. */
+export function borderEdges(owners: number[], size: number): BorderEdge[] {
+  const edges: BorderEdge[] = [];
+  for (let tile = 0; tile < owners.length; tile++) {
+    const owner = owners[tile]!;
+    if (owner === EMPTY) continue;
+    for (let side = 0; side < 6; side++) {
+      const n = neighborAcross(size, tile, side);
+      if (n === null || owners[n] !== owner) edges.push({ tile, side, owner });
+    }
+  }
+  return edges;
+}

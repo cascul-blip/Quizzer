@@ -812,16 +812,13 @@ a.btn {
   fill: #4f9a3a;
 }
 
+/* A faint 1px line round every tile; the border lines are the main cue for who owns what. */
 .hex-edge {
   fill: none;
-  stroke: rgba(0, 0, 0, 0.45);
-  stroke-width: 0.6;
+  stroke: rgba(0, 0, 0, 0.35);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
   stroke-linejoin: round;
-}
-
-.hex.owned .hex-edge {
-  stroke: rgba(255, 255, 255, 0.7);
-  stroke-width: 0.8;
 }
 
 .hex-body {
@@ -859,50 +856,79 @@ a.btn {
   }
 }
 
-.hex-block {
-  fill: rgba(10, 5, 25, 0.55);
+/* Everything drawn over the tiles lets taps through to them. */
+.hex-tray,
+.hex-borders,
+.hex-overlay {
   pointer-events: none;
 }
 
-/* The ring around another team's start: takeable, but it costs more. */
-.hex-guard {
-  fill: rgba(255, 176, 0, 0.3);
-  stroke: #ffb000;
-  stroke-width: 1.2;
-  stroke-dasharray: 3 2;
-  pointer-events: none;
-}
-
-.hex-select {
-  fill: rgba(255, 255, 255, 0.25);
-  stroke: #fff;
-  stroke-width: 1.6;
-  stroke-linejoin: round;
-  pointer-events: none;
-  animation: hex-select 0.9s ease-in-out infinite alternate;
-}
-
-@keyframes hex-select {
-  to {
-    stroke: var(--accent);
-    fill: rgba(255, 210, 63, 0.35);
-  }
-}
-
-.start-mark circle {
-  fill: #fff;
-  stroke: rgba(0, 0, 0, 0.5);
-  stroke-width: 0.5;
-}
-
-.start-mark path {
-  fill: none;
-  stroke-width: 2.4;
+.hex-borders line {
+  stroke-width: 0.8;
   stroke-linecap: round;
 }
 
-.start-mark.out {
-  opacity: 0.35;
+.hex-cost {
+  font-size: 3.6px;
+  font-weight: 900;
+  text-anchor: middle;
+  fill: #1e2633;
+}
+
+.hex-selected {
+  animation: hex-selected 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes hex-selected {
+  from {
+    opacity: 0.75;
+  }
+}
+
+.hex-fx image {
+  mix-blend-mode: screen;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* Just placed: a glow that grows and fades. */
+.fx-pop {
+  animation: fx-pop 0.5s ease-out both;
+}
+
+@keyframes fx-pop {
+  from {
+    transform: scale(0.6);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.1);
+    opacity: 0;
+  }
+}
+
+/* Captured: the flash peaks as the tile is edge-on in its flip (same delay as the flip). */
+.fx-flash {
+  animation: fx-flash 0.7s ease-out both;
+}
+
+@keyframes fx-flash {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  45% {
+    opacity: 1;
+  }
+}
+
+/* A team's painted shape token next to its name. */
+.land-shape {
+  display: inline-block;
+  width: 1.1em;
+  height: 1.1em;
+  vertical-align: -0.2em;
+  margin-right: 0.3em;
 }
 
 /* ----- Racer scene (shared by projector and phones) ----- */
