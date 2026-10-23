@@ -3,7 +3,7 @@
  * Classic = upbeat game show, Tallest Tower = retro chiptune,
  * Submarine Squad = deep-sea suspense, Tower Fight = medieval battle,
  * Robot Attack = Romantic orchestra (public-domain Beethoven and Grieg themes),
- * Land Grab = calm ambient piano that grows into an orchestra as rings close,
+ * Land Grab = calm ambient piano that grows into an orchestra as rings close, in the rich orchestral sound (see rich.ts),
  * Racer = sunny late-80s arcade-racing chiptune (tempo follows the car's speed), in the rich arcade sound (see rich.ts),
  * Cup of Death = original spaghetti-western themes: whistle, twangy guitar, galloping hooves,
  * Dragon's Hoard = a dark cave, a heroic battle with brass and choir, war drums under the fire, a plucky scramble,
@@ -526,6 +526,7 @@ const eighths = (tok: string) => pump(tok, "x.x.x.x.x.x.x.x.");
 
 const landLobby: Track = {
   id: "land-lobby",
+  rich: "orchestral",
   bpm: 62,
   bars: 8,
   reverb: 0.4,
@@ -575,6 +576,7 @@ const LAND_THEME = [
 
 const landPlay: Track = {
   id: "land-play",
+  rich: "orchestral",
   // 66 BPM while the land is quiet, about 109 when a ring is about to close.
   bpm: 66,
   bars: 8,
@@ -620,6 +622,7 @@ const landPlay: Track = {
 
 const landResults: Track = {
   id: "land-results",
+  rich: "orchestral",
   bpm: 72,
   bars: 8,
   reverb: 0.3,
