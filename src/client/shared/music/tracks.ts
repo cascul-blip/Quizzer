@@ -9,7 +9,7 @@
  * Dragon's Hoard = a dark cave, a heroic battle with brass and choir, war drums under the fire, a plucky scramble,
  * Bomb Squad = spy-jazz (bass, brushes, vibraphone) that picks up a tick and more layers as the bomb runs down.
  * Kingdom Siege = a pastoral recorder-and-lute lobby, a marching battle with snare, tabor, recorders and brass,
- *   church bells for a victory and a low brass lament for a fallen castle.
+ *   church bells for a victory and a low brass lament for a fallen castle. These three use the rich sound (see rich.ts).
  * Any of these can be replaced by an audio file in data/music/<id>.<ext>.
  */
 import type { MusicTrackId } from "../../../shared/music-tracks.ts";
@@ -1155,6 +1155,7 @@ const SIEGE_EM = chord("E3 G3 B3");
 
 const siegeLobby: Track = {
   id: "siege-lobby",
+  rich: true,
   bpm: 84,
   bars: 4,
   swing: 0.12,
@@ -1185,6 +1186,7 @@ const SIEGE_ROOTS = ["Bb1", "Eb2", "F2", "G1", "Bb1", "Eb2", "C2", "F2"];
 
 const siegeBattle: Track = {
   id: "siege-battle",
+  rich: true,
   bpm: 112,
   bars: 8,
   // Below 0.15 is a build break: drums and a held chord. More layers as monsters fill the
@@ -1224,6 +1226,7 @@ const siegeBattle: Track = {
 
 const siegeResults: Track = {
   id: "siege-results",
+  rich: true,
   bpm: 92,
   bars: 4,
   reverb: 0.42,

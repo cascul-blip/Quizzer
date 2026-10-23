@@ -6,7 +6,11 @@
  * Patterns are 16 steps per bar. Melodic steps are note names ("C4", "F#3",
  * "Bb2", chords as "C4+E4+G4"), "-" holds the previous note, "." is a rest.
  * Drum steps are "x" (hit), "o" (accent) or ".".
+ *
+ * A track with `rich: true` is played with the fuller sound in rich.ts instead; every other track
+ * sounds exactly as it always has.
  */
+import { STRUM_S, createRichBus, humanize, panFor, playRich, type RichBus } from "./rich.ts";
 
 export type Instrument =
   | "kick"
@@ -61,6 +65,12 @@ export interface Track {
   swing?: number;
   /** How much of the track is also sent through a hall reverb (0…1). */
   reverb?: number;
+  /**
+   * Play with the fuller sound in rich.ts: humanised timing and velocity, stereo spread, filter
+   * envelopes, plucked/FM instruments, saturation, compression and a convolution reverb.
+   * Leave it off (or set it to false) for the original plain oscillators.
+   */
+  rich?: boolean;
   layers: Layer[];
 }
 
@@ -466,25 +476,43 @@ export function scheduleStep(ctx: Ctx, dest: AudioNode, track: Track, step: numb
   const dur = stepSeconds(track, intensity);
   const bar = Math.floor(step / STEPS_PER_BAR) % track.bars;
   const s = step % STEPS_PER_BAR;
-  for (const layer of track.layers) {
-    if (!layerActive(layer, intensity)) continue;
+  track.layers.forEach((layer, li) => {
+    if (!layerActive(layer, intensity)) return;
     const toks = tokens(layer.bars[bar % layer.bars.length]!);
     const tok = toks[s] ?? ".";
-    if (tok === "." || tok === "-") continue;
-    const vol = layer.vol ?? 1;
+    if (tok === "." || tok === "-") return;
+    let vol = layer.vol ?? 1;
+    let at = t;
+    let out = dest;
+    let detune = 0;
+    if (track.rich) {
+      // A player's small unevenness, the same each time round; and the instrument's place in the stereo field.
+      const h = humanize(step, li);
+      at = Math.max(ctx.currentTime, t + h.dt);
+      vol *= h.gain;
+      detune = h.detune;
+      const pan = ctx.createStereoPanner();
+      pan.pan.value = panFor(layer.inst);
+      pan.connect(dest);
+      out = pan;
+    }
     if (DRUMS.has(layer.inst)) {
       // Drums may carry a pitch (e.g. woodblock "E5") or just "x"/"o".
       const pitch = noteFreq(tok) ?? 0;
-      playInstrument(ctx, dest, layer.inst, t, pitch, dur, vol, tok === "o");
-      continue;
+      playInstrument(ctx, out, layer.inst, at, pitch, dur, vol, tok === "o");
+      return;
     }
     let held = 1;
     while (s + held < STEPS_PER_BAR && toks[s + held] === "-") held++;
-    for (const n of tok.split("+")) {
+    tok.split("+").forEach((n, i) => {
       const f = noteFreq(n);
-      if (f) playInstrument(ctx, dest, layer.inst, t, f, held * dur * 0.95, vol);
-    }
-  }
+      if (!f) return;
+      const len = held * dur * 0.95;
+      if (!track.rich) return playInstrument(ctx, out, layer.inst, at, f, len, vol);
+      const start = layer.inst === "pluck" ? at + i * STRUM_S : at;
+      if (!playRich(ctx, out, layer.inst, start, f, len, vol, detune)) playInstrument(ctx, out, layer.inst, start, f, len, vol);
+    });
+  });
 }
 
 /** Render `seconds` of a track into any context (used for previews and tests). */
@@ -516,6 +544,8 @@ interface Playing {
 export class MusicPlayer {
   private master: GainNode | null = null;
   private reverb: ConvolverNode | null = null;
+  /** Saturation, compression and reverb for rich tracks: made when one first plays, taken down when none is playing. */
+  private rich: RichBus | null = null;
   private current: Playing | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
   private intensity = 0;
@@ -636,6 +666,10 @@ export class MusicPlayer {
       setTimeout(() => {
         old.gain.disconnect();
         audio?.pause();
+        if (!this.current?.track?.rich && this.rich) {
+          this.rich.dispose();
+          this.rich = null;
+        }
       }, FADE_S * 1000 + 200);
     }
     this.current = null;
@@ -655,7 +689,15 @@ export class MusicPlayer {
     }
     // An unknown id plays silence (but still counts as "current", so we don't retry every tick).
     const track = this.tracks[id];
-    if (track?.reverb) {
+    if (track?.rich) {
+      // The rich bus replaces the master connection and the shared hall for this track.
+      gain.disconnect();
+      this.rich ??= createRichBus(ctx, master);
+      gain.connect(this.rich.input);
+      const send = ctx.createGain();
+      send.gain.value = track.reverb ?? 0.3;
+      gain.connect(send).connect(this.rich.reverb);
+    } else if (track?.reverb) {
       const send = ctx.createGain();
       send.gain.value = track.reverb;
       gain.connect(send).connect(this.ensureReverb(ctx, master));
