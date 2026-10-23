@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { EMPTY, START_MARGIN, captureThreat, enclosedBy, hexDistance, isGuarded, isProtected, landBoardSize, neighbors, placementCost, startTiles, type LandStart } from "../src/shared/land-board.ts";
+import { EMPTY, START_MARGIN, borderEdges, captureThreat, enclosedBy, hexDistance, isGuarded, isProtected, landBoardSize, neighborAcross, neighbors, placementCost, startTiles, type LandStart } from "../src/shared/land-board.ts";
+import { TEAMS } from "../src/shared/protocol.ts";
 
 const at = (size: number, row: number, col: number) => row * size + col;
 const board = (size: number) => Array<number>(size * size).fill(EMPTY);
@@ -203,5 +204,56 @@ describe("capture threat", () => {
     for (const t of neighbors(size, at(size, 8, 4)).slice(1)) owners[t] = 1;
     expect(threat(owners, out)).toBe(0);
     expect(threat(withRing(11), out)).toBeLessThan(1);
+  });
+});
+
+describe("borders", () => {
+  test("the six sides are the six neighbours, and the side across is three along", () => {
+    for (const size of [10, 12]) {
+      for (let t = 0; t < size * size; t++) {
+        const across = [0, 1, 2, 3, 4, 5].map((side) => neighborAcross(size, t, side));
+        expect(across.filter((n) => n !== null).sort((a, b) => a! - b!)).toEqual(neighbors(size, t).sort((a, b) => a - b));
+        across.forEach((n, side) => n !== null && expect(neighborAcross(size, n, (side + 3) % 6)).toBe(t));
+      }
+    }
+  });
+
+  test("sides run clockwise from the top right", () => {
+    // Row 4 is even, so its upper neighbours are in row 3 at columns 3 and 4.
+    expect([0, 1, 2, 3, 4, 5].map((side) => neighborAcross(10, at(10, 4, 4), side))).toEqual([at(10, 3, 4), at(10, 4, 5), at(10, 5, 4), at(10, 5, 3), at(10, 4, 3), at(10, 3, 3)]);
+    expect(neighborAcross(10, 0, 5)).toBeNull();
+  });
+
+  test("a lone tile is bordered on every side, but not along the board edge", () => {
+    const owners = board(10);
+    owners[at(10, 4, 4)] = 0;
+    owners[0] = 1;
+    const edges = borderEdges(owners, 10);
+    expect(edges.filter((e) => e.tile === at(10, 4, 4)).map((e) => e.side)).toEqual([0, 1, 2, 3, 4, 5]);
+    expect(edges.filter((e) => e.tile === 0).map((e) => e.side)).toEqual([1, 2]);
+    expect(edges.every((e) => !e.rival)).toBe(true);
+  });
+
+  test("two teams side by side each draw their own line on the shared side; a team's own tiles don't", () => {
+    const owners = board(10);
+    owners[at(10, 4, 4)] = 0;
+    owners[at(10, 4, 5)] = 0;
+    owners[at(10, 4, 6)] = 1;
+    const edges = borderEdges(owners, 10);
+    expect(edges.some((e) => e.tile === at(10, 4, 4) && e.side === 1)).toBe(false);
+    expect(edges.find((e) => e.tile === at(10, 4, 5) && e.side === 1)).toEqual({ tile: at(10, 4, 5), side: 1, owner: 0, rival: true });
+    expect(edges.find((e) => e.tile === at(10, 4, 6) && e.side === 4)).toEqual({ tile: at(10, 4, 6), side: 4, owner: 1, rival: true });
+    expect(edges.filter((e) => e.rival)).toHaveLength(2);
+  });
+
+  test("an empty board has no borders", () => {
+    expect(borderEdges(board(12), 12)).toEqual([]);
+  });
+});
+
+describe("teams", () => {
+  test("every team has its own colour and shape", () => {
+    expect(new Set(TEAMS.map((t) => t.color)).size).toBe(TEAMS.length);
+    expect(TEAMS.map((t) => t.shape)).toEqual(["circle", "square", "triangle", "diamond", "star", "heart"]);
   });
 });

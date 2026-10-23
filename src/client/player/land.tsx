@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { EMPTY, placementCost } from "../../shared/land-board.ts";
 import { LAND_GUARD_COST, LAND_QUESTIONS_PER_ROUND, LAND_STEAL_COST, type ClientMsg, type LandBoard, type PlayerLandView } from "../../shared/protocol.ts";
 import { HexBoard } from "../shared/land-art.tsx";
+import { TeamShapeIcon } from "../shared/team-shape.tsx";
 import { useEventFlash } from "../shared/tower-art.tsx";
 import { formatClock, ordinal, useCountdown } from "../shared/ui.tsx";
 import { Feedback, StreamQuestion } from "./tower.tsx";
@@ -12,6 +13,8 @@ type Send = (m: ClientMsg) => void;
 /** After the last tile goes down, keep the land on screen this long before the questions come back. */
 const LAST_TILE_PAUSE_MS = 900;
 const MAX_ZOOM = 4;
+/** The board opens zoomed in this far, on the player's own land. */
+const OPEN_ZOOM = 1.5;
 
 /** Phone screen for Land Grab: three questions, then place the tiles they earned. */
 export function LandPlayer({ view, send }: { view: PlayerLandView; send: Send }) {
@@ -36,6 +39,7 @@ export function LandPlayer({ view, send }: { view: PlayerLandView; send: Send })
     body = (
       <main class="center">
         <div class="team-badge big" style={{ background: view.team.color }}>
+          <TeamShapeIcon team={view.team.index} color="#fff" />
           Team {view.team.name}
         </div>
         <p class="muted">
@@ -51,6 +55,7 @@ export function LandPlayer({ view, send }: { view: PlayerLandView; send: Send })
       <main class="center">
         <div class="land-big-icon">👑</div>
         <div class="team-badge big" style={{ background: view.team.color }}>
+          <TeamShapeIcon team={view.team.index} color="#fff" />
           Team {view.team.name}
         </div>
         <p class="big-score">rules the whole land!</p>
@@ -84,7 +89,16 @@ export function LandPlayer({ view, send }: { view: PlayerLandView; send: Send })
             <b>🚩 {view.claims}</b>
           </span>
         )}
-        <span class="score">{playing ? formatClock(secs) : `Team ${view.team.name}`}</span>
+        <span class="score">
+          {playing ? (
+            formatClock(secs)
+          ) : (
+            <>
+              <TeamShapeIcon team={view.team.index} color={view.team.color} />
+              Team {view.team.name}
+            </>
+          )}
+        </span>
       </header>
       {body}
       <Feedback feedback={view.feedback} rightText={view.state === "claim" ? "+1 tile. To the land!" : "+1 tile"} />
@@ -167,10 +181,10 @@ function ClaimMode(props: { board: LandBoard; live: boolean; claims: number; tea
       <div class="build-head">
         <b>{live ? `Place your tiles! ${claims} left` : "Tile placed!"}</b>
         <span>
-          Grass costs 1 · another team's tile {LAND_STEAL_COST} · amber tiles {LAND_GUARD_COST} · pinch to zoom
+          Grass costs 1 · tiles marked with a number cost that many · pinch to zoom
         </span>
       </div>
-      <PanZoom onTap={(tile) => live && setSelected(tile === selected ? null : tile)}>
+      <PanZoom focus={() => focusTiles(board, team)} onTap={(tile) => live && setSelected(tile === selected ? null : tile)}>
         <HexBoard board={board} viewer={team} selected={selected} />
       </PanZoom>
       <footer class="land-foot">
@@ -188,8 +202,18 @@ function ClaimMode(props: { board: LandBoard; live: boolean; claims: number; tea
   );
 }
 
-/** Drag to pan, pinch (or the buttons, or the mouse wheel) to zoom; a touch that doesn't move is a tap on a tile. */
-function PanZoom({ children, onTap }: { children: ComponentChildren; onTap: (tile: number) => void }) {
+/** The tiles the board opens on: the team's land, or its starting point if it holds none. */
+function focusTiles(board: LandBoard, team: number): number[] {
+  const own = board.owners.flatMap((o, t) => (o === team ? [t] : []));
+  if (own.length) return own;
+  return board.starts.filter((s) => s.team === team).map((s) => s.tile);
+}
+
+/**
+ * Drag to pan, pinch (or the buttons, or the mouse wheel) to zoom; a touch that doesn't move is a tap on a tile.
+ * Opens at OPEN_ZOOM, centred on the `focus` tiles.
+ */
+function PanZoom({ children, focus, onTap }: { children: ComponentChildren; focus?: () => number[]; onTap: (tile: number) => void }) {
   const box = useRef<HTMLDivElement>(null);
   const inner = useRef<HTMLDivElement>(null);
   const view = useRef({ s: 1, x: 0, y: 0 });
@@ -230,6 +254,18 @@ function PanZoom({ children, onTap }: { children: ComponentChildren; onTap: (til
       zoomAt(p.x, p.y, e.deltaY < 0 ? 1.2 : 1 / 1.2);
     };
     el.addEventListener("wheel", onWheel, { passive: false });
+    // Centre the focus tiles, measured on the unzoomed board.
+    const tiles = focus?.() ?? [];
+    const centres = tiles.flatMap((t) => {
+      const r = inner.current?.querySelector(`[data-tile="${t}"]`)?.getBoundingClientRect();
+      return r ? [local({ clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 })] : [];
+    });
+    if (centres.length) {
+      const cx = centres.reduce((a, c) => a + c.x, 0) / centres.length;
+      const cy = centres.reduce((a, c) => a + c.y, 0) / centres.length;
+      view.current = { s: OPEN_ZOOM, x: el.clientWidth / 2 - cx * OPEN_ZOOM, y: el.clientHeight / 2 - cy * OPEN_ZOOM };
+      apply();
+    }
     const ro = new ResizeObserver(apply);
     ro.observe(el);
     return () => {
@@ -299,6 +335,7 @@ function LandResult({ view }: { view: PlayerLandView }) {
   return (
     <main class="center">
       <div class="team-badge big" style={{ background: view.team.color }}>
+        <TeamShapeIcon team={view.team.index} color="#fff" />
         Team {view.team.name}
       </div>
       <p class="muted">

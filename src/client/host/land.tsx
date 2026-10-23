@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import type { HostLandTeam, HostView } from "../../shared/protocol.ts";
 import { HexBoard } from "../shared/land-art.tsx";
 import { play } from "../shared/sounds.ts";
+import { TeamShapeIcon } from "../shared/team-shape.tsx";
 import { useEventFlash } from "../shared/tower-art.tsx";
 import { formatClock, ordinal, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
@@ -102,6 +103,7 @@ function TeamCard({ team, leading, by }: { team: HostLandTeam; leading: boolean;
       <header>
         <span class="land-team-name">
           {leading && <span aria-label="Leading">👑 </span>}
+          <TeamShapeIcon team={team.index} color={team.color} />
           Team {team.name}
         </span>
         {team.out ? (
@@ -150,7 +152,10 @@ function LandPodium({ view, send }: { view: LandView; send: Send }) {
             {places.map(({ team, cls }) =>
               team ? (
                 <div key={cls} class={`place ${cls}`} style={{ "--team": team.color }}>
-                  <div class="place-name">Team {team.name}</div>
+                  <div class="place-name">
+                    <TeamShapeIcon team={team.index} color={team.color} />
+                    Team {team.name}
+                  </div>
                   <div class="place-score">{score(team)}</div>
                   <div class="place-block team-block">{ordinal(team.rank)}</div>
                 </div>

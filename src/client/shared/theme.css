@@ -859,50 +859,120 @@ a.btn {
   }
 }
 
+/* Tiles the viewer can't take: dark slate with a diagonal hatch (the fill is the board's hatch pattern). */
 .hex-block {
-  fill: rgba(10, 5, 25, 0.55);
+  opacity: 0.8;
   pointer-events: none;
 }
 
-/* The ring around another team's start: takeable, but it costs more. */
-.hex-guard {
-  fill: rgba(255, 176, 0, 0.3);
-  stroke: #ffb000;
-  stroke-width: 1.2;
-  stroke-dasharray: 3 2;
+.hex-hatch-bg {
+  fill: #1e2633;
+}
+
+.hex-hatch-line {
+  stroke: rgba(160, 175, 195, 0.45);
+  stroke-width: 0.7;
+}
+
+/* Takeable, but it costs more than one claim. */
+.hex-cost {
   pointer-events: none;
+}
+
+.hex-cost-ring {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 1;
+  stroke-dasharray: 2.2 1.6;
+  stroke-linejoin: round;
+}
+
+.hex-cost circle {
+  fill: #fff;
+  stroke: rgba(0, 0, 0, 0.55);
+  stroke-width: 0.4;
+}
+
+.hex-cost text {
+  font-size: 4.2px;
+  font-weight: 900;
+  text-anchor: middle;
+  fill: #1e2633;
+}
+
+/* Where land changes hands: a thick line in the owner's colour, over a dark one so it reads on any ground. */
+.hex-borders {
+  pointer-events: none;
+}
+
+.hex-borders line {
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+.hex-borders-under line {
+  stroke: rgba(10, 5, 25, 0.75) !important;
+  stroke-width: 2.3;
 }
 
 .hex-select {
-  fill: rgba(255, 255, 255, 0.25);
-  stroke: #fff;
-  stroke-width: 1.6;
-  stroke-linejoin: round;
   pointer-events: none;
+}
+
+.hex-select-glow {
+  fill: none;
+  stroke: #ffe066;
+  stroke-width: 3;
   animation: hex-select 0.9s ease-in-out infinite alternate;
 }
 
+.hex-select-rim {
+  fill: rgba(255, 255, 255, 0.18);
+  stroke: #fff;
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+}
+
 @keyframes hex-select {
+  from {
+    opacity: 0.55;
+  }
   to {
-    stroke: var(--accent);
-    fill: rgba(255, 210, 63, 0.35);
+    opacity: 1;
   }
 }
 
-.start-mark circle {
-  fill: #fff;
-  stroke: rgba(0, 0, 0, 0.5);
-  stroke-width: 0.5;
+/* The shapes are drawn 1 unit across and scaled up, so these widths are scaled too. */
+.start-shape {
+  stroke: #fff;
+  stroke-width: 0.2;
+  stroke-linejoin: round;
 }
 
-.start-mark path {
+.start-shape-shadow {
   fill: none;
-  stroke-width: 2.4;
-  stroke-linecap: round;
+  stroke: rgba(0, 0, 0, 0.55);
+  stroke-width: 0.42;
+  stroke-linejoin: round;
 }
 
 .start-mark.out {
   opacity: 0.35;
+}
+
+/* A team's shape next to its name. */
+.team-shape {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.12em;
+  margin-right: 0.3em;
+}
+
+.team-shape path {
+  stroke: #fff;
+  stroke-width: 0.18;
+  stroke-linejoin: round;
 }
 
 /* ----- Racer scene (shared by projector and phones) ----- */

@@ -22,14 +22,17 @@ export interface ShuffleOptions {
 export type GameMode = "classic" | "tower" | "submarine" | "fight" | "robot" | "land" | "racer" | "cup" | "dragon" | "bomb" | "siege";
 export type TowerPhase = "countdown" | "playing" | "podium";
 
+/** Each team also has a shape, so teams can be told apart without relying on colour. */
+export type TeamShape = "circle" | "square" | "triangle" | "diamond" | "star" | "heart";
+
 export const TEAMS = [
-  { name: "Red", color: "#e21b3c" },
-  { name: "Blue", color: "#1368ce" },
-  { name: "Yellow", color: "#c98a00" },
-  { name: "Cyan", color: "#0fa3b1" },
-  { name: "Purple", color: "#864cbf" },
-  { name: "Orange", color: "#e8710a" },
-] as const;
+  { name: "Red", color: "#d81e3a", shape: "circle" },
+  { name: "Blue", color: "#1f5ee0", shape: "square" },
+  { name: "Yellow", color: "#f5c400", shape: "triangle" },
+  { name: "Cyan", color: "#12b5cb", shape: "diamond" },
+  { name: "Purple", color: "#7d3cc8", shape: "star" },
+  { name: "Pink", color: "#f0559e", shape: "heart" },
+] as const satisfies readonly { name: string; color: string; shape: TeamShape }[];
 export const MAX_TEAMS = TEAMS.length;
 export const TOWER_MINUTES = [2, 3, 5, 7, 10] as const;
 /** Correct answers (blocks) needed before a player switches to build mode. */
