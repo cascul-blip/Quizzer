@@ -436,7 +436,7 @@ The Tallest Tower building blocks are images in `src/client/shared/tower/`, made
 
 The Tower Fight castle is made the same way: `python3 scripts/fight-castle.py` turns the intact tower and its four damage stages in `scripts/fight-castle/` into the images in `src/client/shared/fight/`. If the tower's proportions change, copy the numbers the script prints into `CastleTower` in `src/client/shared/fight-art.tsx`.
 
-The Land Grab tiles in `src/client/shared/land/` come from two generated textures in `scripts/land-tiles/` (grass, and grey paving that takes each team's color): `python3 scripts/land-tiles.py`.
+The Land Grab art in `src/client/shared/land/` (the storybook parchment maps, tiles, shields, cards and plinths) is made by its own art build outside this repo; `src/client/shared/land/manifest.md` says where each piece goes and how it is tinted.
 
 The Racer pixel art in `src/client/shared/racer/` (the car, the skyline and the palm tree) is made from the generated images in `scripts/racer-art/` by `python3 scripts/racer-art.py` (needs Pillow and numpy).
 

@@ -8,6 +8,7 @@ import captureFlashImg from "./land/capture-flash.webp";
 import claimed1Img from "./land/claimed-1.webp";
 import claimed2Img from "./land/claimed-2.webp";
 import claimed3Img from "./land/claimed-3.webp";
+import compassRoseImg from "./land/compass-rose.webp";
 import cost2Img from "./land/cost-2.webp";
 import costBlankImg from "./land/cost-blank.webp";
 import feltTileImg from "./land/felt-tile.webp";
@@ -46,6 +47,7 @@ import phoneCaptureFlashImg from "./land/phone/capture-flash.webp";
 import phoneClaimed1Img from "./land/phone/claimed-1.webp";
 import phoneClaimed2Img from "./land/phone/claimed-2.webp";
 import phoneClaimed3Img from "./land/phone/claimed-3.webp";
+import phoneCompassRoseImg from "./land/phone/compass-rose.webp";
 import phoneCost2Img from "./land/phone/cost-2.webp";
 import phoneCostBlankImg from "./land/phone/cost-blank.webp";
 import phoneFeltTileImg from "./land/phone/felt-tile.webp";
@@ -60,6 +62,9 @@ import phoneKeepPinkImg from "./land/phone/keep-pink.webp";
 import phoneKeepPurpleImg from "./land/phone/keep-purple.webp";
 import phoneKeepRedImg from "./land/phone/keep-red.webp";
 import phoneKeepYellowImg from "./land/phone/keep-yellow.webp";
+import phoneMap10Img from "./land/phone/map-10.webp";
+import phoneMap12Img from "./land/phone/map-12.webp";
+import phoneMap14Img from "./land/phone/map-14.webp";
 import phonePlacePopImg from "./land/phone/place-pop.webp";
 import phoneShapeCircleImg from "./land/phone/shape-circle.webp";
 import phoneShapeDiamondImg from "./land/phone/shape-diamond.webp";
@@ -76,7 +81,7 @@ import { teamInk } from "./ui.tsx";
 
 /*
  * Land Grab's board and its art, shared by the projector and the phones. The art is the
- * painted tabletop in ./land/; ./land/manifest.md says where each piece goes, how big it is
+ * storybook parchment map in ./land/; ./land/manifest.md says where each piece goes, how big it is
  * and how it is tinted. Phones get the half-size copies in ./land/phone/. The card, banner
  * and plinths are projector only.
  */
@@ -93,6 +98,11 @@ const ART = {
   "claimed-1": [claimed1Img, phoneClaimed1Img],
   "claimed-2": [claimed2Img, phoneClaimed2Img],
   "claimed-3": [claimed3Img, phoneClaimed3Img],
+  // The maps are big, and even the phone copies (about 112 px per R) are twice what a 1080p projector needs, so both use them.
+  "map-10": [phoneMap10Img, phoneMap10Img],
+  "map-12": [phoneMap12Img, phoneMap12Img],
+  "map-14": [phoneMap14Img, phoneMap14Img],
+  "compass-rose": [compassRoseImg, phoneCompassRoseImg],
   "state-blocked": [stateBlockedImg, phoneStateBlockedImg],
   "state-guarded": [stateGuardedImg, phoneStateGuardedImg],
   "state-selected": [stateSelectedImg, phoneStateSelectedImg],
@@ -131,9 +141,9 @@ export const landArt = (id: LandArtId): string => pickArt(ART[id][0], ART[id][1]
 
 /** Corner radius of one hex in SVG units. */
 const R = 10;
-/** The manifest gives the tabletop's depths in tenths of R. */
+/** The manifest gives the board's offsets in tenths of R. */
 const D = R / 10;
-/** Tiles are drawn a little smaller than their cell, so the tray shows between them. */
+/** Tiles are drawn a little smaller than their cell, so the parchment edge shows between them as ink lines. */
 const TILE_R = R * 0.95;
 const TILE_W = TILE_R * Math.sqrt(3);
 const hexCorners = (r: number) =>
@@ -147,21 +157,15 @@ const hexPoints = (r: number, x = 0, y = 0) =>
     .join(" ");
 const TILE = hexPoints(TILE_R);
 
-/** The tile sides showing under each top face: grass is lower than claimed land, whose top is lifted too. */
-const GRASS_SIDE = "#34461e";
-const GRASS_DROP = 0.4 * D;
-const OWNED_DROP = 0.8 * D;
-const OWNED_LIFT = 0.3 * D;
-/** The border line where land changes hands, just inside the top face's edge. */
-const BORDER_W = 0.08 * R;
-const BORDER_LIFT = 0.4 * D;
-const BORDER_CORNERS = hexCorners(TILE_R - BORDER_W / 2 / Math.cos(Math.PI / 6));
-/** The wooden tray: every cell, a little bigger and lower, so its outline follows the board. */
-const TRAY_R = 1.12 * R;
-const TRAY_DROP = 0.8 * D;
-/** Size of one repeat of the wood. */
+/** The ink line where land changes hands, on the tile's edge. */
+const BORDER_CORNERS = hexCorners(TILE_R);
+/** The parchment edge: every cell a little bigger, an ink outline under a darker paper band, so its outline follows the board. */
+const EDGE_INK_R = 1.17 * R;
+const EDGE_R = 1.12 * R;
+const INK = "#3a2412";
+/** Size of one repeat of the edge paper. */
 const WOOD = 40;
-/** Room around the board for the tray and its shadow. */
+/** Room around the board for the edge and its shadow. */
 const MARGIN = 5 * D;
 /** The keep is 1.24 tiles wide; its anchor (the middle of its base) goes on the tile centre. */
 const KEEP_W = 1.24 * TILE_W;
@@ -178,10 +182,16 @@ const GRASS: LandArtId[] = ["grass-1", "grass-2", "grass-3", "grass-4"];
 const CLAIMED: LandArtId[] = ["claimed-1", "claimed-2", "claimed-3"];
 /** The keep with its flag in each team's colour, in TEAMS order. */
 const KEEPS: LandArtId[] = ["keep-red", "keep-blue", "keep-yellow", "keep-cyan", "keep-purple", "keep-pink"];
+/** One continuous map per board size, covering boardExtent exactly. Other sizes fall back to grass-N and claimed-N per tile. */
+const MAPS: Partial<Record<number, LandArtId>> = { 10: "map-10", 12: "map-12", 14: "map-14" };
+/** Claimed tiles show the map lightened toward paper, then multiplied by the team colour; yellow, blue and purple get more lighten. */
+const CLAIM_PAPER = "#fffaf0";
+const CLAIM_LIGHTEN: Record<string, number> = { "#d81e3a": 0.35, "#1f5ee0": 0.4, "#f5c400": 0.45, "#12b5cb": 0.35, "#7d3cc8": 0.4, "#f0559e": 0.35 };
 
 const CLIP_ID = "hex-clip";
 const WOOD_ID = "hex-wood";
 const SHADOW_ID = "hex-tray-shadow";
+const MAP_CLIP_ID = "hex-map-clip";
 
 export const teamColor = (team: number) => TEAMS[team % TEAMS.length]!.color;
 
@@ -189,8 +199,6 @@ const rgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 
 const toHex = (c: number[]) => `#${c.map((v) => Math.round(v).toString(16).padStart(2, "0")).join("")}`;
 /** A colour scaled toward black: 0.5 is half as bright. */
 export const shade = (hex: string, f: number) => toHex(rgb(hex).map((v) => v * f));
-/** A colour mixed toward white: 0.55 is 55% of the way. */
-export const towardWhite = (hex: string, t: number) => toHex(rgb(hex).map((v) => v + (255 - v) * t));
 
 /** A picture drawn over the tile's whole box (`scale` times the tile), centred on (x, y). */
 function TileImage({ id, x, y, scale = 1, class: cls, style }: { id: LandArtId; x: number; y: number; scale?: number; class?: string; style?: Record<string, string> }) {
@@ -212,7 +220,7 @@ export interface HexBoardProps {
 }
 
 /**
- * The whole board, back to front: tray, tiles (row by row, each a side and a top face), borders,
+ * The whole board, back to front: parchment edge, the map, tiles (claimed ones tinted), borders,
  * keeps, then the viewer's tile states and the effects. Each tile carries data-tile, so a tap can be
  * traced back to it; everything drawn after the tiles lets taps through.
  */
@@ -223,36 +231,59 @@ export function HexBoard({ board, viewer, selected, placed, capture, label }: He
     const c = hexCenter(size, tile);
     return { x: c.x * R, y: c.y * R };
   });
-  /** Where a tile's top face is: claimed land sits higher. */
-  const top = (tile: number) => ({ x: centres[tile]!.x, y: centres[tile]!.y - (owners[tile] === EMPTY ? 0 : OWNED_LIFT) });
+  const top = (tile: number) => centres[tile]!;
+  const [mapFailed, setMapFailed] = useState<string | null>(null);
+  const mapId = MAPS[size];
+  const map = mapId !== undefined && mapFailed !== mapId ? landArt(mapId) : null;
+  const mapW = (width * R).toFixed(2);
+  const mapH = (height * R).toFixed(2);
   const flipped = capture ? new Map(capture.tiles.map((t, i) => [t, i])) : null;
   const flipDelay = (i: number) => ({ animationDelay: `${Math.min(i * 25, 600)}ms` });
 
-  const tray = centres.map((c, tile) => <polygon key={tile} points={hexPoints(TRAY_R, c.x, c.y + TRAY_DROP)} />);
+  const edge = (r: number) => centres.map((c, tile) => <polygon key={tile} points={hexPoints(r, c.x, c.y)} />);
 
   const tiles = owners.map((owner, tile) => {
     const c = centres[tile]!;
     const row = Math.floor(tile / size);
     const flipIndex = flipped?.get(tile);
     const grass = owner === EMPTY;
+    const color = grass ? "" : teamColor(owner);
     const cls = ["hex", grass ? "grass" : "owned", placed?.tile === tile ? "placed" : "", flipIndex !== undefined ? "flipped" : ""].join(" ");
+    // With a map, grass is the board-wide map showing through the transparent fill (which still takes the tap).
+    // A claimed tile carries its own copy of the map inside .hex-body, so the multiply tint pops and flips with it.
+    let face;
+    if (map && grass) face = <polygon class="hex-fill" points={TILE} style={{ fill: "transparent" }} />;
+    else if (map)
+      face = (
+        <>
+          <polygon class="hex-fill" points={TILE} style={{ fill: "transparent" }} />
+          <g class="hex-claim">
+            <image href={map} x={(-c.x).toFixed(2)} y={(-c.y).toFixed(2)} width={mapW} height={mapH} preserveAspectRatio="none" clip-path={`url(#${CLIP_ID})`} />
+            <polygon points={TILE} fill={CLAIM_PAPER} fill-opacity={CLAIM_LIGHTEN[color.toLowerCase()] ?? 0.4} />
+            <polygon points={TILE} fill={color} style={{ mixBlendMode: "multiply" }} />
+          </g>
+        </>
+      );
+    else
+      face = (
+        <>
+          <polygon class="hex-fill" points={TILE} style={grass ? undefined : { fill: color }} />
+          <image
+            href={landArt(grass ? GRASS[(tile * 7 + row * 3) % GRASS.length]! : CLAIMED[(tile * 5 + row) % CLAIMED.length]!)}
+            x={-TILE_W / 2}
+            y={-TILE_R}
+            width={TILE_W}
+            height={TILE_R * 2}
+            preserveAspectRatio="none"
+            clip-path={`url(#${CLIP_ID})`}
+          />
+        </>
+      );
     return (
       <g key={tile} data-tile={tile} class={cls} transform={`translate(${c.x.toFixed(2)} ${c.y.toFixed(2)})`}>
-        <polygon class="hex-side" points={hexPoints(TILE_R, 0, grass ? GRASS_DROP : OWNED_DROP)} style={{ fill: grass ? GRASS_SIDE : shade(teamColor(owner), 0.5) }} />
-        <g transform={grass ? undefined : `translate(0 ${-OWNED_LIFT})`}>
-          <g class="hex-body" style={flipIndex !== undefined ? flipDelay(flipIndex) : undefined}>
-            <polygon class="hex-fill" points={TILE} style={grass ? undefined : { fill: teamColor(owner) }} />
-            <image
-              href={landArt(grass ? GRASS[(tile * 7 + row * 3) % GRASS.length]! : CLAIMED[(tile * 5 + row) % CLAIMED.length]!)}
-              x={-TILE_W / 2}
-              y={-TILE_R}
-              width={TILE_W}
-              height={TILE_R * 2}
-              preserveAspectRatio="none"
-              clip-path={`url(#${CLIP_ID})`}
-            />
-            <polygon class="hex-edge" points={TILE} />
-          </g>
+        <g class="hex-body" style={flipIndex !== undefined ? flipDelay(flipIndex) : undefined}>
+          {face}
+          <polygon class="hex-edge" points={TILE} />
         </g>
       </g>
     );
@@ -262,15 +293,14 @@ export function HexBoard({ board, viewer, selected, placed, capture, label }: He
     const c = centres[tile]!;
     const a = BORDER_CORNERS[side]!;
     const b = BORDER_CORNERS[(side + 1) % 6]!;
-    const y = c.y - BORDER_LIFT;
     return (
       <line
         key={`${tile}-${side}`}
         x1={(c.x + a.x).toFixed(2)}
-        y1={(y + a.y).toFixed(2)}
+        y1={(c.y + a.y).toFixed(2)}
         x2={(c.x + b.x).toFixed(2)}
-        y2={(y + b.y).toFixed(2)}
-        style={{ stroke: towardWhite(teamColor(owner), 0.55) }}
+        y2={(c.y + b.y).toFixed(2)}
+        style={{ stroke: shade(teamColor(owner), 0.55) }}
       />
     );
   });
@@ -338,12 +368,23 @@ export function HexBoard({ board, viewer, selected, placed, capture, label }: He
           <image href={landArt("tray-wood")} width={WOOD} height={WOOD} />
         </pattern>
         <filter id={SHADOW_ID} x="-10%" y="-10%" width="125%" height="125%">
-          <feDropShadow dx={D} dy={1.6 * D} stdDeviation={0.7 * D} flood-color="#000" flood-opacity="0.75" />
+          <feDropShadow dx={0.6 * D} dy={0.8 * D} stdDeviation={D} flood-color="rgb(60,35,12)" flood-opacity="0.35" />
         </filter>
+        {map && (
+          <clipPath id={MAP_CLIP_ID}>
+            {centres.map((c, tile) => (
+              <polygon key={tile} points={hexPoints(TILE_R, c.x, c.y)} />
+            ))}
+          </clipPath>
+        )}
       </defs>
-      <g class="hex-tray" filter={`url(#${SHADOW_ID})`} style={{ fill: `url(#${WOOD_ID})` }}>
-        {tray}
+      <g class="hex-tray">
+        <g filter={`url(#${SHADOW_ID})`} style={{ fill: INK }}>
+          {edge(EDGE_INK_R)}
+        </g>
+        <g style={{ fill: `url(#${WOOD_ID})` }}>{edge(EDGE_R)}</g>
       </g>
+      {map && <image class="hex-map" href={map} x="0" y="0" width={mapW} height={mapH} preserveAspectRatio="none" clip-path={`url(#${MAP_CLIP_ID})`} onError={() => setMapFailed(mapId!)} />}
       {tiles}
       <g class="hex-borders">{borders}</g>
       <g class="hex-overlay">{keeps}</g>

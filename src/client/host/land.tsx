@@ -71,6 +71,7 @@ export function LandStage({ view, send }: { view: LandView; send: Send }) {
       ) : (
         <main class="land-wrap" style={{ backgroundImage: `url(${landArt("background")})` }}>
           <div class="land-board">
+            <img class="land-compass" src={landArt("compass-rose")} alt="" draggable={false} />
             <HexBoard board={view.board} placed={placed} capture={capture} />
           </div>
           <aside class="land-side">
@@ -102,7 +103,7 @@ function LandBanner({ text, color }: { text: string; color: string }) {
   );
 }
 
-/** A walnut plaque with a ribbon in the team colour; the team's shape sits on the ribbon. */
+/** A parchment card with a ribbon in the team colour; the team's shape sits on the ribbon. */
 function TeamCard({ team, leading, by }: { team: HostLandTeam; leading: boolean; by: string | null }) {
   return (
     <section class={`land-team ${team.out ? "out" : ""}`} style={{ ...teamVars(team.color), borderImageSource: useTeamCard(team.color) }}>
@@ -121,7 +122,7 @@ function TeamCard({ team, leading, by }: { team: HostLandTeam; leading: boolean;
         )}
       </header>
       {!team.out && (
-        <ul class="tower-members">
+        <ul class="tower-members" style={teamVars(team.color)}>
           {team.members.map((m) => (
             <li key={m.id} class={`${m.connected ? "" : "offline"} ${m.claiming ? "building" : ""}`}>
               {m.claiming && <span aria-label="placing tiles">🚩</span>}

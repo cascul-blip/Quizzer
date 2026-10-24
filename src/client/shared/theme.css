@@ -812,13 +812,18 @@ a.btn {
   fill: #4f9a3a;
 }
 
-/* A faint 1px line round every tile; the border lines are the main cue for who owns what. */
+/* A thin ink line round every tile; the border lines are the main cue for who owns what. */
 .hex-edge {
   fill: none;
-  stroke: rgba(0, 0, 0, 0.35);
-  stroke-width: 1px;
-  vector-effect: non-scaling-stroke;
+  stroke: rgba(58, 36, 18, 0.6);
+  stroke-width: 0.4;
   stroke-linejoin: round;
+}
+
+/* A claimed tile's own copy of the map with its multiply tint: isolated, so it looks the same still and mid-animation. */
+.hex-claim {
+  isolation: isolate;
+  pointer-events: none;
 }
 
 .hex-body {
@@ -858,13 +863,14 @@ a.btn {
 
 /* Everything drawn over the tiles lets taps through to them. */
 .hex-tray,
+.hex-map,
 .hex-borders,
 .hex-overlay {
   pointer-events: none;
 }
 
 .hex-borders line {
-  stroke-width: 0.8;
+  stroke-width: 1.1;
   stroke-linecap: round;
 }
 
@@ -886,7 +892,6 @@ a.btn {
 }
 
 .hex-fx image {
-  mix-blend-mode: screen;
   transform-box: fill-box;
   transform-origin: center;
 }
