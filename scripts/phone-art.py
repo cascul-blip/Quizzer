@@ -9,7 +9,7 @@ Phones draw this art far smaller than the projector does, and every phone downlo
 once over the host's Wi-Fi. This writes:
   avatar/phone-faces.webp  every character in AVATARS order, one sheet
   avatar/phone-gear.webp   every accessory in ACCESSORIES order (minus "none"), one sheet
-  fight/phone/*.webp       the castles and ground at half size
+  fight/phone/*.webp       the Tower Fight art at half size
   tower/phone/*.webp       the building tiles at half size
   land/phone/*.webp        the Land Grab board art at half size (not the maps, see below)
 
@@ -31,7 +31,12 @@ SHEET_COLS = 8
 QUALITY = 80
 
 HALF_SIZE = {
-    "fight": ["castle-0", "castle-1", "castle-2", "castle-3", "castle-4", "castle-cloth", "ground-grass", "ground-soil"],
+    # fight/phone/aim-backdrop.webp is phone only and comes straight from the art build.
+    "fight": [
+        "castle-0", "castle-1", "castle-2", "castle-3", "castle-4", "castle-cloth", "castle-cloth-0", "castle-cloth-1",
+        "castle-cloth-2", "castle-cloth-3", "castle-cloth-4", "catapult", "catapult-cloth", "scaffold", "fx-dust", "fx-dirt",
+        "fx-crater-rim", "fx-rubble", "sky", "ground-earth", "ground-grass", "ui-attack", "ui-rebuild", "brick",
+    ],
     "tower": ["lobby", "shop", "office-1", "office-2", "office-3", "office-4"],
     # Board, states, effects, keeps and shapes; the team card, banner and plinths are projector only.
     # The maps (land/phone/map-*.webp) come straight from the art build at 0.75 scale and serve both screens.

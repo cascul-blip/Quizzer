@@ -410,25 +410,6 @@ a.btn {
   height: 100%;
 }
 
-.bf-cloud {
-  animation: bf-drift 40s linear infinite alternate;
-}
-
-.bf-cloud.c1,
-.bf-cloud.c3 {
-  animation-duration: 55s;
-  animation-direction: alternate-reverse;
-}
-
-@keyframes bf-drift {
-  from {
-    translate: -40px 0;
-  }
-  to {
-    translate: 40px 0;
-  }
-}
-
 .castle-fire path {
   transform-box: fill-box;
   transform-origin: bottom center;
@@ -444,7 +425,7 @@ a.btn {
   }
 }
 
-.smoke circle {
+.smoke image {
   transform-box: fill-box;
   transform-origin: center;
   animation: smoke-rise 1.8s ease-out infinite both;
@@ -514,6 +495,26 @@ a.btn {
   }
   to {
     transform: translate(var(--dx), var(--dy)) scale(0.2);
+    opacity: 0;
+  }
+}
+
+.burst-dirt {
+  transform-box: fill-box;
+  transform-origin: bottom center;
+  animation: burst-dirt 1.2s ease-out both;
+}
+
+@keyframes burst-dirt {
+  from {
+    transform: scale(0.4);
+    opacity: 1;
+  }
+  60% {
+    opacity: 1;
+  }
+  to {
+    transform: scale(1);
     opacity: 0;
   }
 }
