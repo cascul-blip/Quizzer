@@ -1030,6 +1030,7 @@ h1 {
   gap: 12px;
   padding: 10px 12px 16px;
   min-height: 0;
+  background: linear-gradient(rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.35)), var(--fight-backdrop) center bottom / cover;
 }
 
 .fight-screen .battlefield {
@@ -1083,10 +1084,10 @@ h1 {
   flex: 1;
   min-height: 110px;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 14px;
+  text-align: left;
   font-size: 26px;
   font-weight: 900;
   color: #fff;
@@ -1096,21 +1097,27 @@ h1 {
 }
 
 .fight-choice.attack {
-  background: #d9480f;
+  background: linear-gradient(#b23a14, #6e1a08);
+  border: 3px solid #e8be6e;
 }
 
 .fight-choice.rebuild {
-  background: #2f7a1f;
+  background: linear-gradient(#46782a, #22421a);
+  border: 3px solid #e8be6e;
 }
 
 .fight-choice small {
+  display: block;
   font-size: 14px;
   font-weight: 700;
   opacity: 0.9;
 }
 
 .fight-choice .big-icon {
-  font-size: 40px;
+  height: 96px;
+  max-height: 70%;
+  width: auto;
+  flex: none;
 }
 
 .fight-choice:disabled {
@@ -1147,6 +1154,7 @@ h1 {
   flex-direction: column-reverse;
   gap: 4px;
   padding: 4px;
+  background: #1c1614;
 }
 
 .wall-row {
@@ -1158,8 +1166,9 @@ h1 {
 .brick {
   flex: 2;
   border-radius: 3px;
-  background: linear-gradient(color-mix(in srgb, var(--team) 70%, #fff) 0 12%, var(--team) 12% 80%, color-mix(in srgb, var(--team) 70%, #000) 80%);
-  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.25);
+  background: var(--team) var(--brick) center / 100% 100%;
+  background-blend-mode: multiply;
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.35);
   animation: brick-in 0.22s cubic-bezier(0.3, 1.5, 0.6, 1) both;
 }
 
@@ -1189,12 +1198,20 @@ h1 {
   position: relative;
   margin: auto;
   padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   border-radius: 999px;
-  background: rgba(20, 5, 45, 0.85);
+  background: rgba(24, 14, 10, 0.9);
+  border: 2px solid #e8be6e;
   font-size: 22px;
   font-weight: 900;
   text-align: center;
   font-variant-numeric: tabular-nums;
+}
+
+.wall-label img {
+  height: 36px;
 }
 
 /* ----- Robot Attack ----- */
