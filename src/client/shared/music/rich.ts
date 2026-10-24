@@ -1,13 +1,11 @@
 /**
- * The "rich" sound, for tracks that opt in with `rich` (today: Kingdom Siege, Racer and Land Grab).
+ * The "rich" sound, for tracks that opt in with `rich` (today: Kingdom Siege and Racer).
  * Every other track keeps the plain oscillators in engine.ts, so the two can be compared.
  *
- * Three styles:
+ * Two styles:
  * - "acoustic" (`rich: true`): early-music instruments for Kingdom Siege; its drums stay plain.
  * - "arcade" (`rich: "arcade"`): a late-80s arcade-racer sound for Racer: FM lead and slap bass,
  *   chorused pulse stabs, drum-machine kit, tighter timing and a tempo-synced ping-pong echo.
- * - "orchestral" (`rich: "orchestral"`): Land Grab's piano and orchestra: a modelled piano, low
- *   strings and orchestral percussion, with the acoustic style's strings, brass and pad.
  *
  * Adds, all generated in code:
  * - humanised timing and velocity (small, seeded, so a loop sounds the same every time);
@@ -20,7 +18,7 @@
 
 type Ctx = BaseAudioContext;
 
-export type RichStyle = "acoustic" | "arcade" | "orchestral";
+export type RichStyle = "acoustic" | "arcade";
 
 /** The style a track's `rich` flag asks for, or null for the plain sound. */
 export const richStyle = (rich: boolean | RichStyle | undefined): RichStyle | null => (rich === true ? "acoustic" : rich || null);
@@ -66,18 +64,11 @@ export function humanize(step: number, layer: number, style: RichStyle = "acoust
 const PAN: Record<RichStyle, Partial<Record<string, number>>> = {
   acoustic: { pluck: -0.35, flute: 0.25, brass: 0.15, bell: 0.3, woodblock: -0.25, snare: 0.1, hat: 0.35, cymbal: -0.3, organ: -0.1 },
   arcade: { hat: 0.3, openhat: -0.3, chipnoise: 0.15, snare: 0.05 },
-  // Orchestra seating: basses to the right, timpani back left, brass right of centre.
-  orchestral: { piano: -0.05, tribass: 0.3, brass: 0.2, timpani: -0.25, cymbal: 0.3 },
 };
 export const panFor = (inst: string, style: RichStyle = "acoustic"): number => PAN[style][inst] ?? 0;
 
 /** Lute chords are strummed: each note of a chord this much later than the one below. */
 export const STRUM_S = 0.012;
-/** A pianist's chord is nearly together, but not quite: the lower note leads by this much. */
-export const PIANO_ROLL_S = 0.006;
-
-/** How far apart the notes of a chord start, for an instrument in a style (0: all together). */
-export const strumFor = (inst: string, style: RichStyle): number => (inst === "pluck" ? STRUM_S : inst === "piano" && style === "orchestral" ? PIANO_ROLL_S : 0);
 
 // ---------- shared pieces ----------
 
@@ -213,8 +204,6 @@ function pluckBuffer(ctx: Ctx, period: number): AudioBuffer {
  */
 export function playRich(ctx: Ctx, dest: AudioNode, inst: string, t: number, freq: number, len: number, vol: number, detune: number, style: RichStyle = "acoustic", accent = false): boolean {
   if (style === "arcade") return playArcade(ctx, dest, inst, t, freq, len, vol * (accent ? 1.35 : 1), detune, accent);
-  // The orchestral style adds its own piano, low strings and percussion to the acoustic instruments.
-  if (style === "orchestral" && playOrchestral(ctx, dest, inst, t, freq, len, vol * (accent ? 1.35 : 1), detune, accent)) return true;
   const v = vol;
   switch (inst) {
     case "pluck": {
@@ -519,124 +508,6 @@ function playArcade(ctx: Ctx, dest: AudioNode, inst: string, t: number, freq: nu
       return true;
     case "openhat":
       metalHat(ctx, dest, t, 0.07 * v, 0.3);
-      return true;
-  }
-  return false;
-}
-
-// ---------- orchestral instruments (Land Grab) ----------
-
-/** Piano strings are stiff, so their overtones run a little sharp: partial n sits at n·f·√(1 + B·n²). */
-export const PIANO_STIFFNESS = 0.0004;
-export const pianoPartial = (freq: number, n: number): number => n * freq * Math.sqrt(1 + PIANO_STIFFNESS * n * n);
-
-/** Each partial's level, and whether it gets a second, slightly detuned string (the beating of a piano's unison). */
-const PIANO_PARTIALS: [level: number, unison: boolean][] = [
-  [1, true],
-  [0.45, true],
-  [0.22, false],
-  [0.12, false],
-  [0.07, false],
-  [0.04, false],
-];
-
-function playOrchestral(ctx: Ctx, dest: AudioNode, inst: string, t: number, freq: number, len: number, v: number, detune: number, accent: boolean): boolean {
-  switch (inst) {
-    case "piano": {
-      // A modelled piano: stretched overtones that die away faster the higher they are, a quick drop after the
-      // hammer then a long ring, beating between unison strings, a felt thump, brighter when played harder,
-      // and placed across the keyboard (low notes left, high right).
-      const ring = Math.min(Math.max(0.6, Math.min(3.5, 2.2 * Math.sqrt(262 / freq))), 0.8 + len * 2.5);
-      const end = t + ring + 0.1;
-      const pan = ctx.createStereoPanner();
-      pan.pan.value = Math.max(-0.5, Math.min(0.5, Math.log2(freq / 262) * 0.25));
-      pan.connect(dest);
-      const bright = Math.min(ctx.sampleRate / 2 - 100, freq * (5 + 9 * Math.min(1.2, v)));
-      const f = filterEnv(ctx, t, bright, bright, Math.max(freq * 2.5, 400), 0.001, ring * 0.5);
-      f.connect(pan);
-      PIANO_PARTIALS.forEach(([level, unison], i) => {
-        const n = i + 1;
-        const pf = pianoPartial(freq, n);
-        if (pf > ctx.sampleRate / 2 - 200) return;
-        const peak = 0.2 * v * level;
-        const decay = ring / (1 + 0.6 * i);
-        const g = ctx.createGain();
-        g.gain.setValueAtTime(0.0001, t);
-        g.gain.exponentialRampToValueAtTime(peak, t + 0.003);
-        g.gain.exponentialRampToValueAtTime(peak * 0.35, t + 0.003 + decay * 0.12);
-        g.gain.exponentialRampToValueAtTime(0.0001, t + decay);
-        g.connect(f);
-        if (unison) {
-          const half = ctx.createGain();
-          half.gain.value = 0.5;
-          half.connect(g);
-          for (const det of [-1.2, 1.2]) osc(ctx, half, "sine", pf, t, Math.min(end, t + decay + 0.05), det + detune);
-        } else osc(ctx, g, "sine", pf, t, Math.min(end, t + decay + 0.05), detune);
-      });
-      airNoise(ctx, pan, t, 0.06 * v, 0.001, 0.003, 0.03, "bandpass", Math.min(freq * 4, 4000), 0.8);
-      return true;
-    }
-    case "tribass": {
-      // Cellos and basses: two bowed saws through a filter that opens with the stroke, a sub-octave, a little bow noise.
-      const end = t + len + 0.3;
-      const attack = Math.min(0.05, len * 0.3);
-      const f = filterEnv(ctx, t, 300, 1200, 700, attack, 0.2);
-      const g = ctx.createGain();
-      env(g.gain, t, 0.25 * v, attack, Math.max(0, len - attack - 0.02), 0.15);
-      f.connect(g).connect(dest);
-      for (const det of [-6, 6]) osc(ctx, f, "sawtooth", freq, t, end, det + detune);
-      const sub = ctx.createGain();
-      sub.gain.value = 0.5;
-      sub.connect(g);
-      osc(ctx, sub, "sine", freq / 2, t, end);
-      airNoise(ctx, dest, t, 0.01 * v, attack, Math.max(0, len - attack), 0.12, "bandpass", freq * 6, 1.2);
-      return true;
-    }
-    case "timpani": {
-      // A kettle drum: a membrane's main modes (inharmonic, the upper ones dying first), settling onto the note
-      // just after the stroke, with a soft mallet.
-      const f0 = freq || 98;
-      for (const [ratio, level, decay] of [
-        [1, 1, 1.4],
-        [1.5, 0.5, 0.9],
-        [1.99, 0.25, 0.6],
-        [2.44, 0.15, 0.4],
-      ] as const) {
-        const o = ctx.createOscillator();
-        o.frequency.setValueAtTime(f0 * ratio * 1.08, t);
-        o.frequency.exponentialRampToValueAtTime(f0 * ratio, t + 0.08);
-        const g = ctx.createGain();
-        env(g.gain, t, 0.55 * v * level, 0.003, 0.02, decay);
-        o.connect(g).connect(dest);
-        o.start(t);
-        o.stop(t + decay + 0.1);
-      }
-      airNoise(ctx, dest, t, 0.3 * v, 0.001, 0.01, 0.08, "lowpass", 600, 0.7);
-      return true;
-    }
-    case "taiko": {
-      // A big drum: a deep body sweeping down, a second mode above it, the slap of the stick and the boom of the shell.
-      for (const [from, to, level, decay] of [
-        [accent ? 120 : 100, 50, 0.8, 0.7],
-        [accent ? 210 : 180, 95, 0.25, 0.3],
-      ] as const) {
-        const o = ctx.createOscillator();
-        o.frequency.setValueAtTime(from, t);
-        o.frequency.exponentialRampToValueAtTime(to, t + 0.35);
-        const g = ctx.createGain();
-        env(g.gain, t, level * v, 0.003, 0.03, decay);
-        o.connect(g).connect(dest);
-        o.start(t);
-        o.stop(t + decay + 0.1);
-      }
-      airNoise(ctx, dest, t, 0.35 * v, 0.001, 0.01, 0.06, "bandpass", 900, 0.8);
-      airNoise(ctx, dest, t, 0.3 * v, 0.002, 0.03, 0.25, "lowpass", 300, 0.7);
-      return true;
-    }
-    case "cymbal":
-      // A suspended cymbal: a long metallic shimmer over washing noise.
-      metalHat(ctx, dest, t, 0.05 * v, 2.2);
-      airNoise(ctx, dest, t, 0.09 * v, 0.002, 0.02, 1.8, "highpass", 4500, 0.7);
       return true;
   }
   return false;

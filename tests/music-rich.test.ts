@@ -1,23 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { STEPS_PER_BAR, renderInto, scheduleStep, stepSeconds, type Track } from "../src/client/shared/music/engine.ts";
-import {
-  ARCADE_TIGHTNESS,
-  ECHO_STEPS,
-  HUMAN_GAIN,
-  HUMAN_TIME_S,
-  PIANO_ROLL_S,
-  STRUM_S,
-  createEcho,
-  createRichBus,
-  humanize,
-  impulseResponse,
-  pianoPartial,
-  playRich,
-  richStyle,
-  saturationCurve,
-  seeded,
-  strumFor,
-} from "../src/client/shared/music/rich.ts";
+import { ARCADE_TIGHTNESS, ECHO_STEPS, HUMAN_GAIN, HUMAN_TIME_S, STRUM_S, createEcho, createRichBus, humanize, impulseResponse, playRich, richStyle, saturationCurve, seeded } from "../src/client/shared/music/rich.ts";
 import { TRACKS } from "../src/client/shared/music/tracks.ts";
 
 // A stand-in for an AudioContext (tests have none): it records every node made and every source started.
@@ -100,7 +83,7 @@ function playLoop(ctx: FakeCtx & BaseAudioContext, track: Track, intensity: numb
 const nearestGap = (t: number, grid: number[]) => Math.min(...grid.map((g) => Math.abs(t - g)));
 
 describe("rich sound is opt-in", () => {
-  test("only the Kingdom Siege (acoustic), Racer (arcade) and Land Grab (orchestral) tracks use it", () => {
+  test("only the Kingdom Siege (acoustic) and Racer (arcade) tracks use it", () => {
     const rich = Object.fromEntries(Object.values(TRACKS).filter((t) => t.rich).map((t) => [t.id, richStyle(t.rich)]));
     expect(rich).toEqual({
       "siege-lobby": "acoustic",
@@ -109,14 +92,11 @@ describe("rich sound is opt-in", () => {
       "racer-lobby": "arcade",
       "racer-drive": "arcade",
       "racer-results": "arcade",
-      "land-lobby": "orchestral",
-      "land-play": "orchestral",
-      "land-results": "orchestral",
     });
   });
 
   test("the flag's values map to styles", () => {
-    expect([undefined, false, true, "arcade" as const, "orchestral" as const].map(richStyle)).toEqual([null, null, "acoustic", "arcade", "orchestral"]);
+    expect([undefined, false, true, "arcade" as const].map(richStyle)).toEqual([null, null, "acoustic", "arcade"]);
   });
 
   test("other tracks get no rich nodes and play exactly on the grid", () => {
@@ -133,7 +113,7 @@ describe("rich sound is opt-in", () => {
   });
 
   test("a track plays the same with rich: false as with no flag at all", () => {
-    const track = TRACKS["dragon-battle"];
+    const track = TRACKS["land-play"];
     const a = fake();
     const b = fake();
     playLoop(a, track, 0.7);
@@ -163,8 +143,7 @@ describe("rich Kingdom Siege tracks", () => {
         expect(ctx.starts.length).toBeGreaterThan(0);
         // Strummed lute chords and the plain drums' built-in offsets (a clap's three hits) can add a little.
         // Arcade tracks are tighter, and none of their instruments have offsets of their own.
-        const style = richStyle(track.rich);
-        const window = style === "arcade" ? HUMAN_TIME_S * ARCADE_TIGHTNESS : style === "orchestral" ? HUMAN_TIME_S + 2 * PIANO_ROLL_S : HUMAN_TIME_S + 3 * STRUM_S;
+        const window = richStyle(track.rich) === "arcade" ? HUMAN_TIME_S * ARCADE_TIGHTNESS : HUMAN_TIME_S + 3 * STRUM_S;
         for (const s of ctx.starts) expect(nearestGap(s, grid)).toBeLessThanOrEqual(window + 1e-9);
         expect(ctx.kinds().has("panner")).toBe(true);
       }
@@ -239,42 +218,6 @@ describe("arcade style (Racer)", () => {
       expect(Math.abs(humanize(step, 3, "arcade").dt)).toBeLessThanOrEqual(HUMAN_TIME_S * ARCADE_TIGHTNESS);
       expect(humanize(step, 3, "arcade").dt).toBeCloseTo(humanize(step, 3).dt * ARCADE_TIGHTNESS, 12);
     }
-  });
-});
-
-describe("orchestral style (Land Grab)", () => {
-  const land = Object.values(TRACKS).filter((t) => richStyle(t.rich) === "orchestral");
-  const plays = (inst: string, style: "acoustic" | "orchestral") => playRich(fake(), dest(new FakeCtx()), inst, 1, 220, 0.4, 1, 0, style);
-
-  test("has a rich version of every Land Grab instrument except the heartbeat", () => {
-    const insts = new Set(land.flatMap((t) => t.layers.map((l) => l.inst)));
-    for (const inst of insts) expect(plays(inst, "orchestral"), inst).toBe(inst !== "heart");
-  });
-
-  test("its piano, low strings and percussion don't leak into Kingdom Siege's acoustic style", () => {
-    for (const inst of ["piano", "tribass", "timpani", "taiko", "cymbal"]) expect(plays(inst, "acoustic"), inst).toBe(false);
-  });
-
-  test("the piano's overtones are stretched sharp, more so the higher they go", () => {
-    let prev = 1;
-    for (let n = 2; n <= 6; n++) {
-      const ratio = pianoPartial(220, n) / (220 * n);
-      expect(ratio).toBeGreaterThan(prev);
-      expect(ratio).toBeLessThan(1.01);
-      prev = ratio;
-    }
-    expect(pianoPartial(220, 1)).toBeCloseTo(220, 1);
-  });
-
-  test("piano chords roll a little in the orchestral style only; the lute is strummed in any style", () => {
-    expect(strumFor("piano", "orchestral")).toBe(PIANO_ROLL_S);
-    expect(strumFor("piano", "acoustic")).toBe(0);
-    expect(strumFor("pluck", "acoustic")).toBe(STRUM_S);
-    expect(strumFor("strings", "orchestral")).toBe(0);
-  });
-
-  test("land-play renders through every intensity, heartbeat included, without errors", () => {
-    for (let i = 0; i <= 1; i += 0.05) renderInto(fake(), dest(new FakeCtx()), TRACKS["land-play"], 4, i);
   });
 });
 
