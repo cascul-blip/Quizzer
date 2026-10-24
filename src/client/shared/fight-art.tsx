@@ -22,30 +22,70 @@ import {
 } from "../../shared/fight-physics.ts";
 import { TOWER_MAX_DAMAGE, type FightShot } from "../../shared/protocol.ts";
 import { ACCESSORY_ART, AVATAR_ART } from "./avatar-art.tsx";
-import castleClothImg from "./fight/castle-cloth.webp";
 import castle0 from "./fight/castle-0.webp";
 import castle1 from "./fight/castle-1.webp";
 import castle2 from "./fight/castle-2.webp";
 import castle3 from "./fight/castle-3.webp";
 import castle4 from "./fight/castle-4.webp";
+import castleCloth0 from "./fight/castle-cloth-0.webp";
+import castleCloth1 from "./fight/castle-cloth-1.webp";
+import castleCloth2 from "./fight/castle-cloth-2.webp";
+import castleCloth3 from "./fight/castle-cloth-3.webp";
+import castleCloth4 from "./fight/castle-cloth-4.webp";
+import catapultImg from "./fight/catapult.webp";
+import catapultClothImg from "./fight/catapult-cloth.webp";
+import dirtImg from "./fight/fx-dirt.webp";
+import dustImg from "./fight/fx-dust.webp";
+import rubbleImg from "./fight/fx-rubble.webp";
+import earthImg from "./fight/ground-earth.webp";
 import grassImg from "./fight/ground-grass.webp";
-import soilImg from "./fight/ground-soil.webp";
-import phoneClothImg from "./fight/phone/castle-cloth.webp";
+import scaffoldImg from "./fight/scaffold.webp";
+import skyImg from "./fight/sky.webp";
+import phoneBackdropImg from "./fight/phone/aim-backdrop.webp";
+import phoneBrickImg from "./fight/phone/brick.webp";
 import phoneCastle0 from "./fight/phone/castle-0.webp";
 import phoneCastle1 from "./fight/phone/castle-1.webp";
 import phoneCastle2 from "./fight/phone/castle-2.webp";
 import phoneCastle3 from "./fight/phone/castle-3.webp";
 import phoneCastle4 from "./fight/phone/castle-4.webp";
+import phoneCastleCloth0 from "./fight/phone/castle-cloth-0.webp";
+import phoneCastleCloth1 from "./fight/phone/castle-cloth-1.webp";
+import phoneCastleCloth2 from "./fight/phone/castle-cloth-2.webp";
+import phoneCastleCloth3 from "./fight/phone/castle-cloth-3.webp";
+import phoneCastleCloth4 from "./fight/phone/castle-cloth-4.webp";
+import phoneCatapultImg from "./fight/phone/catapult.webp";
+import phoneCatapultClothImg from "./fight/phone/catapult-cloth.webp";
+import phoneDirtImg from "./fight/phone/fx-dirt.webp";
+import phoneDustImg from "./fight/phone/fx-dust.webp";
+import phoneRubbleImg from "./fight/phone/fx-rubble.webp";
+import phoneEarthImg from "./fight/phone/ground-earth.webp";
 import phoneGrassImg from "./fight/phone/ground-grass.webp";
-import phoneSoilImg from "./fight/phone/ground-soil.webp";
+import phoneScaffoldImg from "./fight/phone/scaffold.webp";
+import phoneSkyImg from "./fight/phone/sky.webp";
+import phoneUiAttackImg from "./fight/phone/ui-attack.webp";
+import phoneUiRebuildImg from "./fight/phone/ui-rebuild.webp";
 import { isPhoneArt, pickArt } from "./phone-art.ts";
-import { hash01 } from "./tower-art.tsx";
 
 /** Field height → SVG y. */
 export const sy = (y: number) => FIELD_H - y;
 const BASE = sy(GROUND);
 /** How long an impact burst shows after a shot lands. */
 export const IMPACT_MS = 1200;
+/** Art for the phone's own screens around the battlefield (backdrop, choice icons, repair bricks). */
+export const FIGHT_PHONE_UI = { backdrop: phoneBackdropImg, attack: phoneUiAttackImg, rebuild: phoneUiRebuildImg, brick: phoneBrickImg };
+
+/** The painted sky and earth cover the field once; mirrored copies either side fill wide screens seamlessly. */
+function Mirrored({ href, y, height }: { href: string; y: number; height: number }) {
+  const at = { href, y, height, preserveAspectRatio: "none" };
+  // The copies overlap the main image by one unit, so no anti-aliased hairline shows at the joins.
+  return (
+    <>
+      <image {...at} x={0} width={FIELD_W} />
+      <image {...at} x={-1} width={FIELD_W + 1} transform="scale(-1 1)" />
+      <image {...at} x={-2 * FIELD_W} width={FIELD_W + 1} transform="scale(-1 1)" />
+    </>
+  );
+}
 
 /** The whole scene: sky, terrain, both towers and catapults; extra layers go on top. */
 export function Battlefield(props: {
@@ -68,35 +108,28 @@ export function Battlefield(props: {
   return (
     <svg ref={props.svgRef} class={`battlefield ${props.class ?? ""}`} viewBox={`0 0 ${FIELD_W} ${FIELD_H}`} preserveAspectRatio="xMidYMax meet" aria-hidden="true">
       <defs>
-        <linearGradient id="bf-sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#2f8ff0" />
-          <stop offset="0.5" stop-color="#5fb4ff" />
-          <stop offset="1" stop-color="#cdeaff" />
-        </linearGradient>
-        {/* Generated textures (see scripts/fight-ground.py), tiled in field units so they don't stretch with the terrain. */}
-        <pattern id="bf-soil" patternUnits="userSpaceOnUse" width={SOIL_TILE} height={SOIL_TILE}>
-          <image href={pickArt(soilImg, phoneSoilImg)} width={SOIL_TILE} height={SOIL_TILE} />
-        </pattern>
+        {/* The grass texture is tiled in field units so it doesn't stretch with the terrain. */}
         <pattern id="bf-grass" patternUnits="userSpaceOnUse" width={GRASS_TILE} height={GRASS_TILE}>
           <image href={pickArt(grassImg, phoneGrassImg)} width={GRASS_TILE} height={GRASS_TILE} />
         </pattern>
         {/* The soil darkens with depth; in field units, so the extended ground matches the hill. */}
         <linearGradient id="bf-depth" gradientUnits="userSpaceOnUse" x1="0" y1={sy(Math.max(...terrain))} x2="0" y2={FIELD_H + 20}>
           <stop offset="0" stop-color="#2a1608" stop-opacity="0" />
-          <stop offset="1" stop-color="#2a1608" stop-opacity="0.55" />
+          <stop offset="1" stop-color="#2a1608" stop-opacity="0.3" />
         </linearGradient>
         {/* A collapsing tower sinks out of sight at ground level. */}
         <clipPath id="bf-above-ground">
           <rect x={-FIELD_W} y={-FIELD_H} width={FIELD_W * 3} height={FIELD_H + BASE} />
         </clipPath>
       </defs>
-      <rect x={-FIELD_W} y={-FIELD_H} width={FIELD_W * 3} height={FIELD_H * 2} fill="url(#bf-sky)" />
-      <Clouds />
+      {/* Flat top colour of the painted sky, for screens taller than the field. */}
+      <rect x={-FIELD_W} y={-FIELD_H} width={FIELD_W * 3} height={FIELD_H * 2} fill="#1f1f18" />
+      <Mirrored href={pickArt(skyImg, phoneSkyImg)} y={0} height={FIELD_H} />
       <Terrain terrain={terrain} />
       {[0, 1].map((team) => (
         <g key={team}>
           <CastleTower team={team} color={colors[team]!} damage={damage[team] ?? 0} collapsing={collapsing === team} repairing={!!props.repairing?.[team]} />
-          <Catapult team={team} loaded={loaded?.[team] ?? null} r={props.spriteR} />
+          <Catapult team={team} color={colors[team]!} loaded={loaded?.[team] ?? null} r={props.spriteR} />
         </g>
       ))}
       {children}
@@ -104,31 +137,10 @@ export function Battlefield(props: {
   );
 }
 
-function Clouds() {
-  return (
-    <g class="bf-clouds" fill="#fff" opacity="0.85">
-      {[0, 1, 2, 3].map((i) => {
-        const x = 80 + i * 250 + hash01(i, 5) * 80;
-        const y = 70 + hash01(i, 6) * 110;
-        const s = 0.7 + hash01(i, 7) * 0.6;
-        return (
-          <g key={i} class={`bf-cloud c${i}`} transform={`translate(${x} ${y}) scale(${s})`}>
-            <circle cx="0" cy="10" r="22" />
-            <circle cx="26" cy="0" r="28" />
-            <circle cx="54" cy="10" r="20" />
-            <rect x="0" y="10" width="54" height="22" rx="11" />
-          </g>
-        );
-      })}
-    </g>
-  );
-}
-
-/** Size of one texture tile in field units. */
-const SOIL_TILE = 150;
+/** Size of one grass tile in field units. */
 const GRASS_TILE = 56;
 /** Depth of the grass band below the surface, in field units. */
-const GRASS_DEPTH = 13;
+const GRASS_DEPTH = 10;
 
 export function Terrain({ terrain }: { terrain: number[] }) {
   // Flat ground continues past both edges, for screens wider than the field.
@@ -141,7 +153,11 @@ export function Terrain({ terrain }: { terrain: number[] }) {
       <clipPath id="bf-ground">
         <path d={ground} />
       </clipPath>
-      <path d={ground} fill="url(#bf-soil)" />
+      {/* Plain loam under the earth painting (the path runs below the screen); craters just clip the painting deeper. */}
+      <path d={ground} fill="#2a1a10" />
+      <g clip-path="url(#bf-ground)">
+        <Mirrored href={pickArt(earthImg, phoneEarthImg)} y={37.5} height={562.5} />
+      </g>
       <path d={ground} fill="url(#bf-depth)" />
       <g clip-path="url(#bf-ground)" fill="none" stroke-linejoin="round">
         <path d={`M${pts}`} stroke="#2a1608" stroke-opacity="0.35" stroke-width={GRASS_DEPTH * 2 + 8} />
@@ -154,15 +170,17 @@ export function Terrain({ terrain }: { terrain: number[] }) {
 
 // Proportions of the castle image, as printed by scripts/fight-castle.py.
 const CASTLE_ASPECT = 0.403;
-/** Share of the image height above the battlements (flagpole and flag). */
-const CASTLE_FLAG_PART = 0.169;
+/** Share of the image height above the battlements (roof and pennant). */
+const CASTLE_FLAG_PART = 0.198;
 /** Drawn so the stonework is as tall as the tower's hit box. */
 const CASTLE_H = TOWER_H / (1 - CASTLE_FLAG_PART);
 const CASTLE_W = CASTLE_H * CASTLE_ASPECT;
-const STONE = "#8f9199";
 /** The tower at each damage stage, intact first. */
 const CASTLE_STAGES = [castle0, castle1, castle2, castle3, castle4];
 const PHONE_CASTLE_STAGES = [phoneCastle0, phoneCastle1, phoneCastle2, phoneCastle3, phoneCastle4];
+/** The team-cloth mask for each stage; damaged stages lose roof and banner, so one mask won't do. */
+const CLOTH_STAGES = [castleCloth0, castleCloth1, castleCloth2, castleCloth3, castleCloth4];
+const PHONE_CLOTH_STAGES = [phoneCastleCloth0, phoneCastleCloth1, phoneCastleCloth2, phoneCastleCloth3, phoneCastleCloth4];
 
 /**
  * A stone castle tower (generated images, see scripts/fight-castle.py) whose flag and
@@ -179,7 +197,7 @@ export function CastleTower({ team, color, damage, collapsing, repairing }: { te
       {/* The right-hand tower is mirrored, so both banners hang on the outer side. */}
       <g transform={team === 0 ? undefined : `translate(${2 * cx} 0) scale(-1 1)`}>
         <mask id={`castle-cloth-${team}`} maskUnits="userSpaceOnUse" {...img}>
-          <image href={pickArt(castleClothImg, phoneClothImg)} {...img} preserveAspectRatio="none" />
+          <image href={pickArt(CLOTH_STAGES[stage]!, PHONE_CLOTH_STAGES[stage]!)} {...img} preserveAspectRatio="none" />
         </mask>
         <rect {...img} fill={color} mask={`url(#castle-cloth-${team})`} />
         {/* Every stage stays in the page so the next one is already loaded when a hit lands. */}
@@ -189,8 +207,8 @@ export function CastleTower({ team, color, damage, collapsing, repairing }: { te
         {damage >= 4 && (
           // Burning in the broken-off corner of the last stage.
           <g class="castle-fire">
-            <path d={`M${cx + 18},${top + 24} q10,-26 4,-44 q18,18 12,44 Z`} fill="#ff8a00" />
-            <path d={`M${cx + 22},${top + 24} q6,-16 2,-28 q10,12 6,28 Z`} fill="#ffd23f" />
+            <path d={`M${cx + 16},${top + 8} q10,-26 4,-44 q18,18 12,44 Z`} fill="#ff8a00" />
+            <path d={`M${cx + 20},${top + 8} q6,-16 2,-28 q10,12 6,28 Z`} fill="#ffd23f" />
           </g>
         )}
       </g>
@@ -200,7 +218,7 @@ export function CastleTower({ team, color, damage, collapsing, repairing }: { te
     <g class={`castle ${collapsing ? "collapsing" : ""}`} data-team={team}>
       {destroyed && !collapsing ? null : collapsing ? <g clip-path="url(#bf-above-ground)">{body}</g> : body}
       {destroyed && <Rubble team={team} />}
-      {damage >= 3 && !destroyed && <Smoke x={cx} y={top - 20} />}
+      {damage >= 3 && !destroyed && <Smoke x={cx} y={top - 8} />}
       {collapsing && <Smoke x={cx} y={BASE - 40} big />}
       {repairing && !destroyed && <Scaffold team={team} />}
     </g>
@@ -210,17 +228,19 @@ export function CastleTower({ team, color, damage, collapsing, repairing }: { te
 /** Wooden scaffolding and a busy hammer while someone repairs the tower. */
 function Scaffold({ team }: { team: number }) {
   const cx = TOWER_X[team]!;
-  const l = cx - TOWER_W / 2 - 10;
-  const r = cx + TOWER_W / 2 + 10;
   const top = BASE - TOWER_H + 20;
-  const plank = (y: number) => <rect key={y} x={l - 4} y={y} width={r - l + 8} height={7} rx="2" fill="#c8913f" stroke="#1f1633" stroke-width="2" />;
   return (
     <g class="scaffold">
-      {[l, r].map((x) => (
-        <rect key={x} x={x - 3} y={top} width={6} height={BASE - top} fill="#a8742e" stroke="#1f1633" stroke-width="2" />
-      ))}
-      <path d={`M${l},${BASE} L${r},${top + 60} M${r},${BASE} L${l},${top + 60}`} stroke="#a8742e" stroke-width="4" />
-      {[top, top + 60, top + 120].map(plank)}
+      {/* Mirrored for Blue, so the ladder faces the hill on both sides. */}
+      <image
+        href={pickArt(scaffoldImg, phoneScaffoldImg)}
+        x={cx - 56}
+        y={BASE - 217}
+        width={112}
+        height={219.2}
+        preserveAspectRatio="none"
+        transform={team === 0 ? undefined : `translate(${2 * cx} 0) scale(-1 1)`}
+      />
       <text class="scaffold-hammer" x={cx + (team === 0 ? 30 : -30)} y={top - 10} text-anchor="middle">
         🔨
       </text>
@@ -228,59 +248,40 @@ function Scaffold({ team }: { team: number }) {
   );
 }
 
+/** The heap a destroyed tower leaves behind. */
 function Rubble({ team }: { team: number }) {
   const cx = TOWER_X[team]!;
-  return (
-    <g class="rubble">
-      {Array.from({ length: 14 }, (_, i) => {
-        const w = 14 + hash01(team, i, 1) * 18;
-        const h = 10 + hash01(team, i, 2) * 12;
-        const px = cx - 55 + hash01(team, i, 3) * 110 - w / 2;
-        const lift = (1 - Math.abs(px + w / 2 - cx) / 60) * 34 * hash01(team, i, 4);
-        return (
-          <rect
-            key={i}
-            x={px}
-            y={BASE - h - Math.max(0, lift)}
-            width={w}
-            height={h}
-            rx="2"
-            fill={hash01(team, i, 6) < 0.5 ? STONE : "#a9abb3"}
-            stroke="#1f1633"
-            stroke-width="2.5"
-            transform={`rotate(${(hash01(team, i, 5) - 0.5) * 50} ${px + w / 2} ${BASE - h / 2})`}
-          />
-        );
-      })}
-    </g>
-  );
+  return <image class="rubble" href={pickArt(rubbleImg, phoneRubbleImg)} x={cx - 65} y={BASE + 4 - 84} width={130} height={84} preserveAspectRatio="none" />;
 }
 
+/** A dust cloud rising over a damaged tower, or a bigger one as it collapses. */
 function Smoke({ x, y, big }: { x: number; y: number; big?: boolean }) {
-  const s = big ? 2.2 : 1;
+  const w = big ? 90 : 70;
+  const h = w * (195 / 256);
   return (
     <g class={`smoke ${big ? "big" : ""}`}>
       {[0, 1, 2].map((i) => (
-        <circle key={i} cx={x + (i - 1) * 10 * s} cy={y} r={12 * s} fill="#6b6b75" style={{ animationDelay: `${i * 0.6}s` }} />
+        <image key={i} href={pickArt(dustImg, phoneDustImg)} x={x - w / 2 + (i - 1) * 8} y={y - h / 2} width={w} height={h} style={{ animationDelay: `${i * 0.6}s` }} />
       ))}
     </g>
   );
 }
 
-/** A wooden catapult; Red's throws to the right, Blue's to the left. */
-export function Catapult({ team, loaded, r }: { team: number; loaded: AvatarChoice | null; r?: number }) {
+/** A wooden catapult with team-coloured cloth; Red's throws to the right, Blue's to the left. */
+export function Catapult({ team, color, loaded, r }: { team: number; color: string; loaded: AvatarChoice | null; r?: number }) {
   const cx = CATAPULT_X[team]!;
   const dir = team === 0 ? 1 : -1;
   const cupY = sy(LAUNCH_Y);
+  // Placed so the cup sits at (cx, LAUNCH_Y) and the wheels on the ground.
+  const img = { x: -4.8, y: cupY - 5, width: 57.1, height: 39.4 };
   return (
     <g class="catapult">
       <g transform={`translate(${cx} 0) scale(${dir} 1)`}>
-        <rect x={-34} y={BASE - 14} width={52} height={9} rx="3" fill="#8a5a2b" stroke="#1f1633" stroke-width="2.5" />
-        <path d={`M-22,${BASE - 12} L-8,${BASE - 40} L6,${BASE - 12}`} fill="none" stroke="#6b4420" stroke-width="7" stroke-linejoin="round" />
-        <line x1={-8} y1={BASE - 38} x2={-40} y2={cupY + 6} stroke="#8a5a2b" stroke-width="7" stroke-linecap="round" />
-        <path d={`M-50,${cupY} q10,14 20,0`} fill="#6b4420" stroke="#1f1633" stroke-width="2.5" />
-        <circle cx={-26} cy={BASE - 5} r={8} fill="#5e3a1a" stroke="#1f1633" stroke-width="2.5" />
-        <circle cx={10} cy={BASE - 5} r={8} fill="#5e3a1a" stroke="#1f1633" stroke-width="2.5" />
+        <mask id={`catapult-cloth-${team}`} maskUnits="userSpaceOnUse" {...img}>
+          <image href={pickArt(catapultClothImg, phoneCatapultClothImg)} {...img} preserveAspectRatio="none" />
+        </mask>
+        <rect {...img} fill={color} mask={`url(#catapult-cloth-${team})`} />
+        <image href={pickArt(catapultImg, phoneCatapultImg)} {...img} preserveAspectRatio="none" />
       </g>
       {loaded && <AvatarSprite choice={loaded} x={cx} y={LAUNCH_Y} r={r} />}
     </g>
@@ -301,19 +302,28 @@ export function AvatarSprite({ choice, x, y, r = SHOT_R * 1.5, spin = 0 }: { cho
   );
 }
 
-/** Burst where a shot landed: a dust cloud on the ground, a big bang on a tower. */
+/** Burst where a shot landed: a spray of dirt on the ground, a big bang on a tower. */
 export function ImpactBurst({ impact }: { impact: ShotImpact }) {
   if (impact.kind === "offscreen") return null;
   const x = impact.x;
   const y = sy(impact.y);
   const tower = impact.kind === "tower";
+  if (!tower) {
+    const w = 80;
+    const h = w * (249 / 256);
+    return (
+      <g class="burst ground">
+        <image class="burst-dirt" href={pickArt(dirtImg, phoneDirtImg)} x={x - w / 2} y={y + 8 - h} width={w} height={h} />
+      </g>
+    );
+  }
   return (
-    <g class={`burst ${tower ? "tower" : "ground"}`}>
+    <g class="burst tower">
       {Array.from({ length: 8 }, (_, i) => {
         const a = (i / 8) * Math.PI * 2;
-        return <circle key={i} cx={x} cy={y} r={tower ? 12 : 9} fill={tower ? (i % 2 ? "#ffd23f" : "#ff6a00") : "#9c7a52"} style={{ "--dx": `${Math.cos(a) * 42}px`, "--dy": `${Math.sin(a) * 42 - 18}px` }} />;
+        return <circle key={i} cx={x} cy={y} r={12} fill={i % 2 ? "#ffd23f" : "#ff6a00"} style={{ "--dx": `${Math.cos(a) * 42}px`, "--dy": `${Math.sin(a) * 42 - 18}px` }} />;
       })}
-      {tower && <text x={x} y={y - 26} text-anchor="middle" class="burst-text">💥</text>}
+      <text x={x} y={y - 26} text-anchor="middle" class="burst-text">💥</text>
     </g>
   );
 }

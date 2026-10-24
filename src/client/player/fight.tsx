@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { CATAPULT_X, LAUNCH_Y, MAX_PULL, launchVector, shotPos, simulate } from "../../shared/fight-physics.ts";
 import { CORRECT_PER_DECISION, REPAIR_MS, TOWER_MAX_DAMAGE, type ClientMsg, type FightShot, type PlayerFightView } from "../../shared/protocol.ts";
-import { AvatarSprite, Battlefield, HealthBar, ShotLayer, sy } from "../shared/fight-art.tsx";
+import { AvatarSprite, Battlefield, FIGHT_PHONE_UI, HealthBar, ShotLayer, sy } from "../shared/fight-art.tsx";
 import { teamInk, teamVars, useCountdown } from "../shared/ui.tsx";
 import { Feedback, StreamQuestion } from "./tower.tsx";
 
 type Send = (m: ClientMsg) => void;
+
+/** The painted storm sky behind every fight screen. */
+const BACKDROP = { "--fight-backdrop": `url(${FIGHT_PHONE_UI.backdrop})` };
 
 /** Seconds of the arc shown while aiming: enough to read the angle, not enough to see where it lands. */
 const PREVIEW_S = 0.45;
@@ -56,7 +59,7 @@ export function FightPlayer({ view, send }: { view: PlayerFightView; send: Send 
   } else if (view.phase === "collapse") {
     const fallen = view.damage.findIndex((d) => d >= TOWER_MAX_DAMAGE);
     body = (
-      <main class="fight-screen">
+      <main class="fight-screen" style={BACKDROP}>
         <Battlefield spriteR={PHONE_SPRITE_R} terrain={view.terrain} damage={view.damage} colors={colors} collapsing={fallen} />
         <h1 class="fight-msg">{fallen === view.team.index ? "😱 Your tower is falling!" : `🎉 Team ${view.teams[fallen]?.name}'s tower is falling!`}</h1>
       </main>
@@ -131,7 +134,7 @@ function DecideScreen({ view, send }: { view: PlayerFightView; send: Send }) {
     send({ type: "fight.choose", action });
   };
   return (
-    <main class="fight-screen">
+    <main class="fight-screen" style={BACKDROP}>
       <Battlefield spriteR={PHONE_SPRITE_R} terrain={view.terrain} damage={view.damage} colors={view.teams.map((t) => t.color)} />
       <div class="fight-head">
         <b>Your move!</b>
@@ -139,13 +142,19 @@ function DecideScreen({ view, send }: { view: PlayerFightView; send: Send }) {
       </div>
       <div class="fight-choices">
         <button class="btn fight-choice attack" disabled={sent} onClick={() => choose("attack")}>
-          <span class="big-icon">💥</span>Attack
-          <small>Launch yourself at Team {view.teams[1 - view.team.index]!.name}'s tower</small>
+          <img class="big-icon" src={FIGHT_PHONE_UI.attack} alt="" />
+          <span>
+            Attack
+            <small>Launch yourself at Team {view.teams[1 - view.team.index]!.name}'s tower</small>
+          </span>
         </button>
         {ownDamage > 0 && (
           <button class="btn fight-choice rebuild" disabled={sent} onClick={() => choose("rebuild")}>
-            <span class="big-icon">🧱</span>Rebuild
-            <small>Repair 1 damage on your tower</small>
+            <img class="big-icon" src={FIGHT_PHONE_UI.rebuild} alt="" />
+            <span>
+              Rebuild
+              <small>Repair 1 damage on your tower</small>
+            </span>
           </button>
         )}
       </div>
@@ -206,7 +215,7 @@ function AimScreen({ view, send }: { view: PlayerFightView; send: Send }) {
   }
 
   return (
-    <main class="fight-screen aim" ref={areaRef} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={() => ((start.current = null), setPull(null))}>
+    <main class="fight-screen aim" style={BACKDROP} ref={areaRef} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={() => ((start.current = null), setPull(null))}>
       <Battlefield spriteR={PHONE_SPRITE_R} terrain={view.terrain} damage={view.damage} colors={view.teams.map((t) => t.color)} loaded={team === 0 ? [back ? null : view.me.avatar, null] : [null, back ? null : view.me.avatar]}>
         {back && (
           <>
@@ -271,13 +280,14 @@ function RepairWall({ color, repairMs, done }: { color: string; repairMs: number
       </div>,
     );
   }
-  const label = !done ? `🧱 Repairing your tower… ${Math.round(progress * 100)}%` : done.repaired ? "✓ Tower repaired!" : "Already repaired by a teammate";
+  const label = !done ? `Repairing your tower… ${Math.round(progress * 100)}%` : done.repaired ? "✓ Tower repaired!" : "Already repaired by a teammate";
   return (
-    <main class={`repair-wall ${done ? "clearing" : ""}`} style={teamVars(color)}>
+    <main class={`repair-wall ${done ? "clearing" : ""}`} style={{ ...teamVars(color), "--brick": `url(${FIGHT_PHONE_UI.brick})` }}>
       <div class="wall" aria-hidden="true">
         {rows}
       </div>
       <div class="wall-label" role="status">
+        {!done && <img src={FIGHT_PHONE_UI.rebuild} alt="" />}
         {label}
       </div>
     </main>
@@ -296,7 +306,7 @@ function WatchScreen({ view, shot }: { view: PlayerFightView; shot: FightShot })
         ? "💨 Missed! You left a crater in the hill"
         : "🌪 Whoosh… right off the map";
   return (
-    <main class="fight-screen">
+    <main class="fight-screen" style={BACKDROP}>
       <Battlefield spriteR={PHONE_SPRITE_R} terrain={view.terrain} damage={view.damage} colors={view.teams.map((t) => t.color)}>
         <ShotLayer
           shots={[shot]}
