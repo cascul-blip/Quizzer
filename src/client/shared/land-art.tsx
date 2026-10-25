@@ -175,6 +175,9 @@ const KEEP_ANCHOR = { x: 0.496, y: 0.85 };
 const BADGE = (0.27 * 2 * TILE_R) / 0.8;
 /** The selection and the capture flash are pictures 1.2 and 1.3 times the tile; the placing pop is square, 2 tiles wide. */
 const SELECTED = 1.2;
+/** The selected tile is also hatched in the map's own ink, so it reads at a glance on a phone. */
+const HATCH_INK = "#1c130a";
+const HATCH = 1.6;
 const FLASH = 1.3;
 const POP = 2 * TILE_W;
 
@@ -192,6 +195,7 @@ const CLIP_ID = "hex-clip";
 const WOOD_ID = "hex-wood";
 const SHADOW_ID = "hex-tray-shadow";
 const MAP_CLIP_ID = "hex-map-clip";
+const HATCH_ID = "hex-hatch";
 
 export const teamColor = (team: number) => TEAMS[team % TEAMS.length]!.color;
 
@@ -370,6 +374,9 @@ export function HexBoard({ board, viewer, selected, placed, capture, label }: He
         <filter id={SHADOW_ID} x="-10%" y="-10%" width="125%" height="125%">
           <feDropShadow dx={0.6 * D} dy={0.8 * D} stdDeviation={D} flood-color="rgb(60,35,12)" flood-opacity="0.35" />
         </filter>
+        <pattern id={HATCH_ID} width={HATCH} height={HATCH} patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <line x1={HATCH / 2} y1="0" x2={HATCH / 2} y2={HATCH} stroke={HATCH_INK} stroke-width={HATCH * 0.4} />
+        </pattern>
         {map && (
           <clipPath id={MAP_CLIP_ID}>
             {centres.map((c, tile) => (
@@ -390,6 +397,7 @@ export function HexBoard({ board, viewer, selected, placed, capture, label }: He
       <g class="hex-overlay">{keeps}</g>
       <g class="hex-overlay">
         {states}
+        {sel && <polygon class="hex-hatch" points={hexPoints(TILE_R, sel.x, sel.y)} style={{ fill: `url(#${HATCH_ID})` }} />}
         {sel && <TileImage id="state-selected" x={sel.x} y={sel.y} scale={SELECTED} class="hex-selected" />}
       </g>
       <g class="hex-overlay hex-fx">
