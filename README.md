@@ -319,7 +319,7 @@ The painted art comes from `scripts/siege-art.py` (sources in `scripts/siege-art
 
 ## Music
 
-Every game mode has **built-in background music** on the projector (phones stay quiet). It's composed in code, so it adds nothing to the download and needs no licenses:
+Every game mode has **built-in background music** on the projector (phones stay quiet). It's composed in code and played on **recordings of real instruments**: grand piano, string sections, brass, flute, harp, organ, timpani and a drum kit, about 4 MB built into the program. The recordings are public domain (CC0) or free to use with credit (see `src/client/shared/music/samples/CREDITS.md`). Tallest Tower and Racer keep their chiptune and 80s-synth sound on purpose. Add `?music=synth` to the host page's address to hear every track on the older synthesized instruments:
 
 | Mode | Style | Reacts to the game |
 |---|---|---|
@@ -327,7 +327,7 @@ Every game mode has **built-in background music** on the projector (phones stay 
 | Tallest Tower | Retro arcade (chiptune) | Builds up as the game clock runs down |
 | Submarine Squad | Deep-sea suspense | Speeds up and adds layers as the anglerfish closes in; a calmer theme while diving |
 | Tower Fight | Medieval battle | Gets more intense as the towers take damage |
-| Robot Attack | Romantic orchestral: Beethoven and Grieg arranged for synth (*In the Hall of the Mountain King* during the quiz) | Speeds up and adds instruments as each quiz phase's timer runs out; Beethoven's Fifth during movement |
+| Robot Attack | Romantic orchestral: Beethoven and Grieg arranged for orchestra (*In the Hall of the Mountain King* during the quiz) | Speeds up and adds instruments as each quiz phase's timer runs out; Beethoven's Fifth during movement |
 | Land Grab | Calm ambient piano | Speeds up and adds an orchestra as a team gets close to closing a ring; calms down again if the ring is broken |
 | Racer | Sunny late-80s arcade-racing chiptune | Tempo and layers rise with the car's speed; slow and sparse when crashed |
 | Cup of Death | Original spaghetti-western themes: whistle, twangy guitar, galloping hooves; a honky-tonk saloon piano in the lobby | The gallop speeds up and strings, brass and a church bell join as the quiz timer runs out; a heartbeat and a tolling bell while the cups are picked and drunk |

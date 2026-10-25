@@ -151,10 +151,11 @@ const classicResults: Track = {
   ],
 };
 
-// ---------- Tallest Tower: retro arcade ----------
+// ---------- Tallest Tower: retro arcade (chiptune, so it keeps the synth voices) ----------
 
 const towerLobby: Track = {
   id: "tower-lobby",
+  samples: false,
   bpm: 120,
   bars: 4,
   layers: [
@@ -177,6 +178,7 @@ const towerLobby: Track = {
 
 const towerPlay: Track = {
   id: "tower-play",
+  samples: false,
   bpm: 148,
   bars: 4,
   tempoBoost: 0.2,
@@ -203,6 +205,7 @@ const towerPlay: Track = {
 
 const towerResults: Track = {
   id: "tower-results",
+  samples: false,
   bpm: 132,
   bars: 4,
   layers: [
