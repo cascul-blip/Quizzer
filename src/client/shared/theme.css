@@ -882,6 +882,10 @@ a.btn {
   fill: #1e2633;
 }
 
+.hex-hatch {
+  opacity: 0.55;
+}
+
 .hex-selected {
   animation: hex-selected 0.9s ease-in-out infinite alternate;
 }
