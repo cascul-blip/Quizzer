@@ -6,7 +6,8 @@
 import { useEffect } from "preact/hooks";
 import type { MusicTrackId } from "../../../shared/music-tracks.ts";
 import { getAudioContext, isMuted, onMuteChange } from "../sounds.ts";
-import { MusicPlayer } from "./engine.ts";
+import { MusicPlayer, instrumentsOf, usesSamples } from "./engine.ts";
+import { prefetchSamples, setSamplesEnabled } from "./samples.ts";
 import { TRACKS } from "./tracks.ts";
 
 const ON_KEY = "quizzer.music";
@@ -55,8 +56,12 @@ export function setMusicVolume(v: number): void {
   applyLevel();
 }
 
-/** Load the list of custom tracks in data/music/ (host only). */
+/** Load the list of custom tracks in data/music/ (host only), and start downloading the instrument recordings. */
 export async function loadCustomMusic(): Promise<void> {
+  // ?music=synth plays every track with the synthesized voices, as before the recordings.
+  const synth = new URLSearchParams(location.search).get("music") === "synth";
+  setSamplesEnabled(!synth);
+  if (!synth) prefetchSamples(Object.values(TRACKS).flatMap((t) => (usesSamples(t) ? [...instrumentsOf(t)] : [])));
   try {
     const res = await fetch("/api/music");
     if (res.ok) custom = (await res.json()).files ?? {};

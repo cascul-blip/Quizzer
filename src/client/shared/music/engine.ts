@@ -7,9 +7,11 @@
  * "Bb2", chords as "C4+E4+G4"), "-" holds the previous note, "." is a rest.
  * Drum steps are "x" (hit), "o" (accent) or ".".
  *
- * A track with `rich: true` (or `rich: "arcade"`) is played with the fuller sound in rich.ts instead;
- * every other track sounds exactly as it always has.
+ * Most instruments play recordings of the real thing (samples.ts), falling back to the
+ * oscillator voices here until those are loaded; chiptune and arcade tracks keep the synths.
+ * A track with `rich: true` (or `rich: "arcade"`) is played with the fuller sound in rich.ts instead.
  */
+import { loadSamples, playSample } from "./samples.ts";
 import { STRUM_S, createEcho, createRichBus, humanize, panFor, playRich, richStyle, type Echo, type RichBus, type RichStyle } from "./rich.ts";
 
 export type Instrument =
@@ -74,8 +76,16 @@ export interface Track {
    * Leave it off (or set it to false) for the original plain oscillators.
    */
   rich?: boolean | RichStyle;
+  /**
+   * Play instruments from their recordings (samples.ts) where there are some. On by default,
+   * except for arcade-style tracks; false keeps every voice synthesized (chiptune).
+   */
+  samples?: boolean;
   layers: Layer[];
 }
+
+/** Whether a track's instruments play from recordings. */
+export const usesSamples = (track: Track): boolean => track.samples ?? richStyle(track.rich) !== "arcade";
 
 export const STEPS_PER_BAR = 16;
 
@@ -485,6 +495,7 @@ export function scheduleStep(ctx: Ctx, dest: AudioNode, track: Track, step: numb
   const bar = Math.floor(step / STEPS_PER_BAR) % track.bars;
   const s = step % STEPS_PER_BAR;
   const style = richStyle(track.rich);
+  const sampled = usesSamples(track);
   track.layers.forEach((layer, li) => {
     if (!layerActive(layer, intensity)) return;
     const toks = tokens(layer.bars[bar % layer.bars.length]!);
@@ -514,6 +525,7 @@ export function scheduleStep(ctx: Ctx, dest: AudioNode, track: Track, step: numb
       // Drums may carry a pitch (e.g. woodblock "E5") or just "x"/"o".
       const pitch = noteFreq(tok) ?? 0;
       const accent = tok === "o";
+      if (sampled && playSample(ctx, out, layer.inst, at, pitch, dur, vol, detune, accent)) return;
       if (!(style && playRich(ctx, out, layer.inst, at, pitch, dur, vol, detune, style, accent))) playInstrument(ctx, out, layer.inst, at, pitch, dur, vol, accent);
       return;
     }
@@ -523,8 +535,9 @@ export function scheduleStep(ctx: Ctx, dest: AudioNode, track: Track, step: numb
       const f = noteFreq(n);
       if (!f) return;
       const len = held * dur * 0.95;
+      const start = style && layer.inst === "pluck" ? at + i * STRUM_S : at;
+      if (sampled && playSample(ctx, out, layer.inst, start, f, len, vol, detune)) return;
       if (!style) return playInstrument(ctx, out, layer.inst, at, f, len, vol);
-      const start = layer.inst === "pluck" ? at + i * STRUM_S : at;
       if (!playRich(ctx, out, layer.inst, start, f, len, vol, detune, style)) playInstrument(ctx, out, layer.inst, start, f, len, vol);
     });
   });
@@ -538,6 +551,9 @@ export function renderInto(ctx: Ctx, dest: AudioNode, track: Track, seconds: num
     t += stepSeconds(track, intensity) * (step % 2 === 0 ? 1 + (track.swing ?? 0) : 1 - (track.swing ?? 0));
   }
 }
+
+/** The instruments a track plays. */
+export const instrumentsOf = (track: Track): Set<Instrument> => new Set(track.layers.map((l) => l.inst));
 
 // ---------- live player ----------
 
@@ -708,6 +724,8 @@ export class MusicPlayer {
     }
     // An unknown id plays silence (but still counts as "current", so we don't retry every tick).
     const track = this.tracks[id];
+    // Its recordings decode in the background; until they're ready its notes use the synth voices.
+    if (track && usesSamples(track)) void loadSamples(ctx, instrumentsOf(track));
     if (track?.rich) {
       // The rich bus replaces the master connection and the shared hall for this track.
       gain.disconnect();
