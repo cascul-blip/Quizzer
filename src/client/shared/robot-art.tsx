@@ -8,6 +8,7 @@ import type { AvatarChoice } from "../../shared/avatars.ts";
 import { ROBOT_BOARD, robotRing } from "../../shared/protocol.ts";
 import { ACCESSORY_ART, AVATAR_ART } from "./avatar-art.tsx";
 import armImg from "./robot/arm.webp";
+import backdropImg from "./robot/backdrop.webp";
 import bodyImg from "./robot/body.webp";
 import emitterImg from "./robot/emitter.webp";
 import jointImg from "./robot/joint.webp";
@@ -132,15 +133,10 @@ export function RobotArena(props: {
   return (
     <svg class={`robot-arena ${props.class ?? ""} ${props.attack ? "attacking" : ""}`} viewBox={`0 0 ${ARENA_W} ${ARENA_H}`} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
       <defs>
-        <radialGradient id="ra-bg" cx="0.5" cy="0.25" r="0.9">
-          <stop offset="0" stop-color="#3b1f4f" />
-          <stop offset="0.6" stop-color="#170d24" />
-          <stop offset="1" stop-color="#07040c" />
-        </radialGradient>
         <radialGradient id="ra-eye" cx="0.5" cy="0.5" r="0.5">
-          <stop offset="0" stop-color="#e6fbff" />
-          <stop offset="0.4" stop-color="#4fd8ff" />
-          <stop offset="1" stop-color="#4fd8ff" stop-opacity="0" />
+          <stop offset="0" stop-color="#fff1e0" />
+          <stop offset="0.4" stop-color="#ff3a2a" />
+          <stop offset="1" stop-color="#ff3a2a" stop-opacity="0" />
         </radialGradient>
         <filter id="ra-glow" x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur stdDeviation="6" result="b" />
@@ -150,7 +146,8 @@ export function RobotArena(props: {
           </feMerge>
         </filter>
       </defs>
-      <rect x={-ARENA_W} y={-ARENA_H} width={ARENA_W * 3} height={ARENA_H * 3} fill="url(#ra-bg)" />
+      <rect x={-ARENA_W} y={-ARENA_H} width={ARENA_W * 3} height={ARENA_H * 3} fill="#140a08" />
+      <image href={backdropImg} x={BACKDROP.x} y={BACKDROP.y} width={BACKDROP.w} height={BACKDROP.h} preserveAspectRatio="none" />
       <Robot attacking={!!props.attack} clock={clock} />
       <Board marked={marked} inset={props.inset ?? 0} collapsing={new Set(props.collapsing ?? [])} />
       <Pieces players={props.players} hit={hit} me={props.me ?? null} />
@@ -311,37 +308,17 @@ function Emitter({ at, attacking }: { at: Pt; attacking: boolean }) {
   );
 }
 
-/** Where the square body render sits in the arena. Its bottom fades out behind the board. */
-const BODY = { x: 350, y: 60, size: 500 };
+/** The painted forge behind everything; wider than the arena so it fills a wide projector's letterbox. */
+const BACKDROP = { x: -300, y: -100, w: 1800, h: 1012.5 };
+/** Where the square body render sits in the arena. Its pedestal runs just past the bottom edge, so the robot stands in the pit. */
+const BODY = { x: 180, y: 50, size: 840 };
 /** A point of the body render (in pixels of its 1024px source) in arena coordinates. */
 const bodyPt = (px: number, py: number): Pt => ({ x: BODY.x + (px / 1024) * BODY.size, y: BODY.y + (py / 1024) * BODY.size });
 const bodyLen = (px: number) => (px / 1024) * BODY.size;
-/** The mask's lenses: centre and glass radius, in source pixels. The first two are the large ones. */
-const OPTICS = [
-  { x: 464, y: 206, r: 20 },
-  { x: 561, y: 206, r: 20 },
-  { x: 461, y: 268, r: 12 },
-  { x: 564, y: 268, r: 12 },
-].map((o) => ({ ...bodyPt(o.x, o.y), r: bodyLen(o.r) }));
-/** The axe's cutting edge: top tip, outermost point, bottom tip. */
-const [EDGE_TOP, EDGE_MID, EDGE_BOTTOM] = [bodyPt(876, 148), bodyPt(953, 233), bodyPt(904, 336)] as [Pt, Pt, Pt];
-/** Control point of the curve through the three. */
-const EDGE_CTRL = { x: 2 * EDGE_MID.x - (EDGE_TOP.x + EDGE_BOTTOM.x) / 2, y: 2 * EDGE_MID.y - (EDGE_TOP.y + EDGE_BOTTOM.y) / 2 };
-const at = (p: Pt) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`;
+/** The mask's single optic: centre and glass radius, in source pixels. */
+const OPTICS = [{ x: 509, y: 116, r: 11 }].map((o) => ({ ...bodyPt(o.x, o.y), r: bodyLen(o.r) }));
 
-/** The live parts of the axe: its glowing edge and the lightning jumping off it. The axe itself is in the body render. */
-function AxeGlow() {
-  return (
-    <g class="axe">
-      <path class="axe-edge" d={`M${at(EDGE_TOP)} Q${at(EDGE_CTRL)} ${at(EDGE_BOTTOM)}`} fill="none" stroke="#6ff3ff" stroke-width="3" stroke-linecap="round" filter="url(#ra-glow)" />
-      <path class="spark s1" d={`M${at(EDGE_MID)} l18,-14 l-6,16 l20,-10`} fill="none" stroke="#bff8ff" stroke-width="3" stroke-linejoin="round" />
-      <path class="spark s2" d={`M${at(EDGE_BOTTOM)} l22,6 l-14,6 l18,10`} fill="none" stroke="#bff8ff" stroke-width="3" stroke-linejoin="round" />
-      <path class="spark s3" d={`M${at(EDGE_TOP)} l4,-22 l6,14 l10,-18`} fill="none" stroke="#bff8ff" stroke-width="3" stroke-linejoin="round" />
-    </g>
-  );
-}
-
-/** The robot: a hooded machine priest in a red robe with glowing lenses, an axe crackling with lightning and three jointed back arms. */
+/** The robot: a hooded machine priest in a red robe with one glowing red optic and three mechadendrite back arms. */
 function Robot({ attacking, clock }: { attacking: boolean; clock: SwayClock }) {
   const still = prefersStill();
   const frozen = clock.frozenAt !== null;
@@ -365,13 +342,12 @@ function Robot({ attacking, clock }: { attacking: boolean; clock: SwayClock }) {
         <MechArm key={k} pts={pts} />
       ))}
       <image href={bodyImg} x={BODY.x} y={BODY.y} width={BODY.size} height={BODY.size} />
-      <AxeGlow />
-      {OPTICS.slice(0, 2).map((o, i) => (
-        <circle key={i} class="eye-halo" cx={o.x} cy={o.y} r={o.r * 3} fill="url(#ra-eye)" opacity="0.55" />
+      {OPTICS.map((o, i) => (
+        <circle key={i} class="eye-halo" cx={o.x} cy={o.y} r={o.r * 2.9} fill="url(#ra-eye)" opacity="0.55" />
       ))}
       <g class="eyes" filter="url(#ra-glow)">
         {OPTICS.map((o, i) => (
-          <circle key={i} cx={o.x} cy={o.y} r={o.r * 0.75} fill="#4fd8ff" />
+          <circle key={i} cx={o.x} cy={o.y} r={o.r * 0.75} fill="#ff3a2a" />
         ))}
       </g>
       {/* the emitters, in front of the body */}

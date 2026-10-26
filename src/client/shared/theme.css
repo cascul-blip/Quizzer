@@ -661,7 +661,7 @@ a.btn {
 }
 
 .robot.attacking .eyes circle {
-  fill: #ff4a5c;
+  fill: #fff2e8;
 }
 
 @keyframes eye-glow {
@@ -671,34 +671,6 @@ a.btn {
   to {
     opacity: 1;
   }
-}
-
-.robot .spark {
-  opacity: 0;
-  animation: spark 1.3s linear infinite;
-}
-
-.robot .spark.s2 {
-  animation-delay: 0.45s;
-}
-
-.robot .spark.s3 {
-  animation-delay: 0.9s;
-}
-
-@keyframes spark {
-  0%,
-  8% {
-    opacity: 1;
-  }
-  16%,
-  100% {
-    opacity: 0;
-  }
-}
-
-.robot .axe-edge {
-  animation: eye-glow 0.3s steps(2) infinite alternate;
 }
 
 .emitter-core {
