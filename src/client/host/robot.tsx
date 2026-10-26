@@ -14,7 +14,7 @@ type RobotView = Extract<HostView, { kind: "robot" }>;
 export function RobotStage({ view, send }: { view: RobotView; send: Send }) {
   const secs = useCountdown(view.phaseRemainingMs, `${view.phase}-${view.round}`);
   const prev = useRef<RobotView | null>(null);
-  useEffect(() => preloadVoice(["targets-acquired", "flesh-is-weak", "only-metal-endures", "binary-chant"]), []);
+  useEffect(() => preloadVoice(["targets-acquired", "flesh-is-weak", "only-metal-endures", "cannot-evade"]), []);
 
   useEffect(() => {
     const p = prev.current;
@@ -27,7 +27,7 @@ export function RobotStage({ view, send }: { view: RobotView; send: Send }) {
         play("laser");
         // One verdict per blast, once the beams have hit: someone out, then anyone hit, else everyone dodged.
         const a = view.lastAttack;
-        const line = !a ? null : a.eliminated.length > 0 ? "only-metal-endures" : a.hit.length > 0 ? "flesh-is-weak" : "binary-chant";
+        const line = !a ? null : a.eliminated.length > 0 ? "only-metal-endures" : a.hit.length > 0 ? "flesh-is-weak" : "cannot-evade";
         if (line) setTimeout(() => void say(line), 1000);
       }
       if (view.phase === "podium") play("fanfare");

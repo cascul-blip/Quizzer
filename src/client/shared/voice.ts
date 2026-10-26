@@ -6,7 +6,7 @@
 import type { VoiceLineId } from "../../shared/voice-lines.ts";
 import { music } from "./music/index.ts";
 import { getAudioContext, isMuted } from "./sounds.ts";
-import binaryChant from "./voice/binary-chant.mp3";
+import cannotEvade from "./voice/cannot-evade.mp3";
 import fleshIsWeak from "./voice/flesh-is-weak.mp3";
 import onlyMetalEndures from "./voice/only-metal-endures.mp3";
 import targetsAcquired from "./voice/targets-acquired.mp3";
@@ -15,7 +15,7 @@ const CLIPS: Record<VoiceLineId, string> = {
   "targets-acquired": targetsAcquired,
   "flesh-is-weak": fleshIsWeak,
   "only-metal-endures": onlyMetalEndures,
-  "binary-chant": binaryChant,
+  "cannot-evade": cannotEvade,
 };
 
 const ON_KEY = "quizzer.voice";

@@ -5,7 +5,7 @@ export const VOICE_LINES = {
   "targets-acquired": "Targets acquired.",
   "flesh-is-weak": "The flesh is weak.",
   "only-metal-endures": "Only metal endures.",
-  "binary-chant": "zero one one zero one zero zero one",
+  "cannot-evade": "You can not evade me forever.",
 } as const;
 
 export type VoiceLineId = keyof typeof VOICE_LINES;
