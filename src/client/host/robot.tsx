@@ -86,7 +86,7 @@ export function RobotStage({ view, send }: { view: RobotView; send: Send }) {
                 <div class="countdown-label">
                   Answer questions on your phone to earn moves.
                   <br />
-                  When the red Xs appear, get ready to run!
+                  When the targets appear, get ready to run!
                   <br />
                   Every {ROBOT_SHRINK_EVERY} rounds, the outer ring of the board is destroyed.
                 </div>

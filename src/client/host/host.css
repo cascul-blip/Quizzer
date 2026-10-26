@@ -2540,7 +2540,7 @@ select {
   flex: none;
   width: min(22vw, 320px);
   padding: 1.4vh 1vw;
-  background: rgba(20, 5, 45, 0.72);
+  background: rgba(18, 8, 6, 0.78);
   overflow: hidden;
 }
 

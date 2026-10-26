@@ -1,8 +1,8 @@
 There are two modes in this game, the Quiz mode and movement mode.
 
-The main display is an isometric view of what looks like a chess or checkers board (alternating light and dark to help show different positions on the grid).  The board size is 12x12.
+The main display is an isometric view of what looks like a chess or checkers board made of polished granite (alternating light and dark to help show different positions on the grid).  The board size is 12x12.  It hangs over a molten pit in a painted forge.
 
-Behind the board is a robed machine priest: a robot in a red robe with the hood up, its face a metal respirator mask with a cluster of glowing blue lenses.  It holds an electric axe and has 3 mechanical arms coming out of its backpack.
+Behind the board is a robed machine priest: a robot in a red robe with the hood up, its face a metal respirator mask with a single glowing red optic.  It stands on a pedestal in the pit and has 3 segmented mechanical arms coming out of brass sockets on its shoulders, each ending in a laser emitter.
 
 The music for this mode is Romantic orchestral: famous public-domain themes by Beethoven and Grieg, arranged for a synthesized orchestra.
 
@@ -12,7 +12,7 @@ The first time that the players go into quiz mode, it starts with a 20 second ti
 
 During quiz mode, players answer questions as fast as they can.  Each question they answer gives them a movement point.
 
-When there are 5 seconds remaining in quiz mode, 3/4 of the board tiles get a red X over them.  Every tile that a player is currently on also gets a red X.
+When there are 5 seconds remaining in quiz mode, 3/4 of the board tiles get a red X over them (on the projector it is drawn as a red gear-shaped target).  Every tile that a player is currently on also gets a red X.
 
 ### Movement Mode
 Movement mode lasts 7 seconds.  The progress bar at the top of the screen shows the remaining time,  The players phones have arrows on their screens for up, down, left and right.  They use these buttons to move across the grid.  Every movement takes up a movement point that was gained in the quiz mode.  Once they run out of points, they are unable to move any more.
