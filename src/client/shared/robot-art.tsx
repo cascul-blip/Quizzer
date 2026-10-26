@@ -7,11 +7,12 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { ROBOT_BOARD, robotRing } from "../../shared/protocol.ts";
 import { ACCESSORY_ART, AVATAR_ART } from "./avatar-art.tsx";
-import armImg from "./robot/arm.webp";
+import connImg from "./robot/arm-connector.webp";
+import segImg from "./robot/arm-segment.webp";
+import socketImg from "./robot/arm-socket.webp";
 import backdropImg from "./robot/backdrop.webp";
 import bodyImg from "./robot/body.webp";
 import emitterImg from "./robot/emitter.webp";
-import jointImg from "./robot/joint.webp";
 
 export const ARENA_W = 1200;
 export const ARENA_H = 860;
@@ -44,24 +45,28 @@ type Pt = { x: number; y: number };
 
 /** The three laser emitters at the tips of the robot's back arms (at rest): left, center (over its head), right. */
 export const EMITTERS: Pt[] = [
-  { x: 280, y: 215 },
-  { x: CX, y: 38 },
-  { x: ARENA_W - 280, y: 215 },
+  { x: 230, y: 190 },
+  { x: CX, y: 28 },
+  { x: 970, y: 190 },
 ];
 
-/** Rest pose of each back arm: shoulder → four joints → emitter tip. The outer two start at the posts of the backpack, the middle one behind the hood. */
+/**
+ * Rest pose of each back arm: shoulder port → nine joints → emitter tip. Each link is TAPER times
+ * the one before. The outer two start at the outer shoulder ports; the middle one at the inner right
+ * port, arcing over the hood.
+ */
 const ARMS: Pt[][] = [
-  [{ x: 516, y: 108 }, { x: 455, y: 72 }, { x: 385, y: 58 }, { x: 320, y: 80 }, { x: 288, y: 140 }, EMITTERS[0]!],
-  [{ x: 600, y: 170 }, { x: 556, y: 128 }, { x: 540, y: 92 }, { x: 548, y: 60 }, { x: 572, y: 40 }, EMITTERS[1]!],
-  [{ x: 670, y: 108 }, { x: 740, y: 72 }, { x: 812, y: 58 }, { x: 878, y: 80 }, { x: 912, y: 140 }, EMITTERS[2]!],
+  [{ x: 458, y: 182 }, { x: 441, y: 136.5 }, { x: 412.9, y: 101.1 }, { x: 377.1, y: 79 }, { x: 339, y: 68.7 }, { x: 302.7, y: 72.2 }, { x: 271.8, y: 87.2 }, { x: 249.5, y: 110 }, { x: 235.8, y: 136.5 }, { x: 231.1, y: 164 }, EMITTERS[0]!],
+  [{ x: 686, y: 151 }, { x: 697, y: 124.5 }, { x: 702.6, y: 98.4 }, { x: 700.5, y: 73.6 }, { x: 692, y: 52 }, { x: 678.1, y: 35.3 }, { x: 662.1, y: 22.9 }, { x: 645.2, y: 14.3 }, { x: 627.9, y: 12.8 }, { x: 613, y: 19.8 }, EMITTERS[1]!],
+  [{ x: 738, y: 182 }, { x: 755.2, y: 136.1 }, { x: 783.7, y: 100.6 }, { x: 820, y: 78.5 }, { x: 858.4, y: 68.5 }, { x: 895.1, y: 72.6 }, { x: 926.3, y: 87.4 }, { x: 949.5, y: 109.8 }, { x: 964, y: 136.1 }, { x: 969, y: 163.7 }, EMITTERS[2]!],
 ];
 const ARM_SEGMENTS = ARMS.map((pts) => pts.slice(1).map((p, i) => ({ len: Math.hypot(p.x - pts[i]!.x, p.y - pts[i]!.y), ang: Math.atan2(p.y - pts[i]!.y, p.x - pts[i]!.x) })));
 /** One slow sway, back and forth. */
 const SWAY_PERIOD_MS = 7000;
 /** Bend added at each joint at the sway's peak (radians); it builds up toward the tip. */
-const SWAY_AMP = 0.06;
+const SWAY_AMP = 0.03;
 /** Phase lag from one joint to the next, so the arm ripples instead of swinging stiffly. */
-const SWAY_LAG = 0.7;
+const SWAY_LAG = 0.35;
 const ARM_PHASE = [0, 2.1, 4.2];
 
 /** An arm's joint points at sway time t (ms), or its rest pose for null. The last point is the emitter. */
@@ -278,32 +283,99 @@ function Lasers({ marked, tips }: { marked: number[]; tips: Pt[] }) {
   );
 }
 
-/** A back arm's segments and joints (the emitter is drawn separately, in front of the body). */
-function MechArm({ pts }: { pts: Pt[] }) {
+/** Arm thickness at the root of each arm; each chain point is TAPER times the last. */
+const ARM_H0 = [34, 28, 34];
+const TAPER = 0.933;
+const armH = (k: number, j: number) => ARM_H0[k]! * TAPER ** j;
+/** Segment ends pull back this much (× thickness) from each joint; the connector reaches this far under each segment. */
+const GAP = 0.15;
+const OVER = 0.45;
+/** Connector thickness, × the arm thickness at its joint. */
+const CONN_W = 1.05;
+/** Shoulder socket length and width (× the root thickness), and how much of it sits behind the shoulder port. */
+const SOCK_L = 1.4;
+const SOCK_W = 1.2;
+const SOCK_BACK = 0.35;
+const f1 = (n: number) => n.toFixed(1);
+const deg = (y: number, x: number) => (Math.atan2(y, x) * 180) / Math.PI;
+
+/**
+ * A back arm: rigid tapering segments, pulled back from each joint, with a stretchy cable sheath
+ * under every joint to cover the gap at any bend (the emitter is drawn separately, in front of the body).
+ * Mirrors layout() in the art build's arms.py.
+ */
+function MechArm({ pts, k }: { pts: Pt[]; k: number }) {
+  const n = pts.length - 1;
+  const segs = [];
+  const cons = [];
+  const S: Pt[] = [];
+  const E: Pt[] = [];
+  for (let i = 0; i < n; i++) {
+    const a = pts[i]!;
+    const b = pts[i + 1]!;
+    const len = Math.hypot(b.x - a.x, b.y - a.y);
+    const dx = (b.x - a.x) / len;
+    const dy = (b.y - a.y) / len;
+    const g0 = i > 0 ? GAP * armH(k, i) : 0;
+    const g1 = i < n - 1 ? GAP * armH(k, i + 1) : 0;
+    const s = { x: a.x + dx * g0, y: a.y + dy * g0 };
+    S.push(s);
+    E.push({ x: b.x - dx * g1, y: b.y - dy * g1 });
+    const h = armH(k, i);
+    // Flipped on arms running right to left, so the painted rim light stays on top.
+    segs.push(
+      <image key={`s${i}`} href={segImg} x="0" y={f1(-h / 2)} width={f1(len - g0 - g1)} height={f1(h)} preserveAspectRatio="none" transform={`translate(${f1(s.x)},${f1(s.y)}) rotate(${f1(deg(dy, dx))}) scale(1,${dx < 0 ? -1 : 1})`} />,
+    );
+  }
+  for (let j = 1; j < n; j++) {
+    const a = E[j - 1]!;
+    const b = S[j]!;
+    const h = armH(k, j);
+    let vx = b.x - a.x;
+    let vy = b.y - a.y;
+    const d = Math.hypot(vx, vy);
+    if (d < 1e-3) {
+      // Folded flat: lie along the bisector of the two segments.
+      const p0 = pts[j - 1]!;
+      const p1 = pts[j]!;
+      const p2 = pts[j + 1]!;
+      const l0 = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+      const l1 = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+      vx = (p1.x - p0.x) / l0 + (p2.x - p1.x) / l1;
+      vy = (p1.y - p0.y) / l0 + (p2.y - p1.y) / l1;
+    }
+    const len = d + 2 * OVER * h;
+    const w = CONN_W * h;
+    cons.push(
+      <image key={`c${j}`} href={connImg} x={f1(-len / 2)} y={f1(-w / 2)} width={f1(len)} height={f1(w)} preserveAspectRatio="none" transform={`translate(${f1((a.x + b.x) / 2)},${f1((a.y + b.y) / 2)}) rotate(${f1(deg(vy, vx))}) scale(1,${vx < 0 ? -1 : 1})`} />,
+    );
+  }
+  // Connectors underneath; segments root to tip, so each one's brass band overlaps the last one's end.
   return (
     <g class="mech-arm">
-      {pts.slice(1).map((b, i) => {
-        const a = pts[i]!;
-        const len = Math.hypot(b.x - a.x, b.y - a.y);
-        const h = 30 - i * 3;
-        const deg = (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI;
-        return <image key={`s${i}`} href={armImg} x="0" y={-h / 2} width={len} height={h} preserveAspectRatio="none" transform={`translate(${a.x.toFixed(1)},${a.y.toFixed(1)}) rotate(${deg.toFixed(1)})`} />;
-      })}
-      {pts.slice(0, -1).map((p, i) => {
-        const r = 19 - i * 1.6;
-        return <image key={`j${i}`} href={jointImg} x={p.x - r} y={p.y - r} width={r * 2} height={r * 2} />;
-      })}
+      {cons}
+      {segs}
     </g>
   );
 }
 
-const EMITTER_R = 32;
+/** The brass coupling where arm k leaves the shoulder. It follows the rest pose, so it stays still while the arm sways. */
+function ArmSocket({ k }: { k: number }) {
+  const p0 = ARMS[k]![0]!;
+  const p1 = ARMS[k]![1]!;
+  const len = SOCK_L * ARM_H0[k]!;
+  const w = SOCK_W * ARM_H0[k]!;
+  const a = (ARM_SEGMENTS[k]![0]!.ang * 180) / Math.PI;
+  return <image href={socketImg} x={f1(-SOCK_BACK * len)} y={f1(-w / 2)} width={f1(len)} height={f1(w)} preserveAspectRatio="none" transform={`translate(${p0.x},${p0.y}) rotate(${f1(a)}) scale(1,${p1.x < p0.x ? -1 : 1})`} />;
+}
+
+const EMITTER_R = 40;
 
 function Emitter({ at, attacking }: { at: Pt; attacking: boolean }) {
   return (
     <g class={`emitter ${attacking ? "firing" : ""}`}>
       <image href={emitterImg} x={at.x - EMITTER_R} y={at.y - EMITTER_R} width={EMITTER_R * 2} height={EMITTER_R * 2} />
-      <circle cx={at.x} cy={at.y} r="12" class="emitter-core" filter="url(#ra-glow)" />
+      <circle cx={at.x} cy={at.y} r="13" class="emitter-core" filter="url(#ra-glow)" />
     </g>
   );
 }
@@ -339,9 +411,13 @@ function Robot({ attacking, clock }: { attacking: boolean; clock: SwayClock }) {
     <g class={`robot ${attacking ? "attacking" : ""}`}>
       {/* back arms, behind the body */}
       {arms.map((pts, k) => (
-        <MechArm key={k} pts={pts} />
+        <MechArm key={k} pts={pts} k={k} />
       ))}
       <image href={bodyImg} x={BODY.x} y={BODY.y} width={BODY.size} height={BODY.size} />
+      {/* the shoulder sockets the arms grow out of */}
+      {[0, 1, 2].map((k) => (
+        <ArmSocket key={k} k={k} />
+      ))}
       {OPTICS.map((o, i) => (
         <circle key={i} class="eye-halo" cx={o.x} cy={o.y} r={o.r * 2.9} fill="url(#ra-eye)" opacity="0.55" />
       ))}

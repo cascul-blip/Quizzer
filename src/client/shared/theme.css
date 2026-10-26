@@ -674,11 +674,11 @@ a.btn {
 }
 
 .emitter-core {
-  fill: #4fd8ff;
+  fill: #ff5a3a;
 }
 
 .emitter.firing .emitter-core {
-  fill: #ff4a5c;
+  fill: #fff2f2;
   animation: danger-flash 0.12s steps(2) infinite;
 }
 
