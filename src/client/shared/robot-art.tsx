@@ -7,14 +7,22 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { ROBOT_BOARD, robotRing } from "../../shared/protocol.ts";
 import { ACCESSORY_ART, AVATAR_ART } from "./avatar-art.tsx";
-import armImg from "./robot/arm.webp";
+import connImg from "./robot/arm-connector.webp";
+import segImg from "./robot/arm-segment.webp";
+import socketImg from "./robot/arm-socket.webp";
+import backdropImg from "./robot/backdrop.webp";
 import bodyImg from "./robot/body.webp";
 import emitterImg from "./robot/emitter.webp";
-import jointImg from "./robot/joint.webp";
+import reticleGlowImg from "./robot/reticle-glow.webp";
+import reticleImg from "./robot/reticle.webp";
+import doomedImg from "./robot/tile-doomed.webp";
+import { TILE_ART } from "./robot/tiles.ts";
 
 export const ARENA_W = 1200;
 export const ARENA_H = 860;
 const CX = ARENA_W / 2;
+// The granite tiles in robot/tiles/ are pre-rendered for these values (and ROBOT_BOARD):
+// changing any of them misplaces every tile. tests/robot-art.test.ts checks this.
 /** Screen y of the board's near edge and far edge. */
 const NEAR_Y = 800;
 const FAR_Y = 360;
@@ -39,28 +47,50 @@ const quad = (u: number, v: number) => {
   return pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
 };
 
+/** Where tile (u, v)'s pre-rendered image goes: the whole-unit bounding box of its quad. */
+export function tileBox(u: number, v: number): { x: number; y: number; width: number; height: number } {
+  const pts = [project(u, v), project(u + 1, v), project(u + 1, v + 1), project(u, v + 1)];
+  const x = Math.floor(Math.min(...pts.map((p) => p.x)));
+  const y = Math.floor(Math.min(...pts.map((p) => p.y)));
+  return { x, y, width: Math.ceil(Math.max(...pts.map((p) => p.x))) - x, height: Math.ceil(Math.max(...pts.map((p) => p.y))) - y };
+}
+
+/** The targeting reticle's box on tile (u, v): inset a little, squashed to the tile's perspective. */
+const reticleBox = (u: number, v: number) => {
+  const a = project(u + 0.08, v + 0.08);
+  const b = project(u + 0.92, v + 0.92);
+  const p0 = project(u + 0.08, v + 0.92);
+  const p1 = project(u + 0.92, v + 0.08);
+  const x = Math.min(a.x, p0.x);
+  return { x, y: a.y, width: Math.max(p1.x, b.x) - x, height: b.y - a.y };
+};
+
 type Pt = { x: number; y: number };
 
 /** The three laser emitters at the tips of the robot's back arms (at rest): left, center (over its head), right. */
 export const EMITTERS: Pt[] = [
-  { x: 280, y: 215 },
-  { x: CX, y: 38 },
-  { x: ARENA_W - 280, y: 215 },
+  { x: 230, y: 190 },
+  { x: CX, y: 28 },
+  { x: 970, y: 190 },
 ];
 
-/** Rest pose of each back arm: shoulder → four joints → emitter tip. The outer two start at the posts of the backpack, the middle one behind the hood. */
+/**
+ * Rest pose of each back arm: shoulder port → nine joints → emitter tip. Each link is TAPER times
+ * the one before. The outer two start at the outer shoulder ports; the middle one at the inner right
+ * port, arcing over the hood.
+ */
 const ARMS: Pt[][] = [
-  [{ x: 516, y: 108 }, { x: 455, y: 72 }, { x: 385, y: 58 }, { x: 320, y: 80 }, { x: 288, y: 140 }, EMITTERS[0]!],
-  [{ x: 600, y: 170 }, { x: 556, y: 128 }, { x: 540, y: 92 }, { x: 548, y: 60 }, { x: 572, y: 40 }, EMITTERS[1]!],
-  [{ x: 670, y: 108 }, { x: 740, y: 72 }, { x: 812, y: 58 }, { x: 878, y: 80 }, { x: 912, y: 140 }, EMITTERS[2]!],
+  [{ x: 458, y: 182 }, { x: 441, y: 136.5 }, { x: 412.9, y: 101.1 }, { x: 377.1, y: 79 }, { x: 339, y: 68.7 }, { x: 302.7, y: 72.2 }, { x: 271.8, y: 87.2 }, { x: 249.5, y: 110 }, { x: 235.8, y: 136.5 }, { x: 231.1, y: 164 }, EMITTERS[0]!],
+  [{ x: 686, y: 151 }, { x: 697, y: 124.5 }, { x: 702.6, y: 98.4 }, { x: 700.5, y: 73.6 }, { x: 692, y: 52 }, { x: 678.1, y: 35.3 }, { x: 662.1, y: 22.9 }, { x: 645.2, y: 14.3 }, { x: 627.9, y: 12.8 }, { x: 613, y: 19.8 }, EMITTERS[1]!],
+  [{ x: 738, y: 182 }, { x: 755.2, y: 136.1 }, { x: 783.7, y: 100.6 }, { x: 820, y: 78.5 }, { x: 858.4, y: 68.5 }, { x: 895.1, y: 72.6 }, { x: 926.3, y: 87.4 }, { x: 949.5, y: 109.8 }, { x: 964, y: 136.1 }, { x: 969, y: 163.7 }, EMITTERS[2]!],
 ];
 const ARM_SEGMENTS = ARMS.map((pts) => pts.slice(1).map((p, i) => ({ len: Math.hypot(p.x - pts[i]!.x, p.y - pts[i]!.y), ang: Math.atan2(p.y - pts[i]!.y, p.x - pts[i]!.x) })));
 /** One slow sway, back and forth. */
 const SWAY_PERIOD_MS = 7000;
 /** Bend added at each joint at the sway's peak (radians); it builds up toward the tip. */
-const SWAY_AMP = 0.06;
+const SWAY_AMP = 0.03;
 /** Phase lag from one joint to the next, so the arm ripples instead of swinging stiffly. */
-const SWAY_LAG = 0.7;
+const SWAY_LAG = 0.35;
 const ARM_PHASE = [0, 2.1, 4.2];
 
 /** An arm's joint points at sway time t (ms), or its rest pose for null. The last point is the emitter. */
@@ -132,15 +162,10 @@ export function RobotArena(props: {
   return (
     <svg class={`robot-arena ${props.class ?? ""} ${props.attack ? "attacking" : ""}`} viewBox={`0 0 ${ARENA_W} ${ARENA_H}`} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
       <defs>
-        <radialGradient id="ra-bg" cx="0.5" cy="0.25" r="0.9">
-          <stop offset="0" stop-color="#3b1f4f" />
-          <stop offset="0.6" stop-color="#170d24" />
-          <stop offset="1" stop-color="#07040c" />
-        </radialGradient>
         <radialGradient id="ra-eye" cx="0.5" cy="0.5" r="0.5">
-          <stop offset="0" stop-color="#e6fbff" />
-          <stop offset="0.4" stop-color="#4fd8ff" />
-          <stop offset="1" stop-color="#4fd8ff" stop-opacity="0" />
+          <stop offset="0" stop-color="#fff1e0" />
+          <stop offset="0.4" stop-color="#ff3a2a" />
+          <stop offset="1" stop-color="#ff3a2a" stop-opacity="0" />
         </radialGradient>
         <filter id="ra-glow" x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur stdDeviation="6" result="b" />
@@ -150,7 +175,8 @@ export function RobotArena(props: {
           </feMerge>
         </filter>
       </defs>
-      <rect x={-ARENA_W} y={-ARENA_H} width={ARENA_W * 3} height={ARENA_H * 3} fill="url(#ra-bg)" />
+      <rect x={-ARENA_W} y={-ARENA_H} width={ARENA_W * 3} height={ARENA_H * 3} fill="#140a08" />
+      <image href={backdropImg} x={BACKDROP.x} y={BACKDROP.y} width={BACKDROP.w} height={BACKDROP.h} preserveAspectRatio="none" />
       <Robot attacking={!!props.attack} clock={clock} />
       <Board marked={marked} inset={props.inset ?? 0} collapsing={new Set(props.collapsing ?? [])} />
       <Pieces players={props.players} hit={hit} me={props.me ?? null} />
@@ -167,28 +193,38 @@ function Board({ marked, inset, collapsing }: { marked: Set<number>; inset: numb
   const nl = project(far, near);
   const nr = project(near, near);
   const tiles = [];
+  const clips = [];
   const xs = [];
   for (let v = 0; v < ROBOT_BOARD; v++) {
     for (let u = 0; u < ROBOT_BOARD; u++) {
       const i = v * ROBOT_BOARD + u;
       const gone = robotRing(i) < inset;
+      const box = tileBox(u, v);
       if (collapsing.has(i)) {
-        // Solid pulsing red until the lasers fire, then the tile drops away.
-        tiles.push(<polygon key={i} points={quad(u, v)} class={`tile tile-collapse ${gone ? "gone" : ""}`} />);
+        // Cracked and pulsing red until the lasers fire, then the tile drops away.
+        clips.push(
+          <clipPath key={i} id={`ra-q${i}`}>
+            <polygon points={quad(u, v)} />
+          </clipPath>,
+        );
+        tiles.push(
+          <g key={i} class={`tile-collapse ${gone ? "gone" : ""}`}>
+            <image href={TILE_ART[i]} {...box} preserveAspectRatio="none" />
+            <polygon points={quad(u, v)} class="tile-collapse-glow" />
+            <image href={doomedImg} {...box} preserveAspectRatio="none" clip-path={`url(#ra-q${i})`} />
+          </g>,
+        );
         continue;
       }
       if (gone) continue;
-      tiles.push(<polygon key={i} points={quad(u, v)} class={(u + v) % 2 ? "tile dark" : "tile light"} />);
+      tiles.push(<image key={i} href={TILE_ART[i]} {...box} preserveAspectRatio="none" />);
       if (marked.has(i)) {
-        const a = project(u + 0.18, v + 0.18);
-        const b = project(u + 0.82, v + 0.82);
-        const c = project(u + 0.82, v + 0.18);
-        const d = project(u + 0.18, v + 0.82);
+        const rb = reticleBox(u, v);
         xs.push(
           <g key={i} class="tile-x" style={{ animationDelay: `${((u * 7 + v * 13) % 10) * 25}ms` }}>
             <polygon points={quad(u, v)} class="tile-danger" />
-            <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} />
-            <line x1={c.x} y1={c.y} x2={d.x} y2={d.y} />
+            <image href={reticleGlowImg} class="reticle-glow" {...rb} preserveAspectRatio="none" />
+            <image href={reticleImg} {...rb} preserveAspectRatio="none" />
           </g>,
         );
       }
@@ -197,10 +233,11 @@ function Board({ marked, inset, collapsing }: { marked: Set<number>; inset: numb
   return (
     <g class="board">
       {/* Front edge, for a bit of thickness. */}
-      <polygon points={`${nl.x},${nl.y} ${nr.x},${nr.y} ${nr.x},${nr.y + EDGE} ${nl.x},${nl.y + EDGE}`} fill="#231a33" />
-      <polygon points={`${fl.x},${fl.y} ${fr.x},${fr.y} ${nr.x},${nr.y} ${nl.x},${nl.y}`} fill="none" stroke="#8a7bb0" stroke-width="4" />
+      <polygon points={`${nl.x},${nl.y} ${nr.x},${nr.y} ${nr.x},${nr.y + EDGE} ${nl.x},${nl.y + EDGE}`} fill="#1a1412" />
+      <defs>{clips}</defs>
       {tiles}
-      <g class="tile-xs">{xs}</g>
+      <g class="reticles">{xs}</g>
+      <polygon points={`${fl.x},${fl.y} ${fr.x},${fr.y} ${nr.x},${nr.y} ${nl.x},${nl.y}`} fill="none" stroke="#d88a3a" stroke-width="3" stroke-opacity="0.8" />
     </g>
   );
 }
@@ -281,67 +318,114 @@ function Lasers({ marked, tips }: { marked: number[]; tips: Pt[] }) {
   );
 }
 
-/** A back arm's segments and joints (the emitter is drawn separately, in front of the body). */
-function MechArm({ pts }: { pts: Pt[] }) {
+/** Arm thickness at the root of each arm; each chain point is TAPER times the last. */
+const ARM_H0 = [34, 28, 34];
+const TAPER = 0.933;
+const armH = (k: number, j: number) => ARM_H0[k]! * TAPER ** j;
+/** Segment ends pull back this much (× thickness) from each joint; the connector reaches this far under each segment. */
+const GAP = 0.15;
+const OVER = 0.45;
+/** Connector thickness, × the arm thickness at its joint. */
+const CONN_W = 1.05;
+/** Shoulder socket length and width (× the root thickness), and how much of it sits behind the shoulder port. */
+const SOCK_L = 1.4;
+const SOCK_W = 1.2;
+const SOCK_BACK = 0.35;
+const f1 = (n: number) => n.toFixed(1);
+const deg = (y: number, x: number) => (Math.atan2(y, x) * 180) / Math.PI;
+
+/**
+ * A back arm: rigid tapering segments, pulled back from each joint, with a stretchy cable sheath
+ * under every joint to cover the gap at any bend (the emitter is drawn separately, in front of the body).
+ * Mirrors layout() in the art build's arms.py.
+ */
+function MechArm({ pts, k }: { pts: Pt[]; k: number }) {
+  const n = pts.length - 1;
+  const segs = [];
+  const cons = [];
+  const S: Pt[] = [];
+  const E: Pt[] = [];
+  for (let i = 0; i < n; i++) {
+    const a = pts[i]!;
+    const b = pts[i + 1]!;
+    const len = Math.hypot(b.x - a.x, b.y - a.y);
+    const dx = (b.x - a.x) / len;
+    const dy = (b.y - a.y) / len;
+    const g0 = i > 0 ? GAP * armH(k, i) : 0;
+    const g1 = i < n - 1 ? GAP * armH(k, i + 1) : 0;
+    const s = { x: a.x + dx * g0, y: a.y + dy * g0 };
+    S.push(s);
+    E.push({ x: b.x - dx * g1, y: b.y - dy * g1 });
+    const h = armH(k, i);
+    // Flipped on arms running right to left, so the painted rim light stays on top.
+    segs.push(
+      <image key={`s${i}`} href={segImg} x="0" y={f1(-h / 2)} width={f1(len - g0 - g1)} height={f1(h)} preserveAspectRatio="none" transform={`translate(${f1(s.x)},${f1(s.y)}) rotate(${f1(deg(dy, dx))}) scale(1,${dx < 0 ? -1 : 1})`} />,
+    );
+  }
+  for (let j = 1; j < n; j++) {
+    const a = E[j - 1]!;
+    const b = S[j]!;
+    const h = armH(k, j);
+    let vx = b.x - a.x;
+    let vy = b.y - a.y;
+    const d = Math.hypot(vx, vy);
+    if (d < 1e-3) {
+      // Folded flat: lie along the bisector of the two segments.
+      const p0 = pts[j - 1]!;
+      const p1 = pts[j]!;
+      const p2 = pts[j + 1]!;
+      const l0 = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+      const l1 = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+      vx = (p1.x - p0.x) / l0 + (p2.x - p1.x) / l1;
+      vy = (p1.y - p0.y) / l0 + (p2.y - p1.y) / l1;
+    }
+    const len = d + 2 * OVER * h;
+    const w = CONN_W * h;
+    cons.push(
+      <image key={`c${j}`} href={connImg} x={f1(-len / 2)} y={f1(-w / 2)} width={f1(len)} height={f1(w)} preserveAspectRatio="none" transform={`translate(${f1((a.x + b.x) / 2)},${f1((a.y + b.y) / 2)}) rotate(${f1(deg(vy, vx))}) scale(1,${vx < 0 ? -1 : 1})`} />,
+    );
+  }
+  // Connectors underneath; segments root to tip, so each one's brass band overlaps the last one's end.
   return (
     <g class="mech-arm">
-      {pts.slice(1).map((b, i) => {
-        const a = pts[i]!;
-        const len = Math.hypot(b.x - a.x, b.y - a.y);
-        const h = 30 - i * 3;
-        const deg = (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI;
-        return <image key={`s${i}`} href={armImg} x="0" y={-h / 2} width={len} height={h} preserveAspectRatio="none" transform={`translate(${a.x.toFixed(1)},${a.y.toFixed(1)}) rotate(${deg.toFixed(1)})`} />;
-      })}
-      {pts.slice(0, -1).map((p, i) => {
-        const r = 19 - i * 1.6;
-        return <image key={`j${i}`} href={jointImg} x={p.x - r} y={p.y - r} width={r * 2} height={r * 2} />;
-      })}
+      {cons}
+      {segs}
     </g>
   );
 }
 
-const EMITTER_R = 32;
+/** The brass coupling where arm k leaves the shoulder. It follows the rest pose, so it stays still while the arm sways. */
+function ArmSocket({ k }: { k: number }) {
+  const p0 = ARMS[k]![0]!;
+  const p1 = ARMS[k]![1]!;
+  const len = SOCK_L * ARM_H0[k]!;
+  const w = SOCK_W * ARM_H0[k]!;
+  const a = (ARM_SEGMENTS[k]![0]!.ang * 180) / Math.PI;
+  return <image href={socketImg} x={f1(-SOCK_BACK * len)} y={f1(-w / 2)} width={f1(len)} height={f1(w)} preserveAspectRatio="none" transform={`translate(${p0.x},${p0.y}) rotate(${f1(a)}) scale(1,${p1.x < p0.x ? -1 : 1})`} />;
+}
+
+const EMITTER_R = 40;
 
 function Emitter({ at, attacking }: { at: Pt; attacking: boolean }) {
   return (
     <g class={`emitter ${attacking ? "firing" : ""}`}>
       <image href={emitterImg} x={at.x - EMITTER_R} y={at.y - EMITTER_R} width={EMITTER_R * 2} height={EMITTER_R * 2} />
-      <circle cx={at.x} cy={at.y} r="12" class="emitter-core" filter="url(#ra-glow)" />
+      <circle cx={at.x} cy={at.y} r="13" class="emitter-core" filter="url(#ra-glow)" />
     </g>
   );
 }
 
-/** Where the square body render sits in the arena. Its bottom fades out behind the board. */
-const BODY = { x: 350, y: 60, size: 500 };
+/** The painted forge behind everything; wider than the arena so it fills a wide projector's letterbox. */
+const BACKDROP = { x: -300, y: -100, w: 1800, h: 1012.5 };
+/** Where the square body render sits in the arena. Its pedestal runs just past the bottom edge, so the robot stands in the pit. */
+const BODY = { x: 180, y: 50, size: 840 };
 /** A point of the body render (in pixels of its 1024px source) in arena coordinates. */
 const bodyPt = (px: number, py: number): Pt => ({ x: BODY.x + (px / 1024) * BODY.size, y: BODY.y + (py / 1024) * BODY.size });
 const bodyLen = (px: number) => (px / 1024) * BODY.size;
-/** The mask's lenses: centre and glass radius, in source pixels. The first two are the large ones. */
-const OPTICS = [
-  { x: 464, y: 206, r: 20 },
-  { x: 561, y: 206, r: 20 },
-  { x: 461, y: 268, r: 12 },
-  { x: 564, y: 268, r: 12 },
-].map((o) => ({ ...bodyPt(o.x, o.y), r: bodyLen(o.r) }));
-/** The axe's cutting edge: top tip, outermost point, bottom tip. */
-const [EDGE_TOP, EDGE_MID, EDGE_BOTTOM] = [bodyPt(876, 148), bodyPt(953, 233), bodyPt(904, 336)] as [Pt, Pt, Pt];
-/** Control point of the curve through the three. */
-const EDGE_CTRL = { x: 2 * EDGE_MID.x - (EDGE_TOP.x + EDGE_BOTTOM.x) / 2, y: 2 * EDGE_MID.y - (EDGE_TOP.y + EDGE_BOTTOM.y) / 2 };
-const at = (p: Pt) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`;
+/** The mask's single optic: centre and glass radius, in source pixels. */
+const OPTICS = [{ x: 509, y: 116, r: 11 }].map((o) => ({ ...bodyPt(o.x, o.y), r: bodyLen(o.r) }));
 
-/** The live parts of the axe: its glowing edge and the lightning jumping off it. The axe itself is in the body render. */
-function AxeGlow() {
-  return (
-    <g class="axe">
-      <path class="axe-edge" d={`M${at(EDGE_TOP)} Q${at(EDGE_CTRL)} ${at(EDGE_BOTTOM)}`} fill="none" stroke="#6ff3ff" stroke-width="3" stroke-linecap="round" filter="url(#ra-glow)" />
-      <path class="spark s1" d={`M${at(EDGE_MID)} l18,-14 l-6,16 l20,-10`} fill="none" stroke="#bff8ff" stroke-width="3" stroke-linejoin="round" />
-      <path class="spark s2" d={`M${at(EDGE_BOTTOM)} l22,6 l-14,6 l18,10`} fill="none" stroke="#bff8ff" stroke-width="3" stroke-linejoin="round" />
-      <path class="spark s3" d={`M${at(EDGE_TOP)} l4,-22 l6,14 l10,-18`} fill="none" stroke="#bff8ff" stroke-width="3" stroke-linejoin="round" />
-    </g>
-  );
-}
-
-/** The robot: a hooded machine priest in a red robe with glowing lenses, an axe crackling with lightning and three jointed back arms. */
+/** The robot: a hooded machine priest in a red robe with one glowing red optic and three mechadendrite back arms. */
 function Robot({ attacking, clock }: { attacking: boolean; clock: SwayClock }) {
   const still = prefersStill();
   const frozen = clock.frozenAt !== null;
@@ -362,16 +446,19 @@ function Robot({ attacking, clock }: { attacking: boolean; clock: SwayClock }) {
     <g class={`robot ${attacking ? "attacking" : ""}`}>
       {/* back arms, behind the body */}
       {arms.map((pts, k) => (
-        <MechArm key={k} pts={pts} />
+        <MechArm key={k} pts={pts} k={k} />
       ))}
       <image href={bodyImg} x={BODY.x} y={BODY.y} width={BODY.size} height={BODY.size} />
-      <AxeGlow />
-      {OPTICS.slice(0, 2).map((o, i) => (
-        <circle key={i} class="eye-halo" cx={o.x} cy={o.y} r={o.r * 3} fill="url(#ra-eye)" opacity="0.55" />
+      {/* the shoulder sockets the arms grow out of */}
+      {[0, 1, 2].map((k) => (
+        <ArmSocket key={k} k={k} />
+      ))}
+      {OPTICS.map((o, i) => (
+        <circle key={i} class="eye-halo" cx={o.x} cy={o.y} r={o.r * 2.9} fill="url(#ra-eye)" opacity="0.55" />
       ))}
       <g class="eyes" filter="url(#ra-glow)">
         {OPTICS.map((o, i) => (
-          <circle key={i} cx={o.x} cy={o.y} r={o.r * 0.75} fill="#4fd8ff" />
+          <circle key={i} cx={o.x} cy={o.y} r={o.r * 0.75} fill="#ff3a2a" />
         ))}
       </g>
       {/* the emitters, in front of the body */}

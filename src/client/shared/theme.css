@@ -573,29 +573,26 @@ a.btn {
   height: 100%;
 }
 
-.robot-arena .tile.light,
 .mini-board .tile.light {
   fill: #d7d3e6;
 }
 
-.robot-arena .tile.dark,
 .mini-board .tile.dark {
   fill: #3d3558;
 }
 
-.robot-arena .tile {
-  stroke: rgba(0, 0, 0, 0.25);
-  stroke-width: 1;
-}
-
-.tile-x line {
-  stroke: #ff2438;
-  stroke-width: 5;
-  stroke-linecap: round;
-}
-
 .tile-danger {
-  fill: rgba(255, 36, 56, 0.22);
+  fill: rgba(160, 10, 24, 0.13);
+}
+
+.reticle-glow {
+  animation: reticle-pulse 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes reticle-pulse {
+  from {
+    opacity: 0.6;
+  }
 }
 
 .tile-x {
@@ -608,8 +605,12 @@ a.btn {
   }
 }
 
-/* The ring about to be destroyed: solid red, pulsing, then it drops away once the lasers have hit. */
-.robot-arena .tile-collapse,
+/* The ring about to be destroyed: cracked and pulsing red, then it drops away once the lasers have hit. */
+.robot-arena .tile-collapse-glow {
+  fill-opacity: 0.45;
+}
+
+.robot-arena .tile-collapse-glow,
 .mini-collapse {
   fill: #ff2438;
   animation: collapse-pulse 0.7s ease-in-out infinite alternate;
@@ -626,11 +627,7 @@ a.btn {
 }
 
 @keyframes collapse-fall {
-  from {
-    fill: #ff5a28;
-  }
   to {
-    fill: #2a1010;
     opacity: 0;
     transform: translateY(70px);
   }
@@ -661,7 +658,7 @@ a.btn {
 }
 
 .robot.attacking .eyes circle {
-  fill: #ff4a5c;
+  fill: #fff2e8;
 }
 
 @keyframes eye-glow {
@@ -673,40 +670,12 @@ a.btn {
   }
 }
 
-.robot .spark {
-  opacity: 0;
-  animation: spark 1.3s linear infinite;
-}
-
-.robot .spark.s2 {
-  animation-delay: 0.45s;
-}
-
-.robot .spark.s3 {
-  animation-delay: 0.9s;
-}
-
-@keyframes spark {
-  0%,
-  8% {
-    opacity: 1;
-  }
-  16%,
-  100% {
-    opacity: 0;
-  }
-}
-
-.robot .axe-edge {
-  animation: eye-glow 0.3s steps(2) infinite alternate;
-}
-
 .emitter-core {
-  fill: #4fd8ff;
+  fill: #ff5a3a;
 }
 
 .emitter.firing .emitter-core {
-  fill: #ff4a5c;
+  fill: #fff2f2;
   animation: danger-flash 0.12s steps(2) infinite;
 }
 
