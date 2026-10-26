@@ -13,10 +13,16 @@ import socketImg from "./robot/arm-socket.webp";
 import backdropImg from "./robot/backdrop.webp";
 import bodyImg from "./robot/body.webp";
 import emitterImg from "./robot/emitter.webp";
+import reticleGlowImg from "./robot/reticle-glow.webp";
+import reticleImg from "./robot/reticle.webp";
+import doomedImg from "./robot/tile-doomed.webp";
+import { TILE_ART } from "./robot/tiles.ts";
 
 export const ARENA_W = 1200;
 export const ARENA_H = 860;
 const CX = ARENA_W / 2;
+// The granite tiles in robot/tiles/ are pre-rendered for these values (and ROBOT_BOARD):
+// changing any of them misplaces every tile. tests/robot-art.test.ts checks this.
 /** Screen y of the board's near edge and far edge. */
 const NEAR_Y = 800;
 const FAR_Y = 360;
@@ -39,6 +45,24 @@ export function project(u: number, v: number): { x: number; y: number; s: number
 const quad = (u: number, v: number) => {
   const pts = [project(u, v), project(u + 1, v), project(u + 1, v + 1), project(u, v + 1)];
   return pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+};
+
+/** Where tile (u, v)'s pre-rendered image goes: the whole-unit bounding box of its quad. */
+export function tileBox(u: number, v: number): { x: number; y: number; width: number; height: number } {
+  const pts = [project(u, v), project(u + 1, v), project(u + 1, v + 1), project(u, v + 1)];
+  const x = Math.floor(Math.min(...pts.map((p) => p.x)));
+  const y = Math.floor(Math.min(...pts.map((p) => p.y)));
+  return { x, y, width: Math.ceil(Math.max(...pts.map((p) => p.x))) - x, height: Math.ceil(Math.max(...pts.map((p) => p.y))) - y };
+}
+
+/** The targeting reticle's box on tile (u, v): inset a little, squashed to the tile's perspective. */
+const reticleBox = (u: number, v: number) => {
+  const a = project(u + 0.08, v + 0.08);
+  const b = project(u + 0.92, v + 0.92);
+  const p0 = project(u + 0.08, v + 0.92);
+  const p1 = project(u + 0.92, v + 0.08);
+  const x = Math.min(a.x, p0.x);
+  return { x, y: a.y, width: Math.max(p1.x, b.x) - x, height: b.y - a.y };
 };
 
 type Pt = { x: number; y: number };
@@ -169,28 +193,38 @@ function Board({ marked, inset, collapsing }: { marked: Set<number>; inset: numb
   const nl = project(far, near);
   const nr = project(near, near);
   const tiles = [];
+  const clips = [];
   const xs = [];
   for (let v = 0; v < ROBOT_BOARD; v++) {
     for (let u = 0; u < ROBOT_BOARD; u++) {
       const i = v * ROBOT_BOARD + u;
       const gone = robotRing(i) < inset;
+      const box = tileBox(u, v);
       if (collapsing.has(i)) {
-        // Solid pulsing red until the lasers fire, then the tile drops away.
-        tiles.push(<polygon key={i} points={quad(u, v)} class={`tile tile-collapse ${gone ? "gone" : ""}`} />);
+        // Cracked and pulsing red until the lasers fire, then the tile drops away.
+        clips.push(
+          <clipPath key={i} id={`ra-q${i}`}>
+            <polygon points={quad(u, v)} />
+          </clipPath>,
+        );
+        tiles.push(
+          <g key={i} class={`tile-collapse ${gone ? "gone" : ""}`}>
+            <image href={TILE_ART[i]} {...box} preserveAspectRatio="none" />
+            <polygon points={quad(u, v)} class="tile-collapse-glow" />
+            <image href={doomedImg} {...box} preserveAspectRatio="none" clip-path={`url(#ra-q${i})`} />
+          </g>,
+        );
         continue;
       }
       if (gone) continue;
-      tiles.push(<polygon key={i} points={quad(u, v)} class={(u + v) % 2 ? "tile dark" : "tile light"} />);
+      tiles.push(<image key={i} href={TILE_ART[i]} {...box} preserveAspectRatio="none" />);
       if (marked.has(i)) {
-        const a = project(u + 0.18, v + 0.18);
-        const b = project(u + 0.82, v + 0.82);
-        const c = project(u + 0.82, v + 0.18);
-        const d = project(u + 0.18, v + 0.82);
+        const rb = reticleBox(u, v);
         xs.push(
           <g key={i} class="tile-x" style={{ animationDelay: `${((u * 7 + v * 13) % 10) * 25}ms` }}>
             <polygon points={quad(u, v)} class="tile-danger" />
-            <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} />
-            <line x1={c.x} y1={c.y} x2={d.x} y2={d.y} />
+            <image href={reticleGlowImg} class="reticle-glow" {...rb} preserveAspectRatio="none" />
+            <image href={reticleImg} {...rb} preserveAspectRatio="none" />
           </g>,
         );
       }
@@ -199,10 +233,11 @@ function Board({ marked, inset, collapsing }: { marked: Set<number>; inset: numb
   return (
     <g class="board">
       {/* Front edge, for a bit of thickness. */}
-      <polygon points={`${nl.x},${nl.y} ${nr.x},${nr.y} ${nr.x},${nr.y + EDGE} ${nl.x},${nl.y + EDGE}`} fill="#231a33" />
-      <polygon points={`${fl.x},${fl.y} ${fr.x},${fr.y} ${nr.x},${nr.y} ${nl.x},${nl.y}`} fill="none" stroke="#8a7bb0" stroke-width="4" />
+      <polygon points={`${nl.x},${nl.y} ${nr.x},${nr.y} ${nr.x},${nr.y + EDGE} ${nl.x},${nl.y + EDGE}`} fill="#1a1412" />
+      <defs>{clips}</defs>
       {tiles}
-      <g class="tile-xs">{xs}</g>
+      <g class="reticles">{xs}</g>
+      <polygon points={`${fl.x},${fl.y} ${fr.x},${fr.y} ${nr.x},${nr.y} ${nl.x},${nl.y}`} fill="none" stroke="#d88a3a" stroke-width="3" stroke-opacity="0.8" />
     </g>
   );
 }
