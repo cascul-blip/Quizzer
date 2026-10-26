@@ -1,5 +1,5 @@
-// The robot's pre-recorded lines. Each id is the MP3 file name in src/client/shared/voice/;
-// regenerate them with `bun scripts/voice.ts` after changing this list.
+// The robot's pre-recorded lines. Each id is the MP3 file name in src/client/shared/voice/.
+// Those clips are the committed Sovereign takes.
 
 export const VOICE_LINES = {
   "targets-acquired": "Targets acquired.",

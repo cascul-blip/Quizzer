@@ -430,7 +430,7 @@ src/client/player/  phone screen (Preact)
 tests/              bun test suites
 ```
 
-The robot's voice lines are pre-recorded MP3s in `src/client/shared/voice/`, generated with espeak-ng and ffmpeg. They're committed, so building doesn't need either tool. To add or change a line, edit `src/shared/voice-lines.ts` and run `bun scripts/voice.ts` (needs `espeak-ng` and `ffmpeg`).
+The robot's voice lines are pre-recorded MP3s in `src/client/shared/voice/`, the Sovereign takes of the four lines in `src/shared/voice-lines.ts`. They're committed, so building doesn't need espeak or ffmpeg.
 
 The Tallest Tower building blocks are images in `src/client/shared/tower/`, made from the generated facade tiles in `scripts/tower-blocks/`. They're committed too. To change them, replace a source PNG (the prompts are in the script) and run `python3 scripts/tower-blocks.py` (needs Pillow and numpy).
 
