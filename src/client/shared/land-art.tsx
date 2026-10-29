@@ -135,7 +135,7 @@ const ART = {
   "podium-3rd-tint": [podiumThirdTintImg, podiumThirdTintImg],
 } as const satisfies Record<string, readonly [string, string]>;
 
-export type LandArtId = keyof typeof ART;
+type LandArtId = keyof typeof ART;
 
 export const landArt = (id: LandArtId): string => pickArt(ART[id][0], ART[id][1]);
 
@@ -197,12 +197,12 @@ const SHADOW_ID = "hex-tray-shadow";
 const MAP_CLIP_ID = "hex-map-clip";
 const HATCH_ID = "hex-hatch";
 
-export const teamColor = (team: number) => TEAMS[team % TEAMS.length]!.color;
+const teamColor = (team: number) => TEAMS[team % TEAMS.length]!.color;
 
 const rgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
 const toHex = (c: number[]) => `#${c.map((v) => Math.round(v).toString(16).padStart(2, "0")).join("")}`;
 /** A colour scaled toward black: 0.5 is half as bright. */
-export const shade = (hex: string, f: number) => toHex(rgb(hex).map((v) => v * f));
+const shade = (hex: string, f: number) => toHex(rgb(hex).map((v) => v * f));
 
 /** A picture drawn over the tile's whole box (`scale` times the tile), centred on (x, y). */
 function TileImage({ id, x, y, scale = 1, class: cls, style }: { id: LandArtId; x: number; y: number; scale?: number; class?: string; style?: Record<string, string> }) {
@@ -211,7 +211,7 @@ function TileImage({ id, x, y, scale = 1, class: cls, style }: { id: LandArtId; 
   return <image class={cls} href={landArt(id)} x={(x - w / 2).toFixed(2)} y={(y - h / 2).toFixed(2)} width={w.toFixed(2)} height={h.toFixed(2)} preserveAspectRatio="none" style={style} />;
 }
 
-export interface HexBoardProps {
+interface HexBoardProps {
   board: LandBoard;
   /** The team looking at the board: tiles it can't take are hatched, tiles that cost extra are marked. */
   viewer?: number;

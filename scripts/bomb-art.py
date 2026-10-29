@@ -156,7 +156,7 @@ PICTURE_WINDOW = (71, 94, 304, 325)  # picture panel, inner window
 WIRE_LUG = (47, 666)  # y of the top and bottom ring-lug hole centres in wires.jpg
 
 
-def key_out(im: Image.Image, protect_inside: bool = True) -> Image.Image:
+def key_out(im: Image.Image) -> Image.Image:
     """Flat colour screen -> RGBA. Alpha from distance to the key and from how much the key's
     own channel sticks out; the soft rim is un-mixed from the key so it carries no spill.
     Only the rim is despilled, so green circuit boards and a green LED inside keep colour."""
@@ -258,7 +258,7 @@ def magenta(rgb: np.ndarray) -> np.ndarray:
 
 def tintable(im: Image.Image) -> tuple[Image.Image, Image.Image]:
     """(wire with the magenta insulation turned into translucent dark shading, white mask of
-    the insulation). Same scheme as fight/castle-cloth and dragon/banner-cloth."""
+    the insulation). Same scheme as fight/castle-cloth-0…4 and dragon/banner-cloth."""
     a = np.asarray(im).astype(np.float64) / 255
     rgb, alpha = a[..., :3], a[..., 3]
     cloth = magenta(rgb) * (alpha > 0.3)
@@ -629,7 +629,7 @@ def preview(path: str, res: dict, cut: Image.Image, coords: dict) -> None:
                         colours = ["#e21b3c", "#1368ce", "#f2c200", "#26890c"]
                         wsrc = coords["wire"]
                         for j in range(3):
-                            (tx, ty), (bx, by) = pc["terminals_top"][j], pc["terminals_bottom"][j]
+                            (tx, ty), (_, by) = pc["terminals_top"][j], pc["terminals_bottom"][j]
                             nm = "wire-cut" if j < wires_cut else "wire"
                             wpic = tinted(res[nm], res[nm + "-tint"], colours[j])
                             span = by - ty

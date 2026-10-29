@@ -34,7 +34,7 @@ import { Roster, type BasePlayer } from "./roster.ts";
 /** Extra wait after a wrong keypad entry so one slip isn't counted twice. */
 export const BOMB_KEYPAD_LOCK_MS = 800;
 
-export interface BombOptions {
+interface BombOptions {
   clock?: Clock;
   rng?: () => number;
   onChange?: () => void;
@@ -42,7 +42,7 @@ export interface BombOptions {
   onFinish?: (game: BombGame) => void;
 }
 
-export interface BombGameSettings extends BombSettings {
+interface BombGameSettings extends BombSettings {
   shuffleAnswers: boolean;
 }
 
@@ -59,7 +59,7 @@ interface DealOption {
   spot?: PinSpot;
 }
 
-export interface DealtWire {
+interface DealtWire {
   playerId: string;
   optionIndex: number;
   label: string;
@@ -119,7 +119,7 @@ interface Squad {
   flashSeq: number;
 }
 
-export interface BombPlayer extends BasePlayer {
+interface BombPlayer extends BasePlayer {
   squad: number;
   /** Skip the question already on screen; dealt in on the next wire. */
   satOut: boolean;

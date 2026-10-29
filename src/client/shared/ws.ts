@@ -2,7 +2,7 @@ import type { ClientMsg, ServerMsg } from "../../shared/protocol.ts";
 
 export type ConnStatus = "connecting" | "open" | "closed";
 
-export interface Connection {
+interface Connection {
   send(msg: ClientMsg): void;
   close(): void;
 }

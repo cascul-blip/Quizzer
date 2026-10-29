@@ -23,7 +23,7 @@ export const CAUGHT_MS = 4000;
 export const GAP_START = 30;
 export const GAP_MAX = 45;
 /** The fish closes 1 gap-second per second on level 1, +25% per level. */
-export const SPEED_STEP = 0.25;
+const SPEED_STEP = 0.25;
 /** A full squad's boosts are worth this many gap-seconds per player-boost-cycle; divided by players. */
 export const BOOST_POWER = 35;
 /** Boosts to clear a level = BOOSTS_BASE + players. */
@@ -31,18 +31,18 @@ export const BOOSTS_BASE = 3;
 /** The boost can't fire sooner than this after it became available (the phone needs ~2 s of holding). */
 export const BOOST_MIN_HOLD_MS = 1500;
 export const DIVE_SYMBOLS = 5;
-export const DIVE_ADVANCE_FRACTION = 0.7;
+const DIVE_ADVANCE_FRACTION = 0.7;
 /** Time to find each symbol before the instructor moves on to the next one. */
 export const DIVE_SYMBOL_TIMEOUT_MS = 4000;
-export const DIVE_MAX_MS = 100_000;
+const DIVE_MAX_MS = 100_000;
 export const DIVE_WRONG_LOCK_MS = 1000;
 export const DIVE_METERS_PER_HIT = 2;
 export const LEVEL_METERS = 100;
-export const GRID_SIZE = 6;
+const GRID_SIZE = 6;
 /** Grid entries that differ from the target by just one part. */
 export const LOOKALIKES = 3;
-export const PLAYERS_PER_INSTRUCTOR = 6;
-export const MAX_INSTRUCTORS = 4;
+const PLAYERS_PER_INSTRUCTOR = 6;
+const MAX_INSTRUCTORS = 4;
 
 export const speedFor = (level: number) => 1 + SPEED_STEP * (level - 1);
 
@@ -71,7 +71,7 @@ interface Instructor {
   endsAt: number;
 }
 
-export interface SubOptions {
+interface SubOptions {
   clock?: Clock;
   rng?: () => number;
   onChange?: () => void;

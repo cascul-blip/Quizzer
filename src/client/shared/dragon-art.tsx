@@ -58,7 +58,7 @@ import teamPileImg from "./dragon/team-pile.webp";
 import { isPhoneArt } from "./phone-art.ts";
 import { teamVars } from "./ui.tsx";
 
-export type DragonArtId =
+type DragonArtId =
   | "cave"
   | "dragon-healthy"
   | "dragon-wounded"
@@ -88,7 +88,7 @@ export type DragonArtId =
   | "loot-jackpot"
   | "jackpot-pile";
 
-export interface DragonArtSlot {
+interface DragonArtSlot {
   id: DragonArtId;
   /** src/client/shared/dragon/<id>.webp, width × height. */
   projector: { w: number; h: number };
@@ -190,7 +190,7 @@ export const PHONE_ART: Partial<Record<DragonArtId, string>> = {
 };
 
 /** The picture for a slot on this page: the phone copy on phones when there is one. */
-export function dragonArt(id: DragonArtId): string {
+function dragonArt(id: DragonArtId): string {
   return (isPhoneArt() ? PHONE_ART[id] : undefined) ?? PROJECTOR_ART[id];
 }
 
@@ -230,7 +230,7 @@ export function Hoard({ size }: { size: "full" | "half" }) {
 // ---------- the dragon ----------
 
 /** Where the jaw hinges and where the fire comes out (the snout tip), as percentages of the dragon canvas. */
-export const JAW_HINGE = { x: 26.8, y: 33.5 };
+const JAW_HINGE = { x: 26.8, y: 33.5 };
 export const SNOUT = { x: 13.6, y: 40.7 };
 /** How far the jaw turns when wide open; negative opens this left-facing jaw. */
 const JAW_OPEN_DEG = -25;
@@ -241,7 +241,7 @@ const STAGE_ART: Record<0 | 1 | 2, { body: DragonArtId; jaw: DragonArtId }> = {
   2: { body: "dragon-badly-wounded", jaw: "dragon-jaw-badly-wounded" },
 };
 
-export interface DragonProps {
+interface DragonProps {
   stage: 0 | 1 | 2;
   slain?: boolean;
   /** Lying on the gold asleep, with a Zzz (the lobby and countdown). */

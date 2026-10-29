@@ -26,7 +26,7 @@ export class NotFoundError extends Error {}
 export { MAX_MEDIA_BYTES };
 /** Images with more pixels than this are refused rather than decoded. */
 const MAX_IMAGE_PIXELS = 64_000_000;
-export const MEDIA_TYPES: Record<string, string> = {
+const MEDIA_TYPES: Record<string, string> = {
   "image/png": "png",
   "image/jpeg": "jpg",
   "image/gif": "gif",
@@ -73,7 +73,7 @@ export function sniffImageType(bytes: Uint8Array): string | null {
   return null;
 }
 
-export interface QuizPatch {
+interface QuizPatch {
   title?: string;
   description?: string;
   settings?: Partial<QuizSettings>;

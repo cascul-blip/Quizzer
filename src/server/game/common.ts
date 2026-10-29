@@ -15,7 +15,7 @@ export const realClock: Clock = {
 };
 
 export const MAX_PLAYERS = 200;
-export const MAX_NICKNAME = 20;
+const MAX_NICKNAME = 20;
 
 export class GameError extends Error {}
 

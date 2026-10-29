@@ -58,20 +58,20 @@ export const GLYPH_SLOTS = {
   lb: [26, 75],
   rb: [74, 75],
 } as const satisfies Record<string, readonly [number, number]>;
-export type GlyphSlot = keyof typeof GLYPH_SLOTS;
+type GlyphSlot = keyof typeof GLYPH_SLOTS;
 
 /** Part sizes (diameter on the tile). "n" is the small part nested inside a hollow one. */
 export const GLYPH_SIZES = { s: 22, m: 38, l: 60, n: 24 } as const;
-export type GlyphSize = keyof typeof GLYPH_SIZES;
+type GlyphSize = keyof typeof GLYPH_SIZES;
 
-export interface GlyphPart {
+interface GlyphPart {
   shape: GlyphShape;
   slot: GlyphSlot;
   size: GlyphSize;
   rot: number;
 }
 
-export type Glyph = GlyphPart[];
+type Glyph = GlyphPart[];
 
 /** Arrangements that keep parts from colliding. `hollow` = that part must be an outline (something sits inside it). */
 const LAYOUTS: { slot: GlyphSlot; size: GlyphSize; hollow?: boolean }[][] = [

@@ -33,8 +33,8 @@ export const SIEGE_ENDING_MS = 5000;
 /** A lane is in danger while a monster is within this many squares of the wall. */
 export const SIEGE_DANGER_SQUARES = 2;
 /** At most this many monsters on a lane's last two squares (7 and 8) at once, and one more from SIEGE_CROWD_FROM_WAVE on. */
-export const SIEGE_MAX_ENTERING = 2;
-export const SIEGE_CROWD_FROM_WAVE = 5;
+const SIEGE_MAX_ENTERING = 2;
+const SIEGE_CROWD_FROM_WAVE = 5;
 /** Goblins in one group come onto the lane this far apart. */
 export const SIEGE_GROUP_GAP_MS = 2500;
 /** How often an open phone lane map gets new monster dots. */
@@ -54,9 +54,9 @@ export const SIEGE_WAVE_CHOICES: readonly SiegeWaves[] = [5, 10, "endless"];
 
 export type SiegeDefenderType = "archer" | "knight" | "wall";
 export const SIEGE_DEFENDER_TYPES: readonly SiegeDefenderType[] = ["archer", "knight", "wall"];
-export const SIEGE_MAX_LEVEL = 3;
+const SIEGE_MAX_LEVEL = 3;
 
-export interface SiegeDefenderStats {
+interface SiegeDefenderStats {
   label: string;
   /** Place, Lv 2, Lv 3. */
   cost: readonly [number, number, number];
@@ -90,7 +90,7 @@ export function siegeUpgradeCost(type: SiegeDefenderType, level: number): number
 
 export type SiegeMonsterType = "goblin" | "wolf" | "troll" | "giant";
 
-export interface SiegeMonsterStats {
+interface SiegeMonsterStats {
   label: string;
   health: number;
   /** Extra health per connected player (the giant). */
@@ -120,7 +120,7 @@ export const SIEGE_MONSTERS: Record<SiegeMonsterType, SiegeMonsterStats> = {
 };
 
 /** Monsters get this much tougher every wave after the first (+10% health per wave). */
-export const SIEGE_HEALTH_PER_WAVE = 0.1;
+const SIEGE_HEALTH_PER_WAVE = 0.1;
 
 /** A monster's health in a wave: its base (plus the giant's per-player share), +10% per wave after the first, rounded. */
 export function siegeMonsterHealth(type: SiegeMonsterType, wave: number, players: number): number {
@@ -161,17 +161,17 @@ export function siegeWaveBudget(wave: number, players: number, scalePct: number)
 
 // A board stronger than the waves: when the class builds faster than the waves grow, the waves catch up.
 /** Par: an ordinary class's board is worth about this much gold per point of the wave's usual budget. */
-export const SIEGE_PAR_GOLD_PER_POINT = 60;
+const SIEGE_PAR_GOLD_PER_POINT = 60;
 /** A board r times par calls for waves r^this times stronger: a big board is stronger than its gold says. */
-export const SIEGE_STRENGTH_EXPONENT = 2;
+const SIEGE_STRENGTH_EXPONENT = 2;
 /** The boost climbs at most this much per wave, and only after a wave the wall came through untouched; it can drop any amount. */
-export const SIEGE_STRENGTH_STEP = 0.35;
-export const SIEGE_MAX_BOOST = 4;
+const SIEGE_STRENGTH_STEP = 0.35;
+const SIEGE_MAX_BOOST = 4;
 /**
  * The share of the boost that comes as more monsters; the rest is extra health. Mostly health, because a lane
  * only lets so many monsters on at once, so extra monsters just trickle in.
  */
-export const SIEGE_STRENGTH_COUNT_SHARE = 0.3;
+const SIEGE_STRENGTH_COUNT_SHARE = 0.3;
 
 /** The gold a defender is worth: what it cost to place and upgrade, times the share of its health left. */
 export function siegeDefenderGold(type: SiegeDefenderType, level: number, health: number, maxHealth: number): number {
@@ -181,7 +181,7 @@ export function siegeDefenderGold(type: SiegeDefenderType, level: number, health
 }
 
 /** At the top boost the giant walks and swings this many times faster; with no boost it keeps its normal pace. */
-export const SIEGE_GIANT_MAX_PACE = 2;
+const SIEGE_GIANT_MAX_PACE = 2;
 
 /** The giant's pace for a wave's boost: 1× at no boost up to SIEGE_GIANT_MAX_PACE at SIEGE_MAX_BOOST, in proportion between. */
 export function siegeGiantPace(boost: number): number {
@@ -218,10 +218,10 @@ export function siegeSpawnWindowMs(wave: number): number {
   return Math.max(20_000, 30_000 - 1000 * (Math.max(1, wave) - 1));
 }
 
-export const SIEGE_SCALE_MIN = 70;
-export const SIEGE_SCALE_MAX = 130;
+const SIEGE_SCALE_MIN = 70;
+const SIEGE_SCALE_MAX = 130;
 /** The difficulty scale moves at most this many points per wave. */
-export const SIEGE_SCALE_STEP = 20;
+const SIEGE_SCALE_STEP = 20;
 
 /** The scale a wave's accuracy asks for: 70% at 40% accuracy or below, 130% at 90% or above, a straight line in between. */
 export function siegeTargetScale(accuracy: number): number {

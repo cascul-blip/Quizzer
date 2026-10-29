@@ -60,7 +60,7 @@ interface Reveal {
   step: number;
 }
 
-export interface CupOptions {
+interface CupOptions {
   clock?: Clock;
   rng?: () => number;
   onChange?: () => void;
@@ -68,7 +68,7 @@ export interface CupOptions {
   onFinish?: (game: CupGame) => void;
 }
 
-export interface CupGameSettings {
+interface CupGameSettings {
   /** Cups in front of each player at the start (default CUP_DEFAULT_CUPS). */
   cups?: number;
   shuffleAnswers: boolean;

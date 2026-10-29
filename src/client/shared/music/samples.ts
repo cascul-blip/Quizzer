@@ -71,7 +71,7 @@ const bytes = new Map<string, Promise<ArrayBuffer | null>>();
 const buffers = new WeakMap<Ctx, Map<string, AudioBuffer | null>>();
 const decoding = new WeakMap<Ctx, Map<string, Promise<void>>>();
 
-export type Fetcher = (url: string) => Promise<ArrayBuffer>;
+type Fetcher = (url: string) => Promise<ArrayBuffer>;
 const fromNetwork: Fetcher = (url) => fetch(url).then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(`${r.status}`))));
 
 function download(url: string, get: Fetcher): Promise<ArrayBuffer | null> {

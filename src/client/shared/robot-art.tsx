@@ -18,8 +18,8 @@ import reticleImg from "./robot/reticle.webp";
 import doomedImg from "./robot/tile-doomed.webp";
 import { TILE_ART } from "./robot/tiles.ts";
 
-export const ARENA_W = 1200;
-export const ARENA_H = 860;
+const ARENA_W = 1200;
+const ARENA_H = 860;
 const CX = ARENA_W / 2;
 // The granite tiles in robot/tiles/ are pre-rendered for these values (and ROBOT_BOARD):
 // changing any of them misplaces every tile. tests/robot-art.test.ts checks this.
@@ -37,7 +37,7 @@ const EDGE = 18;
 const STACK_SHOWN = 3;
 
 /** Board point → screen point, with the perspective scale there. */
-export function project(u: number, v: number): { x: number; y: number; s: number } {
+function project(u: number, v: number): { x: number; y: number; s: number } {
   const z = 1 + (DEPTH * (ROBOT_BOARD - v)) / ROBOT_BOARD;
   return { x: CX + ((u - ROBOT_BOARD / 2) * TILE) / z, y: HORIZON + H0 / z, s: 1 / z };
 }
@@ -68,7 +68,7 @@ const reticleBox = (u: number, v: number) => {
 type Pt = { x: number; y: number };
 
 /** The three laser emitters at the tips of the robot's back arms (at rest): left, center (over its head), right. */
-export const EMITTERS: Pt[] = [
+const EMITTERS: Pt[] = [
   { x: 230, y: 190 },
   { x: CX, y: 28 },
   { x: 970, y: 190 },
@@ -135,7 +135,7 @@ function useSwayClock(attackSeq: number | null): SwayClock {
   return c;
 }
 
-export interface ArenaPlayer {
+interface ArenaPlayer {
   id: string;
   avatar: AvatarChoice;
   x: number;

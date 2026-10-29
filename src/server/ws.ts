@@ -36,14 +36,14 @@ export interface SocketData {
 
 type WS = ServerWebSocket<SocketData>;
 
-export interface HubOptions {
+interface HubOptions {
   /** Forced join address (--host). */
   address?: string;
   clock?: Clock;
   log?: (msg: string) => void;
 }
 
-export interface LastResults {
+interface LastResults {
   quizId: string;
   title: string;
   csv: string;
@@ -68,7 +68,7 @@ function viewKey(view: PlayerView, now: number): string {
 /** Compress what goes to phones over Wi-Fi; the host screen is on this machine, so it isn't worth the CPU. */
 const compressFor = (ws: WS) => ws.data.role !== "host";
 
-export type LiveGame = Game | TowerGame | SubGame | FightGame | RobotGame | LandGame | RacerGame | CupGame | DragonGame | BombGame | SiegeGame;
+type LiveGame = Game | TowerGame | SubGame | FightGame | RobotGame | LandGame | RacerGame | CupGame | DragonGame | BombGame | SiegeGame;
 
 /** Owns the single live game and every connected socket; pushes each phone its view (or a patch of it) on every change. */
 export class GameHub {

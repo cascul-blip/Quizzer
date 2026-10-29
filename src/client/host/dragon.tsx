@@ -13,7 +13,7 @@ type DragonView = Extract<HostView, { kind: "dragon" }>;
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 /** "Dragon slain in 3:42!" or "The dragon escaped!" */
-export function dragonVerdict(slain: boolean, slainMs: number | null): string {
+function dragonVerdict(slain: boolean, slainMs: number | null): string {
   return slain && slainMs !== null ? `Dragon slain in ${formatClock(Math.round(slainMs / 1000))}!` : "The dragon escaped!";
 }
 

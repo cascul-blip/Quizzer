@@ -678,7 +678,6 @@ def main():
         src = np.asarray(k).astype(np.float32)
         Hs, Ws = src.shape[:2]
         alpha = src[..., 3]
-        named = {}
         upper = np.zeros((Hs, Ws), bool)
         poly_masks = {}
         for name, poly, pivot in cs["pieces"]:
@@ -807,7 +806,6 @@ def main():
     info["wall_top"] = dict(left=(xl, yl), right=(xr, yr), angle=angle, mid=top_mid)
     for name, d in det.items():
         save(d["im"], name, files)
-        save(resize(d["im"], 0.5), name, files, phone=True)
     # gold trims
     trims = {}
     for fname, out in (("archer", "lv3-trim-archer"), ("knight", "lv3-trim-knight"), ("stone-wall", "lv3-trim-wall")):
@@ -818,7 +816,6 @@ def main():
         t = gold_rim(ref, e["base"])
         trims[out] = t
         save(t, out, files)
-        save(resize(t, 0.5), out, files, phone=True)
 
     # --- icons ---------------------------------------------------------------------------------
     ki = K("icons", "fill")
@@ -1024,7 +1021,7 @@ def write_manifest(files, info, figs, cut_info, det):
     L.append("## Phone")
     L.append("")
     L.append("`phone/archer-icon`, `phone/knight-icon`, `phone/stone-wall-icon` (128×128, for the defender strip), "
-             "`phone/coin`, `phone/heart` (64×64), and half-size copies of the level details (`phone/lv2-*`, `phone/lv3-*`). "
+             "`phone/coin` and `phone/heart` (64×64). "
              "The phone's lane map is drawn in code.")
     (OUT / "manifest.md").write_text("\n".join(L) + "\n")
 
@@ -1259,7 +1256,7 @@ def preview(path, board, castle, ban, figs, cut_info, det, trims, small, info):
     sections.append(flow(tiles, W))
 
     # 6. small art + phone
-    header("6. Small art (arrow, coin, heart, dust-puff) and phone/ (128 px icons, 64 px coin/heart, half-size level details)")
+    header("6. Small art (arrow, coin, heart, dust-puff) and phone/ (128 px icons, 64 px coin/heart)")
     tiles = [tile(small["arrow"], "arrow 64x16", scale=2), tile(small["coin"], "coin 64"), tile(small["heart"], "heart 64"),
              tile(small["dust-puff"], "dust-puff 160x120", bg=(70, 90, 50, 255))]
     for f in sorted(PHONE.glob("*.webp")):

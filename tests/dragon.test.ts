@@ -105,7 +105,7 @@ function toScramble(game: DragonGame, clock: FakeClock) {
 }
 
 /** Get a player to the chest screen with a correct answer. */
-function earnChest(game: DragonGame, clock: FakeClock, p: DragonPlayer) {
+function earnChest(game: DragonGame, p: DragonPlayer) {
   const cur = p.current!;
   expect(game.answer(p.id, cur.seq, cur.correct[0]!)).toBe(true);
   expect(p.state).toBe("chest");
@@ -243,11 +243,11 @@ describe("Act 1: the battle", () => {
     clock.advance(DRAGON_TRANSITION_MS);
     const a = byName(game, "A");
     forceLoot(game, "coins", "bigPile");
-    earnChest(game, clock, a);
+    earnChest(game, a);
     game.chest(a.id, 0);
     expect(game.teams[a.team]!.gold).toBe(13);
     clock.advance(DRAGON_LOOT_MS);
-    earnChest(game, clock, a);
+    earnChest(game, a);
     game.chest(a.id, 2);
     expect(game.teams[a.team]!.gold).toBe(43);
   });
@@ -369,7 +369,7 @@ describe("Act 2: the scramble", () => {
     forceLoot(game, "coins", "bigPile");
     answer(game, clock, a, false);
     expect(a.state).toBe("question");
-    earnChest(game, clock, a);
+    earnChest(game, a);
     expect(game.playerView(a.id)!.chest).toMatchObject({ remainingMs: DRAGON_CHEST_MS + FEEDBACK_MS });
     expect(game.chest(a.id, 3)).toBe(false);
     expect(game.chest(a.id, 1)).toBe(true);
@@ -377,7 +377,7 @@ describe("Act 2: the scramble", () => {
     expect(game.answer(a.id, a.current!.seq, 0)).toBe(false);
     clock.advance(DRAGON_LOOT_MS);
     expect(a.state).toBe("question");
-    earnChest(game, clock, a);
+    earnChest(game, a);
     clock.advance(DRAGON_CHEST_MS + FEEDBACK_MS);
     expect(game.playerView(a.id)!.loot).toMatchObject({ kind: "bigPile", gold: 60 });
     expect(a.chestsOpened).toBe(2);
@@ -392,7 +392,7 @@ describe("Act 2: the scramble", () => {
     const a = byName(game, "A");
     forceLoot(game, "charm", "coins", "bats", "bigPile", "coins", "coins");
     for (let i = 0; i < 6; i++) {
-      earnChest(game, clock, a);
+      earnChest(game, a);
       game.chest(a.id, 0);
       clock.advance(DRAGON_LOOT_MS);
     }
@@ -406,7 +406,7 @@ describe("Act 2: the scramble", () => {
     const a = byName(game, "A");
     game.teams[a.team]!.gold = 200;
     forceLoot(game, "trap");
-    earnChest(game, clock, a);
+    earnChest(game, a);
     game.chest(a.id, 0);
     expect(game.teams[a.team]!.gold).toBe(180);
     expect(game.jackpot).toBe(120 + 20);
@@ -431,7 +431,7 @@ describe("Act 2: the scramble", () => {
     toScramble(game, clock);
     const a = byName(game, "A");
     forceLoot(game, "jackpot");
-    earnChest(game, clock, a);
+    earnChest(game, a);
     game.chest(a.id, 0);
     expect(game.teams[a.team]!.gold).toBe(120);
     expect(game.jackpot).toBe(0);
@@ -445,7 +445,7 @@ describe("Act 2: the scramble", () => {
     const [a, b, c] = ["A", "B", "C"].map((n) => byName(game, n)) as [DragonPlayer, DragonPlayer, DragonPlayer];
     game.teams[b.team]!.gold = 200;
     forceLoot(game, "grab25", "grab10", "scale", "grab10");
-    earnChest(game, clock, a);
+    earnChest(game, a);
     game.chest(a.id, 0);
     const view = game.playerView(a.id)!;
     expect(view.state).toBe("grab");
@@ -462,7 +462,7 @@ describe("Act 2: the scramble", () => {
     expect(game.hostView().events.at(-1)).toMatchObject({ kind: "grab", nickname: "A", target: b.team, gold: 50 });
     expect(game.playerView(a.id)!.loot).toMatchObject({ kind: "grab25", gold: 50, target: { index: b.team }, blocked: false });
     // C grabs right away: B is protected, pick again.
-    earnChest(game, clock, c);
+    earnChest(game, c);
     game.chest(c.id, 0);
     expect(game.playerView(c.id)!.grab!.teams.find((t) => t.index === b.team)!.protectedMs).toBeGreaterThan(0);
     expect(game.grab(c.id, b.team)).toBe(false);
@@ -471,11 +471,11 @@ describe("Act 2: the scramble", () => {
     expect(game.teams[c.team]!.gold).toBe(15);
     clock.advance(DRAGON_LOOT_MS);
     // B finds a scale; the next grab against B is blocked.
-    earnChest(game, clock, b);
+    earnChest(game, b);
     game.chest(b.id, 0);
     expect(game.teams[b.team]!.scales).toBe(1);
     clock.advance(DRAGON_GRAB_COOLDOWN_MS);
-    earnChest(game, clock, c);
+    earnChest(game, c);
     game.chest(c.id, 0);
     expect(game.grab(c.id, b.team)).toBe(true);
     expect(game.playerView(c.id)!.loot).toMatchObject({ blocked: true, gold: 0 });
@@ -488,13 +488,13 @@ describe("Act 2: the scramble", () => {
     toScramble(game, clock);
     const [a, b, c] = ["A", "B", "C"].map((n) => byName(game, n)) as [DragonPlayer, DragonPlayer, DragonPlayer];
     forceLoot(game, "grab10", "grab10");
-    earnChest(game, clock, a);
+    earnChest(game, a);
     game.chest(a.id, 0);
     expect(game.playerView(a.id)!.loot).toMatchObject({ kind: "grab10", asCoins: true, gold: 25 });
     clock.advance(DRAGON_LOOT_MS);
     game.teams[b.team]!.gold = 100;
     game.teams[c.team]!.gold = 300;
-    earnChest(game, clock, a);
+    earnChest(game, a);
     game.chest(a.id, 0);
     clock.advance(DRAGON_GRAB_MS);
     expect(game.teams[c.team]!.gold).toBe(270);
@@ -507,7 +507,7 @@ describe("Act 2: the scramble", () => {
     toScramble(game, clock);
     const p = byName(game, "Solo");
     forceLoot(game, "grab25");
-    earnChest(game, clock, p);
+    earnChest(game, p);
     game.chest(p.id, 0);
     expect(game.playerView(p.id)!.loot).toMatchObject({ asCoins: true, gold: 25 });
   });
@@ -526,7 +526,7 @@ describe("Act 2: the scramble", () => {
     toScramble(game, clock);
     const a = byName(game, "A");
     forceLoot(game, "coins");
-    earnChest(game, clock, a);
+    earnChest(game, a);
     game.setConnected(a.id, false);
     clock.advance(DRAGON_CHEST_MS + FEEDBACK_MS + DRAGON_LOOT_MS);
     game.setConnected(a.id, true);
@@ -573,7 +573,7 @@ describe("bandwidth", () => {
     const [a, b] = ["A", "B"].map((n) => byName(game, n)) as [DragonPlayer, DragonPlayer];
     const before = still(game.playerView(a.id));
     forceLoot(game, "bigPile");
-    earnChest(game, clock, b);
+    earnChest(game, b);
     game.chest(b.id, 0);
     expect(still(game.playerView(a.id))).toBe(before);
     expect(game.playerView(a.id)!.grab).toBeNull();
@@ -634,13 +634,13 @@ describe("the end", () => {
     clock.advance(20_000 + RUNE_GRACE_MS + DRAGON_RUNE_REVEAL_MS);
     toScramble(game, clock);
     forceLoot(game, "coins", "coins", "bats");
-    earnChest(game, clock, a);
+    earnChest(game, a);
     game.chest(a.id, 0);
-    earnChest(game, clock, c);
+    earnChest(game, c);
     game.chest(c.id, 0);
     clock.advance(DRAGON_LOOT_MS);
     // 25 each; D's extra correct answer breaks the tie for team 1.
-    earnChest(game, clock, d);
+    earnChest(game, d);
     game.chest(d.id, 0);
     clock.advance(game.phaseEndsAt - clock.now());
     expect(game.phase).toBe("podium");

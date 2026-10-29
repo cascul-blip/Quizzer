@@ -23,7 +23,7 @@ export type GameMode = "classic" | "tower" | "submarine" | "fight" | "robot" | "
 export type TowerPhase = "countdown" | "playing" | "podium";
 
 /** Each team also has a shape, so teams can be told apart without relying on colour. */
-export type TeamShape = "circle" | "square" | "triangle" | "diamond" | "star" | "heart";
+type TeamShape = "circle" | "square" | "triangle" | "diamond" | "star" | "heart";
 
 export const TEAMS = [
   { name: "Red", color: "#d81e3a", shape: "circle" },
@@ -545,8 +545,8 @@ export const ROBOT_DIRS: readonly RobotDir[] = ["up", "down", "left", "right"];
 export const ROBOT_BOARD = 12;
 export const ROBOT_LIVES = 3;
 /** The first quiz phase is this long; each round is ROBOT_QUIZ_STEP_MS shorter, down to ROBOT_QUIZ_MIN_MS. */
-export const ROBOT_QUIZ_START_MS = 30_000;
-export const ROBOT_QUIZ_STEP_MS = 2000;
+const ROBOT_QUIZ_START_MS = 30_000;
+const ROBOT_QUIZ_STEP_MS = 2000;
 export const ROBOT_QUIZ_MIN_MS = 7000;
 /** The red Xs appear this long before the quiz phase ends. */
 export const ROBOT_WARN_MS = 5000;
@@ -668,8 +668,8 @@ export const CUP_DIE_SIDES = 6;
 /** The dice tumble this long before the quiz timer starts. */
 export const CUP_ROLL_MS = 2500;
 /** The first quiz phase is this long; each round is CUP_QUIZ_STEP_MS shorter, down to CUP_QUIZ_MIN_MS. */
-export const CUP_QUIZ_START_MS = 30_000;
-export const CUP_QUIZ_STEP_MS = 2000;
+const CUP_QUIZ_START_MS = 30_000;
+const CUP_QUIZ_STEP_MS = 2000;
 export const CUP_QUIZ_MIN_MS = 10_000;
 /** Time to pick a cup; anyone who hasn't picked by then gets a random one. */
 export const CUP_DRINK_MS = 10_000;
@@ -906,7 +906,7 @@ export interface PlayerLandView {
  */
 export type RacerPhase = "intro" | "confidence" | "open" | "reveal" | "podium";
 
-export type { RacerCar, RacerConfidence, RacerTurnResult } from "./racer-rules.ts";
+export type { RacerCar, RacerConfidence } from "./racer-rules.ts";
 
 /** The player at the wheel this turn. Kept as it was when the turn started, even if they leave or are removed. */
 export interface RacerDriver {
@@ -1068,11 +1068,11 @@ export interface DragonSettings {
 }
 
 /** The dragon is "wounded" under this share of its health and "badly wounded" under the next. */
-export const DRAGON_WOUNDED_AT = 0.66;
-export const DRAGON_BADLY_AT = 0.33;
+const DRAGON_WOUNDED_AT = 0.66;
+const DRAGON_BADLY_AT = 0.33;
 /** Each new wounded stage brings fire breath this much sooner, down to DRAGON_FIRE_MIN_SEC. */
-export const DRAGON_FIRE_STEP_SEC = 10;
-export const DRAGON_FIRE_MIN_SEC = 20;
+const DRAGON_FIRE_STEP_SEC = 10;
+const DRAGON_FIRE_MIN_SEC = 20;
 export const DRAGON_FIRE_WARN_MS = 3000;
 /** The rune question's time: its own time limit, kept within these bounds. */
 export const DRAGON_RUNE_MAX_MS = 20_000;
@@ -1120,8 +1120,8 @@ export const DRAGON_LOOT_TABLE: readonly { kind: DragonLoot; chance: number }[] 
   { kind: "jackpot", chance: 1 },
 ];
 /** Gold in a Coins and a Big pile chest; half (rounded up) if the dragon escaped. */
-export const DRAGON_COINS = 25;
-export const DRAGON_BIG_PILE = 60;
+const DRAGON_COINS = 25;
+const DRAGON_BIG_PILE = 60;
 export const DRAGON_GRAB_SHARE: Partial<Record<DragonLoot, number>> = { grab10: 0.1, grab25: 0.25 };
 
 export function dragonCoinValue(kind: "coins" | "bigPile", escaped: boolean): number {
