@@ -39,7 +39,7 @@ import phoneWireCutImg from "./bomb/phone/wire-cut.webp";
 import phoneWireTintImg from "./bomb/phone/wire-tint.webp";
 import phoneWireCutTintImg from "./bomb/phone/wire-cut-tint.webp";
 
-export interface BombArtSlot {
+interface BombArtSlot {
   id: string;
   /** Projector file under bomb/. Null when the picture is phone-only. */
   projector: { w: number; h: number } | null;
@@ -119,7 +119,7 @@ export function bombArt(id: string): string {
 export const BOMB_PROJECTOR_ART = PROJECTOR_ART;
 export const BOMB_PHONE_ART = PHONE_ART;
 
-export const WIRE_FILL: Record<BombWireColor, string> = {
+const WIRE_FILL: Record<BombWireColor, string> = {
   red: "#d10f0f",
   blue: "#1c56d8",
   yellow: "#e0ae00",
@@ -129,13 +129,8 @@ export const WIRE_FILL: Record<BombWireColor, string> = {
 };
 
 /** Percent boxes on casing.webp. */
-export const CLOCK_FACE = { left: 28.3, top: 18.5, width: 27.4, height: 19.5 };
-export const MODULE_BAY = { left: 28.2, top: 49.2, width: 63.7, height: 25.9 };
-/** Casing drawn 740px wide on the 1344-wide bench, base line on bench (672, 640). */
-export const CASING_WIDTH = (740 / 1344) * 100;
-export const CASING_TOP = 26.9;
-/** Explosion origin on the bench, near the casing centre. */
-export const BOOM_CENTER = { x: 50, y: (423 / 768) * 100 };
+const CLOCK_FACE = { left: 28.3, top: 18.5, width: 27.4, height: 19.5 };
+const MODULE_BAY = { left: 28.2, top: 49.2, width: 63.7, height: 25.9 };
 
 const LEDS: Record<BombPanel, readonly (readonly [number, number])[]> = {
   wire: [[22.8, 10.2], [40.8, 10.2], [58.3, 10.2], [75.0, 10.2]],
@@ -144,7 +139,7 @@ const LEDS: Record<BombPanel, readonly (readonly [number, number])[]> = {
 };
 const WIRE_TOP: readonly (readonly [number, number])[] = [[22.8, 37.6], [39.7, 37.6], [57.2, 37.6], [75.0, 37.6]];
 const WIRE_BOTTOM: readonly (readonly [number, number])[] = [[23.1, 65.6], [39.7, 65.6], [57.5, 65.6], [75.0, 65.6]];
-export const PICTURE_WINDOW = { left: 18.9, top: 23.9, width: 61.7, height: 58.6 };
+const PICTURE_WINDOW = { left: 18.9, top: 23.9, width: 61.7, height: 58.6 };
 
 const PANEL_ASPECT = 372 / 360;
 
@@ -184,7 +179,7 @@ function wireStyle(i: number): CSSProperties {
   return { left: `${top[0] - width / 2}%`, top: `${topY}%`, width: `${width}%`, height: `${height}%` };
 }
 
-export function ModuleFace({
+function ModuleFace({
   mod,
   image,
   spark,

@@ -1,4 +1,4 @@
-export const MAX_POINTS = 1000;
+const MAX_POINTS = 1000;
 
 /**
  * Kahoot-style speed scoring: a correct answer is worth 1000 points when given

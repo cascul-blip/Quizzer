@@ -296,7 +296,7 @@ describe("cutting", () => {
 
 describe("squads, reconnecting, and the ending", () => {
   test("wires wait out a short drop, move after 5 seconds, and a kick re-deals immediately", () => {
-    const { game, clock, joined } = boot([mc(0, 3)], ["Ada", "Ben", "Cara"]);
+    const { game, clock } = boot([mc(0, 3)], ["Ada", "Ben", "Cara"]);
     const right = () => question(game).wires.find((w) => w.correct)!;
     const holder = right().playerId;
     game.setConnected(holder, false);

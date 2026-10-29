@@ -50,7 +50,7 @@ export interface RacerPlayer extends BasePlayer {
   failsAsDriver: number;
 }
 
-export interface RacerOptions {
+interface RacerOptions {
   clock?: Clock;
   rng?: () => number;
   onChange?: () => void;
@@ -59,7 +59,7 @@ export interface RacerOptions {
   onFinish?: (game: RacerGame) => void;
 }
 
-export interface RacerGameSettings {
+interface RacerGameSettings {
   shuffle: ShuffleOptions;
   pacing?: Pacing;
 }

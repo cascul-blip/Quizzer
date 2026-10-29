@@ -33,7 +33,7 @@ QUALITY = 80
 HALF_SIZE = {
     # fight/phone/aim-backdrop.webp is phone only and comes straight from the art build.
     "fight": [
-        "castle-0", "castle-1", "castle-2", "castle-3", "castle-4", "castle-cloth", "castle-cloth-0", "castle-cloth-1",
+        "castle-0", "castle-1", "castle-2", "castle-3", "castle-4", "castle-cloth-0", "castle-cloth-1",
         "castle-cloth-2", "castle-cloth-3", "castle-cloth-4", "catapult", "catapult-cloth", "scaffold", "fx-dust", "fx-dirt",
         "fx-crater-rim", "fx-rubble", "sky", "ground-earth", "ground-grass", "ui-attack", "ui-rebuild", "brick",
     ],

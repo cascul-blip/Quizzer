@@ -44,7 +44,7 @@ import { GameError, assignTeams, realClock, shuffle, shuffleOptions, teamInfo, t
 import { Roster, type BasePlayer } from "./roster.ts";
 import { rankScores, scoreAnswer } from "./scoring.ts";
 
-export { GameError, MAX_NICKNAME, MAX_PLAYERS, cleanNickname, realClock, type Clock } from "./common.ts";
+export { GameError, type Clock } from "./common.ts";
 
 export const INTRO_MS = 3000;
 export const AUTO_REVEAL_MS = 5000;
@@ -60,7 +60,7 @@ export const DEFAULT_DRAGON: DragonSettings = { teams: 2, toughness: "normal", b
 export const DEFAULT_BOMB: BombSettings = { game: "together", squads: 1, modules: 3, wires: 3, minutes: 5, penaltySec: 15 };
 export const DEFAULT_SIEGE: SiegeSettings = { waves: 5 };
 
-export interface Answer {
+interface Answer {
   /** Chosen option index; -1 for a typed answer. */
   option: number;
   /** What the player typed, for a typed question. */
@@ -70,7 +70,7 @@ export interface Answer {
   ms: number;
 }
 
-export interface Player extends BasePlayer {
+interface Player extends BasePlayer {
   score: number;
   /** Points gained on the most recently closed question. */
   lastDelta: number;
@@ -87,7 +87,7 @@ export function preparePlayOrder(source: Question[], opts: ShuffleOptions, rng: 
   return questions;
 }
 
-export interface GameOptions {
+interface GameOptions {
   clock?: Clock;
   rng?: () => number;
   pacing?: Pacing;

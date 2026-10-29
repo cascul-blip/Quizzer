@@ -29,7 +29,6 @@ import {
   SIEGE_LANES,
   SIEGE_LEAP_MS,
   SIEGE_MAP_DOTS_MS,
-  SIEGE_MAX_LEVEL,
   SIEGE_MONSTERS,
   SIEGE_MONSTER_ODDS,
   SIEGE_OPENING_MS,
@@ -39,7 +38,6 @@ import {
   SIEGE_STOMP_SPLASH,
   SIEGE_TICK_MS,
   SIEGE_WARNING_MS,
-  siegeClassSizeFactor,
   siegeGiants,
   siegeNextScale,
   siegeMaxEntering,
@@ -87,7 +85,7 @@ export interface SiegePlayer extends BasePlayer, StreamPlayer {
   mapOpen: boolean;
 }
 
-export interface SiegeDefender {
+interface SiegeDefender {
   id: number;
   type: SiegeDefenderType;
   lane: number;
@@ -128,7 +126,7 @@ export interface SiegeMonster {
 }
 
 /** A monster still to come in the current wave. */
-export interface SiegeSpawn {
+interface SiegeSpawn {
   at: number;
   type: SiegeMonsterType;
   /** Goblins that come in together share a group (and a lane). */
@@ -137,7 +135,7 @@ export interface SiegeSpawn {
   lane: number;
 }
 
-export interface SiegeWaveLog {
+interface SiegeWaveLog {
   wave: number;
   /** Difficulty scale in %. */
   scale: number;
@@ -156,7 +154,7 @@ export interface SiegeWaveLog {
   heartsLost: number;
 }
 
-export interface SiegeOptions {
+interface SiegeOptions {
   clock?: Clock;
   rng?: () => number;
   /** The class's best Endless run on this quiz so far. */
@@ -166,7 +164,7 @@ export interface SiegeOptions {
   onFinish?: (game: SiegeGame) => void;
 }
 
-export interface SiegeGameSettings extends SiegeSettings {
+interface SiegeGameSettings extends SiegeSettings {
   shuffleAnswers: boolean;
   /** Longer waits for wrong answers in a row (the lobby's "Protect from abuse"). */
   protect?: boolean;

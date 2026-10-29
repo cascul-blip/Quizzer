@@ -14,7 +14,6 @@ import {
   LAUNCH_Y,
   SHOT_R,
   TOWER_H,
-  TOWER_W,
   TOWER_X,
   COL_W,
   shotPos,
@@ -70,7 +69,7 @@ import { isPhoneArt, pickArt } from "./phone-art.ts";
 export const sy = (y: number) => FIELD_H - y;
 const BASE = sy(GROUND);
 /** How long an impact burst shows after a shot lands. */
-export const IMPACT_MS = 1200;
+const IMPACT_MS = 1200;
 /** Art for the phone's own screens around the battlefield (backdrop, choice icons, repair bricks). */
 export const FIGHT_PHONE_UI = { backdrop: phoneBackdropImg, attack: phoneUiAttackImg, rebuild: phoneUiRebuildImg, brick: phoneBrickImg };
 
@@ -142,7 +141,7 @@ const GRASS_TILE = 56;
 /** Depth of the grass band below the surface, in field units. */
 const GRASS_DEPTH = 10;
 
-export function Terrain({ terrain }: { terrain: number[] }) {
+function Terrain({ terrain }: { terrain: number[] }) {
   // Flat ground continues past both edges, for screens wider than the field.
   const edge = FIELD_W;
   const pts = [`${-edge},${sy(terrain[0]!)}`, ...terrain.map((h, i) => `${i * COL_W},${sy(h).toFixed(1)}`), `${FIELD_W + edge},${sy(terrain.at(-1)!)}`].join(" L");
@@ -186,7 +185,7 @@ const PHONE_CLOTH_STAGES = [phoneCastleCloth0, phoneCastleCloth1, phoneCastleClo
  * A stone castle tower (generated images, see scripts/fight-castle.py) whose flag and
  * banners take the team color; it looks worse with every hit, and is rubble at TOWER_MAX_DAMAGE.
  */
-export function CastleTower({ team, color, damage, collapsing, repairing }: { team: number; color: string; damage: number; collapsing?: boolean; repairing?: boolean }) {
+function CastleTower({ team, color, damage, collapsing, repairing }: { team: number; color: string; damage: number; collapsing?: boolean; repairing?: boolean }) {
   const cx = TOWER_X[team]!;
   const top = BASE - TOWER_H;
   const stage = Math.min(damage, CASTLE_STAGES.length - 1);
@@ -268,7 +267,7 @@ function Smoke({ x, y, big }: { x: number; y: number; big?: boolean }) {
 }
 
 /** A wooden catapult with team-coloured cloth; Red's throws to the right, Blue's to the left. */
-export function Catapult({ team, color, loaded, r }: { team: number; color: string; loaded: AvatarChoice | null; r?: number }) {
+function Catapult({ team, color, loaded, r }: { team: number; color: string; loaded: AvatarChoice | null; r?: number }) {
   const cx = CATAPULT_X[team]!;
   const dir = team === 0 ? 1 : -1;
   const cupY = sy(LAUNCH_Y);
@@ -303,7 +302,7 @@ export function AvatarSprite({ choice, x, y, r = SHOT_R * 1.5, spin = 0 }: { cho
 }
 
 /** Burst where a shot landed: a spray of dirt on the ground, a big bang on a tower. */
-export function ImpactBurst({ impact }: { impact: ShotImpact }) {
+function ImpactBurst({ impact }: { impact: ShotImpact }) {
   if (impact.kind === "offscreen") return null;
   const x = impact.x;
   const y = sy(impact.y);
@@ -333,7 +332,7 @@ export function ImpactBurst({ impact }: { impact: ShotImpact }) {
  * minus how long ago it was fired, so every screen replays it from the same point.
  * Ticks every frame while a shot is flying or its burst is showing.
  */
-export function useShotClock(shots: FightShot[]): { now: number; startOf: (s: FightShot) => number } {
+function useShotClock(shots: FightShot[]): { now: number; startOf: (s: FightShot) => number } {
   const [now, setNow] = useState(() => performance.now());
   const starts = useRef(new Map<number, number>());
   for (const s of shots) if (!starts.current.has(s.id)) starts.current.set(s.id, performance.now() - s.elapsedMs);

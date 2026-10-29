@@ -73,7 +73,7 @@ function newStar(x: number): Star {
   return { x, y: Math.random(), depth, color: STAR_COLORS[Math.floor(Math.random() * STAR_COLORS.length)]! };
 }
 
-export interface RacerSceneProps {
+interface RacerSceneProps {
   /** Miles per hour. The scene eases toward it, so it may jump. */
   speed: number;
   /** Wrecked: the car smokes and the scene coasts to a stop, whatever the speed. */

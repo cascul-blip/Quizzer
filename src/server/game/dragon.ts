@@ -85,7 +85,7 @@ export interface DragonPlayer extends BasePlayer, StreamPlayer {
   timer: unknown;
 }
 
-export interface DragonTeam {
+interface DragonTeam {
   index: number;
   name: string;
   color: string;
@@ -117,7 +117,7 @@ interface Fire {
   amount: number;
 }
 
-export interface DragonOptions {
+interface DragonOptions {
   clock?: Clock;
   rng?: () => number;
   onChange?: () => void;
@@ -125,7 +125,7 @@ export interface DragonOptions {
   onFinish?: (game: DragonGame) => void;
 }
 
-export interface DragonGameSettings extends DragonSettings {
+interface DragonGameSettings extends DragonSettings {
   shuffleAnswers: boolean;
   /** Longer waits for wrong answers in a row (the lobby's "Protect from abuse"). */
   protect?: boolean;

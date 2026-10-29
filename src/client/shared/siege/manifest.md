@@ -42,13 +42,6 @@ Every figure is a painted miniature on a round base, facing its direction of tra
 | `phone/coin.webp` | 64×64 | yes |  | same 64x64 as the projector copy |
 | `phone/heart.webp` | 64×64 | yes |  | same 64x64 as the projector copy |
 | `phone/knight-icon.webp` | 128×128 | yes |  |  |
-| `phone/lv2-pennant-archer.webp` | 32×48 | yes |  |  |
-| `phone/lv2-pennant-knight.webp` | 32×48 | yes |  |  |
-| `phone/lv2-wall-course.webp` | 65×26 | yes |  |  |
-| `phone/lv3-trim-archer.webp` | 90×110 | yes |  |  |
-| `phone/lv3-trim-knight.webp` | 100×120 | yes |  |  |
-| `phone/lv3-trim-wall.webp` | 100×90 | yes |  |  |
-| `phone/lv3-wall-spikes.webp` | 55×40 | yes |  |  |
 | `phone/stone-wall-icon.webp` | 128×128 | yes |  |  |
 | `stone-wall.webp` | 200×180 | yes | (91, 135) px = (45.5%, 74.9%) |  |
 | `stone-wall-cracked.webp` | 200×180 | yes | (91, 135) px = (45.5%, 74.9%) |  |
@@ -133,4 +126,4 @@ Drawn over the figure, at its canvas pixels. The Lv 3 glow is code.
 
 ## Phone
 
-`phone/archer-icon`, `phone/knight-icon`, `phone/stone-wall-icon` (128×128, for the defender strip), `phone/coin`, `phone/heart` (64×64), and half-size copies of the level details (`phone/lv2-*`, `phone/lv3-*`). The phone's lane map is drawn in code.
+`phone/archer-icon`, `phone/knight-icon`, `phone/stone-wall-icon` (128×128, for the defender strip), `phone/coin` and `phone/heart` (64×64). The phone's lane map is drawn in code.

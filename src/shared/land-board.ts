@@ -107,7 +107,7 @@ export function isProtected(size: number, starts: LandStart[], team: number, til
 }
 
 /** How far from a start the guarded ring is: just outside the protected tiles, where the smallest surrounding ring goes. */
-export const GUARD_DISTANCE = 2;
+const GUARD_DISTANCE = 2;
 
 /** In the ring GUARD_DISTANCE steps from the starting point of a team other than `team` that is still in the game. */
 export function isGuarded(size: number, starts: LandStart[], team: number, tile: number): boolean {
@@ -263,7 +263,7 @@ export function neighborAcross(size: number, tile: number, side: number): number
 }
 
 /** A side of an owned tile where the land changes hands: next to grass, another team's tile, or the board edge. */
-export interface BorderEdge {
+interface BorderEdge {
   tile: number;
   side: number;
   owner: number;

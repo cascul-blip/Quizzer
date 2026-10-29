@@ -256,7 +256,7 @@ export function buildBombResultsCsv(game: BombGame): string {
   return toCsv([header, ...rows]);
 }
 
-export function resultsFileName(game: { quizId: string }, when = new Date()): string {
+function resultsFileName(game: { quizId: string }, when = new Date()): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   const stamp = `${when.getFullYear()}-${pad(when.getMonth() + 1)}-${pad(when.getDate())}_${pad(when.getHours())}${pad(when.getMinutes())}${pad(when.getSeconds())}`;
   return `${stamp}_${game.quizId}.csv`;

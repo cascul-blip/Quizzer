@@ -36,7 +36,7 @@ const SHOT_LINGER_MS = 1500;
 const MAX_EVENTS = 6;
 const TEAM_COUNT = 2;
 
-export interface FightTeam {
+interface FightTeam {
   index: number;
   name: string;
   color: string;
@@ -65,7 +65,7 @@ interface Shot extends Omit<FightShot, "elapsedMs"> {
   firedAt: number;
 }
 
-export interface FightOptions {
+interface FightOptions {
   clock?: Clock;
   rng?: () => number;
   onChange?: () => void;
@@ -73,7 +73,7 @@ export interface FightOptions {
   onFinish?: (game: FightGame) => void;
 }
 
-export interface FightGameSettings extends FightSettings {
+interface FightGameSettings extends FightSettings {
   shuffleAnswers: boolean;
   /** Longer waits for wrong answers in a row (the lobby's "Protect from abuse"). */
   protect?: boolean;
@@ -86,7 +86,6 @@ export class FightGame {
   readonly title: string;
   readonly questions: Question[];
   readonly teams: FightTeam[];
-  readonly settings: FightGameSettings;
   readonly hill: HillHeight;
   readonly roster = new Roster<FightPlayer>();
   readonly startedAt = new Date();
@@ -114,7 +113,6 @@ export class FightGame {
     this.quizId = quiz.id;
     this.title = quiz.title;
     this.questions = quiz.questions;
-    this.settings = settings;
     this.teams = Array.from({ length: TEAM_COUNT }, (_, i) => ({ ...teamInfo(i), damage: 0 }));
     this.clock = opts.clock ?? realClock;
     this.rng = opts.rng ?? Math.random;

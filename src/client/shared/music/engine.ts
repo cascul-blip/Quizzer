@@ -14,7 +14,7 @@
 import { loadSamples, playSample } from "./samples.ts";
 import { STRUM_S, createEcho, createRichBus, humanize, panFor, playRich, richStyle, type Echo, type RichBus, type RichStyle } from "./rich.ts";
 
-export type Instrument =
+type Instrument =
   | "kick"
   | "snare"
   | "hat"
@@ -172,7 +172,7 @@ function noiseHit(ctx: Ctx, dest: AudioNode, t: number, peak: number, dur: numbe
 }
 
 /** Play one instrument hit/note at time t. `len` is the note length in seconds. */
-export function playInstrument(ctx: Ctx, dest: AudioNode, inst: Instrument, t: number, freq: number, len: number, vol: number, accent = false) {
+function playInstrument(ctx: Ctx, dest: AudioNode, inst: Instrument, t: number, freq: number, len: number, vol: number, accent = false) {
   const v = vol * (accent ? 1.35 : 1);
   switch (inst) {
     case "kick": {
@@ -485,7 +485,7 @@ export function stepSeconds(track: Track, intensity: number): number {
 }
 
 /** Where rich tracks can send layers besides `dest`. */
-export interface Sends {
+interface Sends {
   echo?: AudioNode;
 }
 

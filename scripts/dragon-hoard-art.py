@@ -15,7 +15,7 @@ This writes (projector, plus phone/ copies at half size where the spec says phon
                               centre), so they swap in place
   team-pile.webp              coins on a cloth with a pennant: the cloth and pennant are
   team-pile-cloth.webp        translucent shading; the -cloth mask is white where the team
-                              colour goes (same scheme as fight/castle-cloth.webp)
+                              colour goes (same scheme as fight/castle-cloth-0.webp)
   banner.webp, banner-cloth   the team banner, same scheme                       (+ phone)
   chest-closed/open.webp      shared canvas, the base lines up                   (+ phone)
   loot-<id>.webp              8 square icons (bats recoloured from purple to sooty brown so

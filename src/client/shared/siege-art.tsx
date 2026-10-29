@@ -57,11 +57,11 @@ import { pickArt } from "./phone-art.ts";
 // ---------- the numbers from ./siege/manifest.md ----------
 
 /** board.webp, in px. Everything on the board is placed in these pixels and drawn in % of them. */
-export const BOARD = { w: 1344, h: 768 };
+const BOARD = { w: 1344, h: 768 };
 /** The castle wall layers sit at (0, 0) over the board's left edge. */
-export const CASTLE = { w: 360, h: 768 };
+const CASTLE = { w: 360, h: 768 };
 /** Each lane's y range and its 8 squares' x ranges (square 1 next to the wall, square 8 the entry), in board px. */
-export const LANES: readonly { y0: number; y1: number; x: readonly (readonly [number, number])[] }[] = [
+const LANES: readonly { y0: number; y1: number; x: readonly (readonly [number, number])[] }[] = [
   { y0: 67, y1: 151, x: [[248, 376], [376, 505], [505, 633], [633, 762], [762, 890], [890, 1018], [1018, 1147], [1147, 1275]] },
   { y0: 169, y1: 261, x: [[248, 380], [380, 512], [512, 645], [645, 777], [777, 909], [909, 1041], [1041, 1174], [1174, 1306]] },
   { y0: 279, y1: 381, x: [[248, 384], [384, 521], [521, 657], [657, 794], [794, 930], [930, 1067], [1067, 1203], [1203, 1339]] },
@@ -80,7 +80,7 @@ interface Canvas {
   ay: number;
 }
 
-export const FIGURES: Record<"archer" | "knight" | "wall" | SiegeMonsterType, Canvas> = {
+const FIGURES: Record<"archer" | "knight" | "wall" | SiegeMonsterType, Canvas> = {
   archer: { w: 180, h: 220, ax: 82, ay: 188 },
   knight: { w: 200, h: 240, ax: 99, ay: 205 },
   wall: { w: 200, h: 180, ax: 91, ay: 135 },
@@ -124,7 +124,7 @@ function laneX(lane: number, x: number): number {
 }
 
 /** Where a figure's base centre goes, and how big it is drawn. */
-export function boardPoint(lane: number, x: number): { px: number; py: number; scale: number } {
+function boardPoint(lane: number, x: number): { px: number; py: number; scale: number } {
   const l = LANES[Math.max(0, Math.min(LANES.length - 1, lane))]!;
   const h = l.y1 - l.y0;
   return { px: laneX(lane, x), py: (l.y0 + l.y1) / 2 + ANCHOR_DROP * h, scale: h / FIGURE_LANE_PX };
@@ -204,7 +204,7 @@ export function SiegeBoard({ hearts, castle = "auto", children, class: cls = "" 
 }
 
 /** A lane's rectangle on the board (buildable squares and the entry square). */
-export function laneRect(lane: number): JSX.CSSProperties {
+function laneRect(lane: number): JSX.CSSProperties {
   const l = LANES[lane]!;
   return { left: pct(l.x[0]![0], BOARD.w), top: pct(l.y0, BOARD.h), width: pct(l.x[7]![1] - l.x[0]![0], BOARD.w), height: pct(l.y1 - l.y0, BOARD.h) };
 }
@@ -409,7 +409,7 @@ export function RisingBanners() {
 
 // ---------- icons (projector and phone) ----------
 
-export const DEFENDER_ICON: Record<SiegeDefenderType, string> = {
+const DEFENDER_ICON: Record<SiegeDefenderType, string> = {
   archer: phoneArcherIconImg,
   knight: phoneKnightIconImg,
   wall: phoneWallIconImg,

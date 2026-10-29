@@ -30,7 +30,7 @@ export const DROP_COOLDOWN_MS = 400;
 /** Egg announcements, as fractions of the game length. */
 export const MONSTER_AT = [1 / 5, 2 / 5, 3 / 5, 4 / 5] as const;
 
-export interface TowerTeam {
+interface TowerTeam {
   index: number;
   name: string;
   color: string;
@@ -38,8 +38,8 @@ export interface TowerTeam {
   columns: [number, number, number];
 }
 
-export const floorsOf = (t: TowerTeam) => Math.min(...t.columns);
-export const placedOf = (t: TowerTeam) => t.columns[0] + t.columns[1] + t.columns[2];
+const floorsOf = (t: TowerTeam) => Math.min(...t.columns);
+const placedOf = (t: TowerTeam) => t.columns[0] + t.columns[1] + t.columns[2];
 export const sweepMsFor = (floors: number) => Math.max(SWEEP_MIN_MS, SWEEP_START_MS - floors * SWEEP_STEP_MS);
 
 export interface TowerPlayer extends BasePlayer, StreamPlayer {
@@ -53,7 +53,7 @@ export interface TowerPlayer extends BasePlayer, StreamPlayer {
   lastDropAt: number;
 }
 
-export interface TowerOptions {
+interface TowerOptions {
   clock?: Clock;
   rng?: () => number;
   /** Something everyone may care about changed (phase, roster): push to every screen now. */
@@ -63,7 +63,7 @@ export interface TowerOptions {
   onFinish?: (game: TowerGame) => void;
 }
 
-export interface TowerGameSettings extends TowerSettings {
+interface TowerGameSettings extends TowerSettings {
   /** Shuffle answer positions per player (the lobby's "Shuffle answer positions"). */
   shuffleAnswers: boolean;
   /** Longer waits for wrong answers in a row (the lobby's "Protect from abuse"). */

@@ -12,8 +12,8 @@ import { ACCESSORY_ART, AVATAR_ART } from "./avatar-art.tsx";
 import saloonImg from "./cup/saloon.webp";
 import tableImg from "./cup/table.webp";
 
-export const SALOON_W = 1200;
-export const SALOON_H = 800;
+const SALOON_W = 1200;
+const SALOON_H = 800;
 /** Table centre and radii; the seats sit on a wider ring around it. */
 const CX = 600;
 const CY = 440;
@@ -29,14 +29,13 @@ const BLEED = 700;
 const ROOM_H = 960;
 const ROOM_Y = -150;
 const ROOM_W = ROOM_H * (1344 / 768);
-/** The table picture: width / height, and its tabletop ellipse as fractions of the picture (printed by scripts/cup-saloon.py). */
-const TABLE_ASPECT = 1.5177;
+/** The table picture: its tabletop ellipse as fractions of the picture (printed by scripts/cup-saloon.py). */
 const TOP_FX = 0.4995;
 const TOP_FY = 0.2692;
 const TOP_FRX = 0.4995;
 const TOP_FRY = 0.2692;
 
-export interface SeatPlayer {
+interface SeatPlayer {
   id: string;
   nickname: string;
   avatar: AvatarChoice;

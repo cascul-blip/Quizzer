@@ -54,7 +54,7 @@ const LOOKS: Look[] = [
 const mix = (a: number[], b: number[], t: number) => a.map((v, i) => Math.round(v + (b[i]! - v) * t));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
-export interface SeaLook {
+interface SeaLook {
   background: string;
   rays: number;
   ambient: number;

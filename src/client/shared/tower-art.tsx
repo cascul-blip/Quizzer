@@ -116,7 +116,7 @@ export function useNewFloor(floors: number): number | null {
 
 // ---------- building pieces ----------
 
-export interface BlockProps {
+interface BlockProps {
   x: number;
   y: number;
   size: number;

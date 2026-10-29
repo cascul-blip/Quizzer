@@ -28,7 +28,7 @@ export const COUNTDOWN_MS = 3000;
 /** When only one team is left, the board stays up this long before the podium. */
 export const CONQUEST_MS = 3500;
 
-export interface LandTeam {
+interface LandTeam {
   index: number;
   name: string;
   color: string;
@@ -57,7 +57,7 @@ export interface LandPlayer extends BasePlayer, StreamPlayer {
   timer: unknown;
 }
 
-export interface LandOptions {
+interface LandOptions {
   clock?: Clock;
   rng?: () => number;
   onChange?: () => void;
@@ -65,7 +65,7 @@ export interface LandOptions {
   onFinish?: (game: LandGame) => void;
 }
 
-export interface LandGameSettings extends LandSettings {
+interface LandGameSettings extends LandSettings {
   shuffleAnswers: boolean;
 }
 

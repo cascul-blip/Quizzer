@@ -10,7 +10,7 @@ export const WRONG_PENALTY_2_MS = 3000;
 export const WRONG_PENALTY_3_MS = 4000;
 
 /** How much longer the ✗ shows for a wrong answer that is the streak-th in a row. */
-export function wrongPenaltyMs(streak: number): number {
+function wrongPenaltyMs(streak: number): number {
   return streak >= 3 ? WRONG_PENALTY_3_MS : streak === 2 ? WRONG_PENALTY_2_MS : 0;
 }
 

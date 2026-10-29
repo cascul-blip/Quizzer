@@ -13,7 +13,7 @@ import { isCompiled } from "./paths.ts";
 import { MAX_MEDIA_BYTES, MEDIA_MIME, NotFoundError, type QuizStore } from "./quiz/store.ts";
 import { GameHub, type SocketData } from "./ws.ts";
 
-export interface ServerOptions {
+interface ServerOptions {
   store: QuizStore;
   port: number;
   version: string;

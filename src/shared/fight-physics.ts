@@ -14,7 +14,7 @@ export const GROUND = 60;
 export const COLS = 200;
 export const COL_W = FIELD_W / COLS;
 
-export const TOWER_W = 92;
+const TOWER_W = 92;
 export const TOWER_H = 190;
 /** Tower centers: Red (team 0) on the left, Blue (team 1) on the right. */
 export const TOWER_X = [90, 910] as const;
@@ -22,7 +22,7 @@ export const TOWER_X = [90, 910] as const;
 export const CATAPULT_X = [190, 810] as const;
 export const LAUNCH_Y = GROUND + 34;
 
-export const GRAVITY = 600;
+const GRAVITY = 600;
 export const MAX_SPEED = 860;
 /** Pull-back distance (field units) for full power; shorter pulls are weaker. */
 export const MAX_PULL = 180;
@@ -36,8 +36,8 @@ const STEP_S = 1 / 240;
 export const HILL_HEIGHTS = { low: 150, medium: 230, high: 310 } as const;
 export type HillHeight = keyof typeof HILL_HEIGHTS;
 
-export const CRATER_R = 30;
-export const CRATER_DEPTH = 26;
+const CRATER_R = 30;
+const CRATER_DEPTH = 26;
 /** Craters can dig the hill away completely, but not below this. */
 export const MIN_GROUND = 24;
 
@@ -46,7 +46,7 @@ export type ShotImpact =
   | { kind: "ground"; x: number; y: number }
   | { kind: "offscreen"; x: number; y: number };
 
-export interface Flight {
+interface Flight {
   durationMs: number;
   impact: ShotImpact;
 }

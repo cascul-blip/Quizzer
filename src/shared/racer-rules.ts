@@ -69,7 +69,7 @@ export function racerRepairs(correct: number, total: number): boolean {
   return total > 0 && 2 * correct >= total;
 }
 
-export interface RacerTurnInput {
+interface RacerTurnInput {
   /** The driver's locked lever; null when the turn had no driver (car crashed, or nobody connected). */
   confidence: RacerConfidence | null;
   /** Correct answers. */

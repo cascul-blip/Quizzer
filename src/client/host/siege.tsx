@@ -27,7 +27,7 @@ const SHOT_MS = 380;
 const FALLEN_MS = 1300;
 const DUST_MS = 900;
 
-export function waveLabel(wave: number, waves: SiegeSettings["waves"]): string {
+function waveLabel(wave: number, waves: SiegeSettings["waves"]): string {
   return waves === "endless" ? `Wave ${wave}` : `Wave ${wave} of ${waves}`;
 }
 

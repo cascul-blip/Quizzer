@@ -46,7 +46,7 @@ export interface RobotPlayer extends BasePlayer, StreamPlayer {
   hits: number;
 }
 
-export interface RobotOptions {
+interface RobotOptions {
   clock?: Clock;
   rng?: () => number;
   onChange?: () => void;
@@ -54,7 +54,7 @@ export interface RobotOptions {
   onFinish?: (game: RobotGame) => void;
 }
 
-export interface RobotGameSettings {
+interface RobotGameSettings {
   shuffleAnswers: boolean;
   /** Longer waits for wrong answers in a row (the lobby's "Protect from abuse"). */
   protect?: boolean;

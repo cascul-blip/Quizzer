@@ -41,7 +41,7 @@ export function seeded(seed: number): () => number {
   };
 }
 
-export interface Human {
+interface Human {
   /** Seconds to move the note by. */
   dt: number;
   /** Multiplies the note's volume. */

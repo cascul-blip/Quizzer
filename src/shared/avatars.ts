@@ -84,8 +84,8 @@ export interface AvatarChoice {
 const avatarIds = new Set<string>(AVATARS.map((a) => a.id));
 const accessoryIds = new Set<string>(ACCESSORIES.map((a) => a.id));
 
-export const isAvatarId = (id: unknown): id is AvatarId => typeof id === "string" && avatarIds.has(id);
-export const isAccessoryId = (id: unknown): id is AccessoryId => typeof id === "string" && accessoryIds.has(id);
+const isAvatarId = (id: unknown): id is AvatarId => typeof id === "string" && avatarIds.has(id);
+const isAccessoryId = (id: unknown): id is AccessoryId => typeof id === "string" && accessoryIds.has(id);
 
 /** A valid choice, or null if either id is unknown. */
 export function cleanAvatar(avatar: unknown, accessory: unknown): AvatarChoice | null {
@@ -96,6 +96,3 @@ export function cleanAvatar(avatar: unknown, accessory: unknown): AvatarChoice |
 export function randomAvatar(rng: () => number = Math.random): AvatarChoice {
   return { avatar: AVATARS[Math.floor(rng() * AVATARS.length) % AVATARS.length]!.id, accessory: "none" };
 }
-
-export const avatarName = (id: string) => AVATARS.find((a) => a.id === id)?.name ?? id;
-export const accessoryName = (id: string) => ACCESSORIES.find((a) => a.id === id)?.name ?? id;
