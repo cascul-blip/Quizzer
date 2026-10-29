@@ -9,8 +9,9 @@ Also writes manifest.md next to the outputs: every file, its size, alpha, blend 
 layer order and the coordinates the code needs (clock-face rectangle, module bay, LED
 sockets, wire terminals, keypad display, picture window), in px and %.
 
-Style: "A", the gritty disposal room (style-reference.png = bomb/mockups/style-a.png). Every
-generation below used it as the style reference. Keying: green (#00ff00) or blue (#0000ff)
+Style: "A", the gritty disposal room (style-reference.png = bomb/mockups/style-a.png; removed
+from scripts/bomb-art/, recover it from commit 2a65a3c). Every generation below used it as
+the style reference. Keying: green (#00ff00) or blue (#0000ff)
 screens are keyed by colour distance; the fireball and sparks were made on black and are
 keyed by brightness (they look right drawn normally, and best with screen/lighter blending).
 

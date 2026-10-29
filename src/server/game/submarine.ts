@@ -81,12 +81,10 @@ interface SubOptions {
 
 /** Submarine Squad: the whole class boosts a submarine away from an anglerfish, then dives deeper. */
 export class SubGame {
-  readonly kind = "sub";
   readonly quizId: string;
   readonly title: string;
   readonly questionCount: number;
   readonly roster = new Roster<SubPlayer>();
-  readonly startedAt = new Date();
   phase: SubPhase = "countdown";
   level = 1;
   levelsCleared = 0;

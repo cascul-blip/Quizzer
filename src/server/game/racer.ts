@@ -70,13 +70,11 @@ interface RacerGameSettings {
  * Every question is asked once, then the podium.
  */
 export class RacerGame {
-  readonly kind = "racer";
   readonly quizId: string;
   readonly title: string;
   /** Play order, shuffled if the lobby asked for it. */
   readonly questions: Question[];
   readonly roster = new Roster<RacerPlayer>();
-  readonly startedAt = new Date();
   phase: RacerPhase = "intro";
   qIndex = -1;
   pacing: Pacing;

@@ -434,7 +434,7 @@ The robot's voice lines are pre-recorded MP3s in `src/client/shared/voice/`, the
 
 The Tallest Tower building blocks are images in `src/client/shared/tower/`, made from the generated facade tiles in `scripts/tower-blocks/`. They're committed too. To change them, replace a source PNG (the prompts are in the script) and run `python3 scripts/tower-blocks.py` (needs Pillow and numpy).
 
-The Tower Fight castle is made the same way: `python3 scripts/fight-castle.py` turns the intact tower and its four damage stages in `scripts/fight-castle/` into the images in `src/client/shared/fight/`. If the tower's proportions change, copy the numbers the script prints into `CastleTower` in `src/client/shared/fight-art.tsx`.
+The Tower Fight art in `src/client/shared/fight/` (the painterly castle stages and their cloth masks, the catapult, sky, ground and effects) is made by its own art build outside this repo; `python3 scripts/phone-art.py` makes the half-size phone copies. If the castle's proportions change, update `CASTLE_ASPECT` and `CASTLE_FLAG_PART` above `CastleTower` in `src/client/shared/fight-art.tsx`.
 
 The Land Grab art in `src/client/shared/land/` (the storybook parchment maps, tiles, shields, cards and plinths) is made by its own art build outside this repo; `src/client/shared/land/manifest.md` says where each piece goes and how it is tinted.
 

@@ -178,7 +178,6 @@ const DEFENDER_NAMES: Record<SiegeDefenderType, string> = { archer: "an archer",
  * The battle runs in fixed SIEGE_TICK_MS steps on the game clock.
  */
 export class SiegeGame {
-  readonly kind = "siege";
   readonly quizId: string;
   readonly title: string;
   readonly questions: Question[];
@@ -186,7 +185,6 @@ export class SiegeGame {
   readonly roster = new Roster<SiegePlayer>();
   /** Kicked players: their stats stay in the results. */
   readonly kicked: SiegePlayer[] = [];
-  readonly startedAt = new Date();
   phase: SiegePhase = "countdown";
   phaseEndsAt = 0;
   phaseDurationMs = SIEGE_COUNTDOWN_MS;

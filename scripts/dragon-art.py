@@ -67,7 +67,7 @@ dragon-badly-wounded.jpg (image-to-image from dragon-wounded.jpg; v2):
    soot and scorch marks, the wing membrane shredded with many big ragged holes, the eye
    glowing bright orange, a wisp of smoke from the nostril. Keep the flat pure green
    background, same painted cartoon style, same lighting, same outlines, no blood."
-v1-dragon-wounded.jpg / v1-dragon-badly-wounded.jpg are the first, subtler stages (batch 1).
+The first, subtler stages (batch 1, v1-dragon-wounded.jpg / v1-dragon-badly-wounded.jpg) are not in the repo.
 dragon-slain.jpg (image-to-image from dragon-healthy.jpg):
   "Edit this image: the same red and gold dragon with the same scales, horns, colours and
    painted cartoon style, and the same gold treasure pile in the same place, same framing,
@@ -78,7 +78,7 @@ dragon-slain.jpg (image-to-image from dragon-healthy.jpg):
    lying flat, a few torn wing holes and scratched scales, a few coins knocked loose. Kid
    friendly, no blood, no tongue, no text. Same lighting, same outlines."
 dragon-asleep.webp is made from dragon-slain.jpg with the swirl marks keyed out (no extra
-generation). The rejected-*.jpg files are earlier tries kept for reference (head moved; blood pool).
+generation). Earlier rejected tries (head moved; blood pool) are not in the repo.
 The wounded and badly wounded stages came out within ~1% of the healthy outline; this
 script still takes the whole head (above NECK_CUT) from the healthy picture for every
 standing stage, so the shared jaw always matches its socket.

@@ -35,15 +35,15 @@ HALF_SIZE = {
     "fight": [
         "castle-0", "castle-1", "castle-2", "castle-3", "castle-4", "castle-cloth-0", "castle-cloth-1",
         "castle-cloth-2", "castle-cloth-3", "castle-cloth-4", "catapult", "catapult-cloth", "scaffold", "fx-dust", "fx-dirt",
-        "fx-crater-rim", "fx-rubble", "sky", "ground-earth", "ground-grass", "ui-attack", "ui-rebuild", "brick",
+        "fx-rubble", "sky", "ground-earth", "ground-grass", "ui-attack", "ui-rebuild", "brick",
     ],
     "tower": ["lobby", "shop", "office-1", "office-2", "office-3", "office-4"],
     # Board, states, effects, keeps and shapes; the team card, banner and plinths are projector only.
     # The maps (land/phone/map-*.webp) come straight from the art build at 0.75 scale and serve both screens.
     "land": [
         "background", "felt-tile", "tray-wood", "grass-1", "grass-2", "grass-3", "grass-4", "claimed-1",
-        "claimed-2", "claimed-3", "state-blocked", "state-guarded", "state-selected", "cost-2", "cost-blank", "keep",
-        "keep-flag-tint", "keep-red", "keep-blue", "keep-yellow", "keep-cyan", "keep-purple", "keep-pink", "keep-out",
+        "claimed-2", "claimed-3", "state-blocked", "state-guarded", "state-selected", "cost-2", "cost-blank",
+        "keep-red", "keep-blue", "keep-yellow", "keep-cyan", "keep-purple", "keep-pink", "keep-out",
         "place-pop", "capture-flash", "shape-circle", "shape-square", "shape-triangle", "shape-diamond", "shape-star", "shape-heart",
         "compass-rose",
     ],

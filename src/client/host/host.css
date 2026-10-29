@@ -3869,7 +3869,7 @@ select {
   bottom: 46vh;
 }
 
-/* Fire charging at the snout tip (SNOUT in dragon-art.tsx). */
+/* Fire charging at the snout tip (13.6%, 40.7% of the dragon canvas). */
 .fire-building {
   position: absolute;
   z-index: 2;

@@ -273,19 +273,16 @@ export function dealBombWires(opts: {
  * The server deals every wire and checks every cut.
  */
 export class BombGame {
-  readonly kind = "bomb";
   readonly quizId: string;
   readonly title: string;
   readonly questions: Question[];
   readonly settings: BombGameSettings;
   squads: Squad[] = [];
   readonly roster = new Roster<BombPlayer>();
-  readonly startedAt = new Date();
   phase: BombPhase = "countdown";
 
   outcome: "defused" | "exploded" | null = null;
   timeLeftMs: number | null = null;
-  endedByHost = false;
 
   private endsAt = 0;
   private timerRev = 0;
@@ -358,7 +355,6 @@ export class BombGame {
   /** Host ends the game now. Unfinished squads count as exploded, without the explosion cinematic. */
   end(): void {
     if (this.phase === "podium") return;
-    this.endedByHost = true;
     for (const s of this.squads) if (!s.finished && !s.exploded) this.markExploded(s);
     if (this.outcome === null) {
       const finished = this.squads.filter((s) => s.finished).length;

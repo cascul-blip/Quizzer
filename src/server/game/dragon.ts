@@ -136,14 +136,12 @@ interface DragonGameSettings extends DragonSettings {
  * fire-breath rune rounds), then teams race to grab its spilled hoard from chests (Act 2).
  */
 export class DragonGame {
-  readonly kind = "dragon";
   readonly quizId: string;
   readonly title: string;
   readonly questions: Question[];
   readonly settings: DragonGameSettings;
   teams: DragonTeam[];
   readonly roster = new Roster<DragonPlayer>();
-  readonly startedAt = new Date();
   phase: DragonPhase = "countdown";
   phaseEndsAt = 0;
   phaseDurationMs = COUNTDOWN_MS;
