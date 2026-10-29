@@ -72,14 +72,12 @@ interface TowerGameSettings extends TowerSettings {
 
 /** Tallest Tower: teams answer at their own pace; every 4 correct answers are dropped onto the team tower. */
 export class TowerGame {
-  readonly kind = "tower";
   readonly quizId: string;
   readonly title: string;
   readonly questions: Question[];
   readonly teams: TowerTeam[];
   readonly settings: TowerGameSettings;
   readonly roster = new Roster<TowerPlayer>();
-  readonly startedAt = new Date();
   phase: TowerPhase = "countdown";
   /** When the current phase's countdown ends. */
   phaseEndsAt = 0;

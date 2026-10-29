@@ -42,7 +42,7 @@ shield-of-faith.jpg (builds rune-shield.webp; the halo is added here, not genera
    painterly shading, clean dark outlines, warm golden (#ffd23f) light, isolated on a
    perfectly flat plain pure green (#00ff00) background, no glow on the background, no
    shadow, no text, no runes, no letters"
-v1-rune-shield.jpg is the earlier circle of runes (black background), kept for reference.
+v1-rune-shield.jpg was the earlier circle of runes (black background); removed, recover it from commit 2a65a3c.
 hoard-full.jpg:
   "A large mountain of treasure: a big heaped pile of shiny gold coins with goblets, a
    jewelled crown, red rubies, green emeralds and purple amethysts, a few gold chains, seen
@@ -194,8 +194,8 @@ def magenta(rgb: np.ndarray) -> np.ndarray:
 
 
 def tintable(im: Image.Image) -> tuple[Image.Image, Image.Image]:
-    """(picture with the cloth turned into translucent dark shading, white cloth mask), as
-    fight-castle.py does it."""
+    """(picture with the cloth turned into translucent dark shading, white cloth mask), the
+    same scheme as the Tower Fight castle cloths (fight/castle-cloth-0…4.webp)."""
     a = np.asarray(im).astype(np.float64) / 255
     rgb, alpha = a[..., :3], a[..., 3]
     cloth = magenta(rgb) * (alpha > 0.5)
@@ -398,10 +398,10 @@ def main() -> None:
         save(im, out, name)
 
     if args.preview:
-        preview(args.preview, res, src)
+        preview(args.preview, res)
 
 
-def preview(path: str, res: dict[str, Image.Image], src: Path) -> None:
+def preview(path: str, res: dict[str, Image.Image]) -> None:
     W, M = 1800, 20
     sheet_rows = []
 
@@ -409,25 +409,6 @@ def preview(path: str, res: dict[str, Image.Image], src: Path) -> None:
         sheet_rows.append((title, cells, h))
 
     out_dir = OUT_DEFAULT
-    # Before / after for the wounded stages (v1 sources, if kept, run through the same steps).
-    before_after = []
-    if (src / "v1-dragon-wounded.jpg").exists():
-        healthy = np.asarray(da.chroma(Image.open(src / "dragon-healthy.jpg")))
-        jaw0 = Image.open(out_dir / f"{da.JAW_NAME}.webp")
-        for stem in ("dragon-wounded", "dragon-badly-wounded"):
-            v1 = np.asarray(da.chroma(Image.open(src / f"v1-{stem}.jpg")))
-            v1 = da.standing_with_healthy_head(v1, healthy)
-            v1, _ = da.split_jaw(v1)
-            v1 = Image.fromarray(v1, "RGBA").crop((79, 6, 1201, 692))
-            now = Image.open(out_dir / f"{stem}.webp")
-            jn = out_dir / f"{da.JAW_NAME}-{stem.removeprefix('dragon-')}.webp"
-            jaw_now = Image.open(jn) if jn.exists() else jaw0
-            for body, jaw in ((v1, jaw0), (now, jaw_now)):
-                c = Image.new("RGBA", body.size, (0, 0, 0, 0))
-                c.alpha_composite(jaw.resize(body.size))
-                c.alpha_composite(body)
-                before_after.append(c)
-        row("1. Wounded: batch 1 (before) | batch 2 (after)   ||   Badly wounded: before | after", before_after, 260)
     stand = []
     for n in ("dragon-healthy", "dragon-wounded", "dragon-badly-wounded", "dragon-asleep"):
         p = out_dir / f"{n}.webp"
@@ -440,7 +421,7 @@ def preview(path: str, res: dict[str, Image.Image], src: Path) -> None:
                 c.alpha_composite(im)
                 im = c
             stand.append(im)
-    row("2. Final stages: healthy | wounded | badly wounded | dragon-asleep (lobby)", stand, 260)
+    row("1. Final stages: healthy | wounded | badly wounded | dragon-asleep (lobby)", stand, 260)
 
     # The shield (rune-shield.webp) over the dragon in the cave.
     cave = out_dir / "cave.webp"
@@ -451,8 +432,8 @@ def preview(path: str, res: dict[str, Image.Image], src: Path) -> None:
         sc.alpha_composite(d, (96, 384 - d.height - 10))
         r = res[RUNE[1]].resize((230, 230))
         sc.alpha_composite(r, (60, 80))
-        row("3. rune-shield (Shield of Faith) over the dragon in the cave | on purple | on black | hoard full | half | scattered (shared canvas)", [sc, res[RUNE[1]], Image.new("RGBA", (300, 300), (0, 0, 0, 255))], 384)
-        row("3b. hoard-full | hoard-half | hoard-scattered (one shared canvas, bottom-centre aligned)", [res["hoard-full"], res["hoard-half"], res["hoard-scattered"]], 240)
+        row("2. rune-shield (Shield of Faith) over the dragon in the cave | on purple | on black | hoard full | half | scattered (shared canvas)", [sc, res[RUNE[1]], Image.new("RGBA", (300, 300), (0, 0, 0, 255))], 384)
+        row("2b. hoard-full | hoard-half | hoard-scattered (one shared canvas, bottom-centre aligned)", [res["hoard-full"], res["hoard-half"], res["hoard-scattered"]], 240)
         blk = sheet_rows[-2][1][2]
         blk.alpha_composite(res[RUNE[1]].resize((300, 300)))
     tint_cells = []
@@ -460,12 +441,12 @@ def preview(path: str, res: dict[str, Image.Image], src: Path) -> None:
         tint_cells.append(tinted(res[BANNER[1]], res[BANNER[1] + "-cloth"], c))
     for c in TEAM_COLORS:
         tint_cells.append(tinted(res[TEAM_PILE[1]], res[TEAM_PILE[1] + "-cloth"], c))
-    row("4. Tint demo in the answer colours red / blue / gold / green: banner x4 | team pile x4", tint_cells, 300)
-    row("5. Untinted: banner.webp | banner-cloth.webp | team-pile.webp | team-pile-cloth.webp | chest-closed | chest-open (shared canvas) | jackpot-pile",
+    row("3. Tint demo in the answer colours red / blue / gold / green: banner x4 | team pile x4", tint_cells, 300)
+    row("4. Untinted: banner.webp | banner-cloth.webp | team-pile.webp | team-pile-cloth.webp | chest-closed | chest-open (shared canvas) | jackpot-pile",
         [res[BANNER[1]], res[BANNER[1] + "-cloth"], res[TEAM_PILE[1]], res[TEAM_PILE[1] + "-cloth"], res["chest-closed"], res["chest-open"], res[JACKPOT[1]]], 260)
     ids = [i for v in LOOT_SHEETS.values() for i in v]
-    row("6. Loot icons (256 px): " + " | ".join(ids), [res[LOOT_PREFIX + i] for i in ids], 200)
-    row("7. The same, phone copies at 128 px, actual size", [res[LOOT_PREFIX + i].resize((ICON // 2, ICON // 2), Image.Resampling.LANCZOS) for i in ids], ICON // 2)
+    row("5. Loot icons (256 px): " + " | ".join(ids), [res[LOOT_PREFIX + i] for i in ids], 200)
+    row("6. The same, phone copies at 128 px, actual size", [res[LOOT_PREFIX + i].resize((ICON // 2, ICON // 2), Image.Resampling.LANCZOS) for i in ids], ICON // 2)
 
     H = sum(h + 34 + M for _, _, h in sheet_rows) + M
     sheet = da.purple(W, H)

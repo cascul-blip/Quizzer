@@ -81,14 +81,12 @@ interface FightGameSettings extends FightSettings {
 
 /** Tower Fight: Red vs Blue answer at their own pace; every 4 correct answers they attack the enemy tower or repair their own. */
 export class FightGame {
-  readonly kind = "fight";
   readonly quizId: string;
   readonly title: string;
   readonly questions: Question[];
   readonly teams: FightTeam[];
   readonly hill: HillHeight;
   readonly roster = new Roster<FightPlayer>();
-  readonly startedAt = new Date();
   phase: FightPhase = "countdown";
   phaseEndsAt = 0;
   terrain: number[];

@@ -92,12 +92,10 @@ export function spreadTile(taken: { x: number; y: number }[], order: number[], a
 
 /** Robot Attack: answer questions for movement points, then dodge the robot's lasers. Last one standing wins. */
 export class RobotGame {
-  readonly kind = "robot";
   readonly quizId: string;
   readonly title: string;
   readonly questions: Question[];
   readonly roster = new Roster<RobotPlayer>();
-  readonly startedAt = new Date();
   phase: RobotPhase = "countdown";
   round = 0;
   /** Laser attacks fired so far. */

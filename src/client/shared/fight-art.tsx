@@ -167,7 +167,7 @@ function Terrain({ terrain }: { terrain: number[] }) {
   );
 }
 
-// Proportions of the castle image, as printed by scripts/fight-castle.py.
+// Proportions of the castle image (width / height), measured on the art build's castle-0.webp.
 const CASTLE_ASPECT = 0.403;
 /** Share of the image height above the battlements (roof and pennant). */
 const CASTLE_FLAG_PART = 0.198;
@@ -182,7 +182,7 @@ const CLOTH_STAGES = [castleCloth0, castleCloth1, castleCloth2, castleCloth3, ca
 const PHONE_CLOTH_STAGES = [phoneCastleCloth0, phoneCastleCloth1, phoneCastleCloth2, phoneCastleCloth3, phoneCastleCloth4];
 
 /**
- * A stone castle tower (generated images, see scripts/fight-castle.py) whose flag and
+ * A stone castle tower (painted images from the art build) whose flag and
  * banners take the team color; it looks worse with every hit, and is rubble at TOWER_MAX_DAMAGE.
  */
 function CastleTower({ team, color, damage, collapsing, repairing }: { team: number; color: string; damage: number; collapsing?: boolean; repairing?: boolean }) {

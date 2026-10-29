@@ -111,7 +111,6 @@ interface GameOptions {
  * hands its players to that mode's game (TowerGame, SubGame, FightGame, RobotGame, LandGame, RacerGame, CupGame, DragonGame, BombGame, SiegeGame) on start.
  */
 export class Game {
-  readonly kind = "classic";
   readonly quiz: Quiz;
   readonly quizId: string;
   readonly title: string;
@@ -135,7 +134,6 @@ export class Game {
   phaseEndsAt = 0;
   openedAt = 0;
   readonly roster = new Roster<Player>();
-  readonly startedAt = new Date();
 
   private readonly clock: Clock;
   private readonly rng: () => number;

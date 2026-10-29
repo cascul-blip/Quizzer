@@ -78,14 +78,12 @@ interface CupGameSettings {
 
 /** Cup of Death: roll a die, answer that many questions in time, or drink one of your cups. One is poisoned. Last one standing wins. */
 export class CupGame {
-  readonly kind = "cup";
   readonly quizId: string;
   readonly title: string;
   readonly questions: Question[];
   /** Cups in front of each player at the start. */
   readonly startCups: number;
   readonly roster = new Roster<CupPlayer>();
-  readonly startedAt = new Date();
   phase: CupPhase = "countdown";
   round = 0;
   phaseEndsAt = 0;

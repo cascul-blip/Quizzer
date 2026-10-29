@@ -229,9 +229,8 @@ export function Hoard({ size }: { size: "full" | "half" }) {
 
 // ---------- the dragon ----------
 
-/** Where the jaw hinges and where the fire comes out (the snout tip), as percentages of the dragon canvas. */
+/** Where the jaw hinges, as percentages of the dragon canvas. The snout tip, where the fire comes out, is at (13.6%, 40.7%): host.css places the fire there. */
 const JAW_HINGE = { x: 26.8, y: 33.5 };
-export const SNOUT = { x: 13.6, y: 40.7 };
 /** How far the jaw turns when wide open; negative opens this left-facing jaw. */
 const JAW_OPEN_DEG = -25;
 
@@ -252,7 +251,7 @@ interface DragonProps {
 
 /**
  * The dragon facing left. `class` adds the animation states (rearing, flinch, glow, fly-away,
- * crash); `children` are drawn in the dragon's box and move with it (the fire at SNOUT).
+ * crash); `children` are drawn in the dragon's box and move with it (the fire, which host.css puts at the snout tip).
  */
 export function Dragon({
   stage,

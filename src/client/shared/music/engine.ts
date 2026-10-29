@@ -628,10 +628,6 @@ export class MusicPlayer {
     g.setTargetAtTime(this.level * 0.55, t + ms / 1000, 0.3);
   }
 
-  stop(): void {
-    this.play(null);
-  }
-
   private ensureMaster(ctx: AudioContext): GainNode {
     if (!this.master) {
       const comp = ctx.createDynamicsCompressor();

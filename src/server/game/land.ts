@@ -71,7 +71,6 @@ interface LandGameSettings extends LandSettings {
 
 /** Land Grab: teams answer at their own pace; every 3 answers, the correct ones become tiles on a shared hex board. */
 export class LandGame {
-  readonly kind = "land";
   readonly quizId: string;
   readonly title: string;
   readonly questions: Question[];
@@ -81,7 +80,6 @@ export class LandGame {
   /** owners[tile] is a team index, or EMPTY for grass. */
   readonly owners: number[];
   readonly roster = new Roster<LandPlayer>();
-  readonly startedAt = new Date();
   phase: LandPhase = "countdown";
   phaseEndsAt = 0;
   lastPlace: LandPlace | null = null;

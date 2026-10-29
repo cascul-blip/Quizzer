@@ -10,7 +10,7 @@
  */
 import type { ComponentChildren, JSX } from "preact";
 import type { HostSiegeDefender, HostSiegeMonster } from "../../shared/protocol.ts";
-import type { SiegeDefenderType, SiegeMonsterType } from "../../shared/siege-rules.ts";
+import { SIEGE_CRACKED_HEARTS, type SiegeDefenderType, type SiegeMonsterType } from "../../shared/siege-rules.ts";
 import archerDrawImg from "./siege/archer-draw.webp";
 import archerReadyImg from "./siege/archer-ready.webp";
 import arrowImg from "./siege/arrow.webp";
@@ -101,14 +101,6 @@ const KNIGHT_PENNANT = { foot: [10, 95], at: [114, 118] } as const;
 const WALL_COURSE = { w: 130, h: 53, foot: [65, 39], at: [96, 52] } as const;
 const WALL_SPIKES = { w: 110, h: 79, foot: [55, 62], at: [96, 32] } as const;
 
-/** The banner boxes on the castle layers (for the victory flourish), and the wall's face. */
-export const CASTLE_FACE_X = 242;
-export const BANNER_BOXES = [
-  [193, 201, 222, 313],
-  [194, 396, 222, 512],
-  [194, 586, 224, 698],
-] as const;
-
 // ---------- placing things on the board ----------
 
 const pct = (v: number, of: number) => `${(v / of) * 100}%`;
@@ -177,7 +169,7 @@ const flip = (name: string, seq: number) => (seq > 0 ? `${name}-${seq % 2 ? "a" 
 // ---------- the board ----------
 
 export function SiegeBoard({ hearts, castle = "auto", children, class: cls = "" }: { hearts: number; castle?: "auto" | "crumble" | "fallen"; children?: ComponentChildren; class?: string }) {
-  const layer = castle === "fallen" ? castleFallenImg : hearts <= 5 ? castleCrackedImg : castleImg;
+  const layer = castle === "fallen" ? castleFallenImg : hearts <= SIEGE_CRACKED_HEARTS ? castleCrackedImg : castleImg;
   return (
     <div class={`siege-board ${cls}`} style={{ aspectRatio: `${BOARD.w} / ${BOARD.h}` }}>
       <img class="siege-board-img" src={boardImg} alt="" draggable={false} />

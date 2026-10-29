@@ -5,7 +5,7 @@ Style B, from mockups/style-b.png. The user picked it to replace style A.
 - `python3 src/build.py [step …]` rebuilds everything or single steps.
 - Projector files are in this folder, phone copies in `phone/` at half size.
 - Coordinates are in each file's own pixels, top-left origin; % is of that file's width/height.
-- **Masks** (`*-tint.webp`, `keep-flag-tint.webp`) are greyscale: white = take the team colour (multiply), black = leave alone. This is the same tint method as A.
+- **Masks** (`*-tint.webp`) are greyscale: white = take the team colour (multiply), black = leave alone. This is the same tint method as A.
 - Previews: `preview.png` (contact sheet), `preview-scene.png` (12x12, 3 teams, built only from these files, using `map-12`) and `preview-maps.png` (all three maps as boards, plus 1:1 crops of the phone copies). Claimed look (map tinted by team): `preview-scene.png` is the new look, `preview-scene-v1.png` the previous one (claimed-N overlay); `preview-claimed-14x6.png` (6 teams on map-14) and `preview-claimed-phone.png` (1080×1500 window from `phone/map-12` at its native 112 px/R, i.e. a phone zoomed in about 2.5×). Recipe tests: `mockups/claimed-variants.png`, Chrome check: `mockups/claimed-chrome-check.png`. `src/halo-check.png` is the fringe check over white and magenta.
 
 **Drop-in rule.** Every A file name exists here with the **same pixel size, the same phone size, the same anchor and the same slice / text-box numbers**. Replacing `src/client/shared/land/` with these files works without breaking layout.
@@ -36,8 +36,6 @@ Red `#d81e3a` circle · Blue `#1f5ee0` square · Yellow `#f5c400` triangle · Cy
 | `state-guarded.webp` | 444×512 (222×256) | same | yes | dashed **dark ink** ring on a cream underlay (white would vanish on parchment) |
 | `cost-2.webp`, `cost-blank.webp` | 160×160 (80×80) | same | yes | parchment disc, ink ring, serif "2". Same placement as A |
 | `state-selected.webp` | 532×614 (266×307) | same | yes | dark ink rim with a thin gold inner line and a soft gold glow; 1.2× the tile canvas, centred |
-| `keep.webp` | 552×801 (276×400) | same size and anchor, **≠ content** | yes | **heraldic shield with a white cross**; neutral light field for tinting |
-| `keep-flag-tint.webp` | 552×801 (276×400) | same, **≠ content** | mask | white = the shield **field**; the cross and ink stay as they are |
 | `keep-red/blue/yellow/cyan/purple/pink.webp` | 552×801 (276×400) | same | yes | the shield pre-tinted per team. **Code uses these** |
 | `keep-out.webp` | 552×801 (276×400) | same | yes (80% opacity baked in) | knocked out: greyed, faded shield |
 | `place-pop.webp` | 768×768 (384×384) | same | yes | ring of sepia ink stars and gold flecks. **Normal blend** (screen would erase it on parchment) |
@@ -241,7 +239,7 @@ const CLAIM_LIGHTEN: Record<string, number> = { "#d81e3a": 0.35, "#1f5ee0": 0.4,
 
 ## Notes / compromises
 
-- **Pre-tinted shields:** keep-red…pink are pre-tinted; `keep.webp` + `keep-flag-tint` remain for tinting in code. The mask now covers the shield field, not a flag.
+- **Pre-tinted shields:** keep-red…pink are pre-tinted, and code uses only those. The neutral `keep.webp` and its `keep-flag-tint` mask were dropped as unused (#80); they are in git history if a new team colour needs tinting.
 - **Shield size:** the shield is smaller in the canvas than A's keep (0.85 tile widths, against the keep's full 1.24) because the canvas and anchor are kept the same. About 45% of the canvas is empty. If code can take a new size, a tighter 400×560 canvas could replace it, but that would break the drop-in.
 - **Repeated trees:** solved by the continuous map. grass-1…4 remain only as the fallback.
 - **Map file size:** the maps are big for line art: 8.6 MB for all three projector files and 5.3 MB for the phone copies, but a game loads one: projector 2.0 / 2.7 / 3.9 MB, phone 1.25 / 1.7 / 2.4 MB for 10 / 12 / 14. A 1080p projector shows the 12x12 board at only ~50 px/R, so if the size matters more than 4K sharpness, the projector could use the phone copy too (it is 112 px/R, still twice what 1080p needs). Lower WebP quality saves little: q60 is only about 9% smaller than q72 and softens the hatching.
