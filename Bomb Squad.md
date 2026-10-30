@@ -36,7 +36,7 @@ The deal depends on the squad size and how many choices the question has:
 ### Question types
 * **Multiple choice**: as above.
 * **True/False**: there are only two wires, True and False.  With more than 2 players, every player gets either a True or a False wire, split as evenly as possible.  Any player holding the right one can cut it.
-* **Type the answer**: this becomes a **keypad** module.  Every phone shows a text box, and anyone can type the answer and press **Enter**.  A wrong answer costs time the same as a wrong cut.  Typed answers are checked the same way as in every other mode (case and plural endings are ignored).
+* **Type the answer**: this becomes a **keypad** module.  Every phone shows a text box, and anyone can type the answer and press **Enter**.  A wrong answer costs time the same as a wrong cut, shows the right answer, and moves the squad on to the next question (a skipped question does not count toward the module).  Typed answers are checked the same way as in every other mode (case and plural endings are ignored).
 * **Pin on picture**: every phone shows the picture, but only **its own spots**.  The spots are dealt the same way as wires.  The student who has the right spot taps it and holds to cut.  If there are more players than spots, the extra players get copies of wrong spots.
 
 ## Defusing

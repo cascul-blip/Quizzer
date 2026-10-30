@@ -33,7 +33,7 @@ export const BOOST_MIN_HOLD_MS = 1500;
 export const DIVE_SYMBOLS = 5;
 const DIVE_ADVANCE_FRACTION = 0.7;
 /** Time to find each symbol before the instructor moves on to the next one. */
-export const DIVE_SYMBOL_TIMEOUT_MS = 4000;
+export const DIVE_SYMBOL_TIMEOUT_MS = 8000;
 const DIVE_MAX_MS = 100_000;
 export const DIVE_WRONG_LOCK_MS = 1000;
 export const DIVE_METERS_PER_HIT = 2;

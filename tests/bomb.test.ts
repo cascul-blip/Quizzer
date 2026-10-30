@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { BOMB_KEYPAD_LOCK_MS, BombGame, dealBombWires } from "../src/server/game/bomb.ts";
+import { BombGame, dealBombWires } from "../src/server/game/bomb.ts";
 import { DEFAULT_BOMB, Game } from "../src/server/game/game.ts";
 import { buildBombResultsCsv } from "../src/server/game/results.ts";
 import {
@@ -267,25 +267,44 @@ describe("cutting", () => {
     expect(joined).toHaveLength(2);
   });
 
-  test("keypad answers ignore case, a wrong entry locks for 800ms, and it is not a right cut", () => {
+  test("keypad answers ignore case and are not a right cut", () => {
     const q: Question = { id: "t1", type: "text", text: "Capital of France?", timeLimitSec: 20, options: ["Paris"], correct: [0] };
-    const { game, clock, joined } = boot([q], ["Ada"]);
+    const { game, joined } = boot([q], ["Ada"]);
     const id = joined[0]!.id;
     const p = game.players.get(id)!;
     expect(game.playerView(id).keypad).toBe(true);
-    expect(game.type(id, "nope")).toBe(true);
-    expect(p.keypadWrong).toBe(1);
-    expect(p.wrongCuts).toBe(1);
-    expect(game.squads[0]!.wrongCuts).toBe(1);
-    expect(game.type(id, "Paris")).toBe(false);
-    expect(p.keypadWrong).toBe(1);
-    clock.advance(BOMB_KEYPAD_LOCK_MS);
     expect(game.type(id, "paris")).toBe(true);
     expect(p.keypadRight).toBe(1);
     expect(p.rightCuts).toBe(0);
     expect(p.firstTry).toBe(0);
     expect(game.playerView(id).keypad).toBe(false);
     expect(game.playerView(id).reveal).toEqual(["Paris"]);
+  });
+
+  test("a wrong keypad entry costs time, shows the answer and moves to the next question", () => {
+    const t1: Question = { id: "t1", type: "text", text: "Capital of France?", timeLimitSec: 20, options: ["Paris"], correct: [0] };
+    const t2: Question = { id: "t2", type: "text", text: "Capital of Italy?", timeLimitSec: 20, options: ["Rome"], correct: [0] };
+    const { game, clock, joined } = boot([t1, t2], ["Ada"]);
+    const id = joined[0]!.id;
+    const p = game.players.get(id)!;
+    const squad = game.squads[0]!;
+    const before = game.playerView(id).remainingMs;
+    const first = game.playerView(id).question!.text;
+    expect(game.type(id, "nope")).toBe(true);
+    expect(p.keypadWrong).toBe(1);
+    expect(p.wrongCuts).toBe(1);
+    expect(squad.wrongCuts).toBe(1);
+    expect(before - game.playerView(id).remainingMs).toBe(squad.timeLostMs);
+    expect(squad.timeLostMs).toBeGreaterThan(0);
+    expect(game.playerView(id).keypad).toBe(false);
+    expect(game.playerView(id).reveal).toEqual([first === "Capital of France?" ? "Paris" : "Rome"]);
+    // Typing during the pause does nothing.
+    expect(game.type(id, "paris")).toBe(false);
+    expect(p.keypadWrong).toBe(1);
+    clock.advance(BOMB_NEXT_MS);
+    expect(game.playerView(id).keypad).toBe(true);
+    expect(game.playerView(id).question!.text).not.toBe(first);
+    expect(squad.clearedInModule).toBe(0);
   });
 
   test("each squad shuffles its own question order", () => {

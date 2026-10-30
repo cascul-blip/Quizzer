@@ -167,7 +167,7 @@ function RuneScreen({ view, send }: { view: PlayerDragonView; send: Send }) {
       {head}
       {q.image && <img class="q-img" src={`/${q.image}`} alt="" />}
       {q.type === "text" ? (
-        <TextAnswer onSubmit={(text) => answer(0, text)} />
+        <TextAnswer key={f.seq} onSubmit={(text) => answer(0, text)} />
       ) : (
         <div class={`answers n${q.options.length}`}>
           {q.options.map((text, i) => {

@@ -192,9 +192,9 @@ describe("dive", () => {
     expect(ins.index).toBe(1);
   });
 
-  test("an instructor moves on after 4 s; the dive ends after 5 symbols, then the next level", () => {
+  test("an instructor moves on after 8 s; the dive ends after 5 symbols, then the next level", () => {
     const { game, clock } = toDive(["A", "B"]);
-    expect(DIVE_SYMBOL_TIMEOUT_MS).toBe(4000);
+    expect(DIVE_SYMBOL_TIMEOUT_MS).toBe(8000);
     // Both phones get the symbol timer; it counts down and starts over with the next symbol.
     const timers = () =>
       [...game.players.values()].map((p) => {
@@ -202,15 +202,15 @@ describe("dive", () => {
         return d.role === "waiting" ? null : [d.role, d.index, d.symbolRemainingMs, d.symbolMs];
       });
     expect(timers().sort()).toEqual([
-      ["diver", 0, 4000, 4000],
-      ["instructor", 0, 4000, 4000],
+      ["diver", 0, 8000, 8000],
+      ["instructor", 0, 8000, 8000],
     ]);
     clock.advance(1500);
-    expect(timers().map((t) => t![2])).toEqual([2500, 2500]);
-    clock.advance(2500);
+    expect(timers().map((t) => t![2])).toEqual([6500, 6500]);
+    clock.advance(6500);
     expect(timers().map((t) => [t![1], t![2]])).toEqual([
-      [1, 4000],
-      [1, 4000],
+      [1, 8000],
+      [1, 8000],
     ]);
     clock.advance(DIVE_SYMBOL_TIMEOUT_MS);
     for (let i = 2; i < DIVE_SYMBOLS - 1; i++) {

@@ -362,6 +362,7 @@ function RacerAnswering({ view, send }: { view: PlayerRacerView; send: Send }) {
         <PinDragger key={q.index} image={pin.image} spots={pin.spots} labels={q.options} disabled={!armed} onSubmit={choose} />
       ) : q.type === "text" ? (
         <TextAnswer
+          key={q.index}
           disabled={!armed}
           onSubmit={(text) => {
             setPendingText(text);
