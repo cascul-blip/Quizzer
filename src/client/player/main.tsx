@@ -376,6 +376,7 @@ function Answering({ view, send }: { view: Joined; send: (m: ClientMsg) => void 
       {q.image && <img class="q-img" src={`/${q.image}`} alt="" />}
       {q.type === "text" ? (
         <TextAnswer
+          key={q.index}
           onSubmit={(text) => {
             if (navigator.vibrate) navigator.vibrate(30);
             setPendingText(text);

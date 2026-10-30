@@ -111,6 +111,7 @@ export function StreamQuestion({ question, onAnswer }: { question: NonNullable<P
       {question.image && <img class="q-img" src={`/${question.image}`} alt="" />}
       {question.type === "text" ? (
         <TextAnswer
+          key={question.seq}
           disabled={locked}
           onSubmit={(text) => {
             setSentSeq(question.seq);

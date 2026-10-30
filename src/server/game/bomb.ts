@@ -31,9 +31,6 @@ import { GameError, realClock, shuffle, shuffleOptions, teamInfo, topErrors, typ
 import type { Game } from "./game.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
 
-/** Extra wait after a wrong keypad entry so one slip isn't counted twice. */
-export const BOMB_KEYPAD_LOCK_MS = 800;
-
 interface BombOptions {
   clock?: Clock;
   rng?: () => number;
@@ -86,7 +83,6 @@ interface SquadQuestion {
   answers: string[];
   wires: LiveWire[];
   wrongOnThis: number;
-  keypadLockUntil: number;
 }
 
 interface Squad {
@@ -518,7 +514,6 @@ export class BombGame {
       answers: shown.correct.map((i) => shown.options[i]!),
       wires: [],
       wrongOnThis: 0,
-      keypadLockUntil: 0,
     };
     // indexOf fails if shuffle copied the question. Find by id.
     squad.question.qIndex = this.questions.findIndex((item) => item.id === q.id);
@@ -733,7 +728,6 @@ export class BombGame {
     const squad = p && this.squads[p.squad];
     const q = squad?.question;
     if (!p || !squad || !q || q.type !== "text" || this.phase !== "defuse" || squad.pauseUntil || squad.finished || squad.exploded) return false;
-    if (this.clock.now() < q.keypadLockUntil) return false;
     const source = this.questions[q.qIndex]!;
     const correct = checkAnswer(source, text.slice(0, MAX_TYPED_ANSWER));
     if (correct === null) return false;
@@ -744,12 +738,16 @@ export class BombGame {
       squad.wrongCuts++;
       q.wrongOnThis++;
       this.wrongCounts[q.qIndex]!++;
-      q.keypadLockUntil = this.clock.now() + BOMB_KEYPAD_LOCK_MS;
       squad.status = `Wrong answer! −${this.settings.penaltySec} s`;
-      squad.statusUntil = this.clock.now() + 2000;
+      squad.statusUntil = 0;
       this.flash(squad, "wrong", this.settings.penaltySec);
       const exploded = this.applyPenalty(squad, p);
       if (!exploded) {
+        // A wrong entry skips the question: show the answer, then deal the next one. It doesn't count toward the module.
+        squad.reveal = q.answers;
+        squad.pauseUntil = this.clock.now() + BOMB_NEXT_MS;
+        squad.afterPause = "next";
+        squad.hold = null;
         this.armDefuse();
         this.onChange();
       }
