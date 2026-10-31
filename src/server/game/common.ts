@@ -15,6 +15,9 @@ export const realClock: Clock = {
 };
 
 export const MAX_PLAYERS = 200;
+/** Caps per LAN address so one device can't hold the server or fill the roster. Loopback is exempt. */
+export const MAX_SOCKETS_PER_ADDRESS = 8;
+export const MAX_JOINS_PER_ADDRESS = 3;
 const MAX_NICKNAME = 20;
 
 export class GameError extends Error {}

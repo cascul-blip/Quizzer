@@ -18,13 +18,16 @@ import { RobotGame } from "./game/robot.ts";
 import { SiegeGame } from "./game/siege.ts";
 import { SubGame } from "./game/submarine.ts";
 import { TowerGame } from "./game/tower.ts";
-import { lanAddresses, type LanAddress } from "./network.ts";
+import { MAX_JOINS_PER_ADDRESS, MAX_SOCKETS_PER_ADDRESS } from "./game/common.ts";
+import { isLoopbackAddress, lanAddresses, type LanAddress } from "./network.ts";
 import { NotFoundError, type QuizStore } from "./quiz/store.ts";
 import { loadSiegeRecord, saveSiegeRecord } from "./siege-records.ts";
 
 export interface SocketData {
   /** Request came from this machine to a loopback hostname; may use host controls. */
   admin: boolean;
+  /** Remote address, for the per-device caps. */
+  ip: string;
   role: "player" | "host";
   playerId: string | null;
   /** Comparison key of the last player.state sent, so unchanged snapshots aren't resent. */
@@ -237,6 +240,14 @@ export class GameHub {
 
   // ---------- socket lifecycle ----------
 
+  /** Another socket from this address would go over the per-device cap. */
+  socketLimitReached(ip: string): boolean {
+    if (isLoopbackAddress(ip)) return false;
+    let n = 0;
+    for (const s of this.sockets) if (s.data.ip === ip) n++;
+    return n >= MAX_SOCKETS_PER_ADDRESS;
+  }
+
   onOpen(ws: WS): void {
     this.sockets.add(ws);
     this.send(ws, { type: "hello", serverId: this.serverId });
@@ -279,6 +290,11 @@ export class GameHub {
       case "join": {
         if (!this.game) throw new GameError("No game is open yet. Wait for the host.");
         if (ws.data.playerId && this.game.players.has(ws.data.playerId)) return this.sendState(ws);
+        if (!isLoopbackAddress(ws.data.ip)) {
+          const game = this.game;
+          const mine = new Set([...this.sockets].filter((s) => s.data.ip === ws.data.ip && s.data.playerId && game.players.has(s.data.playerId)).map((s) => s.data.playerId));
+          if (mine.size >= MAX_JOINS_PER_ADDRESS) throw new GameError("Too many players from this device");
+        }
         const p = this.game.join(msg.nickname, cleanAvatar(msg.avatar, msg.accessory));
         ws.data.playerId = p.id;
         this.send(ws, { type: "joined", token: p.token, playerId: p.id, images: this.images });
