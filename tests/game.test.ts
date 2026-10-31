@@ -155,6 +155,19 @@ describe("question flow", () => {
     expect(game.phase).toBe("reveal");
   });
 
+  test("skip during the intro only opens the question", () => {
+    const { game } = setup();
+    const a = game.join("A");
+    game.join("B");
+    game.start();
+    expect(game.phase).toBe("intro");
+    game.skip();
+    expect(game.phase).toBe("open");
+    expect(game.answer(a.id, 0, 1)).toBe(true);
+    game.skip();
+    expect(game.phase).toBe("reveal");
+  });
+
   test("auto pacing advances reveal → leaderboard → next intro", () => {
     const { game, clock } = setup({ pacing: "auto" });
     game.join("A");
