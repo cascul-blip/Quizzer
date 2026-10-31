@@ -56,7 +56,7 @@ describe("Phones that fall behind", () => {
   /** Just enough of a Bun socket for the hub, with a send queue the test controls. */
   function fakeSocket(data: Partial<SocketData>) {
     const sock = {
-      data: { admin: false, role: "player", playerId: null, lastSent: null, lastView: null, behind: false, ...data } as SocketData,
+      data: { admin: false, ip: "127.0.0.1", role: "player", playerId: null, lastSent: null, lastView: null, behind: false, ...data } as SocketData,
       sent: [] as ServerMsg[],
       buffered: 0,
       send(m: string) {

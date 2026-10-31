@@ -116,10 +116,12 @@ export function startServer(opts: ServerOptions): RunningServer {
     async fetch(req, srv) {
       const url = new URL(req.url);
       const path = url.pathname;
-      const admin = isAdminRequest(srv.requestIP(req)?.address, req.headers);
+      const ip = srv.requestIP(req)?.address ?? "";
+      const admin = isAdminRequest(ip, req.headers);
 
       if (path === "/ws") {
-        if (srv.upgrade(req, { data: { admin, role: "player", playerId: null, lastSent: null, lastView: null, behind: false } })) return undefined;
+        if (hub.socketLimitReached(ip)) return new Response("Too many connections from this device", { status: 429 });
+        if (srv.upgrade(req, { data: { admin, ip, role: "player", playerId: null, lastSent: null, lastView: null, behind: false } })) return undefined;
         return new Response("Expected a WebSocket upgrade", { status: 426 });
       }
 

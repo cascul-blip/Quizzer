@@ -31,7 +31,7 @@ export function lanAddresses(): LanAddress[] {
 
 const LOOPBACK_HOSTNAMES = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
 
-function isLoopbackAddress(ip: string | undefined | null): boolean {
+export function isLoopbackAddress(ip: string | undefined | null): boolean {
   if (!ip) return false;
   return ip === "::1" || ip.startsWith("127.") || ip.startsWith("::ffff:127.");
 }
