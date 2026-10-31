@@ -449,7 +449,7 @@ export class Game {
 
   skip(): void {
     if (this.phase === "intro") this.openQuestion();
-    if (this.phase === "open") this.closeQuestion();
+    else if (this.phase === "open") this.closeQuestion();
   }
 
   end(): void {
