@@ -97,7 +97,7 @@ quizzer mcp [options]       Run the MCP server over stdio (for AI agents)
 | Leaderboard | Top 5, with points gained on the last question. Players on a streak of 4+ correct answers in a row get a 🔥 badge with the count (e.g. 🔥x4). |
 | Podium | Top 3 plus the rest, with **Show errors**, **Play again** and **Done**. |
 
-- **Pacing**: *Manual* waits for you to press **Next** (or Space/→). *Auto-advance* moves on after 5 seconds on the reveal and leaderboard. You can switch pacing mid-game from the top bar. **Racer** is paced the same way.
+- **Pacing**: *Manual* waits for you to press **Next** (or Space/→). *Auto-advance* moves on after 5 seconds on the reveal and leaderboard. You can switch pacing mid-game from the top bar. **Racer** and **Showdown** are paced the same way.
 - **Scoring**: a correct answer is worth 1000 points if given instantly, falling to 500 at the time limit. Wrong or missing answers score 0.
 - **Multiple correct answers**: players still tap one option, and any correct option scores.
 - **Pin on picture**: the question has a picture with 2–20 labelled spots, such as the numbered lines of a labelled diagram. Players drag a pin onto the picture. Dropped near a label, it snaps onto that spot, and they press **Submit** to lock it in. One spot is the answer and the others are distractors. In the editor, click the picture to add a spot, drag a spot to move it, click it to make it the answer, and rename it in the list (e.g. "56"). To ask about every spot of a diagram, make one question and duplicate it (⧉) for each location. The reveal shows the right spot and how many players picked each one. Pin questions work in every game mode.
@@ -317,6 +317,20 @@ Awards: **Top Archer Captain** (most monsters defeated by archers the player pla
 
 The painted art comes from `scripts/siege-art.py` (sources in `scripts/siege-art/`, positions in `src/client/shared/siege/manifest.md`); the motion, warning arrows, lane flashes, glow, dust and confetti are drawn in code (`src/client/shared/siege-art.tsx`). Phones only get the small defender icons, the coin and the heart; the lane map is drawn in code.
 
+## Showdown mode
+
+Every player for themselves in a Western quick-draw tournament. Choose **Game mode → 🤠 Showdown** in the lobby. Setting: **Rounds** (10, 15 or 20, default 15). Each round is one question, and the questions repeat in a fresh random order if the quiz runs out. Pacing and shuffling work as in Classic. The full rules are in `Showdown.md`.
+
+- **Arenas.** The players start in a random order, the **ladder**, and are paired from the top: **Arena 1 is High Noon** on Main Street (drawn larger), then Arena 2, Arena 3, … With an odd count, the bottom arena is a **3-way duel**. Every duel runs at once on the projector, so nobody waits for another match.
+- **A round.** Everyone gets **the same question**: 3 seconds to read it, then the answers and one shared timer (it closes early once everyone has answered). Each phone shows the answer tiles and who they face, e.g. "Arena 2 · vs 🦊 Sam".
+- **Who wins.** Right beats wrong; if both are right, the **faster** one wins; both wrong or no answer is a **draw**. In a 3-way duel the best player wins, the worst loses and the middle one stays.
+- **Moving.** At each boundary between two arenas, the upper arena's loser swaps with the lower arena's winner. A draw blocks its boundaries. The Arena 1 winner stays on High Noon and the bottom loser stays at the bottom.
+- **The reveal.** The faster gunslinger draws and fires, the other one's hat flies off, a draw is two misses and a puff of dust, and the movers walk up or down the street to their new arenas. Phones show "You won! ⬆ Arena 1", "⬇ Arena 3" or "Draw — you stay".
+
+Late joiners start at the bottom of the ladder from the next round. A disconnected player keeps their place and counts as no answer; a kicked player is removed and the ladder closes up. After the last round, **the ladder order is the final ranking**. The podium awards **Longest reign** (most rounds won on High Noon), **Most wins** and **Biggest climb** (most arenas climbed from the starting arena). The results CSV has one row per player: rank, final arena, wins, losses, draws, rounds won on High Noon, and each answer with its time.
+
+The painted art comes from `scripts/showdown-art.py` (sources in `scripts/showdown-art/`, prompts in `Showdown Art Brief.md`); the draw, hat flip, muzzle flash, dust, tumbleweed and walking are animated in code (`src/client/shared/duel-art.tsx`).
+
 ## Music
 
 Every game mode has **built-in background music** on the projector (phones stay quiet). It's composed in code and played on **recordings of real instruments**: grand piano, string sections, brass, flute, harp, organ, timpani and a drum kit, about 4 MB built into the program. The recordings are public domain (CC0) or free to use with credit (see `src/client/shared/music/samples/CREDITS.md`). Tallest Tower and Racer keep their chiptune and 80s-synth sound on purpose. Add `?music=synth` to the host page's address to hear every track on the older synthesized instruments:
@@ -334,6 +348,7 @@ Every game mode has **built-in background music** on the projector (phones stay 
 | Dragon's Hoard | A quiet cave with deep strings and the dragon breathing; a heroic battle theme with brass, drums and choir; a playful plucked scramble with coin sounds | The battle gets more intense as the dragon weakens and the battle clock runs out; a rising rumble, then war drums, during fire breath; the scramble speeds up as its clock runs out |
 | Bomb Squad | Spy-jazz: bass, brushes and a vibraphone | The defuse theme adds a tick and more layers, and speeds up, as the bomb runs down (extra urgency under 30 seconds). A fanfare if the bomb is defused; a low boom if it explodes |
 | Kingdom Siege | A pastoral lobby with recorder, lute and tabor; a marching battle theme with snare, recorders and brass | The march adds layers as monsters fill the board and as hearts are lost; low brass and timpani for a giant; drums and a held chord during breaks. Church bells and a fanfare if the kingdom stands; a low brass lament if the castle falls |
+| Showdown | An original slow Western standoff: a lone trumpet over tremolo strings, twangy guitar and the High Noon clock bell; a lone picked guitar in the lobby | A clock starts ticking when the answers appear; timpani, flute, bells and finally timpani rolls build as the timer runs out. A brass-and-timpani "draw" sting on each reveal; a sunset trumpet tune on the podium |
 
 The lobby plays the music of whichever game mode is selected. Use the **🎵 button and slider** in the projector's top bar to turn music off or change its volume. The 🔊 button still mutes everything.
 
@@ -354,6 +369,7 @@ Put audio files (MP3, OGG, M4A, WAV, WebM or FLAC) in the **`data/music`** folde
 | `dragon-lobby` · `dragon-battle` · `dragon-fire` · `dragon-scramble` · `dragon-results` | Dragon's Hoard: lobby, battle, fire breath (warning and Shield of Faith question), hoard scramble, final podium |
 | `bomb-lobby` · `bomb-defuse` · `bomb-results` | Bomb Squad: lobby, defusing, the defused or exploded ending and the podium |
 | `siege-lobby` · `siege-battle` · `siege-results` | Kingdom Siege: lobby; countdown, build breaks and waves; the kingdom stands or the castle falls, and the podium |
+| `showdown-lobby` · `showdown` · `showdown-draw` · `showdown-results` | Showdown: lobby, the standoff (question and reveal), the draw sting (plays once on each reveal), final podium |
 
 For example, `data/music/submarine-chase.mp3`. Your files loop; they don't speed up with the game like the built-in music does. Only use music you're allowed to play: royalty-free or Creative Commons tracks (e.g. Pixabay Music, OpenGameArt, or incompetech with credit). Delete a file to go back to the built-in track.
 

@@ -8,6 +8,8 @@ import {
   CUP_MAX_CUPS,
   CUP_MIN_CUPS,
   DRAGON_BATTLE_MINUTES,
+  DUEL_DEFAULT_ROUNDS,
+  DUEL_ROUNDS,
   DRAGON_FIRE_SECONDS,
   DRAGON_MIN_TEAMS,
   DRAGON_SCRAMBLE_MINUTES,
@@ -20,6 +22,7 @@ import {
   type BombSettings,
   type CupSettings,
   type DragonSettings,
+  type DuelSettings,
   type FightSettings,
   type GameMode,
   type HillSetting,
@@ -59,6 +62,7 @@ export const DEFAULT_CUP: CupSettings = { cups: CUP_DEFAULT_CUPS };
 export const DEFAULT_DRAGON: DragonSettings = { teams: 2, toughness: "normal", battleMinutes: 5, fireSec: 45, scrambleMinutes: 3 };
 export const DEFAULT_BOMB: BombSettings = { game: "together", squads: 1, modules: 3, wires: 3, minutes: 5, penaltySec: 15 };
 export const DEFAULT_SIEGE: SiegeSettings = { waves: 5 };
+export const DEFAULT_DUEL: DuelSettings = { rounds: DUEL_DEFAULT_ROUNDS };
 
 interface Answer {
   /** Chosen option index; -1 for a typed answer. */
@@ -102,13 +106,14 @@ interface GameOptions {
   dragon?: DragonSettings;
   bomb?: BombSettings;
   siege?: SiegeSettings;
+  duel?: DuelSettings;
   protect?: boolean;
 }
 
 /**
  * A Classic game: lobby → (intro → open → reveal → leaderboard)* → podium.
  * It also serves as the lobby for every mode; in the other modes the hub
- * hands its players to that mode's game (TowerGame, SubGame, FightGame, RobotGame, LandGame, RacerGame, CupGame, DragonGame, BombGame, SiegeGame) on start.
+ * hands its players to that mode's game (TowerGame, SubGame, FightGame, RobotGame, LandGame, RacerGame, CupGame, DragonGame, BombGame, SiegeGame, DuelGame) on start.
  */
 export class Game {
   readonly quiz: Quiz;
@@ -130,6 +135,7 @@ export class Game {
   dragon: DragonSettings;
   bomb: BombSettings;
   siege: SiegeSettings;
+  duel: DuelSettings;
   /** When the current phase's countdown ends (intro/open), for views. */
   phaseEndsAt = 0;
   openedAt = 0;
@@ -166,6 +172,7 @@ export class Game {
     this.dragon = { ...(opts.dragon ?? DEFAULT_DRAGON) };
     this.bomb = { ...(opts.bomb ?? DEFAULT_BOMB) };
     this.siege = { ...(opts.siege ?? DEFAULT_SIEGE) };
+    this.duel = { ...(opts.duel ?? DEFAULT_DUEL) };
     this.protect = opts.protect ?? true;
   }
 
@@ -262,7 +269,7 @@ export class Game {
 
   setMode(mode: GameMode): void {
     if (this.phase !== "lobby") throw new GameError("The game mode can only be changed before the game starts");
-    if (mode !== "classic" && mode !== "tower" && mode !== "submarine" && mode !== "fight" && mode !== "robot" && mode !== "land" && mode !== "racer" && mode !== "cup" && mode !== "dragon" && mode !== "bomb" && mode !== "siege") throw new GameError("Unknown game mode");
+    if (mode !== "classic" && mode !== "tower" && mode !== "submarine" && mode !== "fight" && mode !== "robot" && mode !== "land" && mode !== "racer" && mode !== "cup" && mode !== "dragon" && mode !== "bomb" && mode !== "siege" && mode !== "duel") throw new GameError("Unknown game mode");
     this.mode = mode;
     if (mode === "bomb") {
       this.bombSquadsManual = false;
@@ -349,6 +356,14 @@ export class Game {
     const waves = settings.waves === "endless" ? "endless" : Number(settings.waves);
     if (!(SIEGE_WAVE_CHOICES as readonly unknown[]).includes(waves)) throw new GameError("Unsupported number of waves");
     this.siege = { waves: waves as SiegeWaves };
+    this.onChange();
+  }
+
+  setDuel(settings: DuelSettings): void {
+    if (this.phase !== "lobby") throw new GameError("Showdown settings can only be changed before the game starts");
+    const rounds = Number(settings.rounds);
+    if (!(DUEL_ROUNDS as readonly number[]).includes(rounds)) throw new GameError("Unsupported number of rounds");
+    this.duel = { rounds };
     this.onChange();
   }
 
@@ -589,6 +604,7 @@ export class Game {
       dragon: this.dragon,
       bomb: this.bomb,
       siege: this.siege,
+      duel: this.duel,
       teams,
       quiz: { id: this.quizId, title: this.title, questionCount: this.questions.length },
       pacing: this.pacing,

@@ -1216,6 +1216,74 @@ describe("Racer over WebSockets", () => {
   });
 });
 
+describe("Showdown over WebSockets", () => {
+  test("lobby rounds → start → duel.answer → reveal → next → end → results", async () => {
+    const quiz = store.create({
+      title: "Showdown E2E",
+      questions: [1, 2].map((n) => ({ type: "multiple_choice", text: `Q${n}`, options: ["right", "wrong"], correct: [0], timeLimitSec: 10 })),
+    });
+    const wsUrl = `ws://localhost:${srv.port}/ws`;
+    const host = await TestSocket.open(wsUrl);
+    host.send({ type: "host.hello" });
+    await host.hostState((v) => v.kind === "idle");
+    host.send({ type: "host.open", quizId: quiz.id });
+    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
+    host.send({ type: "host.setMode", mode: "duel" });
+    await host.hostState((v) => v.kind === "classic" && v.mode === "duel" && v.duel.rounds === 15 && v.teams === null);
+    host.send({ type: "host.setDuel", rounds: 7 });
+    expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: "Unsupported number of rounds" });
+    host.send({ type: "host.setDuel", rounds: 10 });
+    await host.hostState((v) => v.kind === "classic" && v.duel.rounds === 10);
+
+    const names = ["Ann", "Bob"];
+    const players = await Promise.all(names.map(() => TestSocket.open(wsUrl)));
+    for (const [i, p] of players.entries()) {
+      await p.playerState((v) => v.kind === "none" && !!v.game);
+      p.send({ type: "join", nickname: names[i]! });
+      await p.waitFor((m) => m.type === "joined");
+    }
+    await host.hostState((v) => v.kind === "classic" && v.players.length === 2);
+
+    host.send({ type: "host.start", pacing: "manual" });
+    const started = await host.hostState((v) => v.kind === "duel" && v.phase === "intro");
+    expect(started.view.kind === "duel" && started.view).toMatchObject({ round: 1, rounds: 10, playerCount: 2, question: { index: 0, total: 10, text: "Q1", options: [] } });
+    host.send({ type: "host.setShuffle", questions: true, answers: true });
+    expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: "Not available in Showdown" });
+    const ann = await players[0]!.playerState((v) => v.kind === "duel" && v.phase === "intro");
+    expect(ann.view.kind === "duel" && ann.view.opponents.map((o) => o.nickname)).toEqual(["Bob"]);
+
+    // Ann right, Bob wrong: Ann wins Arena 1 and tops the ladder.
+    host.send({ type: "host.skip" });
+    await players[0]!.playerState((v) => v.kind === "duel" && v.phase === "open" && v.question!.options.length === 2);
+    players[0]!.send({ type: "duel.answer", index: 0, option: 0 });
+    await host.hostState((v) => v.kind === "duel" && v.phase === "open" && v.answeredCount === 1);
+    await players[1]!.playerState((v) => v.kind === "duel" && v.phase === "open");
+    players[1]!.send({ type: "duel.answer", index: 0, option: 1 });
+    const reveal = await host.hostState((v) => v.kind === "duel" && v.phase === "reveal");
+    expect(reveal.view.kind === "duel" && reveal.view).toMatchObject({ correct: [0], lastRound: { round: 1 }, players: [{ nickname: "Ann", rank: 1, wins: 1, reign: 1 }, { nickname: "Bob", rank: 2, losses: 1 }] });
+    const mine = await players[1]!.playerState((v) => v.kind === "duel" && v.phase === "reveal");
+    expect(mine.view.kind === "duel" && mine.view).toMatchObject({ reveal: { choice: 1, correct: [0], wasCorrect: false }, myDuel: { arena: 1, draw: false } });
+
+    host.send({ type: "host.next" });
+    await host.hostState((v) => v.kind === "duel" && v.phase === "intro" && v.round === 2);
+    host.send({ type: "host.end" });
+    const podium = await host.hostState((v) => v.kind === "duel" && v.phase === "podium");
+    expect(podium.view.kind === "duel" && podium.view).toMatchObject({ hasResults: true, awards: { longestReign: { value: 1, nicknames: ["Ann"] } }, errors: [{ wrong: 1, text: "Q1" }] });
+    const end = await players[0]!.playerState((v) => v.kind === "duel" && v.phase === "podium" && !!v.result);
+    expect(end.view.kind === "duel" && end.view.result).toEqual({ rank: 1, playerCount: 2, awards: ["Longest reign", "Most wins"] });
+    const csv = await (await fetch(`${base}/api/results/latest.csv`)).text();
+    expect(csv).toContain("Rank,Nickname,Final arena,Start arena,Wins,Losses,Draws,Rounds won in Arena 1,Correct,Wrong,R1 answer (Q1)");
+    expect(csv).toContain("1,Ann,1,1,1,0,0,1,1,0,right,yes,");
+
+    // Play again keeps Showdown and its rounds.
+    host.send({ type: "host.open", quizId: quiz.id });
+    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "duel" && v.duel.rounds === 10);
+    host.send({ type: "host.close" });
+    await host.hostState((v) => v.kind === "idle");
+    [host, ...players].forEach((s) => s.close());
+  });
+});
+
 describe("Only changed player views are pushed", () => {
   const settle = () => new Promise((r) => setTimeout(r, 250)); // longer than the 100 ms activity throttle
   const states = (s: TestSocket) => s.msgs.filter((m) => m.type === "player.state").length;

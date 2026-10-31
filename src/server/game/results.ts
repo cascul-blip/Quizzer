@@ -8,6 +8,7 @@ import type { RobotGame } from "./robot.ts";
 import type { CupGame } from "./cup.ts";
 import type { BombGame } from "./bomb.ts";
 import type { DragonGame } from "./dragon.ts";
+import type { DuelGame } from "./duel.ts";
 import type { SiegeGame } from "./siege.ts";
 import type { SubGame } from "./submarine.ts";
 import type { TowerGame } from "./tower.ts";
@@ -132,6 +133,28 @@ export function buildRacerResultsCsv(game: RacerGame): string {
       const answered = p.correct + p.wrong;
       return [p.nickname, p.correct, p.wrong, answered ? Math.round((p.correct / answered) * 100) : "", p.turnsDriven, p.mphGained, p.failsAsDriver, round(game.car.distance), round(game.car.topSpeed), game.car.crashes];
     });
+  return toCsv([header, ...rows]);
+}
+
+/** Showdown: one row per player in final ladder order, then each round's answer, correctness and time. */
+export function buildDuelResultsCsv(game: DuelGame): string {
+  const header: string[] = ["Rank", "Nickname", "Final arena", "Start arena", "Wins", "Losses", "Draws", "Rounds won in Arena 1", "Correct", "Wrong"];
+  const played = game.questions.slice(0, game.played);
+  played.forEach((q, i) => {
+    const n = i + 1;
+    header.push(`R${n} answer (${q.text})`, `R${n} correct`, `R${n} time (s)`);
+  });
+  const arenas = game.ladderArenas();
+  const rows: (string | number)[][] = game.ranked().map((p, i) => {
+    const final = arenas.get(p.id) ?? "";
+    const row: (string | number)[] = [i + 1, p.nickname, final, p.startArena || final, p.wins, p.losses, p.draws, p.reign, p.correct, p.wrong];
+    played.forEach((q, slot) => {
+      const a = p.answers[slot];
+      if (a) row.push((q.type === "text" ? a.text : q.options[a.option]) ?? "", a.correct ? "yes" : "no", (a.ms / 1000).toFixed(2));
+      else row.push("", "no answer", "");
+    });
+    return row;
+  });
   return toCsv([header, ...rows]);
 }
 

@@ -15,6 +15,7 @@ const LOBBY: Record<GameMode, MusicTrackId> = {
   dragon: "dragon-lobby",
   bomb: "bomb-lobby",
   siege: "siege-lobby",
+  duel: "showdown-lobby",
 };
 
 let landKey = "";
@@ -136,6 +137,16 @@ export function musicFor(view: HostView | null): MusicCue {
       const intensity = Math.max(0.12, urgency, last30 ? 0.75 : 0);
       const timers = view.squads.map((s) => (s.finished || s.exploded ? "x" : s.timerRev)).join(".");
       return { track: "bomb-defuse", intensity, rampTo: 1, rampMs: view.remainingMs, key: `bomb-${view.timerRev}-${timers}-${last30 ? "end" : "run"}` };
+    }
+    case "duel": {
+      if (view.phase === "podium") return { track: "showdown-results" };
+      // The standoff: tremolo strings build under the lone trumpet as the question's time runs out.
+      if (view.phase === "open") {
+        const start = Math.max(0, Math.min(1, 1 - view.phaseRemainingMs / Math.max(1, view.phaseDurationMs)));
+        return { track: "showdown", intensity: 0.2 + start * 0.8, rampTo: 1, rampMs: view.phaseRemainingMs, key: `duel-r${view.round}-open` };
+      }
+      // The reveal drops back to a hush; the draw sting (duel.tsx) plays over it when the shots ring out.
+      return { track: "showdown", intensity: 0.05, key: `duel-r${view.round}-${view.phase}` };
     }
     case "siege": {
       const outcome = view.result?.outcome;

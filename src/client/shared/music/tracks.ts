@@ -10,6 +10,9 @@
  * Bomb Squad = spy-jazz (bass, brushes, vibraphone) that picks up a tick and more layers as the bomb runs down.
  * Kingdom Siege = a pastoral recorder-and-lute lobby, a marching battle with snare, tabor, recorders and brass,
  *   church bells for a victory and a low brass lament for a fallen castle. These three use the rich sound (see rich.ts).
+ * Showdown = an original slow Western standoff: a lone trumpet over tremolo strings, a twangy guitar and the
+ *   High Noon clock bell, with a ticking clock and timpani rolls that build as time runs out, plus a one-shot
+ *   "draw" sting (MusicPlayer.sting) for the reveal. Slower, sparser and tenser than Cup of Death's saloon.
  * Any of these can be replaced by an audio file in data/music/<id>.<ext>.
  */
 import type { MusicTrackId } from "../../../shared/music-tracks.ts";
@@ -1268,6 +1271,159 @@ const siegeResults: Track = {
   ],
 };
 
+// ---------- Showdown: a quick-draw standoff at High Noon ----------
+// D minor, with the Eb (Phrygian) rub over a D pedal for the stare-down. Unlike Cup of Death (A minor,
+// whistle, gallop) there is no gallop and no whistle: a lone trumpet, long silences, a clock.
+
+/** Chords per bar of the standoff: Dm Dm Dm Eb/D | Bb Gm A A. */
+const SHOW_HARMONY = [
+  chord("D4 F4 A4"),
+  chord("D4 F4 A4"),
+  chord("D4 F4 A4"),
+  chord("Eb4 G4 Bb4"),
+  chord("D4 F4 Bb4"),
+  chord("D4 G4 Bb4"),
+  chord("C#4 E4 A4"),
+  chord("C#4 E4 A4"),
+];
+/** Low tremolo strings: a D pedal, then the descent to the dominant. */
+const SHOW_PEDAL = ["D2 A2", "D2 A2", "D2 A2", "D2 A2", "Bb1 F2", "G1 D2", "A1 E2", "A1 E2"].map(chord);
+const SHOW_TIMPANI = ["D2", "D2", "D2", "D2", "Bb2", "G2", "A2", "A2"];
+const tremolo = (tok: string) => pump(tok, "xxxxxxxxxxxxxxxx");
+/** A chord held through a slow bar, bowed twice so it outlasts no recording. */
+const rebow = (tok: string) => seq([tok, 8], [tok, 8]);
+
+const showdownLobby: Track = {
+  id: "showdown-lobby",
+  bpm: 72,
+  bars: 4,
+  reverb: 0.4,
+  layers: [
+    // A lone guitar picking by the empty street.
+    {
+      inst: "twang",
+      bars: [
+        arp(["D2", "A2", "D3", "F3", "A3", "F3", "D3", "A2"], 2),
+        arp(["F2", "Bb2", "D3", "F3", "Bb3", "F3", "D3", "Bb2"], 2),
+        arp(["G2", "D3", "G3", "Bb3", "D4", "Bb3", "G3", "D3"], 2),
+        arp(["E2", "A2", "C#3", "E3", "A3", "E3", "C#3", "A2"], 2),
+      ],
+      vol: 0.6,
+    },
+    { inst: "pad", bars: [chord("D3 A3"), chord("Bb2 F3"), chord("G2 D3"), chord("A2 E3")].map(rebow), vol: 0.3 },
+    {
+      inst: "flute",
+      bars: [seq([".", 4], ["A4", 4], ["D5", 2], ["F5", 6]), seq(["E5", 4], ["D5", 4], ["Bb4", 8]), seq([".", 4], ["Bb4", 2], ["A4", 2], ["G4", 8]), seq(["A4", 12], [".", 4])],
+      vol: 0.4,
+    },
+    // The church clock, far off.
+    { inst: "bell", bars: [once("D4"), rest, rest, rest], vol: 0.35 },
+  ],
+};
+
+const showdown: Track = {
+  id: "showdown",
+  bpm: 60,
+  bars: 8,
+  // From a slow stare-down (intro, ~0.05) to a pounding last few seconds (1). At 60 bpm the clock ticks once a second.
+  tempoBoost: 0.35,
+  reverb: 0.42,
+  layers: [
+    // Always there: tremolo strings, the guitar's low notes and the High Noon bell.
+    { inst: "strings", bars: SHOW_PEDAL.map(tremolo), vol: 0.32 },
+    {
+      inst: "twang",
+      bars: [
+        seq(["D2", 12], [".", 4]),
+        seq([".", 4], ["D2", 8], [".", 4]),
+        seq(["D2", 12], [".", 4]),
+        seq(["Eb2", 8], ["D2", 4], ["A2", 4]),
+        seq(["Bb2", 12], [".", 4]),
+        seq(["G2", 12], [".", 4]),
+        seq(["A2", 8], ["C#3", 4], ["E3", 4]),
+        seq(["A2", 8], ["E3", 2], ["A3", 2], ["C#4", 4]),
+      ],
+      vol: 0.7,
+    },
+    { inst: "bell", bars: [once("D4"), rest], vol: 0.5 },
+    // The question is open: the clock starts ticking and the trumpet steps out.
+    { inst: "tick", bars: [drum("x...x...x...x...")], vol: 0.35, from: 0.15, to: 0.8 },
+    { inst: "tick", bars: [drum("x.x.x.x.x.x.x.x.")], vol: 0.4, from: 0.8 },
+    {
+      inst: "brass",
+      bars: [
+        seq([".", 4], ["A4", 2], ["D5", 10]),
+        seq(["Eb5", 6], ["D5", 2], ["C5", 2], ["D5", 6]),
+        seq(["A4", 12], [".", 4]),
+        seq([".", 8], ["F4", 2], ["G4", 2], ["A4", 4]),
+        seq(["Bb4", 4], ["D5", 4], ["F5", 8]),
+        seq(["E5", 2], ["F5", 2], ["E5", 2], ["D5", 6], ["Bb4", 4]),
+        seq(["C#5", 8], ["E5", 4], ["D5", 2], ["C#5", 2]),
+        seq(["A4", 12], [".", 4]),
+      ],
+      vol: 0.75,
+      from: 0.15,
+    },
+    // Timpani: a lone hit per bar, then rolls, then a roll that never stops.
+    { inst: "timpani", bars: SHOW_TIMPANI.map((r) => once(r)), vol: 0.45, from: 0.35, to: 0.7 },
+    { inst: "timpani", bars: SHOW_TIMPANI.map((r, i) => pump(r, i === 7 ? "xxxxxxxxxxxxxxxx" : "x.......x.xxxxxx")), vol: 0.4, from: 0.7, to: 0.9 },
+    { inst: "timpani", bars: SHOW_TIMPANI.map(tremolo), vol: 0.42, from: 0.9 },
+    // A whistle-like flute answering the trumpet in its gaps.
+    {
+      inst: "flute",
+      bars: [rest, rest, seq([".", 10], ["A5", 2], ["D6", 4]), seq(["C6", 4], ["A5", 4], [".", 8]), rest, rest, rest, seq([".", 8], ["E5", 2], ["G5", 2], ["A5", 4])],
+      vol: 0.4,
+      from: 0.45,
+    },
+    // The whole street holds its breath.
+    { inst: "strings", bars: SHOW_HARMONY.map(rebow), vol: 0.35, from: 0.55 },
+    { inst: "bell", bars: [rest, once("A4")], vol: 0.4, from: 0.65 },
+    { inst: "brass", bars: shift(SHOW_PEDAL.map(rebow), 1), vol: 0.3, from: 0.85 },
+    { inst: "snare", bars: [drum("x.x.x.x.x.x.x.x."), drum("x.x.x.x.x.x.x.x."), drum("x.x.x.x.x.x.x.x."), drum("xxxxxxxxxxxxxxxx")], vol: 0.18, from: 0.9 },
+  ],
+};
+
+/** The draw: a quick brass flourish into a stab, a timpani hit and a cymbal, then the strings ring on. Played once by MusicPlayer.sting. */
+const showdownDraw: Track = {
+  id: "showdown-draw",
+  bpm: 132,
+  bars: 2,
+  reverb: 0.4,
+  layers: [
+    { inst: "brass", bars: [seq(["A4", 1], ["C5", 1], ["D5", 1], [chord("D4 F4 A4 D5"), 5], [".", 8]), rest], vol: 0.9 },
+    { inst: "brass", bars: [seq([".", 3], [chord("D3 A3"), 13]), seq([chord("D3 A3"), 6], [".", 10])], vol: 0.45 },
+    { inst: "timpani", bars: [seq(["A2", 1], ["A2", 1], ["A2", 1], ["D2", 13]), rest], vol: 0.8 },
+    { inst: "cymbal", bars: [drum("...o............"), rest], vol: 0.6 },
+    { inst: "twang", bars: [seq([".", 3], ["D2", 13]), rest], vol: 0.7 },
+    { inst: "strings", bars: [seq([".", 3], [chord("D3 A3 D4"), 13]), seq([chord("D3 A3 D4"), 10], [".", 6])], vol: 0.45 },
+  ],
+};
+
+const showdownResults: Track = {
+  id: "showdown-results",
+  bpm: 88,
+  bars: 4,
+  reverb: 0.35,
+  layers: [
+    // Riding off into the sunset, in D major.
+    {
+      inst: "brass",
+      bars: [
+        seq(["A4", 2], ["D5", 2], ["F#5", 8], ["E5", 2], ["D5", 2]),
+        seq(["G5", 6], ["F#5", 2], ["E5", 4], ["B4", 4]),
+        seq(["A4", 2], ["B4", 2], ["D5", 4], ["E5", 4], ["C#5", 4]),
+        seq(["D5", 12], [".", 4]),
+      ],
+    },
+    { inst: "strings", bars: [hold(chord("D4 F#4 A4")), hold(chord("D4 G4 B4")), hold(chord("C#4 E4 A4")), hold(chord("D4 F#4 A4"))], vol: 0.65 },
+    { inst: "twang", bars: [seq(["D2", 4], [".", 4], ["A2", 4], [".", 4]), seq(["G2", 4], [".", 4], ["D3", 4], [".", 4]), seq(["A2", 4], [".", 4], ["E3", 4], [".", 4]), seq(["D2", 4], [".", 4], ["A2", 4], [".", 4])], vol: 0.75 },
+    { inst: "twang", bars: [chord("D3 F#3 A3"), chord("D3 G3 B3"), chord("C#3 E3 A3"), chord("D3 F#3 A3")].map((c) => pump(c, "..x...x...x...x.")), vol: 0.35 },
+    { inst: "timpani", bars: [pump("D2", "x.......x.x....."), pump("G2", "x.......x.x....."), pump("A2", "x.......x.x....."), pump("D2", "x...x...x.x.x...")], vol: 0.5 },
+    { inst: "bell", bars: [once("D5"), once("D5"), once("E5"), seq(["F#5", 8], ["D5", 8])], vol: 0.35 },
+    { inst: "cymbal", bars: [rest, rest, rest, once("x")], vol: 0.5 },
+  ],
+};
+
 export const TRACKS: Record<MusicTrackId, Track> = {
   "classic-lobby": classicLobby,
   "classic-question": classicQuestion,
@@ -1308,4 +1464,8 @@ export const TRACKS: Record<MusicTrackId, Track> = {
   "siege-lobby": siegeLobby,
   "siege-battle": siegeBattle,
   "siege-results": siegeResults,
+  "showdown-lobby": showdownLobby,
+  showdown,
+  "showdown-draw": showdownDraw,
+  "showdown-results": showdownResults,
 };

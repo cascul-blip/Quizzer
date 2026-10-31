@@ -41,6 +41,10 @@ export const MUSIC_TRACKS = [
   { id: "siege-lobby", mode: "Kingdom Siege", screen: "Lobby" },
   { id: "siege-battle", mode: "Kingdom Siege", screen: "Countdown, build breaks and waves" },
   { id: "siege-results", mode: "Kingdom Siege", screen: "The kingdom stands, the castle falls, or podium" },
+  { id: "showdown-lobby", mode: "Showdown", screen: "Lobby" },
+  { id: "showdown", mode: "Showdown", screen: "The standoff (question and reveal)" },
+  { id: "showdown-draw", mode: "Showdown", screen: "Draw sting (plays once on each reveal)" },
+  { id: "showdown-results", mode: "Showdown", screen: "Final podium" },
 ] as const;
 
 export type MusicTrackId = (typeof MUSIC_TRACKS)[number]["id"];

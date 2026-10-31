@@ -5635,3 +5635,573 @@ select {
     animation: none;
   }
 }
+
+/* ----- Showdown stage ----- */
+
+.duel-stage {
+  --duel-dusk: #241309;
+  --duel-wood: #6b3d1f;
+  --duel-sand: #e9c27a;
+  --duel-gold: #ffcf4d;
+  --duel-red: #c8442b;
+  background: var(--duel-dusk);
+}
+
+/* The question once for everyone, the shared timer and the options: as much as they need, the arenas get the rest. */
+.duel-upper {
+  flex: none;
+  max-height: 46vh;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 1vh;
+  padding: 1.4vh 3vw 0.8vh;
+}
+
+.duel-question {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2vw;
+  padding: 1vh 2vw;
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: var(--radius);
+}
+
+.duel-question h1 {
+  margin: 0;
+  min-width: 0;
+  text-align: center;
+  font-size: min(2.8vw, 4.8vh);
+  font-weight: 900;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.duel-question.medium h1 {
+  font-size: min(2.2vw, 3.8vh);
+}
+
+.duel-question.long h1 {
+  font-size: min(1.6vw, 2.8vh);
+}
+
+.duel-question img {
+  flex: none;
+  max-width: 20vw;
+  max-height: 12vh;
+  border-radius: 6px;
+  object-fit: contain;
+}
+
+.duel-question.is-pin .pin-board {
+  max-height: 18vh;
+  max-width: 32vw;
+}
+
+/* A burning fuse: full during the intro, burns down over the question, empty on the reveal. */
+.duel-timer {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 1vw;
+}
+
+.duel-timer-track {
+  flex: 1;
+  height: 1.2vh;
+  min-height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.duel-timer-fill {
+  --from: 1;
+  height: 100%;
+  width: calc(var(--from) * 100%);
+  background: linear-gradient(90deg, var(--duel-red), var(--duel-gold));
+  border-radius: inherit;
+}
+
+.duel-timer-fill.burning {
+  animation-name: duel-burn;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes duel-burn {
+  from {
+    width: calc(var(--from) * 100%);
+  }
+  to {
+    width: 0;
+  }
+}
+
+.duel-timer.urgent .duel-timer-fill {
+  background: var(--bad);
+}
+
+.duel-timer-secs {
+  flex: none;
+  min-width: 2ch;
+  font-size: min(2vw, 3.4vh);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  color: var(--duel-gold);
+}
+
+.duel-timer.urgent .duel-timer-secs {
+  color: var(--bad);
+}
+
+.duel-intro {
+  margin: 0;
+  text-align: center;
+  font-size: min(2.4vw, 4vh);
+  font-weight: 900;
+  color: var(--duel-sand);
+}
+
+.duel-upper .typing-note {
+  margin: 0;
+  font-size: min(2.2vw, 3.6vh);
+}
+
+/* The options in one row, small: the duels are the show. */
+.duel-tiles {
+  flex: none;
+  padding: 0;
+  gap: 0.8vw;
+}
+
+.duel-tiles .tile {
+  min-height: 0;
+  padding: 0.7vh 1vw;
+  gap: 0.8vw;
+  font-size: min(1.8vw, 3.2vh);
+  line-height: 1.12;
+}
+
+.duel-tiles.medium .tile {
+  font-size: min(1.4vw, 2.5vh);
+}
+
+.duel-tiles.long .tile {
+  font-size: min(1.1vw, 2vh);
+}
+
+.duel-tiles .tile .shape {
+  width: min(2.2vw, 3.6vh);
+  height: min(2.2vw, 3.6vh);
+}
+
+.duel-tiles .tile.right {
+  outline-width: 0.5vh;
+  outline-offset: -0.5vh;
+}
+
+.duel-next {
+  align-self: center;
+  flex: none;
+}
+
+/* the arenas */
+
+.duel-lower {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6vh 1.2vw 1.2vh;
+  overflow: hidden;
+}
+
+.duel-arenas {
+  position: relative;
+  display: grid;
+  gap: 0.8vw;
+  width: 100%;
+}
+
+/* Up to 3 arenas: one row of 16:9 panels, High Noon wider, sitting on one line. */
+.duel-arenas.row {
+  align-items: end;
+}
+
+.duel-arenas.row .duel-cell {
+  aspect-ratio: 16 / 9;
+}
+
+/* More: a grid filling the space, High Noon a 2×2 block in the corner. */
+.duel-arenas.grid {
+  height: 100%;
+  gap: 0.6vw;
+  grid-auto-flow: dense;
+}
+
+.duel-arenas.grid .duel-cell.throne {
+  grid-column: 1 / span 2;
+  grid-row: 1 / span 2;
+}
+
+.duel-cell {
+  min-width: 0;
+  min-height: 0;
+  container-type: size;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Always a 16:9 box (contained in its cell): every position inside it is a share of the panel. */
+.duel-panel {
+  position: relative;
+  width: min(100cqw, calc(100cqh * 16 / 9));
+  aspect-ratio: 16 / 9;
+  container-type: size;
+  overflow: hidden;
+  border-radius: 6px;
+  border: 2px solid var(--duel-wood);
+  background: #8a5a2b;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+
+.duel-panel.throne {
+  border: 3px solid var(--duel-gold);
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.4),
+    0 0 24px rgba(255, 207, 77, 0.35);
+}
+
+.duel-street {
+  position: absolute;
+  inset: 0;
+}
+
+.duel-sign {
+  position: absolute;
+  top: 3cqh;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 1.5cqw;
+  padding: 0.6cqh 2.4cqw;
+  background: var(--duel-wood);
+  color: var(--duel-sand);
+  border: 0.5cqh solid #3b200d;
+  border-radius: 3px;
+  font-size: 8cqh;
+  font-weight: 900;
+  line-height: 1.1;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  box-shadow: 0 0.6cqh 1.2cqh rgba(0, 0, 0, 0.45);
+}
+
+.duel-panel.throne .duel-sign {
+  font-size: 7cqh;
+  color: var(--duel-gold);
+}
+
+.duel-sign-star {
+  width: 9cqh;
+  height: 9cqh;
+}
+
+.duel-body {
+  position: absolute;
+  z-index: 2;
+}
+
+.duel-body.slot2 {
+  z-index: 1;
+}
+
+.duel-body.away {
+  opacity: 0.4;
+  filter: grayscale(0.8);
+}
+
+/* Movers walk off up or down the street (CSS only moves the box; the walk cycle is the clip). */
+.duel-body.leaving {
+  animation: duel-leave 1.4s ease-in forwards;
+}
+
+.duel-body.leaving.up {
+  --duel-leave: -45%;
+}
+
+.duel-body.leaving.down {
+  --duel-leave: 45%;
+}
+
+@keyframes duel-leave {
+  to {
+    transform: translateX(var(--duel-leave));
+    opacity: 0;
+  }
+}
+
+/* Effects are placed at a point and fill a box around it. */
+.duel-fx {
+  position: absolute;
+  z-index: 3;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.duel-flash {
+  width: 40%;
+  height: 40%;
+  transform: translate(-30%, -50%);
+}
+
+.duel-flash.left {
+  transform: translate(-70%, -50%);
+}
+
+.duel-hat {
+  width: 18%;
+  height: 18%;
+}
+
+.duel-dust {
+  width: 34%;
+  height: 22%;
+}
+
+.duel-name {
+  position: absolute;
+  bottom: 1.5cqh;
+  z-index: 5;
+  max-width: 40%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3cqh 1.2cqw;
+  padding: 0.6cqh 1.6cqw;
+  background: rgba(36, 19, 9, 0.85);
+  border-radius: 4px;
+  font-size: 7cqh;
+  font-weight: 800;
+  line-height: 1.15;
+  color: #fff;
+}
+
+.duel-name.slot2 {
+  bottom: 15cqh;
+  max-width: 30%;
+  font-size: 6cqh;
+}
+
+.duel-name.away {
+  opacity: 0.55;
+}
+
+.duel-name-text {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.duel-name.answered {
+  box-shadow: inset 0 0 0 0.4cqh var(--duel-gold);
+}
+
+.duel-name-ready {
+  animation: pop-in 0.25s ease-out;
+}
+
+.duel-name-result {
+  font-variant-numeric: tabular-nums;
+  animation: pop-in 0.25s ease-out;
+}
+
+.duel-name-result.right {
+  color: var(--good);
+}
+
+.duel-name-result.wrong {
+  color: #ff8a7a;
+}
+
+.duel-move {
+  flex-basis: 100%;
+  text-align: center;
+  font-size: 0.85em;
+  animation: pop-in 0.3s ease-out;
+}
+
+.duel-move.up {
+  color: var(--duel-gold);
+}
+
+.duel-move.down {
+  color: #9fc4ff;
+}
+
+.duel-draw {
+  position: absolute;
+  top: 38%;
+  left: 50%;
+  z-index: 5;
+  transform: translate(-50%, -50%);
+  padding: 0.5cqh 3cqw;
+  background: rgba(36, 19, 9, 0.85);
+  color: var(--duel-sand);
+  border-radius: 4px;
+  font-size: 10cqh;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  animation: pop-in 0.3s ease-out;
+}
+
+/* A mover's avatar flying from its old panel to its new one. */
+.duel-token {
+  position: absolute;
+  z-index: 10;
+  width: clamp(36px, 4.5vw, 72px);
+  aspect-ratio: 1;
+  margin: calc(clamp(36px, 4.5vw, 72px) / -2) 0 0 calc(clamp(36px, 4.5vw, 72px) / -2);
+  border-radius: 50%;
+  background: var(--paper);
+  border: 3px solid var(--duel-gold);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  animation-name: duel-fly;
+  animation-timing-function: ease-in-out;
+  animation-fill-mode: both;
+}
+
+.duel-token.down {
+  border-color: #9fc4ff;
+}
+
+.duel-token .avatar {
+  width: 100%;
+  height: 100%;
+}
+
+.duel-token-badge {
+  position: absolute;
+  right: -14%;
+  top: -14%;
+  font-size: clamp(14px, 1.6vw, 26px);
+}
+
+@keyframes duel-fly {
+  0% {
+    transform: translate(0, 0) scale(0.6);
+    opacity: 0;
+  }
+  15% {
+    transform: translate(0, -20%) scale(1);
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--dx), var(--dy)) scale(1);
+    opacity: 0.9;
+  }
+}
+
+/* podium: WANTED posters over the town at sunset */
+
+.duel-podium {
+  position: relative;
+  overflow: hidden;
+}
+
+.duel-podium > :not(.duel-town) {
+  position: relative;
+  z-index: 1;
+}
+
+.duel-town {
+  position: absolute;
+  inset: 0;
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.duel-podium h1 {
+  margin-bottom: 2vh;
+}
+
+.duel-wanted {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 3vw;
+}
+
+.duel-wanted-slot {
+  position: relative;
+  width: min(15vw, 24vh);
+  color: #3b200d;
+  text-align: center;
+}
+
+.duel-wanted-slot.first {
+  width: min(19vw, 31vh);
+}
+
+.duel-wanted-slot.empty {
+  visibility: hidden;
+}
+
+.duel-wanted-star {
+  position: absolute;
+  top: -4vh;
+  right: -2vw;
+  z-index: 2;
+  width: min(6vw, 10vh);
+  height: min(6vw, 10vh);
+}
+
+.duel-wanted-name {
+  font-size: clamp(16px, 1.8vw, 32px);
+  font-weight: 900;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.duel-wanted-line {
+  font-size: clamp(12px, 1.1vw, 20px);
+  font-weight: 700;
+}
+
+/* A big class's ranking scrolls instead of pushing the controls off the screen. */
+.duel-podium .rest {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.duel-podium .rest-who + span {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .duel-body.leaving,
+  .duel-token {
+    animation: none;
+  }
+}

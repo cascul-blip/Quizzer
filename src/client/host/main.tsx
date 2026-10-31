@@ -1,6 +1,6 @@
 import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
-import { BOMB_MAX_SQUADS, BOMB_MINUTES, BOMB_MODULES, BOMB_PENALTIES, BOMB_WIRES, CUP_MAX_CUPS, CUP_MIN_CUPS, DRAGON_BATTLE_MINUTES, DRAGON_FIRE_SECONDS, DRAGON_MIN_TEAMS, DRAGON_SCRAMBLE_MINUTES, DRAGON_TOUGHNESS, HILL_SETTINGS, type BombSettings, type BombStyle, type DragonSettings, type DragonToughness, LAND_MINUTES, LAND_MIN_TEAMS, MAX_TEAMS, TOWER_MINUTES, type GameMode, type HillSetting, type HostPlayer, type HostView, type Pacing, type ServerMsg } from "../../shared/protocol.ts";
+import { BOMB_MAX_SQUADS, BOMB_MINUTES, BOMB_MODULES, BOMB_PENALTIES, BOMB_WIRES, CUP_MAX_CUPS, CUP_MIN_CUPS, DRAGON_BATTLE_MINUTES, DRAGON_FIRE_SECONDS, DRAGON_MIN_TEAMS, DRAGON_SCRAMBLE_MINUTES, DRAGON_TOUGHNESS, DUEL_ROUNDS, HILL_SETTINGS, type BombSettings, type BombStyle, type DragonSettings, type DragonToughness, LAND_MINUTES, LAND_MIN_TEAMS, MAX_TEAMS, TOWER_MINUTES, type GameMode, type HillSetting, type HostPlayer, type HostView, type Pacing, type ServerMsg } from "../../shared/protocol.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { SIEGE_WAVE_CHOICES } from "../../shared/siege-rules.ts";
 import type { QuizSummary } from "../../shared/quiz-schema.ts";
@@ -18,6 +18,7 @@ import { LandStage } from "./land.tsx";
 import { RacerStage } from "./racer.tsx";
 import { CupStage } from "./cup.tsx";
 import { DragonStage } from "./dragon.tsx";
+import { DuelStage } from "./duel.tsx";
 import { BombLobbyPreview, BombStage } from "./bomb.tsx";
 import { SiegeLobbyPreview, SiegeStage } from "./siege.tsx";
 import { RobotStage } from "./robot.tsx";
@@ -107,6 +108,8 @@ function App() {
     body = <BombStage view={view} send={send} />;
   } else if (view.kind === "siege") {
     body = <SiegeStage view={view} send={send} />;
+  } else if (view.kind === "duel") {
+    body = <DuelStage view={view} send={send} />;
   } else {
     body = <Game view={view} send={send} />;
   }
@@ -362,6 +365,7 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
               <option value="dragon">🐉 Dragon's Hoard</option>
               <option value="bomb">💣 Bomb Squad</option>
               <option value="siege">🛡️ Kingdom Siege</option>
+              <option value="duel">🤠 Showdown</option>
             </select>
           </label>
           {tower ? (
@@ -488,6 +492,21 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
                 Shuffle question order
               </label>
               {view.mode === "racer" && <span class="opt mode-hint">One car for the whole class. Each turn a driver bets on how well everyone will answer.</span>}
+              {view.mode === "duel" && (
+                <>
+                  <label class="opt">
+                    Rounds
+                    <select value={view.duel.rounds} onChange={(e) => send({ type: "host.setDuel", rounds: Number(e.currentTarget.value) })}>
+                      {DUEL_ROUNDS.map((r) => (
+                        <option key={r} value={r}>
+                          {r} rounds
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <span class="opt mode-hint">Everyone duels at once. Win to climb toward High Noon, lose and you drop an arena.</span>
+                </>
+              )}
             </>
           )}
           <label class="opt check">
