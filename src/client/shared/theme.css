@@ -2009,3 +2009,369 @@ a.btn {
   -webkit-mask-size: 100% 100%;
   -webkit-mask-repeat: no-repeat;
 }
+
+/* ----- Showdown: duelists, streets and effects (duel-art.tsx, classes sd-*; projector and phones) ----- */
+.sd-street,
+.sd-town {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+}
+
+.sd-star,
+.sd-holster {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* The duelist box: the full 16:9 canvas, as tall as its container; the soles stand at 90% of its height. */
+.sd-fig {
+  position: relative;
+  height: 100%;
+  width: auto;
+  flex: none;
+  pointer-events: none;
+}
+
+.sd-fig-flip {
+  position: absolute;
+  inset: 0;
+}
+
+/* The trimmed art, placed at its spot on the canvas (left/top/width/height set inline). */
+.sd-fig-art {
+  position: absolute;
+}
+
+.sd-fig.sd-face-left .sd-fig-flip {
+  transform: scaleX(-1);
+}
+
+.sd-layer,
+.sd-sheet {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.sd-sheet {
+  overflow: hidden;
+}
+
+.sd-sheet img,
+.sd-hat-cell img {
+  position: absolute;
+  max-width: none;
+  display: block;
+}
+
+.sd-face,
+.sd-hat {
+  position: absolute;
+  display: block;
+}
+
+.sd-face .avatar {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Mirrored duelists keep the player's face the right way round. */
+.sd-fig.sd-face-left .sd-face .avatar {
+  transform: scaleX(-1);
+}
+
+/* Effects: an anchor-positioned box; the inner layer animates once. */
+.sd-fx {
+  position: absolute;
+  pointer-events: none;
+}
+
+.sd-fx img,
+.sd-tumble-still {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.sd-fx img.sd-mirrored,
+.sd-hat-cell.sd-mirrored,
+.sd-hat-still.sd-mirrored {
+  transform: scaleX(-1);
+}
+
+/* Fill mode: the picture contained and centred in the parent. */
+.sd-fx.sd-fill,
+.sd-fill .sd-fx-anim {
+  position: absolute;
+  inset: 0;
+}
+
+.sd-fill img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.sd-fx-anim {
+  animation-fill-mode: both;
+  animation-iteration-count: 1;
+}
+
+.sd-fx-anim.sd-flash {
+  animation: sd-flash 0.26s ease-out both;
+}
+
+.sd-fx-anim.sd-smoke {
+  animation: sd-smoke 1.4s ease-out both;
+}
+
+.sd-fx-anim.sd-dust {
+  animation: sd-dust 1.1s ease-out both;
+}
+
+@keyframes sd-flash {
+  0% {
+    transform: scale(0.35);
+    opacity: 1;
+  }
+  35% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.15);
+    opacity: 0;
+  }
+}
+
+@keyframes sd-smoke {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(6%, -45%) scale(1.5);
+    opacity: 0;
+  }
+}
+
+@keyframes sd-dust {
+  0% {
+    transform: scale(0.3, 0.2);
+    opacity: 0.95;
+  }
+  40% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(1.15, 1.05);
+    opacity: 0;
+  }
+}
+
+/* Bullet: a box from `from` to `to` (rotated); the streak runs along it, tip first. */
+.sd-streak {
+  position: absolute;
+  height: 0;
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+
+.sd-streak img {
+  position: absolute;
+  top: 0;
+  width: 45%;
+  translate: 0 -50%;
+  display: block;
+  animation: sd-streak 0.22s linear both;
+}
+
+@keyframes sd-streak {
+  0% {
+    left: -45%;
+    opacity: 1;
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    left: 100%;
+    opacity: 0;
+  }
+}
+
+/* Flying hat: fills the parent's width at the start; the unit (hat-sized) moves along the filmed path. */
+.sd-flying-hat {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.sd-hat-unit {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 100%;
+}
+
+.sd-hat-cell {
+  position: absolute;
+  overflow: hidden;
+}
+
+.sd-hat-still {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Tumbleweed: rolls across the parent (left), hops (translate), turns (sprite steps / rotate). */
+.sd-tumble {
+  position: absolute;
+  left: 0;
+  pointer-events: none;
+  animation: sd-roll-right 5s linear both;
+}
+
+.sd-tumble.sd-from-right {
+  animation-name: sd-roll-left;
+}
+
+.sd-tumble-hop {
+  width: 100%;
+  height: 100%;
+  animation: sd-hop 0.8s infinite;
+}
+
+.sd-tumble-roll {
+  width: 100%;
+  height: 100%;
+  background-repeat: no-repeat;
+  animation: sd-turn 3s infinite;
+}
+
+.sd-tumble.sd-from-right .sd-tumble-roll {
+  transform: scaleX(-1);
+}
+
+.sd-tumble-still {
+  animation: sd-spin 1.1s linear infinite;
+}
+
+.sd-tumble.sd-from-right .sd-tumble-still {
+  animation-direction: reverse;
+}
+
+@keyframes sd-roll-right {
+  from {
+    left: 0;
+    translate: -110% 0;
+  }
+  to {
+    left: 100%;
+    translate: 10% 0;
+  }
+}
+
+@keyframes sd-roll-left {
+  from {
+    left: 100%;
+    translate: 10% 0;
+  }
+  to {
+    left: 0;
+    translate: -110% 0;
+  }
+}
+
+@keyframes sd-hop {
+  0%,
+  100% {
+    transform: translateY(0);
+    animation-timing-function: ease-out;
+  }
+  45% {
+    transform: translateY(-22%);
+    animation-timing-function: ease-in;
+  }
+  90% {
+    transform: translateY(0) scale(1.04, 0.96);
+  }
+}
+
+@keyframes sd-turn {
+  from {
+    background-position: 0% 0;
+  }
+  to {
+    background-position: 100% 0;
+  }
+}
+
+@keyframes sd-spin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+.sd-wanted {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  padding: 9% 12% 10%;
+  color: #3b2412;
+  font-family: Rockwell, "Roboto Slab", "Courier New", Georgia, serif;
+  text-align: center;
+}
+
+.sd-wanted-heading {
+  font-weight: 900;
+  font-size: 1.6em;
+  letter-spacing: 0.08em;
+  line-height: 1;
+}
+
+.sd-wanted-face {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 78%;
+  margin: 4% 0;
+  aspect-ratio: 1;
+  border: 3px solid rgba(59, 36, 18, 0.7);
+  background: rgba(255, 240, 200, 0.35);
+  filter: sepia(0.25);
+}
+
+.sd-wanted-face .avatar {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.sd-wanted-caption {
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sd-tumble-hop,
+  .sd-tumble-still {
+    animation: none;
+  }
+}

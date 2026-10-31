@@ -15,6 +15,7 @@ const LOBBY: Record<GameMode, MusicTrackId> = {
   dragon: "dragon-lobby",
   bomb: "bomb-lobby",
   siege: "siege-lobby",
+  duel: "showdown-lobby",
 };
 
 let landKey = "";
@@ -136,6 +137,20 @@ export function musicFor(view: HostView | null): MusicCue {
       const intensity = Math.max(0.12, urgency, last30 ? 0.75 : 0);
       const timers = view.squads.map((s) => (s.finished || s.exploded ? "x" : s.timerRev)).join(".");
       return { track: "bomb-defuse", intensity, rampTo: 1, rampMs: view.remainingMs, key: `bomb-${view.timerRev}-${timers}-${last30 ? "end" : "run"}` };
+    }
+    case "duel": {
+      if (view.phase === "podium") return { track: "showdown-results" };
+      // Rounds are quick, so the build starts in the intro (the whistle is already on the tune)
+      // and reaches full gallop halfway through the question's time.
+      if (view.phase === "intro") return { track: "showdown", intensity: 0.3, rampTo: 0.5, rampMs: view.phaseRemainingMs, key: `duel-r${view.round}-intro` };
+      if (view.phase === "open") {
+        const full = view.phaseDurationMs / 2;
+        const elapsed = Math.max(0, view.phaseDurationMs - view.phaseRemainingMs);
+        const start = Math.min(1, elapsed / Math.max(1, full));
+        return { track: "showdown", intensity: 0.5 + start * 0.5, rampTo: 1, rampMs: Math.max(0, full - elapsed), key: `duel-r${view.round}-open` };
+      }
+      // The reveal eases back to the riding beat (no silence between quick rounds); the draw sting (duel.tsx) plays over it.
+      return { track: "showdown", intensity: 0.3, key: `duel-r${view.round}-${view.phase}` };
     }
     case "siege": {
       const outcome = view.result?.outcome;

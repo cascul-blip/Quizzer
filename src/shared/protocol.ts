@@ -19,7 +19,7 @@ export interface ShuffleOptions {
 
 // ---------- Tallest Tower ----------
 
-export type GameMode = "classic" | "tower" | "submarine" | "fight" | "robot" | "land" | "racer" | "cup" | "dragon" | "bomb" | "siege";
+export type GameMode = "classic" | "tower" | "submarine" | "fight" | "robot" | "land" | "racer" | "cup" | "dragon" | "bomb" | "siege" | "duel";
 export type TowerPhase = "countdown" | "playing" | "podium";
 
 /** Each team also has a shape, so teams can be told apart without relying on colour. */
@@ -113,6 +113,8 @@ export type PlayerMsg =
   | { type: "racer.go" }
   /** Racer, open phase: `index` is the question's index (QuestionView.index), as `qIndex` in the classic "answer". One answer per player per question. */
   | { type: "racer.answer"; index: number; option: number; text?: string }
+  /** Showdown, open phase: `index` is the question's index (QuestionView.index), as in racer.answer. One answer per player per round. */
+  | { type: "duel.answer"; index: number; option: number; text?: string }
   | { type: "cup.answer"; seq: number; option: number; text?: string }
   /** Cup of Death, drink phase, drinkers only: pick one of your remaining cups (0-based, left to right). Final once sent. */
   | { type: "cup.pick"; cup: number }
@@ -151,6 +153,7 @@ export type HostMsg =
   | ({ type: "host.setDragon" } & DragonSettings)
   | ({ type: "host.setBomb" } & BombSettings)
   | ({ type: "host.setSiege" } & SiegeSettings)
+  | ({ type: "host.setDuel" } & DuelSettings)
   | { type: "host.next" }
   | { type: "host.skip" }
   | { type: "host.kick"; playerId: string }
@@ -220,7 +223,7 @@ export interface PlayerResult {
 
 export type PlayerView =
   | { kind: "none"; game: null }
-  | { kind: "none"; game: { title: string; phase: Phase | TowerPhase | SubPhase | FightPhase | RobotPhase | LandPhase | RacerPhase | CupPhase | DragonPhase | BombPhase | SiegePhase } }
+  | { kind: "none"; game: { title: string; phase: Phase | TowerPhase | SubPhase | FightPhase | RobotPhase | LandPhase | RacerPhase | CupPhase | DragonPhase | BombPhase | SiegePhase | DuelPhase } }
   | {
       kind: "player";
       phase: Phase;
@@ -248,7 +251,8 @@ export type PlayerView =
   | PlayerCupView
   | PlayerDragonView
   | PlayerBombView
-  | PlayerSiegeView;
+  | PlayerSiegeView
+  | PlayerDuelView;
 
 export interface TowerAwards {
   mostCorrect: { value: number; nicknames: string[] } | null;
@@ -311,6 +315,7 @@ export interface HostGameState {
   dragon: DragonSettings;
   bomb: BombSettings;
   siege: SiegeSettings;
+  duel: DuelSettings;
   /** Team preview while the lobby is in a team mode (Tallest Tower, Tower Fight, Land Grab, Dragon's Hoard, Bomb Squad). */
   teams: (TeamInfo & { members: HostPlayer[] })[] | null;
   quiz: { id: string; title: string; questionCount: number };
@@ -1032,6 +1037,148 @@ export interface PlayerRacerView {
   result: (RacerResult & { awards: string[] }) | null;
 }
 
+// ---------- Showdown ----------
+//
+// Western quick-draw duels on an arena ladder. Paced like Classic/Racer: one shared question per round for everyone.
+// Every round, all the duels run at once: players are paired from the top of the ladder (Arena 1 = High Noon),
+// an odd count makes the bottom arena a 3-way duel. Right beats wrong, both right → faster wins, both wrong → draw.
+// At each boundary the upper arena's loser swaps with the lower arena's winner, unless either arena was a draw.
+// The rules live in duel-rules.ts. There is no lobby phase: the lobby is the classic game (mode "duel").
+
+/**
+ * intro: 3 s look at the question (options hidden) while the duelists face off.
+ * open: options visible, everyone answers once.
+ * reveal: who drew first in each arena and who moves where (`lastRound`).
+ * podium: the game is over; the ladder order is the final ranking.
+ */
+export type DuelPhase = "intro" | "open" | "reveal" | "podium";
+
+export const DUEL_ROUNDS = [10, 15, 20] as const;
+export const DUEL_DEFAULT_ROUNDS = 15;
+
+export interface DuelSettings {
+  /** Rounds to play; questions repeat in a fresh order once they run out. */
+  rounds: number;
+}
+
+export interface DuelPlayerRef {
+  id: string;
+  nickname: string;
+  avatar: AvatarChoice;
+}
+
+/** One duelist's part in a finished round. */
+export interface DuelistResult extends DuelPlayerRef {
+  /** Null: didn't answer. */
+  correct: boolean | null;
+  /** Answer time from the question opening, ms; null if they didn't answer. */
+  ms: number | null;
+  /** "win" moves up a boundary, "lose" moves down; a 3-way duel's middle player and everyone in a draw get "stay". */
+  outcome: "win" | "lose" | "stay";
+  /** Arena (1-based) they are in for the next round. */
+  nextArena: number;
+}
+
+/** One arena of a finished round. */
+export interface DuelArenaResult {
+  /** 1-based; 1 is High Noon. */
+  arena: number;
+  /** Ordered as they stood (left, right, then the third in a 3-way duel). */
+  duelists: DuelistResult[];
+  draw: boolean;
+}
+
+export interface DuelRound {
+  /** Round number (1-based); use it to play the reveal animation once. */
+  round: number;
+  arenas: DuelArenaResult[];
+}
+
+/** The arenas as they stand for the current round. */
+export interface DuelArena {
+  arena: number;
+  /** 2 duelists, or 3 in the bottom arena when the count is odd. Disconnected players stay in place. */
+  duelists: (DuelPlayerRef & { connected: boolean; answered: boolean })[];
+}
+
+export interface DuelAwards {
+  /** Most rounds won in Arena 1. */
+  longestReign: SubAward | null;
+  mostWins: SubAward | null;
+  /** Most arenas climbed from where they started (start arena − final arena). */
+  biggestClimb: SubAward | null;
+}
+
+export interface HostDuelPlayer extends DuelPlayerRef {
+  connected: boolean;
+  /** 1-based arena now. */
+  arena: number;
+  /** Final ranking position (1-based) = ladder order. */
+  rank: number;
+  wins: number;
+  losses: number;
+  draws: number;
+  correct: number;
+  wrong: number;
+  /** Rounds won while in Arena 1. */
+  reign: number;
+  startArena: number;
+}
+
+export interface HostDuelState {
+  kind: "duel";
+  phase: DuelPhase;
+  quiz: { id: string; title: string; questionCount: number };
+  /** Manual waits for host.next on the reveal; auto moves on after 5 s. */
+  pacing: Pacing;
+  /** 1-based round now; total rounds. */
+  round: number;
+  rounds: number;
+  /** `index` is the play-order slot (unique per round); `total` is the round count. Options empty during intro. */
+  question: QuestionView | null;
+  /** The arenas for this round (during reveal: as they stood when the round was played). Empty at the podium. */
+  arenas: DuelArena[];
+  answeredCount: number;
+  playerCount: number;
+  /** Reveal only. */
+  correct: number[] | null;
+  /** The latest finished round (this one on the reveal). Null before the first reveal. */
+  lastRound: DuelRound | null;
+  /** Players in ladder order (rank 1 first). */
+  players: HostDuelPlayer[];
+  phaseRemainingMs: number;
+  phaseDurationMs: number;
+  awards: DuelAwards | null;
+  errors: QuestionError[] | null;
+  hasResults: boolean;
+}
+
+export interface PlayerDuelView {
+  kind: "duel";
+  phase: DuelPhase;
+  title: string;
+  me: DuelPlayerRef & { arena: number; rank: number; wins: number; losses: number; draws: number; reign: number };
+  playerCount: number;
+  round: number;
+  rounds: number;
+  /** As HostDuelState.question. */
+  question: QuestionView | null;
+  phaseRemainingMs: number;
+  phaseDurationMs: number;
+  /** This player's arena this round and who they face (1 opponent, or 2 in a 3-way duel). */
+  arena: number;
+  arenaCount: number;
+  opponents: DuelPlayerRef[];
+  myChoice: number | null;
+  myText: string | null;
+  /** Reveal only. */
+  reveal: { choice: number | null; correct: number[]; wasCorrect: boolean; ms: number | null } | null;
+  /** Reveal only: this player's arena result (the whole duel, so the phone can show the face-off). */
+  myDuel: DuelArenaResult | null;
+  /** Podium only. */
+  result: { rank: number; playerCount: number; awards: string[] } | null;
+}
+
 // ---------- Dragon's Hoard ----------
 //
 // Two acts. Act 1 (battle, with fire-breath rune rounds) is whole-class co-op against one dragon;
@@ -1654,7 +1801,8 @@ export type HostView =
   | (HostCupState & { join: JoinInfo })
   | (HostDragonState & { join: JoinInfo })
   | (HostBombState & { join: JoinInfo })
-  | (HostSiegeState & { join: JoinInfo });
+  | (HostSiegeState & { join: JoinInfo })
+  | (HostDuelState & { join: JoinInfo });
 
 export type ServerMsg =
   /** First message on every connection. A new serverId means the server restarted (maybe with new code). */

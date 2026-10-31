@@ -35,6 +35,7 @@ type Instrument =
   | "flute"
   | "twang"
   | "whistle"
+  | "jawharp"
   | "timpani"
   | "cymbal"
   | "woodblock"
@@ -437,6 +438,34 @@ function playInstrument(ctx: Ctx, dest: AudioNode, inst: Instrument, t: number, 
       noiseHit(ctx, dest, t, 0.03 * v, Math.min(0.4, len), "bandpass", freq * 2, 6);
       return;
     }
+    case "jawharp": {
+      // A jaw harp's "boing": a buzzing reed (sawtooth) through a mouth formant that sweeps up and back down.
+      const ring = Math.max(0.25, len);
+      const g = ctx.createGain();
+      g.connect(dest);
+      env(g, t, 0.2 * v, 0.004, ring * 0.25, ring * 0.75);
+      const o = ctx.createOscillator();
+      o.type = "sawtooth";
+      o.frequency.setValueAtTime(freq * 1.02, t);
+      o.frequency.exponentialRampToValueAtTime(freq, t + 0.03);
+      const mouth = ctx.createBiquadFilter();
+      mouth.type = "bandpass";
+      mouth.Q.value = 9;
+      mouth.frequency.setValueAtTime(freq * 2.5, t);
+      mouth.frequency.exponentialRampToValueAtTime(freq * 7, t + ring * 0.35);
+      mouth.frequency.exponentialRampToValueAtTime(freq * 3, t + ring);
+      // A little of the reed's low body under the formant.
+      const body = ctx.createBiquadFilter();
+      body.type = "lowpass";
+      body.frequency.value = freq * 1.5;
+      const bodyGain = ctx.createGain();
+      bodyGain.gain.value = 0.35;
+      o.connect(mouth).connect(g);
+      o.connect(body).connect(bodyGain).connect(g);
+      o.start(t);
+      o.stop(t + ring + 0.15);
+      return;
+    }
     case "timpani": {
       // A tuned drum: the pitch settles onto the note just after the stroke.
       const o = ctx.createOscillator();
@@ -626,6 +655,55 @@ export class MusicPlayer {
     g.cancelScheduledValues(t);
     g.setTargetAtTime(this.level * 0.15, t, 0.08);
     g.setTargetAtTime(this.level * 0.55, t + ms / 1000, 0.3);
+  }
+
+  /**
+   * Play a short track once over the current music (a sting, e.g. Showdown's "showdown-draw"),
+   * dipping the background track under it. A custom file for the id plays once instead.
+   * Does nothing while audio is locked, muted or music is off.
+   */
+  sting(id: string): void {
+    const ctx = this.getCtx();
+    if (!ctx || ctx.state !== "running" || this.level === 0) return;
+    const master = this.ensureMaster(ctx);
+    const now = ctx.currentTime;
+    const gain = ctx.createGain();
+    gain.connect(master);
+    let seconds: number;
+    const url = this.customUrl(id);
+    const track = this.tracks[id];
+    if (url) {
+      const audio = new Audio(url);
+      ctx.createMediaElementSource(audio).connect(gain);
+      void audio.play().catch(() => {});
+      seconds = 4;
+      audio.addEventListener("ended", () => gain.disconnect(), { once: true });
+    } else if (track) {
+      if (usesSamples(track)) void loadSamples(ctx, instrumentsOf(track));
+      if (track.reverb) {
+        const send = ctx.createGain();
+        send.gain.value = track.reverb;
+        gain.connect(send).connect(this.ensureReverb(ctx, master));
+      }
+      let t = now + 0.02;
+      for (let step = 0; step < track.bars * STEPS_PER_BAR; step++) {
+        scheduleStep(ctx, gain, track, step, t, 0);
+        t += stepSeconds(track, 0) * (step % 2 === 0 ? 1 + (track.swing ?? 0) : 1 - (track.swing ?? 0));
+      }
+      seconds = t - now;
+      setTimeout(() => gain.disconnect(), (seconds + 3) * 1000);
+    } else {
+      gain.disconnect();
+      return;
+    }
+    // Dip the background track (not the master, which carries the sting too).
+    const bg = this.current?.gain.gain;
+    if (bg) {
+      bg.cancelScheduledValues(now);
+      bg.setValueAtTime(bg.value, now);
+      bg.setTargetAtTime(0.3, now, 0.05);
+      bg.setTargetAtTime(1, now + seconds * 0.7, 0.4);
+    }
   }
 
   private ensureMaster(ctx: AudioContext): GainNode {

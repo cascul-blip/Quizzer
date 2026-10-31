@@ -1,18 +1,19 @@
 import type { ServerWebSocket } from "bun";
 import QRCode from "qrcode";
-import type { BombSettings, ClientMsg, CupSettings, DragonSettings, FightSettings, GameMode, HostView, JoinInfo, LandSettings, Pacing, PlayerView, ServerMsg, SiegeSettings, TowerSettings } from "../shared/protocol.ts";
+import type { BombSettings, ClientMsg, CupSettings, DragonSettings, DuelSettings, FightSettings, GameMode, HostView, JoinInfo, LandSettings, Pacing, PlayerView, ServerMsg, SiegeSettings, TowerSettings } from "../shared/protocol.ts";
 import { answerOf } from "../shared/answer-match.ts";
 import { cleanAvatar } from "../shared/avatars.ts";
 import { ValidationError } from "../shared/quiz-schema.ts";
 import { diffView } from "../shared/view-patch.ts";
 import { BombGame } from "./game/bomb.ts";
 import { CupGame } from "./game/cup.ts";
+import { DuelGame } from "./game/duel.ts";
 import { DragonGame } from "./game/dragon.ts";
 import { FightGame } from "./game/fight.ts";
-import { DEFAULT_BOMB, DEFAULT_CUP, DEFAULT_DRAGON, DEFAULT_FIGHT, DEFAULT_LAND, DEFAULT_SIEGE, DEFAULT_TOWER, Game, GameError, type Clock } from "./game/game.ts";
+import { DEFAULT_BOMB, DEFAULT_CUP, DEFAULT_DRAGON, DEFAULT_DUEL, DEFAULT_FIGHT, DEFAULT_LAND, DEFAULT_SIEGE, DEFAULT_TOWER, Game, GameError, type Clock } from "./game/game.ts";
 import { LandGame } from "./game/land.ts";
 import { RacerGame } from "./game/racer.ts";
-import { buildBombResultsCsv, buildCupResultsCsv, buildDragonResultsCsv, buildFightResultsCsv, buildLandResultsCsv, buildRacerResultsCsv, buildResultsCsv, buildRobotResultsCsv, buildSiegeResultsCsv, buildSubResultsCsv, buildTowerResultsCsv, writeResultsFile } from "./game/results.ts";
+import { buildBombResultsCsv, buildCupResultsCsv, buildDragonResultsCsv, buildDuelResultsCsv, buildFightResultsCsv, buildLandResultsCsv, buildRacerResultsCsv, buildResultsCsv, buildRobotResultsCsv, buildSiegeResultsCsv, buildSubResultsCsv, buildTowerResultsCsv, writeResultsFile } from "./game/results.ts";
 import { RobotGame } from "./game/robot.ts";
 import { SiegeGame } from "./game/siege.ts";
 import { SubGame } from "./game/submarine.ts";
@@ -68,7 +69,7 @@ function viewKey(view: PlayerView, now: number): string {
 /** Compress what goes to phones over Wi-Fi; the host screen is on this machine, so it isn't worth the CPU. */
 const compressFor = (ws: WS) => ws.data.role !== "host";
 
-type LiveGame = Game | TowerGame | SubGame | FightGame | RobotGame | LandGame | RacerGame | CupGame | DragonGame | BombGame | SiegeGame;
+type LiveGame = Game | TowerGame | SubGame | FightGame | RobotGame | LandGame | RacerGame | CupGame | DragonGame | BombGame | SiegeGame | DuelGame;
 
 /** Owns the single live game and every connected socket; pushes each phone its view (or a patch of it) on every change. */
 export class GameHub {
@@ -87,7 +88,7 @@ export class GameHub {
   private broadcastQueued = false;
   private activityTimer: ReturnType<typeof setTimeout> | null = null;
   /** Mode, mode settings and pacing carry over to the next lobby ("Play again"). */
-  private lastSetup: { mode: GameMode; tower: TowerSettings; fight: FightSettings; land: LandSettings; cup: CupSettings; dragon: DragonSettings; bomb: BombSettings; siege: SiegeSettings; protect: boolean; pacing: Pacing } = {
+  private lastSetup: { mode: GameMode; tower: TowerSettings; fight: FightSettings; land: LandSettings; cup: CupSettings; dragon: DragonSettings; bomb: BombSettings; siege: SiegeSettings; duel: DuelSettings; protect: boolean; pacing: Pacing } = {
     mode: "classic",
     tower: DEFAULT_TOWER,
     fight: DEFAULT_FIGHT,
@@ -96,6 +97,7 @@ export class GameHub {
     dragon: DEFAULT_DRAGON,
     bomb: DEFAULT_BOMB,
     siege: DEFAULT_SIEGE,
+    duel: DEFAULT_DUEL,
     protect: true,
     pacing: "manual",
   };
@@ -441,6 +443,11 @@ export class GameHub {
         if (!this.game.answer(ws.data.playerId, Number(msg.index), answerOf(msg))) this.sendState(ws);
         return;
       }
+      case "duel.answer": {
+        if (!(this.game instanceof DuelGame) || !ws.data.playerId) return;
+        if (!this.game.answer(ws.data.playerId, Number(msg.index), answerOf(msg))) this.sendState(ws);
+        return;
+      }
       case "tower.drop": {
         if (!(this.game instanceof TowerGame) || !ws.data.playerId) return;
         if (this.game.drop(ws.data.playerId, Number(msg.zone)) === null) this.sendState(ws);
@@ -458,13 +465,13 @@ export class GameHub {
     };
     const classic = () => {
       const g = game();
-      if (!(g instanceof Game)) throw new GameError(`Not available in ${g instanceof TowerGame ? "Tallest Tower" : g instanceof SubGame ? "Submarine Squad" : g instanceof RobotGame ? "Robot Attack" : g instanceof LandGame ? "Land Grab" : g instanceof RacerGame ? "Racer" : g instanceof CupGame ? "Cup of Death" : g instanceof DragonGame ? "Dragon's Hoard" : g instanceof BombGame ? "Bomb Squad" : g instanceof SiegeGame ? "Kingdom Siege" : "Tower Fight"}`);
+      if (!(g instanceof Game)) throw new GameError(`Not available in ${g instanceof TowerGame ? "Tallest Tower" : g instanceof SubGame ? "Submarine Squad" : g instanceof RobotGame ? "Robot Attack" : g instanceof LandGame ? "Land Grab" : g instanceof RacerGame ? "Racer" : g instanceof CupGame ? "Cup of Death" : g instanceof DragonGame ? "Dragon's Hoard" : g instanceof BombGame ? "Bomb Squad" : g instanceof SiegeGame ? "Kingdom Siege" : g instanceof DuelGame ? "Showdown" : "Tower Fight"}`);
       return g;
     };
-    /** Classic and Racer are both paced question by question: next, skip and pacing work in either. */
+    /** Classic, Racer and Showdown are all paced question by question: next, skip and pacing work in each. */
     const paced = () => {
       const g = game();
-      return g instanceof RacerGame ? g : classic();
+      return g instanceof RacerGame || g instanceof DuelGame ? g : classic();
     };
     switch (msg.type) {
       case "host.hello":
@@ -498,6 +505,7 @@ export class GameHub {
         if (lobby.phase === "lobby" && lobby.mode === "siege") return this.startSiege(lobby);
         const pacing = PACINGS.has(msg.pacing) ? msg.pacing : undefined;
         if (lobby.phase === "lobby" && lobby.mode === "racer") return this.startRacer(lobby, pacing);
+        if (lobby.phase === "lobby" && lobby.mode === "duel") return this.startDuel(lobby, pacing);
         lobby.start(pacing);
         this.lastSetup.pacing = lobby.pacing;
         return;
@@ -544,6 +552,10 @@ export class GameHub {
       case "host.setSiege":
         classic().setSiege({ waves: msg.waves });
         this.lastSetup.siege = { ...classic().siege };
+        return;
+      case "host.setDuel":
+        classic().setDuel({ rounds: Number(msg.rounds) });
+        this.lastSetup.duel = { ...classic().duel };
         return;
       case "host.next":
         return paced().next();
@@ -728,6 +740,22 @@ export class GameHub {
     this.log(`Racer started with ${racer.players.size} player(s), ${racer.questions.length} question(s)`);
   }
 
+  /** Hand the lobby's players to a Showdown game, with the lobby's rounds, shuffle choices and pacing. */
+  private startDuel(lobby: Game, pacing?: Pacing): void {
+    if (lobby.players.size === 0) throw new GameError("Wait for at least one player to join");
+    const duel = DuelGame.fromLobby(lobby, {
+      clock: this.opts.clock,
+      onChange: () => this.scheduleBroadcast(),
+      onActivity: (pid) => this.onActivity(pid),
+      onFinish: (g) => this.onFinish(g),
+    });
+    lobby.dispose();
+    this.game = duel;
+    duel.start(pacing);
+    this.lastSetup.pacing = duel.pacing;
+    this.log(`Showdown started with ${duel.players.size} player(s), ${duel.rounds} round(s)`);
+  }
+
   private closeGame(): void {
     if (this.activityTimer) clearTimeout(this.activityTimer);
     this.activityTimer = null;
@@ -762,7 +790,9 @@ export class GameHub {
                         ? buildBombResultsCsv(game)
                         : game instanceof SiegeGame
                           ? buildSiegeResultsCsv(game)
-                          : buildResultsCsv(game);
+                          : game instanceof DuelGame
+                            ? buildDuelResultsCsv(game)
+                            : buildResultsCsv(game);
     let file: string | null = null;
     try {
       file = writeResultsFile(game, csv, this.store.resultsDir);
