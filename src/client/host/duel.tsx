@@ -17,6 +17,8 @@ import {
   TownWide,
   Tumbleweed,
   WantedPoster,
+  duelHat,
+  preloadDuelArt,
   type DuelHat,
   type DuelPose,
 } from "../shared/duel-art.tsx";
@@ -70,6 +72,9 @@ export function DuelStage({ view, send }: { view: DuelView; send: Send }) {
   const connected = view.players.filter((p) => p.connected).length;
   const round = view.phase === "reveal" ? view.lastRound : null;
   const step = useRevealStep(round?.round ?? null);
+
+  // Every pose and clip decoded before the first reveal, so swapping one in never blinks.
+  useEffect(() => preloadDuelArt(), []);
 
   // Sound cues on transitions.
   useEffect(() => {
@@ -482,9 +487,12 @@ function ArenaPanel({ arena, result, view, step, panelRef }: { arena: DuelArena;
       })}
       {acts.map((a, slot) => {
         if (!a.hatFlies) return null;
-        const [x, y] = headOf(slot);
+        // The flight starts from the worn hat's own box, so the hat neither jumps nor grows as it is shot off.
+        const box = boxFor(slot, a.facing);
+        const worn = duelHat("idle");
+        const [x, y] = boxPoint(box, a.facing, worn);
         return (
-          <div key={`hat${round}-${slot}`} class="duel-fx duel-hat" style={{ left: `${x}%`, top: `${y}%` }}>
+          <div key={`hat${round}-${slot}`} class="duel-fx duel-hat" style={{ left: `${x}%`, top: `${y}%`, width: `${(worn.w * box.size) / 100}%`, height: `${(worn.h * box.size) / 100}%` }}>
             <FlyingHat hat={hatOf(people[slot]!.id)} facing={a.facing} />
           </div>
         );

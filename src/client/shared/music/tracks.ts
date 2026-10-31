@@ -10,9 +10,9 @@
  * Bomb Squad = spy-jazz (bass, brushes, vibraphone) that picks up a tick and more layers as the bomb runs down.
  * Kingdom Siege = a pastoral recorder-and-lute lobby, a marching battle with snare, tabor, recorders and brass,
  *   church bells for a victory and a low brass lament for a fallen castle. These three use the rich sound (see rich.ts).
- * Showdown = an original slow Western standoff: a lone trumpet over tremolo strings, a twangy guitar and the
- *   High Noon clock bell, with a ticking clock and timpani rolls that build as time runs out, plus a one-shot
- *   "draw" sting (MusicPlayer.sting) for the reveal. Slower, sparser and tenser than Cup of Death's saloon.
+ * Showdown = original Spaghetti Western music: a whistled tune over a twangy guitar's habanera, anvil pings, whip
+ *   cracks and chanted "hup!" stabs, building to a gallop with the trumpet on the tune as time runs out, plus a
+ *   one-shot "draw" sting (MusicPlayer.sting) for the reveal. In D minor, apart from Cup of Death's A minor.
  * Any of these can be replaced by an audio file in data/music/<id>.<ext>.
  */
 import type { MusicTrackId } from "../../../shared/music-tracks.ts";
@@ -1272,155 +1272,148 @@ const siegeResults: Track = {
 };
 
 // ---------- Showdown: a quick-draw standoff at High Noon ----------
-// D minor, with the Eb (Phrygian) rub over a D pedal for the stare-down. Unlike Cup of Death (A minor,
-// whistle, gallop) there is no gallop and no whistle: a lone trumpet, long silences, a clock.
+// Original music in the Spaghetti Western style: a whistled tune with wide leaps, a twangy electric guitar
+// driving a habanera bass and answering the whistle, anvil pings, whip cracks, chanted "hup!" stabs, and a
+// heroic trumpet that takes the tune in the last seconds. D minor, against Cup of Death's A minor and its
+// stepwise whistle over a boom-chick bass.
 
-/** Chords per bar of the standoff: Dm Dm Dm Eb/D | Bb Gm A A. */
-const SHOW_HARMONY = [
-  chord("D4 F4 A4"),
-  chord("D4 F4 A4"),
-  chord("D4 F4 A4"),
-  chord("Eb4 G4 Bb4"),
-  chord("D4 F4 Bb4"),
-  chord("D4 G4 Bb4"),
-  chord("C#4 E4 A4"),
-  chord("C#4 E4 A4"),
+/** Chords per bar: Dm F C Dm | Gm Dm A Dm. */
+const SHOW_CHORDS = ["D3 F3 A3", "F3 A3 C4", "C3 E3 G3", "D3 F3 A3", "G3 Bb3 D4", "D3 F3 A3", "C#3 E3 A3", "D3 F3 A3"].map(chord);
+const SHOW_ROOTS: [string, string][] = [
+  ["D2", "A2"],
+  ["F2", "C3"],
+  ["C3", "G2"],
+  ["D2", "A2"],
+  ["G2", "D3"],
+  ["D2", "A2"],
+  ["A2", "E2"],
+  ["D2", "A2"],
 ];
-/** Low tremolo strings: a D pedal, then the descent to the dominant. */
-const SHOW_PEDAL = ["D2 A2", "D2 A2", "D2 A2", "D2 A2", "Bb1 F2", "G1 D2", "A1 E2", "A1 E2"].map(chord);
-const SHOW_TIMPANI = ["D2", "D2", "D2", "D2", "Bb2", "G2", "A2", "A2"];
-const tremolo = (tok: string) => pump(tok, "xxxxxxxxxxxxxxxx");
-/** A chord held through a slow bar, bowed twice so it outlasts no recording. */
-const rebow = (tok: string) => seq([tok, 8], [tok, 8]);
+/** The guitar's driving bass: root, root, fifth in a 3+3+2 habanera, twice a bar. */
+const habanera = ([root, fifth]: [string, string]) => seq([root, 3], [root, 3], [fifth, 2], [root, 3], [root, 3], [fifth, 2]);
+/** The whistled tune: octave and fifth leaps that land on long held notes. */
+const SHOW_THEME = [
+  seq(["D5", 4], ["A4", 2], ["D5", 2], ["F5", 8]),
+  seq(["E5", 2], ["F5", 2], ["A5", 8], ["F5", 4]),
+  seq(["G5", 6], ["E5", 2], ["C5", 8]),
+  seq(["D5", 12], [".", 4]),
+  seq(["G4", 2], ["Bb4", 2], ["D5", 4], ["G5", 8]),
+  seq(["F5", 2], ["E5", 2], ["D5", 4], ["A4", 8]),
+  seq(["C#5", 6], ["E5", 2], ["A5", 8]),
+  seq(["D5", 12], [".", 4]),
+];
+/** The electric guitar answers each long whistle note in its gaps. */
+const SHOW_ANSWER = [
+  rest,
+  rest,
+  rest,
+  seq([".", 12], ["D3", 1], ["F3", 1], ["G3", 1], ["A3", 1]),
+  rest,
+  rest,
+  rest,
+  seq([".", 12], ["A3", 1], ["G3", 1], ["F3", 1], ["D3", 1]),
+];
+/** The jaw harp boings on one D drone through every chord, as the real thing does, in the habanera's 3+3+2. */
+const SHOW_BOING = pump("D3", "x..x..x.x..x..x.");
+/** Anvil: a hard, high, short ring. */
+const anvil = (pattern: string) => pump("D6", pattern);
+/** Whip cracks and the chanted "hup!" land at the end of every other bar. */
+const SHOW_WHIP = [rest, drum("............o..."), rest, drum("o.........o....."), rest, drum("............o..."), rest, drum("o.........o.o...")];
+const SHOW_HUP = [rest, drum("............x.x."), rest, drum("............x.x."), rest, drum("............x.x."), rest, drum("............x.xx")];
 
 const showdownLobby: Track = {
   id: "showdown-lobby",
-  bpm: 72,
+  bpm: 84,
   bars: 4,
-  reverb: 0.4,
+  reverb: 0.45,
   layers: [
-    // A lone guitar picking by the empty street.
-    {
-      inst: "twang",
-      bars: [
-        arp(["D2", "A2", "D3", "F3", "A3", "F3", "D3", "A2"], 2),
-        arp(["F2", "Bb2", "D3", "F3", "Bb3", "F3", "D3", "Bb2"], 2),
-        arp(["G2", "D3", "G3", "Bb3", "D4", "Bb3", "G3", "D3"], 2),
-        arp(["E2", "A2", "C#3", "E3", "A3", "E3", "C#3", "A2"], 2),
-      ],
-      vol: 0.6,
-    },
-    { inst: "pad", bars: [chord("D3 A3"), chord("Bb2 F3"), chord("G2 D3"), chord("A2 E3")].map(rebow), vol: 0.3 },
-    {
-      inst: "flute",
-      bars: [seq([".", 4], ["A4", 4], ["D5", 2], ["F5", 6]), seq(["E5", 4], ["D5", 4], ["Bb4", 8]), seq([".", 4], ["Bb4", 2], ["A4", 2], ["G4", 8]), seq(["A4", 12], [".", 4])],
-      vol: 0.4,
-    },
-    // The church clock, far off.
-    { inst: "bell", bars: [once("D4"), rest, rest, rest], vol: 0.35 },
+    // A lone rider: the guitar keeping time and a whistle drifting over the empty street.
+    { inst: "twang", bars: SHOW_ROOTS.slice(0, 4).map(habanera), vol: 0.55 },
+    { inst: "whistle", bars: [seq(["D5", 4], ["A4", 2], ["D5", 2], ["F5", 8]), seq(["E5", 2], ["F5", 2], ["A5", 12]), seq(["G5", 6], ["E5", 2], ["C5", 8]), seq(["D5", 12], [".", 4])], vol: 0.55 },
+    { inst: "woodblock", bars: [drum("x.......x.......")], vol: 0.25 },
+    { inst: "jawharp", bars: [SHOW_BOING, rest, SHOW_BOING, rest], vol: 0.55 },
+    { inst: "bell", bars: [anvil("x..............."), rest, rest, anvil("........x.......")], vol: 0.3 },
   ],
 };
 
 const showdown: Track = {
   id: "showdown",
-  bpm: 60,
+  bpm: 92,
   bars: 8,
-  // From a slow stare-down (intro, ~0.05) to a pounding last few seconds (1). At 60 bpm the clock ticks once a second.
+  // From a slow ride into town (intro, ~0.05) to a full gallop with the trumpet on the tune as time runs out (1).
   tempoBoost: 0.35,
-  reverb: 0.42,
+  reverb: 0.35,
   layers: [
-    // Always there: tremolo strings, the guitar's low notes and the High Noon bell.
-    { inst: "strings", bars: SHOW_PEDAL.map(tremolo), vol: 0.32 },
-    {
-      inst: "twang",
-      bars: [
-        seq(["D2", 12], [".", 4]),
-        seq([".", 4], ["D2", 8], [".", 4]),
-        seq(["D2", 12], [".", 4]),
-        seq(["Eb2", 8], ["D2", 4], ["A2", 4]),
-        seq(["Bb2", 12], [".", 4]),
-        seq(["G2", 12], [".", 4]),
-        seq(["A2", 8], ["C#3", 4], ["E3", 4]),
-        seq(["A2", 8], ["E3", 2], ["A3", 2], ["C#4", 4]),
-      ],
-      vol: 0.7,
-    },
-    { inst: "bell", bars: [once("D4"), rest], vol: 0.5 },
-    // The question is open: the clock starts ticking and the trumpet steps out.
-    { inst: "tick", bars: [drum("x...x...x...x...")], vol: 0.35, from: 0.15, to: 0.8 },
-    { inst: "tick", bars: [drum("x.x.x.x.x.x.x.x.")], vol: 0.4, from: 0.8 },
-    {
-      inst: "brass",
-      bars: [
-        seq([".", 4], ["A4", 2], ["D5", 10]),
-        seq(["Eb5", 6], ["D5", 2], ["C5", 2], ["D5", 6]),
-        seq(["A4", 12], [".", 4]),
-        seq([".", 8], ["F4", 2], ["G4", 2], ["A4", 4]),
-        seq(["Bb4", 4], ["D5", 4], ["F5", 8]),
-        seq(["E5", 2], ["F5", 2], ["E5", 2], ["D5", 6], ["Bb4", 4]),
-        seq(["C#5", 8], ["E5", 4], ["D5", 2], ["C#5", 2]),
-        seq(["A4", 12], [".", 4]),
-      ],
-      vol: 0.75,
-      from: 0.15,
-    },
-    // Timpani: a lone hit per bar, then rolls, then a roll that never stops.
-    { inst: "timpani", bars: SHOW_TIMPANI.map((r) => once(r)), vol: 0.45, from: 0.35, to: 0.7 },
-    { inst: "timpani", bars: SHOW_TIMPANI.map((r, i) => pump(r, i === 7 ? "xxxxxxxxxxxxxxxx" : "x.......x.xxxxxx")), vol: 0.4, from: 0.7, to: 0.9 },
-    { inst: "timpani", bars: SHOW_TIMPANI.map(tremolo), vol: 0.42, from: 0.9 },
-    // A whistle-like flute answering the trumpet in its gaps.
-    {
-      inst: "flute",
-      bars: [rest, rest, seq([".", 10], ["A5", 2], ["D6", 4]), seq(["C6", 4], ["A5", 4], [".", 8]), rest, rest, rest, seq([".", 8], ["E5", 2], ["G5", 2], ["A5", 4])],
-      vol: 0.4,
-      from: 0.45,
-    },
-    // The whole street holds its breath.
-    { inst: "strings", bars: SHOW_HARMONY.map(rebow), vol: 0.35, from: 0.55 },
-    { inst: "bell", bars: [rest, once("A4")], vol: 0.4, from: 0.65 },
-    { inst: "brass", bars: shift(SHOW_PEDAL.map(rebow), 1), vol: 0.3, from: 0.85 },
-    { inst: "snare", bars: [drum("x.x.x.x.x.x.x.x."), drum("x.x.x.x.x.x.x.x."), drum("x.x.x.x.x.x.x.x."), drum("xxxxxxxxxxxxxxxx")], vol: 0.18, from: 0.9 },
+    // Always there: the guitar's habanera, hooves at a walk and an anvil ping at the top of each phrase.
+    { inst: "twang", bars: SHOW_ROOTS.map(habanera), vol: 0.75 },
+    { inst: "woodblock", bars: [drum("x.......x.......")], vol: 0.3, to: 0.45 },
+    { inst: "bell", bars: [anvil("x..............."), rest, rest, rest], vol: 0.35, to: 0.7 },
+    // The jaw harp boinging along with the guitar from the first moment.
+    { inst: "jawharp", bars: [SHOW_BOING], vol: 0.6 },
+    // The question is open: the whistle takes the tune.
+    { inst: "whistle", bars: SHOW_THEME, vol: 0.75, from: 0.15 },
+    // The guitar chops the offbeats and answers the whistle.
+    { inst: "twang", bars: SHOW_CHORDS.map((c) => pump(c, "..x...x...x...x.")), vol: 0.35, from: 0.3 },
+    { inst: "twang", bars: SHOW_ANSWER, vol: 0.6, from: 0.3 },
+    // Into a gallop, with the timpani on the roots.
+    { inst: "woodblock", bars: [GALLOP], vol: 0.45, from: 0.45 },
+    { inst: "timpani", bars: SHOW_ROOTS.map(([r]) => pump(r, "x.......x.......")), vol: 0.45, from: 0.45 },
+    // Whip cracks and the chanted "hup!" (low brass stab and a drum).
+    { inst: "clap", bars: SHOW_WHIP, vol: 0.55, from: 0.55 },
+    { inst: "taiko", bars: SHOW_HUP, vol: 0.5, from: 0.55 },
+    { inst: "brass", bars: SHOW_HUP.map((b) => b.replace(/x/g, chord("D3 A3"))), vol: 0.4, from: 0.55 },
+    // The anvil on every offbeat and the strings sawing underneath.
+    { inst: "bell", bars: [anvil("....x.......x...")], vol: 0.3, from: 0.7 },
+    { inst: "strings", bars: SHOW_CHORDS.map((c) => pump(c, "xxxxxxxxxxxxxxxx")), vol: 0.3, from: 0.7 },
+    // Last seconds: the trumpet takes the tune an octave down, the snare drives.
+    { inst: "brass", bars: shift(SHOW_THEME, -1), vol: 0.6, from: 0.8 },
+    { inst: "snare", bars: [drum("....x.......x..."), drum("....x.......x..."), drum("....x.......x..."), drum("....x...x.x.xxxx")], vol: 0.45, from: 0.9 },
+    { inst: "cymbal", bars: [rest, rest, rest, rest, rest, rest, rest, once("x")], vol: 0.5, from: 0.9 },
   ],
 };
 
-/** The draw: a quick brass flourish into a stab, a timpani hit and a cymbal, then the strings ring on. Played once by MusicPlayer.sting. */
+/** The draw: a whip crack, an anvil strike, a brass stab over a timpani hit, and the guitar ringing out. Played once by MusicPlayer.sting. */
 const showdownDraw: Track = {
   id: "showdown-draw",
   bpm: 132,
   bars: 2,
   reverb: 0.4,
   layers: [
-    { inst: "brass", bars: [seq(["A4", 1], ["C5", 1], ["D5", 1], [chord("D4 F4 A4 D5"), 5], [".", 8]), rest], vol: 0.9 },
-    { inst: "brass", bars: [seq([".", 3], [chord("D3 A3"), 13]), seq([chord("D3 A3"), 6], [".", 10])], vol: 0.45 },
+    { inst: "clap", bars: [drum("o..............."), rest], vol: 0.8 },
+    { inst: "bell", bars: [seq([".", 3], ["D6", 1], [".", 12]), rest], vol: 0.6 },
+    { inst: "brass", bars: [seq([".", 3], [chord("D4 F4 A4 D5"), 6], [".", 7]), rest], vol: 0.85 },
     { inst: "timpani", bars: [seq(["A2", 1], ["A2", 1], ["A2", 1], ["D2", 13]), rest], vol: 0.8 },
-    { inst: "cymbal", bars: [drum("...o............"), rest], vol: 0.6 },
-    { inst: "twang", bars: [seq([".", 3], ["D2", 13]), rest], vol: 0.7 },
-    { inst: "strings", bars: [seq([".", 3], [chord("D3 A3 D4"), 13]), seq([chord("D3 A3 D4"), 10], [".", 6])], vol: 0.45 },
+    { inst: "twang", bars: [seq([".", 3], ["D2", 1], ["A2", 1], ["D3", 11]), seq(["D3", 8], [".", 8])], vol: 0.75 },
+    { inst: "whistle", bars: [seq([".", 6], ["A5", 2], ["D6", 8]), seq(["D6", 6], [".", 10])], vol: 0.5 },
+    { inst: "jawharp", bars: [seq([".", 3], ["D3", 5], [".", 8]), rest], vol: 0.7 },
   ],
 };
 
 const showdownResults: Track = {
   id: "showdown-results",
-  bpm: 88,
+  bpm: 100,
   bars: 4,
   reverb: 0.35,
   layers: [
-    // Riding off into the sunset, in D major.
+    // Riding off into the sunset, in D major: trumpet on the tune, the whistle above it, a full gallop.
     {
       inst: "brass",
       bars: [
-        seq(["A4", 2], ["D5", 2], ["F#5", 8], ["E5", 2], ["D5", 2]),
-        seq(["G5", 6], ["F#5", 2], ["E5", 4], ["B4", 4]),
-        seq(["A4", 2], ["B4", 2], ["D5", 4], ["E5", 4], ["C#5", 4]),
+        seq(["D4", 4], ["A4", 2], ["D5", 2], ["F#5", 8]),
+        seq(["E5", 2], ["F#5", 2], ["A5", 8], ["G5", 4]),
+        seq(["F#5", 4], ["E5", 4], ["C#5", 4], ["E5", 4]),
         seq(["D5", 12], [".", 4]),
       ],
     },
-    { inst: "strings", bars: [hold(chord("D4 F#4 A4")), hold(chord("D4 G4 B4")), hold(chord("C#4 E4 A4")), hold(chord("D4 F#4 A4"))], vol: 0.65 },
-    { inst: "twang", bars: [seq(["D2", 4], [".", 4], ["A2", 4], [".", 4]), seq(["G2", 4], [".", 4], ["D3", 4], [".", 4]), seq(["A2", 4], [".", 4], ["E3", 4], [".", 4]), seq(["D2", 4], [".", 4], ["A2", 4], [".", 4])], vol: 0.75 },
-    { inst: "twang", bars: [chord("D3 F#3 A3"), chord("D3 G3 B3"), chord("C#3 E3 A3"), chord("D3 F#3 A3")].map((c) => pump(c, "..x...x...x...x.")), vol: 0.35 },
+    { inst: "whistle", bars: [seq([".", 8], ["A5", 8]), seq([".", 8], ["D6", 8]), seq([".", 8], ["E6", 8]), seq([".", 4], ["A5", 4], ["D6", 8])], vol: 0.45 },
+    { inst: "strings", bars: [hold(chord("D4 F#4 A4")), hold(chord("D4 G4 B4")), hold(chord("C#4 E4 A4")), hold(chord("D4 F#4 A4"))], vol: 0.6 },
+    { inst: "twang", bars: [habanera(["D2", "A2"]), habanera(["G2", "D3"]), habanera(["A2", "E2"]), habanera(["D2", "A2"])], vol: 0.75 },
+    { inst: "woodblock", bars: [GALLOP], vol: 0.45 },
+    { inst: "jawharp", bars: [SHOW_BOING], vol: 0.5 },
     { inst: "timpani", bars: [pump("D2", "x.......x.x....."), pump("G2", "x.......x.x....."), pump("A2", "x.......x.x....."), pump("D2", "x...x...x.x.x...")], vol: 0.5 },
-    { inst: "bell", bars: [once("D5"), once("D5"), once("E5"), seq(["F#5", 8], ["D5", 8])], vol: 0.35 },
-    { inst: "cymbal", bars: [rest, rest, rest, once("x")], vol: 0.5 },
+    { inst: "clap", bars: [rest, drum("............o..."), rest, drum("o...............")], vol: 0.5 },
+    { inst: "bell", bars: [anvil("x.......x......."), rest, anvil("x.......x......."), once("D6")], vol: 0.3 },
+    { inst: "cymbal", bars: [rest, rest, rest, once("x")], vol: 0.55 },
   ],
 };
 

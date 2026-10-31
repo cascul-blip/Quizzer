@@ -49,6 +49,35 @@ export function duelArt(id: string, phone: boolean = isPhoneArt()): string {
   return DUEL_PROJECTOR_ART[id] ?? DUEL_PHONE_ART[id] ?? "";
 }
 
+/** Files already fetched and decoded; the Image objects are kept so the browser keeps them decoded. */
+const ready = new Set<string>();
+const held: HTMLImageElement[] = [];
+
+function warm(src: string, then?: () => void): void {
+  if (!src || ready.has(src)) return then?.();
+  const img = new Image();
+  img.src = src;
+  held.push(img);
+  img
+    .decode()
+    .catch(() => {})
+    .then(() => {
+      ready.add(src);
+      then?.();
+    });
+}
+
+/**
+ * Fetch and decode the projector art up front (call when the stage mounts), so a pose or clip
+ * swapped in mid-reveal shows at once instead of blinking out while its sheet loads.
+ */
+export function preloadDuelArt(): void {
+  for (const src of Object.values(DUEL_PROJECTOR_ART)) warm(src);
+}
+
+/** The still each clip starts from, shown until the clip's sheet is ready. */
+const CLIP_START: Record<DuelClip, DuelPose> = { "draw-fire": "idle", stagger: "idle", "holster-spin": "fire", walk: "walk1" };
+
 /** The source canvas every duelist is drawn on; the Duelist box has its shape. */
 const CANVAS = { w: 1280, h: 720 } as const;
 const [BX, BY] = DUEL_BOX.canvas;
@@ -83,6 +112,16 @@ export const duelMuzzle = (facing: DuelFacing): { x: number; y: number } => ({ x
 
 /** The head centre of a pose for a duelist facing this way, % of its box. */
 export const duelHead = (pose: DuelPose, facing: DuelFacing): { x: number; y: number } => ({ x: mirrorX(DUEL_HEAD[pose].x, facing), y: DUEL_HEAD[pose].y });
+
+/**
+ * Where a worn hat sits on a pose facing right: its centre and size, % of the Duelist box. Give a
+ * FlyingHat's parent exactly this box so the hat takes off at the size and spot it was worn.
+ */
+export function duelHat(pose: DuelPose): { x: number; y: number; w: number; h: number } {
+  const head = DUEL_POSE_HEAD[pose] ?? DUEL_POSE_HEAD.idle;
+  const g = DUEL_HATS.brown;
+  return { x: toCanvasX(head.x + g.dx + g.w / 2), y: toCanvasY(head.y + g.dy + g.h / 2), w: toCanvasW(g.w), h: toCanvasH(g.h) };
+}
 
 /** Arena 1 is High Noon on Main Street; the others cycle the three streets. */
 export function duelStreetId(arena: number): string {
@@ -275,6 +314,16 @@ export function DuelistClip({
   const x = step(frame % m.cols, m.cellW);
   const y = step(Math.floor(frame / m.cols), m.cellH);
   const head = m.head[frame] ?? m.head[0]!;
+  const src = duelArt(`clip-${clip}`, false);
+  const [loaded, setLoaded] = useState(() => ready.has(src));
+  useEffect(() => {
+    if (loaded) return;
+    let live = true;
+    warm(src, () => live && setLoaded(true));
+    return () => {
+      live = false;
+    };
+  }, [src]);
   return (
     <Figure
       facing={facing}
@@ -282,8 +331,10 @@ export function DuelistClip({
       style={style}
       inner={
         <>
-          <div class="sd-sheet">
-            <img src={duelArt(`clip-${clip}`, false)} style={sheetCell(m.w, m.h, x, y, m.cellW, m.cellH)} alt="" draggable={false} />
+          {/* Until the sheet is decoded, the clip's first pose stands in, so the body never blinks out. */}
+          {!loaded && <img class="sd-layer" src={duelArt(`body-${CLIP_START[clip]}`, false)} alt="" draggable={false} />}
+          <div class="sd-sheet" style={loaded ? undefined : { visibility: "hidden" }}>
+            <img src={src} decoding="sync" style={sheetCell(m.w, m.h, x, y, m.cellW, m.cellH)} alt="" draggable={false} />
           </div>
           <Head avatar={avatar} hat={hat} at={head} phone={false} hand={false} />
         </>

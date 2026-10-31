@@ -35,6 +35,7 @@ type Instrument =
   | "flute"
   | "twang"
   | "whistle"
+  | "jawharp"
   | "timpani"
   | "cymbal"
   | "woodblock"
@@ -435,6 +436,34 @@ function playInstrument(ctx: Ctx, dest: AudioNode, inst: Instrument, t: number, 
       o.stop(t + len + 0.2);
       lfo.stop(t + len + 0.2);
       noiseHit(ctx, dest, t, 0.03 * v, Math.min(0.4, len), "bandpass", freq * 2, 6);
+      return;
+    }
+    case "jawharp": {
+      // A jaw harp's "boing": a buzzing reed (sawtooth) through a mouth formant that sweeps up and back down.
+      const ring = Math.max(0.25, len);
+      const g = ctx.createGain();
+      g.connect(dest);
+      env(g, t, 0.2 * v, 0.004, ring * 0.25, ring * 0.75);
+      const o = ctx.createOscillator();
+      o.type = "sawtooth";
+      o.frequency.setValueAtTime(freq * 1.02, t);
+      o.frequency.exponentialRampToValueAtTime(freq, t + 0.03);
+      const mouth = ctx.createBiquadFilter();
+      mouth.type = "bandpass";
+      mouth.Q.value = 9;
+      mouth.frequency.setValueAtTime(freq * 2.5, t);
+      mouth.frequency.exponentialRampToValueAtTime(freq * 7, t + ring * 0.35);
+      mouth.frequency.exponentialRampToValueAtTime(freq * 3, t + ring);
+      // A little of the reed's low body under the formant.
+      const body = ctx.createBiquadFilter();
+      body.type = "lowpass";
+      body.frequency.value = freq * 1.5;
+      const bodyGain = ctx.createGain();
+      bodyGain.gain.value = 0.35;
+      o.connect(mouth).connect(g);
+      o.connect(body).connect(bodyGain).connect(g);
+      o.start(t);
+      o.stop(t + ring + 0.15);
       return;
     }
     case "timpani": {

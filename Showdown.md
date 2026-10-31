@@ -83,12 +83,12 @@ Nobody gets hurt: the loser only loses their hat.  No blood, and no guns pointin
 ## Sound
 Music is composed in code like the other modes, and is original (not a film score).
 
-* **Lobby** (`showdown-lobby`): a lone guitar picking by the empty street, a soft flute and a far-off church bell.
-* **The standoff** (`showdown`): slow and sparse.  Tremolo strings, low twangy guitar notes and the **High Noon clock bell** during the intro.  When the answers appear, a clock starts **ticking once a second** and a **lone trumpet** plays the theme.  As the timer runs out it speeds up and builds: timpani hits, a whistle-like flute answering the trumpet, held strings, more bells, then **timpani rolls**, low brass and a snare roll in the last seconds.
-* **The draw** (`showdown-draw`): a short one-shot sting on each reveal: a fast brass flourish into a stab, a timpani hit and a cymbal, with the music dipping under it.
-* **Results** (`showdown-results`): riding off into the sunset: a trumpet tune in a major key over strings, guitar and timpani.
+* **Lobby** (`showdown-lobby`): a lone rider: a twangy guitar keeping time, a jaw harp (Jew's harp) boinging along, a whistle drifting over the empty street and a far-off anvil.
+* **The standoff** (`showdown`): original music in the Spaghetti Western style.  Rounds are quick, so the build starts at once: during the intro the guitar drives a habanera bass, a **jaw harp** boings on a D drone, the hooves walk and the **whistle** already has the tune.  When the answers appear it keeps building and reaches its peak halfway through the question's time: the guitar chops the offbeats and answers the whistle, the hooves break into a **gallop** over timpani, then **whip cracks** and chanted **"hup!"** stabs, the anvil on every offbeat and sawing strings, and finally the **trumpet** takes the tune over a driving snare.  The reveal eases back to the riding beat instead of going quiet, so the music never stops between rounds.
+* **The draw** (`showdown-draw`): a short one-shot sting on each reveal: a whip crack, an anvil strike, a brass stab over a timpani hit, a jaw-harp boing and the guitar ringing out, with the music dipping under it.
+* **Results** (`showdown-results`): riding off into the sunset in D major: the trumpet on the tune, the whistle above it, a full gallop and whip cracks.
 
-It's deliberately different from Cup of Death's saloon music: slower, darker (D minor), no gallop and no whistle, a lone trumpet over tremolo strings, and a clock.
+It's written to sound like a classic Spaghetti Western without borrowing any film's melody, and to stay apart from Cup of Death: D minor instead of A minor, a tune of wide leaps instead of steps, a habanera bass instead of boom-chick, plus anvil, whips, the chant and the trumpet.
 
 ## Decisions
 These are the starting choices for this mode.
