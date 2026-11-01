@@ -5720,9 +5720,9 @@ select {
 }
 
 .duel-timer-fill {
-  --from: 1;
   height: 100%;
-  width: calc(var(--from) * 100%);
+  width: 100%;
+  transform-origin: left center;
   background: linear-gradient(90deg, var(--duel-red), var(--duel-gold));
   border-radius: inherit;
 }
@@ -5730,15 +5730,19 @@ select {
 .duel-timer-fill.burning {
   animation-name: duel-burn;
   animation-timing-function: linear;
-  animation-fill-mode: forwards;
+  animation-fill-mode: both;
+}
+
+.duel-timer-fill.spent {
+  width: 0;
 }
 
 @keyframes duel-burn {
   from {
-    width: calc(var(--from) * 100%);
+    transform: scaleX(1);
   }
   to {
-    width: 0;
+    transform: scaleX(0);
   }
 }
 

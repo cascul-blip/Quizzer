@@ -240,16 +240,19 @@ function Question({ view, send, secs }: { view: DuelView; send: Send; secs: numb
 /** One timer for the whole class: a fuse that burns down over the question's time limit. */
 function TimerBar({ view, secs }: { view: DuelView; secs: number }) {
   const open = view.phase === "open";
-  const total = Math.max(1, view.phaseDurationMs);
-  const left = open ? Math.max(0, Math.min(1, view.phaseRemainingMs / total)) : view.phase === "intro" ? 1 : 0;
+  // Catch up once, when the question opens. A later snapshot (someone answering) carries a
+  // smaller phaseRemainingMs. Feeding that into the running animation counts the elapsed time
+  // twice, so the bar jumps ahead of the seconds.
+  const key = `${view.phase}:${view.question?.index ?? -1}`;
+  const start = useRef<{ key: string; elapsed: number } | null>(null);
+  if (!start.current || start.current.key !== key) start.current = { key, elapsed: Math.max(0, view.phaseDurationMs - view.phaseRemainingMs) };
   return (
     <div class={`duel-timer ${open && secs <= 5 ? "urgent" : ""}`}>
       <div class="duel-timer-track">
-        {/* Re-keyed per question so the burn starts from where the server says, then runs on its own. */}
         <div
-          key={`${view.phase}:${view.question?.index ?? -1}`}
-          class={`duel-timer-fill ${open ? "burning" : ""}`}
-          style={{ "--from": String(left), animationDuration: `${Math.max(0, view.phaseRemainingMs)}ms` }}
+          key={key}
+          class={`duel-timer-fill ${open ? "burning" : view.phase === "reveal" ? "spent" : ""}`}
+          style={open ? { animationDuration: `${Math.max(1, view.phaseDurationMs)}ms`, animationDelay: `-${start.current.elapsed}ms` } : undefined}
         />
       </div>
       {open && <span class="duel-timer-secs">{secs}</span>}
