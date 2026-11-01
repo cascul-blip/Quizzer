@@ -5,7 +5,7 @@ A self-hosted, Kahoot-style quiz game for classrooms and events on a local netwo
 - **One program** runs on the host computer (Linux or Windows) and serves everything.
 - The **projector screen** shows the join QR code and URL, the questions and answer tiles, the answer reveal, a leaderboard, and a podium.
 - **Players join from their phone's browser** by scanning the QR code or typing the URL. They don't install anything, and no domain name or internet connection is needed.
-- Quizzes support **multiple choice (2–4 options)**, **true/false** and **pin on picture** questions. You can add images, allow several correct answers, shuffle questions and answers, and export results to CSV.
+- Quizzes support **multiple choice (2–4 options)**, **true/false** and **pin on picture** questions. You can add images and LaTeX maths, allow several correct answers, shuffle questions and answers, and export results to CSV.
 - **AI agents** can create and edit quizzes through the built-in **MCP server**.
 
 ## Quick start
@@ -423,6 +423,8 @@ Edits made over MCP appear in the admin page right away. A game that is already 
   ]
 }
 ```
+
+Question text and answers can include maths in LaTeX between dollar signs, for example `$v_{fy}^2 = v_{iy}^2 + 2g\,d_y$` (in a JSON file the backslashes are doubled). It's typeset with KaTeX on the projector and phones, and the admin editor shows a preview under the question. Prices like `$5` stay as they are; write `\$` for a dollar sign next to maths.
 
 ## Development
 

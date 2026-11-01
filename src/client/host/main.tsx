@@ -24,6 +24,7 @@ import { SiegeLobbyPreview, SiegeStage } from "./siege.tsx";
 import { RobotStage } from "./robot.tsx";
 import { SubStage } from "./submarine.tsx";
 import { TowerStage } from "./tower.tsx";
+import { Tex } from "../shared/tex.tsx";
 
 type GameView = Extract<HostView, { kind: "classic" }>;
 
@@ -732,7 +733,7 @@ function Intro({ view, send }: { view: GameView; send: Send }) {
   return (
     <main class="intro" onClick={() => send({ type: "host.skip" })}>
       <div class="intro-num">Question {q.index + 1}</div>
-      <h1 class="intro-text">{q.text}</h1>
+      <h1 class="intro-text"><Tex text={q.text} /></h1>
       <div class="intro-bar">
         <div class="intro-fill" style={{ animationDuration: `${q.remainingMs}ms` }} key={q.index} />
       </div>
@@ -758,7 +759,7 @@ function QuestionScreen({ view, send }: { view: GameView; send: Send }) {
 
   return (
     <main class={`question ${open ? "is-open" : "is-reveal"} ${pin ? "is-pin" : ""}`}>
-      <h1 class="q-title">{q.text}</h1>
+      <h1 class="q-title"><Tex text={q.text} /></h1>
       <div class="q-middle">
         <div class="side">
           {open ? (
@@ -815,7 +816,7 @@ function QuestionScreen({ view, send }: { view: GameView; send: Send }) {
             return (
               <div key={i} class={`tile opt-${c} ${state}`}>
                 <Shape index={c} />
-                <span class="tile-text">{text}</span>
+                <span class="tile-text"><Tex text={text} /></span>
                 {state === "right" && <span class="tick">✓</span>}
               </div>
             );

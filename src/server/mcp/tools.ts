@@ -18,6 +18,9 @@ Quiz format rules:
   Ask one location per question: e.g. a labelled diagram becomes "Where is the deltoid?", "Where is the biceps?", … sharing image and spots.
   A pin question needs its image first: add it as multiple_choice, call set_question_image, then update_question with type "pin", spots and correct.
   Later questions can reuse the returned image ref ("media/….png") directly in add_question.
+- Question text and options may contain inline LaTeX between dollar signs, typeset with KaTeX: "$v_{fy}^2 = v_{iy}^2 + 2g\\,d_y$", "$R = \\sqrt{R_x^2 + R_y^2}$".
+  Use it for formulas with subscripts, fractions or roots; plain prices like "$5" are left alone, and \\$ is a literal dollar sign.
+  Don't use it for text answers (players type those).
 - timeLimitSec is 5–120 (default 20). Keep question text under 300 chars and each option under 120 chars (shorter reads better on phones).
 - Players tap a single option (or type the answer for text questions, or drop one pin and press Submit for pin questions). Speed matters for scoring, so keep questions readable in a few seconds.
 

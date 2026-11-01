@@ -20,6 +20,7 @@ import { DuelPlayer } from "./duel.tsx";
 import { RobotPlayer } from "./robot.tsx";
 import { SubPlayer } from "./submarine.tsx";
 import { TowerPlayer } from "./tower.tsx";
+import { Tex } from "../shared/tex.tsx";
 
 const TOKEN_KEY = "quizzer.token";
 const NAME_KEY = "quizzer.nickname";
@@ -271,7 +272,7 @@ function Phase({ view, send }: { view: Joined; send: (m: ClientMsg) => void }) {
       return (
         <Center>
           <p class="muted">Question {q!.index + 1} of {q!.total}</p>
-          <h1 class="q-text">{q!.text}</h1>
+          <h1 class="q-text"><Tex text={q!.text} /></h1>
           <p class="muted">Get ready…</p>
         </Center>
       );
@@ -361,7 +362,7 @@ function Answering({ view, send }: { view: Joined; send: (m: ClientMsg) => void 
   const head = (
     <div class="q-head">
       <div class={`timer ${secs <= 5 ? "urgent" : ""}`}>{secs}</div>
-      <h2 class="q-text">{q.text}</h2>
+      <h2 class="q-text"><Tex text={q.text} /></h2>
     </div>
   );
   if (q.type === "pin" && q.image && q.spots) {
@@ -393,7 +394,7 @@ function Answering({ view, send }: { view: Joined; send: (m: ClientMsg) => void 
             return (
               <button key={i} class={`answer opt-${c}`} onClick={() => choose(i)}>
                 <Shape index={c} />
-                <span>{text}</span>
+                <span><Tex text={text} /></span>
               </button>
             );
           })}
@@ -416,7 +417,7 @@ function Result({ view }: { view: Joined }) {
         <div class="points">{r.wasCorrect ? `+${r.points.toLocaleString()}` : "+0"}</div>
         {r.wasCorrect && view.me.streak >= STREAK_MIN && <div class="streak-note">🔥 {view.me.streak} in a row!</div>}
       </div>
-      <p class="q-text small-q">{q.text}</p>
+      <p class="q-text small-q"><Tex text={q.text} /></p>
       {view.myText !== null && <p class="muted">You typed: <b>{view.myText}</b></p>}
       {q.type === "pin" && q.image && q.spots ? (
         <div class="pin-result">
@@ -438,7 +439,7 @@ function Result({ view }: { view: Joined }) {
             return (
               <li key={i} class={`reveal-item opt-${c} ${isCorrect ? "is-correct" : "is-other"} ${isMine && !isCorrect ? "is-wrong-pick" : ""}`}>
                 <Shape index={c} />
-                <span class="t">{text}</span>
+                <span class="t"><Tex text={text} /></span>
                 {isCorrect && <span class="tag">✓ {r.correct.length > 1 ? "Correct" : "Answer"}</span>}
                 {isMine && <span class="tag mine">{isCorrect ? "Your pick" : "✗ Your pick"}</span>}
               </li>

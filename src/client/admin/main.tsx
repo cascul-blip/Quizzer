@@ -4,6 +4,7 @@ import { DEFAULT_TIME_LIMIT, MAX_IMAGE_SIDE, MAX_MEDIA_BYTES, MAX_OPTIONS, MAX_P
 import { MUSIC_TRACKS } from "../../shared/music-tracks.ts";
 import type { Question, Quiz, QuizSettings, QuizSummary } from "../../shared/quiz-schema.ts";
 import { PinBoard } from "../shared/pin.tsx";
+import { Tex } from "../shared/tex.tsx";
 import { Shape, Toast, optionColor } from "../shared/ui.tsx";
 
 // ---------- api ----------
@@ -653,6 +654,7 @@ function QuestionEditor(props: {
         value={q.text}
         onInput={(e) => onChange({ ...q, text: e.currentTarget.value })}
       />
+      <TexPreview q={q} />
 
       <div class="image-row">
         {q.image && q.type === "pin" ? (
@@ -820,3 +822,25 @@ function PinSpotsEditor({ q, onChange, onRemove }: { q: Question; onChange: (q: 
 }
 
 render(<App />, document.getElementById("app")!);
+
+/** How `$…$` maths in the question and answers will look on the projector and phones. */
+function TexPreview({ q }: { q: Question }) {
+  const parts = [q.text, ...(q.type === "pin" ? [] : q.options)];
+  if (!parts.some((t) => t.includes("$"))) return null;
+  return (
+    <div class="tex-preview">
+      <div class="tex-preview-q">
+        <Tex text={q.text} />
+      </div>
+      {q.type !== "pin" && (
+        <ol>
+          {q.options.map((o, i) => (
+            <li key={i}>
+              <Tex text={o} />
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
+  );
+}
