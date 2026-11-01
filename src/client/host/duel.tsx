@@ -451,7 +451,7 @@ function ArenaPanel({ arena, result, view, step, panelRef }: { arena: DuelArena;
   return (
     <div class={`duel-panel ${throne ? "throne" : ""}`} ref={panelRef}>
       <DuelStreet arena={arena.arena} class="duel-street" />
-      {tumble && <Tumbleweed key={`tw${round}`} durationMs={3000} />}
+      {tumble && <Tumbleweed key={`tw${round}`} durationMs={3000} class="duel-tumble" />}
       <div class="duel-sign">
         {throne && <SheriffStar class="duel-sign-star" />}
         <span>{throne ? "High Noon" : `Arena ${arena.arena}`}</span>

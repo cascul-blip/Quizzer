@@ -19,7 +19,7 @@ export function CupStage({ view, send }: { view: CupView; send: Send }) {
     prev.current = view;
     if (!p) return;
     if (view.phase !== p.phase) {
-      if (view.phase === "roll") play(view.round === 1 ? "gunshot" : "diceRoll");
+      if (view.phase === "roll") play(view.round === 1 ? "starterPistol" : "diceRoll");
       if (view.phase === "quiz") play("diceLand");
       if (view.phase === "drink") play("timeUp");
       if (view.phase === "reveal" && view.reveal?.drinks.length === 0) play("survive");
