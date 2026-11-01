@@ -3830,7 +3830,7 @@ select {
   z-index: 3;
   top: 7.5vh;
   left: 50%;
-  transform: translateX(-50%);
+  translate: -50% 0; /* not transform: pop-in animates transform */
   padding: 0.4vh 1.2vw;
   border-radius: 999px;
   background: #8e1330;
@@ -4025,7 +4025,7 @@ select {
   z-index: 4;
   left: 50%;
   bottom: 12vh;
-  transform: translateX(-50%);
+  translate: -50% 0; /* not transform: pop-in animates transform */
   padding: 2vh 3vw;
   border-radius: var(--radius);
   background: rgba(142, 19, 48, 0.92);
@@ -5926,6 +5926,11 @@ select {
   z-index: 1;
 }
 
+/* The tumbleweed rolls in front of the duelists (still under the sign and name tags). */
+.duel-tumble {
+  z-index: 3;
+}
+
 .duel-body.away {
   opacity: 0.4;
   filter: grayscale(0.8);
@@ -6053,7 +6058,8 @@ select {
   top: 38%;
   left: 50%;
   z-index: 5;
-  transform: translate(-50%, -50%);
+  /* translate, not transform: pop-in animates transform and would undo the centring while it runs. */
+  translate: -50% -50%;
   padding: 0.5cqh 3cqw;
   background: rgba(36, 19, 9, 0.85);
   color: var(--duel-sand);

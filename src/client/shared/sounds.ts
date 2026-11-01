@@ -1,6 +1,8 @@
-/** Tiny synthesized sound effects (WebAudio), so no audio files need to be shipped. */
+import shotUrl from "./sfx/shot.mp3";
 
-type Sfx = "tick" | "tickHigh" | "timeUp" | "reveal" | "join" | "start" | "fanfare" | "thud" | "floor" | "rumble" | "roar" | "whoosh" | "chomp" | "bubble" | "heartbeat" | "laser" | "alarm" | "plant" | "capture" | "conquer" | "gearUp" | "skid" | "crash" | "repair" | "leverClick" | "land" | "diceRoll" | "diceLand" | "clink" | "gulp" | "poison" | "survive" | "gunshot" | "dragonRoar" | "sword" | "fireWhoosh" | "shieldClang" | "coins" | "chestOpen" | "trapHiss" | "jackpot" | "snip" | "spark" | "wrongWire" | "moduleChime" | "keypad" | "defuse" | "explosion" | "bowTwang" | "arrowHit" | "swordClang" | "stoneThud" | "placeClack" | "upgradeChime" | "heartLost" | "giantHorn" | "drumRoll" | "wolfHowl" | "trollRoar" | "giantStomp" | "castleCrumble" | "victoryBells";
+/** Tiny synthesized sound effects (WebAudio); a few use a bundled recording instead (RECORDINGS). */
+
+type Sfx = "tick" | "tickHigh" | "timeUp" | "reveal" | "join" | "start" | "fanfare" | "thud" | "floor" | "rumble" | "roar" | "whoosh" | "chomp" | "bubble" | "heartbeat" | "laser" | "alarm" | "plant" | "capture" | "conquer" | "gearUp" | "skid" | "crash" | "repair" | "leverClick" | "land" | "diceRoll" | "diceLand" | "clink" | "gulp" | "poison" | "survive" | "gunshot" | "starterPistol" | "dragonRoar" | "sword" | "fireWhoosh" | "shieldClang" | "coins" | "chestOpen" | "trapHiss" | "jackpot" | "snip" | "spark" | "wrongWire" | "moduleChime" | "keypad" | "defuse" | "explosion" | "bowTwang" | "arrowHit" | "swordClang" | "stoneThud" | "placeClack" | "upgradeChime" | "heartLost" | "giantHorn" | "drumRoll" | "wolfHowl" | "trollRoar" | "giantStomp" | "castleCrumble" | "victoryBells";
 
 const MUTE_KEY = "quizzer.muted";
 let ctx: AudioContext | null = null;
@@ -43,6 +45,7 @@ export function unlockAudio(): void {
   try {
     ctx ??= new AudioContext();
     if (ctx.state === "suspended") void ctx.resume();
+    loadRecordings(ctx);
   } catch {
     ctx = null;
   }
@@ -61,6 +64,96 @@ function tone(freq: number, start: number, dur: number, type: OscillatorType = "
   osc.connect(g).connect(ctx.destination);
   osc.start(t0);
   osc.stop(t0 + dur + 0.05);
+}
+
+let noiseBuf: AudioBuffer | null = null;
+
+/** A burst of white noise through a filter (swept to `freqTo` if given), with a sharp attack and an exponential decay. */
+function noise(start: number, dur: number, filter: BiquadFilterType, freq: number, gain: number, q = 0.7, freqTo?: number, out?: AudioNode): void {
+  if (!ctx) return;
+  if (!noiseBuf || noiseBuf.sampleRate !== ctx.sampleRate) {
+    noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+    const data = noiseBuf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+  }
+  const t0 = ctx.currentTime + start;
+  const src = ctx.createBufferSource();
+  src.buffer = noiseBuf;
+  const f = ctx.createBiquadFilter();
+  f.type = filter;
+  f.frequency.setValueAtTime(freq, t0);
+  if (freqTo) f.frequency.exponentialRampToValueAtTime(freqTo, t0 + dur);
+  f.Q.setValueAtTime(q, t0);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(gain, t0 + 0.003);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  src.connect(f).connect(g).connect(out ?? ctx.destination);
+  src.start(t0);
+  src.stop(t0 + dur + 0.05);
+}
+
+/** A sine whose pitch drops from `from` to `to`: the low punch under a bang. */
+function thump(from: number, to: number, start: number, dur: number, gain: number, out?: AudioNode): void {
+  if (!ctx) return;
+  const t0 = ctx.currentTime + start;
+  const osc = ctx.createOscillator();
+  const g = ctx.createGain();
+  osc.frequency.setValueAtTime(from, t0);
+  osc.frequency.exponentialRampToValueAtTime(to, t0 + dur);
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(gain, t0 + 0.004);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  osc.connect(g).connect(out ?? ctx.destination);
+  osc.start(t0);
+  osc.stop(t0 + dur + 0.05);
+}
+
+/** A soft-clipping overdrive bus: whatever plays into it comes out louder and grittier without harsh clipping. */
+function driveBus(drive: number, level: number): AudioNode | undefined {
+  if (!ctx) return undefined;
+  const curve = new Float32Array(1024);
+  for (let i = 0; i < curve.length; i++) {
+    const x = (i / (curve.length - 1)) * 2 - 1;
+    curve[i] = Math.tanh(x * drive) / Math.tanh(drive);
+  }
+  const shaper = ctx.createWaveShaper();
+  shaper.curve = curve;
+  shaper.oversample = "4x";
+  const g = ctx.createGain();
+  g.gain.value = level;
+  shaper.connect(g).connect(ctx.destination);
+  return shaper;
+}
+
+/** Recorded effects, decoded once the audio is unlocked; until then (or if loading fails) play() synthesizes them. */
+const RECORDINGS = { gunshot: { url: shotUrl, gain: 0.6 } } satisfies Partial<Record<Sfx, { url: string; gain: number }>>;
+const recorded = new Map<Sfx, AudioBuffer>();
+let recordingsRequested = false;
+
+function loadRecordings(ac: AudioContext): void {
+  if (recordingsRequested) return;
+  recordingsRequested = true;
+  for (const [sfx, { url }] of Object.entries(RECORDINGS)) {
+    fetch(url)
+      .then((r) => r.arrayBuffer())
+      .then((data) => ac.decodeAudioData(data))
+      .then((buf) => recorded.set(sfx as Sfx, buf))
+      .catch(() => {}); // keep the synthesized version
+  }
+}
+
+/** Plays a decoded recording; false if it isn't ready. */
+function playRecording(sfx: keyof typeof RECORDINGS): boolean {
+  const buf = recorded.get(sfx);
+  if (!ctx || !buf) return false;
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  const g = ctx.createGain();
+  g.gain.value = RECORDINGS[sfx].gain;
+  src.connect(g).connect(ctx.destination);
+  src.start();
+  return true;
 }
 
 export function play(sfx: Sfx): void {
@@ -184,12 +277,26 @@ export function play(sfx: Sfx): void {
       // A relieved twang up the scale.
       [220, 277.18, 329.63, 440].forEach((f, i) => tone(f, i * 0.07, 0.35, "sawtooth", 0.07));
       return tone(880, 0.3, 0.4, "triangle", 0.1);
-    case "gunshot":
-      // A pistol crack with a ricochet.
+    case "starterPistol":
+      // A pistol crack with a ricochet (Cup's starting shot).
       tone(120, 0, 0.12, "square", 0.3);
       tone(60, 0, 0.3, "sine", 0.35);
       [2400, 2000, 1600, 1250].forEach((f, i) => tone(f, 0.12 + i * 0.05, 0.06, "sine", 0.06));
       return;
+    case "gunshot":
+    {
+      if (playRecording("gunshot")) return;
+      // A big revolver: a crack and a blast that darkens as it dies, a chest-thumping punch and a sub boom,
+      // all driven hard through a soft clipper, then rolling echoes off the canyon walls.
+      const bang = driveBus(4, 0.85);
+      noise(0, 0.06, "highpass", 1500, 1, 0.7, undefined, bang);
+      noise(0, 0.55, "lowpass", 4000, 1, 0.9, 250, bang);
+      thump(140, 38, 0, 0.45, 1, bang);
+      thump(65, 28, 0.01, 0.9, 0.8, bang);
+      noise(0.2, 0.7, "lowpass", 900, 0.3, 0.7, 300);
+      noise(0.48, 0.9, "lowpass", 650, 0.15, 0.7, 250);
+      return;
+    }
     case "dragonRoar":
       // A deep growl that swells and falls away, with a rasp on top.
       [62, 78, 93, 55].forEach((f, i) => tone(f, i * 0.08, 1.4 - i * 0.15, "sawtooth", 0.15));
