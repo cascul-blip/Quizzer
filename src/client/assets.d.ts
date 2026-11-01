@@ -7,3 +7,9 @@ declare module "*.webp" {
   const url: string;
   export default url;
 }
+// Stylesheets imported for their side effect are bundled into the page's CSS.
+declare module "*.css";
+declare module "*.woff2" {
+  const url: string;
+  export default url;
+}

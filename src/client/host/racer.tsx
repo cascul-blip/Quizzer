@@ -8,6 +8,7 @@ import { onMuteChange, play, startRev, type Rev } from "../shared/sounds.ts";
 import { Shape, optionColor, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
 import { Award } from "./tower.tsx";
+import { Tex, visibleLength } from "../shared/tex.tsx";
 
 type RacerView = Extract<HostView, { kind: "racer" }>;
 
@@ -219,13 +220,13 @@ function Turn({ view, send, secs }: { view: RacerView; send: Send; secs: number 
   const reveal = view.phase === "reveal";
   const correct = new Set(view.correct ?? []);
   const counts = view.answerCounts ?? [];
-  const longest = Math.max(0, ...q.options.map((o) => o.length));
+  const longest = Math.max(0, ...q.options.map(visibleLength));
   const turn = reveal && view.lastTurn?.index === q.index ? view.lastTurn : null;
   const pin = q.type === "pin" && q.image && q.spots ? { image: q.image, spots: q.spots } : null;
   return (
     <>
-      <div class={`racer-question ${q.text.length > 160 ? "long" : q.text.length > 80 ? "medium" : ""} ${pin ? "is-pin" : ""}`}>
-        <h1>{q.text}</h1>
+      <div class={`racer-question ${visibleLength(q.text) > 160 ? "long" : visibleLength(q.text) > 80 ? "medium" : ""} ${pin ? "is-pin" : ""}`}>
+        <h1><Tex text={q.text} /></h1>
         {pin ? (
           <PinBoard image={pin.image} spots={pin.spots} labels={q.options} correct={reveal ? [...correct] : undefined} counts={reveal ? counts : undefined} />
         ) : (
@@ -256,7 +257,7 @@ function Turn({ view, send, secs }: { view: RacerView; send: Send; secs: number 
             return (
               <div key={i} class={`tile opt-${c} ${state}`}>
                 <Shape index={c} />
-                <span class="tile-text">{text}</span>
+                <span class="tile-text"><Tex text={text} /></span>
                 {state === "right" && <span class="tick">✓</span>}
                 {reveal && q.type !== "text" && <span class="racer-count">{counts[i] ?? 0}</span>}
               </div>

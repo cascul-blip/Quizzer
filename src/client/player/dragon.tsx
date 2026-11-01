@@ -4,6 +4,7 @@ import { Chest, DragonHead, LOOT_LABEL, LootIcon, RuneShield } from "../shared/d
 import { PinDragger } from "../shared/pin.tsx";
 import { LockedChoice, Shape, TextAnswer, formatClock, optionColor, ordinal, teamInk, teamVars, useCountdown } from "../shared/ui.tsx";
 import { Feedback, StreamQuestion } from "./tower.tsx";
+import { Tex } from "../shared/tex.tsx";
 
 type Send = (m: ClientMsg) => void;
 
@@ -115,7 +116,7 @@ function RuneScreen({ view, send }: { view: PlayerDragonView; send: Send }) {
           <div class="verdict-icon">{r.wasCorrect ? "✓" : "✗"}</div>
           <h1>{r.wasCorrect ? "Correct!" : f.myChoice === null && f.myText === null ? "Time's up!" : "Wrong"}</h1>
         </div>
-        <p class="q-text small-q">{q.text}</p>
+        <p class="q-text small-q"><Tex text={q.text} /></p>
         <div class="flash-answer rune-answer">
           <span>Correct answer{r.answers.length > 1 ? "s" : ""}:</span>
           <b>{r.answers.join(" / ")}</b>
@@ -150,7 +151,7 @@ function RuneScreen({ view, send }: { view: PlayerDragonView; send: Send }) {
     <div class="q-head">
       <div class={`timer ${secs <= 5 ? "urgent" : ""}`}>{secs}</div>
       <h2 class="q-text">
-        <span class="rune-tag">Shield of Faith</span> {q.text}
+        <span class="rune-tag">Shield of Faith</span> <Tex text={q.text} />
       </h2>
     </div>
   );
@@ -175,7 +176,7 @@ function RuneScreen({ view, send }: { view: PlayerDragonView; send: Send }) {
             return (
               <button key={`${f.seq}-${i}`} class={`answer opt-${c}`} onClick={() => answer(i)}>
                 <Shape index={c} />
-                <span>{text}</span>
+                <span><Tex text={text} /></span>
               </button>
             );
           })}

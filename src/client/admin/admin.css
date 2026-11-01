@@ -489,6 +489,19 @@ textarea {
   color: var(--a-soft);
 }
 
+.tex-preview {
+  margin: 6px 0 10px;
+  padding: 8px 12px;
+  border-left: 3px solid var(--a-soft);
+  color: var(--a-ink);
+  font-size: 16px;
+}
+
+.tex-preview ol {
+  margin: 6px 0 0;
+  padding-left: 22px;
+}
+
 .issues {
   color: var(--a-warn);
   font-weight: 700;

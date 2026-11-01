@@ -5,6 +5,7 @@ import { BOMB_HOLD_MS, type PlayerBombView, type PlayerBombWire } from "../../sh
 import { bombArt, Confetti, CuttersIcon, WireGraphic } from "../shared/bomb-art.tsx";
 import { play } from "../shared/sounds.ts";
 import { formatClock, ordinal, useCountdown } from "../shared/ui.tsx";
+import { Tex } from "../shared/tex.tsx";
 
 type Send = (m: ClientMsg) => void;
 
@@ -117,7 +118,7 @@ function Defusing({ view, send }: { view: PlayerBombView; send: Send }) {
           Squad {view.squad.name}
         </p>
       )}
-      <h1 class="bw-q">{q.text}</h1>
+      <h1 class="bw-q"><Tex text={q.text} /></h1>
       {q.image && q.type !== "pin" && <img class="bw-qimg" src={`/${q.image}`} alt="" />}
       {/* Always there, so "… is cutting" appearing never pushes the Cut button out from under a finger. */}
       <p class={`bw-status ${view.reveal && !view.status?.startsWith("Wrong") ? "good" : ""}`}>{line || "\u00a0"}</p>

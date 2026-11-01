@@ -7,6 +7,7 @@ import { play } from "../shared/sounds.ts";
 import { Shape, formatClock, optionColor, ordinal, teamVars, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
 import { Award } from "./tower.tsx";
+import { Tex } from "../shared/tex.tsx";
 
 type DragonView = Extract<HostView, { kind: "dragon" }>;
 
@@ -207,7 +208,7 @@ function FireOverlay({ view }: { view: DragonView }) {
           </span>
         )}
       </div>
-      <h1 class="rune-text">{q.text}</h1>
+      <h1 class="rune-text"><Tex text={q.text} /></h1>
       {pin ? (
         <div class="rune-pin">
           <PinBoard image={pin.image} spots={pin.spots} labels={q.options} correct={reveal ? [...correct] : undefined} counts={reveal ? (f.answerCounts ?? undefined) : undefined} />
@@ -222,7 +223,7 @@ function FireOverlay({ view }: { view: DragonView }) {
             return (
               <div key={i} class={`tile opt-${c} ${state}`}>
                 <Shape index={c} />
-                <span class="tile-text">{text}</span>
+                <span class="tile-text"><Tex text={text} /></span>
                 {reveal && <span class="tile-count">{f.answerCounts?.[i] ?? 0}</span>}
                 {state === "right" && <span class="tick">✓</span>}
               </div>

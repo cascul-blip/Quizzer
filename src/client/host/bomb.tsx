@@ -5,6 +5,7 @@ import { play } from "../shared/sounds.ts";
 import { formatClock, ordinal, teamVars, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
 import { Award } from "./tower.tsx";
+import { Tex } from "../shared/tex.tsx";
 
 type BombView = Extract<HostView, { kind: "bomb" }>;
 
@@ -222,7 +223,7 @@ function TogetherBomb({ view }: { view: BombView }) {
       {q && (
         <div class="bw-question">
           {q.image && !picture && <img src={`/${q.image}`} alt="" />}
-          <p>{q.text}</p>
+          <p><Tex text={q.text} /></p>
           {q.reveal && <p class="bw-reveal">Answer: {q.reveal.join(", ")}</p>}
         </div>
       )}

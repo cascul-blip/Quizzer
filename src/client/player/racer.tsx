@@ -6,6 +6,7 @@ import { RacerScene } from "../shared/racer-art.tsx";
 import { play } from "../shared/sounds.ts";
 import { PinDragger } from "../shared/pin.tsx";
 import { LockedChoice, Shape, TextAnswer, optionColor, useCountdown } from "../shared/ui.tsx";
+import { Tex, visibleLength } from "../shared/tex.tsx";
 
 type Send = (m: ClientMsg) => void;
 
@@ -25,7 +26,7 @@ const TOP_STOP = 1 / 6;
 const BOTTOM_STOP = 5 / 6;
 
 const plural = (n: number, word: string, many = `${word}s`) => `${n} ${n === 1 ? word : many}`;
-const qClass = (text: string) => (text.length > LONG_QUESTION ? "long" : "");
+const qClass = (text: string) => (visibleLength(text) > LONG_QUESTION ? "long" : "");
 
 /** Phone screen for Racer: the driver's lever, then the question for everyone, then what it did to the car. */
 export function RacerPlayer({ view, send }: { view: PlayerRacerView; send: Send }) {
@@ -43,7 +44,7 @@ export function RacerPlayer({ view, send }: { view: PlayerRacerView; send: Send 
   } else if (view.phase === "intro") {
     body = (
       <main class="center racer-watch">
-        <p class={`q-text racer-q ${qClass(q.text)}`}>{q.text}</p>
+        <p class={`q-text racer-q ${qClass(q.text)}`}><Tex text={q.text} /></p>
         <p class="racer-ask">The car has crashed. Get at least half right to repair it.</p>
       </main>
     );
@@ -119,7 +120,7 @@ function DriverScreen({ view, send }: { view: PlayerRacerView; send: Send }) {
           <div class={`timer racer-num ${secs <= 5 ? "urgent" : ""}`}>{secs}</div>
           <h1>You're the driver</h1>
         </div>
-        <p class={`q-text racer-q ${qClass(q.text)}`}>{q.text}</p>
+        <p class={`q-text racer-q ${qClass(q.text)}`}><Tex text={q.text} /></p>
         {q.image && <img class="q-img racer-q-img" src={`/${q.image}`} alt="" />}
         <p class="racer-ask">How confident are you in the class?</p>
       </div>
@@ -136,7 +137,7 @@ function WatchScreen({ view }: { view: PlayerRacerView }) {
   const q = view.question!;
   return (
     <main class="center racer-watch">
-      <p class={`q-text racer-q ${qClass(q.text)}`}>{q.text}</p>
+      <p class={`q-text racer-q ${qClass(q.text)}`}><Tex text={q.text} /></p>
       {view.driver && (
         <div class="racer-driver">
           <div class="racer-avatar">
@@ -343,7 +344,7 @@ function RacerAnswering({ view, send }: { view: PlayerRacerView; send: Send }) {
     <main class="answering">
       <div class="q-head">
         <div class={`timer ${secs <= 5 ? "urgent" : ""}`}>{secs}</div>
-        <h2 class={`q-text ${qClass(q.text)}`}>{q.text}</h2>
+        <h2 class={`q-text ${qClass(q.text)}`}><Tex text={q.text} /></h2>
       </div>
       {q.image && !pin && <img class="q-img" src={`/${q.image}`} alt="" />}
       <div class="racer-chip">
@@ -376,7 +377,7 @@ function RacerAnswering({ view, send }: { view: PlayerRacerView; send: Send }) {
             return (
               <button key={i} class={`answer opt-${c}`} onClick={() => choose(i)}>
                 <Shape index={c} />
-                <span>{text}</span>
+                <span><Tex text={text} /></span>
               </button>
             );
           })}
@@ -417,7 +418,7 @@ function RacerReveal({ view }: { view: PlayerRacerView }) {
               return (
                 <li key={i} class={`reveal-item opt-${c} is-correct`}>
                   <Shape index={c} />
-                  <span class="t">{q.options[i]}</span>
+                  <span class="t"><Tex text={q.options[i]!} /></span>
                   <span class="tag">✓ {r!.correct.length > 1 ? "Correct" : "Answer"}</span>
                 </li>
               );

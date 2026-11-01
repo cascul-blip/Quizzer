@@ -3,6 +3,7 @@ import type { ClientMsg, DuelArenaResult, DuelistResult, DuelPlayerRef, PlayerDu
 import { DuelStreet, Duelist, DustPuff, GunSmoke, MuzzleFlash, WantedPoster } from "../shared/duel-art.tsx";
 import { PinBoard, PinDragger } from "../shared/pin.tsx";
 import { LockedChoice, Shape, TextAnswer, optionColor, ordinal, useCountdown } from "../shared/ui.tsx";
+import { Tex, visibleLength } from "../shared/tex.tsx";
 
 type Send = (m: ClientMsg) => void;
 type Pose = "idle" | "ready" | "draw" | "fire" | "stagger" | "tip" | "walk1" | "walk2";
@@ -11,7 +12,7 @@ type Hat = "brown" | "black" | "white" | "sheriff" | null;
 /** Questions longer than this are set in smaller type so every screen fits without scrolling. */
 const LONG_QUESTION = 140;
 
-const qClass = (text: string) => (text.length > LONG_QUESTION ? "long" : "");
+const qClass = (text: string) => (visibleLength(text) > LONG_QUESTION ? "long" : "");
 const arenaName = (n: number) => (n === 1 ? "High Noon" : `Arena ${n}`);
 const secs = (ms: number) => `${(ms / 1000).toFixed(1)} s`;
 
@@ -127,7 +128,7 @@ function DuelIntro({ view }: { view: PlayerDuelView }) {
   const left = useCountdown(view.phaseRemainingMs, `intro:${view.round}`);
   return (
     <main class="center duel-watch">
-      <p class={`q-text duel-q ${qClass(q.text)}`}>{q.text}</p>
+      <p class={`q-text duel-q ${qClass(q.text)}`}><Tex text={q.text} /></p>
       {view.opponents.length === 0 ? (
         <p class="duel-ask">You'll join the bottom arena next round</p>
       ) : (
@@ -144,7 +145,7 @@ function DuelWatch({ view }: { view: PlayerDuelView }) {
   return (
     <main class="center duel-watch">
       <div class={`timer ${left <= 5 ? "urgent" : ""}`}>{left}</div>
-      <p class={`q-text duel-q ${qClass(q.text)}`}>{q.text}</p>
+      <p class={`q-text duel-q ${qClass(q.text)}`}><Tex text={q.text} /></p>
       <p class="duel-ask">You'll join the bottom arena next round</p>
       <p class="muted">Watch the projector for now.</p>
     </main>
@@ -183,7 +184,7 @@ function DuelAnswering({ view, send }: { view: PlayerDuelView; send: Send }) {
     <main class="answering">
       <div class="q-head">
         <div class={`timer ${left <= 5 ? "urgent" : ""}`}>{left}</div>
-        <h2 class={`q-text ${qClass(q.text)}`}>{q.text}</h2>
+        <h2 class={`q-text ${qClass(q.text)}`}><Tex text={q.text} /></h2>
       </div>
       {q.image && !pin && <img class="q-img" src={`/${q.image}`} alt="" />}
       {pin ? (
@@ -204,7 +205,7 @@ function DuelAnswering({ view, send }: { view: PlayerDuelView; send: Send }) {
             return (
               <button key={i} class={`answer opt-${c}`} onClick={() => choose(i)}>
                 <Shape index={c} />
-                <span>{text}</span>
+                <span><Tex text={text} /></span>
               </button>
             );
           })}
@@ -283,7 +284,7 @@ function DuelReveal({ view }: { view: PlayerDuelView }) {
                 return (
                   <li key={i} class={`reveal-item opt-${c} is-correct`}>
                     <Shape index={c} />
-                    <span class="t">{q.options[i]}</span>
+                    <span class="t"><Tex text={q.options[i]!} /></span>
                     <span class="tag">✓ {r.correct.length > 1 ? "Correct" : "Answer"}</span>
                   </li>
                 );

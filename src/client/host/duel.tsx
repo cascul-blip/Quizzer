@@ -28,6 +28,7 @@ import { play } from "../shared/sounds.ts";
 import { Shape, optionColor, ordinal, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
 import { Award } from "./tower.tsx";
+import { Tex, visibleLength } from "../shared/tex.tsx";
 
 type DuelView = Extract<HostView, { kind: "duel" }>;
 type Facing = "left" | "right";
@@ -201,12 +202,12 @@ function Question({ view, send, secs }: { view: DuelView; send: Send; secs: numb
   const open = view.phase === "open";
   const reveal = view.phase === "reveal";
   const correct = new Set(view.correct ?? []);
-  const longest = Math.max(0, ...q.options.map((o) => o.length));
+  const longest = Math.max(0, ...q.options.map(visibleLength));
   const pin = q.type === "pin" && q.image && q.spots ? { image: q.image, spots: q.spots } : null;
   return (
     <>
-      <div class={`duel-question ${q.text.length > 160 ? "long" : q.text.length > 80 ? "medium" : ""} ${pin ? "is-pin" : ""}`}>
-        <h1>{q.text}</h1>
+      <div class={`duel-question ${visibleLength(q.text) > 160 ? "long" : visibleLength(q.text) > 80 ? "medium" : ""} ${pin ? "is-pin" : ""}`}>
+        <h1><Tex text={q.text} /></h1>
         {pin ? <PinBoard image={pin.image} spots={pin.spots} labels={q.options} correct={reveal ? [...correct] : undefined} /> : q.image && <img src={`/${q.image}`} alt="" />}
       </div>
       <TimerBar view={view} secs={secs} />
@@ -221,7 +222,7 @@ function Question({ view, send, secs }: { view: DuelView; send: Send; secs: numb
             return (
               <div key={i} class={`tile opt-${c} ${state}`}>
                 <Shape index={c} />
-                <span class="tile-text">{text}</span>
+                <span class="tile-text"><Tex text={text} /></span>
                 {state === "right" && <span class="tick">✓</span>}
               </div>
             );

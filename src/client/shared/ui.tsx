@@ -2,6 +2,7 @@ import { Component, type ComponentChildren } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { STREAK_MIN, TEAMS } from "../../shared/protocol.ts";
 import { PinIcon } from "./pin.tsx";
+import { Tex } from "./tex.tsx";
 
 /** Text colour on a team-coloured background: white, but dark on the bright yellow team. */
 export const teamInk = (color: string | undefined): string => (color?.toLowerCase() === TEAMS[2].color ? "#2b2100" : "#fff");
@@ -53,7 +54,9 @@ export function LockedChoice({ type, index, label }: { type: string; index: numb
   return (
     <div class={`locked opt-${c}`}>
       <Shape index={c} />
-      <span>{label}</span>
+      <span>
+        <Tex text={label} />
+      </span>
     </div>
   );
 }
