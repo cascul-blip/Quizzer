@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { arenaOf, climbLadder, compareDuelists, duelOutcome, pairArenas, type DuelAnswerInfo } from "../src/shared/duel-rules.ts";
+import { arenaOf, arenaPoints, climbLadder, compareDuelists, duelOutcome, pairArenas, standings, type DuelAnswerInfo } from "../src/shared/duel-rules.ts";
 
 const right = (ms: number): DuelAnswerInfo => ({ correct: true, ms });
 const wrong = (ms: number): DuelAnswerInfo => ({ correct: false, ms });
@@ -113,5 +113,20 @@ describe("climbLadder", () => {
   test("one player, two players", () => {
     expect(climbLadder(["a"], [["a"]], [["stay"]])).toEqual(["a"]);
     expect(climbLadder(["a", "b"], [["a", "b"]], [["win", "lose"]])).toEqual(["a", "b"]);
+  });
+});
+
+describe("points", () => {
+  test("a win is worth 1 in the bottom arena and 1 more for each arena above it", () => {
+    expect([1, 2, 3].map((a) => arenaPoints(a, 3))).toEqual([3, 2, 1]);
+    expect(arenaPoints(1, 1)).toBe(1);
+    expect(arenaPoints(1, 15)).toBe(15);
+    expect(arenaPoints(15, 15)).toBe(1);
+  });
+
+  test("standings: most points first, equal points by ladder order, off-ladder last", () => {
+    const p = (id: string, points: number) => ({ id, points });
+    const players = [p("a", 2), p("b", 5), p("c", 2), p("d", 0), p("x", 2)];
+    expect(standings(["d", "c", "b", "a"], players).map((q) => q.id)).toEqual(["b", "c", "a", "x", "d"]);
   });
 });

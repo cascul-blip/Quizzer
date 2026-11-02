@@ -6042,6 +6042,13 @@ select {
   color: #ff8a7a;
 }
 
+.duel-name-points {
+  color: var(--duel-gold);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  animation: pop-in 0.3s ease-out;
+}
+
 .duel-move {
   flex-basis: 100%;
   text-align: center;

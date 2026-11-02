@@ -85,6 +85,24 @@ export function climbLadder<T>(order: readonly T[], arenas: readonly (readonly T
   return [...ladder, ...order.filter((id) => !placed.has(id))];
 }
 
+/**
+ * Points for winning a duel in arena `arena` (1-based, 1 = top) when the round has `arenaCount` arenas:
+ * the bottom arena is worth 1, the one above it 2, and so on up to `arenaCount` for Arena 1.
+ */
+export function arenaPoints(arena: number, arenaCount: number): number {
+  return Math.max(1, arenaCount - arena + 1);
+}
+
+/**
+ * The final standings: most points first; equal points keep their ladder order (higher on the ladder first).
+ * Players not on the ladder go last.
+ */
+export function standings<T extends { id: string; points: number }>(ladder: readonly string[], players: readonly T[]): T[] {
+  const pos = new Map(ladder.map((id, i) => [id, i]));
+  const at = (p: T) => pos.get(p.id) ?? Number.MAX_SAFE_INTEGER;
+  return [...players].sort((a, b) => b.points - a.points || at(a) - at(b));
+}
+
 /** 1-based arena of each player in a ladder order. */
 export function arenaOf<T>(order: readonly T[]): Map<T, number> {
   const map = new Map<T, number>();

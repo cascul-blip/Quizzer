@@ -1043,13 +1043,14 @@ export interface PlayerRacerView {
 // Every round, all the duels run at once: players are paired from the top of the ladder (Arena 1 = High Noon),
 // an odd count makes the bottom arena a 3-way duel. Right beats wrong, both right → faster wins, both wrong → draw.
 // At each boundary the upper arena's loser swaps with the lower arena's winner, unless either arena was a draw.
+// A win scores points: 1 in the bottom arena, 1 more for each arena above it. Most points wins the game.
 // The rules live in duel-rules.ts. There is no lobby phase: the lobby is the classic game (mode "duel").
 
 /**
  * intro: 3 s look at the question (options hidden) while the duelists face off.
  * open: options visible, everyone answers once.
  * reveal: who drew first in each arena and who moves where (`lastRound`).
- * podium: the game is over; the ladder order is the final ranking.
+ * podium: the game is over; points decide the final ranking (equal points: higher on the ladder first).
  */
 export type DuelPhase = "intro" | "open" | "reveal" | "podium";
 
@@ -1075,6 +1076,8 @@ export interface DuelistResult extends DuelPlayerRef {
   ms: number | null;
   /** "win" moves up a boundary, "lose" moves down; a 3-way duel's middle player and everyone in a draw get "stay". */
   outcome: "win" | "lose" | "stay";
+  /** Points won this round: a win in the bottom arena is worth 1, each arena above it 1 more; 0 without a win. */
+  points: number;
   /** Arena (1-based) they are in for the next round. */
   nextArena: number;
 }
@@ -1113,8 +1116,9 @@ export interface HostDuelPlayer extends DuelPlayerRef {
   connected: boolean;
   /** 1-based arena now. */
   arena: number;
-  /** Final ranking position (1-based) = ladder order. */
+  /** Standing (1-based): most points first, equal points by ladder order. Also the final ranking. */
   rank: number;
+  points: number;
   wins: number;
   losses: number;
   draws: number;
@@ -1144,7 +1148,7 @@ export interface HostDuelState {
   correct: number[] | null;
   /** The latest finished round (this one on the reveal). Null before the first reveal. */
   lastRound: DuelRound | null;
-  /** Players in ladder order (rank 1 first). */
+  /** Players in standing order (rank 1 first). */
   players: HostDuelPlayer[];
   phaseRemainingMs: number;
   phaseDurationMs: number;
@@ -1157,7 +1161,7 @@ export interface PlayerDuelView {
   kind: "duel";
   phase: DuelPhase;
   title: string;
-  me: DuelPlayerRef & { arena: number; rank: number; wins: number; losses: number; draws: number; reign: number };
+  me: DuelPlayerRef & { arena: number; rank: number; points: number; wins: number; losses: number; draws: number; reign: number };
   playerCount: number;
   round: number;
   rounds: number;

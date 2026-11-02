@@ -136,9 +136,9 @@ export function buildRacerResultsCsv(game: RacerGame): string {
   return toCsv([header, ...rows]);
 }
 
-/** Showdown: one row per player in final ladder order, then each round's answer, correctness and time. */
+/** Showdown: one row per player in final ranking order (points, then ladder), then each round's answer, correctness and time. */
 export function buildDuelResultsCsv(game: DuelGame): string {
-  const header: string[] = ["Rank", "Nickname", "Final arena", "Start arena", "Wins", "Losses", "Draws", "Rounds won in Arena 1", "Correct", "Wrong"];
+  const header: string[] = ["Rank", "Nickname", "Points", "Final arena", "Start arena", "Wins", "Losses", "Draws", "Rounds won in Arena 1", "Correct", "Wrong"];
   const played = game.questions.slice(0, game.played);
   played.forEach((q, i) => {
     const n = i + 1;
@@ -147,7 +147,7 @@ export function buildDuelResultsCsv(game: DuelGame): string {
   const arenas = game.ladderArenas();
   const rows: (string | number)[][] = game.ranked().map((p, i) => {
     const final = arenas.get(p.id) ?? "";
-    const row: (string | number)[] = [i + 1, p.nickname, final, p.startArena || final, p.wins, p.losses, p.draws, p.reign, p.correct, p.wrong];
+    const row: (string | number)[] = [i + 1, p.nickname, p.points, final, p.startArena || final, p.wins, p.losses, p.draws, p.reign, p.correct, p.wrong];
     played.forEach((q, slot) => {
       const a = p.answers[slot];
       if (a) row.push((q.type === "text" ? a.text : q.options[a.option]) ?? "", a.correct ? "yes" : "no", (a.ms / 1000).toFixed(2));
