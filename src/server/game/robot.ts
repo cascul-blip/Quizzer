@@ -453,7 +453,8 @@ export class RobotGame {
       phaseRemainingMs: this.remainingMs(),
       me: { id: p.id, nickname: p.nickname, avatar: p.avatar, lives: p.lives, out: p.outRound !== null, points: p.points, correct: p.correct, x: p.x, y: p.y },
       question: this.phase === "quiz" ? this.stream.questionView(p) : null,
-      feedback: this.stream.feedbackView(p),
+      // Only while answering: a wrong-answer wait must never cover the arrows in the move phase.
+      feedback: this.phase === "quiz" ? this.stream.feedbackView(p) : null,
       board: onBoard
         ? {
             marked: [...this.marked].sort((x, y) => x - y),

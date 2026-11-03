@@ -167,6 +167,19 @@ describe("Robot Attack", () => {
     expect(game.move(a.id, "sideways" as never)).toBe(false);
   });
 
+  test("a player still waiting out a wrong-answer penalty can move, with no ✗ covering the arrows", () => {
+    const { game, clock } = setup(["A"]);
+    const a = byName(game, "A");
+    answer(game, clock, a, true);
+    answer(game, clock, a, false);
+    a.readyAt = clock.now() + 60_000; // a long streak's wait that runs past the quiz
+    toMove(game, clock);
+    expect(game.playerView(a.id)!.feedback).toBeNull();
+    a.x = 5;
+    a.y = 5;
+    expect(game.move(a.id, "right")).toBe(true);
+  });
+
   test("a player can't move onto another player's tile, and a blocked move costs nothing", () => {
     const { game, clock } = setup(["A", "B"]);
     const a = byName(game, "A");

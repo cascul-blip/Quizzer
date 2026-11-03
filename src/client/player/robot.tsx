@@ -54,7 +54,8 @@ export function RobotPlayer({ view, send }: { view: PlayerRobotView; send: Send 
         )}
       </header>
       {body}
-      <Feedback feedback={view.feedback} rightText={view.me.out ? "Correct!" : "+1 move ⚡"} />
+      {/* Unmounted outside the quiz so a lingering ✗ (and its wait) never blocks moving. */}
+      {view.phase === "quiz" && <Feedback feedback={view.feedback} rightText={view.me.out ? "Correct!" : "+1 move ⚡"} />}
     </div>
   );
 }
