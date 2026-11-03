@@ -336,9 +336,9 @@ The painted art comes from `scripts/showdown-art.py` (sources in `scripts/showdo
 
 Every player for themselves in a kart race on an Indy-500-style oval. Choose **Game mode → 🏎 Kart Rally** in the lobby. Setting: **Rounds** (3, 4, 5, 6, 7, 8 or 10, default 5). After a 3, 2, 1 countdown, each round has three parts. The full rules are in `Kart Rally.md`.
 
-- **Quiz (15 seconds).** Everyone answers their own stream of questions on their phone as fast as they can, as in Robot Attack. **Each correct answer is 1 point**, and each point is **1 second of driving**.
+- **Quiz (15 seconds).** Everyone answers their own stream of questions on their phone as fast as they can, as in Robot Attack. **Each correct answer is 1 point**, and each point is **3 seconds of driving**.
 - **Intro.** Two crossed checkered flags and "Get ready to drive in 3, 2, 1".
-- **Drive.** The gas is always on; every player steers their own car with a **steering wheel on their phone**: drag it to turn (up to 135° each way), and let go to spring it back to the centre. The track is only on the projector, so look up to drive. The edges are **walls**: a car that hits one bounces off and slows down for a moment. Cars are **ghosts** and drive through each other. When a car runs out of fuel it coasts to a stop and waits there for the next round, so **positions carry over**. The drive ends when the last car stops (at most 20 seconds).
+- **Drive.** The gas is always on; every player steers their own car with a **steering wheel on their phone**: drag it to turn (up to 135° each way), and let go to spring it back to the centre. The track is only on the projector, so look up to drive. The edges are **walls**: a car that hits one bounces off and slows down for a moment. Cars are **ghosts** and drive through each other. When a car runs out of fuel it coasts to a stop and waits there for the next round, so **positions carry over**. The drive ends when the last car stops (at most 60 seconds).
 
 The projector shows a top-down oval with open-wheel cars in each player's colour, each with a name tag showing the player's avatar. After the last round, **the player who has driven furthest wins** (laps plus progress round the lap). The podium awards **Most correct answers** and **Smoothest driver** (fewest wall hits among players who drove).
 

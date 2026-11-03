@@ -100,7 +100,7 @@ export function KartStage({ view, send }: { view: KartView; send: Send }) {
                       Round {view.round} of {view.rounds}
                     </div>
                     <div>📱 Answer questions on your phone</div>
-                    <div class="kart-quiz-sub">Every correct answer = {KART_MS_PER_POINT / 1000} second of driving</div>
+                    <div class="kart-quiz-sub">Every correct answer = {KART_MS_PER_POINT / 1000} seconds of driving</div>
                   </div>
                 )}
               </div>
@@ -109,7 +109,7 @@ export function KartStage({ view, send }: { view: KartView; send: Send }) {
             {view.phase === "countdown" && (
               <div class="countdown-overlay kart-overlay">
                 <div class="countdown-label">
-                  Answer questions on your phone to earn fuel: every correct answer is 1 second of driving.
+                  Answer questions on your phone to earn fuel: every correct answer is {KART_MS_PER_POINT / 1000} seconds of driving.
                   <br />
                   Then steer your car with the wheel on your phone. The gas is always on!
                   <br />

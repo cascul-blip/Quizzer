@@ -10,7 +10,7 @@ Settings:
 ## Quiz
 The quiz lasts **15 seconds**.  A bar across the top of the projector drains as time runs out.
 
-Everyone answers their own stream of questions on their phone as fast as they can, the same as in Robot Attack.  **Each correct answer is 1 point**, and each point is **1 second of driving** in the next drive.  Questions come in a random order and repeat once the quiz runs out.
+Everyone answers their own stream of questions on their phone as fast as they can, the same as in Robot Attack.  **Each correct answer is 1 point**, and each point is **3 seconds of driving** in the next drive.  Questions come in a random order and repeat once the quiz runs out.
 
 ## Intro
 Two crossed checkered flags fill the projector with the words "Get ready to drive in 3, 2, 1".  Phones switch to the steering wheel.
@@ -22,7 +22,7 @@ Two crossed checkered flags fill the projector with the words "Get ready to driv
 * **Cars are ghosts.**  They drive through each other, so nobody can block or ram anyone.
 * When a car runs out of fuel it **coasts to a stop** and waits there.  A player with 0 points doesn't move this round.
 * **Positions carry over.**  The next drive starts from wherever each car stopped, facing the way it was going.
-* The drive ends when the last car stops (at most 20 seconds), then the next round's quiz starts.
+* The drive ends when the last car stops (at most 60 seconds), then the next round's quiz starts.
 
 ## Steering
 The phone shows a large steering wheel.
@@ -51,7 +51,7 @@ A game starts with a 3, 2, 1 countdown, then each round is: a 15 second quiz, th
 
 Each correct answer is 1 point.  Wrong answers cost nothing, apart from the wait when Protect from abuse is on.
 
-Each point is 1 second of driving.  Points don't carry over: the fuel for each drive comes only from that round's quiz.
+Each point is 3 seconds of driving.  Points don't carry over: the fuel for each drive comes only from that round's quiz.
 
 The gas is always on; players only steer.  The wheel turns ±135° and springs back to the centre when released.
 
@@ -63,7 +63,7 @@ Cars are ghosts: there are no collisions between cars.
 
 A car that runs out of fuel coasts to a stop and waits there.  Positions carry over between rounds.
 
-The drive ends when the last car stops, or after 20 seconds.
+The drive ends when the last car stops, or after 60 seconds.
 
 The winner is the player who has driven the furthest (laps plus progress round the current lap) after the last round.
 

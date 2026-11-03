@@ -10,7 +10,7 @@ import { COUNTDOWN_MS as CUP_COUNTDOWN_MS } from "../src/server/game/cup.ts";
 import { COUNTDOWN_MS as DRAGON_COUNTDOWN_MS } from "../src/server/game/dragon.ts";
 import { BOMB_COUNTDOWN_MS, BOMB_HOLD_MS, BOMB_NEXT_MS, BOMB_RESULT_MS } from "../src/shared/protocol.ts";
 import { SIEGE_COUNTDOWN_MS, SIEGE_OPENING_MS } from "../src/shared/siege-rules.ts";
-import { KART_COUNTDOWN_MS, KART_INTRO_MS, KART_QUIZ_MS, KART_TICK_MS } from "../src/shared/kart-rules.ts";
+import { KART_COUNTDOWN_MS, KART_INTRO_MS, KART_MS_PER_POINT, KART_QUIZ_MS, KART_TICK_MS } from "../src/shared/kart-rules.ts";
 import { BOOST_MIN_HOLD_MS, COUNTDOWN_MS as SUB_COUNTDOWN_MS } from "../src/server/game/submarine.ts";
 import { startServer, type RunningServer } from "../src/server/http.ts";
 import { isAdminRequest } from "../src/server/network.ts";
@@ -1336,7 +1336,7 @@ describe("Kart Rally over WebSockets", () => {
     clock.advance(KART_INTRO_MS);
     srv.hub.broadcast();
     await host.hostState((v) => v.kind === "kart" && v.phase === "drive");
-    await ann.playerState((v) => v.kind === "kart" && v.phase === "drive" && v.fuelStartMs === 1000);
+    await ann.playerState((v) => v.kind === "kart" && v.phase === "drive" && v.fuelStartMs === KART_MS_PER_POINT);
 
     // Full right lock: the projector's next tick shows Ann's wheel turned.
     ann.send({ type: "kart.steer", wheel: 1 });

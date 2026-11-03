@@ -138,7 +138,7 @@ describe("Kart Rally", () => {
     expect(view.fuelMs).toBe(3 * KART_MS_PER_POINT);
     expect(view.fuelStartMs).toBe(3 * KART_MS_PER_POINT);
     clock.advance(1000);
-    expect(game.playerView(a.id)!.fuelMs).toBe(2000);
+    expect(game.playerView(a.id)!.fuelMs).toBe(3 * KART_MS_PER_POINT - 1000);
     finishDrive(game, clock);
     expect(a.drivenMs).toBe(3 * KART_MS_PER_POINT);
     expect(a.car.distance).toBeGreaterThan(gridSlot(0, 2).distance + 500);
@@ -325,7 +325,7 @@ describe("Kart Rally", () => {
     expect(c.current).not.toBeNull();
     earn(game, clock, "C", 2);
     toDrive(game, clock);
-    expect(c.fuelStartMs).toBe(2000);
+    expect(c.fuelStartMs).toBe(2 * KART_MS_PER_POINT);
     const d = game.join("D");
     expect(d.car).toEqual(gridSlot(3, 4));
     expect(d.moving).toBe(false);

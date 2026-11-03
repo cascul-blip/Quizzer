@@ -46,12 +46,12 @@ const COAST_PER_S = 2;
 export const KART_QUIZ_MS = 15_000;
 export const KART_INTRO_MS = 3000;
 export const KART_COUNTDOWN_MS = 3000;
-export const KART_DRIVE_CAP_MS = 20_000;
+export const KART_DRIVE_CAP_MS = 60_000;
 /** After the last car stops, the drive phase holds this long before the next round. */
 export const KART_DRIVE_HOLD_MS = 1500;
 export const KART_TICK_MS = 50;
 /** Each correct answer buys this much driving. */
-export const KART_MS_PER_POINT = 1000;
+export const KART_MS_PER_POINT = 3000;
 export const KART_ROUND_CHOICES = [3, 4, 5, 6, 7, 8, 10] as const;
 export const KART_DEFAULT_ROUNDS = 5;
 

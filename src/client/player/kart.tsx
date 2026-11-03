@@ -1,7 +1,7 @@
 import type { Ref } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { ClientMsg, PlayerKartView } from "../../shared/protocol.ts";
-import { KART_TICK_MS, METRES_PER_UNIT, WHEEL_MAX_DEG } from "../../shared/kart-rules.ts";
+import { KART_MS_PER_POINT, KART_TICK_MS, METRES_PER_UNIT, WHEEL_MAX_DEG } from "../../shared/kart-rules.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
 import { Feedback, StreamQuestion } from "./tower.tsx";
@@ -23,7 +23,7 @@ export function KartPlayer({ view, send }: { view: PlayerKartView; send: Send })
     body = (
       <main class="center">
         <CheckeredFlags />
-        <p class="muted">Answer questions to earn fuel — each correct answer is 1 second of driving. Then steer your car from your phone!</p>
+        <p class="muted">Answer questions to earn fuel — each correct answer is {KART_MS_PER_POINT / 1000} seconds of driving. Then steer your car from your phone!</p>
         <div class="tower-count">{Math.max(1, secs)}</div>
       </main>
     );
@@ -57,7 +57,7 @@ export function KartPlayer({ view, send }: { view: PlayerKartView; send: Send })
         </span>
       </header>
       {body}
-      <Feedback feedback={view.feedback} rightText="+1 s fuel ⛽" />
+      <Feedback feedback={view.feedback} rightText={`+${KART_MS_PER_POINT / 1000} s fuel ⛽`} />
     </div>
   );
 }
