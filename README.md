@@ -104,7 +104,7 @@ quizzer mcp [options]       Run the MCP server over stdio (for AI agents)
 - **Shuffling** is chosen in the lobby for each game; the quiz's shuffle settings in the editor are the defaults. Shuffling answer positions moves each answer to a random tile (and color), so the correct answer isn't always in the same place. The order is fixed when you press Start and is the same on the projector and every phone. True/False keeps True before False.
 - **Streaks**: after 4 correct answers in a row, a player gets 🔥x4 (x5, x6, …) next to their name on the leaderboard, the podium and their phone. A wrong or missed answer resets it.
 - **Show errors**: on the final screen of every game mode, this button swaps the results for a table of the **10 questions with the most wrong answers**, each with its correct answer, so you can go over them with the class. Press **Show results** to switch back. Classic and Racer count wrong answers only, not questions a player let time out; in the other modes a question can come up more than once, and every wrong answer counts.
-- **Protect from abuse**: a lobby checkbox, on by default, for **Tallest Tower**, **Submarine Squad**, **Tower Fight**, **Robot Attack**, **Cup of Death**, **Dragon's Hoard** and **Kingdom Siege**. It slows down players who tap random answers instead of reading. The ✗ screen normally shows for 1 second; after **2 wrong answers in a row** it stays **3 seconds longer**, and after **3 or more in a row**, **4 seconds longer**, with a countdown on the phone. A correct answer resets it. Reloading the page doesn't skip the wait.
+- **Protect from abuse**: a lobby checkbox, on by default, for **Tallest Tower**, **Submarine Squad**, **Tower Fight**, **Robot Attack**, **Cup of Death**, **Dragon's Hoard**, **Kingdom Siege** and **Kart Rally**. It slows down players who tap random answers instead of reading. The ✗ screen normally shows for 1 second; after **2 wrong answers in a row** it stays **3 seconds longer**, and after **3 or more in a row**, **4 seconds longer**, with a countdown on the phone. A correct answer resets it. Reloading the page doesn't skip the wait.
 - **Results file**: a CSV of every finished game is saved in `data/results/`. The latest one is also at `http://localhost:8080/api/results/latest.csv` on the host computer.
 - **Reconnecting**: if a phone locks, refreshes or drops Wi-Fi, it rejoins as the same player with the same score. Players can also join after the game has started.
 - Only one game runs at a time. The admin, host controls and API only work from the host computer itself (`localhost`). Phones can only reach the player page.
@@ -332,6 +332,16 @@ Late joiners start at the bottom of the ladder from the next round. A disconnect
 
 The painted art comes from `scripts/showdown-art.py` (sources in `scripts/showdown-art/`, prompts in `Showdown Art Brief.md`); the draw, hat flip, muzzle flash, dust, tumbleweed and walking are animated in code (`src/client/shared/duel-art.tsx`).
 
+## Kart Rally mode
+
+Every player for themselves in a kart race on an Indy-500-style oval. Choose **Game mode → 🏎 Kart Rally** in the lobby. Setting: **Rounds** (3, 4, 5, 6, 7, 8 or 10, default 5). After a 3, 2, 1 countdown, each round has three parts. The full rules are in `Kart Rally.md`.
+
+- **Quiz (15 seconds).** Everyone answers their own stream of questions on their phone as fast as they can, as in Robot Attack. **Each correct answer is 1 point**, and each point is **1 second of driving**.
+- **Intro.** Two crossed checkered flags and "Get ready to drive in 3, 2, 1".
+- **Drive.** The gas is always on; every player steers their own car with a **steering wheel on their phone**: drag it to turn (up to 135° each way), and let go to spring it back to the centre. The track is only on the projector, so look up to drive. The edges are **walls**: a car that hits one bounces off and slows down for a moment. Cars are **ghosts** and drive through each other. When a car runs out of fuel it coasts to a stop and waits there for the next round, so **positions carry over**. The drive ends when the last car stops (at most 20 seconds).
+
+The projector shows a top-down oval with open-wheel cars in each player's colour, each with a name tag showing the player's avatar. After the last round, **the player who has driven furthest wins** (laps plus progress round the lap). The podium awards **Most correct answers** and **Smoothest driver** (fewest wall hits among players who drove).
+
 ## Music
 
 Every game mode has **built-in background music** on the projector (phones stay quiet). It's composed in code and played on **recordings of real instruments**: grand piano, string sections, brass, flute, harp, organ, timpani and a drum kit, about 4 MB built into the program. The recordings are public domain (CC0) or free to use with credit (see `src/client/shared/music/samples/CREDITS.md`). Tallest Tower and Racer keep their chiptune and 80s-synth sound on purpose. Add `?music=synth` to the host page's address to hear every track on the older synthesized instruments:
@@ -350,6 +360,7 @@ Every game mode has **built-in background music** on the projector (phones stay 
 | Bomb Squad | Spy-jazz: bass, brushes and a vibraphone | The defuse theme adds a tick and more layers, and speeds up, as the bomb runs down (extra urgency under 30 seconds). A fanfare if the bomb is defused; a low boom if it explodes |
 | Kingdom Siege | A pastoral lobby with recorder, lute and tabor; a marching battle theme with snare, recorders and brass | The march adds layers as monsters fill the board and as hearts are lost; low brass and timpani for a giant; drums and a held chord during breaks. Church bells and a fanfare if the kingdom stands; a low brass lament if the castle falls |
 | Showdown | Original Spaghetti Western music: a whistled tune over a twangy guitar's habanera, a jaw harp and anvil pings; a lone rider's whistle in the lobby | Builds from the intro on (rounds are quick) and peaks halfway through the question: the guitar, a gallop, timpani, whip cracks, chanted "hup!" stabs and strings, then the trumpet takes the tune. A whip-and-anvil "draw" sting on each reveal; a sunset trumpet-and-whistle tune on the podium |
+| Kart Rally | Original synth-rock with an engine under it: an idling engine buzz, a driving rock beat, chugging bass, twangy power chords and a square-wave lead | One track for the whole round: idling engines at the start of the quiz, building into the full band as the quiz runs out and through the flags, then faster with the engines at full revs while the cars drive. A victory-lap rock anthem on the podium |
 
 The lobby plays the music of whichever game mode is selected. Use the **🎵 button and slider** in the projector's top bar to turn music off or change its volume. The 🔊 button still mutes everything.
 
@@ -371,6 +382,7 @@ Put audio files (MP3, OGG, M4A, WAV, WebM or FLAC) in the **`data/music`** folde
 | `bomb-lobby` · `bomb-defuse` · `bomb-results` | Bomb Squad: lobby, defusing, the defused or exploded ending and the podium |
 | `siege-lobby` · `siege-battle` · `siege-results` | Kingdom Siege: lobby; countdown, build breaks and waves; the kingdom stands or the castle falls, and the podium |
 | `showdown-lobby` · `showdown` · `showdown-draw` · `showdown-results` | Showdown: lobby, the standoff (question and reveal), the draw sting (plays once on each reveal), final podium |
+| `kart-lobby` · `kart-race` · `kart-results` | Kart Rally: lobby; quiz, intro and drive; final podium |
 
 For example, `data/music/submarine-chase.mp3`. Your files loop; they don't speed up with the game like the built-in music does. Only use music you're allowed to play: royalty-free or Creative Commons tracks (e.g. Pixabay Music, OpenGameArt, or incompetech with credit). Delete a file to go back to the built-in track.
 

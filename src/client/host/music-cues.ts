@@ -16,6 +16,7 @@ const LOBBY: Record<GameMode, MusicTrackId> = {
   bomb: "bomb-lobby",
   siege: "siege-lobby",
   duel: "showdown-lobby",
+  kart: "kart-lobby",
 };
 
 let landKey = "";
@@ -167,6 +168,18 @@ export function musicFor(view: HostView | null): MusicCue {
       const busy = Math.min(1, view.monsterCount / 10);
       const intensity = Math.max(0.2, Math.min(giant ? 1 : 0.84, 0.2 + busy * 0.35 + lost * 0.45), giant ? 0.85 : 0);
       return { track: "siege-battle", intensity, key: `siege-wave-${view.wave}` };
+    }
+    case "kart": {
+      if (view.phase === "podium") return { track: "kart-results" };
+      // One track for the whole round: engines idle at the start of the quiz, the band builds
+      // as its time runs out and through the flags, and plays flat out (faster) while the cars drive.
+      if (view.phase === "quiz") {
+        const elapsed = Math.max(0, Math.min(1, 1 - view.phaseRemainingMs / Math.max(1, view.phaseDurationMs)));
+        return { track: "kart-race", intensity: 0.15 + elapsed * 0.4, rampTo: 0.55, rampMs: view.phaseRemainingMs, key: `kart-q${view.round}` };
+      }
+      if (view.phase === "intro") return { track: "kart-race", intensity: 0.6, rampTo: 0.8, rampMs: view.phaseRemainingMs, key: `kart-intro${view.round}` };
+      if (view.phase === "drive") return { track: "kart-race", intensity: 1, key: `kart-drive${view.round}` };
+      return { track: "kart-race", intensity: 0.05, key: "kart-countdown" };
     }
   }
 }

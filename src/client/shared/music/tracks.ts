@@ -13,6 +13,9 @@
  * Showdown = original Spaghetti Western music in the shape of a title theme: electric-guitar tremolo,
  *   a sparse whistle, flute in the gaps, anvil, whip and "hup!" stabs, the trumpet taking the tune as time
  *   runs out, and a one-shot draw sting. In D minor (the podium in D major), apart from Cup of Death's A minor.
+ * Kart Rally = original synth-rock racing loops: an idling engine buzz, chugging bass, twangy power chords
+ *   and a square-wave lead. The race track builds from idling engines at the start of the quiz to the
+ *   full band, faster and with the engines at full revs, while the cars drive.
  * Any of these can be replaced by an audio file in data/music/<id>.<ext>.
  */
 import type { MusicTrackId } from "../../../shared/music-tracks.ts";
@@ -1414,6 +1417,152 @@ const showdownResults: Track = {
   ],
 };
 
+// ---------- Kart Rally: synth-rock with an engine under it (original) ----------
+// E minor for the lobby and the race, G major on the podium. A buzzy low "engine" (pulse
+// sixteenths on the root) idles under everything, a chugging bass and twangy power chords
+// play the rock part, and a square-wave lead takes the hook.
+
+const FIFTHS: Record<string, string> = { C: "G", D: "A", E: "B", F: "C", G: "D", A: "E", B: "F#" };
+/** Power chord for the guitar: root, fifth and octave ("E3" → E3+B3+E4). Naturals only. */
+const power = (root: string) => {
+  const name = root[0]!;
+  const oct = Number(root.slice(1));
+  const fifth = FIFTHS[name]!;
+  return chord(`${root} ${fifth}${"CDEFGAB".indexOf(fifth[0]!) < "CDEFGAB".indexOf(name) ? oct + 1 : oct} ${name}${oct + 1}`);
+};
+/** A motor ticking over: sixteenths with a lumpy idle (strong-weak pulses). */
+const idle = (note: string) => pump(note, "x.xxx.xxx.xxx.xx");
+/** Engine at full revs: every sixteenth. */
+const revs = (note: string) => pump(note, "xxxxxxxxxxxxxxxx");
+/** Palm-muted eighth-note chug with a push into the next bar. */
+const chug = (note: string) => pump(note, "x.x.x.x.x.x.x.xx");
+
+const KART_LOBBY_ROOTS = ["E2", "C2", "D2", "B1"];
+
+const kartLobby: Track = {
+  id: "kart-lobby",
+  bpm: 116,
+  bars: 4,
+  layers: [
+    // Engines idling on the grid.
+    { inst: "pulse", bars: KART_LOBBY_ROOTS.map((r) => idle(octaveUp(r, -1))), vol: 0.22 },
+    { inst: "kick", bars: [drum("x.....x.x.......")], vol: 0.85 },
+    { inst: "snare", bars: [drum("....x.......x..."), drum("....x.......x..."), drum("....x.......x..."), drum("....x.......x.xx")], vol: 0.6 },
+    { inst: "hat", bars: [drum("x.x.x.x.x.x.x.x.")], vol: 0.55 },
+    { inst: "bass", bars: KART_LOBBY_ROOTS.map(chug), vol: 0.85 },
+    {
+      inst: "twang",
+      bars: KART_LOBBY_ROOTS.map((r) => {
+        const p = power(octaveUp(r));
+        return seq([p, 3], [p, 3], [".", 2], [p, 2], [".", 2], [p, 4]);
+      }),
+      vol: 0.5,
+    },
+    {
+      inst: "lead",
+      bars: [
+        seq(["E5", 2], ["G5", 2], ["B5", 4], ["A5", 2], ["G5", 2], ["E5", 4]),
+        seq(["G5", 2], ["E5", 2], ["C5", 4], [".", 4], ["E5", 2], ["G5", 2]),
+        seq(["A5", 3], ["F#5", 3], ["D5", 2], ["F#5", 2], ["A5", 2], ["D6", 4]),
+        seq(["B5", 6], ["A5", 2], ["F#5", 4], ["D#5", 4]),
+      ],
+      vol: 0.6,
+    },
+  ],
+};
+
+// 8 bars: Em C D B / Em C G D. The lead's hook is two answering phrases.
+const KART_ROOTS = ["E2", "C2", "D2", "B1", "E2", "C2", "G1", "D2"];
+const KART_CHORDS = ["E4 G4 B4", "E4 G4 C5", "D4 F#4 A4", "D#4 F#4 B4", "E4 G4 B4", "E4 G4 C5", "D4 G4 B4", "D4 F#4 A4"];
+
+const kartRace: Track = {
+  id: "kart-race",
+  // 128 BPM as the quiz starts, about 166 once the cars are driving.
+  bpm: 128,
+  bars: 8,
+  tempoBoost: 0.3,
+  layers: [
+    // Quiz start: idling engines, a ticking hat and a root note per beat.
+    { inst: "pulse", bars: KART_ROOTS.map((r) => idle(octaveUp(r, -1))), vol: 0.24, to: 0.85 },
+    { inst: "hat", bars: [drum("x.x.x.x.x.x.x.x.")], vol: 0.5, to: 0.8 },
+    { inst: "bass", bars: KART_ROOTS.map((r) => pump(r, "x...x...x...x...")), vol: 0.75, to: 0.25 },
+    // Warming up: a rock beat and a chugging bass.
+    { inst: "kick", bars: [drum("x.....x.x.......")], vol: 0.85, from: 0.25, to: 0.7 },
+    { inst: "bass", bars: KART_ROOTS.map(chug), vol: 0.85, from: 0.25 },
+    // Building: backbeat and power chords on the accents.
+    { inst: "snare", bars: [drum("....x.......x..."), drum("....x.......x..."), drum("....x.......x..."), drum("....x.......x.xx")], vol: 0.6, from: 0.4 },
+    { inst: "twang", bars: KART_ROOTS.map((r) => pump(power(octaveUp(r)), "x..x..x...x..x..")), vol: 0.45, from: 0.4, to: 0.7 },
+    // The hook comes in as the quiz nears its end.
+    {
+      inst: "lead",
+      bars: [
+        seq(["B4", 2], ["E5", 2], ["G5", 2], ["E5", 2], ["B5", 4], ["A5", 2], ["G5", 2]),
+        seq(["G5", 2], ["E5", 2], ["C5", 2], ["E5", 2], ["G5", 4], ["E5", 4]),
+        seq(["F#5", 2], ["A5", 2], ["D6", 4], ["C6", 2], ["A5", 2], ["F#5", 4]),
+        seq(["D#5", 3], ["F#5", 3], ["B5", 6], [".", 2], ["B4", 2]),
+        seq(["B4", 2], ["E5", 2], ["G5", 2], ["E5", 2], ["B5", 4], ["C6", 2], ["B5", 2]),
+        seq(["C6", 2], ["B5", 2], ["G5", 2], ["E5", 2], ["G5", 4], ["C6", 4]),
+        seq(["B5", 3], ["G5", 3], ["D5", 2], ["G5", 2], ["B5", 2], ["D6", 4]),
+        seq(["F#6", 4], ["E6", 2], ["D6", 2], ["A5", 4], ["F#5", 2], ["A5", 2]),
+      ],
+      vol: 0.7,
+      from: 0.55,
+    },
+    // Intro and drive: the full band, driving kick and sixteenth-note guitar chug.
+    { inst: "kick", bars: [drum("x...x...x...x..."), drum("x...x...x...x..."), drum("x...x...x...x..."), drum("x...x...x.x.x.x.")], vol: 0.9, from: 0.7 },
+    { inst: "twang", bars: KART_ROOTS.map((r) => pump(power(octaveUp(r)), "x.xxx.xxx.xxx.x.")), vol: 0.42, from: 0.7 },
+    {
+      inst: "pulse",
+      bars: KART_CHORDS.map((c) => {
+        const [a, b, d] = c.split(" ").map((n) => octaveUp(n)) as [string, string, string];
+        return arp([a, b, d, b]);
+      }),
+      vol: 0.18,
+      from: 0.7,
+    },
+    { inst: "openhat", bars: [drum("..x...x...x...x.")], vol: 0.45, from: 0.8 },
+    { inst: "hat", bars: [drum("xxxxxxxxxxxxxxxx")], vol: 0.4, from: 0.8 },
+    { inst: "cymbal", bars: [once("x"), rest, rest, rest], vol: 0.45, from: 0.8 },
+    // Flat out: the engines roar at full revs under it all.
+    { inst: "pulse", bars: KART_ROOTS.map((r) => revs(r)), vol: 0.2, from: 0.85 },
+    { inst: "snare", bars: [rest, rest, rest, rest, rest, rest, rest, drum("........x.x.xxxx")], vol: 0.5, from: 0.85 },
+  ],
+};
+
+// 8 bars in G major: G D Em C / G D C D-G, the hook from the race turned into a victory lap.
+const KART_WIN_ROOTS = ["G1", "D2", "E2", "C2", "G1", "D2", "C2", "D2"];
+const KART_WIN_CHORDS = ["G3 B3 D4", "F#3 A3 D4", "G3 B3 E4", "G3 C4 E4", "G3 B3 D4", "F#3 A3 D4", "G3 C4 E4", "F#3 A3 D4"];
+
+const kartResults: Track = {
+  id: "kart-results",
+  bpm: 120,
+  bars: 8,
+  layers: [
+    { inst: "kick", bars: [drum("x...x...x...x...")], vol: 0.85 },
+    { inst: "snare", bars: [drum("....x.......x..."), drum("....x.......x..."), drum("....x.......x..."), drum("....x...x.x.xxxx")], vol: 0.6 },
+    { inst: "hat", bars: [drum("x.x.x.x.x.x.x.x.")], vol: 0.5 },
+    { inst: "cymbal", bars: [once("x"), rest, rest, rest], vol: 0.5 },
+    { inst: "bass", bars: KART_WIN_ROOTS.map((r) => bounce(r, octaveUp(r))), vol: 0.85 },
+    { inst: "twang", bars: KART_WIN_ROOTS.map((r) => seq([power(octaveUp(r)), 6], [power(octaveUp(r)), 2], [".", 2], [power(octaveUp(r)), 6])), vol: 0.45 },
+    { inst: "pad", bars: KART_WIN_CHORDS.map((c) => hold(chord(c))), vol: 0.5 },
+    {
+      inst: "lead",
+      bars: [
+        seq(["D5", 2], ["G5", 2], ["B5", 4], ["A5", 2], ["G5", 2], ["D5", 4]),
+        seq(["F#5", 2], ["A5", 2], ["D6", 6], [".", 2], ["C6", 2], ["A5", 2]),
+        seq(["B5", 2], ["G5", 2], ["E5", 4], ["G5", 2], ["B5", 2], ["E6", 4]),
+        seq(["E6", 3], ["D6", 3], ["C6", 2], ["G5", 6], [".", 2]),
+        seq(["D5", 2], ["G5", 2], ["B5", 4], ["D6", 2], ["B5", 2], ["G5", 4]),
+        seq(["A5", 2], ["D6", 2], ["F#6", 6], [".", 2], ["E6", 2], ["D6", 2]),
+        seq(["E6", 4], ["C6", 2], ["G5", 2], ["C6", 4], ["E6", 4]),
+        seq(["D6", 4], ["F#6", 4], ["G6", 8]),
+      ],
+      vol: 0.65,
+    },
+    { inst: "brass", bars: [rest, rest, rest, rest, rest, rest, seq(["G4", 4], ["C5", 4], ["E5", 8]), seq(["F#4", 4], ["A4", 4], ["B4", 8])], vol: 0.55 },
+  ],
+};
+
 export const TRACKS: Record<MusicTrackId, Track> = {
   "classic-lobby": classicLobby,
   "classic-question": classicQuestion,
@@ -1458,4 +1607,7 @@ export const TRACKS: Record<MusicTrackId, Track> = {
   showdown,
   "showdown-draw": showdownDraw,
   "showdown-results": showdownResults,
+  "kart-lobby": kartLobby,
+  "kart-race": kartRace,
+  "kart-results": kartResults,
 };
