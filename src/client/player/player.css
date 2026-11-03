@@ -3530,3 +3530,285 @@ h1 {
   width: 100%;
   height: 100%;
 }
+
+/* ---------- Kart Rally ---------- */
+
+.kart-game {
+  background: radial-gradient(ellipse at 50% 0%, #2c3e50 0%, #141c26 70%);
+}
+
+/* The intro and the drive are locked to the screen so the wheel never scrolls. */
+.kart-game.fit-screen {
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.kart-game > main {
+  min-height: 0;
+}
+
+.kart-stats {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.kart-swatch {
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+  vertical-align: middle;
+}
+
+.kart-swatch.big {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  margin: 0 2px;
+}
+
+.kart-points {
+  background: rgba(255, 255, 255, 0.15);
+  padding: 2px 10px;
+  border-radius: 6px;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.kart-emoji {
+  font-size: 72px;
+}
+
+.kart-flags {
+  width: 150px;
+  height: auto;
+  filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.3));
+}
+
+.kart-flags.big {
+  width: min(220px, 50vw, 28dvh);
+}
+
+/* intro */
+
+.kart-intro {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 16px;
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+  text-align: center;
+}
+
+.kart-intro-lead {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.kart-intro-count {
+  font-size: min(120px, 18dvh);
+  font-weight: 900;
+  line-height: 1;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  animation: pop-in 0.35s ease-out;
+}
+
+.kart-you {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 19px;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 6px 16px 6px 6px;
+  border-radius: 999px;
+}
+
+.kart-you-avatar {
+  width: 48px;
+  height: 48px;
+}
+
+.kart-intro-fuel {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--accent);
+}
+
+.kart-intro-fuel.empty {
+  color: var(--on-bg-soft);
+}
+
+/* drive */
+
+.kart-drive {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  padding-bottom: max(14px, env(safe-area-inset-bottom));
+}
+
+.kart-wheel-pad {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  cursor: grab;
+  position: relative;
+}
+
+.kart-wheel-pad:active {
+  cursor: grabbing;
+}
+
+/* Fills the pad; the viewBox keeps it round and centred, so it fits whichever side is shorter. */
+.kart-wheel {
+  display: block;
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 100%;
+  height: 100%;
+  max-width: 560px;
+  max-height: 560px;
+  pointer-events: none;
+  transition: opacity 0.4s, filter 0.4s;
+}
+
+.kart-wheel-turn {
+  will-change: transform;
+}
+
+.kart-drive.out .kart-wheel {
+  opacity: 0.35;
+  filter: grayscale(0.8);
+}
+
+.kart-fuel {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.kart-fuel-head {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 800;
+  font-size: 18px;
+}
+
+.kart-fuel-secs {
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.kart-fuel-track {
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  overflow: hidden;
+}
+
+.kart-fuel-bar {
+  height: 100%;
+  width: 100%;
+  transform-origin: left center;
+  background: linear-gradient(90deg, #e0344a 0%, #f4a100 35%, #2fa84f 75%);
+  background-size: 100% 100%;
+}
+
+.kart-fuel-msg {
+  margin: 0;
+  text-align: center;
+  font-weight: 800;
+  font-size: 18px;
+  color: var(--on-bg-soft);
+  flex-shrink: 0;
+}
+
+/* Landscape phones: the gauge sits beside the wheel. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .kart-drive {
+    flex-direction: row;
+    padding: 6px 16px;
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+
+  .kart-wheel-pad {
+    align-self: stretch;
+  }
+
+  .kart-fuel,
+  .kart-drive > .kart-fuel-msg {
+    width: 34%;
+    max-width: 260px;
+  }
+
+  .kart-intro {
+    display: grid;
+    grid-template-columns: auto auto;
+    grid-template-rows: auto auto auto auto;
+    column-gap: 24px;
+    row-gap: 6px;
+    align-content: center;
+    justify-content: center;
+  }
+
+  .kart-intro .kart-flags {
+    grid-row: 1 / span 4;
+    width: min(260px, 36vw, 55dvh);
+  }
+}
+
+/* podium */
+
+.kart-result-stats {
+  display: flex;
+  gap: 12px;
+}
+
+.kart-result-stats > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 96px;
+  padding: 10px 16px;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.kart-result-stats b {
+  font-size: 30px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.kart-result-stats span {
+  color: var(--on-bg-soft);
+  font-size: 14px;
+  font-weight: 700;
+}
