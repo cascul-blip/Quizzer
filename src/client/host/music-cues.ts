@@ -171,14 +171,17 @@ export function musicFor(view: HostView | null): MusicCue {
     }
     case "sleigh": {
       if (view.phase === "podium") return { track: "sleigh-results" };
-      // One track for the whole round: engines idle at the start of the quiz, the band builds
-      // as its time runs out and through the flags, and plays flat out (faster) while the cars drive.
+      // Every present delivered: the celebration before the podium, with the extra bells and timpani.
+      if (view.finished) return { track: "sleigh-results", intensity: 0.9, key: "sleigh-finale" };
+      // One track for the whole round: a few sleigh bells and pizzicato at the start of the quiz,
+      // the carol builds as its time runs out and through "get ready to fly", and plays in full
+      // (faster) while the sleighs are in the air.
       if (view.phase === "quiz") {
         const elapsed = Math.max(0, Math.min(1, 1 - view.phaseRemainingMs / Math.max(1, view.phaseDurationMs)));
         return { track: "sleigh-flight", intensity: 0.15 + elapsed * 0.4, rampTo: 0.55, rampMs: view.phaseRemainingMs, key: `sleigh-q${view.round}` };
       }
       if (view.phase === "intro") return { track: "sleigh-flight", intensity: 0.6, rampTo: 0.8, rampMs: view.phaseRemainingMs, key: `sleigh-intro${view.round}` };
-      if (view.phase === "drive") return { track: "sleigh-flight", intensity: 1, key: `sleigh-drive${view.round}` };
+      if (view.phase === "flight") return { track: "sleigh-flight", intensity: 1, key: `sleigh-flight${view.round}` };
       return { track: "sleigh-flight", intensity: 0.05, key: "sleigh-countdown" };
     }
   }

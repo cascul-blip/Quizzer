@@ -2,7 +2,7 @@ import shotUrl from "./sfx/shot.mp3";
 
 /** Tiny synthesized sound effects (WebAudio); a few use a bundled recording instead (RECORDINGS). */
 
-type Sfx = "tick" | "tickHigh" | "timeUp" | "reveal" | "join" | "start" | "fanfare" | "thud" | "floor" | "rumble" | "roar" | "whoosh" | "chomp" | "bubble" | "heartbeat" | "laser" | "alarm" | "plant" | "capture" | "conquer" | "gearUp" | "skid" | "crash" | "repair" | "leverClick" | "land" | "diceRoll" | "diceLand" | "clink" | "gulp" | "poison" | "survive" | "gunshot" | "starterPistol" | "dragonRoar" | "sword" | "fireWhoosh" | "shieldClang" | "coins" | "chestOpen" | "trapHiss" | "jackpot" | "snip" | "spark" | "wrongWire" | "moduleChime" | "keypad" | "defuse" | "explosion" | "bowTwang" | "arrowHit" | "swordClang" | "stoneThud" | "placeClack" | "upgradeChime" | "heartLost" | "giantHorn" | "drumRoll" | "wolfHowl" | "trollRoar" | "giantStomp" | "castleCrumble" | "victoryBells";
+type Sfx = "tick" | "tickHigh" | "timeUp" | "reveal" | "join" | "start" | "fanfare" | "thud" | "floor" | "rumble" | "roar" | "whoosh" | "chomp" | "bubble" | "heartbeat" | "laser" | "alarm" | "plant" | "capture" | "conquer" | "gearUp" | "skid" | "crash" | "repair" | "leverClick" | "land" | "diceRoll" | "diceLand" | "clink" | "gulp" | "poison" | "survive" | "gunshot" | "starterPistol" | "dragonRoar" | "sword" | "fireWhoosh" | "shieldClang" | "coins" | "chestOpen" | "trapHiss" | "jackpot" | "snip" | "spark" | "wrongWire" | "moduleChime" | "keypad" | "defuse" | "explosion" | "bowTwang" | "arrowHit" | "swordClang" | "stoneThud" | "placeClack" | "upgradeChime" | "heartLost" | "giantHorn" | "drumRoll" | "wolfHowl" | "trollRoar" | "giantStomp" | "castleCrumble" | "victoryBells" | "deliver" | "jingle";
 
 const MUTE_KEY = "quizzer.muted";
 let ctx: AudioContext | null = null;
@@ -422,6 +422,38 @@ export function play(sfx: Sfx): void {
         tone(f * 2.4, i * 0.28, 0.6, "sine", 0.03);
       });
       return;
+    case "deliver":
+      // A present down the chimney: a soft low "ho" under a sparkling chime arpeggio.
+      tone(98, 0, 0.45, "sine", 0.14);
+      tone(147, 0.02, 0.4, "triangle", 0.05);
+      [1046.5, 1318.5, 1568, 2093, 2637].forEach((f, i) => {
+        tone(f, 0.05 + i * 0.06, 0.6, "sine", 0.08);
+        tone(f * 2, 0.05 + i * 0.06, 0.25, "sine", 0.02);
+      });
+      noise(0.05, 0.5, "highpass", 7000, 0.04);
+      return;
+    case "jingle":
+      // A quick shake of sleigh bells.
+      for (let i = 0; i < 5; i++) shake(i * 0.07 + (i % 2) * 0.012, 0.11 - i * 0.012);
+      return;
+  }
+}
+
+/** One shake of sleigh bells: a few bursts of high, ringing band-passed noise with bright little tones. */
+function shake(start: number, gain: number, out?: AudioNode): void {
+  if (!ctx) return;
+  for (let j = 0; j < 3; j++) noise(start + j * 0.018, 0.09, "bandpass", 6500 + j * 1300, gain, 4, undefined, out);
+  for (const f of [2637, 3520, 4186]) {
+    const t0 = ctx.currentTime + start + Math.random() * 0.02;
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.frequency.setValueAtTime(f * (0.99 + Math.random() * 0.02), t0);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(gain * 0.25, t0 + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.12);
+    osc.connect(g).connect(out ?? ctx.destination);
+    osc.start(t0);
+    osc.stop(t0 + 0.17);
   }
 }
 
@@ -465,6 +497,50 @@ export function startRev(volume = 1): Rev | null {
       gain.gain.setTargetAtTime(0.0001, t, 0.06);
       main.stop(t + 0.4);
       grit.stop(t + 0.4);
+    },
+  };
+}
+
+export interface Jingle {
+  /** 0 = barely moving (an occasional soft shake), 1 = full gallop (fast, loud shimmer). */
+  set(level: number): void;
+  stop(): void;
+}
+
+/** A looping sleigh-bell shimmer under a flying sleigh; its rate and loudness follow `level`. */
+export function startJingle(volume = 1): Jingle | null {
+  unlockAudio();
+  if (muted || !ctx) return null;
+  const c = ctx;
+  const out = c.createGain();
+  out.gain.value = 0.0001;
+  out.connect(c.destination);
+  let level = 0;
+  let next = 0; // seconds from now until the next shake
+  let beat = 0;
+  const LOOKAHEAD = 0.1;
+  const TICK_MS = 50;
+  const timer = setInterval(() => {
+    if (muted || c.state !== "running") return;
+    next -= TICK_MS / 1000;
+    while (next < LOOKAHEAD) {
+      if (level > 0.02) {
+        // Bells bounce on the reindeer's stride: strong-weak pairs.
+        shake(Math.max(0, next), (beat % 2 === 0 ? 0.12 : 0.07) * (0.5 + level * 0.5), out);
+        beat++;
+      }
+      next += 0.32 - level * 0.2 + Math.random() * 0.02;
+    }
+  }, TICK_MS);
+  return {
+    set(l) {
+      level = Math.max(0, Math.min(1, l));
+      out.gain.setTargetAtTime((level > 0.02 ? 0.35 + level * 0.65 : 0.0001) * volume, c.currentTime, 0.08);
+    },
+    stop() {
+      clearInterval(timer);
+      out.gain.setTargetAtTime(0.0001, c.currentTime, 0.06);
+      setTimeout(() => out.disconnect(), 600);
     },
   };
 }

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { BOMB_MAX_SQUADS, BOMB_MINUTES, BOMB_MODULES, BOMB_PENALTIES, BOMB_WIRES, CUP_MAX_CUPS, CUP_MIN_CUPS, DRAGON_BATTLE_MINUTES, DRAGON_FIRE_SECONDS, DRAGON_MIN_TEAMS, DRAGON_SCRAMBLE_MINUTES, DRAGON_TOUGHNESS, DUEL_ROUNDS, HILL_SETTINGS, type BombSettings, type BombStyle, type DragonSettings, type DragonToughness, LAND_MINUTES, LAND_MIN_TEAMS, MAX_TEAMS, TOWER_MINUTES, type GameMode, type HillSetting, type HostPlayer, type HostView, type Pacing, type ServerMsg } from "../../shared/protocol.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { SIEGE_WAVE_CHOICES } from "../../shared/siege-rules.ts";
-import { SLEIGH_ROUND_CHOICES } from "../../shared/sleigh-rules.ts";
+import { SLEIGH_HOUSE_CHOICES } from "../../shared/sleigh-rules.ts";
 import type { QuizSummary } from "../../shared/quiz-schema.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { Dragon } from "../shared/dragon-art.tsx";
@@ -366,7 +366,7 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
               <option value="robot">🤖 Robot Attack</option>
               <option value="land">🚩 Land Grab</option>
               <option value="racer">🏎 Racer</option>
-              <option value="sleigh">🏎️ Santa's Sleigh Run</option>
+              <option value="sleigh">🎅 Santa's Sleigh Run</option>
               <option value="cup">☠️ Cup of Death</option>
               <option value="dragon">🐉 Dragon's Hoard</option>
               <option value="bomb">💣 Bomb Squad</option>
@@ -449,16 +449,16 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
           ) : view.mode === "sleigh" ? (
             <>
               <label class="opt">
-                Rounds
-                <select value={view.sleigh.rounds} onChange={(e) => send({ type: "host.setSleigh", rounds: Number(e.currentTarget.value) })}>
-                  {SLEIGH_ROUND_CHOICES.map((r) => (
-                    <option key={r} value={r}>
-                      {r} rounds
+                Houses
+                <select value={view.sleigh.houses} onChange={(e) => send({ type: "host.setSleigh", houses: Number(e.currentTarget.value) })}>
+                  {SLEIGH_HOUSE_CHOICES.map((n) => (
+                    <option key={n} value={n}>
+                      {n} houses
                     </option>
                   ))}
                 </select>
               </label>
-              <span class="opt mode-hint">Answer questions to fuel your car, then steer it round the oval from your phone. Most distance after the last round wins.</span>
+              <span class="opt mode-hint">Answer questions to power your reindeer, then steer your sleigh over the snowy city from your phone. Fly over a house to deliver its present. The game ends when every present is delivered; most presents wins.</span>
             </>
           ) : view.mode === "cup" ? (
             <>

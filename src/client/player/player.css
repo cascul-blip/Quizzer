@@ -3534,10 +3534,75 @@ h1 {
 /* ---------- Santa's Sleigh Run ---------- */
 
 .sleigh-game {
-  background: radial-gradient(ellipse at 50% 0%, #2c3e50 0%, #141c26 70%);
+  --sleigh-gold: #f6c453;
+  --sleigh-red: #e3263f;
+  --sleigh-green: #2fa35a;
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse 120% 60% at 50% 115%, rgba(47, 163, 90, 0.35) 0%, transparent 60%),
+    radial-gradient(ellipse 90% 50% at 50% -10%, rgba(120, 160, 255, 0.28) 0%, transparent 70%),
+    linear-gradient(180deg, #0b1a3a 0%, #0a1f33 55%, #0b2a26 100%);
 }
 
-/* The intro and the drive are locked to the screen so the wheel never scrolls. */
+/* Soft falling snow: two layers of dots drifting at different speeds. */
+.sleigh-game::before,
+.sleigh-game::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-repeat: repeat;
+}
+
+.sleigh-game::before {
+  background-image:
+    radial-gradient(circle at 20px 30px, rgba(255, 255, 255, 0.8) 0 1.6px, transparent 2.4px),
+    radial-gradient(circle at 90px 80px, rgba(255, 255, 255, 0.6) 0 1.2px, transparent 2px),
+    radial-gradient(circle at 150px 20px, rgba(255, 255, 255, 0.7) 0 1.4px, transparent 2.2px),
+    radial-gradient(circle at 60px 140px, rgba(255, 255, 255, 0.55) 0 1px, transparent 1.8px);
+  background-size: 180px 180px;
+  animation: sleigh-snow 14s linear infinite;
+  opacity: 0.7;
+}
+
+.sleigh-game::after {
+  background-image:
+    radial-gradient(circle at 40px 60px, rgba(255, 255, 255, 0.9) 0 2.4px, transparent 3.4px),
+    radial-gradient(circle at 200px 170px, rgba(255, 255, 255, 0.75) 0 2px, transparent 3px),
+    radial-gradient(circle at 130px 230px, rgba(255, 255, 255, 0.65) 0 1.8px, transparent 2.8px);
+  background-size: 260px 260px;
+  animation: sleigh-snow-big 22s linear infinite;
+  opacity: 0.45;
+}
+
+@keyframes sleigh-snow {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 60px 180px;
+  }
+}
+
+@keyframes sleigh-snow-big {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: -80px 260px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sleigh-game::before,
+  .sleigh-game::after {
+    animation: none;
+  }
+}
+
+/* The intro and the flight are locked to the screen so the wheel never scrolls. */
 .sleigh-game.fit-screen {
   height: 100dvh;
   overflow: hidden;
@@ -3547,11 +3612,17 @@ h1 {
   min-height: 0;
 }
 
+.sleigh-game > .bar {
+  background: linear-gradient(180deg, rgba(120, 10, 28, 0.85), rgba(90, 8, 22, 0.75));
+  border-bottom: 3px solid var(--sleigh-gold);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.35);
+}
+
 .sleigh-stats {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 20px;
+  gap: 8px;
+  font-size: 18px;
   flex-shrink: 0;
 }
 
@@ -3559,39 +3630,61 @@ h1 {
   display: inline-block;
   width: 22px;
   height: 22px;
-  border-radius: 6px;
-  border: 2px solid rgba(255, 255, 255, 0.85);
-  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+  border-radius: 50%;
+  border: 2px solid var(--sleigh-gold);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.3), 0 2px 0 rgba(0, 0, 0, 0.35);
   vertical-align: middle;
 }
 
 .sleigh-swatch.big {
   width: 30px;
   height: 30px;
-  border-radius: 8px;
   margin: 0 2px;
 }
 
-.sleigh-points {
-  background: rgba(255, 255, 255, 0.15);
+.sleigh-chip {
   padding: 2px 10px;
-  border-radius: 6px;
-  color: var(--accent);
+  border-radius: 999px;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1.5px solid rgba(246, 196, 83, 0.55);
+  color: #fff;
+}
+
+.sleigh-chip.reindeer {
+  color: var(--sleigh-gold);
 }
 
 .sleigh-emoji {
   font-size: 72px;
+  line-height: 1;
 }
 
-.sleigh-flags {
+.sleigh-canes {
   width: 150px;
   height: auto;
-  filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.3));
+  filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.35));
 }
 
-.sleigh-flags.big {
-  width: min(220px, 50vw, 28dvh);
+.sleigh-canes.big {
+  width: min(210px, 50vw, 26dvh);
+}
+
+.sleigh-countdown h1 {
+  color: #fff;
+  text-shadow: 0 2px 0 #7a1020, 0 0 18px rgba(246, 196, 83, 0.45);
+}
+
+.sleigh-countdown .muted {
+  max-width: 380px;
+  line-height: 1.4;
+}
+
+.sleigh-game .tower-count,
+.sleigh-game .final-rank.top {
+  color: var(--sleigh-gold);
+  text-shadow: 0 3px 0 #7a1020;
 }
 
 /* intro */
@@ -3618,7 +3711,8 @@ h1 {
   font-size: min(120px, 18dvh);
   font-weight: 900;
   line-height: 1;
-  color: var(--accent);
+  color: var(--sleigh-gold);
+  text-shadow: 0 4px 0 #7a1020, 0 0 30px rgba(246, 196, 83, 0.5);
   font-variant-numeric: tabular-nums;
   animation: pop-in 0.35s ease-out;
 }
@@ -3630,6 +3724,7 @@ h1 {
   font-size: 19px;
   font-weight: 800;
   background: rgba(255, 255, 255, 0.1);
+  border: 1.5px solid rgba(246, 196, 83, 0.45);
   padding: 6px 16px 6px 6px;
   border-radius: 999px;
 }
@@ -3643,16 +3738,17 @@ h1 {
   margin: 0;
   font-size: 20px;
   font-weight: 900;
-  color: var(--accent);
+  color: var(--sleigh-gold);
 }
 
 .sleigh-intro-fuel.empty {
   color: var(--on-bg-soft);
+  font-size: 17px;
 }
 
-/* drive */
+/* flight */
 
-.sleigh-drive {
+.sleigh-flight {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -3699,18 +3795,64 @@ h1 {
   will-change: transform;
 }
 
-.sleigh-drive.out .sleigh-wheel {
-  opacity: 0.35;
-  filter: grayscale(0.8);
+.sleigh-flight.out .sleigh-wheel {
+  opacity: 0.4;
+  filter: grayscale(0.7);
 }
 
-.sleigh-fuel {
+.sleigh-pop {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 2;
+  pointer-events: none;
+  white-space: nowrap;
+  padding: 10px 20px;
+  border-radius: 999px;
+  font-size: 26px;
+  font-weight: 900;
+  color: #fff;
+  background: linear-gradient(180deg, #2fb862, #1d7f41);
+  border: 3px solid var(--sleigh-gold);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45), 0 0 30px rgba(246, 196, 83, 0.5);
+  animation: sleigh-pop 1.4s ease-out forwards;
+}
+
+@keyframes sleigh-pop {
+  0% {
+    transform: translate(-50%, -50%) scale(0.3);
+    opacity: 0;
+  }
+  15% {
+    transform: translate(-50%, -50%) scale(1.15);
+    opacity: 1;
+  }
+  25% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  75% {
+    transform: translate(-50%, -90%) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -130%) scale(0.95);
+    opacity: 0;
+  }
+}
+
+.sleigh-side {
   width: 100%;
   max-width: 420px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   flex-shrink: 0;
+}
+
+.sleigh-fuel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .sleigh-fuel-head {
@@ -3721,7 +3863,7 @@ h1 {
 }
 
 .sleigh-fuel-secs {
-  color: var(--accent);
+  color: var(--sleigh-gold);
   font-variant-numeric: tabular-nums;
 }
 
@@ -3729,7 +3871,8 @@ h1 {
   height: 18px;
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.45);
-  border: 2px solid rgba(255, 255, 255, 0.25);
+  border: 2px solid var(--sleigh-gold);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
   overflow: hidden;
 }
 
@@ -3737,22 +3880,55 @@ h1 {
   height: 100%;
   width: 100%;
   transform-origin: left center;
-  background: linear-gradient(90deg, #e0344a 0%, #f4a100 35%, #2fa84f 75%);
-  background-size: 100% 100%;
+  background:
+    repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.18) 0 6px, transparent 6px 12px),
+    linear-gradient(90deg, #d6203a 0%, #f08a24 35%, #2fa35a 75%);
 }
 
 .sleigh-fuel-msg {
   margin: 0;
   text-align: center;
   font-weight: 800;
-  font-size: 18px;
+  font-size: 17px;
   color: var(--on-bg-soft);
-  flex-shrink: 0;
+}
+
+.sleigh-fuel-msg.done {
+  color: var(--sleigh-gold);
+  font-size: 22px;
+  font-weight: 900;
+  animation: pop-in 0.4s ease-out;
+}
+
+.sleigh-tally {
+  margin: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1.5px solid rgba(246, 196, 83, 0.35);
+  font-weight: 800;
+  font-size: 16px;
+}
+
+.sleigh-tally b {
+  color: var(--sleigh-gold);
+  font-size: 19px;
+  font-variant-numeric: tabular-nums;
+}
+
+.sleigh-tally-all {
+  color: var(--on-bg-soft);
+  font-variant-numeric: tabular-nums;
 }
 
 /* Landscape phones: the gauge sits beside the wheel. */
 @media (orientation: landscape) and (max-height: 520px) {
-  .sleigh-drive {
+  .sleigh-flight {
     flex-direction: row;
     padding: 6px 16px;
     padding-bottom: max(8px, env(safe-area-inset-bottom));
@@ -3762,10 +3938,14 @@ h1 {
     align-self: stretch;
   }
 
-  .sleigh-fuel,
-  .sleigh-drive > .sleigh-fuel-msg {
-    width: 34%;
-    max-width: 260px;
+  .sleigh-side {
+    width: 38%;
+    max-width: 280px;
+  }
+
+  .sleigh-tally {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .sleigh-intro {
@@ -3778,9 +3958,9 @@ h1 {
     justify-content: center;
   }
 
-  .sleigh-intro .sleigh-flags {
+  .sleigh-intro .sleigh-canes {
     grid-row: 1 / span 4;
-    width: min(260px, 36vw, 55dvh);
+    width: min(240px, 34vw, 55dvh);
   }
 }
 
@@ -3795,10 +3975,11 @@ h1 {
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-width: 96px;
+  min-width: 110px;
   padding: 10px 16px;
   border-radius: var(--radius);
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(246, 196, 83, 0.5);
 }
 
 .sleigh-result-stats b {
@@ -3811,4 +3992,9 @@ h1 {
   color: var(--on-bg-soft);
   font-size: 14px;
   font-weight: 700;
+}
+
+.sleigh-result .award-chip {
+  background: linear-gradient(180deg, #ffd977, var(--sleigh-gold));
+  box-shadow: 0 2px 0 #9a6a12;
 }

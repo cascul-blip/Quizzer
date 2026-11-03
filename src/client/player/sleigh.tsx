@@ -12,18 +12,26 @@ type Send = (m: ClientMsg) => void;
 const SPRING_MS = 220;
 /** How long the wheel takes to swing to full lock from the arrow keys. */
 const KEY_SWING_MS = 120;
+/** Seconds of flying each correct answer buys. */
+const SECS_PER_POINT = SLEIGH_MS_PER_POINT / 1000;
 
-/** Phone screen for Santa's Sleigh Run: questions during the quiz, a steering wheel during the drive. */
+const plural = (n: number, one: string, many = `${one}s`) => (n === 1 ? one : many);
+
+/** Phone screen for Santa's Sleigh Run: questions during the quiz, a sleigh wheel during the flight. */
 export function SleighPlayer({ view, send }: { view: PlayerSleighView; send: Send }) {
   const secs = useCountdown(view.phaseRemainingMs, `${view.phase}-${view.round}`);
-  const fit = view.phase === "intro" || view.phase === "drive";
+  const fit = view.phase === "intro" || view.phase === "flight";
 
   let body;
   if (view.phase === "countdown") {
     body = (
-      <main class="center">
-        <CheckeredFlags />
-        <p class="muted">Answer questions to earn fuel — each correct answer is {SLEIGH_MS_PER_POINT / 1000} seconds of driving. Then steer your car from your phone!</p>
+      <main class="center sleigh-countdown">
+        <CandyCanes />
+        <h1>Santa's Sleigh Run</h1>
+        <p class="muted">
+          Answer questions to power your reindeer — every correct answer is {SECS_PER_POINT} seconds of flying. Then steer your sleigh over the city and fly over
+          houses to deliver presents!
+        </p>
         <div class="tower-count">{Math.max(1, secs)}</div>
       </main>
     );
@@ -37,8 +45,8 @@ export function SleighPlayer({ view, send }: { view: PlayerSleighView; send: Sen
     );
   } else if (view.phase === "intro") {
     body = <IntroScreen view={view} secs={secs} />;
-  } else if (view.phase === "drive") {
-    body = <DriveScreen key={view.round} view={view} send={send} />;
+  } else if (view.phase === "flight") {
+    body = <FlightScreen key={view.round} view={view} send={send} />;
   } else {
     body = <SleighResult view={view} />;
   }
@@ -48,76 +56,79 @@ export function SleighPlayer({ view, send }: { view: PlayerSleighView; send: Sen
       <header class="bar">
         <span class="name">{view.me.nickname}</span>
         <span class="sleigh-stats">
-          <span class="sleigh-swatch" style={{ background: view.me.color }} aria-label="Your car's colour" />
+          <span class="sleigh-swatch" style={{ background: view.me.color }} aria-label="Your sleigh's colour" />
           {view.phase !== "podium" && (
-            <span class="sleigh-points" aria-label={`${view.me.points} seconds of fuel this round`}>
-              ⛽{view.me.points}
+            <span class="sleigh-chip reindeer" aria-label={`${view.me.points} seconds of flying this round`}>
+              🦌 {view.me.points * SECS_PER_POINT}s
             </span>
           )}
+          <span class="sleigh-chip presents" aria-label={`${view.me.presents} ${plural(view.me.presents, "present")} delivered`}>
+            🎁 {view.me.presents}
+          </span>
         </span>
       </header>
       {body}
-      <Feedback feedback={view.feedback} rightText={`+${SLEIGH_MS_PER_POINT / 1000} s fuel ⛽`} />
+      <Feedback feedback={view.feedback} rightText={`+${SECS_PER_POINT} s 🦌`} />
     </div>
   );
 }
 
-/** Two checkered flags crossed at their poles. */
-function CheckeredFlags({ big }: { big?: boolean }) {
+/** Two candy canes crossed at their stems, tied with a holly sprig. */
+function CandyCanes({ big }: { big?: boolean }) {
+  // The cane: a stem with a hook curling outward at the top.
+  const cane = "M0 0 L0 -96 A26 26 0 0 1 52 -96 L52 -84";
   return (
-    <svg class={`sleigh-flags ${big ? "big" : ""}`} viewBox="-20 -2 240 142" aria-hidden="true">
+    <svg class={`sleigh-canes ${big ? "big" : ""}`} viewBox="-10 -6 220 156" aria-hidden="true">
       <defs>
-        <pattern id="sleigh-checker" width="16" height="16" patternUnits="userSpaceOnUse">
-          <rect width="16" height="16" fill="#fff" />
-          <rect width="8" height="8" fill="#111" />
-          <rect x="8" y="8" width="8" height="8" fill="#111" />
+        <pattern id="sleigh-cane-stripe" width="18" height="18" patternUnits="userSpaceOnUse" patternTransform="rotate(40)">
+          <rect width="18" height="18" fill="#fffaf2" />
+          <rect width="7" height="18" fill="#d6203a" />
+          <rect x="10" width="2.5" height="18" fill="#2f9e55" />
         </pattern>
       </defs>
       {[-1, 1].map((side) => (
-        <g key={side} transform={`translate(${100 - side * 34} 136) rotate(${side * 36}) scale(${side} 1)`}>
-          {/* pole */}
-          <rect x="-3" y="-128" width="6" height="128" rx="3" fill="#d9d9d9" stroke="#555" stroke-width="1.2" />
-          <circle cx="0" cy="-130" r="5" fill="#ffd23f" stroke="#7a5b00" stroke-width="1.2" />
-          {/* waving cloth */}
-          <path d="M3 -124 C 25 -136, 45 -112, 72 -122 L 72 -76 C 45 -66, 25 -90, 3 -78 Z" fill="url(#sleigh-checker)" stroke="#111" stroke-width="2" stroke-linejoin="round" />
-          <path d="M3 -124 C 25 -136, 45 -112, 72 -122 L 72 -76 C 45 -66, 25 -90, 3 -78 Z" fill="url(#sleigh-shade)" opacity="0.25" />
+        <g key={side} transform={`translate(${100 + side * 30} 142) rotate(${-side * 28}) scale(${-side} 1)`}>
+          <path d={cane} fill="none" stroke="#7a1020" stroke-width="20" stroke-linecap="round" />
+          <path d={cane} fill="none" stroke="url(#sleigh-cane-stripe)" stroke-width="16" stroke-linecap="round" />
+          <path d="M-4 -6 L-4 -96 A22 22 0 0 1 30 -112" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="3" stroke-linecap="round" />
         </g>
       ))}
-      <defs>
-        <linearGradient id="sleigh-shade" x1="0" x2="1">
-          <stop offset="0" stop-color="#000" stop-opacity="0" />
-          <stop offset="0.45" stop-color="#000" stop-opacity="0.6" />
-          <stop offset="0.7" stop-color="#000" stop-opacity="0" />
-          <stop offset="1" stop-color="#000" stop-opacity="0.5" />
-        </linearGradient>
-      </defs>
+      {/* holly where the canes cross */}
+      <g transform="translate(100 104)">
+        <path d="M0 0 C -10 -14, -30 -14, -40 -4 C -32 -2, -30 6, -24 8 C -18 2, -10 6, 0 0 Z" fill="#1f7a3e" stroke="#0e4a24" stroke-width="2" />
+        <path d="M0 0 C 10 -14, 30 -14, 40 -4 C 32 -2, 30 6, 24 8 C 18 2, 10 6, 0 0 Z" fill="#1f7a3e" stroke="#0e4a24" stroke-width="2" />
+        <circle cx="-6" cy="2" r="7" fill="#e3263f" stroke="#7a1020" stroke-width="1.5" />
+        <circle cx="6" cy="2" r="7" fill="#e3263f" stroke="#7a1020" stroke-width="1.5" />
+        <circle cx="0" cy="-7" r="7" fill="#e3263f" stroke="#7a1020" stroke-width="1.5" />
+        <circle cx="-2" cy="-9" r="2" fill="rgba(255,255,255,0.7)" />
+      </g>
     </svg>
   );
 }
 
 function IntroScreen({ view, secs }: { view: PlayerSleighView; secs: number }) {
-  const fuel = view.me.points;
+  const flying = view.me.points * SECS_PER_POINT;
   return (
     <main class="sleigh-intro">
-      <CheckeredFlags big />
-      <p class="sleigh-intro-lead">Get ready to drive in</p>
+      <CandyCanes big />
+      <p class="sleigh-intro-lead">Get ready to fly in</p>
       <div key={secs} class="sleigh-intro-count">
         {Math.max(1, secs)}
       </div>
       <div class="sleigh-you">
         <Avatar choice={view.me.avatar} class="sleigh-you-avatar" />
         <span>
-          You're the <span class="sleigh-swatch big" style={{ background: view.me.color }} /> car
+          You're the <span class="sleigh-swatch big" style={{ background: view.me.color }} /> sleigh
         </span>
       </div>
-      <p class={`sleigh-intro-fuel ${fuel === 0 ? "empty" : ""}`}>
-        ⛽ {fuel === 0 ? "No fuel this round" : `${fuel} second${fuel === 1 ? "" : "s"} of fuel`}
+      <p class={`sleigh-intro-fuel ${flying === 0 ? "empty" : ""}`}>
+        🦌 {flying === 0 ? "No flying this round — your reindeer are resting" : `${flying} ${plural(flying, "second")} of flying`}
       </p>
     </main>
   );
 }
 
-// ---------- drive ----------
+// ---------- flight ----------
 
 /** Signed difference a − b in degrees, unwrapped to −180…180. */
 function angleDelta(a: number, b: number): number {
@@ -132,7 +143,7 @@ const clampDeg = (d: number) => Math.max(-WHEEL_MAX_DEG, Math.min(WHEEL_MAX_DEG,
 const easeOutBack = (t: number) => 1 + 2.2 * Math.pow(t - 1, 3) + 1.2 * Math.pow(t - 1, 2);
 const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
 
-function DriveScreen({ view, send }: { view: PlayerSleighView; send: Send }) {
+function FlightScreen({ view, send }: { view: PlayerSleighView; send: Send }) {
   const noFuel = view.fuelStartMs <= 0;
   const [out, setOut] = useState(noFuel || view.fuelMs <= 0);
 
@@ -295,87 +306,141 @@ function DriveScreen({ view, send }: { view: PlayerSleighView; send: Send }) {
     };
   }, []);
 
+  // ----- a present delivered: buzz and pop -----
+  const seenDelivery = useRef(view.lastDelivery);
+  const [pop, setPop] = useState<number | null>(null);
+  useEffect(() => {
+    const seq = view.lastDelivery;
+    if (seq === null || seq === seenDelivery.current) return;
+    seenDelivery.current = seq;
+    navigator.vibrate?.([60, 40, 60]);
+    setPop(seq);
+    const t = setTimeout(() => setPop((p) => (p === seq ? null : p)), 1400);
+    return () => clearTimeout(t);
+  }, [view.lastDelivery]);
+
+  let msg: string | null = null;
+  if (view.finished) msg = "🎄 Every present delivered!";
+  else if (noFuel) msg = "Your reindeer are resting this round — answer more questions next time!";
+  else if (out) msg = "Your reindeer need a rest — waiting for the others";
+
   return (
-    <main class={`sleigh-drive ${out ? "out" : ""}`}>
-      <div ref={padRef} class="sleigh-wheel-pad" role="slider" aria-label="Steering wheel" aria-valuemin={-1} aria-valuemax={1} aria-valuenow={0}>
-        <SteeringWheel color={view.me.color} gRef={wheelRef} />
+    <main class={`sleigh-flight ${out || view.finished ? "out" : ""}`}>
+      <div ref={padRef} class="sleigh-wheel-pad" role="slider" aria-label="Sleigh wheel" aria-valuemin={-1} aria-valuemax={1} aria-valuenow={0}>
+        <SleighWheel color={view.me.color} gRef={wheelRef} />
+        {pop !== null && (
+          <div key={pop} class="sleigh-pop" role="status">
+            +1 🎁 Delivered!
+          </div>
+        )}
       </div>
-      {noFuel ? (
-        <p class="sleigh-fuel-msg">No fuel this round — answer more questions next time!</p>
-      ) : (
-        <div class="sleigh-fuel">
-          <div class="sleigh-fuel-head">
-            <span>⛽ Fuel</span>
-            <span class="sleigh-fuel-secs">
-              <span ref={secsRef}>{(view.fuelMs / 1000).toFixed(1)}</span> s
-            </span>
+      <div class="sleigh-side">
+        {!noFuel && (
+          <div class="sleigh-fuel">
+            <div class="sleigh-fuel-head">
+              <span>🦌 Reindeer energy</span>
+              <span class="sleigh-fuel-secs">
+                <span ref={secsRef}>{(view.fuelMs / 1000).toFixed(1)}</span> s
+              </span>
+            </div>
+            <div class="sleigh-fuel-track">
+              <div ref={barRef} class="sleigh-fuel-bar" style={{ transform: `scaleX(${startMs > 0 ? view.fuelMs / startMs : 0})` }} />
+            </div>
           </div>
-          <div class="sleigh-fuel-track">
-            <div ref={barRef} class="sleigh-fuel-bar" style={{ transform: `scaleX(${startMs > 0 ? view.fuelMs / startMs : 0})` }} />
-          </div>
-          {out && <p class="sleigh-fuel-msg">Out of fuel — waiting for the others</p>}
-        </div>
-      )}
+        )}
+        {msg && <p class={`sleigh-fuel-msg ${view.finished ? "done" : ""}`}>{msg}</p>}
+        <p class="sleigh-tally">
+          <span>
+            🎁 You've delivered <b>{view.me.presents}</b>
+          </span>
+          <span class="sleigh-tally-all">
+            {view.delivered} / {view.total} delivered
+          </span>
+        </p>
+      </div>
     </main>
   );
 }
 
-/** A sporty three-spoke wheel, drawn around (0, 0). `gRef` is the group that rotates. */
-function SteeringWheel({ color, gRef }: { color: string; gRef: Ref<SVGGElement> }) {
-  // Grip ridges on the rim's sides (where hands go: 9 and 3 o'clock, ± 40°).
-  const ridges: number[] = [];
-  for (const centre of [180, 0]) for (let a = -40; a <= 40; a += 6) ridges.push(centre + a);
+/**
+ * A wooden sleigh wheel, drawn around (0, 0): a red-lacquered rim with gold trim, six
+ * candy-cane spokes and handles, and a gold hub. `gRef` is the group that rotates.
+ */
+function SleighWheel({ color, gRef }: { color: string; gRef: Ref<SVGGElement> }) {
+  const spokes = [0, 60, 120, 180, 240, 300];
+  // Brass studs around the rim, skipping the coloured marker at the top.
+  const studs: number[] = [];
+  for (let a = 0; a < 360; a += 20) if (Math.abs(a - 270) > 15) studs.push(a);
   return (
-    <svg class="sleigh-wheel" viewBox="-116 -116 232 232" aria-hidden="true">
+    <svg class="sleigh-wheel" viewBox="-124 -124 248 248" aria-hidden="true">
       <defs>
-        <radialGradient id="sleigh-rim" cx="0" cy="0" r="100" gradientUnits="userSpaceOnUse">
-          <stop offset="0.74" stop-color="#1a1a1d" />
-          <stop offset="0.8" stop-color="#4a4a52" />
-          <stop offset="0.86" stop-color="#2a2a2f" />
-          <stop offset="0.95" stop-color="#0d0d10" />
+        <pattern id="sleigh-spoke-stripe" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <rect width="14" height="14" fill="#fff7ea" />
+          <rect width="6" height="14" fill="#d6203a" />
+        </pattern>
+        <radialGradient id="sleigh-rim-wood" cx="0" cy="0" r="100" gradientUnits="userSpaceOnUse">
+          <stop offset="0.74" stop-color="#6e0f1c" />
+          <stop offset="0.8" stop-color="#c2263a" />
+          <stop offset="0.86" stop-color="#9c1a2c" />
+          <stop offset="0.95" stop-color="#5a0b16" />
         </radialGradient>
-        <linearGradient id="sleigh-spoke" x1="0" y1="-1" x2="0" y2="1">
-          <stop offset="0" stop-color="#9aa0aa" />
-          <stop offset="0.5" stop-color="#5c616b" />
-          <stop offset="1" stop-color="#3a3e46" />
+        <radialGradient id="sleigh-gold" cx="-0.3" cy="-0.35" r="1.2">
+          <stop offset="0" stop-color="#fff2b0" />
+          <stop offset="0.45" stop-color="#f2c14e" />
+          <stop offset="1" stop-color="#9a6a12" />
+        </radialGradient>
+        <radialGradient id="sleigh-glow">
+          <stop offset="0.55" stop-color="#ffd877" stop-opacity="0.22" />
+          <stop offset="1" stop-color="#ffd877" stop-opacity="0" />
+        </radialGradient>
+        <linearGradient id="sleigh-handle" x1="-1" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#5a3311" />
+          <stop offset="0.45" stop-color="#b8763a" />
+          <stop offset="1" stop-color="#5a3311" />
         </linearGradient>
-        <radialGradient id="sleigh-hub" cx="-0.25" cy="-0.3" r="1.1">
-          <stop offset="0" stop-color="#55555e" />
-          <stop offset="1" stop-color="#141417" />
-        </radialGradient>
       </defs>
-      {/* drop shadow, does not rotate */}
-      <circle cx="0" cy="5" r="94" fill="none" stroke="rgba(0,0,0,0.35)" stroke-width="24" />
+      {/* drop shadow and a soft glow, which do not rotate */}
+      <circle r="122" fill="url(#sleigh-glow)" />
+      <circle cx="0" cy="6" r="90" fill="none" stroke="rgba(0,0,0,0.3)" stroke-width="22" />
       <g ref={gRef} class="sleigh-wheel-turn">
-        {/* spokes: left, right, bottom */}
-        <path d="M-82 -6 L-26 -14 L-26 14 L-82 12 Z" fill="url(#sleigh-spoke)" stroke="#222" stroke-width="1.5" />
-        <path d="M82 -6 L26 -14 L26 14 L82 12 Z" fill="url(#sleigh-spoke)" stroke="#222" stroke-width="1.5" />
-        <path d="M-14 24 L14 24 L11 84 L-11 84 Z" fill="url(#sleigh-spoke)" stroke="#222" stroke-width="1.5" />
-        {/* rim */}
-        <circle r="88" fill="none" stroke="url(#sleigh-rim)" stroke-width="20" />
-        <circle r="98" fill="none" stroke="#000" stroke-width="1.5" opacity="0.6" />
-        <circle r="78" fill="none" stroke="#000" stroke-width="1.5" opacity="0.6" />
-        {/* leather grips */}
-        {ridges.map((a) => (
-          <line key={a} x1="80" y1="0" x2="96" y2="0" transform={`rotate(${a})`} stroke="#000" stroke-width="2" opacity="0.55" stroke-linecap="round" />
+        {/* handles poking out past the rim */}
+        {spokes.map((a) => (
+          <g key={`h${a}`} transform={`rotate(${a})`}>
+            <rect x="92" y="-7" width="26" height="14" rx="7" fill="url(#sleigh-handle)" stroke="#3a1f08" stroke-width="1.5" />
+            <circle cx="117" cy="0" r="6" fill="url(#sleigh-gold)" stroke="#7a5200" stroke-width="1.2" />
+          </g>
         ))}
-        {[180, 0].map((c) => (
-          <path
-            key={c}
-            d={arc(88, c - 44, c + 44)}
-            fill="none"
-            stroke="rgba(255,255,255,0.08)"
-            stroke-width="18"
-          />
+        {/* candy-cane spokes */}
+        {spokes.map((a) => (
+          <g key={`s${a}`} transform={`rotate(${a})`}>
+            <rect x="20" y="-7" width="64" height="14" rx="7" fill="#7a1020" />
+            <rect x="21" y="-5.5" width="62" height="11" rx="5.5" fill="url(#sleigh-spoke-stripe)" />
+            <rect x="24" y="-4" width="56" height="2.5" rx="1.2" fill="rgba(255,255,255,0.55)" />
+          </g>
         ))}
-        {/* top-centre marker in the car's colour */}
-        <path d={arc(88, -99, -81)} fill="none" stroke={color} stroke-width="20" />
-        <line x1="0" y1="-78" x2="0" y2="-98" stroke="rgba(0,0,0,0.25)" stroke-width="1" />
+        {/* rim: lacquered wood between two gold bands */}
+        <circle r="88" fill="none" stroke="url(#sleigh-rim-wood)" stroke-width="20" />
+        <circle r="98" fill="none" stroke="#f2c14e" stroke-width="3.5" />
+        <circle r="78" fill="none" stroke="#f2c14e" stroke-width="3.5" />
+        <circle r="99.8" fill="none" stroke="#5a3a00" stroke-width="1" opacity="0.7" />
+        <circle r="76.2" fill="none" stroke="#5a3a00" stroke-width="1" opacity="0.7" />
+        <path d={arc(88, 200, 250)} fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="6" stroke-linecap="round" />
+        {studs.map((a) => (
+          <circle key={a} cx={88 * Math.cos((a * Math.PI) / 180)} cy={88 * Math.sin((a * Math.PI) / 180)} r="2.6" fill="url(#sleigh-gold)" />
+        ))}
+        {/* top-centre marker in the sleigh's colour, with a little gold star */}
+        <path d={arc(88, -101, -79)} fill="none" stroke={color} stroke-width="22" />
+        <path d={star(0, -88, 7, 3)} fill="#fff6c8" stroke="#7a5200" stroke-width="1" />
         {/* hub */}
-        <circle r="30" fill="url(#sleigh-hub)" stroke="#000" stroke-width="2" />
-        <circle r="22" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="2" />
-        <circle r="12" fill={color} stroke="#000" stroke-width="1.5" />
-        <circle cx="-3" cy="-4" r="4" fill="rgba(255,255,255,0.35)" />
+        <circle r="30" fill="url(#sleigh-gold)" stroke="#6b4700" stroke-width="2" />
+        <circle r="23" fill="none" stroke="rgba(90,58,0,0.5)" stroke-width="1.5" stroke-dasharray="3 3" />
+        <circle r="15" fill={color} stroke="#5a3a00" stroke-width="2" />
+        {/* holly on the hub */}
+        <path d="M0 -2 C -6 -10, -16 -10, -20 -4 C -15 -3, -14 1, -11 3 C -8 -1, -4 1, 0 -2 Z" fill="#1f7a3e" stroke="#0e4a24" stroke-width="1.2" />
+        <path d="M0 -2 C 6 -10, 16 -10, 20 -4 C 15 -3, 14 1, 11 3 C 8 -1, 4 1, 0 -2 Z" fill="#1f7a3e" stroke="#0e4a24" stroke-width="1.2" />
+        <circle cx="-3.5" cy="1" r="4" fill="#e3263f" stroke="#7a1020" stroke-width="1" />
+        <circle cx="3.5" cy="1" r="4" fill="#e3263f" stroke="#7a1020" stroke-width="1" />
+        <circle cx="0" cy="-4" r="4" fill="#e3263f" stroke="#7a1020" stroke-width="1" />
       </g>
     </svg>
   );
@@ -387,6 +452,17 @@ function arc(r: number, a: number, b: number): string {
   return `M${p(a)} A${r} ${r} 0 ${b - a > 180 ? 1 : 0} 1 ${p(b)}`;
 }
 
+/** A five-pointed star path centred on (cx, cy). */
+function star(cx: number, cy: number, outer: number, inner: number): string {
+  const pts: string[] = [];
+  for (let i = 0; i < 10; i++) {
+    const r = i % 2 ? inner : outer;
+    const a = (i * Math.PI) / 5 - Math.PI / 2;
+    pts.push(`${(cx + r * Math.cos(a)).toFixed(2)} ${(cy + r * Math.sin(a)).toFixed(2)}`);
+  }
+  return `M${pts.join(" L")} Z`;
+}
+
 // ---------- podium ----------
 
 function SleighResult({ view }: { view: PlayerSleighView }) {
@@ -395,17 +471,17 @@ function SleighResult({ view }: { view: PlayerSleighView }) {
   const won = r.rank === 1;
   const metres = Math.max(0, Math.round(r.distance * METRES_PER_UNIT));
   return (
-    <main class="center">
-      <div class="sleigh-emoji">{won ? "🏆" : "🏁"}</div>
+    <main class="center sleigh-result">
+      <div class="sleigh-emoji">{won ? "🏆" : "🎄"}</div>
       <div class={`final-rank ${won ? "top" : ""}`}>{won ? "You win!" : `${ordinal(r.rank)} of ${r.playerCount}`}</div>
       <div class="sleigh-result-stats">
         <div>
-          <b>{r.laps}</b>
-          <span>lap{r.laps === 1 ? "" : "s"}</span>
+          <b>🎁 {r.presents}</b>
+          <span>{plural(r.presents, "present")}</span>
         </div>
         <div>
           <b>{metres.toLocaleString()}</b>
-          <span>metres</span>
+          <span>metres flown</span>
         </div>
       </div>
       <p class="big-score">{view.me.correct} correct</p>
