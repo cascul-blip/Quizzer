@@ -48,7 +48,7 @@ export function DuelPlayer({ view, send }: { view: PlayerDuelView; send: Send })
           </span>
         )}
         <span class="score duel-num">
-          {view.me.wins} {view.me.wins === 1 ? "win" : "wins"}
+          {view.me.points} {view.me.points === 1 ? "pt" : "pts"}
         </span>
       </header>
       {view.phase !== "podium" && <FaceOff view={view} />}
@@ -220,8 +220,9 @@ function duelLine(duel: DuelArenaResult, me: DuelistResult): { text: string; ton
   const here = duel.arena;
   const next = me.nextArena;
   if (me.outcome === "win") {
-    if (next < here) return { text: `You drew first! ⬆ ${arenaName(next)}`, tone: "up" };
-    return { text: here === 1 ? "You drew first! ⭐ You hold High Noon" : `You drew first! You stay in ${arenaName(here)}`, tone: "up" };
+    const won = `You drew first! +${me.points} ${me.points === 1 ? "pt" : "pts"}`;
+    if (next < here) return { text: `${won} ⬆ ${arenaName(next)}`, tone: "up" };
+    return { text: here === 1 ? `${won} ⭐ You hold High Noon` : `${won} · You stay in ${arenaName(here)}`, tone: "up" };
   }
   if (me.outcome === "lose") {
     if (next > here) return { text: `Too slow, partner. ⬇ ${arenaName(next)}`, tone: "down" };
@@ -310,7 +311,7 @@ function DuelPodium({ view }: { view: PlayerDuelView }) {
       </div>
       <div class={`final-rank ${r.rank <= 3 ? "top" : ""}`}>{ordinal(r.rank)}</div>
       <p class="big-score">
-        Rank {r.rank} of {r.playerCount}
+        Rank {r.rank} of {r.playerCount} · {m.points} {m.points === 1 ? "pt" : "pts"}
       </p>
       <p class="muted duel-num">
         {m.wins}W · {m.losses}L · {m.draws}D{m.reign > 0 ? ` · ⭐ ${m.reign} at High Noon` : ""}

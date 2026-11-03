@@ -530,6 +530,7 @@ function NameTag({ slot, name, result, arena, step, answered, away }: { slot: nu
           {result.correct ? "✓" : "✗"} {result.ms !== null ? `${(result.ms / 1000).toFixed(1)} s` : "—"}
         </span>
       )}
+      {result && result.points > 0 && step >= STEP_SETTLE && <span class="duel-name-points">+{result.points}</span>}
       {moved && (
         <span class={`duel-move ${moved}`}>
           {moved === "up" ? "⬆" : "⬇"} {result!.nextArena === 1 ? "High Noon" : `Arena ${result!.nextArena}`}
@@ -570,7 +571,7 @@ function DuelPodium({ view, send }: { view: DuelView; send: Send }) {
                   <WantedPoster avatar={p.avatar}>
                     <div class="duel-wanted-name">{p.nickname}</div>
                     <div class="duel-wanted-line">
-                      {ordinal(p.rank)} · {p.wins} win{p.wins === 1 ? "" : "s"}
+                      {ordinal(p.rank)} · {p.points} pt{p.points === 1 ? "" : "s"}
                     </div>
                   </WantedPoster>
                 </div>
@@ -592,7 +593,7 @@ function DuelPodium({ view, send }: { view: DuelView; send: Send }) {
                     {ordinal(p.rank)} <Avatar choice={p.avatar} class="rest-avatar" /> {p.nickname}
                   </span>
                   <span>
-                    {p.wins}–{p.losses}–{p.draws}
+                    {p.points} pt{p.points === 1 ? "" : "s"} · {p.wins}–{p.losses}–{p.draws}
                   </span>
                 </li>
               ))}

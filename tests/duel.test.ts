@@ -41,7 +41,7 @@ function setup(names: string[], opts: { questions?: number; rounds?: number; pac
 }
 
 const byName = (game: DuelGame, name: string) => [...game.players.values()].find((p) => p.nickname === name)!;
-const ladderNames = (game: DuelGame) => game.ranked().map((p) => p.nickname);
+const ladderNames = (game: DuelGame) => game.onLadder().map((p) => p.nickname);
 const arenaNames = (game: DuelGame) => game.arenas.map((a) => a.map((id) => game.players.get(id)!.nickname));
 
 function answer(game: DuelGame, p: DuelPlayer, right: boolean): boolean {
@@ -364,13 +364,14 @@ describe("Showdown", () => {
 
     const v = game.hostView();
     expect(v).toMatchObject({ phase: "podium", question: null, arenas: [], hasResults: true, correct: null });
-    expect(v.players.map((p) => [p.nickname, p.rank, p.arena, p.startArena, p.wins, p.reign])).toEqual([
-      ["D", 1, 1, 2, 2, 1],
-      ["F", 2, 1, 3, 2, 0],
-      ["A", 3, 2, 1, 1, 1],
-      ["E", 4, 2, 3, 1, 0],
-      ["B", 5, 3, 1, 0, 0],
-      ["C", 6, 3, 2, 0, 0],
+    // Every round has 3 arenas: a win is worth 3 on High Noon, 2 in Arena 2, 1 in Arena 3.
+    expect(v.players.map((p) => [p.nickname, p.rank, p.points, p.arena, p.startArena, p.wins, p.reign])).toEqual([
+      ["D", 1, 5, 1, 2, 2, 1],
+      ["F", 2, 3, 1, 3, 2, 0],
+      ["A", 3, 3, 2, 1, 1, 1],
+      ["E", 4, 1, 2, 3, 1, 0],
+      ["B", 5, 0, 3, 1, 0, 0],
+      ["C", 6, 0, 3, 2, 0, 0],
     ]);
     expect(v.awards).toEqual({
       longestReign: { value: 1, nicknames: ["D", "A"] },
@@ -390,11 +391,82 @@ describe("Showdown", () => {
     const lines = csv.replace(/^﻿/, "").trim().split("\r\n");
     expect(lines).toHaveLength(7);
     expect(lines[0]).toBe(
-      "Rank,Nickname,Final arena,Start arena,Wins,Losses,Draws,Rounds won in Arena 1,Correct,Wrong,R1 answer (Question 0),R1 correct,R1 time (s),R2 answer (Question 1),R2 correct,R2 time (s)",
+      "Rank,Nickname,Points,Final arena,Start arena,Wins,Losses,Draws,Rounds won in Arena 1,Correct,Wrong,R1 answer (Question 0),R1 correct,R1 time (s),R2 answer (Question 1),R2 correct,R2 time (s)",
     );
-    expect(lines[1]).toBe("1,D,1,2,2,0,0,1,2,0,yes,yes,0.20,yes,yes,0.10");
-    expect(lines[3]).toBe("3,A,2,1,1,1,0,1,1,1,yes,yes,0.10,no,no,0.40");
-    expect(lines[6]).toBe("6,C,3,2,0,2,0,0,0,2,no,no,0.50,no,no,0.60");
+    expect(lines[1]).toBe("1,D,5,1,2,2,0,0,1,2,0,yes,yes,0.20,yes,yes,0.10");
+    expect(lines[3]).toBe("3,A,3,2,1,1,1,0,1,1,1,yes,yes,0.10,no,no,0.40");
+    expect(lines[6]).toBe("6,C,0,3,2,0,2,0,0,0,2,no,no,0.50,no,no,0.60");
+  });
+
+  test("points decide the ranking, not the ladder; the round's arena count sets the value", () => {
+    const { game, clock } = setup(["A", "B", "C", "D"], { rounds: 10 });
+    // Round 1: [A B] [C D]. A wins High Noon (2 pts), D wins Arena 2 (1 pt); D swaps up with B.
+    round(game, clock, [
+      ["A", true],
+      ["D", true],
+      ["B", false],
+      ["C", false],
+    ]);
+    expect(game.lastRound!.arenas.map((a) => a.duelists.map((d) => [d.nickname, d.points]))).toEqual([
+      [
+        ["A", 2],
+        ["B", 0],
+      ],
+      [
+        ["C", 0],
+        ["D", 1],
+      ],
+    ]);
+    game.next();
+    // Round 2: [A D] [B C]. D takes High Noon (2 pts), B wins Arena 2 (1 pt).
+    round(game, clock, [
+      ["D", true],
+      ["B", true],
+      ["A", false],
+      ["C", false],
+    ]);
+    game.next();
+    // Round 3: [D B] [A C]. Only A is right (1 pt); High Noon drew, so A can't climb past B.
+    round(game, clock, [
+      ["A", true],
+      ["D", false],
+      ["B", false],
+      ["C", false],
+    ]);
+    expect(ladderNames(game)).toEqual(["D", "B", "A", "C"]);
+    game.end();
+    // A (2 + 1) and D (1 + 2) tie on 3: D is higher on the ladder. A outranks B, who is above A on the ladder.
+    expect(game.hostView().players.map((p) => [p.nickname, p.rank, p.points])).toEqual([
+      ["D", 1, 3],
+      ["A", 2, 3],
+      ["B", 3, 1],
+      ["C", 4, 0],
+    ]);
+    // A late joiner makes 3 arenas: High Noon is now worth 3.
+    const late = setup(["A", "B", "C", "D"]);
+    late.game.join("E");
+    late.game.join("F");
+    round(late.game, late.clock, [
+      ["C", true],
+      ["A", false],
+    ]);
+    late.game.next();
+    expect(late.game.hostView().arenas).toHaveLength(3);
+    round(late.game, late.clock, [
+      ["A", true],
+      ["F", true],
+      ["E", false],
+    ]);
+    expect(late.game.lastRound!.arenas[0]!.duelists.find((d) => d.nickname === "A")!.points).toBe(3);
+    expect(late.game.lastRound!.arenas[2]!.duelists.find((d) => d.nickname === "F")!.points).toBe(1);
+    expect(late.game.hostView().players.map((p) => [p.nickname, p.points])).toEqual([
+      ["A", 3],
+      ["C", 1],
+      ["F", 1],
+      ["B", 0],
+      ["D", 0],
+      ["E", 0],
+    ]);
   });
 
   test("the host ends the game while a question is open: it is settled first", () => {

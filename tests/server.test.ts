@@ -1272,8 +1272,8 @@ describe("Showdown over WebSockets", () => {
     const end = await players[0]!.playerState((v) => v.kind === "duel" && v.phase === "podium" && !!v.result);
     expect(end.view.kind === "duel" && end.view.result).toEqual({ rank: 1, playerCount: 2, awards: ["Longest reign", "Most wins"] });
     const csv = await (await fetch(`${base}/api/results/latest.csv`)).text();
-    expect(csv).toContain("Rank,Nickname,Final arena,Start arena,Wins,Losses,Draws,Rounds won in Arena 1,Correct,Wrong,R1 answer (Q1)");
-    expect(csv).toContain("1,Ann,1,1,1,0,0,1,1,0,right,yes,");
+    expect(csv).toContain("Rank,Nickname,Points,Final arena,Start arena,Wins,Losses,Draws,Rounds won in Arena 1,Correct,Wrong,R1 answer (Q1)");
+    expect(csv).toContain("1,Ann,1,1,1,1,0,0,1,1,0,right,yes,");
 
     // Play again keeps Showdown and its rounds.
     host.send({ type: "host.open", quizId: quiz.id });

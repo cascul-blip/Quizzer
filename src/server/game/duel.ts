@@ -18,7 +18,7 @@ import { DUEL_DEFAULT_ROUNDS, DUEL_ROUNDS } from "../../shared/protocol.ts";
 import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import { MAX_TYPED_ANSWER, checkAnswer, type AnswerValue } from "../../shared/answer-match.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
-import { arenaOf, climbLadder, duelOutcome, pairArenas } from "../../shared/duel-rules.ts";
+import { arenaOf, arenaPoints, climbLadder, duelOutcome, pairArenas, standings } from "../../shared/duel-rules.ts";
 import { GameError, realClock, shuffle, topErrors, type Clock } from "./common.ts";
 import { AUTO_REVEAL_MS, GRACE_MS, preparePlayOrder, type Game } from "./game.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
@@ -44,6 +44,8 @@ export interface DuelAnswer {
 export interface DuelPlayer extends BasePlayer {
   /** By round slot (round − 1). */
   answers: (DuelAnswer | undefined)[];
+  /** Earned by winning duels: the bottom arena is worth 1, each arena above it 1 more. Decides the final ranking. */
+  points: number;
   wins: number;
   losses: number;
   draws: number;
@@ -156,7 +158,7 @@ export class DuelGame {
   }
 
   private newPlayer(base: BasePlayer): DuelPlayer {
-    return { ...base, answers: [], wins: 0, losses: 0, draws: 0, correct: 0, wrong: 0, reign: 0, startArena: 0 };
+    return { ...base, answers: [], points: 0, wins: 0, losses: 0, draws: 0, correct: 0, wrong: 0, reign: 0, startArena: 0 };
   }
 
   /** The arena (index) a player duels in this round, or -1. */
@@ -328,6 +330,7 @@ export class DuelGame {
       results.map((r) => r.outcomes),
     );
     const next = arenaOf(this.ladder);
+    const arenaCount = this.arenas.length;
     const arenas: DuelArenaResult[] = this.arenas.map((arena, k) => {
       const { outcomes, draw } = results[k]!;
       return {
@@ -337,13 +340,15 @@ export class DuelGame {
           const p = this.players.get(id)!;
           const a = p.answers[slot];
           const outcome = outcomes[i]!;
+          const points = outcome === "win" ? arenaPoints(k + 1, arenaCount) : 0;
+          p.points += points;
           if (a?.correct) p.correct++;
           else if (a) p.wrong++;
           if (outcome === "win") p.wins++;
           if (outcome === "lose") p.losses++;
           if (draw) p.draws++;
           if (outcome === "win" && k === 0) p.reign++;
-          return { ...ref(p), correct: a ? a.correct : null, ms: a ? a.ms : null, outcome, nextArena: next.get(id) ?? 0 };
+          return { ...ref(p), correct: a ? a.correct : null, ms: a ? a.ms : null, outcome, points, nextArena: next.get(id) ?? 0 };
         }),
       };
     });
@@ -382,9 +387,14 @@ export class DuelGame {
 
   // ---------- results ----------
 
-  /** Players in ladder order (rank 1 first). */
-  ranked(): DuelPlayer[] {
+  /** Players in ladder order (top of the ladder first). */
+  onLadder(): DuelPlayer[] {
     return this.ladder.map((id) => this.players.get(id)).filter((p): p is DuelPlayer => !!p);
+  }
+
+  /** The standings (rank 1 first): most points, then higher on the ladder. */
+  ranked(): DuelPlayer[] {
+    return standings(this.ladder, this.onLadder());
   }
 
   /** Arena per player id on the current ladder (next round's arena during the reveal; the final one at the podium). */
@@ -465,6 +475,7 @@ export class DuelGame {
       connected: p.connected,
       arena: this.arenaNow(p.id, ladderArenas),
       rank: i + 1,
+      points: p.points,
       wins: p.wins,
       losses: p.losses,
       draws: p.draws,
@@ -500,7 +511,7 @@ export class DuelGame {
     if (!p) return null;
     const q = this.currentQuestion;
     const ladderArenas = this.ladderArenas();
-    const rank = this.ladder.indexOf(p.id) + 1;
+    const rank = this.ranked().indexOf(p) + 1;
     const arenaNow = this.arenaNow(p.id, ladderArenas);
     // This round's arena and opponents (still this round's on the reveal); a late joiner waiting for the next round
     // gets the arena the ladder puts them in and no opponents.
@@ -526,7 +537,7 @@ export class DuelGame {
       kind: "duel",
       phase: this.phase,
       title: this.title,
-      me: { ...ref(p), arena: arenaNow, rank, wins: p.wins, losses: p.losses, draws: p.draws, reign: p.reign },
+      me: { ...ref(p), arena: arenaNow, rank, points: p.points, wins: p.wins, losses: p.losses, draws: p.draws, reign: p.reign },
       playerCount: this.players.size,
       round: Math.max(1, this.round),
       rounds: this.rounds,

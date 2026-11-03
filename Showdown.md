@@ -48,19 +48,28 @@ At each **boundary** between two arenas, the **upper arena's loser swaps with th
 
 Example with 6 players: Arena 1 is Ana vs Ben, Arena 2 is Cal vs Dee, Arena 3 is Eve vs Fox.  Ben, Dee and Fox win.  Ben stays on High Noon.  Ana (Arena 1's loser) swaps with Dee (Arena 2's winner), and Cal (Arena 2's loser) swaps with Fox (Arena 3's winner).  Eve stays at the bottom.  Next round: Arena 1 Ben vs Dee, Arena 2 Ana vs Fox, Arena 3 Cal vs Eve.
 
+## Points
+Winning a duel scores points, worth more the higher the arena:
+
+* A win in the **bottom arena is worth 1 point**, the arena above it 2, and so on up to High Noon.  With 3 arenas, High Noon is worth 3; with 15 arenas, it is worth 15.
+* The value comes from **that round's** number of arenas, so it changes if players join or are kicked.
+* Losing, staying (a 3-way duel's middle player) and draws score nothing.
+
+In the example above, Ben scores 3, Dee 2 and Fox 1.
+
 ## Late join, leave and kick
 * **Late joiners** go to the **bottom of the ladder** and duel from the next round.
 * A **disconnected** player keeps their place and counts as no answer, so their opponent only has to answer right to win.  If they reconnect, they carry on where they are.
 * **Kicking** a player removes them and the ladder closes up.  If that leaves an arena with one duelist this round, that duelist just stays.
 
 ## End and awards
-The game ends after the last round.  **The ladder order is the final ranking**: the winner of the last High Noon duel is first, and so on down the ladder.  The podium shows the top three on **WANTED** posters, the rest of the ladder, and the awards:
+The game ends after the last round.  **The most points wins.**  Players with equal points are ranked by their place on the ladder, higher first.  The ladder only decides who duels whom; a player near the top of the ladder can still finish below someone who scored more.  The podium shows the top three on **WANTED** posters with their points, the rest of the ranking, and the awards:
 
 * **Longest reign**: most rounds won in Arena 1.
 * **Most wins**: most duels won.
 * **Biggest climb**: most arenas climbed from the starting arena to the final one.
 
-**Show errors**, **Play again** and **Done** work as in every other mode.  The results CSV has one row per player: rank, final arena, wins, losses, draws, rounds won on High Noon, and each answer with its time.
+**Show errors**, **Play again** and **Done** work as in every other mode.  The results CSV has one row per player: rank, points, final arena, wins, losses, draws, rounds won on High Noon, and each answer with its time.
 
 ## Display
 The art is a painted Western movie style; the full list of images and the prompts used to make them are in `Showdown Art Brief.md`.
@@ -70,15 +79,16 @@ The art is a painted Western movie style; the full list of images and the prompt
 * **High Noon**: Arena 1 is always drawn larger, on Main Street at noon with the clock tower and a sheriff's star.
 * **Big classes**: the panels shrink into a grid (e.g. 30 players = 15 panels).
 * **While the question is open**: the question and timer at the top, tumbleweed rolling through the panels, hands hovering over holsters, and a mark over each duelist who has answered (not whether they were right).
-* **The reveal**: the faster right answer **draws and fires** (muzzle flash, smoke), and the other duelist's **hat flies off** and they stagger back into the dust.  The winner tips their hat.  In a **draw**, both shoot and miss and dust puffs up.  Then the movers **walk up or down the street** to their new panels.
+* **The reveal**: the faster right answer **draws and fires** (muzzle flash, smoke), and the other duelist's **hat flies off** and they stagger back into the dust.  The winner tips their hat.  In a **draw**, both shoot and miss and dust puffs up.  Each winner's name shows the points they scored (**+3**).  Then the movers **walk up or down the street** to their new panels.
 * **Podium**: a sunset town street, the top three on WANTED posters, the sheriff's star for the champion, the awards.
 
 Nobody gets hurt: the loser only loses their hat.  No blood, and no guns pointing at the viewer.
 
 ### Phones
 * **Intro / open**: the question, the answer tiles, and "Arena 2 · vs 🦊 Sam" (or both opponents in a 3-way duel).
-* **Reveal**: your duel side-on (you and your opponent), ✓/✗ and both times, and where you're going next.
-* **Podium**: your rank and your awards.
+* **Top bar**: your points so far.
+* **Reveal**: your duel side-on (you and your opponent), ✓/✗ and both times, the points you won, and where you're going next.
+* **Podium**: your rank, your points and your awards.
 
 ## Sound
 Music is composed in code like the other modes, and is original (not a film score).
