@@ -19,7 +19,7 @@ export interface ShuffleOptions {
 
 // ---------- Tallest Tower ----------
 
-export type GameMode = "classic" | "tower" | "submarine" | "fight" | "robot" | "land" | "racer" | "cup" | "dragon" | "bomb" | "siege" | "duel";
+export type GameMode = "classic" | "tower" | "submarine" | "fight" | "robot" | "land" | "racer" | "cup" | "dragon" | "bomb" | "siege" | "duel" | "kart";
 export type TowerPhase = "countdown" | "playing" | "podium";
 
 /** Each team also has a shape, so teams can be told apart without relying on colour. */
@@ -103,6 +103,9 @@ export type PlayerMsg =
   | { type: "fight.fire"; dx: number; dy: number }
   | { type: "robot.answer"; seq: number; option: number; text?: string }
   | { type: "robot.move"; dir: RobotDir }
+  | { type: "kart.answer"; seq: number; option: number; text?: string }
+  /** Kart Rally, drive phase only: the phone's steering wheel, −1 (full left) … 1 (full right). Sent at most every KART_TICK_MS while it changes. */
+  | { type: "kart.steer"; wheel: number }
   | { type: "land.answer"; seq: number; option: number; text?: string }
   | { type: "land.place"; tile: number }
   /** Leave the land early; unused claims are kept for next time. */
@@ -154,6 +157,7 @@ export type HostMsg =
   | ({ type: "host.setBomb" } & BombSettings)
   | ({ type: "host.setSiege" } & SiegeSettings)
   | ({ type: "host.setDuel" } & DuelSettings)
+  | ({ type: "host.setKart" } & KartSettings)
   | { type: "host.next" }
   | { type: "host.skip" }
   | { type: "host.kick"; playerId: string }
@@ -223,7 +227,7 @@ export interface PlayerResult {
 
 export type PlayerView =
   | { kind: "none"; game: null }
-  | { kind: "none"; game: { title: string; phase: Phase | TowerPhase | SubPhase | FightPhase | RobotPhase | LandPhase | RacerPhase | CupPhase | DragonPhase | BombPhase | SiegePhase | DuelPhase } }
+  | { kind: "none"; game: { title: string; phase: Phase | TowerPhase | SubPhase | FightPhase | RobotPhase | LandPhase | RacerPhase | CupPhase | DragonPhase | BombPhase | SiegePhase | DuelPhase | KartPhase } }
   | {
       kind: "player";
       phase: Phase;
@@ -252,7 +256,8 @@ export type PlayerView =
   | PlayerDragonView
   | PlayerBombView
   | PlayerSiegeView
-  | PlayerDuelView;
+  | PlayerDuelView
+  | PlayerKartView;
 
 export interface TowerAwards {
   mostCorrect: { value: number; nicknames: string[] } | null;
@@ -316,6 +321,7 @@ export interface HostGameState {
   bomb: BombSettings;
   siege: SiegeSettings;
   duel: DuelSettings;
+  kart: KartSettings;
   /** Team preview while the lobby is in a team mode (Tallest Tower, Tower Fight, Land Grab, Dragon's Hoard, Bomb Squad). */
   teams: (TeamInfo & { members: HostPlayer[] })[] | null;
   quiz: { id: string; title: string; questionCount: number };
@@ -1806,7 +1812,8 @@ export type HostView =
   | (HostDragonState & { join: JoinInfo })
   | (HostBombState & { join: JoinInfo })
   | (HostSiegeState & { join: JoinInfo })
-  | (HostDuelState & { join: JoinInfo });
+  | (HostDuelState & { join: JoinInfo })
+  | (HostKartState & { join: JoinInfo });
 
 export type ServerMsg =
   /** First message on every connection. A new serverId means the server restarted (maybe with new code). */
@@ -1819,3 +1826,99 @@ export type ServerMsg =
   | { type: "kicked" }
   | { type: "resumeFailed" }
   | { type: "error"; message: string };
+
+// ---------- Kart Rally ----------
+
+/**
+ * Kart Rally. countdown: 3, 2, 1 before the first round. quiz: KART_QUIZ_MS of answering for points.
+ * intro: crossed flags and "Get ready to drive in 3, 2, 1". drive: every car drives (1 s per point)
+ * until the last one stops or KART_DRIVE_CAP_MS. podium: after the last round. Rules in kart-rules.ts.
+ */
+export type KartPhase = "countdown" | "quiz" | "intro" | "drive" | "podium";
+
+export interface KartSettings {
+  /** Quiz + drive rounds (KART_ROUND_CHOICES). */
+  rounds: number;
+}
+
+export interface KartAwards {
+  mostCorrect: SubAward | null;
+  /** Fewest wall hits among players who drove; value = hits. */
+  smoothest: SubAward | null;
+}
+
+export interface HostKartCar {
+  id: string;
+  nickname: string;
+  avatar: AvatarChoice;
+  connected: boolean;
+  color: string;
+  /** Pose in field units (kart-rules.ts), rounded to 0.1; heading in radians. */
+  x: number;
+  y: number;
+  heading: number;
+  /** Current wheel, −1…1 (front wheels are drawn turned). */
+  wheel: number;
+  /** Fraction of top speed, 0…1. */
+  speed: number;
+  /** Points earned in this round's quiz (fuel for the next drive). */
+  points: number;
+  /** Driving time left this drive, ms (0 outside the drive). */
+  fuelMs: number;
+  /** Full fuel this drive started with, ms. */
+  fuelStartMs: number;
+  /** Still moving (has fuel or is coasting to a stop). */
+  moving: boolean;
+  laps: number;
+  distance: number;
+  /** Wall hits so far; bumps on each new hit (the screen flashes sparks). */
+  hits: number;
+  rank: number;
+}
+
+export interface KartStanding {
+  id: string;
+  nickname: string;
+  avatar: AvatarChoice;
+  color: string;
+  rank: number;
+  laps: number;
+  distance: number;
+  correct: number;
+  hits: number;
+}
+
+export interface HostKartState {
+  kind: "kart";
+  phase: KartPhase;
+  quiz: { id: string; title: string; questionCount: number };
+  round: number;
+  rounds: number;
+  phaseRemainingMs: number;
+  phaseDurationMs: number;
+  /** Server time of this snapshot (ms), for smoothing cars between ticks. */
+  tick: number;
+  cars: HostKartCar[];
+  playerCount: number;
+  standings: KartStanding[] | null;
+  awards: KartAwards | null;
+  errors: QuestionError[] | null;
+  hasResults: boolean;
+}
+
+export interface PlayerKartView {
+  kind: "kart";
+  phase: KartPhase;
+  title: string;
+  round: number;
+  rounds: number;
+  phaseRemainingMs: number;
+  me: { id: string; nickname: string; avatar: AvatarChoice; color: string; points: number; correct: number; laps: number; rank: number };
+  playerCount: number;
+  question: StreamQuestionView | null;
+  feedback: { seq: number; correct: boolean; remainingMs: number; answers: string[]; penaltyMs: number } | null;
+  /** Drive phase: driving time left (a running countdown; ms), and the full amount this drive started with. */
+  fuelMs: number;
+  fuelStartMs: number;
+  result: { rank: number; playerCount: number; laps: number; distance: number; awards: string[] } | null;
+}
