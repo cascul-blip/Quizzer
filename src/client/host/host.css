@@ -6234,7 +6234,7 @@ select {
 }
 
 .sleigh-bar-flight .robot-bar-fill {
-  background: repeating-linear-gradient(-45deg, #c8102e 0 18px, #f4f4f4 18px 36px);
+  background: repeating-linear-gradient(-45deg, #a80f22 0 18px, #c42032 18px 36px);
 }
 
 .sleigh-bar-intro .robot-bar-fill,
@@ -6357,6 +6357,23 @@ select {
   }
 }
 
+.sleigh-gift-ring {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sleigh-ring 1.6s ease-out infinite;
+}
+
+@keyframes sleigh-ring {
+  from {
+    transform: scale(0.6) rotate(0deg);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.35) rotate(60deg);
+    opacity: 0;
+  }
+}
+
 .sleigh-smoke {
   animation: sleigh-smoke 3s ease-in-out infinite alternate;
 }
@@ -6388,7 +6405,7 @@ select {
   }
 }
 
-.sleigh-house.done {
+.sleigh-house.is-done {
   animation: sleigh-house-lit 0.6s ease-out both;
 }
 
@@ -6969,6 +6986,7 @@ select {
   .sleigh-chimney-glow,
   .sleigh-gift-bob,
   .sleigh-gift-shadow,
+  .sleigh-gift-ring,
   .sleigh-smoke,
   .sleigh-bulbs .tw-a,
   .sleigh-bulbs .tw-b,

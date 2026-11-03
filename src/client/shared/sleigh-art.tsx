@@ -99,12 +99,12 @@ function Pine({ x, y, r, seed, decorated }: { x: number; y: number; r: number; s
   }
   return (
     <g>
-      <circle cx={f1(x + r * 0.35)} cy={f1(y + r * 0.5)} r={f1(r * 0.95)} fill="rgba(2,6,20,0.45)" />
+      <circle cx={f1(x + r * 0.3)} cy={f1(y + r * 0.4)} r={f1(r * 0.85)} fill="rgba(2,6,20,0.3)" />
       <polygon points={pts(r, 9, rot)} fill={decorated ? "#1f6b3a" : "#173f2e"} />
       <polygon points={pts(r * 0.72, 7, rot + 0.3)} fill={decorated ? "#2b8a4a" : "#1f5239"} />
       <polygon points={pts(r * 0.45, 6, rot + 0.6)} fill={decorated ? "#36a35a" : "#28664a"} />
       {/* Snow on the moonlit side. */}
-      <polygon points={pts(r * 0.62, 7, rot + 0.15)} fill="#e8f0ff" opacity="0.5" transform={`translate(${f1(-r * 0.22)} ${f1(-r * 0.26)})`} />
+      {!decorated && <polygon points={pts(r * 0.5, 7, rot + 0.15)} fill="#e8f0ff" opacity="0.3" transform={`translate(${f1(-r * 0.15)} ${f1(-r * 0.18)})`} />}
       {lights}
       {decorated && <Star x={x} y={y} r={4.5} />}
     </g>
@@ -402,13 +402,13 @@ function City({ houses }: { houses: readonly Box[] }) {
           <stop offset="1" stop-color="#fff1a0" stop-opacity="0" />
         </radialGradient>
         <radialGradient id="sl-padglow">
-          <stop offset="0.75" stop-color="#cfe0ff" stop-opacity="0.35" />
+          <stop offset="0.75" stop-color="#cfe0ff" stop-opacity="0.18" />
           <stop offset="1" stop-color="#cfe0ff" stop-opacity="0" />
         </radialGradient>
         <radialGradient id="sl-ice" cx="0.4" cy="0.35" r="0.7">
-          <stop offset="0" stop-color="#f4f8ff" />
-          <stop offset="0.7" stop-color="#d6e3f8" />
-          <stop offset="1" stop-color="#b9cbea" />
+          <stop offset="0" stop-color="#dfe8f8" />
+          <stop offset="0.7" stop-color="#b8c9e8" />
+          <stop offset="1" stop-color="#97add6" />
         </radialGradient>
         <linearGradient id="sl-pond" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" stop-color="#9fd0f0" />
@@ -579,7 +579,7 @@ export function House({ house, color }: { house: HouseShape; color?: string | nu
     return [p[0] + (t[0] - p[0]) * k, p[1] + (t[1] - p[1]) * k];
   };
   const poly = (pts: [number, number][]) => pts.map((p) => `${f1(p[0])},${f1(p[1])}`).join(" ");
-  const snowK = 0.22 + ((house.id * 7) % 5) * 0.03;
+  const snowK = 0.4 + ((house.id * 7) % 5) * 0.04;
 
   // Light from the windows, spilling out on every side.
   const spills: [number, number, number, number][] = [];
@@ -607,9 +607,9 @@ export function House({ house, color }: { house: HouseShape; color?: string | nu
   const giftColor = GIFTS[house.id % GIFTS.length]!;
 
   return (
-    <g class={`sleigh-house ${done ? "done" : "waiting"}`} transform={`translate(${x} ${y})`}>
+    <g class={`sleigh-house ${done ? "is-done" : "is-waiting"}`} transform={`translate(${x} ${y})`}>
       {spills.map(([sx, sy, rx, ry], i) => (
-        <ellipse key={i} cx={f1(sx)} cy={f1(sy)} rx={rx * (done ? 1.5 : 1.2)} ry={ry * (done ? 1.5 : 1.2)} fill="url(#sl-window)" />
+        <ellipse key={i} cx={f1(sx)} cy={f1(sy)} rx={rx * (done ? 1.7 : 1)} ry={ry * (done ? 1.7 : 1)} fill="url(#sl-window)" opacity={done ? 1 : 0.65} />
       ))}
       <rect x="5" y="7" width={w} height={h} rx="2" fill="rgba(5,10,30,0.5)" />
       {faces.map((f, i) => (
@@ -668,9 +668,10 @@ export function House({ house, color }: { house: HouseShape; color?: string | nu
         </>
       ) : (
         <g transform={`translate(${ch.x} ${ch.y})`}>
-          <ellipse class="sleigh-gift-shadow" cx="3" cy="4" rx="8" ry="4" fill="rgba(0,0,0,0.35)" />
+          <circle class="sleigh-gift-ring" r="20" fill="none" stroke="#ffd23f" stroke-width="2.5" stroke-dasharray="5 4" />
+          <ellipse class="sleigh-gift-shadow" cx="3" cy="4" rx="10" ry="5" fill="rgba(0,0,0,0.4)" />
           <g class="sleigh-gift-bob">
-            <Gift s={19} color={giftColor} />
+            <Gift s={24} color={giftColor} />
           </g>
         </g>
       )}
@@ -692,14 +693,14 @@ function Reindeer({ x, y, rudolph, phase }: { x: number; y: number; rudolph?: bo
       <g class={`sleigh-legs ${phase ? "a" : "b"}`} stroke="#4a2c12" stroke-width="1.6" stroke-linecap="round">
         <path d="M4.5 2.5l2.5 2.8M-4.5 -2.5l-2.5 -2.8" />
       </g>
-      <ellipse rx="7.6" ry="3.5" fill="#8b5a2b" />
+      <ellipse rx="7.8" ry="3.9" fill="#8b5a2b" />
       <ellipse cx="0.5" cy="-1" rx="5.4" ry="1.5" fill="#a8743f" />
       <circle cx="-7.6" cy="0" r="1.6" fill="#f4ead8" />
       {/* Collar with a bell. */}
       <path d="M5.2 -3.1Q6.4 0 5.2 3.1" stroke="#c0392b" stroke-width="1.4" fill="none" />
       <circle cx="6" cy="2.6" r="1" fill="#f2c14e" />
       {/* Head, antlers and nose. */}
-      <path d="M8 -1.5L5.2 -5.4L2.6 -6.1M5.9 -4.4L6.9 -7.1M8 1.5L5.2 5.4L2.6 6.1M5.9 4.4L6.9 7.1" stroke="#ead6ae" stroke-width="1.1" stroke-linecap="round" fill="none" />
+      <path d="M8 -1.5L5.2 -5.4L2.6 -6.1M5.9 -4.4L6.9 -7.1M8 1.5L5.2 5.4L2.6 6.1M5.9 4.4L6.9 7.1" stroke="#dcc49a" stroke-width="0.9" stroke-linecap="round" fill="none" />
       <ellipse cx="8.9" cy="0" rx="3.4" ry="2.3" fill="#7a4c22" />
       <ellipse cx="7.4" cy="-2.3" rx="1.3" ry="0.7" fill="#6a3f1a" />
       <ellipse cx="7.4" cy="2.3" rx="1.3" ry="0.7" fill="#6a3f1a" />
@@ -774,14 +775,17 @@ export function SleighTeam({ color, wheel = 0, flying = false }: { color: string
       <rect x={-L2 + 5.5} y="1" width="4" height="4" fill="#4db8ff" stroke="#14507a" stroke-width="0.5" />
       <rect x={-L2 + 2} y="2" width="3" height="3" fill="#ffd23f" stroke="#7a5f10" stroke-width="0.5" />
       {/* Santa from above: red coat with white trim, beard poking forward, hat with its bobble flopping back. */}
-      <ellipse cx="-22" cy="0" rx="6.4" ry="8" fill="#d62828" stroke="#fff" stroke-width="1.2" />
-      <path d="M-19 -4.5L-16.8 -4.2M-19 4.5L-16.8 4.2" stroke="#d62828" stroke-width="2.6" stroke-linecap="round" />
-      <circle cx="-16.6" cy="-4.2" r="1.3" fill="#1b1b1b" />
-      <circle cx="-16.6" cy="4.2" r="1.3" fill="#1b1b1b" />
-      <path d="M-19.5 -3.5Q-15.6 0 -19.5 3.5Q-18 0 -19.5 -3.5Z" fill="#fafafa" />
-      <circle cx="-21.5" cy="0" r="3.9" fill="#e23b3b" stroke="#fff" stroke-width="1.6" />
-      <path d="M-22.5 -1.5Q-25.5 -0.8 -26.5 0.8" stroke="#e23b3b" stroke-width="2.4" stroke-linecap="round" fill="none" />
-      <circle cx="-27" cy="1" r="1.7" fill="#fff" />
+      <ellipse cx="-22.5" cy="0" rx="6.6" ry="8.4" fill="#c81f2a" stroke="#7a0f16" stroke-width="0.7" />
+      <ellipse cx="-23.5" cy="-2.5" rx="4" ry="4" fill="#e0353f" opacity="0.7" />
+      <path d="M-18.2 -6.6Q-15.6 0 -18.2 6.6" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round" />
+      <path d="M-19.5 -5.6L-15.8 -4.4M-19.5 5.6L-15.8 4.4" stroke="#c81f2a" stroke-width="2.8" stroke-linecap="round" />
+      <circle cx="-15.4" cy="-4.3" r="1.4" fill="#1b1b1b" />
+      <circle cx="-15.4" cy="4.3" r="1.4" fill="#1b1b1b" />
+      <ellipse cx="-17.4" cy="0" rx="2.6" ry="3.3" fill="#fafafa" />
+      <circle cx="-21.2" cy="0" r="3.6" fill="#e8343e" />
+      <path d="M-19.2 -2.9A3.6 3.6 0 0 1 -19.2 2.9" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" />
+      <path d="M-22.5 -0.5Q-25.5 0.2 -27.5 2" stroke="#e8343e" stroke-width="2.6" stroke-linecap="round" fill="none" />
+      <circle cx="-28" cy="2.2" r="1.9" fill="#fff" />
     </g>
   );
 }
