@@ -1,72 +1,84 @@
-Every player for themselves in a kart race on an Indy-500-style oval.  The game alternates between a short quiz, where every correct answer buys fuel, and a drive, where every player steers their own car with a steering wheel on their phone.  The track is only on the projector, so players have to look up to drive.
+Every player for themselves, delivering Christmas presents over a snowy city at night.  The game alternates between a short quiz, where every correct answer buys flying time, and a flight, where every player steers their own sleigh with a steering wheel on their phone.  The city is only on the projector, so players have to look up to fly.
 
 ## Lobby
-Choose **Game mode → 🏎 Kart Rally**.
+Choose **Game mode → 🎅 Santa's Sleigh Run**.
 
 Settings:
-* **Rounds**: 3, 4, 5, 6, 7, 8 or 10 (default 5).  Each round is one quiz and one drive.
+* **Houses**: any number from 15 to 30 (default 20).  Each house needs one present, and the game lasts until every present is delivered.
 * **Protect from abuse** works the same as in Robot Attack.
 
 ## Quiz
 The quiz lasts **15 seconds**.  A bar across the top of the projector drains as time runs out.
 
-Everyone answers their own stream of questions on their phone as fast as they can, the same as in Robot Attack.  **Each correct answer is 1 point**, and each point is **3 seconds of driving** in the next drive.  Questions come in a random order and repeat once the quiz runs out.
+Everyone answers their own stream of questions on their phone as fast as they can, the same as in Robot Attack.  **Each correct answer is 1 point**, and each point is **3 seconds of flying** in the next flight.  Questions come in a random order and repeat once the quiz runs out.
 
 ## Intro
-Two crossed checkered flags fill the projector with the words "Get ready to drive in 3, 2, 1".  Phones switch to the steering wheel.
+The projector shows the reindeer ready to take off, with the words "Get ready to fly in 3, 2, 1".  Phones switch to the steering wheel.
 
-## Driving
-* **The gas is always on.**  Players only steer.
-* Every car drives at the same top speed, for as long as its fuel lasts: a player with 7 points drives for 7 seconds.
-* **The track edges are walls.**  A car that hits one bounces off and slows down for a moment, then picks its speed back up.
-* **Cars are ghosts.**  They drive through each other, so nobody can block or ram anyone.
-* When a car runs out of fuel it **coasts to a stop** and waits there.  A player with 0 points doesn't move this round.
-* **Positions carry over.**  The next drive starts from wherever each car stopped, facing the way it was going.
-* The drive ends when the last car stops (at most 60 seconds), then the next round's quiz starts.
+## Flight
+* **The reindeer are always running.**  Players only steer.
+* Every sleigh flies at the same top speed, for as long as its flying time lasts: a player with 7 points flies for 7 seconds.
+* **Sleighs fly over the rooftops**, so houses never get in the way.
+* **Only the city's edge is a wall.**  A sleigh that bumps into it bounces off and slows down for a moment, then picks its speed back up.
+* **Sleighs are ghosts.**  They fly through each other, so nobody can block or ram anyone.
+* When a sleigh runs out of flying time it **glides to a stop** and hovers there.  A player with 0 points doesn't move this round.
+* **Positions carry over.**  The next flight starts from wherever each sleigh stopped, facing the way it was going.
+* The flight ends when the last sleigh stops (at most 60 seconds), then the next round's quiz starts.
+
+## Houses and deliveries
+The houses are placed at random across the city at the start of the game, with streets between them and a clear launch pad (the North Pole) in the middle, where every sleigh starts.
+
+Each house starts dark, waiting for its present.  **Flying over a house that still needs a present delivers it**: the first sleigh there claims it and scores 1 present.  The house then lights up with festive lights, and a delivered house can't be claimed again.  If two sleighs reach the same house in the same instant, the one closer to its centre gets it.
+
+Rounds repeat until **every present is delivered**.  Then the whole city lights up for a short celebration, and the podium follows.
 
 ## Steering
 The phone shows a large steering wheel.
 
-* **Drag** the wheel round to turn.  It turns up to **135° each way**; the further it is turned, the tighter the car turns.
-* **Let go** and the wheel springs back to the centre, and the car drives straight.
+* **Drag** the wheel round to turn.  It turns up to **135° each way**; the further it is turned, the tighter the sleigh turns.
+* **Let go** and the wheel springs back to the centre, and the sleigh flies straight.
 
-## Track and display
-A realistic top-down view of an Indy-style oval: two long straights joined by two sweeping turns, grey asphalt with white edge lines, a red-and-white kerb and a concrete wall on the outside, grass in the infield and the stands around the outside.  A checkered start/finish line crosses the middle of the bottom straight, and cars race counter-clockwise (left turns, like an Indy oval).
+## Display
+A top-down view of a snowy city at night: snow-covered roofs and gardens, dark streets, street lamps, and a low wall of snow round the edge.  Houses still waiting for a present are dark; delivered ones are strung with coloured Christmas lights and glow.  A counter shows how many presents are delivered out of the total.
 
-The track is **100 units wide** and a car is **30 wide**, so there is room for about three cars side by side.  The projector scales the whole oval to fit the screen.
+The city is **1600 × 900 units** and a sleigh team (sleigh plus reindeer) is **80 long**; crossing the city takes about 4 seconds.  The projector scales the whole city to fit the screen.
 
-Each player's car is an **open-wheel racer in that player's colour**, with the front wheels turned to match their steering wheel.  A small name tag with the player's avatar and nickname follows each car.  A wall hit throws off sparks.
+Each player's sleigh is **painted in that player's colour**, pulled by a team of reindeer with **Rudolph leading** (red nose glowing).  A small name tag with the player's avatar, nickname and number of presents follows each sleigh.  A bump into the city edge throws up a puff of snow.  A delivery drops a present down the chimney with a sparkle.
 
 ## Sound
-The music is original synth-rock with engine sounds: an idling engine buzz, a driving rock beat, a chugging bass, twangy power chords and an energetic square-wave lead.
+The music is public-domain Christmas carols, with sleigh bells jingling through all three.
 
-* **Lobby**: a mid-tempo rock groove with the engines idling.
-* **Race** (quiz, intro and drive): one track for the whole round.  It starts sparse at the start of the quiz (idling engines, a hat and a bass note on each beat), builds as the quiz runs out (rock beat, chugging bass, backbeat, power chords, then the lead), keeps building through the intro, and plays the full band, faster, with the engines at full revs while the cars drive.
-* **Podium**: a victory-lap anthem in a major key.
+* **Lobby**: "O Come, All Ye Faithful" (Adeste Fideles, J. F. Wade, 18th century) on flute and glockenspiel, with strings, piano and a pizzicato bass.
+* **Rounds** (quiz, intro and flight): "Joy to the World" (Lowell Mason's "Antioch", 1839), one track for the whole round.  It starts sparse at the start of the quiz (sleigh bells, held strings and a bass note on each beat), builds as the quiz runs out (the tune on pizzicato, the clip-clop of hooves, an oom-pah piano, then glockenspiel), keeps building through the intro, and plays the full band with brass on the tune, faster, while the sleighs fly.
+* **Celebration and podium**: "Hark! The Herald Angels Sing" (Mendelssohn, 1840) on festive brass with glockenspiel, strings and timpani.  The celebration adds a flute descant, faster sleigh bells and a snare.
+
+Sound effects: a sleigh-bell shimmer under each flying sleigh that follows its speed, a short sleigh-bell jingle, and a bright magic chime with a low "ho" for each present delivered.
 
 ## Decisions
-The host chooses 3 to 10 rounds (3, 4, 5, 6, 7, 8 or 10), default 5.
+The host chooses 15 to 30 houses, default 20.  There is no round limit: the game ends when every present is delivered.
 
-A game starts with a 3, 2, 1 countdown, then each round is: a 15 second quiz, the 3 second intro, then the drive.
+A game starts with a 3, 2, 1 countdown, then each round is: a 15 second quiz, the 3 second intro, then the flight.
 
 Each correct answer is 1 point.  Wrong answers cost nothing, apart from the wait when Protect from abuse is on.
 
-Each point is 3 seconds of driving.  Points don't carry over: the fuel for each drive comes only from that round's quiz.
+Each point is 3 seconds of flying.  Points don't carry over: the flying time for each flight comes only from that round's quiz.
 
-The gas is always on; players only steer.  The wheel turns ±135° and springs back to the centre when released.
+The reindeer are always running; players only steer.  The wheel turns ±135° and springs back to the centre when released.
 
-The oval is 100 units wide and cars are 30 wide, scaled to fit the projector.  The track is only shown on the projector.
+Sleighs fly over the houses.  Only the city's edge is a wall: a sleigh that bumps into it bounces off and slows down briefly.
 
-The track edges are walls.  A car that hits one bounces off and slows down briefly.
+Sleighs are ghosts: there are no collisions between sleighs.
 
-Cars are ghosts: there are no collisions between cars.
+A sleigh that runs out of flying time glides to a stop and waits there.  Positions carry over between rounds.
 
-A car that runs out of fuel coasts to a stop and waits there.  Positions carry over between rounds.
+The flight ends when the last sleigh stops, or after 60 seconds.
 
-The drive ends when the last car stops, or after 60 seconds.
+The first sleigh to fly over a house that still needs a present delivers it.  After the last present, a 3 second celebration, then the podium.
 
-The winner is the player who has driven the furthest (laps plus progress round the current lap) after the last round.
+The winner is the player who delivered the most presents; a tie is broken by distance flown.
 
-There are awards for "Most correct answers" and "Smoothest driver" (fewest wall hits among players who drove).
+There are awards for "Most correct answers", "Smoothest flyer" (fewest bumps into the city edge among players who flew) and "Furthest flown".
 
-Late joiners start on the starting grid and can answer questions straight away.  A disconnected player's wheel springs back to the centre, so their car drives straight until its fuel runs out.
+The results CSV has one row per player: rank, presents, distance (m), correct, wrong, accuracy, bumps and seconds flown.
+
+Late joiners start on the launch pad and can answer questions straight away.  A disconnected player's wheel springs back to the centre, so their sleigh flies straight until its flying time runs out.

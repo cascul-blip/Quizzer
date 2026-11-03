@@ -390,7 +390,8 @@ function SleighWheel({ color, gRef }: { color: string; gRef: Ref<SVGGElement> })
           <stop offset="1" stop-color="#9a6a12" />
         </radialGradient>
         <radialGradient id="sleigh-glow">
-          <stop offset="0.55" stop-color="#ffd877" stop-opacity="0.22" />
+          <stop offset="0.7" stop-color="#ffd877" stop-opacity="0" />
+          <stop offset="0.8" stop-color="#ffd877" stop-opacity="0.2" />
           <stop offset="1" stop-color="#ffd877" stop-opacity="0" />
         </radialGradient>
         <linearGradient id="sleigh-handle" x1="-1" y1="0" x2="1" y2="0">

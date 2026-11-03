@@ -1,59 +1,64 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
-import { FIELD_H, FIELD_W, SLEIGH_MS_PER_POINT, SLEIGH_TICK_MS, METRES_PER_UNIT } from "../../shared/sleigh-rules.ts";
-import type { HostSleighCar, HostView } from "../../shared/protocol.ts";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
+import { FIELD_H, FIELD_W, METRES_PER_UNIT, SLEIGH_MS_PER_POINT, SLEIGH_TICK_MS } from "../../shared/sleigh-rules.ts";
+import type { HostSleighPlayer, HostView, SleighHouse } from "../../shared/protocol.ts";
 import { ACCESSORY_ART, AVATAR_ART, Avatar } from "../shared/avatar-art.tsx";
-import { CheckeredFlags, SleighCar, SleighTrack } from "../shared/sleigh-art.tsx";
-import { play, startRev, type Rev } from "../shared/sounds.ts";
+import { CandyCanes, CityGround, Gift, House, HouseDefs, SleighTeam, Snowfall } from "../shared/sleigh-art.tsx";
+import { play, startJingle } from "../shared/sounds.ts";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
 import { Award } from "./tower.tsx";
 
 type SleighView = Extract<HostView, { kind: "sleigh" }>;
+type Jingle = NonNullable<ReturnType<typeof startJingle>>;
 
-/** A jump farther than this between two snapshots is a reset (back on the grid), not a move. */
+/** A jump farther than this between two snapshots is a reset (back on the launch pad), not a move. */
 const SNAP_DIST = 160;
-/** How long the spark burst of a wall hit lasts (keep in step with host.css). */
-const SPARK_MS = 600;
-/** At most one skid sound this often, however many cars hit the wall. */
-const SKID_GAP_MS = 220;
+/** How long a snow puff after a wall bump lasts (keep in step with host.css). */
+const PUFF_MS = 700;
+/** How long a delivery's drop, burst and "+1" pop last (keep in step with host.css). */
+const DROP_MS = 1700;
+/** At most one bump sound this often, however many sleighs hit the wall. */
+const BUMP_GAP_MS = 220;
 
 const metres = (d: number) => `${Math.max(0, Math.round(d * METRES_PER_UNIT)).toLocaleString("en-US")} m`;
-const lapText = (n: number) => `${n} lap${n === 1 ? "" : "s"}`;
+const SECS_PER_POINT = SLEIGH_MS_PER_POINT / 1000;
 
-/** Projector screen for Santa's Sleigh Run: countdown → (quiz → intro → drive)… → podium. */
+/** Projector screen for Santa's Sleigh Run: countdown → (quiz → intro → flight)… → finale → podium. */
 export function SleighStage({ view, send }: { view: SleighView; send: Send }) {
   const secs = useCountdown(view.phaseRemainingMs, `${view.phase}-${view.round}`);
   const prev = useRef<SleighView | null>(null);
-  const rev = useRef<Rev | null>(null);
+  const jingle = useRef<Jingle | null>(null);
 
   useEffect(() => {
     const p = prev.current;
     prev.current = view;
-    if (!p || view.phase === p.phase) return;
+    if (!p) return;
+    if (view.finished && !p.finished) play("jingle");
+    if (view.phase === p.phase) return;
     if (view.phase === "quiz" && view.round === 1) play("start");
-    if (view.phase === "drive") play("tickHigh");
+    if (view.phase === "flight") play("jingle");
     if (view.phase === "podium") play("fanfare");
   }, [view]);
 
-  // 3, 2, 1 before every drive.
+  // 3, 2, 1 before every flight.
   useEffect(() => {
     if ((view.phase === "intro" || view.phase === "countdown") && secs > 0 && secs <= 3) play("tick");
   }, [secs, view.phase]);
 
-  // The engines run while the cars do, louder and higher the faster the field is going.
-  const driving = view.phase === "drive";
+  // Sleigh bells ring while the sleighs fly, louder the more of them are in the air.
+  const flying = view.phase === "flight" && !view.finished;
   useEffect(() => {
-    if (!driving) return;
-    rev.current = startRev(0.55);
+    if (!flying) return;
+    jingle.current = startJingle(0.5);
     return () => {
-      rev.current?.stop();
-      rev.current = null;
+      jingle.current?.stop();
+      jingle.current = null;
     };
-  }, [driving]);
+  }, [flying]);
   useEffect(() => {
-    if (!rev.current || view.cars.length === 0) return;
-    const avg = view.cars.reduce((sum, c) => sum + (c.moving ? c.speed : 0), 0) / view.cars.length;
-    rev.current.set(avg);
+    if (!jingle.current || view.sleighs.length === 0) return;
+    const avg = view.sleighs.reduce((sum, s) => sum + (s.moving ? s.speed : 0), 0) / view.sleighs.length;
+    jingle.current.set(avg);
   }, [view]);
 
   useEffect(() => {
@@ -69,17 +74,16 @@ export function SleighStage({ view, send }: { view: SleighView; send: Send }) {
     <div class="stage sleigh-stage">
       <header class="topbar">
         <div class="title">{view.quiz.title}</div>
-        <div class="pill sleigh-pill">🏎️ Santa's Sleigh Run</div>
-        {view.round > 0 && (
-          <div class="pill">
-            Round {view.round} / {view.rounds}
-          </div>
-        )}
+        <div class="pill sleigh-pill">🎅 Santa's Sleigh Run</div>
+        {view.round > 0 && <div class="pill">Round {view.round}</div>}
+        <div class="pill sleigh-count-pill">
+          🎁 {view.delivered} / {view.total}
+        </div>
         <div class="spacer" />
         <div class="pill">👥 {view.playerCount}</div>
         <ScreenControls join={view.join} />
         {view.phase !== "podium" && (
-          <button class="btn ghost small" onClick={() => confirm("End the game now? Cars are ranked by the distance driven so far.") && send({ type: "host.end" })}>
+          <button class="btn ghost small" onClick={() => confirm("End the game now? Sleighs are ranked by the presents delivered so far.") && send({ type: "host.end" })}>
             End game
           </button>
         )}
@@ -89,18 +93,20 @@ export function SleighStage({ view, send }: { view: SleighView; send: Send }) {
       ) : (
         <>
           <PhaseBar view={view} secs={secs} />
-          <main class={`sleigh-wrap phase-${view.phase}`}>
+          <main class={`sleigh-wrap phase-${view.phase} ${view.finished ? "finished" : ""}`}>
             <div class="sleigh-field-box">
               <div class="sleigh-field">
-                <SleighTrack />
-                <Cars view={view} />
+                <CityGround houses={view.houses} />
+                <Houses view={view} />
+                <Sleighs view={view} />
+                <Snowfall />
                 {view.phase === "quiz" && (
                   <div class="sleigh-quiz-note">
-                    <div class="sleigh-quiz-round">
-                      Round {view.round} of {view.rounds}
+                    <div class="sleigh-quiz-round">Round {view.round}</div>
+                    <div>📱 Answer questions to power your reindeer</div>
+                    <div class="sleigh-quiz-sub">
+                      🎁 {view.delivered} of {view.total} delivered · every correct answer = {SECS_PER_POINT} s of flying
                     </div>
-                    <div>📱 Answer questions on your phone</div>
-                    <div class="sleigh-quiz-sub">Every correct answer = {SLEIGH_MS_PER_POINT / 1000} seconds of driving</div>
                   </div>
                 )}
               </div>
@@ -108,12 +114,13 @@ export function SleighStage({ view, send }: { view: SleighView; send: Send }) {
             <Standings view={view} />
             {view.phase === "countdown" && (
               <div class="countdown-overlay sleigh-overlay">
+                <div class="sleigh-overlay-title">🎅 Santa needs your help! 🎄</div>
                 <div class="countdown-label">
-                  Answer questions on your phone to earn fuel: every correct answer is {SLEIGH_MS_PER_POINT / 1000} seconds of driving.
+                  Answer questions on your phone: every correct answer gives your reindeer {SECS_PER_POINT} seconds of flying.
                   <br />
-                  Then steer your car with the wheel on your phone. The gas is always on!
+                  Then steer your sleigh with the wheel on your phone and fly over the houses to drop their presents down the chimney.
                   <br />
-                  Most distance after {view.rounds} rounds wins.
+                  Deliver the most presents to win!
                 </div>
                 <div class="countdown-num" key={secs}>
                   {Math.max(1, secs)}
@@ -122,13 +129,14 @@ export function SleighStage({ view, send }: { view: SleighView; send: Send }) {
             )}
             {view.phase === "intro" && (
               <div class="countdown-overlay sleigh-overlay sleigh-intro">
-                <CheckeredFlags />
-                <div class="countdown-label">Get ready to drive in…</div>
+                <CandyCanes />
+                <div class="countdown-label">Get ready to fly in…</div>
                 <div class="countdown-num" key={secs}>
                   {Math.max(1, secs)}
                 </div>
               </div>
             )}
+            {view.finished && view.phase === "flight" && <Finale total={view.total} />}
           </main>
         </>
       )}
@@ -139,24 +147,50 @@ export function SleighStage({ view, send }: { view: SleighView; send: Send }) {
 /** The bar across the top drains over each phase, with what to do right now. */
 function PhaseBar({ view, secs }: { view: SleighView; secs: number }) {
   // Catch up once, when the phase starts (see robot.tsx).
-  const key = `${view.phase}-${view.round}`;
+  const key = `${view.phase}-${view.round}-${view.finished}`;
   const start = useRef<{ key: string; elapsed: number } | null>(null);
   if (!start.current || start.current.key !== key) start.current = { key, elapsed: Math.max(0, view.phaseDurationMs - view.phaseRemainingMs) };
   const elapsed = start.current.elapsed;
-  const moving = view.cars.filter((c) => c.moving).length;
+  const moving = view.sleighs.filter((s) => s.moving).length;
+  const left = view.total - view.delivered;
   const label =
     view.phase === "quiz"
-      ? `⛽ Answer questions to earn fuel · ${secs}s`
-      : view.phase === "drive"
-        ? moving > 0
-          ? `🏁 Steer with your phone! · ${moving} car${moving === 1 ? "" : "s"} on track · ${secs}s`
-          : "🏁 Everyone's out of fuel"
+      ? `🦌 Answer questions to power your reindeer · ${secs}s`
+      : view.phase === "flight"
+        ? view.finished
+          ? "🎄 Every present delivered!"
+          : moving > 0
+            ? `🛷 Steer with your phone! · ${moving} sleigh${moving === 1 ? "" : "s"} flying · ${left} present${left === 1 ? "" : "s"} to go · ${secs}s`
+            : "🦌 The reindeer need a rest"
         : "Get ready…";
   return (
     <div class={`robot-bar sleigh-bar sleigh-bar-${view.phase}`}>
       <div key={key} class="robot-bar-fill" style={{ animationDuration: `${view.phaseDurationMs}ms`, animationDelay: `-${elapsed}ms` }} />
       <div class="robot-bar-label">{label}</div>
     </div>
+  );
+}
+
+/** Each player's colour by id, for the houses they delivered to. */
+function colorsOf(sleighs: { id: string; color: string }[]): Map<string, string> {
+  return new Map(sleighs.map((s) => [s.id, s.color]));
+}
+
+/** The houses, re-drawn only when a present is delivered (or a deliverer's colour changes). */
+function Houses({ view }: { view: SleighView }) {
+  const colors = colorsOf(view.sleighs);
+  const key = view.houses.map((h) => `${h.id}:${h.deliveredBy ? colors.get(h.deliveredBy) ?? "?" : ""}`).join("|");
+  return useMemo(
+    () => (
+      <svg class="sleigh-houses" viewBox={`0 0 ${FIELD_W} ${FIELD_H}`} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+        <HouseDefs />
+        {view.houses.map((h) => (
+          <House key={h.id} house={h} color={h.deliveredBy ? colors.get(h.deliveredBy) ?? "#ffd23f" : null} />
+        ))}
+      </svg>
+    ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [key],
   );
 }
 
@@ -188,23 +222,39 @@ function sample(m: Motion, now: number): Pose {
   return { x: m.from.x + (m.to.x - m.from.x) * k, y: m.from.y + (m.to.y - m.from.y) * k, h: m.from.h + angleDiff(m.from.h, m.to.h) * k };
 }
 
-interface Spark {
+interface Puff {
   key: number;
   x: number;
   y: number;
 }
 
+interface Drop {
+  key: number;
+  /** Where the present starts (the sleigh) and lands (the chimney). */
+  sx: number;
+  sy: number;
+  tx: number;
+  ty: number;
+  color: string;
+  name: string;
+}
+
+const chimneyOf = (h: SleighHouse) => ({ x: h.x + h.chimney.x, y: h.y + h.chimney.y });
+
 /**
- * The cars, on an svg laid over the track. Each snapshot sets a new target pose; a rAF loop
- * glides every car there over the time between ticks, writing transforms straight to the DOM.
+ * The sleighs, on an svg laid over the town. Each snapshot sets a new target pose; a rAF loop
+ * glides every sleigh there over the time between ticks, writing transforms straight to the DOM.
+ * New deliveries drop a present down the chimney; wall bumps throw up a puff of snow.
  */
-function Cars({ view }: { view: SleighView }) {
+function Sleighs({ view }: { view: SleighView }) {
   const motions = useRef(new Map<string, Motion>());
   const els = useRef(new Map<string, { pos: SVGGElement | null; rot: SVGGElement | null }>());
-  const hits = useRef(new Map<string, number>());
-  const lastSkid = useRef(0);
-  const sparkSeq = useRef(0);
-  const [sparks, setSparks] = useState<Spark[]>([]);
+  const bumps = useRef(new Map<string, number>());
+  const delivered = useRef<Map<number, string | null> | null>(null);
+  const lastBump = useRef(0);
+  const seq = useRef(0);
+  const [puffs, setPuffs] = useState<Puff[]>([]);
+  const [drops, setDrops] = useState<Drop[]>([]);
 
   const apply = (now: number) => {
     for (const [id, m] of motions.current) {
@@ -219,12 +269,12 @@ function Cars({ view }: { view: SleighView }) {
   useLayoutEffect(() => {
     const now = performance.now();
     const seen = new Set<string>();
-    const fresh: Spark[] = [];
-    for (const c of view.cars) {
-      seen.add(c.id);
-      const to = { x: c.x, y: c.y, h: c.heading };
-      const m = motions.current.get(c.id);
-      if (!m) motions.current.set(c.id, { from: to, to, at: now, dur: SLEIGH_TICK_MS, tick: view.tick });
+    const freshPuffs: Puff[] = [];
+    for (const s of view.sleighs) {
+      seen.add(s.id);
+      const to = { x: s.x, y: s.y, h: s.heading };
+      const m = motions.current.get(s.id);
+      if (!m) motions.current.set(s.id, { from: to, to, at: now, dur: SLEIGH_TICK_MS, tick: view.tick });
       else if (m.tick !== view.tick) {
         const cur = sample(m, now);
         const jump = Math.hypot(to.x - cur.x, to.y - cur.y) > SNAP_DIST;
@@ -234,21 +284,43 @@ function Cars({ view }: { view: SleighView }) {
         m.dur = Math.max(16, Math.min(250, view.tick - m.tick || SLEIGH_TICK_MS));
         m.tick = view.tick;
       }
-      const before = hits.current.get(c.id);
-      if (before !== undefined && c.hits > before && view.phase === "drive") fresh.push({ key: ++sparkSeq.current, x: c.x, y: c.y });
-      hits.current.set(c.id, c.hits);
+      const before = bumps.current.get(s.id);
+      if (before !== undefined && s.bumps > before && view.phase === "flight") freshPuffs.push({ key: ++seq.current, x: s.x, y: s.y });
+      bumps.current.set(s.id, s.bumps);
     }
     for (const id of motions.current.keys()) if (!seen.has(id)) motions.current.delete(id);
-    for (const id of hits.current.keys()) if (!seen.has(id)) hits.current.delete(id);
-    apply(now);
-    if (fresh.length > 0) {
-      if (now - lastSkid.current > SKID_GAP_MS) {
-        lastSkid.current = now;
-        play("skid");
+    for (const id of bumps.current.keys()) if (!seen.has(id)) bumps.current.delete(id);
+
+    // Every house that has just been delivered to (more than one can land in a tick).
+    const freshDrops: Drop[] = [];
+    const was = delivered.current;
+    if (was) {
+      for (const h of view.houses) {
+        if (!h.deliveredBy || was.get(h.id)) continue;
+        const who = view.sleighs.find((s) => s.id === h.deliveredBy);
+        const m = motions.current.get(h.deliveredBy);
+        const from = m ? sample(m, now) : who ? { x: who.x, y: who.y } : chimneyOf(h);
+        const to = chimneyOf(h);
+        freshDrops.push({ key: ++seq.current, sx: from.x, sy: from.y, tx: to.x, ty: to.y, color: who?.color ?? "#ffd23f", name: who?.nickname ?? "" });
       }
-      setSparks((s) => [...s, ...fresh]);
-      const keys = new Set(fresh.map((f) => f.key));
-      setTimeout(() => setSparks((s) => s.filter((x) => !keys.has(x.key))), SPARK_MS);
+    }
+    delivered.current = new Map(view.houses.map((h) => [h.id, h.deliveredBy]));
+
+    apply(now);
+    if (freshPuffs.length > 0) {
+      if (now - lastBump.current > BUMP_GAP_MS) {
+        lastBump.current = now;
+        play("thud");
+      }
+      setPuffs((p) => [...p, ...freshPuffs]);
+      const keys = new Set(freshPuffs.map((f) => f.key));
+      setTimeout(() => setPuffs((p) => p.filter((x) => !keys.has(x.key))), PUFF_MS);
+    }
+    if (freshDrops.length > 0) {
+      play("deliver");
+      setDrops((d) => [...d, ...freshDrops]);
+      const keys = new Set(freshDrops.map((f) => f.key));
+      setTimeout(() => setDrops((d) => d.filter((x) => !keys.has(x.key))), DROP_MS);
     }
   }, [view]);
 
@@ -262,104 +334,150 @@ function Cars({ view }: { view: SleighView }) {
     return () => cancelAnimationFrame(raf);
   }, []);
 
-  const drive = view.phase === "drive";
-  const crowded = view.cars.length > 14;
+  const flight = view.phase === "flight";
+  const crowded = view.sleighs.length > 14;
   return (
-    <svg class={`sleigh-cars ${crowded ? "crowded" : ""}`} viewBox={`0 0 ${FIELD_W} ${FIELD_H}`} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-      {view.cars.map((c) => (
+    <svg class={`sleigh-sleighs ${crowded ? "crowded" : ""}`} viewBox={`0 0 ${FIELD_W} ${FIELD_H}`} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+      {puffs.map((p) => (
+        <g key={p.key} transform={`translate(${p.x.toFixed(1)} ${p.y.toFixed(1)})`}>
+          <g class="sleigh-puff">
+            {Array.from({ length: 7 }, (_, i) => {
+              const a = (i / 7) * Math.PI * 2 + (p.key % 5) * 0.4;
+              const d = 10 + ((i * 5 + p.key) % 3) * 4;
+              return <circle key={i} cx={(Math.cos(a) * d).toFixed(1)} cy={(Math.sin(a) * d).toFixed(1)} r={7 + (i % 3) * 2} fill="#f4f8ff" opacity="0.85" />;
+            })}
+            <circle r="11" fill="#fff" />
+          </g>
+        </g>
+      ))}
+      {view.sleighs.map((s) => (
         <g
-          key={c.id}
-          class={`sleigh-car-pos ${c.connected ? "" : "offline"} ${c.rank === 1 && view.round > 1 ? "leader" : ""}`}
+          key={s.id}
+          class={`sleigh-pos ${s.connected ? "" : "offline"} ${s.rank === 1 && s.presents > 0 ? "leader" : ""} ${flight && !s.moving ? "parked" : ""}`}
           ref={(el) => {
-            const e = els.current.get(c.id) ?? { pos: null, rot: null };
+            const e = els.current.get(s.id) ?? { pos: null, rot: null };
             e.pos = el;
-            els.current.set(c.id, e);
+            els.current.set(s.id, e);
           }}
         >
           <g
             ref={(el) => {
-              const e = els.current.get(c.id) ?? { pos: null, rot: null };
+              const e = els.current.get(s.id) ?? { pos: null, rot: null };
               e.rot = el;
-              els.current.set(c.id, e);
+              els.current.set(s.id, e);
             }}
           >
-            <SleighCar color={c.color} wheel={drive ? c.wheel : 0} />
+            <SleighTeam color={s.color} wheel={flight ? s.wheel : 0} flying={flight && s.moving && s.speed > 0.2} />
           </g>
-          <NameTag car={c} drive={drive} />
+          <NameTag sleigh={s} flight={flight} />
         </g>
       ))}
-      {sparks.map((s) => (
-        <g key={s.key} transform={`translate(${s.x.toFixed(1)} ${s.y.toFixed(1)})`}>
-          <g class="sleigh-spark">
-            <circle r="9" fill="#fff6c2" />
-            {Array.from({ length: 10 }, (_, i) => {
-              const a = (i / 10) * Math.PI * 2 + (s.key % 5) * 0.3;
-              const r0 = 6;
-              const r1 = 16 + ((i * 7 + s.key) % 3) * 6;
-              return <line key={i} x1={(Math.cos(a) * r0).toFixed(1)} y1={(Math.sin(a) * r0).toFixed(1)} x2={(Math.cos(a) * r1).toFixed(1)} y2={(Math.sin(a) * r1).toFixed(1)} stroke={i % 2 ? "#ffd23f" : "#ff8a1f"} stroke-width="2.6" stroke-linecap="round" />;
+      {drops.map((d) => (
+        <g key={d.key} transform={`translate(${d.tx.toFixed(1)} ${d.ty.toFixed(1)})`}>
+          <g class="sleigh-burst">
+            {Array.from({ length: 12 }, (_, i) => {
+              const a = (i / 12) * Math.PI * 2;
+              const r1 = i % 2 ? 26 : 36;
+              return <line key={i} x1={(Math.cos(a) * 10).toFixed(1)} y1={(Math.sin(a) * 10).toFixed(1)} x2={(Math.cos(a) * r1).toFixed(1)} y2={(Math.sin(a) * r1).toFixed(1)} stroke={i % 3 === 0 ? "#fff" : i % 3 === 1 ? "#ffd23f" : d.color} stroke-width="3" stroke-linecap="round" />;
             })}
+            <circle r="12" fill="#fff6c2" />
           </g>
+          <g class="sleigh-drop" style={{ "--dx": `${(d.sx - d.tx).toFixed(1)}px`, "--dy": `${(d.sy - d.ty).toFixed(1)}px` }}>
+            <Gift s={20} color={d.color} ribbon="#fff" />
+          </g>
+          <text class="sleigh-pop" y="-34" text-anchor="middle">
+            +1 🎁 {d.name.length > 12 ? `${d.name.slice(0, 11)}…` : d.name}
+          </text>
         </g>
       ))}
     </svg>
   );
 }
 
-/** Avatar and name above a car (unrotated), with a fuel gauge while it drives. */
-function NameTag({ car, drive }: { car: HostSleighCar; drive: boolean }) {
-  const art = AVATAR_ART[car.avatar.avatar] ?? AVATAR_ART.cat;
-  const extra = ACCESSORY_ART[car.avatar.accessory] ?? ACCESSORY_ART.none;
-  const fuel = car.fuelStartMs > 0 ? Math.max(0, Math.min(1, car.fuelMs / car.fuelStartMs)) : 0;
+/** Avatar and name above a sleigh (unrotated), with an energy bar while it flies. */
+function NameTag({ sleigh: s, flight }: { sleigh: HostSleighPlayer; flight: boolean }) {
+  const art = AVATAR_ART[s.avatar.avatar] ?? AVATAR_ART.cat;
+  const extra = ACCESSORY_ART[s.avatar.accessory] ?? ACCESSORY_ART.none;
+  const energy = s.fuelStartMs > 0 ? Math.max(0, Math.min(1, s.fuelMs / s.fuelStartMs)) : 0;
   const size = 22;
-  const name = car.nickname.length > 12 ? `${car.nickname.slice(0, 11)}…` : car.nickname;
+  const name = s.nickname.length > 12 ? `${s.nickname.slice(0, 11)}…` : s.nickname;
   return (
-    <g class="sleigh-tag" transform="translate(0 -34)">
-      <circle r={size / 2 + 2} fill={car.color} stroke="#fff" stroke-width="1.5" />
+    <g class="sleigh-tag" transform="translate(0 -32)">
+      <circle r={size / 2 + 2.5} fill={s.color} stroke="#fff" stroke-width="1.5" />
       <g transform={`translate(${-size / 2} ${-size / 2}) scale(${size / 100})`}>
         {art()}
         {extra()}
       </g>
       <text class="sleigh-tag-name" x={size / 2 + 5} y="4.5">
         {name}
+        {s.presents > 0 && <tspan class="sleigh-tag-count"> 🎁{s.presents}</tspan>}
       </text>
-      {drive && car.fuelStartMs > 0 && (
-        <g transform={`translate(${-size / 2} ${size / 2 + 3})`}>
+      {flight && s.fuelStartMs > 0 && (
+        <g transform={`translate(${-size / 2} ${size / 2 + 3.5})`}>
           <rect width={size} height="4" rx="2" fill="rgba(0,0,0,0.6)" />
-          <rect width={(size * fuel).toFixed(1)} height="4" rx="2" fill={fuel > 0.3 ? "#3ddc6a" : "#ff8a1f"} />
+          <rect width={(size * energy).toFixed(1)} height="4" rx="2" fill={energy > 0.3 ? "#ffd23f" : "#ff6b4a"} />
         </g>
       )}
     </g>
   );
 }
 
-/** Side panel: this round's fuel during the quiz, the running order while driving. */
+/** Side panel: presents per player, with this round's points (quiz) or flying time left (flight). */
 function Standings({ view }: { view: SleighView }) {
-  const drive = view.phase === "drive";
-  const quiz = view.phase === "quiz" || view.phase === "intro" || view.phase === "countdown";
-  const cars = [...view.cars].sort((a, b) => a.rank - b.rank || a.nickname.localeCompare(b.nickname));
-  const crowded = cars.length > 16;
+  const flight = view.phase === "flight";
+  const sleighs = [...view.sleighs].sort((a, b) => a.rank - b.rank || a.nickname.localeCompare(b.nickname));
+  const crowded = sleighs.length > 16;
   return (
     <section class={`sleigh-standings ${crowded ? "crowded" : ""}`}>
-      <h2>{drive ? "🏁 Race order" : view.round <= 1 && view.phase !== "intro" ? "⛽ Fuel this round" : "⛽ Fuel · race order"}</h2>
+      <h2>🎁 Presents delivered</h2>
       <div class="sleigh-standings-head">
-        <span>Pos</span>
+        <span>#</span>
         <span />
-        <span>Driver</span>
-        <span>Fuel</span>
-        <span>Laps</span>
+        <span>Sleigh</span>
+        <span>{flight ? "Flying" : "Points"}</span>
+        <span>🎁</span>
       </div>
       <ul>
-        {cars.map((c) => (
-          <li key={c.id} class={`${c.connected ? "" : "offline"} ${drive && !c.moving ? "parked" : ""}`} style={{ "--car": c.color }}>
-            <span class="sleigh-pos">{c.rank}</span>
-            <Avatar choice={c.avatar} />
-            <span class="n">{c.nickname}</span>
-            <span class="sleigh-fuel">{drive ? (c.fuelMs > 0 ? `${(c.fuelMs / 1000).toFixed(1)}s` : c.moving ? "…" : "🏁") : quiz ? `⛽ ${c.points}` : ""}</span>
-            <span class="sleigh-laps">{c.laps}</span>
+        {sleighs.map((s) => (
+          <li key={s.id} class={`${s.connected ? "" : "offline"} ${flight && !s.moving ? "parked" : ""}`} style={{ "--car": s.color }}>
+            <span class="sleigh-pos-n">{s.rank}</span>
+            <Avatar choice={s.avatar} />
+            <span class="n">{s.nickname}</span>
+            <span class="sleigh-energy">{flight ? (s.fuelMs > 0 ? `🦌 ${(s.fuelMs / 1000).toFixed(1)}s` : s.moving ? "…" : "💤") : `⭐ ${s.points}`}</span>
+            <span class="sleigh-presents">{s.presents}</span>
           </li>
         ))}
       </ul>
     </section>
+  );
+}
+
+/** "Every present delivered!", with a burst of confetti and snow. */
+function Finale({ total }: { total: number }) {
+  const bits = useMemo(
+    () =>
+      Array.from({ length: 70 }, (_, i) => ({
+        x: (i * 37) % 100,
+        d: ((i * 13) % 20) / 10,
+        s: 2.2 + ((i * 7) % 10) / 6,
+        c: ["#e63946", "#ffd23f", "#2a9d3f", "#ffffff", "#4db8ff", "#ff7ad9"][i % 6]!,
+        r: (i * 47) % 360,
+        snow: i % 3 === 0,
+      })),
+    [],
+  );
+  return (
+    <div class="sleigh-finale">
+      <div class="sleigh-confetti" aria-hidden="true">
+        {bits.map((b, i) => (
+          <i key={i} class={b.snow ? "snow" : ""} style={{ left: `${b.x}%`, animationDelay: `${b.d * 0.5}s`, animationDuration: `${b.s}s`, background: b.snow ? undefined : b.c, rotate: `${b.r}deg` }} />
+        ))}
+      </div>
+      <div class="sleigh-finale-card">
+        <div class="sleigh-finale-title">🎄 Every present delivered! 🎄</div>
+        <div class="sleigh-finale-sub">All {total} houses have their presents. Merry Christmas!</div>
+      </div>
+    </div>
   );
 }
 
@@ -368,12 +486,20 @@ function SleighPodium({ view, send }: { view: SleighView; send: Send }) {
   const standings = view.standings ?? [];
   const winners = standings.filter((s) => s.rank === 1);
   const a = view.awards;
-  const title = winners.length === 0 ? "Race over" : winners.length === 1 ? `🏆 ${winners[0]!.nickname} wins!` : `🏆 ${winners.map((w) => w.nickname).join(" & ")} win!`;
+  const title = winners.length === 0 ? "Sleigh run over" : winners.length === 1 ? `🏆 ${winners[0]!.nickname} wins!` : `🏆 ${winners.map((w) => w.nickname).join(" & ")} win!`;
+  const colors = colorsOf(standings);
   return (
     <main class="podium tower-podium sleigh-podium">
       <div class="podium-bg" aria-hidden="true">
-        <SleighTrack />
+        <CityGround houses={view.houses} />
+        <svg class="sleigh-houses" viewBox={`0 0 ${FIELD_W} ${FIELD_H}`} preserveAspectRatio="xMidYMid slice">
+          <HouseDefs />
+          {view.houses.map((h) => (
+            <House key={h.id} house={h} color={h.deliveredBy ? colors.get(h.deliveredBy) ?? "#ffd23f" : null} />
+          ))}
+        </svg>
       </div>
+      <Snowfall />
       <h1>{title}</h1>
       {showErrors ? (
         <ErrorsTable errors={view.errors ?? []} />
@@ -386,14 +512,18 @@ function SleighPodium({ view, send }: { view: SleighView; send: Send }) {
                 <Avatar choice={s.avatar} />
                 <span class="lb-name">{s.nickname}</span>
                 <span class="sleigh-final-dist">
-                  <b>{lapText(s.laps)}</b> · {metres(s.distance)}
+                  <b>
+                    🎁 {s.presents} present{s.presents === 1 ? "" : "s"}
+                  </b>{" "}
+                  · {metres(s.distance)}
                 </span>
               </li>
             ))}
           </ol>
           <div class="awards">
             <Award icon="✅" title="Most correct answers" award={a?.mostCorrect ?? null} unit="correct" />
-            <Award icon="🧈" title="Smoothest driver" award={a?.smoothest ?? null} unit="wall hits" valueText={(v) => (v === 0 ? "No wall hits" : `${v} wall hit${v === 1 ? "" : "s"}`)} />
+            <Award icon="🛷" title="Smoothest flyer" award={a?.smoothest ?? null} unit="bumps" valueText={(v) => (v === 0 ? "No bumps" : `${v} bump${v === 1 ? "" : "s"}`)} />
+            <Award icon="🦌" title="Furthest flown" award={a?.furthest ?? null} unit="m" valueText={metres} />
           </div>
         </>
       )}

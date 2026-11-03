@@ -104,7 +104,7 @@ function Pine({ x, y, r, seed, decorated }: { x: number; y: number; r: number; s
       <polygon points={pts(r * 0.72, 7, rot + 0.3)} fill={decorated ? "#2b8a4a" : "#1f5239"} />
       <polygon points={pts(r * 0.45, 6, rot + 0.6)} fill={decorated ? "#36a35a" : "#28664a"} />
       {/* Snow on the moonlit side. */}
-      <polygon points={pts(r * 0.62, 7, rot + 0.15)} fill="#e8f0ff" opacity="0.5" transform={`translate(${f1(-r * 0.22)} ${f1(-r * 0.26)})`} clip-path="none" />
+      <polygon points={pts(r * 0.62, 7, rot + 0.15)} fill="#e8f0ff" opacity="0.5" transform={`translate(${f1(-r * 0.22)} ${f1(-r * 0.26)})`} />
       {lights}
       {decorated && <Star x={x} y={y} r={4.5} />}
     </g>
