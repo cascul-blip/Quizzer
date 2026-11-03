@@ -17,6 +17,7 @@ import { DragonPlayer } from "./dragon.tsx";
 import { BombPlayer } from "./bomb.tsx";
 import { SiegePlayer } from "./siege.tsx";
 import { DuelPlayer } from "./duel.tsx";
+import { KartPlayer } from "./kart.tsx";
 import { RobotPlayer } from "./robot.tsx";
 import { SubPlayer } from "./submarine.tsx";
 import { TowerPlayer } from "./tower.tsx";
@@ -190,6 +191,8 @@ function App() {
     body = <SiegePlayer view={view} send={send} />;
   } else if (view.kind === "duel") {
     body = <DuelPlayer view={view} send={send} />;
+  } else if (view.kind === "kart") {
+    body = <KartPlayer view={view} send={send} />;
   } else {
     body = <Game view={view} send={send} />;
   }

@@ -10,6 +10,7 @@ import { COUNTDOWN_MS as CUP_COUNTDOWN_MS } from "../src/server/game/cup.ts";
 import { COUNTDOWN_MS as DRAGON_COUNTDOWN_MS } from "../src/server/game/dragon.ts";
 import { BOMB_COUNTDOWN_MS, BOMB_HOLD_MS, BOMB_NEXT_MS, BOMB_RESULT_MS } from "../src/shared/protocol.ts";
 import { SIEGE_COUNTDOWN_MS, SIEGE_OPENING_MS } from "../src/shared/siege-rules.ts";
+import { KART_COUNTDOWN_MS, KART_INTRO_MS, KART_QUIZ_MS, KART_TICK_MS } from "../src/shared/kart-rules.ts";
 import { BOOST_MIN_HOLD_MS, COUNTDOWN_MS as SUB_COUNTDOWN_MS } from "../src/server/game/submarine.ts";
 import { startServer, type RunningServer } from "../src/server/http.ts";
 import { isAdminRequest } from "../src/server/network.ts";
@@ -1278,6 +1279,85 @@ describe("Showdown over WebSockets", () => {
     // Play again keeps Showdown and its rounds.
     host.send({ type: "host.open", quizId: quiz.id });
     await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "duel" && v.duel.rounds === 10);
+    host.send({ type: "host.close" });
+    await host.hostState((v) => v.kind === "idle");
+    [host, ...players].forEach((s) => s.close());
+  });
+});
+
+describe("Kart Rally over WebSockets", () => {
+  test("lobby rounds → countdown → quiz → kart.answer → drive → kart.steer → end → results → play again", async () => {
+    const quiz = store.create({
+      title: "Kart E2E",
+      questions: [1, 2].map((n) => ({ type: "multiple_choice", text: `Q${n}`, options: ["right", "wrong"], correct: [0] })),
+    });
+    const wsUrl = `ws://localhost:${srv.port}/ws`;
+    const host = await TestSocket.open(wsUrl);
+    host.send({ type: "host.hello" });
+    await host.hostState((v) => v.kind === "idle");
+    host.send({ type: "host.open", quizId: quiz.id });
+    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
+    host.send({ type: "host.setMode", mode: "kart" });
+    await host.hostState((v) => v.kind === "classic" && v.mode === "kart" && v.kart.rounds === 5 && v.teams === null);
+    host.send({ type: "host.setKart", rounds: 9 });
+    expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: "Unsupported number of rounds" });
+    host.send({ type: "host.setKart", rounds: 3 });
+    await host.hostState((v) => v.kind === "classic" && v.kart.rounds === 3);
+
+    const names = ["Ann", "Bob"];
+    const players = await Promise.all(names.map(() => TestSocket.open(wsUrl)));
+    for (const [i, p] of players.entries()) {
+      await p.playerState((v) => v.kind === "none" && !!v.game);
+      p.send({ type: "join", nickname: names[i]! });
+      await p.waitFor((m) => m.type === "joined");
+    }
+    await host.hostState((v) => v.kind === "classic" && v.players.length === 2);
+
+    host.send({ type: "host.start", pacing: "manual" });
+    const started = await host.hostState((v) => v.kind === "kart" && v.phase === "countdown");
+    expect(started.view.kind === "kart" && started.view).toMatchObject({ round: 0, rounds: 3, playerCount: 2 });
+    host.send({ type: "host.setShuffle", questions: true, answers: true });
+    expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: "Not available in Kart Rally" });
+    clock.advance(KART_COUNTDOWN_MS);
+    srv.hub.broadcast();
+
+    // Ann answers one question right: one second of driving.
+    const ann = players[0]!;
+    const st = await ann.playerState((v) => v.kind === "kart" && v.phase === "quiz" && !!v.question && !v.feedback);
+    const q = st.view.kind === "kart" ? st.view.question! : null;
+    ann.send({ type: "kart.answer", seq: q!.seq, option: 0 });
+    const fb = await ann.playerState((v) => v.kind === "kart" && v.feedback?.seq === q!.seq);
+    expect(fb.view.kind === "kart" && fb.view.feedback!.correct).toBe(true);
+    expect(fb.view.kind === "kart" && fb.view.me.points).toBe(1);
+
+    clock.advance(KART_QUIZ_MS);
+    srv.hub.broadcast();
+    await host.hostState((v) => v.kind === "kart" && v.phase === "intro");
+    clock.advance(KART_INTRO_MS);
+    srv.hub.broadcast();
+    await host.hostState((v) => v.kind === "kart" && v.phase === "drive");
+    await ann.playerState((v) => v.kind === "kart" && v.phase === "drive" && v.fuelStartMs === 1000);
+
+    // Full right lock: the projector's next tick shows Ann's wheel turned.
+    ann.send({ type: "kart.steer", wheel: 1 });
+    await new Promise((r) => setTimeout(r, 100));
+    clock.advance(KART_TICK_MS);
+    const steered = await host.hostState((v) => v.kind === "kart" && v.phase === "drive" && v.cars.some((c) => c.nickname === "Ann" && c.wheel === 1));
+    expect(steered.view.kind === "kart" && steered.view.cars.find((c) => c.nickname === "Ann")!.moving).toBe(true);
+
+    host.send({ type: "host.end" });
+    const podium = await host.hostState((v) => v.kind === "kart" && v.phase === "podium");
+    expect(podium.view.kind === "kart" && podium.view).toMatchObject({ hasResults: true });
+    expect(podium.view.kind === "kart" && podium.view.standings!.map((s) => s.nickname)).toEqual(["Ann", "Bob"]);
+    const end = await ann.playerState((v) => v.kind === "kart" && v.phase === "podium" && !!v.result);
+    expect(end.view.kind === "kart" && end.view.result).toMatchObject({ rank: 1, playerCount: 2 });
+    const csv = await (await fetch(`${base}/api/results/latest.csv`)).text();
+    expect(csv).toContain("Ann");
+    expect(csv).toContain("Bob");
+
+    // Play again keeps Kart Rally and its rounds.
+    host.send({ type: "host.open", quizId: quiz.id });
+    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "kart" && v.kart.rounds === 3);
     host.send({ type: "host.close" });
     await host.hostState((v) => v.kind === "idle");
     [host, ...players].forEach((s) => s.close());

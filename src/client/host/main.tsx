@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { BOMB_MAX_SQUADS, BOMB_MINUTES, BOMB_MODULES, BOMB_PENALTIES, BOMB_WIRES, CUP_MAX_CUPS, CUP_MIN_CUPS, DRAGON_BATTLE_MINUTES, DRAGON_FIRE_SECONDS, DRAGON_MIN_TEAMS, DRAGON_SCRAMBLE_MINUTES, DRAGON_TOUGHNESS, DUEL_ROUNDS, HILL_SETTINGS, type BombSettings, type BombStyle, type DragonSettings, type DragonToughness, LAND_MINUTES, LAND_MIN_TEAMS, MAX_TEAMS, TOWER_MINUTES, type GameMode, type HillSetting, type HostPlayer, type HostView, type Pacing, type ServerMsg } from "../../shared/protocol.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { SIEGE_WAVE_CHOICES } from "../../shared/siege-rules.ts";
+import { KART_ROUND_CHOICES } from "../../shared/kart-rules.ts";
 import type { QuizSummary } from "../../shared/quiz-schema.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { Dragon } from "../shared/dragon-art.tsx";
@@ -19,6 +20,7 @@ import { RacerStage } from "./racer.tsx";
 import { CupStage } from "./cup.tsx";
 import { DragonStage } from "./dragon.tsx";
 import { DuelStage } from "./duel.tsx";
+import { KartStage } from "./kart.tsx";
 import { BombLobbyPreview, BombStage } from "./bomb.tsx";
 import { SiegeLobbyPreview, SiegeStage } from "./siege.tsx";
 import { RobotStage } from "./robot.tsx";
@@ -111,6 +113,8 @@ function App() {
     body = <SiegeStage view={view} send={send} />;
   } else if (view.kind === "duel") {
     body = <DuelStage view={view} send={send} />;
+  } else if (view.kind === "kart") {
+    body = <KartStage view={view} send={send} />;
   } else {
     body = <Game view={view} send={send} />;
   }
@@ -362,6 +366,7 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
               <option value="robot">🤖 Robot Attack</option>
               <option value="land">🚩 Land Grab</option>
               <option value="racer">🏎 Racer</option>
+              <option value="kart">🏎️ Kart Rally</option>
               <option value="cup">☠️ Cup of Death</option>
               <option value="dragon">🐉 Dragon's Hoard</option>
               <option value="bomb">💣 Bomb Squad</option>
@@ -441,6 +446,20 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
             </>
           ) : view.mode === "robot" ? (
             <span class="opt mode-hint">Answer questions to earn moves, then dodge the robot's lasers. Last one standing wins.</span>
+          ) : view.mode === "kart" ? (
+            <>
+              <label class="opt">
+                Rounds
+                <select value={view.kart.rounds} onChange={(e) => send({ type: "host.setKart", rounds: Number(e.currentTarget.value) })}>
+                  {KART_ROUND_CHOICES.map((r) => (
+                    <option key={r} value={r}>
+                      {r} rounds
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <span class="opt mode-hint">Answer questions to fuel your car, then steer it round the oval from your phone. Most distance after the last round wins.</span>
+            </>
           ) : view.mode === "cup" ? (
             <>
               <label class="opt">
@@ -518,7 +537,7 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
             />
             Shuffle answer positions
           </label>
-          {(view.mode === "tower" || view.mode === "submarine" || view.mode === "fight" || view.mode === "robot" || view.mode === "cup" || view.mode === "dragon" || view.mode === "siege") && (
+          {(view.mode === "tower" || view.mode === "submarine" || view.mode === "fight" || view.mode === "robot" || view.mode === "cup" || view.mode === "dragon" || view.mode === "siege" || view.mode === "kart") && (
             <label class="opt check" title="Wrong answers in a row make a player wait longer before the next question">
               <input type="checkbox" checked={view.protect} onChange={(e) => send({ type: "host.setProtect", on: e.currentTarget.checked })} />
               Protect from abuse
