@@ -6217,3 +6217,357 @@ select {
     animation: none;
   }
 }
+
+/* ---------- Kart Rally ---------- */
+
+.kart-pill {
+  background: #b3121f;
+}
+
+.kart-bar .robot-bar-fill {
+  background: linear-gradient(90deg, #0f5c2a, #2fbf55);
+}
+
+.kart-bar-drive .robot-bar-fill {
+  background: linear-gradient(90deg, #8f0f1a, #e21b3c);
+}
+
+.kart-bar-intro .robot-bar-fill,
+.kart-bar-countdown .robot-bar-fill {
+  background: repeating-conic-gradient(#1b1b1b 0 25%, #2c2c2c 0 50%) 0 0 / 24px 24px;
+}
+
+.kart-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+  background: #1c2a1a;
+}
+
+.kart-field-box {
+  flex: 1;
+  min-width: 0;
+  container-type: size;
+  display: grid;
+  place-items: center;
+  background: #3a6831;
+}
+
+/* The track's 16:9 box, as big as fits: HTML overlays can then be placed in % of the field. */
+.kart-field {
+  position: relative;
+  width: min(100cqw, 100cqh * 16 / 9);
+  height: min(100cqh, 100cqw * 9 / 16);
+}
+
+.kart-field > svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.kart-track {
+  /* Static: give it its own layer so the moving cars never repaint it. */
+  will-change: transform;
+  transition: filter 0.6s ease;
+}
+
+.kart-wrap.phase-quiz .kart-track,
+.kart-wrap.phase-countdown .kart-track {
+  filter: brightness(0.55) saturate(0.8);
+}
+
+.kart-wrap.phase-quiz .kart-cars {
+  filter: brightness(0.75);
+}
+
+.kart-car-pos.offline {
+  opacity: 0.45;
+}
+
+.kart-tag-name {
+  font: 800 13px var(--font);
+  fill: #fff;
+  paint-order: stroke;
+  stroke: rgba(0, 0, 0, 0.75);
+  stroke-width: 3.5px;
+  stroke-linejoin: round;
+}
+
+.kart-cars.crowded .kart-tag-name {
+  font-size: 11px;
+}
+
+.kart-car-pos.leader .kart-tag > circle {
+  stroke: var(--accent);
+  stroke-width: 2.5px;
+}
+
+.kart-spark {
+  animation: kart-spark 0.6s ease-out both;
+}
+
+@keyframes kart-spark {
+  from {
+    transform: scale(0.3);
+    opacity: 1;
+  }
+  60% {
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+.kart-quiz-note {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  translate: -50% -50%;
+  width: 58%;
+  padding: 2.2cqh 2cqw;
+  border-radius: var(--radius);
+  background: rgba(10, 14, 20, 0.93);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  border: 3px solid rgba(255, 255, 255, 0.18);
+  text-align: center;
+  font-size: clamp(18px, 2.6cqh, 40px);
+  font-weight: 900;
+  animation: pop-in 0.35s ease-out both;
+}
+
+.kart-quiz-round {
+  font-size: 0.7em;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.kart-quiz-sub {
+  font-size: 0.62em;
+  font-weight: 700;
+  color: var(--on-bg-soft);
+  margin-top: 0.4em;
+}
+
+.kart-overlay {
+  background: rgba(8, 10, 14, 0.66);
+  z-index: 2;
+}
+
+.kart-overlay .countdown-label {
+  max-width: 80vw;
+  line-height: 1.35;
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.5);
+}
+
+.kart-overlay .countdown-num {
+  text-shadow: 0 6px 0 rgba(0, 0, 0, 0.45);
+}
+
+.kart-intro .kart-flags {
+  width: clamp(160px, 22vw, 380px);
+  height: auto;
+  animation: kart-wave 1.2s ease-in-out infinite alternate;
+  filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.5));
+}
+
+@keyframes kart-wave {
+  from {
+    transform: rotate(-3deg) scale(0.98);
+  }
+  to {
+    transform: rotate(3deg) scale(1.02);
+  }
+}
+
+.kart-standings {
+  flex: none;
+  width: min(20vw, 330px);
+  padding: 1.2vh 0.8vw;
+  background: rgba(12, 16, 22, 0.86);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  font-size: clamp(13px, 1.05vw, 20px);
+}
+
+.kart-standings h2 {
+  margin: 0 0 0.6vh;
+  font-size: 1.05em;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+}
+
+.kart-standings-head,
+.kart-standings li {
+  display: grid;
+  grid-template-columns: 1.7em 1.6em minmax(0, 1fr) 3.6em 2em;
+  align-items: center;
+  gap: 6px;
+}
+
+.kart-standings-head {
+  font-size: 0.7em;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--on-bg-soft);
+  padding: 0 4px 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+.kart-standings-head span:nth-child(n + 4) {
+  text-align: right;
+}
+
+.kart-standings ul {
+  list-style: none;
+  margin: 0.5vh 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-weight: 700;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.kart-standings li {
+  padding: 2px 4px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border-left: 4px solid var(--car);
+}
+
+.kart-standings li .avatar {
+  width: 1.6em;
+  height: 1.6em;
+}
+
+.kart-standings li .n {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kart-pos {
+  font-weight: 900;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.kart-standings li:nth-child(1) .kart-pos {
+  color: #ffd23f;
+}
+
+.kart-standings li:nth-child(2) .kart-pos {
+  color: #d9dde3;
+}
+
+.kart-standings li:nth-child(3) .kart-pos {
+  color: #e39a5b;
+}
+
+.kart-fuel,
+.kart-laps {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.kart-fuel {
+  color: var(--accent);
+}
+
+.kart-laps {
+  color: var(--on-bg-soft);
+}
+
+.kart-standings li.offline .n {
+  font-style: italic;
+  opacity: 0.6;
+}
+
+.kart-standings li.parked {
+  opacity: 0.6;
+}
+
+.kart-standings.crowded {
+  font-size: clamp(11px, 0.85vw, 16px);
+}
+
+.kart-standings.crowded ul {
+  gap: 1px;
+}
+
+.kart-standings.crowded li {
+  padding: 0 4px;
+}
+
+.kart-podium .podium-bg {
+  opacity: 0.3;
+}
+
+.kart-podium .podium-bg .kart-track {
+  width: 100%;
+  height: 100%;
+}
+
+.kart-final {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: min(900px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.8vh;
+}
+
+.kart-final li {
+  display: flex;
+  align-items: center;
+  gap: 1.4vw;
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: var(--radius);
+  border-left: 0.5em solid var(--car);
+  padding: 0.8vh 1.6vw;
+  font-size: clamp(16px, 1.8vw, 30px);
+  font-weight: 800;
+  animation: rise 0.4s ease-out both;
+}
+
+.kart-final li.won {
+  background: var(--accent);
+}
+
+.kart-final .avatar {
+  width: 1.6em;
+  height: 1.6em;
+  flex: none;
+}
+
+.kart-final-dist {
+  font-size: 0.72em;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.kart-final-dist b {
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kart-spark,
+  .kart-intro .kart-flags {
+    animation: none;
+  }
+}
