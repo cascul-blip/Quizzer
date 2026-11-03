@@ -6252,7 +6252,13 @@ select {
   container-type: size;
   display: grid;
   place-items: center;
-  background: #3a6831;
+  background: #3d6e33;
+  transition: background-color 0.6s ease;
+}
+
+.kart-wrap.phase-quiz .kart-field-box,
+.kart-wrap.phase-countdown .kart-field-box {
+  background: #1f3a1b;
 }
 
 /* The track's 16:9 box, as big as fits: HTML overlays can then be placed in % of the field. */
@@ -6362,7 +6368,8 @@ select {
 }
 
 .kart-overlay .countdown-label {
-  max-width: 80vw;
+  max-width: min(1200px, 70vw);
+  font-size: clamp(20px, 2.1vw, 40px);
   line-height: 1.35;
   text-shadow: 0 3px 0 rgba(0, 0, 0, 0.5);
 }

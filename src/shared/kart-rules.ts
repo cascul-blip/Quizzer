@@ -213,3 +213,6 @@ export function lapsOf(distance: number): number {
 export function normAngle(a: number): number {
   return Math.atan2(Math.sin(a), Math.cos(a));
 }
+
+/** Field units to metres for showing distances (a 50-unit Indy car is about 5 m long). */
+export const METRES_PER_UNIT = 0.1;

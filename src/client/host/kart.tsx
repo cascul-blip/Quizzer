@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
-import { FIELD_H, FIELD_W, KART_MS_PER_POINT, KART_TICK_MS } from "../../shared/kart-rules.ts";
+import { FIELD_H, FIELD_W, KART_MS_PER_POINT, KART_TICK_MS, METRES_PER_UNIT } from "../../shared/kart-rules.ts";
 import type { HostKartCar, HostView } from "../../shared/protocol.ts";
 import { ACCESSORY_ART, AVATAR_ART, Avatar } from "../shared/avatar-art.tsx";
 import { CheckeredFlags, KartCar, KartTrack } from "../shared/kart-art.tsx";
@@ -17,8 +17,7 @@ const SPARK_MS = 600;
 /** At most one skid sound this often, however many cars hit the wall. */
 const SKID_GAP_MS = 220;
 
-/** Distance in field units → metres as shown (a car, 50 units long, is about 5 m). */
-const metres = (d: number) => `${Math.max(0, Math.round(d / 10)).toLocaleString("en-US")} m`;
+const metres = (d: number) => `${Math.max(0, Math.round(d * METRES_PER_UNIT)).toLocaleString("en-US")} m`;
 const lapText = (n: number) => `${n} lap${n === 1 ? "" : "s"}`;
 
 /** Projector screen for Kart Rally: countdown → (quiz → intro → drive)… → podium. */

@@ -1,15 +1,13 @@
 import type { Ref } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { ClientMsg, PlayerKartView } from "../../shared/protocol.ts";
-import { KART_TICK_MS, WHEEL_MAX_DEG } from "../../shared/kart-rules.ts";
+import { KART_TICK_MS, METRES_PER_UNIT, WHEEL_MAX_DEG } from "../../shared/kart-rules.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
 import { Feedback, StreamQuestion } from "./tower.tsx";
 
 type Send = (m: ClientMsg) => void;
 
-/** Field units to metres for the podium (a car is 50 units long, about a 2.5 m kart). */
-const METRES_PER_UNIT = 0.05;
 /** How long the wheel takes to spring back to centre after it is let go. */
 const SPRING_MS = 220;
 /** How long the wheel takes to swing to full lock from the arrow keys. */
@@ -395,7 +393,7 @@ function KartResult({ view }: { view: PlayerKartView }) {
   const r = view.result;
   if (!r) return null;
   const won = r.rank === 1;
-  const metres = Math.round(r.distance * METRES_PER_UNIT);
+  const metres = Math.max(0, Math.round(r.distance * METRES_PER_UNIT));
   return (
     <main class="center">
       <div class="kart-emoji">{won ? "🏆" : "🏁"}</div>
