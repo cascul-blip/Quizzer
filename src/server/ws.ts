@@ -232,7 +232,7 @@ export class GameHub {
     }, ACTIVITY_THROTTLE_MS);
   }
 
-  /** Only the projector, e.g. on every Santa's Sleigh Run drive tick (phones don't need the cars' positions). */
+  /** Only the projector, e.g. on every Santa's Sleigh Run flight tick (phones don't need the sleighs' positions). */
   private pushHost(): void {
     let hostMsg: string | null = null;
     for (const ws of this.sockets) if (ws.data.role === "host") ws.send((hostMsg ??= JSON.stringify({ type: "host.state", view: this.hostView() } satisfies ServerMsg)));
@@ -594,7 +594,7 @@ export class GameHub {
         this.lastSetup.duel = { ...classic().duel };
         return;
       case "host.setSleigh":
-        classic().setSleigh({ rounds: Number(msg.rounds) });
+        classic().setSleigh({ houses: Number(msg.houses) });
         this.lastSetup.sleigh = { ...classic().sleigh };
         return;
       case "host.next":
@@ -688,7 +688,7 @@ export class GameHub {
     this.log(`Robot Attack started with ${robot.players.size} player(s)`);
   }
 
-  /** Hand the lobby's players to a Santa's Sleigh Run game. Drive ticks only refresh the projector. */
+  /** Hand the lobby's players to a Santa's Sleigh Run game. Flight ticks only refresh the projector. */
   private startSleigh(lobby: Game): void {
     if (lobby.players.size === 0) throw new GameError("Wait for at least one player to join");
     const sleigh = SleighGame.fromLobby(lobby, {
@@ -701,7 +701,7 @@ export class GameHub {
     lobby.dispose();
     this.game = sleigh;
     sleigh.start();
-    this.log(`Santa's Sleigh Run started with ${sleigh.players.size} player(s), ${sleigh.rounds} round(s)`);
+    this.log(`Santa's Sleigh Run started with ${sleigh.players.size} player(s), ${sleigh.houses.length} houses`);
   }
 
   /** Hand the lobby's players to a Cup of Death game. */

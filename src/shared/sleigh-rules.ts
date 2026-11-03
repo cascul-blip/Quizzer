@@ -173,13 +173,14 @@ export function houseDistance(pose: { x: number; y: number }, house: { x: number
 
 // ---------- sleighs ----------
 
-/** Launch slot `i`: sleighs fan out round the launch pad, pointing outwards, in rings of 8. */
+/**
+ * Launch slot `i` of `total`: sleighs spread evenly over the launch pad (a sunflower spiral,
+ * packed tighter the more there are, so even 200 stay on the pad), each pointing outwards.
+ */
 export function launchSlot(i: number, total: number): Sleigh {
-  const ring = Math.floor(i / 8);
-  const inRing = Math.min(8, total - ring * 8);
-  const k = i % 8;
-  const a = (k / Math.max(1, inRing)) * Math.PI * 2 + ring * 0.4 - Math.PI / 2;
-  const r = 30 + ring * 30;
+  const n = Math.max(1, total);
+  const r = (PAD_R - 25) * Math.sqrt((i + 0.5) / n);
+  const a = i * 2.39996323 - Math.PI / 2;
   return { x: CX + Math.cos(a) * r, y: CY + Math.sin(a) * r, heading: normAngle(a), speed: 0, distance: 0, scraping: false };
 }
 
