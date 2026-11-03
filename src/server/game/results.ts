@@ -2,7 +2,7 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { FightGame } from "./fight.ts";
 import type { Game } from "./game.ts";
-import type { KartGame } from "./kart.ts";
+import type { SleighGame } from "./sleigh.ts";
 import type { LandGame } from "./land.ts";
 import type { RacerGame } from "./racer.ts";
 import type { RobotGame } from "./robot.ts";
@@ -97,8 +97,8 @@ export function buildRobotResultsCsv(game: RobotGame): string {
   return toCsv([header, ...rows]);
 }
 
-/** Kart Rally: one row per player in final standing order. */
-export function buildKartResultsCsv(game: KartGame): string {
+/** Santa's Sleigh Run: one row per player in final standing order. */
+export function buildSleighResultsCsv(game: SleighGame): string {
   const header = ["Rank", "Nickname", "Laps", "Distance", "Correct", "Wrong", "Accuracy %", "Wall hits", "Seconds driven"];
   const rows: (string | number)[][] = game.standings().map((s) => {
     const p = game.players.get(s.id)!;

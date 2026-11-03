@@ -19,7 +19,7 @@ export interface ShuffleOptions {
 
 // ---------- Tallest Tower ----------
 
-export type GameMode = "classic" | "tower" | "submarine" | "fight" | "robot" | "land" | "racer" | "cup" | "dragon" | "bomb" | "siege" | "duel" | "kart";
+export type GameMode = "classic" | "tower" | "submarine" | "fight" | "robot" | "land" | "racer" | "cup" | "dragon" | "bomb" | "siege" | "duel" | "sleigh";
 export type TowerPhase = "countdown" | "playing" | "podium";
 
 /** Each team also has a shape, so teams can be told apart without relying on colour. */
@@ -103,9 +103,9 @@ export type PlayerMsg =
   | { type: "fight.fire"; dx: number; dy: number }
   | { type: "robot.answer"; seq: number; option: number; text?: string }
   | { type: "robot.move"; dir: RobotDir }
-  | { type: "kart.answer"; seq: number; option: number; text?: string }
-  /** Kart Rally, drive phase only: the phone's steering wheel, −1 (full left) … 1 (full right). Sent at most every KART_TICK_MS while it changes. */
-  | { type: "kart.steer"; wheel: number }
+  | { type: "sleigh.answer"; seq: number; option: number; text?: string }
+  /** Santa's Sleigh Run, flight phase only: the phone's steering wheel, −1 (full left) … 1 (full right). Sent at most every SLEIGH_TICK_MS while it changes. */
+  | { type: "sleigh.steer"; wheel: number }
   | { type: "land.answer"; seq: number; option: number; text?: string }
   | { type: "land.place"; tile: number }
   /** Leave the land early; unused claims are kept for next time. */
@@ -157,7 +157,7 @@ export type HostMsg =
   | ({ type: "host.setBomb" } & BombSettings)
   | ({ type: "host.setSiege" } & SiegeSettings)
   | ({ type: "host.setDuel" } & DuelSettings)
-  | ({ type: "host.setKart" } & KartSettings)
+  | ({ type: "host.setSleigh" } & SleighSettings)
   | { type: "host.next" }
   | { type: "host.skip" }
   | { type: "host.kick"; playerId: string }
@@ -227,7 +227,7 @@ export interface PlayerResult {
 
 export type PlayerView =
   | { kind: "none"; game: null }
-  | { kind: "none"; game: { title: string; phase: Phase | TowerPhase | SubPhase | FightPhase | RobotPhase | LandPhase | RacerPhase | CupPhase | DragonPhase | BombPhase | SiegePhase | DuelPhase | KartPhase } }
+  | { kind: "none"; game: { title: string; phase: Phase | TowerPhase | SubPhase | FightPhase | RobotPhase | LandPhase | RacerPhase | CupPhase | DragonPhase | BombPhase | SiegePhase | DuelPhase | SleighPhase } }
   | {
       kind: "player";
       phase: Phase;
@@ -257,7 +257,7 @@ export type PlayerView =
   | PlayerBombView
   | PlayerSiegeView
   | PlayerDuelView
-  | PlayerKartView;
+  | PlayerSleighView;
 
 export interface TowerAwards {
   mostCorrect: { value: number; nicknames: string[] } | null;
@@ -321,7 +321,7 @@ export interface HostGameState {
   bomb: BombSettings;
   siege: SiegeSettings;
   duel: DuelSettings;
-  kart: KartSettings;
+  sleigh: SleighSettings;
   /** Team preview while the lobby is in a team mode (Tallest Tower, Tower Fight, Land Grab, Dragon's Hoard, Bomb Squad). */
   teams: (TeamInfo & { members: HostPlayer[] })[] | null;
   quiz: { id: string; title: string; questionCount: number };
@@ -1813,7 +1813,7 @@ export type HostView =
   | (HostBombState & { join: JoinInfo })
   | (HostSiegeState & { join: JoinInfo })
   | (HostDuelState & { join: JoinInfo })
-  | (HostKartState & { join: JoinInfo });
+  | (HostSleighState & { join: JoinInfo });
 
 export type ServerMsg =
   /** First message on every connection. A new serverId means the server restarted (maybe with new code). */
@@ -1827,98 +1827,134 @@ export type ServerMsg =
   | { type: "resumeFailed" }
   | { type: "error"; message: string };
 
-// ---------- Kart Rally ----------
+// ---------- Santa's Sleigh Run ----------
 
 /**
- * Kart Rally. countdown: 3, 2, 1 before the first round. quiz: KART_QUIZ_MS of answering for points.
- * intro: crossed flags and "Get ready to drive in 3, 2, 1". drive: every car drives (1 s per point)
- * until the last one stops or KART_DRIVE_CAP_MS. podium: after the last round. Rules in kart-rules.ts.
+ * Santa's Sleigh Run. countdown: 3, 2, 1 before the first round. quiz: SLEIGH_QUIZ_MS of answering for points.
+ * intro: "Get ready to fly in 3, 2, 1". flight: every sleigh flies (SLEIGH_MS_PER_POINT per point) until the
+ * last one stops or SLEIGH_DRIVE_CAP_MS; flying into a house that still needs its present delivers it (first
+ * sleigh there claims it). Rounds repeat until every present is delivered, then SLEIGH_FINALE_MS of
+ * celebration (still "flight", with `finished` set) and the podium. Rules in sleigh-rules.ts.
  */
-export type KartPhase = "countdown" | "quiz" | "intro" | "drive" | "podium";
+export type SleighPhase = "countdown" | "quiz" | "intro" | "flight" | "podium";
 
-export interface KartSettings {
-  /** Quiz + drive rounds (KART_ROUND_CHOICES). */
-  rounds: number;
+export interface SleighSettings {
+  /** Houses waiting for a present (SLEIGH_HOUSE_CHOICES: 15–30). */
+  houses: number;
 }
 
-export interface KartAwards {
+export interface SleighAwards {
   mostCorrect: SubAward | null;
-  /** Fewest wall hits among players who drove; value = hits. */
+  /** Fewest bumps into the city wall among players who flew; value = bumps (0 is valid). */
   smoothest: SubAward | null;
+  /** Most distance flown; value = field units (show with METRES_PER_UNIT). */
+  furthest: SubAward | null;
 }
 
-export interface HostKartCar {
+export interface SleighHouse {
+  id: number;
+  /** Footprint (top-left corner and size) in field units. */
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  roof: string;
+  /** Chimney centre, relative to the footprint's top-left corner. */
+  chimney: { x: number; y: number };
+  /** Player id of the sleigh that delivered its present, or null while it's still waiting. */
+  deliveredBy: string | null;
+}
+
+/** The latest present dropped down a chimney (the screens animate each seq once). */
+export interface SleighDelivery {
+  seq: number;
+  house: number;
+  playerId: string;
+}
+
+export interface HostSleighPlayer {
   id: string;
   nickname: string;
   avatar: AvatarChoice;
   connected: boolean;
   color: string;
-  /** Pose in field units (kart-rules.ts), rounded to 0.1; heading in radians. */
+  /** Pose in field units (sleigh-rules.ts), rounded to 0.1; heading in radians. */
   x: number;
   y: number;
   heading: number;
-  /** Current wheel, −1…1 (front wheels are drawn turned). */
+  /** Current wheel, −1…1. */
   wheel: number;
   /** Fraction of top speed, 0…1. */
   speed: number;
-  /** Points earned in this round's quiz (fuel for the next drive). */
+  /** Points earned in this round's quiz (flying time for the next flight). */
   points: number;
-  /** Driving time left this drive, ms (0 outside the drive). */
+  /** Flying time left this flight, ms (0 outside the flight). */
   fuelMs: number;
-  /** Full fuel this drive started with, ms. */
+  /** Full flying time this flight started with, ms. */
   fuelStartMs: number;
-  /** Still moving (has fuel or is coasting to a stop). */
+  /** Still moving (has fuel or is gliding to a stop). */
   moving: boolean;
-  laps: number;
+  presents: number;
   distance: number;
-  /** Wall hits so far; bumps on each new hit (the screen flashes sparks). */
-  hits: number;
+  /** Bumps into the city wall so far; goes up on each new bump (the screen flashes). */
+  bumps: number;
   rank: number;
 }
 
-export interface KartStanding {
+export interface SleighStanding {
   id: string;
   nickname: string;
   avatar: AvatarChoice;
   color: string;
   rank: number;
-  laps: number;
+  presents: number;
   distance: number;
   correct: number;
-  hits: number;
+  bumps: number;
 }
 
-export interface HostKartState {
-  kind: "kart";
-  phase: KartPhase;
+export interface HostSleighState {
+  kind: "sleigh";
+  phase: SleighPhase;
   quiz: { id: string; title: string; questionCount: number };
   round: number;
-  rounds: number;
   phaseRemainingMs: number;
   phaseDurationMs: number;
-  /** Server time of this snapshot (ms), for smoothing cars between ticks. */
+  /** Server time of this snapshot (ms), for smoothing sleighs between ticks. */
   tick: number;
-  cars: HostKartCar[];
+  /** Every house, delivered or not (positions never change during a game). */
+  houses: SleighHouse[];
+  delivered: number;
+  total: number;
+  lastDelivery: SleighDelivery | null;
+  /** Every present has been delivered: the finale is playing before the podium. */
+  finished: boolean;
+  sleighs: HostSleighPlayer[];
   playerCount: number;
-  standings: KartStanding[] | null;
-  awards: KartAwards | null;
+  standings: SleighStanding[] | null;
+  awards: SleighAwards | null;
   errors: QuestionError[] | null;
   hasResults: boolean;
 }
 
-export interface PlayerKartView {
-  kind: "kart";
-  phase: KartPhase;
+export interface PlayerSleighView {
+  kind: "sleigh";
+  phase: SleighPhase;
   title: string;
   round: number;
-  rounds: number;
   phaseRemainingMs: number;
-  me: { id: string; nickname: string; avatar: AvatarChoice; color: string; points: number; correct: number; laps: number; rank: number };
+  me: { id: string; nickname: string; avatar: AvatarChoice; color: string; points: number; correct: number; presents: number; rank: number };
   playerCount: number;
+  /** Presents delivered by everyone so far, of `total`. */
+  delivered: number;
+  total: number;
+  finished: boolean;
+  /** This player's latest delivery (seq), to buzz once per present. */
+  lastDelivery: number | null;
   question: StreamQuestionView | null;
   feedback: { seq: number; correct: boolean; remainingMs: number; answers: string[]; penaltyMs: number } | null;
-  /** Drive phase: driving time left (a running countdown; ms), and the full amount this drive started with. */
+  /** Flight phase: flying time left (a running countdown; ms), and the full amount this flight started with. */
   fuelMs: number;
   fuelStartMs: number;
-  result: { rank: number; playerCount: number; laps: number; distance: number; awards: string[] } | null;
+  result: { rank: number; playerCount: number; presents: number; distance: number; awards: string[] } | null;
 }

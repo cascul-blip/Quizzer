@@ -6218,26 +6218,26 @@ select {
   }
 }
 
-/* ---------- Kart Rally ---------- */
+/* ---------- Santa's Sleigh Run ---------- */
 
-.kart-pill {
+.sleigh-pill {
   background: #b3121f;
 }
 
-.kart-bar .robot-bar-fill {
+.sleigh-bar .robot-bar-fill {
   background: linear-gradient(90deg, #0f5c2a, #2fbf55);
 }
 
-.kart-bar-drive .robot-bar-fill {
+.sleigh-bar-drive .robot-bar-fill {
   background: linear-gradient(90deg, #8f0f1a, #e21b3c);
 }
 
-.kart-bar-intro .robot-bar-fill,
-.kart-bar-countdown .robot-bar-fill {
+.sleigh-bar-intro .robot-bar-fill,
+.sleigh-bar-countdown .robot-bar-fill {
   background: repeating-conic-gradient(#1b1b1b 0 25%, #2c2c2c 0 50%) 0 0 / 24px 24px;
 }
 
-.kart-wrap {
+.sleigh-wrap {
   position: relative;
   flex: 1;
   min-height: 0;
@@ -6246,7 +6246,7 @@ select {
   background: #1c2a1a;
 }
 
-.kart-field-box {
+.sleigh-field-box {
   flex: 1;
   min-width: 0;
   container-type: size;
@@ -6256,19 +6256,19 @@ select {
   transition: background-color 0.6s ease;
 }
 
-.kart-wrap.phase-quiz .kart-field-box,
-.kart-wrap.phase-countdown .kart-field-box {
+.sleigh-wrap.phase-quiz .sleigh-field-box,
+.sleigh-wrap.phase-countdown .sleigh-field-box {
   background: #1f3a1b;
 }
 
 /* The track's 16:9 box, as big as fits: HTML overlays can then be placed in % of the field. */
-.kart-field {
+.sleigh-field {
   position: relative;
   width: min(100cqw, 100cqh * 16 / 9);
   height: min(100cqh, 100cqw * 9 / 16);
 }
 
-.kart-field > svg {
+.sleigh-field > svg {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -6276,26 +6276,26 @@ select {
   display: block;
 }
 
-.kart-track {
+.sleigh-track {
   /* Static: give it its own layer so the moving cars never repaint it. */
   will-change: transform;
   transition: filter 0.6s ease;
 }
 
-.kart-wrap.phase-quiz .kart-track,
-.kart-wrap.phase-countdown .kart-track {
+.sleigh-wrap.phase-quiz .sleigh-track,
+.sleigh-wrap.phase-countdown .sleigh-track {
   filter: brightness(0.55) saturate(0.8);
 }
 
-.kart-wrap.phase-quiz .kart-cars {
+.sleigh-wrap.phase-quiz .sleigh-cars {
   filter: brightness(0.75);
 }
 
-.kart-car-pos.offline {
+.sleigh-car-pos.offline {
   opacity: 0.45;
 }
 
-.kart-tag-name {
+.sleigh-tag-name {
   font: 800 13px var(--font);
   fill: #fff;
   paint-order: stroke;
@@ -6304,20 +6304,20 @@ select {
   stroke-linejoin: round;
 }
 
-.kart-cars.crowded .kart-tag-name {
+.sleigh-cars.crowded .sleigh-tag-name {
   font-size: 11px;
 }
 
-.kart-car-pos.leader .kart-tag > circle {
+.sleigh-car-pos.leader .sleigh-tag > circle {
   stroke: var(--accent);
   stroke-width: 2.5px;
 }
 
-.kart-spark {
-  animation: kart-spark 0.6s ease-out both;
+.sleigh-spark {
+  animation: sleigh-spark 0.6s ease-out both;
 }
 
-@keyframes kart-spark {
+@keyframes sleigh-spark {
   from {
     transform: scale(0.3);
     opacity: 1;
@@ -6331,7 +6331,7 @@ select {
   }
 }
 
-.kart-quiz-note {
+.sleigh-quiz-note {
   position: absolute;
   left: 50%;
   top: 46%;
@@ -6348,44 +6348,44 @@ select {
   animation: pop-in 0.35s ease-out both;
 }
 
-.kart-quiz-round {
+.sleigh-quiz-round {
   font-size: 0.7em;
   color: var(--accent);
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
 
-.kart-quiz-sub {
+.sleigh-quiz-sub {
   font-size: 0.62em;
   font-weight: 700;
   color: var(--on-bg-soft);
   margin-top: 0.4em;
 }
 
-.kart-overlay {
+.sleigh-overlay {
   background: rgba(8, 10, 14, 0.66);
   z-index: 2;
 }
 
-.kart-overlay .countdown-label {
+.sleigh-overlay .countdown-label {
   max-width: min(1200px, 70vw);
   font-size: clamp(20px, 2.1vw, 40px);
   line-height: 1.35;
   text-shadow: 0 3px 0 rgba(0, 0, 0, 0.5);
 }
 
-.kart-overlay .countdown-num {
+.sleigh-overlay .countdown-num {
   text-shadow: 0 6px 0 rgba(0, 0, 0, 0.45);
 }
 
-.kart-intro .kart-flags {
+.sleigh-intro .sleigh-flags {
   width: clamp(160px, 22vw, 380px);
   height: auto;
-  animation: kart-wave 1.2s ease-in-out infinite alternate;
+  animation: sleigh-wave 1.2s ease-in-out infinite alternate;
   filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.5));
 }
 
-@keyframes kart-wave {
+@keyframes sleigh-wave {
   from {
     transform: rotate(-3deg) scale(0.98);
   }
@@ -6394,7 +6394,7 @@ select {
   }
 }
 
-.kart-standings {
+.sleigh-standings {
   flex: none;
   width: min(20vw, 330px);
   padding: 1.2vh 0.8vw;
@@ -6405,7 +6405,7 @@ select {
   font-size: clamp(13px, 1.05vw, 20px);
 }
 
-.kart-standings h2 {
+.sleigh-standings h2 {
   margin: 0 0 0.6vh;
   font-size: 1.05em;
   font-weight: 900;
@@ -6414,15 +6414,15 @@ select {
   color: var(--accent);
 }
 
-.kart-standings-head,
-.kart-standings li {
+.sleigh-standings-head,
+.sleigh-standings li {
   display: grid;
   grid-template-columns: 1.7em 1.6em minmax(0, 1fr) 3.6em 2em;
   align-items: center;
   gap: 6px;
 }
 
-.kart-standings-head {
+.sleigh-standings-head {
   font-size: 0.7em;
   font-weight: 800;
   text-transform: uppercase;
@@ -6431,11 +6431,11 @@ select {
   border-bottom: 1px solid var(--line);
 }
 
-.kart-standings-head span:nth-child(n + 4) {
+.sleigh-standings-head span:nth-child(n + 4) {
   text-align: right;
 }
 
-.kart-standings ul {
+.sleigh-standings ul {
   list-style: none;
   margin: 0.5vh 0 0;
   padding: 0;
@@ -6447,87 +6447,87 @@ select {
   overflow: hidden;
 }
 
-.kart-standings li {
+.sleigh-standings li {
   padding: 2px 4px;
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.05);
   border-left: 4px solid var(--car);
 }
 
-.kart-standings li .avatar {
+.sleigh-standings li .avatar {
   width: 1.6em;
   height: 1.6em;
 }
 
-.kart-standings li .n {
+.sleigh-standings li .n {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.kart-pos {
+.sleigh-pos {
   font-weight: 900;
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
 
-.kart-standings li:nth-child(1) .kart-pos {
+.sleigh-standings li:nth-child(1) .sleigh-pos {
   color: #ffd23f;
 }
 
-.kart-standings li:nth-child(2) .kart-pos {
+.sleigh-standings li:nth-child(2) .sleigh-pos {
   color: #d9dde3;
 }
 
-.kart-standings li:nth-child(3) .kart-pos {
+.sleigh-standings li:nth-child(3) .sleigh-pos {
   color: #e39a5b;
 }
 
-.kart-fuel,
-.kart-laps {
+.sleigh-fuel,
+.sleigh-laps {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-.kart-fuel {
+.sleigh-fuel {
   color: var(--accent);
 }
 
-.kart-laps {
+.sleigh-laps {
   color: var(--on-bg-soft);
 }
 
-.kart-standings li.offline .n {
+.sleigh-standings li.offline .n {
   font-style: italic;
   opacity: 0.6;
 }
 
-.kart-standings li.parked {
+.sleigh-standings li.parked {
   opacity: 0.6;
 }
 
-.kart-standings.crowded {
+.sleigh-standings.crowded {
   font-size: clamp(11px, 0.85vw, 16px);
 }
 
-.kart-standings.crowded ul {
+.sleigh-standings.crowded ul {
   gap: 1px;
 }
 
-.kart-standings.crowded li {
+.sleigh-standings.crowded li {
   padding: 0 4px;
 }
 
-.kart-podium .podium-bg {
+.sleigh-podium .podium-bg {
   opacity: 0.3;
 }
 
-.kart-podium .podium-bg .kart-track {
+.sleigh-podium .podium-bg .sleigh-track {
   width: 100%;
   height: 100%;
 }
 
-.kart-final {
+.sleigh-final {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -6537,7 +6537,7 @@ select {
   gap: 0.8vh;
 }
 
-.kart-final li {
+.sleigh-final li {
   display: flex;
   align-items: center;
   gap: 1.4vw;
@@ -6551,30 +6551,30 @@ select {
   animation: rise 0.4s ease-out both;
 }
 
-.kart-final li.won {
+.sleigh-final li.won {
   background: var(--accent);
 }
 
-.kart-final .avatar {
+.sleigh-final .avatar {
   width: 1.6em;
   height: 1.6em;
   flex: none;
 }
 
-.kart-final-dist {
+.sleigh-final-dist {
   font-size: 0.72em;
   color: var(--ink-soft);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-.kart-final-dist b {
+.sleigh-final-dist b {
   color: var(--ink);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .kart-spark,
-  .kart-intro .kart-flags {
+  .sleigh-spark,
+  .sleigh-intro .sleigh-flags {
     animation: none;
   }
 }

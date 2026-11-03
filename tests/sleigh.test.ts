@@ -1,17 +1,17 @@
 import { describe, expect, test } from "bun:test";
 import { Game } from "../src/server/game/game.ts";
-import { FEEDBACK_MS, KartGame, type KartPlayer } from "../src/server/game/kart.ts";
-import { buildKartResultsCsv } from "../src/server/game/results.ts";
+import { FEEDBACK_MS, SleighGame, type SleighPlayer } from "../src/server/game/sleigh.ts";
+import { buildSleighResultsCsv } from "../src/server/game/results.ts";
 import {
-  KART_COUNTDOWN_MS,
-  KART_DRIVE_CAP_MS,
-  KART_DRIVE_HOLD_MS,
-  KART_INTRO_MS,
-  KART_MS_PER_POINT,
-  KART_QUIZ_MS,
-  KART_TICK_MS,
+  SLEIGH_COUNTDOWN_MS,
+  SLEIGH_DRIVE_CAP_MS,
+  SLEIGH_DRIVE_HOLD_MS,
+  SLEIGH_INTRO_MS,
+  SLEIGH_MS_PER_POINT,
+  SLEIGH_QUIZ_MS,
+  SLEIGH_TICK_MS,
   gridSlot,
-} from "../src/shared/kart-rules.ts";
+} from "../src/shared/sleigh-rules.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
 import { FakeClock, sampleQuiz } from "./helpers.ts";
 
@@ -39,10 +39,10 @@ function setup(names: string[], rounds = 3) {
   let changes = 0;
   let ticks = 0;
   const lobby = new Game(quiz(), { clock });
-  lobby.setMode("kart");
-  lobby.setKart({ rounds });
+  lobby.setMode("sleigh");
+  lobby.setSleigh({ rounds });
   for (const n of names) lobby.join(n);
-  const game = KartGame.fromLobby(lobby, {
+  const game = SleighGame.fromLobby(lobby, {
     clock,
     rng: seeded(),
     onFinish: () => finished++,
@@ -51,41 +51,41 @@ function setup(names: string[], rounds = 3) {
   });
   game.start();
   expect(game.phase).toBe("countdown");
-  clock.advance(KART_COUNTDOWN_MS);
+  clock.advance(SLEIGH_COUNTDOWN_MS);
   expect(game.phase).toBe("quiz");
   return { clock, game, finished: () => finished, changes: () => changes, ticks: () => ticks };
 }
 
-const byName = (game: KartGame, name: string) => [...game.players.values()].find((p) => p.nickname === name)!;
+const byName = (game: SleighGame, name: string) => [...game.players.values()].find((p) => p.nickname === name)!;
 
-function answer(game: KartGame, clock: FakeClock, p: KartPlayer, right: boolean) {
+function answer(game: SleighGame, clock: FakeClock, p: SleighPlayer, right: boolean) {
   const cur = p.current!;
   const option = right ? cur.correct[0]! : cur.options.findIndex((_, i) => !cur.correct.includes(i));
   expect(game.answer(p.id, cur.seq, option)).toBe(true);
   clock.advance(FEEDBACK_MS);
 }
 
-function earn(game: KartGame, clock: FakeClock, name: string, n: number) {
+function earn(game: SleighGame, clock: FakeClock, name: string, n: number) {
   for (let i = 0; i < n; i++) answer(game, clock, byName(game, name), true);
 }
 
 /** From any time in the quiz phase to the start of the drive. */
-function toDrive(game: KartGame, clock: FakeClock) {
+function toDrive(game: SleighGame, clock: FakeClock) {
   expect(game.phase).toBe("quiz");
   clock.advance(game.phaseEndsAt - clock.now());
   expect(game.phase).toBe("intro");
-  clock.advance(KART_INTRO_MS);
+  clock.advance(SLEIGH_INTRO_MS);
   expect(game.phase).toBe("drive");
 }
 
 /** Run the drive phase to its end (the next quiz or the podium). */
-function finishDrive(game: KartGame, clock: FakeClock) {
+function finishDrive(game: SleighGame, clock: FakeClock) {
   const round = game.round;
-  for (let t = 0; t <= KART_DRIVE_CAP_MS + KART_DRIVE_HOLD_MS && game.phase === "drive"; t += KART_TICK_MS) clock.advance(KART_TICK_MS);
+  for (let t = 0; t <= SLEIGH_DRIVE_CAP_MS + SLEIGH_DRIVE_HOLD_MS && game.phase === "drive"; t += SLEIGH_TICK_MS) clock.advance(SLEIGH_TICK_MS);
   expect(game.phase === "podium" || game.round === round + 1).toBe(true);
 }
 
-describe("Kart Rally", () => {
+describe("Santa's Sleigh Run", () => {
   test("cars line up on the grid in join order with distinct colours", () => {
     const { game } = setup(["A", "B", "C", "D"]);
     const players = [...game.players.values()];
@@ -99,23 +99,23 @@ describe("Kart Rally", () => {
   test("phase sequence and timings: countdown → quiz → intro → drive → quiz … → podium", () => {
     const { game, clock, finished } = setup(["A"], 3);
     expect(game.round).toBe(1);
-    expect(game.phaseDurationMs).toBe(KART_QUIZ_MS);
-    expect(game.hostView().phaseRemainingMs).toBe(KART_QUIZ_MS);
-    clock.advance(KART_QUIZ_MS - 1);
+    expect(game.phaseDurationMs).toBe(SLEIGH_QUIZ_MS);
+    expect(game.hostView().phaseRemainingMs).toBe(SLEIGH_QUIZ_MS);
+    clock.advance(SLEIGH_QUIZ_MS - 1);
     expect(game.phase).toBe("quiz");
     clock.advance(1);
     expect(game.phase).toBe("intro");
-    expect(game.phaseDurationMs).toBe(KART_INTRO_MS);
-    clock.advance(KART_INTRO_MS);
+    expect(game.phaseDurationMs).toBe(SLEIGH_INTRO_MS);
+    clock.advance(SLEIGH_INTRO_MS);
     expect(game.phase).toBe("drive");
     // Nobody has fuel: the drive just holds and moves on.
-    expect(game.phaseDurationMs).toBe(KART_DRIVE_HOLD_MS);
-    clock.advance(KART_DRIVE_HOLD_MS);
+    expect(game.phaseDurationMs).toBe(SLEIGH_DRIVE_HOLD_MS);
+    clock.advance(SLEIGH_DRIVE_HOLD_MS);
     expect(game.phase).toBe("quiz");
     expect(game.round).toBe(2);
     for (let r = 2; r <= 3; r++) {
       toDrive(game, clock);
-      clock.advance(KART_DRIVE_HOLD_MS);
+      clock.advance(SLEIGH_DRIVE_HOLD_MS);
     }
     expect(game.phase).toBe("podium");
     expect(game.round).toBe(3);
@@ -132,22 +132,22 @@ describe("Kart Rally", () => {
     toDrive(game, clock);
     const a = byName(game, "A");
     expect(a.points).toBe(0);
-    expect(a.fuelStartMs).toBe(3 * KART_MS_PER_POINT);
+    expect(a.fuelStartMs).toBe(3 * SLEIGH_MS_PER_POINT);
     expect(a.car.speed).toBe(1);
     const view = game.playerView(a.id)!;
-    expect(view.fuelMs).toBe(3 * KART_MS_PER_POINT);
-    expect(view.fuelStartMs).toBe(3 * KART_MS_PER_POINT);
+    expect(view.fuelMs).toBe(3 * SLEIGH_MS_PER_POINT);
+    expect(view.fuelStartMs).toBe(3 * SLEIGH_MS_PER_POINT);
     clock.advance(1000);
-    expect(game.playerView(a.id)!.fuelMs).toBe(3 * KART_MS_PER_POINT - 1000);
+    expect(game.playerView(a.id)!.fuelMs).toBe(3 * SLEIGH_MS_PER_POINT - 1000);
     finishDrive(game, clock);
-    expect(a.drivenMs).toBe(3 * KART_MS_PER_POINT);
+    expect(a.drivenMs).toBe(3 * SLEIGH_MS_PER_POINT);
     expect(a.car.distance).toBeGreaterThan(gridSlot(0, 2).distance + 500);
   });
 
   test("answers only count in the quiz phase", () => {
     const { game, clock } = setup(["A"]);
     const a = byName(game, "A");
-    clock.advance(KART_QUIZ_MS);
+    clock.advance(SLEIGH_QUIZ_MS);
     expect(game.phase).toBe("intro");
     expect(game.answer(a.id, a.current!.seq, a.current!.correct[0]!)).toBe(false);
   });
@@ -171,19 +171,19 @@ describe("Kart Rally", () => {
     earn(game, clock, "A", 1);
     toDrive(game, clock);
     const a = byName(game, "A");
-    clock.advance(KART_MS_PER_POINT);
+    clock.advance(SLEIGH_MS_PER_POINT);
     expect(a.moving).toBe(true); // coasting
     let t = 0;
     while (a.moving && t < 5000) {
-      clock.advance(KART_TICK_MS);
-      t += KART_TICK_MS;
+      clock.advance(SLEIGH_TICK_MS);
+      t += SLEIGH_TICK_MS;
     }
     expect(a.moving).toBe(false);
     expect(a.car.speed).toBe(0);
     expect(game.phase).toBe("drive");
-    expect(game.phaseDurationMs).toBe(KART_DRIVE_HOLD_MS);
+    expect(game.phaseDurationMs).toBe(SLEIGH_DRIVE_HOLD_MS);
     const pos = { ...a.car };
-    clock.advance(KART_DRIVE_HOLD_MS - 1);
+    clock.advance(SLEIGH_DRIVE_HOLD_MS - 1);
     expect(game.phase).toBe("drive");
     expect(a.car.x).toBe(pos.x);
     clock.advance(1);
@@ -201,11 +201,11 @@ describe("Kart Rally", () => {
     // Plenty of fuel: fake more than the cap.
     toDrive(game, clock);
     const a = byName(game, "A");
-    a.fuelEndsAt = clock.now() + KART_DRIVE_CAP_MS * 2;
-    clock.advance(KART_DRIVE_CAP_MS - KART_TICK_MS);
+    a.fuelEndsAt = clock.now() + SLEIGH_DRIVE_CAP_MS * 2;
+    clock.advance(SLEIGH_DRIVE_CAP_MS - SLEIGH_TICK_MS);
     expect(game.phase).toBe("drive");
     expect(a.moving).toBe(true);
-    clock.advance(KART_TICK_MS);
+    clock.advance(SLEIGH_TICK_MS);
     expect(game.phase).toBe("quiz");
     expect(a.car.speed).toBe(0);
     expect(a.fuelMs).toBe(0);
@@ -228,7 +228,7 @@ describe("Kart Rally", () => {
     expect(a.wheel).toBe(-1);
     expect(game.steer("nobody", 0)).toBe(false);
     // Turning left from the start turns the heading counter-clockwise.
-    clock.advance(KART_TICK_MS);
+    clock.advance(SLEIGH_TICK_MS);
     expect(a.car.heading).toBeLessThan(0);
   });
 
@@ -240,7 +240,7 @@ describe("Kart Rally", () => {
     game.steer(a.id, 1);
     game.setConnected(a.id, false);
     expect(a.wheel).toBe(0);
-    clock.advance(KART_TICK_MS * 4);
+    clock.advance(SLEIGH_TICK_MS * 4);
     expect(a.car.heading).toBeCloseTo(0, 6);
   });
 
@@ -252,14 +252,14 @@ describe("Kart Rally", () => {
     const c0 = changes();
     const t0 = ticks();
     clock.advance(1000);
-    expect(ticks() - t0).toBe(1000 / KART_TICK_MS);
+    expect(ticks() - t0).toBe(1000 / SLEIGH_TICK_MS);
     expect(changes()).toBe(c0);
     finishDrive(game, clock);
     // B stops, A stops (→ hold), next round: a handful, not one per tick.
     expect(changes() - c0).toBeLessThanOrEqual(5);
     expect(ticks() - t0).toBeGreaterThan(80);
     const t1 = ticks();
-    clock.advance(KART_QUIZ_MS);
+    clock.advance(SLEIGH_QUIZ_MS);
     expect(ticks()).toBe(t1);
   });
 
@@ -268,7 +268,7 @@ describe("Kart Rally", () => {
     earn(game, clock, "A", 2);
     toDrive(game, clock);
     game.steer(game.hostView().cars[0]!.id, 0.37);
-    clock.advance(KART_TICK_MS * 3);
+    clock.advance(SLEIGH_TICK_MS * 3);
     const v = game.hostView();
     expect(v.tick).toBe(clock.now());
     const car = v.cars[0]!;
@@ -277,7 +277,7 @@ describe("Kart Rally", () => {
     expect(Math.round(car.heading * 1000) / 1000).toBe(car.heading);
     expect(car.moving).toBe(true);
     expect(car.wheel).toBeCloseTo(0.37, 6);
-    expect(v.kind).toBe("kart");
+    expect(v.kind).toBe("sleigh");
     expect(v.rounds).toBe(3);
   });
 
@@ -304,7 +304,7 @@ describe("Kart Rally", () => {
     const host = game.hostView();
     expect(host.hasResults).toBe(true);
     expect(host.awards).toEqual(aw);
-    const csv = buildKartResultsCsv(game);
+    const csv = buildSleighResultsCsv(game);
     expect(csv.replace(/^\uFEFF/, "").split(/\r?\n/)[0]).toBe("Rank,Nickname,Laps,Distance,Correct,Wrong,Accuracy %,Wall hits,Seconds driven");
     expect(csv).toContain("1,B,0,");
   });
@@ -325,7 +325,7 @@ describe("Kart Rally", () => {
     expect(c.current).not.toBeNull();
     earn(game, clock, "C", 2);
     toDrive(game, clock);
-    expect(c.fuelStartMs).toBe(2 * KART_MS_PER_POINT);
+    expect(c.fuelStartMs).toBe(2 * SLEIGH_MS_PER_POINT);
     const d = game.join("D");
     expect(d.car).toEqual(gridSlot(3, 4));
     expect(d.moving).toBe(false);
@@ -341,7 +341,7 @@ describe("Kart Rally", () => {
     toDrive(game, clock);
     game.kick(byName(game, "B").id);
     expect(game.players.size).toBe(1);
-    clock.advance(KART_TICK_MS * 2);
+    clock.advance(SLEIGH_TICK_MS * 2);
     game.end();
     const t = ticks();
     clock.advance(10_000);

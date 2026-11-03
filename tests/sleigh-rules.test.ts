@@ -2,36 +2,36 @@ import { describe, expect, test } from "bun:test";
 import {
   CX,
   CY,
-  KART_SPEED,
+  SLEIGH_SPEED,
   LAP,
   STRAIGHT,
   TURN_R,
   WALL_LIMIT,
   WALL_SPEED_KEEP,
   gridSlot,
-  kartColor,
+  sleighColor,
   lapsOf,
   launch,
   stepCar,
   trackCoords,
   trackPoint,
   type Car,
-} from "../src/shared/kart-rules.ts";
+} from "../src/shared/sleigh-rules.ts";
 
 function carAt(s: number, offset = 0, speed = 1): Car {
   const p = trackPoint(s, offset);
   return { ...p, speed, distance: s, scraping: false };
 }
 
-describe("kart rules", () => {
+describe("sleigh rules", () => {
   test("a car with fuel and a straight wheel drives straight at top speed", () => {
     const start = carAt(0);
     const { car, hit } = stepCar(start, 0, true, 100);
     expect(hit).toBe(false);
     expect(car.y).toBeCloseTo(start.y, 6);
-    expect(car.x - start.x).toBeCloseTo(KART_SPEED * 0.1, 6);
+    expect(car.x - start.x).toBeCloseTo(SLEIGH_SPEED * 0.1, 6);
     expect(car.heading).toBeCloseTo(0, 9);
-    expect(car.distance).toBeCloseTo(KART_SPEED * 0.1, 6);
+    expect(car.distance).toBeCloseTo(SLEIGH_SPEED * 0.1, 6);
   });
 
   test("a stopped car without fuel stays put", () => {
@@ -139,7 +139,7 @@ describe("kart rules", () => {
   });
 
   test("car colours are distinct for the first players", () => {
-    const colours = new Set(Array.from({ length: 30 }, (_, i) => kartColor(i)));
+    const colours = new Set(Array.from({ length: 30 }, (_, i) => sleighColor(i)));
     expect(colours.size).toBe(30);
   });
 });

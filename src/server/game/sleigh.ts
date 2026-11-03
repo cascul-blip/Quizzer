@@ -1,22 +1,22 @@
 import type { AnswerValue } from "../../shared/answer-match.ts";
 import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import {
-  KART_COUNTDOWN_MS,
-  KART_DEFAULT_ROUNDS,
-  KART_DRIVE_CAP_MS,
-  KART_DRIVE_HOLD_MS,
-  KART_INTRO_MS,
-  KART_MS_PER_POINT,
-  KART_QUIZ_MS,
-  KART_TICK_MS,
+  SLEIGH_COUNTDOWN_MS,
+  SLEIGH_DEFAULT_ROUNDS,
+  SLEIGH_DRIVE_CAP_MS,
+  SLEIGH_DRIVE_HOLD_MS,
+  SLEIGH_INTRO_MS,
+  SLEIGH_MS_PER_POINT,
+  SLEIGH_QUIZ_MS,
+  SLEIGH_TICK_MS,
   gridSlot,
-  kartColor,
+  sleighColor,
   lapsOf,
   launch,
   stepCar,
   type Car,
-} from "../../shared/kart-rules.ts";
-import type { HostKartState, KartAwards, KartPhase, KartStanding, PlayerKartView } from "../../shared/protocol.ts";
+} from "../../shared/sleigh-rules.ts";
+import type { HostSleighState, SleighAwards, SleighPhase, SleighStanding, PlayerSleighView } from "../../shared/protocol.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import { GameError, realClock, type Clock } from "./common.ts";
 import type { Game } from "./game.ts";
@@ -25,7 +25,7 @@ import { QuestionStream, newStreamPlayer, type StreamPlayer } from "./stream.ts"
 
 export { FEEDBACK_MS } from "./stream.ts";
 
-export interface KartPlayer extends BasePlayer, StreamPlayer {
+export interface SleighPlayer extends BasePlayer, StreamPlayer {
   car: Car;
   color: string;
   /** Steering wheel, −1 (full left) … 1 (full right). */
@@ -46,17 +46,17 @@ export interface KartPlayer extends BasePlayer, StreamPlayer {
   drivenMs: number;
 }
 
-interface KartOptions {
+interface SleighOptions {
   clock?: Clock;
   rng?: () => number;
   onChange?: () => void;
   onActivity?: (playerId: string) => void;
   /** Every drive tick: only for pushing the host's view (cars move). */
   onTick?: () => void;
-  onFinish?: (game: KartGame) => void;
+  onFinish?: (game: SleighGame) => void;
 }
 
-interface KartGameSettings {
+interface SleighGameSettings {
   shuffleAnswers: boolean;
   /** Longer waits for wrong answers in a row (the lobby's "Protect from abuse"). */
   protect?: boolean;
@@ -66,17 +66,17 @@ interface KartGameSettings {
 const r1 = (n: number) => Math.round(n * 10) / 10;
 const r3 = (n: number) => Math.round(n * 1000) / 1000;
 
-/** Kart Rally: answer questions for driving time, then steer round the oval. Most distance after the last round wins. */
-export class KartGame {
+/** Santa's Sleigh Run: answer questions for driving time, then steer round the oval. Most distance after the last round wins. */
+export class SleighGame {
   readonly quizId: string;
   readonly title: string;
   readonly questions: Question[];
   readonly rounds: number;
-  readonly roster = new Roster<KartPlayer>();
-  phase: KartPhase = "countdown";
+  readonly roster = new Roster<SleighPlayer>();
+  phase: SleighPhase = "countdown";
   round = 0;
   phaseEndsAt = 0;
-  phaseDurationMs = KART_COUNTDOWN_MS;
+  phaseDurationMs = SLEIGH_COUNTDOWN_MS;
 
   private readonly clock: Clock;
   private readonly rng: () => number;
@@ -91,14 +91,14 @@ export class KartGame {
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onTick: () => void;
-  private readonly onFinish: (game: KartGame) => void;
+  private readonly onFinish: (game: SleighGame) => void;
 
-  constructor(quiz: Quiz, settings: KartGameSettings, opts: KartOptions = {}) {
+  constructor(quiz: Quiz, settings: SleighGameSettings, opts: SleighOptions = {}) {
     if (quiz.questions.length === 0) throw new GameError("This quiz has no questions");
     this.quizId = quiz.id;
     this.title = quiz.title;
     this.questions = quiz.questions;
-    this.rounds = Number.isFinite(settings.rounds) && settings.rounds >= 1 ? Math.floor(settings.rounds) : KART_DEFAULT_ROUNDS;
+    this.rounds = Number.isFinite(settings.rounds) && settings.rounds >= 1 ? Math.floor(settings.rounds) : SLEIGH_DEFAULT_ROUNDS;
     this.clock = opts.clock ?? realClock;
     this.rng = opts.rng ?? Math.random;
     this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock, settings.protect);
@@ -109,8 +109,8 @@ export class KartGame {
   }
 
   /** Take over a lobby's players (same ids and tokens), lined up on the grid in join order. */
-  static fromLobby(lobby: Game, opts: KartOptions = {}): KartGame {
-    const game = new KartGame(lobby.quiz, { shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect, rounds: lobby.kart.rounds }, opts);
+  static fromLobby(lobby: Game, opts: SleighOptions = {}): SleighGame {
+    const game = new SleighGame(lobby.quiz, { shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect, rounds: lobby.sleigh.rounds }, opts);
     game.gridTotal = lobby.players.size;
     for (const p of lobby.players.values()) {
       game.roster.adopt(game.newPlayer({ id: p.id, nickname: p.nickname, token: p.token, connected: p.connected, avatar: p.avatar }));
@@ -118,17 +118,17 @@ export class KartGame {
     return game;
   }
 
-  get players(): Map<string, KartPlayer> {
+  get players(): Map<string, SleighPlayer> {
     return this.roster.players;
   }
 
-  private newPlayer(base: BasePlayer): KartPlayer {
+  private newPlayer(base: BasePlayer): SleighPlayer {
     const i = this.gridCount++;
     return {
       ...base,
       ...newStreamPlayer(),
       car: gridSlot(i, Math.max(this.gridTotal, i + 1)),
-      color: kartColor(i),
+      color: sleighColor(i),
       wheel: 0,
       points: 0,
       fuelMs: 0,
@@ -144,11 +144,11 @@ export class KartGame {
 
   start(): void {
     if (this.players.size === 0) throw new GameError("Wait for at least one player to join");
-    this.setPhase("countdown", KART_COUNTDOWN_MS, () => this.beginRound());
+    this.setPhase("countdown", SLEIGH_COUNTDOWN_MS, () => this.beginRound());
     this.onChange();
   }
 
-  private setPhase(phase: KartPhase, ms: number, then: () => void): void {
+  private setPhase(phase: SleighPhase, ms: number, then: () => void): void {
     if (this.timer !== null) this.clock.clearTimeout(this.timer);
     this.phase = phase;
     this.phaseDurationMs = ms;
@@ -166,12 +166,12 @@ export class KartGame {
       p.fuelStartMs = 0;
       if (!p.current) this.stream.deal(p);
     }
-    this.setPhase("quiz", KART_QUIZ_MS, () => this.beginIntro());
+    this.setPhase("quiz", SLEIGH_QUIZ_MS, () => this.beginIntro());
     this.onChange();
   }
 
   private beginIntro(): void {
-    this.setPhase("intro", KART_INTRO_MS, () => this.beginDrive());
+    this.setPhase("intro", SLEIGH_INTRO_MS, () => this.beginDrive());
     this.onChange();
   }
 
@@ -179,7 +179,7 @@ export class KartGame {
   private beginDrive(): void {
     const now = this.clock.now();
     for (const p of this.players.values()) {
-      const fuel = p.points * KART_MS_PER_POINT;
+      const fuel = p.points * SLEIGH_MS_PER_POINT;
       p.points = 0;
       p.fuelMs = fuel;
       p.fuelStartMs = fuel;
@@ -187,7 +187,7 @@ export class KartGame {
       p.car = fuel > 0 ? launch(p.car) : { ...p.car, speed: 0, scraping: false };
       p.moving = fuel > 0;
     }
-    this.setPhase("drive", KART_DRIVE_CAP_MS, () => this.endDrive());
+    this.setPhase("drive", SLEIGH_DRIVE_CAP_MS, () => this.endDrive());
     this.lastTickAt = now;
     if (![...this.players.values()].some((p) => p.moving)) return this.hold();
     this.scheduleTick();
@@ -199,7 +199,7 @@ export class KartGame {
     this.tickTimer = this.clock.setTimeout(() => {
       this.tickTimer = null;
       this.tick();
-    }, KART_TICK_MS);
+    }, SLEIGH_TICK_MS);
   }
 
   private tick(): void {
@@ -243,7 +243,7 @@ export class KartGame {
   private hold(): void {
     if (this.tickTimer !== null) this.clock.clearTimeout(this.tickTimer);
     this.tickTimer = null;
-    this.setPhase("drive", KART_DRIVE_HOLD_MS, () => this.endDrive());
+    this.setPhase("drive", SLEIGH_DRIVE_HOLD_MS, () => this.endDrive());
     this.onChange();
   }
 
@@ -294,7 +294,7 @@ export class KartGame {
 
   // ---------- players ----------
 
-  join(rawNickname: unknown, avatar?: AvatarChoice | null): KartPlayer {
+  join(rawNickname: unknown, avatar?: AvatarChoice | null): SleighPlayer {
     if (this.phase === "podium") throw new GameError("This game has finished");
     const player = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), (base) => this.newPlayer(base));
     if (this.round > 0) this.stream.deal(player);
@@ -302,7 +302,7 @@ export class KartGame {
     return player;
   }
 
-  byToken(token: unknown): KartPlayer | null {
+  byToken(token: unknown): SleighPlayer | null {
     return this.roster.byToken(token);
   }
 
@@ -314,7 +314,7 @@ export class KartGame {
     this.onChange();
   }
 
-  kick(playerId: string): KartPlayer | null {
+  kick(playerId: string): SleighPlayer | null {
     const p = this.roster.remove(playerId);
     if (p) this.onChange();
     return p;
@@ -344,8 +344,8 @@ export class KartGame {
   // ---------- results ----------
 
   /** Most distance first; equal distance (to 0.1) shares a rank, ordered by correct answers. */
-  standings(): KartStanding[] {
-    const key = (p: KartPlayer) => r1(p.car.distance);
+  standings(): SleighStanding[] {
+    const key = (p: SleighPlayer) => r1(p.car.distance);
     const sorted = [...this.players.values()].sort((a, b) => key(b) - key(a) || b.correct - a.correct);
     let rank = 0;
     let prev: number | null = null;
@@ -368,7 +368,7 @@ export class KartGame {
     });
   }
 
-  awards(): KartAwards {
+  awards(): SleighAwards {
     const players = [...this.players.values()];
     const topCorrect = Math.max(0, ...players.map((p) => p.correct));
     const drivers = players.filter((p) => p.drivenMs > 0);
@@ -385,7 +385,7 @@ export class KartGame {
     return this.phaseEndsAt ? Math.max(0, this.phaseEndsAt - this.clock.now()) : 0;
   }
 
-  private fuelLeft(p: KartPlayer): number {
+  private fuelLeft(p: SleighPlayer): number {
     return this.phase === "drive" ? Math.max(0, p.fuelEndsAt - this.clock.now()) : 0;
   }
 
@@ -393,11 +393,11 @@ export class KartGame {
     return new Map(this.standings().map((s) => [s.id, s.rank]));
   }
 
-  hostView(): HostKartState {
+  hostView(): HostSleighState {
     const podium = this.phase === "podium";
     const ranks = this.ranks();
     return {
-      kind: "kart",
+      kind: "sleigh",
       phase: this.phase,
       quiz: { id: this.quizId, title: this.title, questionCount: this.questions.length },
       round: this.round,
@@ -433,12 +433,12 @@ export class KartGame {
     };
   }
 
-  playerView(playerId: string): PlayerKartView | null {
+  playerView(playerId: string): PlayerSleighView | null {
     const p = this.players.get(playerId);
     if (!p) return null;
     const standings = this.standings();
     const mine = standings.find((s) => s.id === p.id)!;
-    let result: PlayerKartView["result"] = null;
+    let result: PlayerSleighView["result"] = null;
     if (this.phase === "podium") {
       const aw = this.awards();
       result = {
@@ -453,7 +453,7 @@ export class KartGame {
       };
     }
     return {
-      kind: "kart",
+      kind: "sleigh",
       phase: this.phase,
       title: this.title,
       round: this.round,

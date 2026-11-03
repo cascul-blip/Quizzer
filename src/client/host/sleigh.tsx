@@ -1,14 +1,14 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
-import { FIELD_H, FIELD_W, KART_MS_PER_POINT, KART_TICK_MS, METRES_PER_UNIT } from "../../shared/kart-rules.ts";
-import type { HostKartCar, HostView } from "../../shared/protocol.ts";
+import { FIELD_H, FIELD_W, SLEIGH_MS_PER_POINT, SLEIGH_TICK_MS, METRES_PER_UNIT } from "../../shared/sleigh-rules.ts";
+import type { HostSleighCar, HostView } from "../../shared/protocol.ts";
 import { ACCESSORY_ART, AVATAR_ART, Avatar } from "../shared/avatar-art.tsx";
-import { CheckeredFlags, KartCar, KartTrack } from "../shared/kart-art.tsx";
+import { CheckeredFlags, SleighCar, SleighTrack } from "../shared/sleigh-art.tsx";
 import { play, startRev, type Rev } from "../shared/sounds.ts";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
 import { Award } from "./tower.tsx";
 
-type KartView = Extract<HostView, { kind: "kart" }>;
+type SleighView = Extract<HostView, { kind: "sleigh" }>;
 
 /** A jump farther than this between two snapshots is a reset (back on the grid), not a move. */
 const SNAP_DIST = 160;
@@ -20,10 +20,10 @@ const SKID_GAP_MS = 220;
 const metres = (d: number) => `${Math.max(0, Math.round(d * METRES_PER_UNIT)).toLocaleString("en-US")} m`;
 const lapText = (n: number) => `${n} lap${n === 1 ? "" : "s"}`;
 
-/** Projector screen for Kart Rally: countdown → (quiz → intro → drive)… → podium. */
-export function KartStage({ view, send }: { view: KartView; send: Send }) {
+/** Projector screen for Santa's Sleigh Run: countdown → (quiz → intro → drive)… → podium. */
+export function SleighStage({ view, send }: { view: SleighView; send: Send }) {
   const secs = useCountdown(view.phaseRemainingMs, `${view.phase}-${view.round}`);
-  const prev = useRef<KartView | null>(null);
+  const prev = useRef<SleighView | null>(null);
   const rev = useRef<Rev | null>(null);
 
   useEffect(() => {
@@ -66,10 +66,10 @@ export function KartStage({ view, send }: { view: KartView; send: Send }) {
   }, []);
 
   return (
-    <div class="stage kart-stage">
+    <div class="stage sleigh-stage">
       <header class="topbar">
         <div class="title">{view.quiz.title}</div>
-        <div class="pill kart-pill">🏎️ Kart Rally</div>
+        <div class="pill sleigh-pill">🏎️ Santa's Sleigh Run</div>
         {view.round > 0 && (
           <div class="pill">
             Round {view.round} / {view.rounds}
@@ -85,31 +85,31 @@ export function KartStage({ view, send }: { view: KartView; send: Send }) {
         )}
       </header>
       {view.phase === "podium" ? (
-        <KartPodium view={view} send={send} />
+        <SleighPodium view={view} send={send} />
       ) : (
         <>
           <PhaseBar view={view} secs={secs} />
-          <main class={`kart-wrap phase-${view.phase}`}>
-            <div class="kart-field-box">
-              <div class="kart-field">
-                <KartTrack />
+          <main class={`sleigh-wrap phase-${view.phase}`}>
+            <div class="sleigh-field-box">
+              <div class="sleigh-field">
+                <SleighTrack />
                 <Cars view={view} />
                 {view.phase === "quiz" && (
-                  <div class="kart-quiz-note">
-                    <div class="kart-quiz-round">
+                  <div class="sleigh-quiz-note">
+                    <div class="sleigh-quiz-round">
                       Round {view.round} of {view.rounds}
                     </div>
                     <div>📱 Answer questions on your phone</div>
-                    <div class="kart-quiz-sub">Every correct answer = {KART_MS_PER_POINT / 1000} seconds of driving</div>
+                    <div class="sleigh-quiz-sub">Every correct answer = {SLEIGH_MS_PER_POINT / 1000} seconds of driving</div>
                   </div>
                 )}
               </div>
             </div>
             <Standings view={view} />
             {view.phase === "countdown" && (
-              <div class="countdown-overlay kart-overlay">
+              <div class="countdown-overlay sleigh-overlay">
                 <div class="countdown-label">
-                  Answer questions on your phone to earn fuel: every correct answer is {KART_MS_PER_POINT / 1000} seconds of driving.
+                  Answer questions on your phone to earn fuel: every correct answer is {SLEIGH_MS_PER_POINT / 1000} seconds of driving.
                   <br />
                   Then steer your car with the wheel on your phone. The gas is always on!
                   <br />
@@ -121,7 +121,7 @@ export function KartStage({ view, send }: { view: KartView; send: Send }) {
               </div>
             )}
             {view.phase === "intro" && (
-              <div class="countdown-overlay kart-overlay kart-intro">
+              <div class="countdown-overlay sleigh-overlay sleigh-intro">
                 <CheckeredFlags />
                 <div class="countdown-label">Get ready to drive in…</div>
                 <div class="countdown-num" key={secs}>
@@ -137,7 +137,7 @@ export function KartStage({ view, send }: { view: KartView; send: Send }) {
 }
 
 /** The bar across the top drains over each phase, with what to do right now. */
-function PhaseBar({ view, secs }: { view: KartView; secs: number }) {
+function PhaseBar({ view, secs }: { view: SleighView; secs: number }) {
   // Catch up once, when the phase starts (see robot.tsx).
   const key = `${view.phase}-${view.round}`;
   const start = useRef<{ key: string; elapsed: number } | null>(null);
@@ -153,7 +153,7 @@ function PhaseBar({ view, secs }: { view: KartView; secs: number }) {
           : "🏁 Everyone's out of fuel"
         : "Get ready…";
   return (
-    <div class={`robot-bar kart-bar kart-bar-${view.phase}`}>
+    <div class={`robot-bar sleigh-bar sleigh-bar-${view.phase}`}>
       <div key={key} class="robot-bar-fill" style={{ animationDuration: `${view.phaseDurationMs}ms`, animationDelay: `-${elapsed}ms` }} />
       <div class="robot-bar-label">{label}</div>
     </div>
@@ -198,7 +198,7 @@ interface Spark {
  * The cars, on an svg laid over the track. Each snapshot sets a new target pose; a rAF loop
  * glides every car there over the time between ticks, writing transforms straight to the DOM.
  */
-function Cars({ view }: { view: KartView }) {
+function Cars({ view }: { view: SleighView }) {
   const motions = useRef(new Map<string, Motion>());
   const els = useRef(new Map<string, { pos: SVGGElement | null; rot: SVGGElement | null }>());
   const hits = useRef(new Map<string, number>());
@@ -224,14 +224,14 @@ function Cars({ view }: { view: KartView }) {
       seen.add(c.id);
       const to = { x: c.x, y: c.y, h: c.heading };
       const m = motions.current.get(c.id);
-      if (!m) motions.current.set(c.id, { from: to, to, at: now, dur: KART_TICK_MS, tick: view.tick });
+      if (!m) motions.current.set(c.id, { from: to, to, at: now, dur: SLEIGH_TICK_MS, tick: view.tick });
       else if (m.tick !== view.tick) {
         const cur = sample(m, now);
         const jump = Math.hypot(to.x - cur.x, to.y - cur.y) > SNAP_DIST;
         m.from = jump ? to : cur;
         m.to = to;
         m.at = now;
-        m.dur = Math.max(16, Math.min(250, view.tick - m.tick || KART_TICK_MS));
+        m.dur = Math.max(16, Math.min(250, view.tick - m.tick || SLEIGH_TICK_MS));
         m.tick = view.tick;
       }
       const before = hits.current.get(c.id);
@@ -265,11 +265,11 @@ function Cars({ view }: { view: KartView }) {
   const drive = view.phase === "drive";
   const crowded = view.cars.length > 14;
   return (
-    <svg class={`kart-cars ${crowded ? "crowded" : ""}`} viewBox={`0 0 ${FIELD_W} ${FIELD_H}`} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+    <svg class={`sleigh-cars ${crowded ? "crowded" : ""}`} viewBox={`0 0 ${FIELD_W} ${FIELD_H}`} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
       {view.cars.map((c) => (
         <g
           key={c.id}
-          class={`kart-car-pos ${c.connected ? "" : "offline"} ${c.rank === 1 && view.round > 1 ? "leader" : ""}`}
+          class={`sleigh-car-pos ${c.connected ? "" : "offline"} ${c.rank === 1 && view.round > 1 ? "leader" : ""}`}
           ref={(el) => {
             const e = els.current.get(c.id) ?? { pos: null, rot: null };
             e.pos = el;
@@ -283,14 +283,14 @@ function Cars({ view }: { view: KartView }) {
               els.current.set(c.id, e);
             }}
           >
-            <KartCar color={c.color} wheel={drive ? c.wheel : 0} />
+            <SleighCar color={c.color} wheel={drive ? c.wheel : 0} />
           </g>
           <NameTag car={c} drive={drive} />
         </g>
       ))}
       {sparks.map((s) => (
         <g key={s.key} transform={`translate(${s.x.toFixed(1)} ${s.y.toFixed(1)})`}>
-          <g class="kart-spark">
+          <g class="sleigh-spark">
             <circle r="9" fill="#fff6c2" />
             {Array.from({ length: 10 }, (_, i) => {
               const a = (i / 10) * Math.PI * 2 + (s.key % 5) * 0.3;
@@ -306,20 +306,20 @@ function Cars({ view }: { view: KartView }) {
 }
 
 /** Avatar and name above a car (unrotated), with a fuel gauge while it drives. */
-function NameTag({ car, drive }: { car: HostKartCar; drive: boolean }) {
+function NameTag({ car, drive }: { car: HostSleighCar; drive: boolean }) {
   const art = AVATAR_ART[car.avatar.avatar] ?? AVATAR_ART.cat;
   const extra = ACCESSORY_ART[car.avatar.accessory] ?? ACCESSORY_ART.none;
   const fuel = car.fuelStartMs > 0 ? Math.max(0, Math.min(1, car.fuelMs / car.fuelStartMs)) : 0;
   const size = 22;
   const name = car.nickname.length > 12 ? `${car.nickname.slice(0, 11)}…` : car.nickname;
   return (
-    <g class="kart-tag" transform="translate(0 -34)">
+    <g class="sleigh-tag" transform="translate(0 -34)">
       <circle r={size / 2 + 2} fill={car.color} stroke="#fff" stroke-width="1.5" />
       <g transform={`translate(${-size / 2} ${-size / 2}) scale(${size / 100})`}>
         {art()}
         {extra()}
       </g>
-      <text class="kart-tag-name" x={size / 2 + 5} y="4.5">
+      <text class="sleigh-tag-name" x={size / 2 + 5} y="4.5">
         {name}
       </text>
       {drive && car.fuelStartMs > 0 && (
@@ -333,15 +333,15 @@ function NameTag({ car, drive }: { car: HostKartCar; drive: boolean }) {
 }
 
 /** Side panel: this round's fuel during the quiz, the running order while driving. */
-function Standings({ view }: { view: KartView }) {
+function Standings({ view }: { view: SleighView }) {
   const drive = view.phase === "drive";
   const quiz = view.phase === "quiz" || view.phase === "intro" || view.phase === "countdown";
   const cars = [...view.cars].sort((a, b) => a.rank - b.rank || a.nickname.localeCompare(b.nickname));
   const crowded = cars.length > 16;
   return (
-    <section class={`kart-standings ${crowded ? "crowded" : ""}`}>
+    <section class={`sleigh-standings ${crowded ? "crowded" : ""}`}>
       <h2>{drive ? "🏁 Race order" : view.round <= 1 && view.phase !== "intro" ? "⛽ Fuel this round" : "⛽ Fuel · race order"}</h2>
-      <div class="kart-standings-head">
+      <div class="sleigh-standings-head">
         <span>Pos</span>
         <span />
         <span>Driver</span>
@@ -351,11 +351,11 @@ function Standings({ view }: { view: KartView }) {
       <ul>
         {cars.map((c) => (
           <li key={c.id} class={`${c.connected ? "" : "offline"} ${drive && !c.moving ? "parked" : ""}`} style={{ "--car": c.color }}>
-            <span class="kart-pos">{c.rank}</span>
+            <span class="sleigh-pos">{c.rank}</span>
             <Avatar choice={c.avatar} />
             <span class="n">{c.nickname}</span>
-            <span class="kart-fuel">{drive ? (c.fuelMs > 0 ? `${(c.fuelMs / 1000).toFixed(1)}s` : c.moving ? "…" : "🏁") : quiz ? `⛽ ${c.points}` : ""}</span>
-            <span class="kart-laps">{c.laps}</span>
+            <span class="sleigh-fuel">{drive ? (c.fuelMs > 0 ? `${(c.fuelMs / 1000).toFixed(1)}s` : c.moving ? "…" : "🏁") : quiz ? `⛽ ${c.points}` : ""}</span>
+            <span class="sleigh-laps">{c.laps}</span>
           </li>
         ))}
       </ul>
@@ -363,29 +363,29 @@ function Standings({ view }: { view: KartView }) {
   );
 }
 
-function KartPodium({ view, send }: { view: KartView; send: Send }) {
+function SleighPodium({ view, send }: { view: SleighView; send: Send }) {
   const [showErrors, setShowErrors] = useState(false);
   const standings = view.standings ?? [];
   const winners = standings.filter((s) => s.rank === 1);
   const a = view.awards;
   const title = winners.length === 0 ? "Race over" : winners.length === 1 ? `🏆 ${winners[0]!.nickname} wins!` : `🏆 ${winners.map((w) => w.nickname).join(" & ")} win!`;
   return (
-    <main class="podium tower-podium kart-podium">
+    <main class="podium tower-podium sleigh-podium">
       <div class="podium-bg" aria-hidden="true">
-        <KartTrack />
+        <SleighTrack />
       </div>
       <h1>{title}</h1>
       {showErrors ? (
         <ErrorsTable errors={view.errors ?? []} />
       ) : (
         <>
-          <ol class="kart-final">
+          <ol class="sleigh-final">
             {standings.slice(0, Math.max(5, winners.length)).map((s, i) => (
               <li key={s.id} class={s.rank === 1 ? "won" : ""} style={{ animationDelay: `${i * 80}ms`, "--car": s.color }}>
                 <span class="lb-rank">{ordinal(s.rank)}</span>
                 <Avatar choice={s.avatar} />
                 <span class="lb-name">{s.nickname}</span>
-                <span class="kart-final-dist">
+                <span class="sleigh-final-dist">
                   <b>{lapText(s.laps)}</b> · {metres(s.distance)}
                 </span>
               </li>

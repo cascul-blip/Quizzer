@@ -1,10 +1,10 @@
 /**
- * Kart Rally art: an Indy-style oval seen from straight above, and the open-wheel cars
- * that race round it. Everything is inline SVG in kart-rules.ts field units (y down), so
+ * Santa's Sleigh Run art: an Indy-style oval seen from straight above, and the open-wheel cars
+ * that race round it. Everything is inline SVG in sleigh-rules.ts field units (y down), so
  * the projector can stack the cars on top of the track with the same viewBox.
  */
 import { Component } from "preact";
-import { CAR_L, CAR_W, CX, CY, FIELD_H, FIELD_W, LAP, STRAIGHT, TRACK_W, TURN_R, trackPoint } from "../../shared/kart-rules.ts";
+import { CAR_L, CAR_W, CX, CY, FIELD_H, FIELD_W, LAP, STRAIGHT, TRACK_W, TURN_R, trackPoint } from "../../shared/sleigh-rules.ts";
 
 const HALF = STRAIGHT / 2;
 const EDGE = TRACK_W / 2;
@@ -295,10 +295,10 @@ function Track() {
       <g transform={`translate(${CX} ${CY - 40}) skewX(-12)`} font-family="'Arial Black', Impact, 'Helvetica Neue', Arial, sans-serif" font-weight="900" text-anchor="middle">
         <rect x="-330" y="-86" width="660" height="150" rx="10" fill="rgba(255,255,255,0.08)" />
         <text y="22" font-size="118" fill="#1a2a12" opacity="0.35" transform="translate(6 7)">
-          KART RALLY
+          SLEIGH RALLY
         </text>
         <text y="22" font-size="118" fill="#f6f6f6">
-          KART RALLY
+          SLEIGH RALLY
         </text>
         <rect x="-300" y="38" width="600" height="12" fill="#d62828" />
         <rect x="-300" y="-76" width="600" height="6" fill="#d62828" />
@@ -314,13 +314,13 @@ function Track() {
 }
 
 /** The whole oval, static: renders once and never again (it is the heaviest part of the scene). */
-export class KartTrack extends Component<{ class?: string }> {
+export class SleighTrack extends Component<{ class?: string }> {
   shouldComponentUpdate() {
     return false;
   }
   render() {
     return (
-      <svg class={`kart-track ${this.props.class ?? ""}`} viewBox={`0 0 ${FIELD_W} ${FIELD_H}`} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+      <svg class={`sleigh-track ${this.props.class ?? ""}`} viewBox={`0 0 ${FIELD_W} ${FIELD_H}`} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
         <Track />
       </svg>
     );
@@ -343,7 +343,7 @@ function Tyre({ x, y, w, h }: { x: number; y: number; w: number; h: number }) {
  * A top-down open-wheel car, CAR_L long and CAR_W wide, centred on (0, 0) and pointing
  * along +x. `wheel` (−1…1) turns the front tyres; positive steers right (clockwise on screen).
  */
-export function KartCar({ color, wheel = 0 }: { color: string; wheel?: number }) {
+export function SleighCar({ color, wheel = 0 }: { color: string; wheel?: number }) {
   const steer = Math.max(-1, Math.min(1, wheel)) * 25;
   // Tyre size and the axles.
   const tw = 11;
@@ -352,7 +352,7 @@ export function KartCar({ color, wheel = 0 }: { color: string; wheel?: number })
   const rx = -15;
   const ty = W2 - th / 2;
   return (
-    <g class="kart-car">
+    <g class="sleigh-car">
       {/* Shadow. */}
       <rect x={-L2 + 2} y={-W2 + 3} width={CAR_L} height={CAR_W} rx="8" fill="rgba(0,0,0,0.35)" />
       {/* Suspension. */}
@@ -430,7 +430,7 @@ export function CheckeredFlags({ class: cls }: { class?: string }) {
     </>
   );
   return (
-    <svg class={`kart-flags ${cls ?? ""}`} viewBox="-75 -20 350 225" aria-hidden="true">
+    <svg class={`sleigh-flags ${cls ?? ""}`} viewBox="-75 -20 350 225" aria-hidden="true">
       <defs>
         <linearGradient id="kcf-shade" x1="1" y1="0" x2="0" y2="0">
           <stop offset="0" stop-color="#000" stop-opacity="0.1" />
