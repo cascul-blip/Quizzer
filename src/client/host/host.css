@@ -6908,19 +6908,30 @@ select {
 }
 
 /* Podium. */
-.sleigh-podium .podium-bg {
-  opacity: 0.35;
+.sleigh-podium {
+  background: #0b1226;
 }
 
-.sleigh-podium .podium-bg svg {
+/* The town, covering the whole screen behind the results. */
+.sleigh-podium .podium-bg {
+  opacity: 0.5;
+  container-type: size;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.sleigh-podium-city {
+  position: relative;
+  flex: none;
+  width: max(100cqw, 100cqh * 16 / 9);
+  height: max(100cqh, 100cqw * 9 / 16);
+}
+
+.sleigh-podium-city svg {
   position: absolute;
   inset: 0;
   width: 100%;
-  height: 100%;
-}
-
-.sleigh-podium .podium-bg .sleigh-city {
-  /* Fill the screen like the houses layer does. */
   height: 100%;
 }
 

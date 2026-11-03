@@ -385,7 +385,7 @@ function Sleighs({ view }: { view: SleighView }) {
           <g class="sleigh-drop" style={{ "--dx": `${(d.sx - d.tx).toFixed(1)}px`, "--dy": `${(d.sy - d.ty).toFixed(1)}px` }}>
             <Gift s={20} color={d.color} ribbon="#fff" />
           </g>
-          <text class="sleigh-pop" y="-34" text-anchor="middle">
+          <text class="sleigh-pop" y="-62" text-anchor="middle">
             +1 🎁 {d.name.length > 12 ? `${d.name.slice(0, 11)}…` : d.name}
           </text>
         </g>
@@ -491,13 +491,15 @@ function SleighPodium({ view, send }: { view: SleighView; send: Send }) {
   return (
     <main class="podium tower-podium sleigh-podium">
       <div class="podium-bg" aria-hidden="true">
-        <CityGround houses={view.houses} />
-        <svg class="sleigh-houses" viewBox={`0 0 ${FIELD_W} ${FIELD_H}`} preserveAspectRatio="xMidYMid slice">
-          <HouseDefs />
-          {view.houses.map((h) => (
-            <House key={h.id} house={h} color={h.deliveredBy ? colors.get(h.deliveredBy) ?? "#ffd23f" : null} />
-          ))}
-        </svg>
+        <div class="sleigh-podium-city">
+          <CityGround houses={view.houses} />
+          <svg class="sleigh-houses" viewBox={`0 0 ${FIELD_W} ${FIELD_H}`} preserveAspectRatio="xMidYMid meet">
+            <HouseDefs />
+            {view.houses.map((h) => (
+              <House key={h.id} house={h} color={h.deliveredBy ? colors.get(h.deliveredBy) ?? "#ffd23f" : null} />
+            ))}
+          </svg>
+        </div>
       </div>
       <Snowfall />
       <h1>{title}</h1>

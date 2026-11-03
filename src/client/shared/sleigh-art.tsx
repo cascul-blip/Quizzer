@@ -186,7 +186,7 @@ function LaunchPad() {
       </text>
       {glints}
       {/* The striped pole, from straight above, casting a long moon shadow. */}
-      <path d={`M${CX} ${CY}L${CX + 46} ${CY + 30}`} stroke="rgba(10,20,50,0.35)" stroke-width="9" stroke-linecap="round" />
+      <path d={`M${CX} ${CY}L${CX + 26} ${CY + 17}`} stroke="rgba(10,20,50,0.25)" stroke-width="10" stroke-linecap="round" />
       <circle cx={CX} cy={CY} r="11" fill="#fdfdfd" stroke="#b9c6dc" stroke-width="1" />
       {swirl}
       <circle cx={CX} cy={CY} r="5.5" fill="#e8b93a" stroke="#9b7414" stroke-width="0.8" />
@@ -617,11 +617,11 @@ export function House({ house, color }: { house: HouseShape; color?: string | nu
       ))}
       {/* Shingle lines along the eaves. */}
       <rect x="2.5" y="2.5" width={w - 5} height={h - 5} fill="none" stroke={dark} stroke-width="1" opacity="0.6" />
+      <path d={`M0 0L${r1[0]} ${r1[1]}L0 ${h}M${w} 0L${r2[0]} ${r2[1]}L${w} ${h}`} stroke={dark} stroke-width="1.4" fill="none" />
       {faces.map((f, i) => (
         <polygon key={`s${i}`} points={poly(f.pts.map((p) => (ridgeSet.has(`${p[0]},${p[1]}`) ? p : toward(p, snowK))))} fill={f.snow} />
       ))}
       {/* Hips and ridge. */}
-      <path d={`M0 0L${r1[0]} ${r1[1]}L0 ${h}M${w} 0L${r2[0]} ${r2[1]}L${w} ${h}`} stroke="rgba(40,55,90,0.35)" stroke-width="1.2" fill="none" />
       <path d={`M${r1[0]} ${r1[1]}L${r2[0]} ${r2[1]}`} stroke="#ffffff" stroke-width="2.6" stroke-linecap="round" />
       <path d={`M${r1[0]} ${r1[1]}L${r2[0]} ${r2[1]}`} stroke="rgba(60,80,120,0.45)" stroke-width="0.9" stroke-linecap="round" transform="translate(0.8 1)" />
       <rect x="0" y="0" width={w} height={h} fill="none" stroke="rgba(10,15,30,0.55)" stroke-width="1.2" />
@@ -804,10 +804,10 @@ export function CandyCanes({ class: cls }: { class?: string }) {
   );
   return (
     <svg class={`sleigh-canes ${cls ?? ""}`} viewBox="-40 -30 320 260" aria-hidden="true">
-      <g transform="translate(70 10) rotate(-22)">{cane}</g>
-      <g transform="translate(170 10) scale(-1 1) rotate(-22)">{cane}</g>
+      <g transform="translate(168 18) rotate(30)">{cane}</g>
+      <g transform="translate(72 18) scale(-1 1) rotate(30)">{cane}</g>
       {/* Holly and a bow where they cross. */}
-      <g transform="translate(120 150)">
+      <g transform="translate(120 122)">
         <path d="M0 0c-18 -12 -40 -10 -46 4c10 -2 18 2 22 10c6 -6 14 -10 24 -14z" fill="#1f7a3e" stroke="#0f4a24" stroke-width="1.5" />
         <path d="M0 0c18 -12 40 -10 46 4c-10 -2 -18 2 -22 10c-6 -6 -14 -10 -24 -14z" fill="#258a47" stroke="#0f4a24" stroke-width="1.5" />
         <path d="M0 0c-14 -6 -26 -20 -20 -28c8 -2 16 10 20 28zM0 0c14 -6 26 -20 20 -28c-8 -2 -16 10 -20 28z" fill="#e63946" stroke="#8a1010" stroke-width="1.5" />
