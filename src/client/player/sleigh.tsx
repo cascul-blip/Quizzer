@@ -325,7 +325,7 @@ function FlightScreen({ view, send }: { view: PlayerSleighView; send: Send }) {
   else if (out) msg = "Your reindeer need a rest — waiting for the others";
 
   return (
-    <main class={`sleigh-flight ${out || view.finished ? "out" : ""}`}>
+    <main class={`sleigh-flight ${out && !view.finished ? "out" : ""}`}>
       <div ref={padRef} class="sleigh-wheel-pad" role="slider" aria-label="Sleigh wheel" aria-valuemin={-1} aria-valuemax={1} aria-valuenow={0}>
         <SleighWheel color={view.me.color} gRef={wheelRef} />
         {pop !== null && (
@@ -335,7 +335,7 @@ function FlightScreen({ view, send }: { view: PlayerSleighView; send: Send }) {
         )}
       </div>
       <div class="sleigh-side">
-        {!noFuel && (
+        {!noFuel && !view.finished && (
           <div class="sleigh-fuel">
             <div class="sleigh-fuel-head">
               <span>🦌 Reindeer energy</span>
