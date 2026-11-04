@@ -6,10 +6,13 @@
  * ticks) always agree. Field units with y pointing down (screen coordinates); the
  * projector scales the whole field to fit.
  *
- * The city fills the field inside CITY_MARGIN; its edge is a wall. Sleighs fly over
- * the rooftops, so houses never block them: flying into a house that still needs
- * its present delivers it (the first sleigh there claims it).
+ * The city is one painted town (sleigh-town.ts) filling the field; inside CITY_MARGIN its
+ * edge is a wall. Each game picks some of its houses to wait for presents. Sleighs fly over
+ * the rooftops, so houses never block them: flying over a roof that still needs its
+ * present delivers it (the first sleigh there claims it).
  */
+
+import { TOWN_SPOTS, type TownSpot } from "./sleigh-town.ts";
 
 export const FIELD_W = 1600;
 export const FIELD_H = 900;
@@ -19,7 +22,7 @@ export const CITY = { x0: CITY_MARGIN, y0: CITY_MARGIN, x1: FIELD_W - CITY_MARGI
 /** Centre of the field: the North Pole launch pad, kept clear of houses. */
 export const CX = FIELD_W / 2;
 export const CY = FIELD_H / 2;
-export const PAD_R = 120;
+export const PAD_R = 85;
 
 /** The sleigh with its reindeer team, nose to tail along +x (the sleigh's centre is the pose). */
 export const SLEIGH_L = 80;
@@ -91,23 +94,22 @@ export interface Sleigh extends SleighPose {
 
 export interface HouseSpot {
   id: number;
-  /** Top-left corner and size of the footprint. */
+  /** Which house of the painted town (TownSpot id in sleigh-town.ts). */
+  spot: number;
+  /** Bounding box of the roof: top-left corner and size. */
   x: number;
   y: number;
   w: number;
   h: number;
-  /** Roof colour. */
-  roof: string;
-  /** Chimney centre, relative to the footprint's top-left corner (where the present drops). */
+  /** Roof outline (convex), field units. */
+  poly: [number, number][];
+  /** Chimney centre, relative to the bounding box's top-left corner (where the present drops). */
   chimney: { x: number; y: number };
 }
 
-const ROOFS = ["#8c2f39", "#3d5a80", "#5b3a29", "#6b705c", "#7b2d26", "#2f4858", "#9c6644", "#4a4e69"];
-/** Gap kept between houses (the streets), and between houses and the city wall. */
-const HOUSE_GAP = 40;
-const HOUSE_MIN = 60;
-const HOUSE_MAX = 100;
-/** How close (beyond the footprint) the sleigh's centre must come to deliver. */
+/** How far inside the city wall a house's whole roof must be to wait for a present. */
+const HOUSE_WALL_GAP = 10;
+/** How far (beyond the roof) the sleigh's centre may be and still deliver. */
 export const DELIVER_MARGIN = 6;
 
 /** A seeded random number generator (mulberry32), so a seed always gives the same city. */
@@ -122,48 +124,69 @@ export function seededRng(seed: number): () => number {
   };
 }
 
-const overlaps = (a: { x: number; y: number; w: number; h: number }, b: { x: number; y: number; w: number; h: number }, gap: number) =>
-  a.x < b.x + b.w + gap && b.x < a.x + a.w + gap && a.y < b.y + b.h + gap && b.y < a.y + a.h + gap;
-
-/** Whether a footprint keeps clear of the launch pad circle. */
-function clearOfPad(r: { x: number; y: number; w: number; h: number }): boolean {
-  const nx = Math.max(r.x, Math.min(CX, r.x + r.w));
-  const ny = Math.max(r.y, Math.min(CY, r.y + r.h));
-  return Math.hypot(nx - CX, ny - CY) > PAD_R + HOUSE_GAP / 2;
+/** Distance from a point to the segment a–b. */
+function segmentDistance(px: number, py: number, a: readonly [number, number], b: readonly [number, number]): number {
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const t = Math.max(0, Math.min(1, ((px - a[0]) * dx + (py - a[1]) * dy) / (dx * dx + dy * dy || 1)));
+  return Math.hypot(a[0] + t * dx - px, a[1] + t * dy - py);
 }
+
+function insidePolygon(px: number, py: number, poly: readonly (readonly [number, number])[]): boolean {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i]!;
+    const [xj, yj] = poly[j]!;
+    if (yi > py !== yj > py && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+/** How far a point is from a polygon's outline (0 inside). */
+export function polygonDistance(px: number, py: number, poly: readonly (readonly [number, number])[]): number {
+  if (insidePolygon(px, py, poly)) return 0;
+  return Math.min(...poly.map((p, i) => segmentDistance(px, py, p, poly[(i + 1) % poly.length]!)));
+}
+
+/** The painted town's houses that can wait for a present: whole roof inside the wall, clear of the launch pad. */
+export const HOUSE_SPOTS: readonly TownSpot[] = TOWN_SPOTS.filter(
+  (s) =>
+    s.poly.every(([x, y]) => x >= CITY.x0 + HOUSE_WALL_GAP && x <= CITY.x1 - HOUSE_WALL_GAP && y >= CITY.y0 + HOUSE_WALL_GAP && y <= CITY.y1 - HOUSE_WALL_GAP) &&
+    polygonDistance(CX, CY, s.poly) > PAD_R + HOUSE_WALL_GAP,
+);
 
 /**
- * Scatter `n` houses over the city: inside the walls, never overlapping (a street's width
- * apart), clear of the launch pad. Same rng sequence → same city. Houses shrink if the
- * city is too crowded to fit them all at full size.
+ * Pick `n` of the town's houses to wait for presents (ids 0…n−1, in reading order: top to
+ * bottom, left to right). Same rng sequence → same houses.
  */
-export function placeHouses(n: number, rng: () => number): HouseSpot[] {
-  const out: HouseSpot[] = [];
-  let maxSize = HOUSE_MAX;
-  let tries = 0;
-  while (out.length < n) {
-    if (++tries > 4000) {
-      // Too crowded: start again with smaller houses.
-      maxSize = Math.max(HOUSE_MIN, maxSize - 10);
-      out.length = 0;
-      tries = 0;
-    }
-    const w = Math.round(HOUSE_MIN + rng() * (maxSize - HOUSE_MIN));
-    const h = Math.round(HOUSE_MIN + rng() * (maxSize - HOUSE_MIN));
-    const x = Math.round(CITY.x0 + HOUSE_GAP + rng() * (CITY.x1 - CITY.x0 - 2 * HOUSE_GAP - w));
-    const y = Math.round(CITY.y0 + HOUSE_GAP + rng() * (CITY.y1 - CITY.y0 - 2 * HOUSE_GAP - h));
-    const r = { x, y, w, h };
-    if (!clearOfPad(r) || out.some((o) => overlaps(o, r, HOUSE_GAP))) continue;
-    const roof = ROOFS[Math.floor(rng() * ROOFS.length)]!;
-    const chimney = { x: Math.round(w * (0.25 + rng() * 0.5)), y: Math.round(h * (0.25 + rng() * 0.5)) };
-    out.push({ id: out.length, x, y, w, h, roof, chimney });
+export function pickHouses(n: number, rng: () => number): HouseSpot[] {
+  const pool = [...HOUSE_SPOTS];
+  // Fisher–Yates, then keep the first n.
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [pool[i], pool[j]] = [pool[j]!, pool[i]!];
   }
-  return out;
+  const picked = pool.slice(0, Math.min(n, pool.length));
+  const box = (s: TownSpot) => {
+    const xs = s.poly.map((p) => p[0]);
+    const ys = s.poly.map((p) => p[1]);
+    return { x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) };
+  };
+  return picked
+    .map((s) => ({ s, b: box(s) }))
+    .sort((a, b) => a.b.y - b.b.y || a.b.x - b.b.x)
+    .map(({ s, b }, id) => ({
+      id,
+      spot: s.id,
+      ...b,
+      poly: s.poly.map(([x, y]) => [x, y] as [number, number]),
+      chimney: { x: Math.round((s.chimney[0] - b.x) * 10) / 10, y: Math.round((s.chimney[1] - b.y) * 10) / 10 },
+    }));
 }
 
-/** Whether a sleigh at this pose is over the house (its centre within the footprint plus DELIVER_MARGIN). */
-export function hitsHouse(pose: { x: number; y: number }, house: { x: number; y: number; w: number; h: number }): boolean {
-  return pose.x >= house.x - DELIVER_MARGIN && pose.x <= house.x + house.w + DELIVER_MARGIN && pose.y >= house.y - DELIVER_MARGIN && pose.y <= house.y + house.h + DELIVER_MARGIN;
+/** Whether a sleigh at this pose is over the house (its centre on the roof, or within DELIVER_MARGIN of it). */
+export function hitsHouse(pose: { x: number; y: number }, house: { poly: readonly (readonly [number, number])[] }): boolean {
+  return polygonDistance(pose.x, pose.y, house.poly) <= DELIVER_MARGIN;
 }
 
 /** How far the sleigh's centre is from the house's centre (to settle two sleighs arriving in the same tick). */

@@ -14,7 +14,7 @@ import {
   SLEIGH_SPEED,
   SLEIGH_TICK_MS,
   launchSlot,
-  placeHouses,
+  pickHouses,
   seededRng,
 } from "../src/shared/sleigh-rules.ts";
 import type { SleighHouse } from "../src/shared/protocol.ts";
@@ -107,7 +107,7 @@ describe("Santa's Sleigh Run", () => {
     const { game } = setup(["A", "B", "C", "D"], 23, 7);
     expect(game.houses.length).toBe(23);
     // The first draws of the game's rng place the city, so a seed always gives the same one.
-    expect(game.houses.map(({ deliveredBy, ...h }) => h)).toEqual(placeHouses(23, seededRng(7)));
+    expect(game.houses.map(({ deliveredBy, ...h }) => h)).toEqual(pickHouses(23, seededRng(7)));
     expect(game.houses.every((h) => h.deliveredBy === null)).toBe(true);
     const players = [...game.players.values()];
     players.forEach((p, i) => expect(p.sleigh).toEqual(launchSlot(i, 4)));

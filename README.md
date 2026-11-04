@@ -469,6 +469,8 @@ The Tower Fight art in `src/client/shared/fight/` (the painterly castle stages a
 
 The Land Grab art in `src/client/shared/land/` (the storybook parchment maps, tiles, shields, cards and plinths) is made by its own art build outside this repo; `src/client/shared/land/manifest.md` says where each piece goes and how it is tinted.
 
+The Santa's Sleigh Run art in `src/client/shared/sleigh/` (the painted town, each house's lit patch, the sleigh and reindeer gallop frames, gifts, chimneys, wall, launch pad, effects and screens) and the town's house table `src/shared/sleigh-town.ts` are made from the generated art in `scripts/sleigh-art/` (prompts in `Santa's Sleigh Run Art Brief.md`, roof outlines in `houses.json`) by `python3 scripts/sleigh-art.py` (needs Pillow and numpy). Player-colour parts are split into a shading layer and a paint mask and tinted on a canvas (`src/client/shared/tint.ts`).
+
 The Racer pixel art in `src/client/shared/racer/` (the car, the skyline and the palm tree) is made from the generated images in `scripts/racer-art/` by `python3 scripts/racer-art.py` (needs Pillow and numpy).
 
 The server is authoritative. It runs the game state machine and timers, scores answers by server time, and pushes a complete view snapshot to each screen after every change, so a reconnecting screen always gets the full picture.

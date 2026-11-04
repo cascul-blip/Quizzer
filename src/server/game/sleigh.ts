@@ -16,7 +16,7 @@ import {
   houseDistance,
   launch,
   launchSlot,
-  placeHouses,
+  pickHouses,
   sleighColor,
   stepSleigh,
   type Sleigh,
@@ -120,7 +120,7 @@ export class SleighGame {
     this.clock = opts.clock ?? realClock;
     this.rng = opts.rng ?? Math.random;
     const n = Number.isFinite(settings.houses) ? Math.min(SLEIGH_MAX_HOUSES, Math.max(SLEIGH_MIN_HOUSES, Math.floor(settings.houses))) : SLEIGH_DEFAULT_HOUSES;
-    this.houses = placeHouses(n, this.rng).map((h) => ({ ...h, deliveredBy: null }));
+    this.houses = pickHouses(n, this.rng).map((h) => ({ ...h, deliveredBy: null }));
     this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock, settings.protect);
     this.onChange = opts.onChange ?? (() => {});
     this.onActivity = opts.onActivity ?? (() => this.onChange());
@@ -475,7 +475,7 @@ export class SleighGame {
       phaseRemainingMs: this.remainingMs(),
       phaseDurationMs: this.phaseDurationMs,
       tick: this.clock.now(),
-      houses: this.houses.map((h) => ({ ...h, chimney: { ...h.chimney } })),
+      houses: this.houses.map((h) => ({ ...h, poly: h.poly.map(([x, y]) => [x, y] as [number, number]), chimney: { ...h.chimney } })),
       delivered: this.delivered,
       total: this.houses.length,
       lastDelivery: this.lastDelivery,

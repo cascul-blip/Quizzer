@@ -1853,13 +1853,16 @@ export interface SleighAwards {
 
 export interface SleighHouse {
   id: number;
-  /** Footprint (top-left corner and size) in field units. */
+  /** Which house of the painted town (TownSpot id in sleigh-town.ts). */
+  spot: number;
+  /** Bounding box of the roof (top-left corner and size) in field units. */
   x: number;
   y: number;
   w: number;
   h: number;
-  roof: string;
-  /** Chimney centre, relative to the footprint's top-left corner. */
+  /** Roof outline, field units. */
+  poly: [number, number][];
+  /** Chimney centre, relative to the bounding box's top-left corner. */
   chimney: { x: number; y: number };
   /** Player id of the sleigh that delivered its present, or null while it's still waiting. */
   deliveredBy: string | null;

@@ -3,6 +3,11 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import type { ClientMsg, PlayerSleighView } from "../../shared/protocol.ts";
 import { SLEIGH_MS_PER_POINT, SLEIGH_TICK_MS, METRES_PER_UNIT, WHEEL_MAX_DEG } from "../../shared/sleigh-rules.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
+import backdropImg from "../shared/sleigh/phone/backdrop.webp";
+import candyCanesImg from "../shared/sleigh/phone/candy-canes.webp";
+import wheelImg from "../shared/sleigh/phone/wheel.webp";
+import wheelPaintImg from "../shared/sleigh/phone/wheel-paint.webp";
+import { useTinted } from "../shared/tint.ts";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
 import { Feedback, StreamQuestion } from "./tower.tsx";
 
@@ -52,7 +57,7 @@ export function SleighPlayer({ view, send }: { view: PlayerSleighView; send: Sen
   }
 
   return (
-    <div class={`game sleigh-game ${fit ? "fit-screen" : ""}`}>
+    <div class={`game sleigh-game ${fit ? "fit-screen" : ""}`} style={{ "--scene": `url(${backdropImg})` }}>
       <header class="bar">
         <span class="name">{view.me.nickname}</span>
         <span class="sleigh-stats">
@@ -73,37 +78,9 @@ export function SleighPlayer({ view, send }: { view: PlayerSleighView; send: Sen
   );
 }
 
-/** Two candy canes crossed at their stems, tied with a holly sprig. */
+/** Two candy canes crossed and tied with a bow and holly. */
 function CandyCanes({ big }: { big?: boolean }) {
-  // The cane: a stem with a hook curling outward at the top.
-  const cane = "M0 0 L0 -96 A26 26 0 0 1 52 -96 L52 -84";
-  return (
-    <svg class={`sleigh-canes ${big ? "big" : ""}`} viewBox="-10 -6 220 156" aria-hidden="true">
-      <defs>
-        <pattern id="sleigh-cane-stripe" width="18" height="18" patternUnits="userSpaceOnUse" patternTransform="rotate(40)">
-          <rect width="18" height="18" fill="#fffaf2" />
-          <rect width="7" height="18" fill="#d6203a" />
-          <rect x="10" width="2.5" height="18" fill="#2f9e55" />
-        </pattern>
-      </defs>
-      {[-1, 1].map((side) => (
-        <g key={side} transform={`translate(${100 + side * 30} 142) rotate(${-side * 28}) scale(${-side} 1)`}>
-          <path d={cane} fill="none" stroke="#7a1020" stroke-width="20" stroke-linecap="round" />
-          <path d={cane} fill="none" stroke="url(#sleigh-cane-stripe)" stroke-width="16" stroke-linecap="round" />
-          <path d="M-4 -6 L-4 -96 A22 22 0 0 1 30 -112" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="3" stroke-linecap="round" />
-        </g>
-      ))}
-      {/* holly where the canes cross */}
-      <g transform="translate(100 104)">
-        <path d="M0 0 C -10 -14, -30 -14, -40 -4 C -32 -2, -30 6, -24 8 C -18 2, -10 6, 0 0 Z" fill="#1f7a3e" stroke="#0e4a24" stroke-width="2" />
-        <path d="M0 0 C 10 -14, 30 -14, 40 -4 C 32 -2, 30 6, 24 8 C 18 2, 10 6, 0 0 Z" fill="#1f7a3e" stroke="#0e4a24" stroke-width="2" />
-        <circle cx="-6" cy="2" r="7" fill="#e3263f" stroke="#7a1020" stroke-width="1.5" />
-        <circle cx="6" cy="2" r="7" fill="#e3263f" stroke="#7a1020" stroke-width="1.5" />
-        <circle cx="0" cy="-7" r="7" fill="#e3263f" stroke="#7a1020" stroke-width="1.5" />
-        <circle cx="-2" cy="-9" r="2" fill="rgba(255,255,255,0.7)" />
-      </g>
-    </svg>
-  );
+  return <img class={`sleigh-canes ${big ? "big" : ""}`} src={candyCanesImg} alt="" />;
 }
 
 function IntroScreen({ view, secs }: { view: PlayerSleighView; secs: number }) {
@@ -363,105 +340,29 @@ function FlightScreen({ view, send }: { view: PlayerSleighView; send: Send }) {
 }
 
 /**
- * A wooden sleigh wheel, drawn around (0, 0): a red-lacquered rim with gold trim, six
- * candy-cane spokes and handles, and a gold hub. `gRef` is the group that rotates.
+ * The magical sleigh wheel (a painted picture): red-lacquered rim, candy-cane spokes and a
+ * gold hub, with the marker at the top and the hub's centre in the sleigh's colour. `gRef` is
+ * the group that rotates.
  */
 function SleighWheel({ color, gRef }: { color: string; gRef: Ref<SVGGElement> }) {
-  const spokes = [0, 60, 120, 180, 240, 300];
-  // Brass studs around the rim, skipping the coloured marker at the top.
-  const studs: number[] = [];
-  for (let a = 0; a < 360; a += 20) if (Math.abs(a - 270) > 15) studs.push(a);
+  const href = useTinted(wheelImg, wheelPaintImg, color);
   return (
     <svg class="sleigh-wheel" viewBox="-124 -124 248 248" aria-hidden="true">
       <defs>
-        <pattern id="sleigh-spoke-stripe" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-          <rect width="14" height="14" fill="#fff7ea" />
-          <rect width="6" height="14" fill="#d6203a" />
-        </pattern>
-        <radialGradient id="sleigh-rim-wood" cx="0" cy="0" r="100" gradientUnits="userSpaceOnUse">
-          <stop offset="0.74" stop-color="#6e0f1c" />
-          <stop offset="0.8" stop-color="#c2263a" />
-          <stop offset="0.86" stop-color="#9c1a2c" />
-          <stop offset="0.95" stop-color="#5a0b16" />
-        </radialGradient>
-        <radialGradient id="sleigh-gold" cx="-0.3" cy="-0.35" r="1.2">
-          <stop offset="0" stop-color="#fff2b0" />
-          <stop offset="0.45" stop-color="#f2c14e" />
-          <stop offset="1" stop-color="#9a6a12" />
-        </radialGradient>
         <radialGradient id="sleigh-glow">
           <stop offset="0.7" stop-color="#ffd877" stop-opacity="0" />
           <stop offset="0.8" stop-color="#ffd877" stop-opacity="0.2" />
           <stop offset="1" stop-color="#ffd877" stop-opacity="0" />
         </radialGradient>
-        <linearGradient id="sleigh-handle" x1="-1" y1="0" x2="1" y2="0">
-          <stop offset="0" stop-color="#5a3311" />
-          <stop offset="0.45" stop-color="#b8763a" />
-          <stop offset="1" stop-color="#5a3311" />
-        </linearGradient>
       </defs>
       {/* drop shadow and a soft glow, which do not rotate */}
       <circle r="122" fill="url(#sleigh-glow)" />
       <circle cx="0" cy="6" r="90" fill="none" stroke="rgba(0,0,0,0.3)" stroke-width="22" />
       <g ref={gRef} class="sleigh-wheel-turn">
-        {/* handles poking out past the rim */}
-        {spokes.map((a) => (
-          <g key={`h${a}`} transform={`rotate(${a})`}>
-            <rect x="92" y="-7" width="26" height="14" rx="7" fill="url(#sleigh-handle)" stroke="#3a1f08" stroke-width="1.5" />
-            <circle cx="117" cy="0" r="6" fill="url(#sleigh-gold)" stroke="#7a5200" stroke-width="1.2" />
-          </g>
-        ))}
-        {/* candy-cane spokes */}
-        {spokes.map((a) => (
-          <g key={`s${a}`} transform={`rotate(${a})`}>
-            <rect x="20" y="-7" width="64" height="14" rx="7" fill="#7a1020" />
-            <rect x="21" y="-5.5" width="62" height="11" rx="5.5" fill="url(#sleigh-spoke-stripe)" />
-            <rect x="24" y="-4" width="56" height="2.5" rx="1.2" fill="rgba(255,255,255,0.55)" />
-          </g>
-        ))}
-        {/* rim: lacquered wood between two gold bands */}
-        <circle r="88" fill="none" stroke="url(#sleigh-rim-wood)" stroke-width="20" />
-        <circle r="98" fill="none" stroke="#f2c14e" stroke-width="3.5" />
-        <circle r="78" fill="none" stroke="#f2c14e" stroke-width="3.5" />
-        <circle r="99.8" fill="none" stroke="#5a3a00" stroke-width="1" opacity="0.7" />
-        <circle r="76.2" fill="none" stroke="#5a3a00" stroke-width="1" opacity="0.7" />
-        <path d={arc(88, 200, 250)} fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="6" stroke-linecap="round" />
-        {studs.map((a) => (
-          <circle key={a} cx={88 * Math.cos((a * Math.PI) / 180)} cy={88 * Math.sin((a * Math.PI) / 180)} r="2.6" fill="url(#sleigh-gold)" />
-        ))}
-        {/* top-centre marker in the sleigh's colour, with a little gold star */}
-        <path d={arc(88, -101, -79)} fill="none" stroke={color} stroke-width="22" />
-        <path d={star(0, -88, 7, 3)} fill="#fff6c8" stroke="#7a5200" stroke-width="1" />
-        {/* hub */}
-        <circle r="30" fill="url(#sleigh-gold)" stroke="#6b4700" stroke-width="2" />
-        <circle r="23" fill="none" stroke="rgba(90,58,0,0.5)" stroke-width="1.5" stroke-dasharray="3 3" />
-        <circle r="15" fill={color} stroke="#5a3a00" stroke-width="2" />
-        {/* holly on the hub */}
-        <path d="M0 -2 C -6 -10, -16 -10, -20 -4 C -15 -3, -14 1, -11 3 C -8 -1, -4 1, 0 -2 Z" fill="#1f7a3e" stroke="#0e4a24" stroke-width="1.2" />
-        <path d="M0 -2 C 6 -10, 16 -10, 20 -4 C 15 -3, 14 1, 11 3 C 8 -1, 4 1, 0 -2 Z" fill="#1f7a3e" stroke="#0e4a24" stroke-width="1.2" />
-        <circle cx="-3.5" cy="1" r="4" fill="#e3263f" stroke="#7a1020" stroke-width="1" />
-        <circle cx="3.5" cy="1" r="4" fill="#e3263f" stroke="#7a1020" stroke-width="1" />
-        <circle cx="0" cy="-4" r="4" fill="#e3263f" stroke="#7a1020" stroke-width="1" />
+        <image href={href} x="-124" y="-124" width="248" height="248" />
       </g>
     </svg>
   );
-}
-
-/** SVG arc path along a circle of radius r from angle a to b (degrees, 0 = 3 o'clock, clockwise). */
-function arc(r: number, a: number, b: number): string {
-  const p = (d: number) => `${(r * Math.cos((d * Math.PI) / 180)).toFixed(2)} ${(r * Math.sin((d * Math.PI) / 180)).toFixed(2)}`;
-  return `M${p(a)} A${r} ${r} 0 ${b - a > 180 ? 1 : 0} 1 ${p(b)}`;
-}
-
-/** A five-pointed star path centred on (cx, cy). */
-function star(cx: number, cy: number, outer: number, inner: number): string {
-  const pts: string[] = [];
-  for (let i = 0; i < 10; i++) {
-    const r = i % 2 ? inner : outer;
-    const a = (i * Math.PI) / 5 - Math.PI / 2;
-    pts.push(`${(cx + r * Math.cos(a)).toFixed(2)} ${(cy + r * Math.sin(a)).toFixed(2)}`);
-  }
-  return `M${pts.join(" L")} Z`;
 }
 
 // ---------- podium ----------

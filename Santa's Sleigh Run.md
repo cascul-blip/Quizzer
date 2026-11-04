@@ -26,9 +26,9 @@ The projector shows the reindeer ready to take off, with the words "Get ready to
 * The flight ends when the last sleigh stops (at most 60 seconds), then the next round's quiz starts.
 
 ## Houses and deliveries
-The houses are placed at random across the city at the start of the game, with streets between them and a clear launch pad (the North Pole) in the middle, where every sleigh starts.
+The city is one painted town with a fixed set of houses (39 of them can take part).  At the start of the game the chosen number of them are picked at random to wait for presents.  The launch pad (the North Pole) is in the middle of town, where every sleigh starts; the houses under it never take part.
 
-Each house starts dark, waiting for its present.  **Flying over a house that still needs a present delivers it**: the first sleigh there claims it and scores 1 present.  The house then lights up with festive lights, and a delivered house can't be claimed again.  If two sleighs reach the same house in the same instant, the one closer to its centre gets it.
+Each house starts dark, waiting for its present: its chimney glows and a present bobs over it.  **Flying over the roof of a house that still needs a present delivers it**: the first sleigh there claims it and scores 1 present.  The house then lights up with festive lights, and a delivered house can't be claimed again.  If two sleighs reach the same house in the same instant, the one closer to its centre gets it.
 
 Rounds repeat until **every present is delivered**.  Then the whole city lights up for a short celebration, and the podium follows.
 
@@ -39,7 +39,7 @@ The phone shows a large steering wheel.
 * **Let go** and the wheel springs back to the centre, and the sleigh flies straight.
 
 ## Display
-A top-down view of a snowy city at night: snow-covered roofs and gardens, dark streets, street lamps, and a low wall of snow round the edge.  Houses still waiting for a present are dark; delivered ones are strung with coloured Christmas lights and glow.  A counter shows how many presents are delivered out of the total.
+A painted top-down view of a snowy town at night: snow-covered roofs, dark streets and bare trees, with a low snow-capped stone wall round the edge (wreaths along it).  Houses still waiting for a present are dark; delivered ones switch to their lit picture, strung with coloured Christmas lights, with a present in the deliverer's colour on the roof.  A counter shows how many presents are delivered out of the total.
 
 The city is **1600 × 900 units** and a sleigh team (sleigh plus reindeer) is **80 long**; crossing the city takes about 4 seconds.  The projector scales the whole city to fit the screen.
 

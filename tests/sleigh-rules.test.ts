@@ -15,7 +15,9 @@ import {
   houseDistance,
   launch,
   launchSlot,
-  placeHouses,
+  HOUSE_SPOTS,
+  pickHouses,
+  polygonDistance,
   seededRng,
   sleighColor,
   stepSleigh,
@@ -26,8 +28,6 @@ import {
 const EDGE = SLEIGH_W / 2;
 const LO = { x: CITY.x0 + EDGE, y: CITY.y0 + EDGE };
 const HI = { x: CITY.x1 - EDGE, y: CITY.y1 - EDGE };
-/** placeHouses keeps a street this wide between houses and from the wall. */
-const GAP = 40;
 
 function at(x: number, y: number, heading = 0, speed = 1): Sleigh {
   return { x, y, heading, speed, distance: 0, scraping: false };
@@ -158,55 +158,58 @@ describe("houses", () => {
     expect(SLEIGH_HOUSE_CHOICES.length).toBe(16);
   });
 
+  test("the town has enough houses for the most the host can pick", () => {
+    expect(HOUSE_SPOTS.length).toBeGreaterThanOrEqual(SLEIGH_MAX_HOUSES);
+  });
+
   for (let n = SLEIGH_MIN_HOUSES; n <= SLEIGH_MAX_HOUSES; n++) {
-    test(`placeHouses(${n}): inside the city, never overlapping, clear of the pad, same seed → same city`, () => {
+    test(`pickHouses(${n}): different town houses inside the city, clear of the pad, same seed → same houses`, () => {
       for (const seed of [1, 7, 42, 1234, 99999]) {
-        const houses = placeHouses(n, seededRng(seed));
+        const houses = pickHouses(n, seededRng(seed));
         expect(houses.length).toBe(n);
         expect(houses.map((h) => h.id)).toEqual(Array.from({ length: n }, (_, i) => i));
+        expect(new Set(houses.map((h) => h.spot)).size).toBe(n);
         for (const h of houses) {
           expect(h.w).toBeGreaterThan(0);
           expect(h.h).toBeGreaterThan(0);
-          expect(h.x).toBeGreaterThanOrEqual(CITY.x0 + GAP);
-          expect(h.y).toBeGreaterThanOrEqual(CITY.y0 + GAP);
-          expect(h.x + h.w).toBeLessThanOrEqual(CITY.x1 - GAP);
-          expect(h.y + h.h).toBeLessThanOrEqual(CITY.y1 - GAP);
-          // Chimney on the roof.
-          expect(h.chimney.x).toBeGreaterThanOrEqual(0);
-          expect(h.chimney.x).toBeLessThanOrEqual(h.w);
-          expect(h.chimney.y).toBeGreaterThanOrEqual(0);
-          expect(h.chimney.y).toBeLessThanOrEqual(h.h);
-          // Nearest point of the footprint to the pad centre stays outside the pad.
-          const nx = Math.max(h.x, Math.min(CX, h.x + h.w));
-          const ny = Math.max(h.y, Math.min(CY, h.y + h.h));
-          expect(Math.hypot(nx - CX, ny - CY)).toBeGreaterThan(PAD_R);
-        }
-        for (let i = 0; i < houses.length; i++) {
-          for (let j = i + 1; j < houses.length; j++) {
-            const a = houses[i]!;
-            const b = houses[j]!;
-            const apart = a.x + a.w + GAP <= b.x || b.x + b.w + GAP <= a.x || a.y + a.h + GAP <= b.y || b.y + b.h + GAP <= a.y;
-            expect(apart).toBe(true);
+          for (const [x, y] of h.poly) {
+            expect(x).toBeGreaterThan(CITY.x0);
+            expect(y).toBeGreaterThan(CITY.y0);
+            expect(x).toBeLessThan(CITY.x1);
+            expect(y).toBeLessThan(CITY.y1);
+            // The bounding box holds the outline.
+            expect(x).toBeGreaterThanOrEqual(h.x);
+            expect(x).toBeLessThanOrEqual(h.x + h.w);
+            expect(y).toBeGreaterThanOrEqual(h.y);
+            expect(y).toBeLessThanOrEqual(h.y + h.h);
           }
+          // The chimney is on the roof, and so is the box's centre (the tests aim there).
+          expect(hitsHouse({ x: h.x + h.chimney.x, y: h.y + h.chimney.y }, h)).toBe(true);
+          expect(hitsHouse({ x: h.x + h.w / 2, y: h.y + h.h / 2 }, h)).toBe(true);
+          expect(polygonDistance(CX, CY, h.poly)).toBeGreaterThan(PAD_R);
         }
-        expect(placeHouses(n, seededRng(seed))).toEqual(houses);
+        expect(pickHouses(n, seededRng(seed))).toEqual(houses);
       }
     });
   }
 
-  test("different seeds give different cities", () => {
-    expect(placeHouses(20, seededRng(1))).not.toEqual(placeHouses(20, seededRng(2)));
+  test("different seeds pick different houses", () => {
+    expect(pickHouses(20, seededRng(1))).not.toEqual(pickHouses(20, seededRng(2)));
   });
 
-  test("hitsHouse: the footprint plus DELIVER_MARGIN; houseDistance from the centre", () => {
-    const h = { x: 100, y: 200, w: 80, h: 60 };
+  test("hitsHouse: the roof outline plus DELIVER_MARGIN; houseDistance from the box's centre", () => {
+    const h = { x: 100, y: 200, w: 80, h: 60, poly: [[100, 200], [180, 200], [180, 260], [100, 260]] as [number, number][] };
     expect(hitsHouse({ x: 140, y: 230 }, h)).toBe(true);
     expect(hitsHouse({ x: 100, y: 200 }, h)).toBe(true);
-    expect(hitsHouse({ x: 100 - DELIVER_MARGIN, y: 200 - DELIVER_MARGIN }, h)).toBe(true);
-    expect(hitsHouse({ x: 180 + DELIVER_MARGIN, y: 260 + DELIVER_MARGIN }, h)).toBe(true);
+    expect(hitsHouse({ x: 100 - DELIVER_MARGIN, y: 230 }, h)).toBe(true);
+    expect(hitsHouse({ x: 140, y: 260 + DELIVER_MARGIN }, h)).toBe(true);
     expect(hitsHouse({ x: 100 - DELIVER_MARGIN - 0.1, y: 230 }, h)).toBe(false);
     expect(hitsHouse({ x: 140, y: 260 + DELIVER_MARGIN + 0.1 }, h)).toBe(false);
     expect(hitsHouse({ x: 500, y: 500 }, h)).toBe(false);
+    // A triangle roof: the empty corner of its box is not over the house.
+    const tri = { poly: [[0, 0], [100, 0], [0, 100]] as [number, number][] };
+    expect(hitsHouse({ x: 20, y: 20 }, tri)).toBe(true);
+    expect(hitsHouse({ x: 90, y: 90 }, tri)).toBe(false);
     expect(houseDistance({ x: 140, y: 230 }, h)).toBe(0);
     expect(houseDistance({ x: 143, y: 234 }, h)).toBeCloseTo(5, 9);
   });

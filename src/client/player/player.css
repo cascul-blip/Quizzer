@@ -3539,10 +3539,11 @@ h1 {
   --sleigh-green: #2fa35a;
   position: relative;
   isolation: isolate;
+  /* The starry sky over the rooftops (--scene, set by sleigh.tsx), darkened a little for the text. */
   background:
-    radial-gradient(ellipse 120% 60% at 50% 115%, rgba(47, 163, 90, 0.35) 0%, transparent 60%),
-    radial-gradient(ellipse 90% 50% at 50% -10%, rgba(120, 160, 255, 0.28) 0%, transparent 70%),
-    linear-gradient(180deg, #0b1a3a 0%, #0a1f33 55%, #0b2a26 100%);
+    linear-gradient(180deg, rgba(6, 12, 34, 0.2) 0%, rgba(6, 12, 34, 0.45) 100%),
+    var(--scene) center / cover,
+    #0b1a3a;
 }
 
 /* Soft falling snow: two layers of dots drifting at different speeds. */
@@ -3664,7 +3665,7 @@ h1 {
 .sleigh-canes {
   width: 150px;
   height: auto;
-  filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.35));
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.45));
 }
 
 .sleigh-canes.big {

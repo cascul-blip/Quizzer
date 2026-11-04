@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "preact/ho
 import { FIELD_H, FIELD_W, METRES_PER_UNIT, SLEIGH_MS_PER_POINT, SLEIGH_TICK_MS } from "../../shared/sleigh-rules.ts";
 import type { HostSleighPlayer, HostView, SleighHouse } from "../../shared/protocol.ts";
 import { ACCESSORY_ART, AVATAR_ART, Avatar } from "../shared/avatar-art.tsx";
-import { CandyCanes, CityGround, Gift, House, HouseDefs, SleighTeam, Snowfall } from "../shared/sleigh-art.tsx";
+import { CELEBRATION_IMG, CandyCanes, CityGround, Gift, House, HouseDefs, SNOW_PUFF_IMG, SPARKLE_IMG, SleighTeam, SleighTeamDefs, Snowfall, TAKEOFF_IMG } from "../shared/sleigh-art.tsx";
 import { play, startJingle } from "../shared/sounds.ts";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
@@ -96,7 +96,7 @@ export function SleighStage({ view, send }: { view: SleighView; send: Send }) {
           <main class={`sleigh-wrap phase-${view.phase} ${view.finished ? "finished" : ""}`}>
             <div class="sleigh-field-box">
               <div class="sleigh-field">
-                <CityGround houses={view.houses} />
+                <CityGround />
                 <Houses view={view} />
                 <Sleighs view={view} />
                 <Snowfall />
@@ -128,7 +128,7 @@ export function SleighStage({ view, send }: { view: SleighView; send: Send }) {
               </div>
             )}
             {view.phase === "intro" && (
-              <div class="countdown-overlay sleigh-overlay sleigh-intro">
+              <div class="countdown-overlay sleigh-overlay sleigh-intro" style={{ "--scene": `url(${TAKEOFF_IMG})` }}>
                 <CandyCanes />
                 <div class="countdown-label">Get ready to fly in…</div>
                 <div class="countdown-num" key={secs}>
@@ -340,16 +340,10 @@ function Sleighs({ view }: { view: SleighView }) {
     <svg class={`sleigh-sleighs ${crowded ? "crowded" : ""}`} viewBox={`0 0 ${FIELD_W} ${FIELD_H}`} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
       {puffs.map((p) => (
         <g key={p.key} transform={`translate(${p.x.toFixed(1)} ${p.y.toFixed(1)})`}>
-          <g class="sleigh-puff">
-            {Array.from({ length: 7 }, (_, i) => {
-              const a = (i / 7) * Math.PI * 2 + (p.key % 5) * 0.4;
-              const d = 10 + ((i * 5 + p.key) % 3) * 4;
-              return <circle key={i} cx={(Math.cos(a) * d).toFixed(1)} cy={(Math.sin(a) * d).toFixed(1)} r={7 + (i % 3) * 2} fill="#f4f8ff" opacity="0.85" />;
-            })}
-            <circle r="11" fill="#fff" />
-          </g>
+          <image class="sleigh-puff" href={SNOW_PUFF_IMG} x="-24" y="-24" width="48" height="48" />
         </g>
       ))}
+      <SleighTeamDefs />
       {view.sleighs.map((s) => (
         <g
           key={s.id}
@@ -367,23 +361,16 @@ function Sleighs({ view }: { view: SleighView }) {
               els.current.set(s.id, e);
             }}
           >
-            <SleighTeam color={s.color} wheel={flight ? s.wheel : 0} flying={flight && s.moving && s.speed > 0.2} />
+            <SleighTeam color={s.color} wheel={flight ? s.wheel : 0} gallop={flight && s.moving && s.speed > 0} flying={flight && s.moving && s.speed > 0.2} />
           </g>
           <NameTag sleigh={s} flight={flight} />
         </g>
       ))}
       {drops.map((d) => (
         <g key={d.key} transform={`translate(${d.tx.toFixed(1)} ${d.ty.toFixed(1)})`}>
-          <g class="sleigh-burst">
-            {Array.from({ length: 12 }, (_, i) => {
-              const a = (i / 12) * Math.PI * 2;
-              const r1 = i % 2 ? 26 : 36;
-              return <line key={i} x1={(Math.cos(a) * 10).toFixed(1)} y1={(Math.sin(a) * 10).toFixed(1)} x2={(Math.cos(a) * r1).toFixed(1)} y2={(Math.sin(a) * r1).toFixed(1)} stroke={i % 3 === 0 ? "#fff" : i % 3 === 1 ? "#ffd23f" : d.color} stroke-width="3" stroke-linecap="round" />;
-            })}
-            <circle r="12" fill="#fff6c2" />
-          </g>
+          <image class="sleigh-burst" href={SPARKLE_IMG} x="-45" y="-45" width="90" height="90" />
           <g class="sleigh-drop" style={{ "--dx": `${(d.sx - d.tx).toFixed(1)}px`, "--dy": `${(d.sy - d.ty).toFixed(1)}px` }}>
-            <Gift s={20} color={d.color} ribbon="#fff" />
+            <Gift s={20} color={d.color} />
           </g>
           <text class="sleigh-pop" y="-62" text-anchor="middle">
             +1 🎁 {d.name.length > 12 ? `${d.name.slice(0, 11)}…` : d.name}
@@ -487,19 +474,10 @@ function SleighPodium({ view, send }: { view: SleighView; send: Send }) {
   const winners = standings.filter((s) => s.rank === 1);
   const a = view.awards;
   const title = winners.length === 0 ? "Sleigh run over" : winners.length === 1 ? `🏆 ${winners[0]!.nickname} wins!` : `🏆 ${winners.map((w) => w.nickname).join(" & ")} win!`;
-  const colors = colorsOf(standings);
   return (
     <main class="podium tower-podium sleigh-podium">
       <div class="podium-bg" aria-hidden="true">
-        <div class="sleigh-podium-city">
-          <CityGround houses={view.houses} />
-          <svg class="sleigh-houses" viewBox={`0 0 ${FIELD_W} ${FIELD_H}`} preserveAspectRatio="xMidYMid meet">
-            <HouseDefs />
-            {view.houses.map((h) => (
-              <House key={h.id} house={h} color={h.deliveredBy ? colors.get(h.deliveredBy) ?? "#ffd23f" : null} />
-            ))}
-          </svg>
-        </div>
+        <img class="sleigh-podium-scene" src={CELEBRATION_IMG} alt="" />
       </div>
       <Snowfall />
       <h1>{title}</h1>

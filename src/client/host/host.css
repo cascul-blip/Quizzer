@@ -6374,90 +6374,48 @@ select {
   }
 }
 
-.sleigh-smoke {
-  animation: sleigh-smoke 3s ease-in-out infinite alternate;
-}
-
-@keyframes sleigh-smoke {
-  from {
-    transform: translate(0, 0);
-  }
-  to {
-    transform: translate(-4px, -3px);
-  }
-}
-
-/* Delivered houses: the string lights twinkle. */
-.sleigh-bulbs .tw-a {
-  animation: sleigh-twinkle 1.1s steps(2, jump-none) infinite alternate;
-}
-
-.sleigh-bulbs .tw-b {
-  animation: sleigh-twinkle 1.1s steps(2, jump-none) -1.1s infinite alternate-reverse;
-}
-
-@keyframes sleigh-twinkle {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0.45;
-  }
-}
-
-.sleigh-house.is-done {
-  animation: sleigh-house-lit 0.6s ease-out both;
+/* A delivered house lights up: its lit picture flashes in over the dark town. */
+.sleigh-lit {
+  animation: sleigh-house-lit 0.8s ease-out both;
 }
 
 @keyframes sleigh-house-lit {
   from {
-    filter: brightness(1.8);
+    opacity: 0;
+    filter: brightness(2.2);
+  }
+  40% {
+    opacity: 1;
   }
   to {
     filter: none;
   }
 }
 
-/* The reindeer gallop, and Rudolph's nose glows. */
-.sleigh-legs.a {
-  animation: sleigh-gallop 0.32s ease-in-out infinite alternate;
+.sleigh-pad-text {
+  font-family: "Arial Black", "Helvetica Neue", Arial, sans-serif;
+  font-weight: 900;
+  fill: #b3121f;
+  paint-order: stroke;
+  stroke: rgba(255, 255, 255, 0.85);
+  stroke-width: 2.5px;
+  stroke-linejoin: round;
 }
 
-.sleigh-legs.b {
-  animation: sleigh-gallop 0.32s ease-in-out -0.32s infinite alternate-reverse;
-}
-
-@keyframes sleigh-gallop {
-  from {
-    transform: translate(-1.6px, 0);
-  }
-  to {
-    transform: translate(1.6px, 0);
-  }
-}
-
-.sleigh-pos.parked .sleigh-legs,
-.sleigh-wrap:not(.phase-flight) .sleigh-legs {
-  animation: none;
-}
-
+/* Rudolph's nose glows (the reindeer gallop by SMIL in sleigh-art.tsx). */
 .sleigh-nose-glow {
   transform-box: fill-box;
   transform-origin: center;
   animation: sleigh-glow 0.9s ease-in-out infinite alternate;
 }
 
-.sleigh-dust circle {
-  animation: sleigh-dust 0.5s ease-in-out infinite alternate;
-}
-
-.sleigh-dust circle:nth-child(2n) {
-  animation-delay: -0.25s;
+.sleigh-dust {
+  animation: sleigh-dust 0.35s ease-in-out infinite alternate;
 }
 
 @keyframes sleigh-dust {
   from {
-    opacity: 0.25;
+    opacity: 0.55;
   }
   to {
     opacity: 1;
@@ -6667,6 +6625,11 @@ select {
 .sleigh-overlay {
   background: radial-gradient(ellipse at center, rgba(14, 28, 64, 0.72), rgba(4, 8, 22, 0.88));
   z-index: 2;
+}
+
+/* "Get ready to fly": the team on the hilltop under the moon. */
+.sleigh-overlay.sleigh-intro {
+  background: linear-gradient(rgba(4, 8, 22, 0.25), rgba(4, 8, 22, 0.55)), var(--scene) center / cover;
 }
 
 .sleigh-overlay-title {
@@ -6912,27 +6875,19 @@ select {
   background: #0b1226;
 }
 
-/* The town, covering the whole screen behind the results. */
+/* The lit-up town under fireworks, covering the whole screen behind the results. */
 .sleigh-podium .podium-bg {
-  opacity: 0.5;
+  opacity: 0.6;
   container-type: size;
   display: grid;
   place-items: center;
   overflow: hidden;
 }
 
-.sleigh-podium-city {
-  position: relative;
-  flex: none;
-  width: max(100cqw, 100cqh * 16 / 9);
-  height: max(100cqh, 100cqw * 9 / 16);
-}
-
-.sleigh-podium-city svg {
-  position: absolute;
-  inset: 0;
+.sleigh-podium-scene {
   width: 100%;
   height: 100%;
+  object-fit: cover;
 }
 
 .sleigh-podium > .sleigh-snowfall {
@@ -6998,12 +6953,9 @@ select {
   .sleigh-gift-bob,
   .sleigh-gift-shadow,
   .sleigh-gift-ring,
-  .sleigh-smoke,
-  .sleigh-bulbs .tw-a,
-  .sleigh-bulbs .tw-b,
-  .sleigh-legs,
+  .sleigh-lit,
   .sleigh-nose-glow,
-  .sleigh-dust circle,
+  .sleigh-dust,
   .sleigh-snowfall i,
   .sleigh-confetti i,
   .sleigh-intro .sleigh-canes {
