@@ -25,8 +25,8 @@ export const CY = FIELD_H / 2;
 export const PAD_R = 85;
 
 /** The sleigh with its reindeer team, nose to tail along +x (the sleigh's centre is the pose). */
-export const SLEIGH_L = 120;
-export const SLEIGH_W = 45;
+export const SLEIGH_L = 180;
+export const SLEIGH_W = 68;
 /** How far the sleigh's centre stays from the city wall. */
 const EDGE_PAD = SLEIGH_W / 2;
 
@@ -49,16 +49,18 @@ export const SLEIGH_COUNTDOWN_MS = 3000;
 export const SLEIGH_DRIVE_CAP_MS = 60_000;
 /** After the last sleigh stops, the flight holds this long before the next round. */
 export const SLEIGH_DRIVE_HOLD_MS = 1500;
-/** After the last present is delivered, the celebration lasts this long before the podium. */
+/** After the last flight once the game clock has run out, "Time's up!" shows this long before the podium. */
 export const SLEIGH_FINALE_MS = 3000;
+/** Every present of a round delivered: the flight ends early and the celebration lasts this long before the next round. */
+export const SLEIGH_CLEARED_MS = 3000;
 export const SLEIGH_TICK_MS = 50;
 /** Each correct answer buys this much flying. */
 export const SLEIGH_MS_PER_POINT = 2000;
-/** Houses waiting for presents: the host picks any number in this range. */
-export const SLEIGH_MIN_HOUSES = 15;
-export const SLEIGH_MAX_HOUSES = 30;
-export const SLEIGH_HOUSE_CHOICES: readonly number[] = Array.from({ length: SLEIGH_MAX_HOUSES - SLEIGH_MIN_HOUSES + 1 }, (_, i) => SLEIGH_MIN_HOUSES + i);
-export const SLEIGH_DEFAULT_HOUSES = 20;
+/** Houses waiting for presents each round (a new set every round). */
+export const SLEIGH_HOUSES_PER_ROUND = 20;
+/** Game lengths the host can pick, minutes. The flight under way when the clock runs out still finishes. */
+export const SLEIGH_MINUTES = [3, 5, 7, 10] as const;
+export const SLEIGH_DEFAULT_MINUTES = 5;
 
 /** Field units to metres for showing distances (a 120-unit sleigh team is about 12 m long). */
 export const METRES_PER_UNIT = 0.1;
@@ -153,18 +155,29 @@ export const HOUSE_SPOTS: readonly TownSpot[] = TOWN_SPOTS.filter(
     polygonDistance(CX, CY, s.poly) > PAD_R + HOUSE_WALL_GAP,
 );
 
+/** What a new set of houses keeps away from: the last round's houses (town spot ids) and the parked sleighs. */
+export interface HouseAvoid {
+  spots?: Iterable<number>;
+  sleighs?: readonly { x: number; y: number }[];
+}
+
 /**
  * Pick `n` of the town's houses to wait for presents (ids 0…n−1, in reading order: top to
- * bottom, left to right). Same rng sequence → same houses.
+ * bottom, left to right). Same rng sequence → same houses. Never a house under one of
+ * `avoid.sleighs` (it would be delivered the moment that sleigh moves); the spots in
+ * `avoid.spots` only when there are not enough others.
  */
-export function pickHouses(n: number, rng: () => number): HouseSpot[] {
-  const pool = [...HOUSE_SPOTS];
-  // Fisher–Yates, then keep the first n.
-  for (let i = pool.length - 1; i > 0; i--) {
+export function pickHouses(n: number, rng: () => number, avoid: HouseAvoid = {}): HouseSpot[] {
+  const shuffled = [...HOUSE_SPOTS];
+  // Fisher–Yates, then keep the first n (the spots to avoid last).
+  for (let i = shuffled.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
-    [pool[i], pool[j]] = [pool[j]!, pool[i]!];
+    [shuffled[i], shuffled[j]] = [shuffled[j]!, shuffled[i]!];
   }
-  const picked = pool.slice(0, Math.min(n, pool.length));
+  const old = new Set(avoid.spots ?? []);
+  const sleighs = avoid.sleighs ?? [];
+  const pool = shuffled.filter((s) => !sleighs.some((p) => hitsHouse(p, s)));
+  const picked = [...pool.filter((s) => !old.has(s.id)), ...pool.filter((s) => old.has(s.id))].slice(0, Math.min(n, pool.length));
   const box = (s: TownSpot) => {
     const xs = s.poly.map((p) => p[0]);
     const ys = s.poly.map((p) => p[1]);

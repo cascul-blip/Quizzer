@@ -6229,6 +6229,18 @@ select {
   font-variant-numeric: tabular-nums;
 }
 
+/* The game clock: red for its last 30 seconds and once time is up (the last flight). */
+.sleigh-clock-pill {
+  font-variant-numeric: tabular-nums;
+  min-width: 5.5em;
+  text-align: center;
+}
+
+.sleigh-clock-pill.low,
+.sleigh-clock-pill.up {
+  background: #b3261e;
+}
+
 .sleigh-bar .robot-bar-fill {
   background: linear-gradient(90deg, #0f5c2a, #2fbf55);
 }
@@ -6431,12 +6443,20 @@ select {
   opacity: 0.45;
 }
 
+/* The light streak behind a moving sleigh, in its team's colour, fading toward its old end. */
+.sleigh-trail {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.35));
+}
+
 .sleigh-tag-name {
-  font: 800 13px var(--font);
+  font: 800 19px var(--font);
   fill: #fff;
   paint-order: stroke;
   stroke: rgba(5, 10, 30, 0.85);
-  stroke-width: 3.5px;
+  stroke-width: 5px;
   stroke-linejoin: round;
 }
 
@@ -6445,12 +6465,12 @@ select {
 }
 
 .sleigh-sleighs.crowded .sleigh-tag-name {
-  font-size: 11px;
+  font-size: 15px;
 }
 
 .sleigh-pos.leader .sleigh-tag > circle {
   stroke: #ffd23f;
-  stroke-width: 3px;
+  stroke-width: 3.5px;
 }
 
 /* A delivery: the present arcs down the chimney, a sparkle burst and a "+1" pop. */

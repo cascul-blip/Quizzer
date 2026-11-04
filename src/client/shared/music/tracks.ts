@@ -14,7 +14,7 @@
  *   a sparse whistle, flute in the gaps, anvil, whip and "hup!" stabs, the trumpet taking the tune as time
  *   runs out, and a one-shot draw sting. In D minor (the podium in D major), apart from Cup of Death's A minor.
  * Santa's Sleigh Run = public-domain Christmas carols with sleigh bells: "O Come, All Ye Faithful" (Adeste Fideles)
- *   on flute and glockenspiel in the lobby, "Joy to the World" (Mason's "Antioch") for the rounds, building from
+ *   on flute and glockenspiel in the lobby, "O Come, O Come, Emmanuel" (in E minor) for the rounds, building from
  *   sleigh bells and pizzicato at the start of the quiz to the full band, faster, while the sleighs fly, and
  *   "Hark! The Herald Angels Sing" (Mendelssohn) on brass for the podium.
  * Any of these can be replaced by an audio file in data/music/<id>.<ext>.
@@ -1419,8 +1419,8 @@ const showdownResults: Track = {
 };
 
 // ---------- Santa's Sleigh Run: public-domain Christmas carols ----------
-// The lobby is "O Come, All Ye Faithful" (Adeste Fideles, J. F. Wade, 18th c.), the flight is
-// "Joy to the World" (Lowell Mason's "Antioch", 1839) and the podium is "Hark! The Herald Angels
+// The lobby is "O Come, All Ye Faithful" (Adeste Fideles, J. F. Wade, 18th c.), the rounds are
+// "O Come, O Come, Emmanuel" (Veni Emmanuel; the old "Joy to the World" is kept as sleighFlightJoy) and the podium is "Hark! The Herald Angels
 // Sing" (Mendelssohn, 1840). Sleigh bells (a bright hat pattern) jingle through all three.
 // The melodies are written one bar per 16 steps (a quarter note = 4 steps); the harmony is given
 // as one chord per beat and turned into bass, pads and accompaniment by the helpers below.
@@ -1435,8 +1435,9 @@ const XMAS_CHORDS: Record<string, string> = {
   Em: "G3 B3 E4",
   C: "G3 C4 E4",
   Am: "A3 C4 E4",
+  B7: "F#3 A3 D#4",
 };
-const XMAS_ROOTS: Record<string, string> = { G: "G2", D: "D2", D7: "D2", A: "A2", A7: "A2", Em: "E2", C: "C3", Am: "A2" };
+const XMAS_ROOTS: Record<string, string> = { G: "G2", D: "D2", D7: "D2", A: "A2", A7: "A2", Em: "E2", C: "C3", Am: "A2", B7: "B2" };
 
 /** One bar from four beats of chords: each beat's 4 steps follow `beat` ("x" = play, "-" = hold, "." = rest). */
 const beats = (q: string[], beat: string, pick: (chordName: string, step: number) => string) =>
@@ -1535,7 +1536,11 @@ const ANTIOCH_HARMONY = [
   ["A7", "D", "D", "D"], ["D", "D", "A", "A"], ["A7", "A7", "D", "G"], ["D", "D", "D", "A7"], ["D", "D", "D", "D"],
 ];
 
-const sleighFlight: Track = {
+/**
+ * The rounds' old track, "Joy to the World", kept so it can come back: put it in TRACKS as
+ * "sleigh-flight" in place of sleighFlight (and switch the notes in the header and the docs back).
+ */
+export const sleighFlightJoy: Track = {
   id: "sleigh-flight",
   // 104 BPM as the quiz starts, about 140 once the reindeer are flying.
   bpm: 104,
@@ -1566,6 +1571,74 @@ const sleighFlight: Track = {
     { inst: "cymbal", bars: [once("x"), rest, rest, rest, rest, rest, rest, rest, rest, rest], vol: 0.45, from: 0.75 },
     // The last bar's bells shake into the repeat.
     { inst: "openhat", bars: [rest, rest, rest, rest, rest, rest, rest, rest, rest, BELLS_SHAKE], vol: 0.3, from: 0.6 },
+  ],
+};
+
+// O Come, O Come, Emmanuel ("Veni Emmanuel", a 15th-century French processional tune) in E minor,
+// 4/4. Six lines of three bars; the refrain ("Rejoice! Rejoice!") ends like the second line.
+const EMMANUEL = [
+  seq(["E4", 4], ["G4", 4], ["B4", 4], ["B4", 4]), // O come, O come,
+  seq(["B4", 4], ["A4", 4], ["C5", 4], ["B4", 4]), // Em-man-u-
+  seq(["A4", 4], ["G4", 12]), // el,
+  seq(["A4", 4], ["B4", 4], ["G4", 4], ["E4", 4]), // And ran-som cap-
+  seq(["G4", 4], ["A4", 4], ["F#4", 4], ["E4", 4]), // tive Is-ra-
+  seq(["D4", 4], ["E4", 12]), // el,
+  seq(["A4", 4], ["A4", 4], ["E4", 4], ["E4", 4]), // That mourns in lone-
+  seq(["F#4", 4], ["G4", 4], ["F#4", 4], ["E4", 4]), // ly ex-ile
+  seq(["D4", 12], [".", 4]), // here
+  seq(["G4", 4], ["A4", 4], ["B4", 4], ["B4", 4]), // Un-til the Son
+  seq(["B4", 4], ["A4", 4], ["C5", 4], ["B4", 4]), // of God ap-
+  seq(["A4", 4], ["G4", 12]), // pear.
+  seq(["D5", 4], ["D5", 4], ["B4", 4], ["B4", 4]), // Re-joice! Re-joice!
+  seq(["B4", 4], ["A4", 4], ["C5", 4], ["B4", 4]), // Em-man-u-
+  seq(["A4", 4], ["G4", 12]), // el
+  seq(["A4", 4], ["B4", 4], ["G4", 4], ["E4", 4]), // Shall come to thee,
+  seq(["G4", 4], ["A4", 4], ["F#4", 4], ["E4", 4]), // O Is-ra-
+  seq(["D4", 4], ["E4", 12]), // el.
+];
+const EMMANUEL_HARMONY = [
+  ["Em", "Em", "Em", "G"], ["G", "D", "Am", "Em"], ["D", "G", "G", "G"],
+  ["D", "G", "Em", "C"], ["C", "Am", "D", "Em"], ["D", "Em", "Em", "Em"],
+  ["Am", "D", "Am", "C"], ["D", "G", "D", "Em"], ["G", "G", "D", "D"],
+  ["Em", "D", "G", "G"], ["G", "D", "Am", "Em"], ["D", "G", "G", "G"],
+  ["G", "D", "G", "Em"], ["G", "D", "Am", "Em"], ["D", "G", "G", "G"],
+  ["D", "G", "Em", "C"], ["C", "Am", "B7", "Em"], ["D", "Em", "Em", "Em"],
+];
+/** A backbeat with a fill at the end of each line (every third bar). */
+const EMMANUEL_SNARE = Array.from({ length: 18 }, (_, i) => drum(i % 3 === 2 ? "....x...x.x.xxxx" : "....x.......x..."));
+
+const sleighFlight: Track = {
+  id: "sleigh-flight",
+  // 100 BPM as the quiz starts, about 140 once the reindeer are flying.
+  bpm: 100,
+  bars: 18,
+  tempoBoost: 0.35,
+  reverb: 0.25,
+  layers: [
+    // Quiz start: a few sleigh bells, held strings and a root note per beat.
+    { inst: "hat", bars: [BELLS_8THS], vol: 0.4, to: 0.7 },
+    { inst: "strings", bars: EMMANUEL_HARMONY.map(padBar), vol: 0.35, to: 0.75 },
+    { inst: "bass", bars: EMMANUEL_HARMONY.map(rootBeats), vol: 0.6, to: 0.5 },
+    // Warming up: the tune on pizzicato, the woodblock clip-clop of hooves.
+    { inst: "pluck", bars: EMMANUEL, vol: 0.55, from: 0.2, to: 0.75 },
+    { inst: "woodblock", bars: [drum("x..x....x..x....")], vol: 0.3, from: 0.3 },
+    // Building: an oom-pah piano, a bouncing bass and a soft kick.
+    { inst: "piano", bars: EMMANUEL_HARMONY.map(offbeatChords), vol: 0.3, from: 0.4 },
+    { inst: "bass", bars: EMMANUEL_HARMONY.map(rootBounce), vol: 0.7, from: 0.5 },
+    { inst: "kick", bars: [drum("x.......x.......")], vol: 0.6, from: 0.4, to: 0.75 },
+    // The glockenspiel takes the tune as the quiz nears its end.
+    { inst: "bell", bars: shift(EMMANUEL, 1), vol: 0.4, from: 0.55 },
+    // Intro and flight: the full band, brass on the tune, faster sleigh bells, backbeat.
+    { inst: "brass", bars: EMMANUEL, vol: 0.65, from: 0.75 },
+    { inst: "strings", bars: EMMANUEL_HARMONY.map(brokenChords), vol: 0.35, from: 0.75 },
+    { inst: "flute", bars: shift(EMMANUEL, 1), vol: 0.3, from: 0.85 },
+    { inst: "hat", bars: [BELLS_16THS], vol: 0.45, from: 0.7 },
+    { inst: "kick", bars: [drum("x...x...x...x...")], vol: 0.8, from: 0.75 },
+    { inst: "snare", bars: EMMANUEL_SNARE, vol: 0.5, from: 0.75 },
+    // A cymbal at the top and at the start of the refrain.
+    { inst: "cymbal", bars: Array.from({ length: 18 }, (_, i) => ([0, 12].includes(i) ? once("x") : rest)), vol: 0.45, from: 0.75 },
+    // The last bar's bells shake into the repeat.
+    { inst: "openhat", bars: [...Array(17).fill(rest), BELLS_SHAKE], vol: 0.3, from: 0.6 },
   ],
 };
 

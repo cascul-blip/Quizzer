@@ -8,7 +8,7 @@ import candyCanesImg from "../shared/sleigh/phone/candy-canes.webp";
 import wheelImg from "../shared/sleigh/phone/wheel.webp";
 import wheelPaintImg from "../shared/sleigh/phone/wheel-paint.webp";
 import { useTinted } from "../shared/tint.ts";
-import { ordinal, useCountdown } from "../shared/ui.tsx";
+import { formatClock, ordinal, useCountdown } from "../shared/ui.tsx";
 import { Feedback, StreamQuestion } from "./tower.tsx";
 
 type Send = (m: ClientMsg) => void;
@@ -25,6 +25,8 @@ const plural = (n: number, one: string, many = `${one}s`) => (n === 1 ? one : ma
 /** Phone screen for Santa's Sleigh Run: questions during the quiz, a joystick during the flight. */
 export function SleighPlayer({ view, send }: { view: PlayerSleighView; send: Send }) {
   const secs = useCountdown(view.phaseRemainingMs, `${view.phase}-${view.round}`);
+  const running = useCountdown(view.gameRemainingMs, view.round > 0 && !view.timeUp ? "running" : `waiting-${view.timeUp}`);
+  const clock = view.round > 0 ? running : Math.ceil(view.gameRemainingMs / 1000);
   const fit = view.phase === "intro" || view.phase === "flight";
 
   let body;
@@ -35,7 +37,7 @@ export function SleighPlayer({ view, send }: { view: PlayerSleighView; send: Sen
         <h1>Santa's Sleigh Run</h1>
         <p class="muted">
           Answer questions to power your reindeer — every correct answer is {SECS_PER_POINT} seconds of flying. Then steer your sleigh over the city and fly over
-          houses to deliver presents!
+          houses to deliver presents! Every round brings new houses.
         </p>
         <div class="tower-count">{Math.max(1, secs)}</div>
       </main>
@@ -70,6 +72,11 @@ export function SleighPlayer({ view, send }: { view: PlayerSleighView; send: Sen
           <span class="sleigh-chip presents" aria-label={`${view.me.presents} ${plural(view.me.presents, "present")} delivered`}>
             🎁 {view.me.presents}
           </span>
+          {view.phase !== "podium" && (
+            <span class={`sleigh-chip clock ${view.timeUp ? "up" : ""}`} aria-label={view.timeUp ? "Time's up: last round" : `${formatClock(clock)} left in the game`}>
+              ⏱ {view.timeUp ? "Last" : formatClock(clock)}
+            </span>
+          )}
         </span>
       </header>
       {body}
@@ -312,12 +319,13 @@ function FlightScreen({ view, send }: { view: PlayerSleighView; send: Send }) {
   }, [view.lastDelivery]);
 
   let msg: string | null = null;
-  if (view.finished) msg = "🎄 Every present delivered!";
+  if (view.finished) msg = "⏰ Time's up!";
+  else if (view.cleared) msg = `🎄 All ${view.total} presents delivered! New houses next round`;
   else if (noFuel) msg = "Your reindeer are resting this round — answer more questions next time!";
   else if (out) msg = "Your reindeer need a rest — waiting for the others";
 
   return (
-    <main class={`sleigh-flight ${out && !view.finished ? "out" : ""}`}>
+    <main class={`sleigh-flight ${out && !view.finished && !view.cleared ? "out" : ""}`}>
       <div ref={padRef} class="sleigh-wheel-pad" role="application" aria-label="Sleigh joystick: hold it the way to fly, the arrow keys work too">
         <SleighStick color={view.me.color} wheelRef={wheelRef} knobRef={knobRef} />
         {pop !== null && (
@@ -327,7 +335,7 @@ function FlightScreen({ view, send }: { view: PlayerSleighView; send: Send }) {
         )}
       </div>
       <div class="sleigh-side">
-        {!noFuel && !view.finished && (
+        {!noFuel && !view.finished && !view.cleared && (
           <div class="sleigh-fuel">
             <div class="sleigh-fuel-head">
               <span>🦌 Reindeer energy</span>
@@ -340,13 +348,13 @@ function FlightScreen({ view, send }: { view: PlayerSleighView; send: Send }) {
             </div>
           </div>
         )}
-        {msg && <p class={`sleigh-fuel-msg ${view.finished ? "done" : ""}`}>{msg}</p>}
+        {msg && <p class={`sleigh-fuel-msg ${view.finished || view.cleared ? "done" : ""}`}>{msg}</p>}
         <p class="sleigh-tally">
           <span>
             🎁 You've delivered <b>{view.me.presents}</b>
           </span>
           <span class="sleigh-tally-all">
-            {view.delivered} / {view.total} delivered
+            {view.delivered} / {view.total} this round
           </span>
         </p>
       </div>

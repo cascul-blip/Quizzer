@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { BOMB_MAX_SQUADS, BOMB_MINUTES, BOMB_MODULES, BOMB_PENALTIES, BOMB_WIRES, CUP_MAX_CUPS, CUP_MIN_CUPS, DRAGON_BATTLE_MINUTES, DRAGON_FIRE_SECONDS, DRAGON_MIN_TEAMS, DRAGON_SCRAMBLE_MINUTES, DRAGON_TOUGHNESS, DUEL_ROUNDS, HILL_SETTINGS, type BombSettings, type BombStyle, type DragonSettings, type DragonToughness, LAND_MINUTES, LAND_MIN_TEAMS, MAX_TEAMS, TOWER_MINUTES, type GameMode, type HillSetting, type HostPlayer, type HostView, type Pacing, type ServerMsg } from "../../shared/protocol.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { SIEGE_WAVE_CHOICES } from "../../shared/siege-rules.ts";
-import { SLEIGH_HOUSE_CHOICES } from "../../shared/sleigh-rules.ts";
+import { SLEIGH_MINUTES } from "../../shared/sleigh-rules.ts";
 import type { QuizSummary } from "../../shared/quiz-schema.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { Dragon } from "../shared/dragon-art.tsx";
@@ -449,16 +449,16 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
           ) : view.mode === "sleigh" ? (
             <>
               <label class="opt">
-                Houses
-                <select value={view.sleigh.houses} onChange={(e) => send({ type: "host.setSleigh", houses: Number(e.currentTarget.value) })}>
-                  {SLEIGH_HOUSE_CHOICES.map((n) => (
-                    <option key={n} value={n}>
-                      {n} houses
+                Time
+                <select value={view.sleigh.minutes} onChange={(e) => send({ type: "host.setSleigh", minutes: Number(e.currentTarget.value) })}>
+                  {SLEIGH_MINUTES.map((m) => (
+                    <option key={m} value={m}>
+                      {m} min
                     </option>
                   ))}
                 </select>
               </label>
-              <span class="opt mode-hint">Answer questions to power your reindeer, then steer your sleigh over the snowy city from your phone. Fly over a house to deliver its present. The game ends when every present is delivered; most presents wins.</span>
+              <span class="opt mode-hint">Answer questions to power your reindeer, then steer your sleigh over the snowy city from your phone. Fly over a house to deliver its present. Every round brings 20 new houses; most presents when time runs out wins.</span>
             </>
           ) : view.mode === "cup" ? (
             <>

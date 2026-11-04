@@ -1,14 +1,15 @@
 import type { AnswerValue } from "../../shared/answer-match.ts";
 import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import {
+  SLEIGH_CLEARED_MS,
   SLEIGH_COUNTDOWN_MS,
-  SLEIGH_DEFAULT_HOUSES,
+  SLEIGH_DEFAULT_MINUTES,
   SLEIGH_DRIVE_CAP_MS,
   SLEIGH_DRIVE_HOLD_MS,
   SLEIGH_FINALE_MS,
+  SLEIGH_HOUSES_PER_ROUND,
   SLEIGH_INTRO_MS,
-  SLEIGH_MAX_HOUSES,
-  SLEIGH_MIN_HOUSES,
+  SLEIGH_MINUTES,
   SLEIGH_MS_PER_POINT,
   SLEIGH_QUIZ_MS,
   SLEIGH_TICK_MS,
@@ -71,8 +72,8 @@ interface SleighGameSettings {
   shuffleAnswers: boolean;
   /** Longer waits for wrong answers in a row (the lobby's "Protect from abuse"). */
   protect?: boolean;
-  /** Houses waiting for a present (SLEIGH_HOUSE_CHOICES). */
-  houses: number;
+  /** Game length, minutes (SLEIGH_MINUTES). */
+  minutes: number;
 }
 
 const r1 = (n: number) => Math.round(n * 10) / 10;
@@ -80,21 +81,30 @@ const r3 = (n: number) => Math.round(n * 1000) / 1000;
 
 /**
  * Santa's Sleigh Run: answer questions for flying time, then steer over the city delivering
- * presents (fly over a house that still needs one). Rounds repeat until every present is
- * delivered; most presents wins.
+ * presents (fly over a house that still needs one). Every round brings SLEIGH_HOUSES_PER_ROUND
+ * new houses; delivering them all ends the flight early. Rounds repeat until the game clock
+ * runs out (the round under way still flies); most presents wins.
  */
 export class SleighGame {
   readonly quizId: string;
   readonly title: string;
   readonly questions: Question[];
-  /** Every house in the city (placed once, when the game is created). */
-  readonly houses: SleighHouse[];
+  /** This round's houses (a new set each round; ids are never reused in a game). */
+  houses: SleighHouse[] = [];
+  /** Game length, minutes. */
+  readonly minutes: number;
   readonly roster = new Roster<SleighPlayer>();
   phase: SleighPhase = "countdown";
   round = 0;
   phaseEndsAt = 0;
   phaseDurationMs = SLEIGH_COUNTDOWN_MS;
-  /** Every present has been delivered (the finale plays, then the podium). */
+  /** Server time the game clock runs out (0 until the first quiz starts). */
+  gameEndsAt = 0;
+  /** The game clock has run out: the round under way is the last. */
+  timeUp = false;
+  /** Every present of this round is delivered: the flight has ended early and the celebration plays. */
+  cleared = false;
+  /** The last flight after time ran out is over ("Time's up!" plays, then the podium). */
   finished = false;
   lastDelivery: SleighDelivery | null = null;
 
@@ -103,6 +113,8 @@ export class SleighGame {
   private readonly stream: QuestionStream;
   private timer: unknown = null;
   private tickTimer: unknown = null;
+  private gameTimer: unknown = null;
+  private nextHouseId = 0;
   private lastTickAt = 0;
   private deliverySeq = 0;
   /** Sleighs placed on the launch pad so far (also picks the paint). */
@@ -121,8 +133,8 @@ export class SleighGame {
     this.questions = quiz.questions;
     this.clock = opts.clock ?? realClock;
     this.rng = opts.rng ?? Math.random;
-    const n = Number.isFinite(settings.houses) ? Math.min(SLEIGH_MAX_HOUSES, Math.max(SLEIGH_MIN_HOUSES, Math.floor(settings.houses))) : SLEIGH_DEFAULT_HOUSES;
-    this.houses = pickHouses(n, this.rng).map((h) => ({ ...h, deliveredBy: null }));
+    this.minutes = (SLEIGH_MINUTES as readonly number[]).includes(settings.minutes) ? settings.minutes : SLEIGH_DEFAULT_MINUTES;
+    this.newHouses();
     this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock, settings.protect);
     this.onChange = opts.onChange ?? (() => {});
     this.onActivity = opts.onActivity ?? (() => this.onChange());
@@ -132,7 +144,7 @@ export class SleighGame {
 
   /** Take over a lobby's players (same ids and tokens), fanned out round the launch pad in join order. */
   static fromLobby(lobby: Game, opts: SleighOptions = {}): SleighGame {
-    const game = new SleighGame(lobby.quiz, { shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect, houses: lobby.sleigh.houses }, opts);
+    const game = new SleighGame(lobby.quiz, { shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect, minutes: lobby.sleigh.minutes }, opts);
     game.slotTotal = lobby.players.size;
     for (const p of lobby.players.values()) {
       game.roster.adopt(game.newPlayer({ id: p.id, nickname: p.nickname, token: p.token, connected: p.connected, avatar: p.avatar }));
@@ -144,8 +156,15 @@ export class SleighGame {
     return this.roster.players;
   }
 
+  /** Presents delivered this round. */
   get delivered(): number {
     return this.houses.filter((h) => h.deliveredBy !== null).length;
+  }
+
+  /** A new set of houses for the next round: away from the last round's where it can be, never under a parked sleigh. */
+  private newHouses(): void {
+    const avoid = { spots: this.houses.map((h) => h.spot), sleighs: [...this.players.values()].map((p) => p.sleigh) };
+    this.houses = pickHouses(SLEIGH_HOUSES_PER_ROUND, this.rng, avoid).map((h) => ({ ...h, id: this.nextHouseId++, deliveredBy: null }));
   }
 
   private newPlayer(base: BasePlayer): SleighPlayer {
@@ -190,6 +209,16 @@ export class SleighGame {
 
   private beginRound(): void {
     this.round++;
+    // The game clock starts with the first quiz. Running out ends nothing at once: the round under way still flies.
+    if (this.round === 1) {
+      const ms = this.minutes * 60_000;
+      this.gameEndsAt = this.clock.now() + ms;
+      this.gameTimer = this.clock.setTimeout(() => {
+        this.gameTimer = null;
+        this.timeUp = true;
+        this.onChange();
+      }, ms);
+    }
     for (const p of this.players.values()) {
       p.points = 0;
       p.fuelStartMs = 0;
@@ -235,7 +264,7 @@ export class SleighGame {
   }
 
   private tick(): void {
-    if (this.phase !== "flight" || this.finished) return;
+    if (this.phase !== "flight" || this.finished || this.cleared) return;
     const now = this.clock.now();
     const dt = Math.max(0, now - this.lastTickAt);
     const from = this.lastTickAt;
@@ -273,7 +302,7 @@ export class SleighGame {
     }
     const delivered = this.deliver(flew);
     this.onTick();
-    if (this.houses.every((h) => h.deliveredBy !== null)) return this.beginFinale();
+    if (this.houses.every((h) => h.deliveredBy !== null)) return this.beginCleared();
     if (!anyMoving) return this.hold();
     this.scheduleTick();
     if (stopped || delivered) this.onChange();
@@ -308,12 +337,19 @@ export class SleighGame {
     return any;
   }
 
-  /** The last present is down a chimney: everyone stops, a moment of celebration, then the podium. */
-  private beginFinale(): void {
-    this.finished = true;
+  /** This round's last present is down a chimney: everyone stops, a moment of celebration, then the round ends. */
+  private beginCleared(): void {
+    this.cleared = true;
     if (this.tickTimer !== null) this.clock.clearTimeout(this.tickTimer);
     this.tickTimer = null;
     this.parkSleighs();
+    this.setPhase("flight", SLEIGH_CLEARED_MS, () => this.endFlight());
+    this.onChange();
+  }
+
+  /** Time ran out and the last flight is over: "Time's up!", then the podium. */
+  private beginFinale(): void {
+    this.finished = true;
     this.setPhase("flight", SLEIGH_FINALE_MS, () => this.finish());
     this.onChange();
   }
@@ -326,11 +362,14 @@ export class SleighGame {
     this.onChange();
   }
 
-  /** The flight is over: sleighs stay where they are and the next round starts (no round limit). */
+  /** The flight is over: sleighs stay where they are; the game ends if time has run out, otherwise the next round brings new houses. */
   private endFlight(): void {
     if (this.tickTimer !== null) this.clock.clearTimeout(this.tickTimer);
     this.tickTimer = null;
     this.parkSleighs();
+    this.cleared = false;
+    if (this.timeUp) return this.beginFinale();
+    this.newHouses();
     this.beginRound();
   }
 
@@ -368,8 +407,10 @@ export class SleighGame {
   private clearTimers(): void {
     if (this.timer !== null) this.clock.clearTimeout(this.timer);
     if (this.tickTimer !== null) this.clock.clearTimeout(this.tickTimer);
+    if (this.gameTimer !== null) this.clock.clearTimeout(this.gameTimer);
     this.timer = null;
     this.tickTimer = null;
+    this.gameTimer = null;
   }
 
   // ---------- players ----------
@@ -416,7 +457,7 @@ export class SleighGame {
   /** Move the stick (flight phase only, not during the finale), clamped to its rim. Stored for the next tick; nothing is broadcast. */
   steer(playerId: string, x: number, y: number): boolean {
     const p = this.players.get(playerId);
-    if (!p || this.phase !== "flight" || this.finished) return false;
+    if (!p || this.phase !== "flight" || this.finished || this.cleared) return false;
     if (typeof x !== "number" || typeof y !== "number" || !Number.isFinite(x) || !Number.isFinite(y)) return false;
     const m = Math.hypot(x, y);
     p.stick = m > 1 ? { x: x / m, y: y / m } : { x, y };
@@ -470,7 +511,13 @@ export class SleighGame {
   }
 
   private fuelLeft(p: SleighPlayer): number {
-    return this.phase === "flight" && !this.finished ? Math.max(0, p.fuelEndsAt - this.clock.now()) : 0;
+    return this.phase === "flight" && !this.finished && !this.cleared ? Math.max(0, p.fuelEndsAt - this.clock.now()) : 0;
+  }
+
+  /** Game clock left: the full length before the first quiz, 0 once it has run out or the game is over. */
+  private gameRemainingMs(): number {
+    if (this.phase === "podium" || this.timeUp) return 0;
+    return this.gameEndsAt ? Math.max(0, this.gameEndsAt - this.clock.now()) : this.minutes * 60_000;
   }
 
   private ranks(): Map<string, number> {
@@ -492,6 +539,10 @@ export class SleighGame {
       delivered: this.delivered,
       total: this.houses.length,
       lastDelivery: this.lastDelivery,
+      gameRemainingMs: this.gameRemainingMs(),
+      gameDurationMs: this.minutes * 60_000,
+      timeUp: this.timeUp,
+      cleared: this.cleared,
       finished: this.finished,
       sleighs: [...this.players.values()].map((p) => ({
         id: p.id,
@@ -551,6 +602,9 @@ export class SleighGame {
       playerCount: this.players.size,
       delivered: this.delivered,
       total: this.houses.length,
+      gameRemainingMs: this.gameRemainingMs(),
+      timeUp: this.timeUp,
+      cleared: this.cleared,
       finished: this.finished,
       lastDelivery: p.lastDelivery,
       question: this.phase === "quiz" ? this.stream.questionView(p) : null,

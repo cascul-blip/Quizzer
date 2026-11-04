@@ -3,11 +3,13 @@ import { Game } from "../src/server/game/game.ts";
 import { FEEDBACK_MS, SleighGame, type SleighPlayer } from "../src/server/game/sleigh.ts";
 import { buildSleighResultsCsv } from "../src/server/game/results.ts";
 import {
+  SLEIGH_CLEARED_MS,
   SLEIGH_COUNTDOWN_MS,
-  SLEIGH_DEFAULT_HOUSES,
+  SLEIGH_DEFAULT_MINUTES,
   SLEIGH_DRIVE_CAP_MS,
   SLEIGH_DRIVE_HOLD_MS,
   SLEIGH_FINALE_MS,
+  SLEIGH_HOUSES_PER_ROUND,
   SLEIGH_INTRO_MS,
   SLEIGH_MS_PER_POINT,
   SLEIGH_QUIZ_MS,
@@ -34,14 +36,14 @@ function quiz(): Quiz {
   });
 }
 
-function setup(names: string[], houses = 15, seed = 42) {
+function setup(names: string[], minutes = 5, seed = 42) {
   const clock = new FakeClock();
   let finished = 0;
   let changes = 0;
   let ticks = 0;
   const lobby = new Game(quiz(), { clock });
   lobby.setMode("sleigh");
-  lobby.setSleigh({ houses });
+  lobby.setSleigh({ minutes });
   for (const n of names) lobby.join(n);
   const game = SleighGame.fromLobby(lobby, {
     clock,
@@ -82,7 +84,7 @@ function toFlight(game: SleighGame, clock: FakeClock) {
 /** Run the flight phase to its end (the next quiz or the podium). */
 function finishFlight(game: SleighGame, clock: FakeClock) {
   const round = game.round;
-  for (let t = 0; t <= SLEIGH_DRIVE_CAP_MS + SLEIGH_FINALE_MS && game.phase === "flight"; t += SLEIGH_TICK_MS) clock.advance(SLEIGH_TICK_MS);
+  for (let t = 0; t <= SLEIGH_DRIVE_CAP_MS + SLEIGH_CLEARED_MS + SLEIGH_FINALE_MS && game.phase === "flight"; t += SLEIGH_TICK_MS) clock.advance(SLEIGH_TICK_MS);
   expect(game.phase === "podium" || game.round === round + 1).toBe(true);
 }
 
@@ -103,34 +105,46 @@ function waiting(game: SleighGame, skip: number[] = []): SleighHouse {
 }
 
 describe("Santa's Sleigh Run", () => {
-  test("houses are placed from the game's rng; sleighs fan out on the launch pad with distinct colours", () => {
-    const { game } = setup(["A", "B", "C", "D"], 23, 7);
-    expect(game.houses.length).toBe(23);
-    // The first draws of the game's rng place the city, so a seed always gives the same one.
-    expect(game.houses.map(({ deliveredBy, ...h }) => h)).toEqual(pickHouses(23, seededRng(7)));
+  test("the first round's houses are placed from the game's rng; sleighs fan out on the launch pad with distinct colours", () => {
+    const { game } = setup(["A", "B", "C", "D"], 5, 7);
+    expect(game.houses.length).toBe(SLEIGH_HOUSES_PER_ROUND);
+    // The first draws of the game's rng place the houses, so a seed always gives the same ones.
+    expect(game.houses.map(({ deliveredBy, ...h }) => h)).toEqual(pickHouses(SLEIGH_HOUSES_PER_ROUND, seededRng(7)));
     expect(game.houses.every((h) => h.deliveredBy === null)).toBe(true);
     const players = [...game.players.values()];
     players.forEach((p, i) => expect(p.sleigh).toEqual(launchSlot(i, 4)));
     expect(new Set(players.map((p) => p.color)).size).toBe(4);
     const v = game.hostView();
-    expect(v).toMatchObject({ delivered: 0, total: 23, finished: false, lastDelivery: null });
-    expect(v.houses.length).toBe(23);
+    expect(v).toMatchObject({ delivered: 0, total: SLEIGH_HOUSES_PER_ROUND, finished: false, cleared: false, timeUp: false, lastDelivery: null });
+    expect(v.houses.length).toBe(SLEIGH_HOUSES_PER_ROUND);
   });
 
-  test("lobby default is SLEIGH_DEFAULT_HOUSES; settings are validated", () => {
+  test("lobby default is SLEIGH_DEFAULT_MINUTES; settings are validated", () => {
     const lobby = new Game(quiz());
     lobby.setMode("sleigh");
-    expect(lobby.sleigh.houses).toBe(SLEIGH_DEFAULT_HOUSES);
-    expect(() => lobby.setSleigh({ houses: 14 })).toThrow("Unsupported number of houses");
-    expect(() => lobby.setSleigh({ houses: 31 })).toThrow("Unsupported number of houses");
-    expect(() => lobby.setSleigh({ houses: 20.5 })).toThrow("Unsupported number of houses");
-    lobby.setSleigh({ houses: 30 });
-    expect(lobby.sleigh.houses).toBe(30);
+    expect(lobby.sleigh.minutes).toBe(SLEIGH_DEFAULT_MINUTES);
+    for (const bad of [0, 4, 5.5, 11, Number.NaN]) expect(() => lobby.setSleigh({ minutes: bad })).toThrow("Unsupported game length");
+    for (const m of [3, 5, 7, 10]) {
+      lobby.setSleigh({ minutes: m });
+      expect(lobby.sleigh.minutes).toBe(m);
+    }
     lobby.join("A");
-    expect(SleighGame.fromLobby(lobby).houses.length).toBe(30);
+    const game = SleighGame.fromLobby(lobby);
+    expect(game.minutes).toBe(10);
+    expect(game.hostView()).toMatchObject({ gameDurationMs: 600_000, gameRemainingMs: 600_000 });
   });
 
-  test("phase sequence: countdown → quiz → intro → flight → quiz …, rounds keep going until every present is delivered", () => {
+  test("the game clock starts with the first quiz and counts down in both views", () => {
+    const { game, clock } = setup(["A"], 3);
+    const a = byName(game, "A");
+    expect(game.gameEndsAt).toBe(clock.now() + 3 * 60_000);
+    clock.advance(20_000);
+    expect(game.hostView().gameRemainingMs).toBe(160_000);
+    expect(game.playerView(a.id)!.gameRemainingMs).toBe(160_000);
+    expect(game.timeUp).toBe(false);
+  });
+
+  test("phase sequence: countdown → quiz → intro → flight → quiz …, rounds keep going while the clock runs", () => {
     const { game, clock, finished } = setup(["A"]);
     expect(game.round).toBe(1);
     expect(game.phaseDurationMs).toBe(SLEIGH_QUIZ_MS);
@@ -413,7 +427,7 @@ describe("Santa's Sleigh Run", () => {
     expect(game.lastDelivery).toMatchObject({ house: h2.id, playerId: b.id });
   });
 
-  test("the last present: everyone stops, the finale holds (still flight), then the podium", () => {
+  test("the round's last present: everyone stops, the celebration holds (still flight), then 20 new houses and the next quiz", () => {
     const { game, clock, finished, changes } = setup(["A", "B"]);
     earn(game, clock, "A", 5);
     earn(game, clock, "B", 2);
@@ -428,9 +442,10 @@ describe("Santa's Sleigh Run", () => {
       clock.advance(SLEIGH_TICK_MS);
     }
     expect(game.delivered).toBe(game.houses.length);
-    expect(game.finished).toBe(true);
+    expect(game.cleared).toBe(true);
+    expect(game.finished).toBe(false);
     expect(game.phase).toBe("flight");
-    expect(game.phaseDurationMs).toBe(SLEIGH_FINALE_MS);
+    expect(game.phaseDurationMs).toBe(SLEIGH_CLEARED_MS);
     for (const p of [a, b]) {
       expect(p.moving).toBe(false);
       expect(p.sleigh.speed).toBe(0);
@@ -439,21 +454,90 @@ describe("Santa's Sleigh Run", () => {
     }
     expect(game.steer(a.id, 1, 0)).toBe(false);
     const host = game.hostView();
-    expect(host).toMatchObject({ finished: true, phase: "flight", delivered: host.total });
+    expect(host).toMatchObject({ cleared: true, finished: false, phase: "flight", delivered: host.total, total: SLEIGH_HOUSES_PER_ROUND });
     expect(host.sleighs.every((s) => !s.moving)).toBe(true);
-    expect(game.playerView(b.id)).toMatchObject({ finished: true, delivered: host.total, total: host.total });
+    expect(game.playerView(b.id)).toMatchObject({ cleared: true, delivered: host.total, total: host.total });
     const pos = { ...a.sleigh };
+    const oldIds = new Set(game.houses.map((h) => h.id));
+    const oldSpots = new Set(game.houses.map((h) => h.spot));
+    const presents = a.presents;
     const c0 = changes();
-    clock.advance(SLEIGH_FINALE_MS - 1);
+    clock.advance(SLEIGH_CLEARED_MS - 1);
     expect(game.phase).toBe("flight");
     expect(a.sleigh).toEqual(pos);
     expect(changes()).toBe(c0);
     clock.advance(1);
+    // A new set of houses (new ids, as few repeats as the town allows), presents carried over, sleighs where they stopped.
+    expect(game.phase).toBe("quiz");
+    expect(game.round).toBe(2);
+    expect(game.cleared).toBe(false);
+    expect(finished()).toBe(0);
+    expect(game.houses.length).toBe(SLEIGH_HOUSES_PER_ROUND);
+    expect(game.houses.every((h) => h.deliveredBy === null && !oldIds.has(h.id))).toBe(true);
+    expect(game.houses.filter((h) => oldSpots.has(h.spot)).length).toBeLessThan(SLEIGH_HOUSES_PER_ROUND / 2);
+    expect(game.delivered).toBe(0);
+    expect(a.presents).toBe(presents);
+    expect(a.sleigh).toEqual(pos);
+    expect(game.standings()[0]!.nickname).toBe("A");
+  });
+
+  test("time up during the quiz: that round still flies, then \"Time's up!\" and the podium", () => {
+    const { game, clock, finished } = setup(["A", "B"], 3);
+    const a = byName(game, "A");
+    // Play out rounds with nobody flying until the clock is nearly gone, then land in a quiz when it runs out.
+    while (game.gameEndsAt - clock.now() > SLEIGH_QUIZ_MS) {
+      toFlight(game, clock);
+      clock.advance(SLEIGH_DRIVE_HOLD_MS);
+      expect(game.phase).toBe("quiz");
+    }
+    expect(game.timeUp).toBe(false);
+    earn(game, clock, "A", 3);
+    clock.advance(game.gameEndsAt - clock.now());
+    expect(game.timeUp).toBe(true);
+    expect(game.hostView()).toMatchObject({ timeUp: true, gameRemainingMs: 0 });
+    expect(game.phase).toBe("quiz");
+    const round = game.round;
+    toFlight(game, clock);
+    expect(a.moving).toBe(true);
+    expect(game.steer(a.id, 1, 0)).toBe(true);
+    clock.advance(SLEIGH_TICK_MS * 10);
+    expect(a.sleigh.distance).toBeGreaterThan(0);
+    // The flight plays out, then the finale instead of a new round.
+    for (let i = 0; i < 1000 && !game.finished; i++) clock.advance(SLEIGH_TICK_MS);
+    expect(game.finished).toBe(true);
+    expect(game.phase).toBe("flight");
+    expect(game.phaseDurationMs).toBe(SLEIGH_FINALE_MS);
+    expect(game.round).toBe(round);
+    expect(game.steer(a.id, 1, 0)).toBe(false);
+    expect(game.playerView(a.id)).toMatchObject({ finished: true, timeUp: true });
+    clock.advance(SLEIGH_FINALE_MS);
     expect(game.phase).toBe("podium");
     expect(finished()).toBe(1);
-    expect(game.round).toBe(1);
-    expect(game.standings()[0]!.nickname).toBe("A");
     expect(game.hostView().standings).not.toBeNull();
+  });
+
+  test("time up during a flight: the flight keeps going until it ends, then the podium", () => {
+    const { game, clock, finished } = setup(["A"], 3);
+    const a = byName(game, "A");
+    while (game.gameEndsAt - clock.now() > SLEIGH_QUIZ_MS + SLEIGH_INTRO_MS + SLEIGH_DRIVE_HOLD_MS + 1000) {
+      toFlight(game, clock);
+      clock.advance(SLEIGH_DRIVE_HOLD_MS);
+    }
+    earn(game, clock, "A", 10);
+    toFlight(game, clock);
+    game.steer(a.id, 1, 0);
+    // Run until the clock runs out mid-flight.
+    while (!game.timeUp) clock.advance(SLEIGH_TICK_MS);
+    expect(game.phase).toBe("flight");
+    expect(game.finished).toBe(false);
+    expect(a.moving).toBe(true);
+    expect(game.steer(a.id, 0, 1)).toBe(true);
+    const d = a.sleigh.distance;
+    clock.advance(SLEIGH_TICK_MS * 5);
+    expect(a.sleigh.distance).toBeGreaterThan(d);
+    for (let i = 0; i < 2000 && game.phase === "flight"; i++) clock.advance(SLEIGH_TICK_MS);
+    expect(game.phase).toBe("podium");
+    expect(finished()).toBe(1);
   });
 
   test("end() goes straight to the podium and stops ticking", () => {
@@ -475,7 +559,7 @@ describe("Santa's Sleigh Run", () => {
   });
 
   test("onTick fires every flight tick but onChange only on discrete events", () => {
-    const { game, clock, changes, ticks } = setup(["A", "B"], 15, 3);
+    const { game, clock, changes, ticks } = setup(["A", "B"], 5, 3);
     earn(game, clock, "A", 4);
     earn(game, clock, "B", 2);
     toFlight(game, clock);
@@ -488,9 +572,13 @@ describe("Santa's Sleigh Run", () => {
     // Nobody has stopped yet: the only discrete events are deliveries (at most one per house).
     expect(changes() - c0).toBeLessThanOrEqual(game.delivered);
     expect(changes() - c0).toBeLessThan(ticks() - t0);
-    finishFlight(game, clock);
+    let delivered = 0;
+    while (game.phase === "flight") {
+      clock.advance(SLEIGH_TICK_MS);
+      if (game.phase === "flight") delivered = game.delivered;
+    }
     // B stops, A stops (→ hold), next round: a handful, not one per tick.
-    expect(changes() - c0).toBeLessThanOrEqual(5 + game.delivered);
+    expect(changes() - c0).toBeLessThanOrEqual(5 + delivered);
     expect(ticks() - t0).toBeGreaterThan(80);
     const t1 = ticks();
     clock.advance(SLEIGH_QUIZ_MS);

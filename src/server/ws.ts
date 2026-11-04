@@ -594,7 +594,7 @@ export class GameHub {
         this.lastSetup.duel = { ...classic().duel };
         return;
       case "host.setSleigh":
-        classic().setSleigh({ houses: Number(msg.houses) });
+        classic().setSleigh({ minutes: Number(msg.minutes) });
         this.lastSetup.sleigh = { ...classic().sleigh };
         return;
       case "host.next":
@@ -701,7 +701,7 @@ export class GameHub {
     lobby.dispose();
     this.game = sleigh;
     sleigh.start();
-    this.log(`Santa's Sleigh Run started with ${sleigh.players.size} player(s), ${sleigh.houses.length} houses`);
+    this.log(`Santa's Sleigh Run started with ${sleigh.players.size} player(s), ${sleigh.minutes} min`);
   }
 
   /** Hand the lobby's players to a Cup of Death game. */

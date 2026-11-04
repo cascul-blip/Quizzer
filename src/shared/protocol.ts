@@ -1833,14 +1833,17 @@ export type ServerMsg =
  * Santa's Sleigh Run. countdown: 3, 2, 1 before the first round. quiz: SLEIGH_QUIZ_MS of answering for points.
  * intro: "Get ready to fly in 3, 2, 1". flight: every sleigh flies (SLEIGH_MS_PER_POINT per point) until the
  * last one stops or SLEIGH_DRIVE_CAP_MS; flying into a house that still needs its present delivers it (first
- * sleigh there claims it). Rounds repeat until every present is delivered, then SLEIGH_FINALE_MS of
- * celebration (still "flight", with `finished` set) and the podium. Rules in sleigh-rules.ts.
+ * sleigh there claims it). Each round has SLEIGH_HOUSES_PER_ROUND new houses; delivering them all ends the
+ * flight early with SLEIGH_CLEARED_MS of celebration (still "flight", with `cleared` set). The game clock
+ * (SleighSettings.minutes) starts with the first quiz; once it runs out (`timeUp`) the round under way still
+ * flies, then SLEIGH_FINALE_MS of "Time's up!" (still "flight", with `finished` set) and the podium.
+ * Rules in sleigh-rules.ts.
  */
 export type SleighPhase = "countdown" | "quiz" | "intro" | "flight" | "podium";
 
 export interface SleighSettings {
-  /** Houses waiting for a present (SLEIGH_HOUSE_CHOICES: 15–30). */
-  houses: number;
+  /** Game length (SLEIGH_MINUTES: 3, 5, 7 or 10). */
+  minutes: number;
 }
 
 export interface SleighAwards {
@@ -1925,12 +1928,20 @@ export interface HostSleighState {
   phaseDurationMs: number;
   /** Server time of this snapshot (ms), for smoothing sleighs between ticks. */
   tick: number;
-  /** Every house, delivered or not (positions never change during a game). */
+  /** This round's houses, delivered or not (a new set each round; ids are never reused in a game). */
   houses: SleighHouse[];
+  /** Presents delivered this round, of `total`. */
   delivered: number;
   total: number;
   lastDelivery: SleighDelivery | null;
-  /** Every present has been delivered: the finale is playing before the podium. */
+  /** Game clock left (ms; the full length until the first quiz starts) and its full length. */
+  gameRemainingMs: number;
+  gameDurationMs: number;
+  /** The game clock has run out: this round is the last. */
+  timeUp: boolean;
+  /** Every present of this round has been delivered: the flight has ended early and the celebration is playing. */
+  cleared: boolean;
+  /** The last flight after time ran out is over: "Time's up!" is playing before the podium. */
   finished: boolean;
   sleighs: HostSleighPlayer[];
   playerCount: number;
@@ -1948,9 +1959,12 @@ export interface PlayerSleighView {
   phaseRemainingMs: number;
   me: { id: string; nickname: string; avatar: AvatarChoice; color: string; points: number; correct: number; presents: number; rank: number };
   playerCount: number;
-  /** Presents delivered by everyone so far, of `total`. */
+  /** Presents delivered by everyone this round, of `total`. */
   delivered: number;
   total: number;
+  gameRemainingMs: number;
+  timeUp: boolean;
+  cleared: boolean;
   finished: boolean;
   /** This player's latest delivery (seq), to buzz once per present. */
   lastDelivery: number | null;

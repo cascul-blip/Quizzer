@@ -5,9 +5,8 @@ import {
   CY,
   DELIVER_MARGIN,
   PAD_R,
-  SLEIGH_HOUSE_CHOICES,
-  SLEIGH_MAX_HOUSES,
-  SLEIGH_MIN_HOUSES,
+  SLEIGH_HOUSES_PER_ROUND,
+  SLEIGH_MINUTES,
   SLEIGH_SPEED,
   SLEIGH_W,
   STICK_DEAD_ZONE,
@@ -194,17 +193,16 @@ describe("sleigh flight", () => {
 });
 
 describe("houses", () => {
-  test("house choices are 15–30", () => {
-    expect(SLEIGH_HOUSE_CHOICES[0]).toBe(SLEIGH_MIN_HOUSES);
-    expect(SLEIGH_HOUSE_CHOICES.at(-1)).toBe(SLEIGH_MAX_HOUSES);
-    expect(SLEIGH_HOUSE_CHOICES.length).toBe(16);
+  test("20 houses a round; games of 3, 5, 7 or 10 minutes", () => {
+    expect(SLEIGH_HOUSES_PER_ROUND).toBe(20);
+    expect([...SLEIGH_MINUTES]).toEqual([3, 5, 7, 10]);
   });
 
-  test("the town has enough houses for the most the host can pick", () => {
-    expect(HOUSE_SPOTS.length).toBeGreaterThanOrEqual(SLEIGH_MAX_HOUSES);
+  test("the town has enough houses for a round", () => {
+    expect(HOUSE_SPOTS.length).toBeGreaterThanOrEqual(SLEIGH_HOUSES_PER_ROUND);
   });
 
-  for (let n = SLEIGH_MIN_HOUSES; n <= SLEIGH_MAX_HOUSES; n++) {
+  for (const n of [1, 10, SLEIGH_HOUSES_PER_ROUND, HOUSE_SPOTS.length]) {
     test(`pickHouses(${n}): different town houses inside the city, clear of the pad, same seed → same houses`, () => {
       for (const seed of [1, 7, 42, 1234, 99999]) {
         const houses = pickHouses(n, seededRng(seed));
@@ -234,6 +232,38 @@ describe("houses", () => {
       }
     });
   }
+
+  test("a new set reuses as few of the last round's houses as it can", () => {
+    for (const seed of [1, 7, 42, 1234, 99999]) {
+      const rng = seededRng(seed);
+      const first = pickHouses(SLEIGH_HOUSES_PER_ROUND, rng);
+      const old = new Set(first.map((h) => h.spot));
+      const next = pickHouses(SLEIGH_HOUSES_PER_ROUND, rng, { spots: old });
+      expect(next.length).toBe(SLEIGH_HOUSES_PER_ROUND);
+      expect(new Set(next.map((h) => h.spot)).size).toBe(SLEIGH_HOUSES_PER_ROUND);
+      // Every house not used last round is in the new set; only the shortfall repeats.
+      const repeats = next.filter((h) => old.has(h.spot)).length;
+      expect(repeats).toBe(Math.max(0, SLEIGH_HOUSES_PER_ROUND - (HOUSE_SPOTS.length - old.size)));
+    }
+    // With plenty of others to pick from, none repeat.
+    const few = pickHouses(5, seededRng(3));
+    const again = pickHouses(5, seededRng(4), { spots: few.map((h) => h.spot) });
+    expect(again.some((h) => few.some((f) => f.spot === h.spot))).toBe(false);
+  });
+
+  test("a new set never puts a house under a parked sleigh", () => {
+    // A sleigh parked on the middle of each of a few houses.
+    const sleighs = HOUSE_SPOTS.slice(0, 8).map((s) => {
+      const xs = s.poly.map((p) => p[0]);
+      const ys = s.poly.map((p) => p[1]);
+      return { x: (Math.min(...xs) + Math.max(...xs)) / 2, y: (Math.min(...ys) + Math.max(...ys)) / 2 };
+    });
+    for (const seed of [1, 7, 42]) {
+      const houses = pickHouses(SLEIGH_HOUSES_PER_ROUND, seededRng(seed), { sleighs });
+      expect(houses.length).toBe(SLEIGH_HOUSES_PER_ROUND);
+      for (const h of houses) for (const p of sleighs) expect(hitsHouse(p, h)).toBe(false);
+    }
+  });
 
   test("different seeds pick different houses", () => {
     expect(pickHouses(20, seededRng(1))).not.toEqual(pickHouses(20, seededRng(2)));

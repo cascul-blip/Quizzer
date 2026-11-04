@@ -10,7 +10,7 @@ import { COUNTDOWN_MS as CUP_COUNTDOWN_MS } from "../src/server/game/cup.ts";
 import { COUNTDOWN_MS as DRAGON_COUNTDOWN_MS } from "../src/server/game/dragon.ts";
 import { BOMB_COUNTDOWN_MS, BOMB_HOLD_MS, BOMB_NEXT_MS, BOMB_RESULT_MS } from "../src/shared/protocol.ts";
 import { SIEGE_COUNTDOWN_MS, SIEGE_OPENING_MS } from "../src/shared/siege-rules.ts";
-import { SLEIGH_COUNTDOWN_MS, SLEIGH_DEFAULT_HOUSES, SLEIGH_INTRO_MS, SLEIGH_MS_PER_POINT, SLEIGH_QUIZ_MS, SLEIGH_TICK_MS } from "../src/shared/sleigh-rules.ts";
+import { SLEIGH_COUNTDOWN_MS, SLEIGH_DEFAULT_MINUTES, SLEIGH_HOUSES_PER_ROUND, SLEIGH_INTRO_MS, SLEIGH_MS_PER_POINT, SLEIGH_QUIZ_MS, SLEIGH_TICK_MS } from "../src/shared/sleigh-rules.ts";
 import { BOOST_MIN_HOLD_MS, COUNTDOWN_MS as SUB_COUNTDOWN_MS } from "../src/server/game/submarine.ts";
 import { startServer, type RunningServer } from "../src/server/http.ts";
 import { isAdminRequest } from "../src/server/network.ts";
@@ -1286,7 +1286,7 @@ describe("Showdown over WebSockets", () => {
 });
 
 describe("Santa's Sleigh Run over WebSockets", () => {
-  test("lobby houses → countdown → quiz → sleigh.answer → flight → sleigh.steer → end → results → play again", async () => {
+  test("lobby game length → countdown → quiz → sleigh.answer → flight → sleigh.steer → end → results → play again", async () => {
     const quiz = store.create({
       title: "Sleigh E2E",
       questions: [1, 2].map((n) => ({ type: "multiple_choice", text: `Q${n}`, options: ["right", "wrong"], correct: [0] })),
@@ -1298,13 +1298,13 @@ describe("Santa's Sleigh Run over WebSockets", () => {
     host.send({ type: "host.open", quizId: quiz.id });
     await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
     host.send({ type: "host.setMode", mode: "sleigh" });
-    await host.hostState((v) => v.kind === "classic" && v.mode === "sleigh" && v.sleigh.houses === SLEIGH_DEFAULT_HOUSES && v.teams === null);
-    host.send({ type: "host.setSleigh", houses: 31 });
-    expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: "Unsupported number of houses" });
-    host.send({ type: "host.setSleigh", houses: 15.5 });
-    expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: "Unsupported number of houses" });
-    host.send({ type: "host.setSleigh", houses: 17 });
-    await host.hostState((v) => v.kind === "classic" && v.sleigh.houses === 17);
+    await host.hostState((v) => v.kind === "classic" && v.mode === "sleigh" && v.sleigh.minutes === SLEIGH_DEFAULT_MINUTES && v.teams === null);
+    host.send({ type: "host.setSleigh", minutes: 4 });
+    expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: "Unsupported game length" });
+    host.send({ type: "host.setSleigh", minutes: 5.5 });
+    expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: "Unsupported game length" });
+    host.send({ type: "host.setSleigh", minutes: 7 });
+    await host.hostState((v) => v.kind === "classic" && v.sleigh.minutes === 7);
 
     const names = ["Ann", "Bob"];
     const players = await Promise.all(names.map(() => TestSocket.open(wsUrl)));
@@ -1317,8 +1317,8 @@ describe("Santa's Sleigh Run over WebSockets", () => {
 
     host.send({ type: "host.start", pacing: "manual" });
     const started = await host.hostState((v) => v.kind === "sleigh" && v.phase === "countdown");
-    expect(started.view.kind === "sleigh" && started.view).toMatchObject({ round: 0, playerCount: 2, total: 17, delivered: 0, finished: false });
-    expect(started.view.kind === "sleigh" && started.view.houses.length).toBe(17);
+    expect(started.view.kind === "sleigh" && started.view).toMatchObject({ round: 0, playerCount: 2, total: SLEIGH_HOUSES_PER_ROUND, delivered: 0, finished: false, gameDurationMs: 7 * 60_000 });
+    expect(started.view.kind === "sleigh" && started.view.houses.length).toBe(SLEIGH_HOUSES_PER_ROUND);
     host.send({ type: "host.setShuffle", questions: true, answers: true });
     expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: "Not available in Santa's Sleigh Run" });
     clock.advance(SLEIGH_COUNTDOWN_MS);
@@ -1358,9 +1358,9 @@ describe("Santa's Sleigh Run over WebSockets", () => {
     expect(csv).toContain("Ann");
     expect(csv).toContain("Bob");
 
-    // Play again keeps Santa's Sleigh Run and its houses.
+    // Play again keeps Santa's Sleigh Run and its game length.
     host.send({ type: "host.open", quizId: quiz.id });
-    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "sleigh" && v.sleigh.houses === 17);
+    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "sleigh" && v.sleigh.minutes === 7);
     host.send({ type: "host.close" });
     await host.hostState((v) => v.kind === "idle");
     [host, ...players].forEach((s) => s.close());

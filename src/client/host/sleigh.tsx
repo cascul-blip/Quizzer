@@ -1,10 +1,10 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
-import { FIELD_H, FIELD_W, METRES_PER_UNIT, SLEIGH_MS_PER_POINT, SLEIGH_TICK_MS } from "../../shared/sleigh-rules.ts";
+import { FIELD_H, FIELD_W, METRES_PER_UNIT, SLEIGH_L, SLEIGH_MS_PER_POINT, SLEIGH_TICK_MS } from "../../shared/sleigh-rules.ts";
 import type { HostSleighPlayer, HostView, SleighHouse } from "../../shared/protocol.ts";
 import { ACCESSORY_ART, AVATAR_ART, Avatar } from "../shared/avatar-art.tsx";
 import { CELEBRATION_IMG, CandyCanes, CityGround, Gift, House, HouseDefs, SNOW_PUFF_IMG, SPARKLE_IMG, SleighTeam, SleighTeamDefs, Snowfall, TAKEOFF_IMG } from "../shared/sleigh-art.tsx";
 import { play, startJingle } from "../shared/sounds.ts";
-import { ordinal, useCountdown } from "../shared/ui.tsx";
+import { formatClock, ordinal, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
 import { Award } from "./tower.tsx";
 
@@ -19,13 +19,33 @@ const PUFF_MS = 700;
 const DROP_MS = 1700;
 /** At most one bump sound this often, however many sleighs hit the wall. */
 const BUMP_GAP_MS = 220;
+/** The light streak behind a moving sleigh: how long a point of it lasts before it has faded away. */
+const TRAIL_MS = 900;
+/** The streak is drawn in this many bands, newest (widest, brightest) first, each one older and fainter. */
+const TRAIL_BANDS = 6;
+/** The streak starts under the sleigh itself (its centre is this far behind the team's). */
+const TRAIL_BACK = (SLEIGH_L * 27) / 80;
+/** A new point is added to the streak once the sleigh has moved this far. */
+const TRAIL_STEP = 4;
+
+interface TrailPoint {
+  x: number;
+  y: number;
+  t: number;
+}
+
+/** Path data through `pts` ("" when there are too few to draw). */
+const trailPath = (pts: TrailPoint[]) => (pts.length < 2 ? "" : pts.map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(""));
 
 const metres = (d: number) => `${Math.max(0, Math.round(d * METRES_PER_UNIT)).toLocaleString("en-US")} m`;
 const SECS_PER_POINT = SLEIGH_MS_PER_POINT / 1000;
 
-/** Projector screen for Santa's Sleigh Run: countdown → (quiz → intro → flight)… → finale → podium. */
+/** Projector screen for Santa's Sleigh Run: countdown → (quiz → intro → flight)… until time runs out → finale → podium. */
 export function SleighStage({ view, send }: { view: SleighView; send: Send }) {
   const secs = useCountdown(view.phaseRemainingMs, `${view.phase}-${view.round}`);
+  // The game clock runs from the first quiz; until then it shows the full length, standing still.
+  const running = useCountdown(view.gameRemainingMs, view.round > 0 && !view.timeUp ? "running" : `waiting-${view.timeUp}`);
+  const clock = view.round > 0 ? running : Math.ceil(view.gameRemainingMs / 1000);
   const prev = useRef<SleighView | null>(null);
   const jingle = useRef<Jingle | null>(null);
 
@@ -33,7 +53,7 @@ export function SleighStage({ view, send }: { view: SleighView; send: Send }) {
     const p = prev.current;
     prev.current = view;
     if (!p) return;
-    if (view.finished && !p.finished) play("jingle");
+    if ((view.finished && !p.finished) || (view.cleared && !p.cleared)) play("jingle");
     if (view.phase === p.phase) return;
     if (view.phase === "quiz" && view.round === 1) play("start");
     if (view.phase === "flight") play("jingle");
@@ -46,7 +66,7 @@ export function SleighStage({ view, send }: { view: SleighView; send: Send }) {
   }, [secs, view.phase]);
 
   // Sleigh bells ring while the sleighs fly, louder the more of them are in the air.
-  const flying = view.phase === "flight" && !view.finished;
+  const flying = view.phase === "flight" && !view.finished && !view.cleared;
   useEffect(() => {
     if (!flying) return;
     jingle.current = startJingle(0.5);
@@ -79,6 +99,9 @@ export function SleighStage({ view, send }: { view: SleighView; send: Send }) {
         <div class="pill sleigh-count-pill">
           🎁 {view.delivered} / {view.total}
         </div>
+        {view.phase !== "podium" && (
+          <div class={`pill sleigh-clock-pill ${view.timeUp ? "up" : view.round > 0 && clock <= 30 ? "low" : ""}`}>{view.timeUp ? "⏱ Last flight!" : `⏱ ${formatClock(clock)}`}</div>
+        )}
         <div class="spacer" />
         <div class="pill">👥 {view.playerCount}</div>
         <ScreenControls join={view.join} />
@@ -93,7 +116,7 @@ export function SleighStage({ view, send }: { view: SleighView; send: Send }) {
       ) : (
         <>
           <PhaseBar view={view} secs={secs} />
-          <main class={`sleigh-wrap phase-${view.phase} ${view.finished ? "finished" : ""}`}>
+          <main class={`sleigh-wrap phase-${view.phase} ${view.finished || view.cleared ? "finished" : ""}`}>
             <div class="sleigh-field-box">
               <div class="sleigh-field">
                 <CityGround />
@@ -105,7 +128,7 @@ export function SleighStage({ view, send }: { view: SleighView; send: Send }) {
                     <div class="sleigh-quiz-round">Round {view.round}</div>
                     <div>📱 Answer questions to power your reindeer</div>
                     <div class="sleigh-quiz-sub">
-                      🎁 {view.delivered} of {view.total} delivered · every correct answer = {SECS_PER_POINT} s of flying
+                      {view.timeUp ? "⏰ Time's up: this is the last round!" : `🎁 ${view.total} new houses to visit`} · every correct answer = {SECS_PER_POINT} s of flying
                     </div>
                   </div>
                 )}
@@ -120,7 +143,7 @@ export function SleighStage({ view, send }: { view: SleighView; send: Send }) {
                   <br />
                   Then steer your sleigh with the joystick on your phone and fly over the houses to drop their presents down the chimney.
                   <br />
-                  Deliver the most presents to win!
+                  Every round brings {view.total} new houses. Deliver the most presents in {view.gameDurationMs / 60_000} minutes to win!
                 </div>
                 <div class="countdown-num" key={secs}>
                   {Math.max(1, secs)}
@@ -136,7 +159,8 @@ export function SleighStage({ view, send }: { view: SleighView; send: Send }) {
                 </div>
               </div>
             )}
-            {view.finished && view.phase === "flight" && <Finale total={view.total} />}
+            {view.phase === "flight" && view.finished && <Finale title="⏰ Time's up! 🎄" sub="The reindeer are heading home. Who delivered the most presents?" />}
+            {view.phase === "flight" && view.cleared && <Finale title={`🎄 All ${view.total} presents delivered! 🎄`} sub="New houses are waiting next round." />}
           </main>
         </>
       )}
@@ -147,7 +171,7 @@ export function SleighStage({ view, send }: { view: SleighView; send: Send }) {
 /** The bar across the top drains over each phase, with what to do right now. */
 function PhaseBar({ view, secs }: { view: SleighView; secs: number }) {
   // Catch up once, when the phase starts (see robot.tsx).
-  const key = `${view.phase}-${view.round}-${view.finished}`;
+  const key = `${view.phase}-${view.round}-${view.finished}-${view.cleared}`;
   const start = useRef<{ key: string; elapsed: number } | null>(null);
   if (!start.current || start.current.key !== key) start.current = { key, elapsed: Math.max(0, view.phaseDurationMs - view.phaseRemainingMs) };
   const elapsed = start.current.elapsed;
@@ -158,8 +182,10 @@ function PhaseBar({ view, secs }: { view: SleighView; secs: number }) {
       ? `🦌 Answer questions to power your reindeer · ${secs}s`
       : view.phase === "flight"
         ? view.finished
-          ? "🎄 Every present delivered!"
-          : moving > 0
+          ? "⏰ Time's up!"
+          : view.cleared
+            ? `🎄 All ${view.total} presents delivered! New houses next round`
+            : moving > 0
             ? `🛷 Steer with your phone! · ${moving} sleigh${moving === 1 ? "" : "s"} flying · ${left} present${left === 1 ? "" : "s"} to go · ${secs}s`
             : "🦌 The reindeer need a rest"
         : "Get ready…";
@@ -250,6 +276,8 @@ function Sleighs({ view }: { view: SleighView }) {
   const motions = useRef(new Map<string, Motion>());
   const els = useRef(new Map<string, { pos: SVGGElement | null; rot: SVGGElement | null }>());
   const bumps = useRef(new Map<string, number>());
+  const trails = useRef(new Map<string, TrailPoint[]>());
+  const trailEls = useRef(new Map<string, (SVGPathElement | null)[]>());
   const delivered = useRef<Map<number, string | null> | null>(null);
   const lastBump = useRef(0);
   const seq = useRef(0);
@@ -263,6 +291,32 @@ function Sleighs({ view }: { view: SleighView }) {
       const p = sample(m, now);
       el.pos.setAttribute("transform", `translate(${p.x.toFixed(2)} ${p.y.toFixed(2)})`);
       el.rot.setAttribute("transform", `rotate(${((p.h * 180) / Math.PI).toFixed(2)})`);
+      drawTrail(id, { x: p.x - Math.cos(p.h) * TRAIL_BACK, y: p.y - Math.sin(p.h) * TRAIL_BACK, t: now });
+    }
+  };
+
+  /** Extend the sleigh's streak to `tail` (where the sleigh is now), let its old end fade and redraw its bands. */
+  const drawTrail = (id: string, tail: TrailPoint) => {
+    const bands = trailEls.current.get(id);
+    if (!bands) return;
+    let pts = trails.current.get(id);
+    if (!pts) trails.current.set(id, (pts = []));
+    const last = pts[pts.length - 1];
+    const moved = last ? Math.hypot(tail.x - last.x, tail.y - last.y) : Infinity;
+    // Sent back to the launch pad: start a new streak rather than draw one across the town.
+    if (moved > SNAP_DIST) pts.length = 0;
+    if (moved >= TRAIL_STEP) pts.push(tail);
+    while (pts.length > 0 && tail.t - pts[0]!.t > TRAIL_MS) pts.shift();
+    // Newest first, ending at the sleigh as it is now (not only at the last point kept).
+    const line = pts.length > 0 ? [tail, ...pts.slice().reverse()] : [];
+    const span = TRAIL_MS / TRAIL_BANDS;
+    let i = 0;
+    for (let b = 0; b < TRAIL_BANDS; b++) {
+      const band: TrailPoint[] = [];
+      // Each band starts at the previous band's last point, so the streak has no gaps.
+      if (i > 0) band.push(line[i - 1]!);
+      while (i < line.length && tail.t - line[i]!.t <= (b + 1) * span) band.push(line[i++]!);
+      bands[b]?.setAttribute("d", trailPath(band));
     }
   };
 
@@ -290,6 +344,7 @@ function Sleighs({ view }: { view: SleighView }) {
     }
     for (const id of motions.current.keys()) if (!seen.has(id)) motions.current.delete(id);
     for (const id of bumps.current.keys()) if (!seen.has(id)) bumps.current.delete(id);
+    for (const id of trails.current.keys()) if (!seen.has(id)) trails.current.delete(id);
 
     // Every house that has just been delivered to (more than one can land in a tick).
     const freshDrops: Drop[] = [];
@@ -344,6 +399,26 @@ function Sleighs({ view }: { view: SleighView }) {
         </g>
       ))}
       <SleighTeamDefs />
+      {/* The light streaks, under every sleigh; drawTrail writes their paths each frame. */}
+      <g class="sleigh-trails">
+        {view.sleighs.map((s) => (
+          <g key={s.id} class="sleigh-trail" stroke={s.color}>
+            {Array.from({ length: TRAIL_BANDS }, (_, b) => (
+              <path
+                key={b}
+                stroke-width={(18 * (1 - b / TRAIL_BANDS) + 3).toFixed(1)}
+                stroke-opacity={(0.75 * (1 - b / TRAIL_BANDS) ** 1.3).toFixed(2)}
+                ref={(el) => {
+                  const bands = trailEls.current.get(s.id) ?? [];
+                  bands[b] = el;
+                  if (bands.every((x) => !x)) trailEls.current.delete(s.id);
+                  else trailEls.current.set(s.id, bands);
+                }}
+              />
+            ))}
+          </g>
+        ))}
+      </g>
       {view.sleighs.map((s) => (
         <g
           key={s.id}
@@ -386,23 +461,24 @@ function NameTag({ sleigh: s, flight }: { sleigh: HostSleighPlayer; flight: bool
   const art = AVATAR_ART[s.avatar.avatar] ?? AVATAR_ART.cat;
   const extra = ACCESSORY_ART[s.avatar.accessory] ?? ACCESSORY_ART.none;
   const energy = s.fuelStartMs > 0 ? Math.max(0, Math.min(1, s.fuelMs / s.fuelStartMs)) : 0;
-  const size = 22;
+  const size = 32;
+  const bar = 44;
   const name = s.nickname.length > 12 ? `${s.nickname.slice(0, 11)}…` : s.nickname;
   return (
-    <g class="sleigh-tag" transform="translate(0 -44)">
-      <circle r={size / 2 + 2.5} fill={s.color} stroke="#fff" stroke-width="1.5" />
+    <g class="sleigh-tag" transform="translate(0 -70)">
+      <circle r={size / 2 + 3} fill={s.color} stroke="#fff" stroke-width="2" />
       <g transform={`translate(${-size / 2} ${-size / 2}) scale(${size / 100})`}>
         {art()}
         {extra()}
       </g>
-      <text class="sleigh-tag-name" x={size / 2 + 5} y="4.5">
+      <text class="sleigh-tag-name" x={size / 2 + 7} y="6">
         {name}
         {s.presents > 0 && <tspan class="sleigh-tag-count"> 🎁{s.presents}</tspan>}
       </text>
       {flight && s.fuelStartMs > 0 && (
-        <g transform={`translate(${-size / 2} ${size / 2 + 3.5})`}>
-          <rect width={size} height="4" rx="2" fill="rgba(0,0,0,0.6)" />
-          <rect width={(size * energy).toFixed(1)} height="4" rx="2" fill={energy > 0.3 ? "#ffd23f" : "#ff6b4a"} />
+        <g transform={`translate(${-bar / 2} ${size / 2 + 5})`}>
+          <rect width={bar} height="6" rx="3" fill="rgba(0,0,0,0.65)" stroke="rgba(255,255,255,0.5)" stroke-width="0.8" />
+          <rect width={(bar * energy).toFixed(1)} height="6" rx="3" fill={energy > 0.3 ? "#ffd23f" : "#ff6b4a"} />
         </g>
       )}
     </g>
@@ -440,7 +516,8 @@ function Standings({ view }: { view: SleighView }) {
 }
 
 /** "Every present delivered!", with a burst of confetti and snow. */
-function Finale({ total }: { total: number }) {
+/** Confetti and a card: every present of the round delivered, or time up at the end of the game. */
+function Finale({ title, sub }: { title: string; sub: string }) {
   const bits = useMemo(
     () =>
       Array.from({ length: 70 }, (_, i) => ({
@@ -461,8 +538,8 @@ function Finale({ total }: { total: number }) {
         ))}
       </div>
       <div class="sleigh-finale-card">
-        <div class="sleigh-finale-title">🎄 Every present delivered! 🎄</div>
-        <div class="sleigh-finale-sub">All {total} houses have their presents. Merry Christmas!</div>
+        <div class="sleigh-finale-title">{title}</div>
+        <div class="sleigh-finale-sub">{sub}</div>
       </div>
     </div>
   );

@@ -3657,6 +3657,10 @@ h1 {
   color: var(--sleigh-gold);
 }
 
+.sleigh-chip.clock.up {
+  background: #b3261e;
+}
+
 .sleigh-emoji {
   font-size: 72px;
   line-height: 1;

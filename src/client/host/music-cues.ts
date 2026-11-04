@@ -171,7 +171,7 @@ export function musicFor(view: HostView | null): MusicCue {
     }
     case "sleigh": {
       if (view.phase === "podium") return { track: "sleigh-results" };
-      // Every present delivered: the celebration before the podium, with the extra bells and timpani.
+      // Time up and the last flight over: the celebration before the podium, with the extra bells and timpani.
       if (view.finished) return { track: "sleigh-results", intensity: 0.9, key: "sleigh-finale" };
       // One track for the whole round: a few sleigh bells and pizzicato at the start of the quiz,
       // the carol builds as its time runs out and through "get ready to fly", and plays in full
