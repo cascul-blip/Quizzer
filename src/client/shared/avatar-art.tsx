@@ -13,15 +13,20 @@ import type { JSX } from "preact";
 import { ACCESSORIES, AVATARS, type AccessoryId, type AvatarChoice, type AvatarId } from "../../shared/avatars.ts";
 import { isPhoneArt } from "./phone-art.ts";
 import alienImg from "./avatar/alien.webp";
+import angelkidImg from "./avatar/angelkid.webp";
 import antlersImg from "./avatar/antlers.webp";
+import arcticfoxImg from "./avatar/arcticfox.webp";
 import axolotlImg from "./avatar/axolotl.webp";
+import beanieImg from "./avatar/beanie.webp";
 import bearImg from "./avatar/bear.webp";
 import beeImg from "./avatar/bee.webp";
-import beanieImg from "./avatar/beanie.webp";
+import bellcollarImg from "./avatar/bellcollar.webp";
 import beretImg from "./avatar/beret.webp";
+import bobbleImg from "./avatar/bobble.webp";
 import bowImg from "./avatar/bow.webp";
 import bowtieImg from "./avatar/bowtie.webp";
 import bunnyImg from "./avatar/bunny.webp";
+import candycaneImg from "./avatar/candycane.webp";
 import capImg from "./avatar/cap.webp";
 import capybaraImg from "./avatar/capybara.webp";
 import catImg from "./avatar/cat.webp";
@@ -29,31 +34,43 @@ import chickImg from "./avatar/chick.webp";
 import cowImg from "./avatar/cow.webp";
 import cowboyImg from "./avatar/cowboy.webp";
 import crownImg from "./avatar/crown.webp";
+import crownwreathImg from "./avatar/crownwreath.webp";
 import curlyImg from "./avatar/curly.webp";
 import dinoImg from "./avatar/dino.webp";
 import dogImg from "./avatar/dog.webp";
 import dragonImg from "./avatar/dragon.webp";
+import earmuffsImg from "./avatar/earmuffs.webp";
+import elfImg from "./avatar/elf.webp";
+import elfhatImg from "./avatar/elfhat.webp";
+import emperorchickImg from "./avatar/emperorchick.webp";
 import eyepatchImg from "./avatar/eyepatch.webp";
 import flowersImg from "./avatar/flowers.webp";
 import foxImg from "./avatar/fox.webp";
 import frogImg from "./avatar/frog.webp";
 import ghostImg from "./avatar/ghost.webp";
+import gingerbreadImg from "./avatar/gingerbread.webp";
 import gogglesImg from "./avatar/goggles.webp";
+import headphonesImg from "./avatar/headphones.webp";
 import heartsImg from "./avatar/hearts.webp";
 import hedgehogImg from "./avatar/hedgehog.webp";
-import headphonesImg from "./avatar/headphones.webp";
+import hollyImg from "./avatar/holly.webp";
+import huskyImg from "./avatar/husky.webp";
 import kid1Img from "./avatar/kid1.webp";
 import kid2Img from "./avatar/kid2.webp";
 import kid3Img from "./avatar/kid3.webp";
 import kid4Img from "./avatar/kid4.webp";
 import koalaImg from "./avatar/koala.webp";
 import lionImg from "./avatar/lion.webp";
+import mistletoeImg from "./avatar/mistletoe.webp";
+import mittensImg from "./avatar/mittens.webp";
 import monkeyImg from "./avatar/monkey.webp";
 import monocleImg from "./avatar/monocle.webp";
 import monsterImg from "./avatar/monster.webp";
+import mooseImg from "./avatar/moose.webp";
 import mouseImg from "./avatar/mouse.webp";
 import mustacheImg from "./avatar/mustache.webp";
 import nerdImg from "./avatar/nerd.webp";
+import nutcrackerImg from "./avatar/nutcracker.webp";
 import octopusImg from "./avatar/octopus.webp";
 import owlImg from "./avatar/owl.webp";
 import pandaImg from "./avatar/panda.webp";
@@ -65,13 +82,25 @@ import gearSheet from "./avatar/phone-gear.webp";
 import pigImg from "./avatar/pig.webp";
 import pigtailsImg from "./avatar/pigtails.webp";
 import pirateImg from "./avatar/pirate.webp";
+import polarbearImg from "./avatar/polarbear.webp";
 import propellerImg from "./avatar/propeller.webp";
 import raccoonImg from "./avatar/raccoon.webp";
+import reindeerImg from "./avatar/reindeer.webp";
+import reindeerbandImg from "./avatar/reindeerband.webp";
 import robotImg from "./avatar/robot.webp";
+import santahatImg from "./avatar/santahat.webp";
 import scarfImg from "./avatar/scarf.webp";
+import sealImg from "./avatar/seal.webp";
 import sharkImg from "./avatar/shark.webp";
+import sheepImg from "./avatar/sheep.webp";
 import snorkelImg from "./avatar/snorkel.webp";
+import snowbunnyImg from "./avatar/snowbunny.webp";
+import snowflakesImg from "./avatar/snowflakes.webp";
+import snowmanImg from "./avatar/snowman.webp";
+import snowyowlImg from "./avatar/snowyowl.webp";
 import spikyImg from "./avatar/spiky.webp";
+import starImg from "./avatar/star.webp";
+import starsImg from "./avatar/stars.webp";
 import sunglassesImg from "./avatar/sunglasses.webp";
 import tiaraImg from "./avatar/tiara.webp";
 import tigerImg from "./avatar/tiger.webp";
@@ -80,6 +109,7 @@ import turtleImg from "./avatar/turtle.webp";
 import unicornImg from "./avatar/unicorn.webp";
 import vikingImg from "./avatar/viking.webp";
 import wizardImg from "./avatar/wizard.webp";
+import xmasscarfImg from "./avatar/xmasscarf.webp";
 
 /** Layout of the phone sheets, as written by scripts/phone-art.py. */
 const CELL = 192;
@@ -142,6 +172,21 @@ const FACE_IMG: Record<AvatarId, string> = {
   hedgehog: hedgehogImg,
   bee: beeImg,
   capybara: capybaraImg,
+  snowman: snowmanImg,
+  reindeer: reindeerImg,
+  polarbear: polarbearImg,
+  gingerbread: gingerbreadImg,
+  elf: elfImg,
+  nutcracker: nutcrackerImg,
+  snowyowl: snowyowlImg,
+  arcticfox: arcticfoxImg,
+  emperorchick: emperorchickImg,
+  seal: sealImg,
+  husky: huskyImg,
+  snowbunny: snowbunnyImg,
+  moose: mooseImg,
+  sheep: sheepImg,
+  angelkid: angelkidImg,
 };
 
 const GEAR_IMG: Record<Exclude<AccessoryId, "none">, string> = {
@@ -174,6 +219,21 @@ const GEAR_IMG: Record<Exclude<AccessoryId, "none">, string> = {
   beret: beretImg,
   scarf: scarfImg,
   tiara: tiaraImg,
+  santahat: santahatImg,
+  elfhat: elfhatImg,
+  bobble: bobbleImg,
+  earmuffs: earmuffsImg,
+  xmasscarf: xmasscarfImg,
+  holly: hollyImg,
+  mistletoe: mistletoeImg,
+  stars: starsImg,
+  snowflakes: snowflakesImg,
+  reindeerband: reindeerbandImg,
+  star: starImg,
+  bellcollar: bellcollarImg,
+  candycane: candycaneImg,
+  mittens: mittensImg,
+  crownwreath: crownwreathImg,
 };
 
 export const AVATAR_ART = Object.fromEntries(AVATARS.map((a, i) => [a.id, painted(FACE_IMG[a.id], facesSheet, i, AVATARS.length)])) as Record<AvatarId, () => JSX.Element>;

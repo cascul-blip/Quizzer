@@ -1,5 +1,5 @@
 import { useState } from "preact/hooks";
-import { ACCESSORIES, AVATARS, type AvatarChoice } from "../../shared/avatars.ts";
+import { OFFERED_ACCESSORIES, OFFERED_AVATARS, type AvatarChoice } from "../../shared/avatars.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 
 /** Lobby picker: a Character tab and an Accessory tab, each a grid previewing the option on the current look. */
@@ -7,8 +7,8 @@ export function AvatarPicker({ value, onPick }: { value: AvatarChoice; onPick: (
   const [tab, setTab] = useState<"avatar" | "accessory">("avatar");
   const options =
     tab === "avatar"
-      ? AVATARS.map((a) => ({ id: a.id, name: a.name, choice: { ...value, avatar: a.id }, selected: a.id === value.avatar }))
-      : ACCESSORIES.map((a) => ({ id: a.id, name: a.name, choice: { ...value, accessory: a.id }, selected: a.id === value.accessory }));
+      ? OFFERED_AVATARS.map((a) => ({ id: a.id, name: a.name, choice: { ...value, avatar: a.id }, selected: a.id === value.avatar }))
+      : OFFERED_ACCESSORIES.map((a) => ({ id: a.id, name: a.name, choice: { ...value, accessory: a.id }, selected: a.id === value.accessory }));
   return (
     <section class="avatar-picker card">
       <div class="picker-tabs" role="tablist">

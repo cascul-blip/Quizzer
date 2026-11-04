@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { QuizStore } from "../src/server/quiz/store.ts";
 import { GameHub, type SocketData } from "../src/server/ws.ts";
+import { OFFERED_AVATARS } from "../src/shared/avatars.ts";
 import type { ServerMsg } from "../src/shared/protocol.ts";
 import { applyPatch, diffView } from "../src/shared/view-patch.ts";
 import { FakeClock, tempDir } from "./helpers.ts";
@@ -77,12 +78,12 @@ describe("Phones that fall behind", () => {
     hub.onOpen(host as never);
     hub.onMessage(host as never, JSON.stringify({ type: "host.open", quizId: quiz.id }));
     hub.onOpen(phone as never);
-    hub.onMessage(phone as never, JSON.stringify({ type: "join", nickname: "Ann", avatar: "cat", accessory: "none" }));
+    hub.onMessage(phone as never, JSON.stringify({ type: "join", nickname: "Ann", avatar: OFFERED_AVATARS[0]!.id, accessory: "none" }));
     await Promise.resolve();
     phone.sent = [];
 
     phone.buffered = 4096;
-    for (const avatar of ["dog", "fox", "owl"]) {
+    for (const avatar of OFFERED_AVATARS.slice(1, 4).map((a) => a.id)) {
       hub.onMessage(phone as never, JSON.stringify({ type: "setAvatar", avatar, accessory: "none" }));
       await Promise.resolve();
     }
@@ -93,7 +94,7 @@ describe("Phones that fall behind", () => {
     expect(phone.sent).toHaveLength(1);
     expect(phone.sent[0]!.type).toBe("player.patch");
     const ops = phone.sent[0]!.type === "player.patch" ? phone.sent[0]!.ops : [];
-    expect(JSON.stringify(ops)).toContain('"owl"');
+    expect(JSON.stringify(ops)).toContain(JSON.stringify(OFFERED_AVATARS[3]!.id));
     expect(JSON.stringify(ops)).not.toContain('"fox"');
 
     // A socket that keeps up isn't sent anything extra on drain.
