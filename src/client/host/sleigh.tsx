@@ -118,7 +118,7 @@ export function SleighStage({ view, send }: { view: SleighView; send: Send }) {
                 <div class="countdown-label">
                   Answer questions on your phone: every correct answer gives your reindeer {SECS_PER_POINT} seconds of flying.
                   <br />
-                  Then steer your sleigh with the wheel on your phone and fly over the houses to drop their presents down the chimney.
+                  Then steer your sleigh with the joystick on your phone and fly over the houses to drop their presents down the chimney.
                   <br />
                   Deliver the most presents to win!
                 </div>
@@ -361,7 +361,7 @@ function Sleighs({ view }: { view: SleighView }) {
               els.current.set(s.id, e);
             }}
           >
-            <SleighTeam color={s.color} wheel={flight ? s.wheel : 0} gallop={flight && s.moving && s.speed > 0} flying={flight && s.moving && s.speed > 0.2} />
+            <SleighTeam color={s.color} turn={s.turn} gallop={flight && s.moving && s.speed > 0} flying={flight && s.moving && s.speed > 0.2} />
           </g>
           <NameTag sleigh={s} flight={flight} />
         </g>
@@ -389,7 +389,7 @@ function NameTag({ sleigh: s, flight }: { sleigh: HostSleighPlayer; flight: bool
   const size = 22;
   const name = s.nickname.length > 12 ? `${s.nickname.slice(0, 11)}…` : s.nickname;
   return (
-    <g class="sleigh-tag" transform="translate(0 -32)">
+    <g class="sleigh-tag" transform="translate(0 -44)">
       <circle r={size / 2 + 2.5} fill={s.color} stroke="#fff" stroke-width="1.5" />
       <g transform={`translate(${-size / 2} ${-size / 2}) scale(${size / 100})`}>
         {art()}

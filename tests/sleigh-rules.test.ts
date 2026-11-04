@@ -10,10 +10,11 @@ import {
   SLEIGH_MIN_HOUSES,
   SLEIGH_SPEED,
   SLEIGH_W,
+  STICK_DEAD_ZONE,
+  MAX_TURN_RATE,
   WALL_SPEED_KEEP,
   hitsHouse,
   houseDistance,
-  launch,
   launchSlot,
   HOUSE_SPOTS,
   pickHouses,
@@ -21,6 +22,7 @@ import {
   seededRng,
   sleighColor,
   stepSleigh,
+  stickPush,
   type Sleigh,
 } from "../src/shared/sleigh-rules.ts";
 
@@ -33,11 +35,18 @@ function at(x: number, y: number, heading = 0, speed = 1): Sleigh {
   return { x, y, heading, speed, distance: 0, scraping: false };
 }
 
+/** The stick pushed fully toward `heading` (or `push` of the way). */
+function toward(heading: number, push = 1) {
+  return { x: Math.cos(heading) * push, y: Math.sin(heading) * push };
+}
+const LET_GO = { x: 0, y: 0 };
+
 describe("sleigh flight", () => {
-  test("with fuel and a straight wheel a sleigh flies straight at top speed", () => {
+  test("a stick held the way it flies keeps it straight at top speed", () => {
     const start = at(CX, CY);
-    const { sleigh, bump } = stepSleigh(start, 0, true, 100);
+    const { sleigh, bump, turn } = stepSleigh(start, toward(0), true, 100);
     expect(bump).toBe(false);
+    expect(turn).toBe(0);
     expect(sleigh.y).toBeCloseTo(start.y, 6);
     expect(sleigh.x - start.x).toBeCloseTo(SLEIGH_SPEED * 0.1, 6);
     expect(sleigh.heading).toBeCloseTo(0, 9);
@@ -45,59 +54,92 @@ describe("sleigh flight", () => {
     expect(sleigh.scraping).toBe(false);
   });
 
-  test("launch gives full speed; a stopped sleigh without fuel stays put", () => {
-    expect(launch(at(CX, CY, 0, 0)).speed).toBe(1);
+  test("a stopped sleigh stays put until the stick is pushed, then speeds up", () => {
     const start = at(CX, CY, 0, 0);
-    const { sleigh } = stepSleigh(start, 1, false, 100);
-    expect(sleigh.x).toBe(start.x);
-    expect(sleigh.y).toBe(start.y);
-    expect(sleigh.speed).toBe(0);
+    expect(stepSleigh(start, LET_GO, true, 100).sleigh).toEqual({ ...start, speed: 0 });
+    expect(stepSleigh(start, toward(0, STICK_DEAD_ZONE * 0.9), true, 100).sleigh.speed).toBe(0);
+    let s = start;
+    s = stepSleigh(s, toward(0), true, 100).sleigh;
+    expect(s.speed).toBeGreaterThan(0);
+    expect(s.speed).toBeLessThan(1);
+    for (let i = 0; i < 10; i++) s = stepSleigh(s, toward(0), true, 100).sleigh;
+    expect(s.speed).toBe(1);
   });
 
-  test("without fuel a flying sleigh glides to a stop", () => {
+  test("how hard the stick is pushed sets the speed", () => {
+    expect(stickPush(LET_GO)).toBe(0);
+    expect(stickPush({ x: STICK_DEAD_ZONE, y: 0 })).toBe(0);
+    expect(stickPush({ x: 0, y: -1 })).toBe(1);
+    expect(stickPush({ x: 3, y: 4 })).toBe(1);
+    expect(stickPush({ x: Number.NaN, y: 1 })).toBe(0);
+    let s = at(CX, CY, 0, 0);
+    const half = (1 + STICK_DEAD_ZONE) / 2;
+    for (let i = 0; i < 20; i++) s = stepSleigh(s, toward(0, half), true, 50).sleigh;
+    expect(s.speed).toBeCloseTo(0.5, 6);
+  });
+
+  test("letting go of the stick brings it to a stop", () => {
     let s = at(CX, CY);
-    for (let i = 0; i < 40; i++) s = stepSleigh(s, 0, false, 50).sleigh;
+    for (let i = 0; i < 20; i++) s = stepSleigh(s, LET_GO, true, 50).sleigh;
     expect(s.speed).toBe(0);
     expect(s.distance).toBeGreaterThan(0);
   });
 
-  test("wheel −1 turns counter-clockwise (heading decreases), +1 clockwise", () => {
-    const left = stepSleigh(at(CX, CY), -1, true, 50).sleigh;
-    const right = stepSleigh(at(CX, CY), 1, true, 50).sleigh;
-    expect(left.heading).toBeLessThan(0);
-    expect(right.heading).toBeGreaterThan(0);
-    // On screen (y down) a left turn moves the sleigh up.
-    expect(left.y).toBeLessThan(CY);
-    expect(right.y).toBeGreaterThan(CY);
-  });
-
-  test("full lock flies a circle and comes back round", () => {
+  test("without fuel a flying sleigh glides to a stop, whatever the stick says", () => {
     let s = at(CX, CY);
-    let turned = 0;
-    for (let i = 0; i < 200 && turned < 2 * Math.PI; i++) {
-      const before = s.heading;
-      s = stepSleigh(s, 1, true, 50).sleigh;
-      turned += Math.atan2(Math.sin(s.heading - before), Math.cos(s.heading - before));
-    }
-    expect(turned).toBeGreaterThanOrEqual(2 * Math.PI);
-    expect(Math.hypot(s.x - CX, s.y - CY)).toBeLessThan(40);
+    for (let i = 0; i < 40; i++) s = stepSleigh(s, toward(1), false, 50).sleigh;
+    expect(s.speed).toBe(0);
+    expect(s.heading).toBeCloseTo(0, 9);
+    expect(s.distance).toBeGreaterThan(0);
   });
 
-  test("non-finite wheel counts as straight", () => {
-    const { sleigh } = stepSleigh(at(CX, CY), Number.NaN, true, 50);
+  test("it turns toward the stick: up turns counter-clockwise (heading decreases), down clockwise", () => {
+    const left = stepSleigh(at(CX, CY), toward(-Math.PI / 2), true, 50);
+    const right = stepSleigh(at(CX, CY), toward(Math.PI / 2), true, 50);
+    expect(left.sleigh.heading).toBeLessThan(0);
+    expect(right.sleigh.heading).toBeGreaterThan(0);
+    expect(left.turn).toBe(-1);
+    expect(right.turn).toBe(1);
+    // On screen (y down) a left turn moves the sleigh up.
+    expect(left.sleigh.y).toBeLessThan(CY);
+    expect(right.sleigh.y).toBeGreaterThan(CY);
+  });
+
+  test("it turns no faster than MAX_TURN_RATE and settles on the stick's direction", () => {
+    let s = at(CX, CY);
+    const want = 2.5;
+    s = stepSleigh(s, toward(want), true, 100).sleigh;
+    expect(s.heading).toBeCloseTo(MAX_TURN_RATE * 0.1, 9);
+    for (let i = 0; i < 20; i++) s = stepSleigh(s, toward(want), true, 50).sleigh;
+    expect(s.heading).toBeCloseTo(want, 9);
+    const r = stepSleigh(s, toward(want), true, 50);
+    expect(r.turn).toBeCloseTo(0, 9);
+  });
+
+  test("it turns the short way round, even across ±π", () => {
+    const s = at(CX, CY, Math.PI - 0.1);
+    const r = stepSleigh(s, toward(-Math.PI + 0.1), true, 20);
+    expect(r.turn).toBeGreaterThan(0);
+  });
+
+  test("a non-finite stick counts as let go", () => {
+    const { sleigh, turn } = stepSleigh(at(CX, CY), { x: Number.NaN, y: 1 }, true, 50);
     expect(sleigh.heading).toBeCloseTo(0, 9);
+    expect(sleigh.speed).toBeLessThan(1);
+    expect(turn).toBe(0);
   });
 
   test("flying head-on into the wall: clamped, one bump, speed lost, bounced back", () => {
     let s = at(HI.x - 5, CY, 0);
-    const r = stepSleigh(s, 0, true, 50);
+    const r = stepSleigh(s, toward(0), true, 50);
     expect(r.bump).toBe(true);
     expect(r.sleigh.x).toBe(HI.x);
     expect(r.sleigh.speed).toBeCloseTo(WALL_SPEED_KEEP, 6);
     expect(Math.abs(r.sleigh.heading)).toBeCloseTo(Math.PI, 6);
     s = r.sleigh;
+    // Now steering away from the wall.
     for (let i = 0; i < 10; i++) {
-      const n = stepSleigh(s, 0, true, 50);
+      const n = stepSleigh(s, toward(Math.PI), true, 50);
       expect(n.bump).toBe(false);
       s = n.sleigh;
     }
@@ -105,7 +147,7 @@ describe("sleigh flight", () => {
   });
 
   test("pressing along the wall counts one bump while scraping and slides along it", () => {
-    // Flying down the right-hand wall, steering into it.
+    // Flying down the right-hand wall, the stick held into it (down and right).
     let s = at(HI.x - 10, 300, Math.PI / 2 - 0.4);
     let bumps = 0;
     let streak = 0;
@@ -114,7 +156,7 @@ describe("sleigh flight", () => {
     let slid = 0;
     for (let i = 0; i < 40; i++) {
       const was = s.scraping;
-      const r = stepSleigh(s, -1, true, 50);
+      const r = stepSleigh(s, toward(Math.PI / 2 - 0.4), true, 50);
       // A bump only when contact starts.
       expect(r.bump).toBe(!was && r.sleigh.scraping);
       if (r.bump) bumps++;
@@ -142,7 +184,7 @@ describe("sleigh flight", () => {
     let s = at(HI.x - 100, LO.y + 100, -0.6);
     let path = 0;
     for (let i = 0; i < 120; i++) {
-      const next = stepSleigh(s, i % 30 < 15 ? 0.7 : -0.4, i < 100, 50).sleigh;
+      const next = stepSleigh(s, toward(i % 30 < 15 ? 0.7 : -2.4, i % 7 === 0 ? 0.5 : 1), i < 100, 50).sleigh;
       path += Math.hypot(next.x - s.x, next.y - s.y);
       s = next;
     }

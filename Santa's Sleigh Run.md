@@ -1,4 +1,4 @@
-Every player for themselves, delivering Christmas presents over a snowy city at night.  The game alternates between a short quiz, where every correct answer buys flying time, and a flight, where every player steers their own sleigh with a steering wheel on their phone.  The city is only on the projector, so players have to look up to fly.
+Every player for themselves, delivering Christmas presents over a snowy city at night.  The game alternates between a short quiz, where every correct answer buys flying time, and a flight, where every player steers their own sleigh with a joystick on their phone.  The city is only on the projector, so players have to look up to fly.
 
 ## Lobby
 Choose **Game mode → 🎅 Santa's Sleigh Run**.
@@ -10,14 +10,14 @@ Settings:
 ## Quiz
 The quiz lasts **15 seconds**.  A bar across the top of the projector drains as time runs out.
 
-Everyone answers their own stream of questions on their phone as fast as they can, the same as in Robot Attack.  **Each correct answer is 1 point**, and each point is **3 seconds of flying** in the next flight.  Questions come in a random order and repeat once the quiz runs out.
+Everyone answers their own stream of questions on their phone as fast as they can, the same as in Robot Attack.  **Each correct answer is 1 point**, and each point is **2 seconds of flying** in the next flight.  Questions come in a random order and repeat once the quiz runs out.
 
 ## Intro
-The projector shows the reindeer ready to take off, with the words "Get ready to fly in 3, 2, 1".  Phones switch to the steering wheel.
+The projector shows the reindeer ready to take off, with the words "Get ready to fly in 3, 2, 1".  Phones switch to the joystick.
 
 ## Flight
-* **The reindeer are always running.**  Players only steer.
-* Every sleigh flies at the same top speed, for as long as its flying time lasts: a player with 7 points flies for 7 seconds.
+* **Sleighs wait on the launch pad until their player pushes the stick**, and only move while it is pushed (see Steering).
+* A sleigh's flying time is a clock: it starts running down when the flight starts, whether the sleigh is moving or not.  A player with 7 points can fly for 14 seconds.
 * **Sleighs fly over the rooftops**, so houses never get in the way.
 * **Only the city's edge is a wall.**  A sleigh that bumps into it bounces off and slows down for a moment, then picks its speed back up.
 * **Sleighs are ghosts.**  They fly through each other, so nobody can block or ram anyone.
@@ -33,15 +33,17 @@ Each house starts dark, waiting for its present: its chimney glows and a present
 Rounds repeat until **every present is delivered**.  Then the whole city lights up for a short celebration, and the podium follows.
 
 ## Steering
-The phone shows a large steering wheel.
+The phone shows an analogue joystick: a knob in the sleigh's colour on the painted sleigh wheel.
 
-* **Drag** the wheel round to turn.  It turns up to **135° each way**; the further it is turned, the tighter the sleigh turns.
-* **Let go** and the wheel springs back to the centre, and the sleigh flies straight.
+* **Hold** the stick the way you want to fly.  Directions match the projector (up on the phone is up on the city), and the sleigh turns to face that way at its usual turning speed (a half turn takes about 1.3 seconds), then flies straight on.
+* **How far** the stick is pushed sets the speed: a little push creeps along, the edge of the wheel is full speed.  A small dead zone in the middle counts as let go.
+* **Let go** and the knob springs back to the centre and the sleigh slows to a stop (in under half a second), staying where it is.
+* The wheel turns so its marker points the way the stick was last pushed.  The arrow keys work too, on a computer.
 
 ## Display
 A painted top-down view of a snowy town at night: snow-covered roofs, dark streets and bare trees, with a low snow-capped stone wall round the edge (wreaths along it).  Houses still waiting for a present are dark; delivered ones switch to their lit picture, strung with coloured Christmas lights, with a present in the deliverer's colour on the roof.  A counter shows how many presents are delivered out of the total.
 
-The city is **1600 × 900 units** and a sleigh team (sleigh plus reindeer) is **80 long**; crossing the city takes about 4 seconds.  The projector scales the whole city to fit the screen.
+The city is **1600 × 900 units** and a sleigh team (sleigh plus reindeer) is **120 long**; crossing the city takes about 4 seconds.  The projector scales the whole city to fit the screen.
 
 Each player's sleigh is **painted in that player's colour**, pulled by a team of reindeer with **Rudolph leading** (red nose glowing).  A small name tag with the player's avatar, nickname and number of presents follows each sleigh.  A bump into the city edge throws up a puff of snow.  A delivery drops a present down the chimney with a sparkle.
 
@@ -61,17 +63,17 @@ A game starts with a 3, 2, 1 countdown, then each round is: a 15 second quiz, th
 
 Each correct answer is 1 point.  Wrong answers cost nothing, apart from the wait when Protect from abuse is on.
 
-Each point is 3 seconds of flying.  Points don't carry over: the flying time for each flight comes only from that round's quiz.
+Each point is 2 seconds of flying.  Points don't carry over: the flying time for each flight comes only from that round's quiz.
 
-The reindeer are always running; players only steer.  The wheel turns ±135° and springs back to the centre when released.
+Sleighs move only while the stick is pushed: they turn toward its direction (at most 2.5 radians a second) and their speed follows how far it is pushed.  Flying time runs down from the start of the flight either way.
 
 Sleighs fly over the houses.  Only the city's edge is a wall: a sleigh that bumps into it bounces off and slows down briefly.
 
 Sleighs are ghosts: there are no collisions between sleighs.
 
-A sleigh that runs out of flying time glides to a stop and waits there.  Positions carry over between rounds.
+A sleigh that runs out of flying time glides to a stop and waits there, whatever its stick says.  Positions carry over between rounds.
 
-The flight ends when the last sleigh stops, or after 60 seconds.
+The flight ends when the last sleigh has used up its flying time and stopped, or after 60 seconds.
 
 The first sleigh to fly over a house that still needs a present delivers it.  After the last present, a 3 second celebration, then the podium.
 
@@ -81,4 +83,4 @@ There are awards for "Most correct answers", "Smoothest flyer" (fewest bumps int
 
 The results CSV has one row per player: rank, presents, distance (m), correct, wrong, accuracy, bumps and seconds flown.
 
-Late joiners start on the launch pad and can answer questions straight away.  A disconnected player's wheel springs back to the centre, so their sleigh flies straight until its flying time runs out.
+Late joiners start on the launch pad and can answer questions straight away.  A disconnected player's stick counts as let go, so their sleigh stops where it is.

@@ -14,12 +14,12 @@ import {
   SLEIGH_TICK_MS,
   hitsHouse,
   houseDistance,
-  launch,
   launchSlot,
   pickHouses,
   sleighColor,
   stepSleigh,
   type Sleigh,
+  type Stick,
 } from "../../shared/sleigh-rules.ts";
 import type { HostSleighState, PlayerSleighView, SleighAwards, SleighDelivery, SleighHouse, SleighPhase, SleighStanding } from "../../shared/protocol.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
@@ -33,8 +33,10 @@ export { FEEDBACK_MS } from "./stream.ts";
 export interface SleighPlayer extends BasePlayer, StreamPlayer {
   sleigh: Sleigh;
   color: string;
-  /** Steering wheel, −1 (full left) … 1 (full right). */
-  wheel: number;
+  /** The phone's stick, field directions, length 0…1 (0, 0 when let go). */
+  stick: Stick;
+  /** How hard the sleigh turned on the last tick, −1 (full left) … 1 (full right). */
+  turn: number;
   /** Correct answers this round: flying time for the next flight. */
   points: number;
   /** Flying time left this flight (as of the last tick), ms. */
@@ -51,7 +53,7 @@ export interface SleighPlayer extends BasePlayer, StreamPlayer {
   lastDelivery: number | null;
   /** Bumps into the city wall over the whole game. */
   bumps: number;
-  /** Time actually spent flying with fuel, over the whole game, ms. */
+  /** Time actually spent flying with fuel (ticks it moved), over the whole game, ms. */
   flownMs: number;
 }
 
@@ -153,7 +155,8 @@ export class SleighGame {
       ...newStreamPlayer(),
       sleigh: launchSlot(i, Math.max(this.slotTotal, i + 1)),
       color: sleighColor(i),
-      wheel: 0,
+      stick: { x: 0, y: 0 },
+      turn: 0,
       points: 0,
       fuelMs: 0,
       fuelStartMs: 0,
@@ -201,7 +204,7 @@ export class SleighGame {
     this.onChange();
   }
 
-  /** Points become flying time (unspent time is lost), sleighs with time launch, and the tick loop starts. */
+  /** Points become flying time (unspent time is lost) and the tick loop starts; sleighs wait on the pad for their stick. */
   private beginFlight(): void {
     const now = this.clock.now();
     for (const p of this.players.values()) {
@@ -210,7 +213,10 @@ export class SleighGame {
       p.fuelMs = fuel;
       p.fuelStartMs = fuel;
       p.fuelEndsAt = fuel > 0 ? now + fuel : 0;
-      p.sleigh = fuel > 0 ? launch(p.sleigh) : { ...p.sleigh, speed: 0, scraping: false };
+      p.sleigh = { ...p.sleigh, speed: 0, scraping: false };
+      // A stick still held from the last flight (its release came after the flight ended) is let go.
+      p.stick = { x: 0, y: 0 };
+      p.turn = 0;
       p.moving = fuel > 0;
     }
     this.setPhase("flight", SLEIGH_DRIVE_CAP_MS, () => this.endFlight());
@@ -239,22 +245,26 @@ export class SleighGame {
     const flew: SleighPlayer[] = [];
     for (const p of this.players.values()) {
       if (!p.moving) continue;
-      const wheel = p.connected ? p.wheel : 0;
+      const stick = p.connected ? p.stick : { x: 0, y: 0 };
       const fuelLeft = Math.max(0, p.fuelEndsAt - from);
       let sleigh = p.sleigh;
       let bumps = 0;
+      let turn = 0;
       const step = (fuel: boolean, ms: number) => {
         if (ms <= 0) return;
-        const r = stepSleigh(sleigh, wheel, fuel, ms);
+        const r = stepSleigh(sleigh, stick, fuel, ms);
         sleigh = r.sleigh;
+        turn = r.turn;
         if (r.bump) bumps++;
       };
       const flown = Math.min(fuelLeft, dt);
       step(true, flown);
       step(false, dt - flown);
+      // Flying time counts as flown only if the sleigh moved (the clock runs while it waits too).
+      if (sleigh.distance > p.sleigh.distance) p.flownMs += flown;
       p.sleigh = sleigh;
+      p.turn = turn;
       p.bumps += bumps;
-      p.flownMs += flown;
       p.fuelMs = Math.max(0, p.fuelEndsAt - now);
       p.moving = p.fuelMs > 0 || sleigh.speed > 0;
       flew.push(p);
@@ -328,6 +338,7 @@ export class SleighGame {
   private parkSleighs(): void {
     for (const p of this.players.values()) {
       p.sleigh = { ...p.sleigh, speed: 0, scraping: false };
+      p.turn = 0;
       p.fuelMs = 0;
       p.fuelEndsAt = 0;
       p.moving = false;
@@ -379,7 +390,7 @@ export class SleighGame {
     const p = this.players.get(playerId);
     if (!p || p.connected === connected) return;
     p.connected = connected;
-    if (!connected) p.wheel = 0;
+    if (!connected) p.stick = { x: 0, y: 0 };
     this.onChange();
   }
 
@@ -402,11 +413,13 @@ export class SleighGame {
     return true;
   }
 
-  /** Turn the wheel (flight phase only, not during the finale). Stored for the next tick; nothing is broadcast. */
-  steer(playerId: string, wheel: number): boolean {
+  /** Move the stick (flight phase only, not during the finale), clamped to its rim. Stored for the next tick; nothing is broadcast. */
+  steer(playerId: string, x: number, y: number): boolean {
     const p = this.players.get(playerId);
-    if (!p || this.phase !== "flight" || this.finished || typeof wheel !== "number" || !Number.isFinite(wheel)) return false;
-    p.wheel = Math.max(-1, Math.min(1, wheel));
+    if (!p || this.phase !== "flight" || this.finished) return false;
+    if (typeof x !== "number" || typeof y !== "number" || !Number.isFinite(x) || !Number.isFinite(y)) return false;
+    const m = Math.hypot(x, y);
+    p.stick = m > 1 ? { x: x / m, y: y / m } : { x, y };
     return true;
   }
 
@@ -489,7 +502,7 @@ export class SleighGame {
         x: r1(p.sleigh.x),
         y: r1(p.sleigh.y),
         heading: r3(p.sleigh.heading),
-        wheel: r3(p.connected ? p.wheel : 0),
+        turn: r3(this.phase === "flight" ? p.turn : 0),
         speed: r3(p.sleigh.speed),
         points: p.points,
         fuelMs: this.fuelLeft(p),

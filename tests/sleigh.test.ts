@@ -94,7 +94,7 @@ const STEP = SLEIGH_SPEED * (SLEIGH_TICK_MS / 1000);
 function aim(p: SleighPlayer, h: SleighHouse, dx = 0) {
   const c = centre(h);
   p.sleigh = { ...p.sleigh, x: c.x - STEP + dx, y: c.y, heading: 0, speed: 1, scraping: false };
-  p.wheel = 0;
+  p.stick = { x: 1, y: 0 };
 }
 
 /** A house no sleigh is over, still waiting for its present. */
@@ -167,7 +167,8 @@ describe("Santa's Sleigh Run", () => {
     const a = byName(game, "A");
     expect(a.points).toBe(0);
     expect(a.fuelStartMs).toBe(3 * SLEIGH_MS_PER_POINT);
-    expect(a.sleigh.speed).toBe(1);
+    expect(a.sleigh.speed).toBe(0); // waiting for the stick
+    game.steer(a.id, 1, 0);
     const view = game.playerView(a.id)!;
     expect(view.fuelMs).toBe(3 * SLEIGH_MS_PER_POINT);
     expect(view.fuelStartMs).toBe(3 * SLEIGH_MS_PER_POINT);
@@ -196,7 +197,7 @@ describe("Santa's Sleigh Run", () => {
     toFlight(game, clock);
     expect(b.sleigh.speed).toBe(0);
     expect(game.hostView().sleighs.find((s) => s.id === b.id)!.moving).toBe(false);
-    game.steer(b.id, 1);
+    game.steer(b.id, 1, 0);
     finishFlight(game, clock);
     expect(b.sleigh.x).toBe(start.x);
     expect(b.sleigh.y).toBe(start.y);
@@ -209,6 +210,7 @@ describe("Santa's Sleigh Run", () => {
     earn(game, clock, "A", 1);
     toFlight(game, clock);
     const a = byName(game, "A");
+    game.steer(a.id, 1, 0);
     clock.advance(SLEIGH_MS_PER_POINT);
     expect(a.moving).toBe(true); // gliding
     let t = 0;
@@ -252,38 +254,73 @@ describe("Santa's Sleigh Run", () => {
     }
   });
 
-  test("steering: flight phase only, clamped, non-finite rejected; left turns counter-clockwise", () => {
+  test("steering: flight phase only, clamped to the rim, non-finite rejected", () => {
     const { game, clock } = setup(["A"]);
     const a = byName(game, "A");
-    expect(game.steer(a.id, 0.5)).toBe(false);
-    expect(a.wheel).toBe(0);
+    expect(game.steer(a.id, 0.5, 0)).toBe(false);
+    expect(a.stick).toEqual({ x: 0, y: 0 });
     earn(game, clock, "A", 3);
     toFlight(game, clock);
-    const h0 = a.sleigh.heading;
-    expect(game.steer(a.id, 5)).toBe(true);
-    expect(a.wheel).toBe(1);
-    expect(game.steer(a.id, -3)).toBe(true);
-    expect(a.wheel).toBe(-1);
-    expect(game.steer(a.id, Number.NaN)).toBe(false);
-    expect(game.steer(a.id, Infinity)).toBe(false);
-    expect(game.steer(a.id, "1" as unknown as number)).toBe(false);
-    expect(a.wheel).toBe(-1);
-    expect(game.steer("nobody", 0)).toBe(false);
-    clock.advance(SLEIGH_TICK_MS);
-    expect(Math.sin(a.sleigh.heading - h0)).toBeLessThan(0);
+    expect(game.steer(a.id, 0.3, -0.4)).toBe(true);
+    expect(a.stick).toEqual({ x: 0.3, y: -0.4 });
+    expect(game.steer(a.id, -3, 4)).toBe(true);
+    expect(a.stick.x).toBeCloseTo(-0.6, 9);
+    expect(a.stick.y).toBeCloseTo(0.8, 9);
+    expect(game.steer(a.id, Number.NaN, 0)).toBe(false);
+    expect(game.steer(a.id, 0, Infinity)).toBe(false);
+    expect(game.steer(a.id, "1" as unknown as number, 0)).toBe(false);
+    expect(a.stick.x).toBeCloseTo(-0.6, 9);
+    expect(game.steer("nobody", 0, 0)).toBe(false);
   });
 
-  test("a disconnected player's wheel is centred", () => {
+  test("sleighs wait on the pad until their stick is pushed, then fly toward it", () => {
     const { game, clock } = setup(["A"]);
     const a = byName(game, "A");
-    earn(game, clock, "A", 2);
+    earn(game, clock, "A", 3);
     toFlight(game, clock);
-    const h0 = a.sleigh.heading;
-    game.steer(a.id, 1);
-    game.setConnected(a.id, false);
-    expect(a.wheel).toBe(0);
+    const start = { ...a.sleigh };
     clock.advance(SLEIGH_TICK_MS * 4);
-    expect(a.sleigh.heading).toBeCloseTo(h0, 6);
+    expect(a.sleigh.x).toBe(start.x);
+    expect(a.sleigh.y).toBe(start.y);
+    expect(a.moving).toBe(true);
+    // Flying time runs down even while it waits.
+    expect(a.fuelMs).toBe(3 * SLEIGH_MS_PER_POINT - SLEIGH_TICK_MS * 4);
+    expect(a.flownMs).toBe(0); // but waiting isn't flying
+    // It starts pointing up, so turning to point down takes a moment.
+    game.steer(a.id, 0, 1);
+    clock.advance(SLEIGH_TICK_MS * 30);
+    expect(a.sleigh.speed).toBe(1);
+    expect(Math.sin(a.sleigh.heading)).toBeCloseTo(1, 6);
+    expect(a.sleigh.y).toBeGreaterThan(start.y);
+    game.steer(a.id, 0, 0);
+    clock.advance(SLEIGH_TICK_MS * 10);
+    expect(a.sleigh.speed).toBe(0);
+  });
+
+  test("a disconnected player's stick is let go and the sleigh stops", () => {
+    const { game, clock } = setup(["A"]);
+    const a = byName(game, "A");
+    earn(game, clock, "A", 3);
+    toFlight(game, clock);
+    game.steer(a.id, 1, 0);
+    clock.advance(SLEIGH_TICK_MS * 4);
+    expect(a.sleigh.speed).toBeGreaterThan(0);
+    game.setConnected(a.id, false);
+    expect(a.stick).toEqual({ x: 0, y: 0 });
+    clock.advance(SLEIGH_TICK_MS * 10);
+    expect(a.sleigh.speed).toBe(0);
+  });
+
+  test("a stick held when the flight ends is let go for the next one", () => {
+    const { game, clock } = setup(["A"]);
+    const a = byName(game, "A");
+    earn(game, clock, "A", 1);
+    toFlight(game, clock);
+    game.steer(a.id, 1, 0);
+    finishFlight(game, clock);
+    earn(game, clock, "A", 1);
+    toFlight(game, clock);
+    expect(a.stick).toEqual({ x: 0, y: 0 });
   });
 
   test("flying over a waiting house delivers its present (steered there)", () => {
@@ -296,8 +333,7 @@ describe("Santa's Sleigh Run", () => {
     const c = centre(target);
     for (let i = 0; i < 200 && target.deliveredBy === null && game.phase === "flight"; i++) {
       const want = Math.atan2(c.y - a.sleigh.y, c.x - a.sleigh.x);
-      const diff = Math.atan2(Math.sin(want - a.sleigh.heading), Math.cos(want - a.sleigh.heading));
-      game.steer(a.id, Math.max(-1, Math.min(1, diff * 3)));
+      game.steer(a.id, Math.cos(want), Math.sin(want));
       const c0 = changes();
       clock.advance(SLEIGH_TICK_MS);
       if (target.deliveredBy !== null) expect(changes()).toBeGreaterThan(c0);
@@ -401,7 +437,7 @@ describe("Santa's Sleigh Run", () => {
       expect(p.fuelMs).toBe(0);
       expect(game.playerView(p.id)!.fuelMs).toBe(0);
     }
-    expect(game.steer(a.id, 1)).toBe(false);
+    expect(game.steer(a.id, 1, 0)).toBe(false);
     const host = game.hostView();
     expect(host).toMatchObject({ finished: true, phase: "flight", delivered: host.total });
     expect(host.sleighs.every((s) => !s.moving)).toBe(true);
@@ -443,8 +479,8 @@ describe("Santa's Sleigh Run", () => {
     earn(game, clock, "A", 4);
     earn(game, clock, "B", 2);
     toFlight(game, clock);
-    game.steer(byName(game, "A").id, 1);
-    game.steer(byName(game, "B").id, -1);
+    game.steer(byName(game, "A").id, 1, 0);
+    game.steer(byName(game, "B").id, -1, 0);
     const c0 = changes();
     const t0 = ticks();
     clock.advance(1000);
@@ -465,7 +501,7 @@ describe("Santa's Sleigh Run", () => {
     const { game, clock } = setup(["A"]);
     earn(game, clock, "A", 2);
     toFlight(game, clock);
-    game.steer(game.hostView().sleighs[0]!.id, 0.37);
+    game.steer(game.hostView().sleighs[0]!.id, 0.37, 0.61);
     clock.advance(SLEIGH_TICK_MS * 3);
     const v = game.hostView();
     expect(v.tick).toBe(clock.now());
@@ -475,7 +511,8 @@ describe("Santa's Sleigh Run", () => {
     expect(Math.round(s.heading * 1000) / 1000).toBe(s.heading);
     expect(Math.round(s.distance * 10) / 10).toBe(s.distance);
     expect(s.moving).toBe(true);
-    expect(s.wheel).toBeCloseTo(0.37, 6);
+    expect(Math.round(s.turn * 1000) / 1000).toBe(s.turn);
+    expect(Math.abs(s.turn)).toBeLessThanOrEqual(1);
     expect(v.kind).toBe("sleigh");
     expect(v.round).toBe(1);
   });
@@ -506,6 +543,8 @@ describe("Santa's Sleigh Run", () => {
     earn(game, clock, "B", 5);
     answer(game, clock, byName(game, "C"), false);
     toFlight(game, clock);
+    game.steer(byName(game, "A").id, 0, 1);
+    game.steer(byName(game, "B").id, 0, -1);
     finishFlight(game, clock);
     const [a, b, c] = ["A", "B", "C"].map((n) => byName(game, n));
     b!.bumps = 2;

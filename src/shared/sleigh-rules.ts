@@ -25,25 +25,23 @@ export const CY = FIELD_H / 2;
 export const PAD_R = 85;
 
 /** The sleigh with its reindeer team, nose to tail along +x (the sleigh's centre is the pose). */
-export const SLEIGH_L = 80;
-export const SLEIGH_W = 30;
+export const SLEIGH_L = 120;
+export const SLEIGH_W = 45;
 /** How far the sleigh's centre stays from the city wall. */
 const EDGE_PAD = SLEIGH_W / 2;
 
 /** Top speed, field units per second (crossing the city takes about 4 s). */
 export const SLEIGH_SPEED = 380;
-/** Turning rate at full lock, radians per second (a turn radius of about 150 at top speed). */
+/** Fastest a sleigh turns toward the stick's direction, radians per second (a turn radius of about 150 at top speed). */
 export const MAX_TURN_RATE = 2.5;
-/** The phone's wheel turns this far each way. */
-export const WHEEL_MAX_DEG = 135;
+/** A push on the phone's stick shorter than this (a fraction of its reach) counts as let go. */
+export const STICK_DEAD_ZONE = 0.15;
+/** How fast the speed follows the stick, as a fraction of top speed per second (a stopped sleigh reaches full speed in 0.4 s). */
+const SPEED_FOLLOW_PER_S = 2.5;
 /** Fraction of its speed a sleigh keeps when it bumps the city wall. */
 export const WALL_SPEED_KEEP = 0.5;
 /** How much of the push into the wall bounces back off it. */
 const WALL_BOUNCE = 0.3;
-/** Speed regained per second after a bump (as a fraction of top speed). */
-const RECOVER_PER_S = 1;
-/** Speed lost per second once a sleigh runs out of flying time (gliding to a stop). */
-const COAST_PER_S = 2;
 
 export const SLEIGH_QUIZ_MS = 15_000;
 export const SLEIGH_INTRO_MS = 3000;
@@ -55,14 +53,14 @@ export const SLEIGH_DRIVE_HOLD_MS = 1500;
 export const SLEIGH_FINALE_MS = 3000;
 export const SLEIGH_TICK_MS = 50;
 /** Each correct answer buys this much flying. */
-export const SLEIGH_MS_PER_POINT = 3000;
+export const SLEIGH_MS_PER_POINT = 2000;
 /** Houses waiting for presents: the host picks any number in this range. */
 export const SLEIGH_MIN_HOUSES = 15;
 export const SLEIGH_MAX_HOUSES = 30;
 export const SLEIGH_HOUSE_CHOICES: readonly number[] = Array.from({ length: SLEIGH_MAX_HOUSES - SLEIGH_MIN_HOUSES + 1 }, (_, i) => SLEIGH_MIN_HOUSES + i);
 export const SLEIGH_DEFAULT_HOUSES = 20;
 
-/** Field units to metres for showing distances (an 80-unit sleigh team is about 8 m long). */
+/** Field units to metres for showing distances (a 120-unit sleigh team is about 12 m long). */
 export const METRES_PER_UNIT = 0.1;
 
 /** Distinct sleigh paint for the first players; later ones step round the colour wheel. */
@@ -207,23 +205,39 @@ export function launchSlot(i: number, total: number): Sleigh {
   return { x: CX + Math.cos(a) * r, y: CY + Math.sin(a) * r, heading: normAngle(a), speed: 0, distance: 0, scraping: false };
 }
 
-/** A sleigh at the start of its flight: full speed straight away (the reindeer are always running). */
-export function launch(s: Sleigh): Sleigh {
-  return { ...s, speed: 1 };
+/** The phone's stick: where the thumb is from its centre, field directions (+x right, +y down), length 0…1. */
+export interface Stick {
+  x: number;
+  y: number;
+}
+
+/** How hard the stick is pushed, 0 (inside the dead zone) … 1 (at its rim); non-finite counts as let go. */
+export function stickPush(stick: Stick): number {
+  const m = Number.isFinite(stick.x) && Number.isFinite(stick.y) ? Math.min(1, Math.hypot(stick.x, stick.y)) : 0;
+  return m <= STICK_DEAD_ZONE ? 0 : (m - STICK_DEAD_ZONE) / (1 - STICK_DEAD_ZONE);
 }
 
 /**
- * Move one sleigh `dtMs` along. `wheel` is −1 (full left) … 1 (full right); `fuel` is whether
- * it still has flying time (without it the sleigh glides to a stop). The city wall keeps it
- * in: a sleigh that touches it loses speed, slides along it and bounces off a little.
+ * Move one sleigh `dtMs` along. The sleigh turns toward the `stick`'s direction (at most
+ * MAX_TURN_RATE) and its speed follows how hard the stick is pushed, so a let-go stick brings it
+ * to a stop. `fuel` is whether it still has flying time (without it the sleigh glides to a stop
+ * and can't steer). The city wall keeps it in: a sleigh that touches it loses speed, slides
+ * along it and bounces off a little. `turn` is how hard it turned, −1 (full left) … 1 (full right).
  */
-export function stepSleigh(s: Sleigh, wheel: number, fuel: boolean, dtMs: number): { sleigh: Sleigh; bump: boolean } {
+export function stepSleigh(s: Sleigh, stick: Stick, fuel: boolean, dtMs: number): { sleigh: Sleigh; bump: boolean; turn: number } {
   const dt = dtMs / 1000;
-  const w = Math.max(-1, Math.min(1, Number.isFinite(wheel) ? wheel : 0));
-  let speed = fuel ? Math.min(1, s.speed + RECOVER_PER_S * dt) : Math.max(0, s.speed - COAST_PER_S * dt);
-  if (speed <= 0 && s.speed <= 0) return { sleigh: { ...s, speed: 0, scraping: false }, bump: false };
-  // A stopped sleigh can't turn on the spot: steering scales with speed.
-  let heading = s.heading + w * MAX_TURN_RATE * dt * Math.min(1, speed * 1.5);
+  const push = fuel ? stickPush(stick) : 0;
+  const follow = SPEED_FOLLOW_PER_S * dt;
+  let speed = s.speed < push ? Math.min(push, s.speed + follow) : Math.max(push, s.speed - follow);
+  if (speed <= 0 && s.speed <= 0) return { sleigh: { ...s, speed: 0, scraping: false }, bump: false, turn: 0 };
+  let heading = s.heading;
+  let turn = 0;
+  if (push > 0 && dt > 0) {
+    const most = MAX_TURN_RATE * dt;
+    const step = Math.max(-most, Math.min(most, normAngle(Math.atan2(stick.y, stick.x) - heading)));
+    heading += step;
+    turn = step / most;
+  }
   const v = SLEIGH_SPEED * speed * dt;
   let x = s.x + Math.cos(heading) * v;
   let y = s.y + Math.sin(heading) * v;
@@ -252,7 +266,7 @@ export function stepSleigh(s: Sleigh, wheel: number, fuel: boolean, dtMs: number
     }
   }
   const moved = Math.hypot(x - s.x, y - s.y);
-  return { sleigh: { x, y, heading: normAngle(heading), speed, distance: s.distance + moved, scraping: touching }, bump };
+  return { sleigh: { x, y, heading: normAngle(heading), speed, distance: s.distance + moved, scraping: touching }, bump, turn };
 }
 
 /** −π…π */

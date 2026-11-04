@@ -5,7 +5,7 @@
  * inside SVGs that share one viewBox, so the projector stacks the houses and the sleighs on the town.
  */
 import { Component } from "preact";
-import { CITY, CX, CY, FIELD_H, FIELD_W, PAD_R } from "../../shared/sleigh-rules.ts";
+import { CITY, CX, CY, FIELD_H, FIELD_W, PAD_R, SLEIGH_L } from "../../shared/sleigh-rules.ts";
 import { LIT_PATCHES } from "./sleigh/lit.ts";
 import candyCanesImg from "./sleigh/candy-canes.webp";
 import chimneyDoneImg from "./sleigh/chimney-done.webp";
@@ -187,7 +187,7 @@ export function Gift({ s, color }: { s: number; color: string }) {
 const CHIMNEY = 14;
 
 /**
- * A house of the painted town. Still waiting: its chimney glows and a present bobs over it.
+ * A house of the painted town. Still waiting: its chimney glows, a gold ring marks it and a present bobs over it.
  * Delivered (`color` = the deliverer's): the house switches to its lit picture (string lights
  * and window glow), the fire is out and a present in the deliverer's colour sits on the roof.
  */
@@ -201,7 +201,7 @@ export function House({ house, color }: { house: HouseShape; color?: string | nu
     <g class={`sleigh-house ${done ? "is-done" : "is-waiting"}`}>
       {done && patch && <image class="sleigh-lit" href={patch.href} x={patch.x} y={patch.y} width={patch.w} height={patch.h} />}
       <g transform={`translate(${f1(cx)} ${f1(cy)})`}>
-        {!done && <circle class="sleigh-chimney-glow" r="24" fill="url(#sl-chimney)" />}
+        {!done && <circle class="sleigh-chimney-glow" r="46" fill="url(#sl-chimney)" />}
         <image href={done ? chimneyDoneImg : chimneyWaitingImg} x={-CHIMNEY / 2} y={-CHIMNEY / 2} width={CHIMNEY} height={CHIMNEY} />
       </g>
       {done ? (
@@ -211,11 +211,15 @@ export function House({ house, color }: { house: HouseShape; color?: string | nu
           <Gift s={15} color={color!} />
         </g>
       ) : (
+        // Big enough to spot on a low-resolution projector: a steady gold ring (dark-edged, so it
+        // shows on snowy roofs and dark streets alike), a pulse spreading from it and a large present.
         <g transform={`translate(${f1(cx)} ${f1(cy)})`}>
-          <circle class="sleigh-gift-ring" r="20" fill="none" stroke="#ffd23f" stroke-width="2.5" stroke-dasharray="5 4" />
-          <ellipse class="sleigh-gift-shadow" cx="3" cy="4" rx="12" ry="7" fill="url(#sl-shadow)" />
+          <circle r="30" fill="none" stroke="rgba(8,14,40,0.75)" stroke-width="8" />
+          <circle r="30" fill="none" stroke="#ffd23f" stroke-width="3.5" />
+          <circle class="sleigh-gift-ring" r="30" fill="none" stroke="#ffd23f" stroke-width="4" stroke-dasharray="7 5" />
+          <ellipse class="sleigh-gift-shadow" cx="3" cy="5" rx="17" ry="10" fill="url(#sl-shadow)" />
           <g class="sleigh-gift-bob">
-            <image href={GIFTS[house.id % GIFTS.length]} x="-12" y="-12" width="24" height="24" />
+            <image class="sleigh-gift" href={GIFTS[house.id % GIFTS.length]} x="-19" y="-19" width="38" height="38" />
           </g>
         </g>
       )}
@@ -288,19 +292,21 @@ const PAIR_Y = 6.5;
 /** The sleigh's centre and the front of its body (where the harness starts). */
 const SLEIGH_X = -27;
 const SLEIGH_FRONT = -14;
+/** The team below is drawn 80 long; scaled up to SLEIGH_L. */
+const TEAM_SCALE = SLEIGH_L / 80;
 
 /**
  * Santa's sleigh and team from above, SLEIGH_L long and SLEIGH_W wide, centred on (0, 0) and
  * flying along +x: the sleigh at the back (painted `color`), two pairs of reindeer and Rudolph
- * leading. `wheel` (−1…1) swings the team into the turn; `gallop` runs the reindeer; `flying`
+ * leading. `turn` (−1…1) swings the team into the turn; `gallop` runs the reindeer; `flying`
  * adds a trail of magic dust. Needs SleighTeamDefs in the same svg.
  */
-export function SleighTeam({ color, wheel = 0, gallop = false, flying = false }: { color: string; wheel?: number; gallop?: boolean; flying?: boolean }) {
+export function SleighTeam({ color, turn = 0, gallop = false, flying = false }: { color: string; turn?: number; gallop?: boolean; flying?: boolean }) {
   const sleigh = useTinted(sleighImg, sleighPaintImg, color);
-  const lean = Math.max(-1, Math.min(1, wheel)) * 10;
+  const lean = Math.max(-1, Math.min(1, turn)) * 10;
   const deer = (id: "a" | "b") => (gallop ? `#sl-deer-${id}` : "#sl-deer-still");
   return (
-    <g class="sleigh-team">
+    <g class="sleigh-team" transform={`scale(${TEAM_SCALE})`}>
       {flying && <image class="sleigh-dust" href={magicDustImg} x={SLEIGH_X - 12 - 44} y="-6" width="48" height="12" />}
       <ellipse cx="4" cy="5" rx="44" ry="13" fill="url(#sl-team-shadow)" />
       {/* The team swings into the turn round the front of the sleigh. */}

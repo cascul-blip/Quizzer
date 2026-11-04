@@ -3792,7 +3792,8 @@ h1 {
   transition: opacity 0.4s, filter 0.4s;
 }
 
-.sleigh-wheel-turn {
+.sleigh-wheel-turn,
+.sleigh-knob {
   will-change: transform;
 }
 

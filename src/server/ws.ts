@@ -480,7 +480,7 @@ export class GameHub {
       case "sleigh.steer": {
         // High-frequency: a rejected steer (wrong phase, stale) needs no resync.
         if (!(this.game instanceof SleighGame) || !ws.data.playerId) return;
-        this.game.steer(ws.data.playerId, Number(msg.wheel));
+        this.game.steer(ws.data.playerId, Number(msg.x), Number(msg.y));
         return;
       }
       case "tower.drop": {

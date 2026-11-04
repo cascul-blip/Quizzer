@@ -1341,11 +1341,11 @@ describe("Santa's Sleigh Run over WebSockets", () => {
     await host.hostState((v) => v.kind === "sleigh" && v.phase === "flight");
     await ann.playerState((v) => v.kind === "sleigh" && v.phase === "flight" && v.fuelStartMs === SLEIGH_MS_PER_POINT);
 
-    // Full right lock: the projector's next tick shows Ann's wheel turned.
-    ann.send({ type: "sleigh.steer", wheel: 1 });
+    // Stick pushed right while her sleigh points up: the projector's next tick shows it turning right.
+    ann.send({ type: "sleigh.steer", x: 1, y: 0 });
     await new Promise((r) => setTimeout(r, 100));
     clock.advance(SLEIGH_TICK_MS);
-    const steered = await host.hostState((v) => v.kind === "sleigh" && v.phase === "flight" && v.sleighs.some((c) => c.nickname === "Ann" && c.wheel === 1));
+    const steered = await host.hostState((v) => v.kind === "sleigh" && v.phase === "flight" && v.sleighs.some((c) => c.nickname === "Ann" && c.turn === 1 && c.speed > 0));
     expect(steered.view.kind === "sleigh" && steered.view.sleighs.find((c) => c.nickname === "Ann")!.moving).toBe(true);
 
     host.send({ type: "host.end" });

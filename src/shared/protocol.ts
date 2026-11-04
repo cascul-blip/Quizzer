@@ -104,8 +104,8 @@ export type PlayerMsg =
   | { type: "robot.answer"; seq: number; option: number; text?: string }
   | { type: "robot.move"; dir: RobotDir }
   | { type: "sleigh.answer"; seq: number; option: number; text?: string }
-  /** Santa's Sleigh Run, flight phase only: the phone's steering wheel, −1 (full left) … 1 (full right). Sent at most every SLEIGH_TICK_MS while it changes. */
-  | { type: "sleigh.steer"; wheel: number }
+  /** Santa's Sleigh Run, flight phase only: the phone's stick, where the thumb is from its centre in field directions (+x right, +y down), length 0…1; 0, 0 when let go. Sent at most every SLEIGH_TICK_MS while it changes. */
+  | { type: "sleigh.steer"; x: number; y: number }
   | { type: "land.answer"; seq: number; option: number; text?: string }
   | { type: "land.place"; tile: number }
   /** Leave the land early; unused claims are kept for next time. */
@@ -1885,8 +1885,8 @@ export interface HostSleighPlayer {
   x: number;
   y: number;
   heading: number;
-  /** Current wheel, −1…1. */
-  wheel: number;
+  /** How hard it is turning, −1 (full left) … 1 (full right). */
+  turn: number;
   /** Fraction of top speed, 0…1. */
   speed: number;
   /** Points earned in this round's quiz (flying time for the next flight). */

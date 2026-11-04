@@ -1,7 +1,7 @@
 import type { Ref } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { ClientMsg, PlayerSleighView } from "../../shared/protocol.ts";
-import { SLEIGH_MS_PER_POINT, SLEIGH_TICK_MS, METRES_PER_UNIT, WHEEL_MAX_DEG } from "../../shared/sleigh-rules.ts";
+import { SLEIGH_MS_PER_POINT, SLEIGH_TICK_MS, METRES_PER_UNIT, STICK_DEAD_ZONE } from "../../shared/sleigh-rules.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import backdropImg from "../shared/sleigh/phone/backdrop.webp";
 import candyCanesImg from "../shared/sleigh/phone/candy-canes.webp";
@@ -13,16 +13,16 @@ import { Feedback, StreamQuestion } from "./tower.tsx";
 
 type Send = (m: ClientMsg) => void;
 
-/** How long the wheel takes to spring back to centre after it is let go. */
+/** How long the stick takes to spring back to centre after it is let go. */
 const SPRING_MS = 220;
-/** How long the wheel takes to swing to full lock from the arrow keys. */
-const KEY_SWING_MS = 120;
+/** How far the knob travels from the centre at a full push, in the wheel's viewBox units (the rim's inside). */
+const REACH = 82;
 /** Seconds of flying each correct answer buys. */
 const SECS_PER_POINT = SLEIGH_MS_PER_POINT / 1000;
 
 const plural = (n: number, one: string, many = `${one}s`) => (n === 1 ? one : many);
 
-/** Phone screen for Santa's Sleigh Run: questions during the quiz, a sleigh wheel during the flight. */
+/** Phone screen for Santa's Sleigh Run: questions during the quiz, a joystick during the flight. */
 export function SleighPlayer({ view, send }: { view: PlayerSleighView; send: Send }) {
   const secs = useCountdown(view.phaseRemainingMs, `${view.phase}-${view.round}`);
   const fit = view.phase === "intro" || view.phase === "flight";
@@ -107,18 +107,8 @@ function IntroScreen({ view, secs }: { view: PlayerSleighView; secs: number }) {
 
 // ---------- flight ----------
 
-/** Signed difference a − b in degrees, unwrapped to −180…180. */
-function angleDelta(a: number, b: number): number {
-  let d = a - b;
-  while (d > 180) d -= 360;
-  while (d < -180) d += 360;
-  return d;
-}
-
-const clampDeg = (d: number) => Math.max(-WHEEL_MAX_DEG, Math.min(WHEEL_MAX_DEG, d));
-/** Overshoots a touch past the end, like a wheel's self-centring spring. */
+/** Overshoots a touch past the centre, like a stick's spring. */
 const easeOutBack = (t: number) => 1 + 2.2 * Math.pow(t - 1, 3) + 1.2 * Math.pow(t - 1, 2);
-const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
 
 function FlightScreen({ view, send }: { view: PlayerSleighView; send: Send }) {
   const noFuel = view.fuelStartMs <= 0;
@@ -155,20 +145,22 @@ function FlightScreen({ view, send }: { view: PlayerSleighView; send: Send }) {
     }
   }, [out]);
 
-  // ----- steering wheel -----
+  // ----- joystick: the sleigh turns toward where it is pushed, as fast as it is pushed -----
   const padRef = useRef<HTMLDivElement>(null);
+  const knobRef = useRef<SVGGElement>(null);
   const wheelRef = useRef<SVGGElement>(null);
   const sendRef = useRef(send);
   sendRef.current = send;
   const st = useRef({
-    deg: 0, // shown rotation
+    x: 0, // shown knob position, −1…1 of REACH
+    y: 0,
+    deg: 0, // shown wheel rotation: its marker points the way the stick was last pushed
     pointer: null as number | null,
-    lastAngle: 0,
     anim: 0,
-    keys: { left: false, right: false },
+    keys: { left: false, right: false, up: false, down: false },
     // throttled sending
-    value: 0, // value to report
-    sent: 0, // last value sent
+    value: { x: 0, y: 0 }, // value to report
+    sent: { x: 0, y: 0 }, // last value sent
     sentAt: -Infinity,
     trailing: undefined as ReturnType<typeof setTimeout> | undefined,
   });
@@ -176,18 +168,20 @@ function FlightScreen({ view, send }: { view: PlayerSleighView; send: Send }) {
   useEffect(() => {
     const s = st.current;
     const draw = () => {
+      if (knobRef.current) knobRef.current.style.transform = `translate(${s.x * REACH}px, ${s.y * REACH}px)`;
       if (wheelRef.current) wheelRef.current.style.transform = `rotate(${s.deg}deg)`;
     };
+    const same = (a: { x: number; y: number }, b: { x: number; y: number }) => a.x === b.x && a.y === b.y;
     const flush = () => {
       s.trailing = undefined;
-      if (s.value === s.sent) return;
+      if (same(s.value, s.sent)) return;
       s.sent = s.value;
       s.sentAt = performance.now();
-      sendRef.current({ type: "sleigh.steer", wheel: s.value });
+      sendRef.current({ type: "sleigh.steer", x: s.value.x, y: s.value.y });
     };
-    const report = (value: number) => {
-      s.value = Math.round(value * 1000) / 1000;
-      if (s.value === s.sent || s.trailing !== undefined) return;
+    const report = (x: number, y: number) => {
+      s.value = { x: Math.round(x * 1000) / 1000, y: Math.round(y * 1000) / 1000 };
+      if (same(s.value, s.sent) || s.trailing !== undefined) return;
       const wait = s.sentAt + SLEIGH_TICK_MS - performance.now();
       if (wait <= 0) flush();
       else s.trailing = setTimeout(flush, wait + 2);
@@ -196,32 +190,55 @@ function FlightScreen({ view, send }: { view: PlayerSleighView; send: Send }) {
       cancelAnimationFrame(s.anim);
       s.anim = 0;
     };
-    /** Animate the shown rotation to `target` (the reported value jumps there straight away). */
-    const animateTo = (target: number, ms: number, ease: (t: number) => number) => {
+    /** Put the stick at (x, y), clamped to its rim, and turn the wheel to point that way. */
+    const moveTo = (x: number, y: number) => {
       stopAnim();
-      report(target / WHEEL_MAX_DEG);
-      const from = s.deg;
+      const m = Math.hypot(x, y);
+      if (m > 1) {
+        x /= m;
+        y /= m;
+      }
+      s.x = x;
+      s.y = y;
+      if (m > STICK_DEAD_ZONE) {
+        const deg = (Math.atan2(y, x) * 180) / Math.PI + 90;
+        // The shortest way round from the current rotation, so the wheel never spins the long way.
+        s.deg += ((((deg - s.deg) % 360) + 540) % 360) - 180;
+      }
+      draw();
+      report(x, y);
+    };
+    /** Let go: the stick reports centre straight away and the knob springs back. */
+    const release = () => {
+      stopAnim();
+      report(0, 0);
+      const fx = s.x;
+      const fy = s.y;
       const t0 = performance.now();
       const step = () => {
-        const t = Math.min(1, (performance.now() - t0) / ms);
-        s.deg = from + (target - from) * ease(t);
+        const t = Math.min(1, (performance.now() - t0) / SPRING_MS);
+        const k = 1 - easeOutBack(t);
+        s.x = fx * k;
+        s.y = fy * k;
         draw();
         s.anim = t < 1 ? requestAnimationFrame(step) : 0;
       };
       s.anim = requestAnimationFrame(step);
     };
-    const angleOf = (e: PointerEvent) => {
+    /** The pointer's offset from the pad's centre, as a fraction of the knob's reach on screen. */
+    const stickOf = (e: PointerEvent) => {
       const r = padRef.current!.getBoundingClientRect();
-      return (Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2)) * 180) / Math.PI;
+      const reachPx = (REACH * Math.min(r.width, r.height)) / 248;
+      return { x: (e.clientX - (r.left + r.width / 2)) / reachPx, y: (e.clientY - (r.top + r.height / 2)) / reachPx };
     };
 
     const pad = padRef.current!;
     const onDown = (e: PointerEvent) => {
       if (s.pointer !== null) return;
       e.preventDefault();
-      stopAnim();
       s.pointer = e.pointerId;
-      s.lastAngle = angleOf(e);
+      const p = stickOf(e);
+      moveTo(p.x, p.y);
       try {
         pad.setPointerCapture(e.pointerId);
       } catch {
@@ -231,34 +248,32 @@ function FlightScreen({ view, send }: { view: PlayerSleighView; send: Send }) {
     const onMove = (e: PointerEvent) => {
       if (e.pointerId !== s.pointer) return;
       e.preventDefault();
-      const a = angleOf(e);
-      s.deg = clampDeg(s.deg + angleDelta(a, s.lastAngle));
-      s.lastAngle = a;
-      draw();
-      report(s.deg / WHEEL_MAX_DEG);
+      const p = stickOf(e);
+      moveTo(p.x, p.y);
     };
     const onUp = (e: PointerEvent) => {
       if (e.pointerId !== s.pointer) return;
       s.pointer = null;
-      animateTo(0, SPRING_MS, easeOutBack);
+      release();
     };
 
-    const keyDir = () => (s.keys.right ? 1 : 0) - (s.keys.left ? 1 : 0);
+    const KEYS: Record<string, keyof typeof s.keys> = { ArrowLeft: "left", ArrowRight: "right", ArrowUp: "up", ArrowDown: "down" };
     const onKey = (e: KeyboardEvent) => {
-      const k = e.key === "ArrowLeft" ? "left" : e.key === "ArrowRight" ? "right" : null;
+      const k = KEYS[e.key];
       if (!k) return;
       e.preventDefault();
       const down = e.type === "keydown";
       if (s.keys[k] === down) return; // key repeat
       s.keys[k] = down;
       if (s.pointer !== null) return;
-      const dir = keyDir();
-      if (dir === 0) animateTo(0, SPRING_MS, easeOutBack);
-      else animateTo(dir * WHEEL_MAX_DEG, KEY_SWING_MS, easeOut);
+      const x = (s.keys.right ? 1 : 0) - (s.keys.left ? 1 : 0);
+      const y = (s.keys.down ? 1 : 0) - (s.keys.up ? 1 : 0);
+      if (x === 0 && y === 0) release();
+      else moveTo(x, y);
     };
     const onBlur = () => {
-      s.keys.left = s.keys.right = false;
-      if (s.pointer === null && s.deg !== 0) animateTo(0, SPRING_MS, easeOutBack);
+      s.keys.left = s.keys.right = s.keys.up = s.keys.down = false;
+      if (s.pointer === null && (s.x !== 0 || s.y !== 0)) release();
     };
 
     pad.addEventListener("pointerdown", onDown);
@@ -303,8 +318,8 @@ function FlightScreen({ view, send }: { view: PlayerSleighView; send: Send }) {
 
   return (
     <main class={`sleigh-flight ${out && !view.finished ? "out" : ""}`}>
-      <div ref={padRef} class="sleigh-wheel-pad" role="slider" aria-label="Sleigh wheel" aria-valuemin={-1} aria-valuemax={1} aria-valuenow={0}>
-        <SleighWheel color={view.me.color} gRef={wheelRef} />
+      <div ref={padRef} class="sleigh-wheel-pad" role="application" aria-label="Sleigh joystick: hold it the way to fly, the arrow keys work too">
+        <SleighStick color={view.me.color} wheelRef={wheelRef} knobRef={knobRef} />
         {pop !== null && (
           <div key={pop} class="sleigh-pop" role="status">
             +1 🎁 Delivered!
@@ -340,11 +355,11 @@ function FlightScreen({ view, send }: { view: PlayerSleighView; send: Send }) {
 }
 
 /**
- * The magical sleigh wheel (a painted picture): red-lacquered rim, candy-cane spokes and a
- * gold hub, with the marker at the top and the hub's centre in the sleigh's colour. `gRef` is
- * the group that rotates.
+ * The joystick: the magical sleigh wheel (a painted picture: red-lacquered rim, candy-cane spokes,
+ * gold hub, its marker in the sleigh's colour) as the base, turned by `wheelRef` so the marker
+ * points the way the sleigh is steered, and a knob in the sleigh's colour moved by `knobRef`.
  */
-function SleighWheel({ color, gRef }: { color: string; gRef: Ref<SVGGElement> }) {
+function SleighStick({ color, wheelRef, knobRef }: { color: string; wheelRef: Ref<SVGGElement>; knobRef: Ref<SVGGElement> }) {
   const href = useTinted(wheelImg, wheelPaintImg, color);
   return (
     <svg class="sleigh-wheel" viewBox="-124 -124 248 248" aria-hidden="true">
@@ -354,12 +369,23 @@ function SleighWheel({ color, gRef }: { color: string; gRef: Ref<SVGGElement> })
           <stop offset="0.8" stop-color="#ffd877" stop-opacity="0.2" />
           <stop offset="1" stop-color="#ffd877" stop-opacity="0" />
         </radialGradient>
+        <radialGradient id="sleigh-knob-gloss" cx="0.38" cy="0.32" r="0.7">
+          <stop offset="0" stop-color="#fff" stop-opacity="0.75" />
+          <stop offset="0.45" stop-color="#fff" stop-opacity="0.1" />
+          <stop offset="1" stop-color="#000" stop-opacity="0.35" />
+        </radialGradient>
       </defs>
-      {/* drop shadow and a soft glow, which do not rotate */}
+      {/* drop shadow and a soft glow, which do not turn */}
       <circle r="122" fill="url(#sleigh-glow)" />
       <circle cx="0" cy="6" r="90" fill="none" stroke="rgba(0,0,0,0.3)" stroke-width="22" />
-      <g ref={gRef} class="sleigh-wheel-turn">
+      <g ref={wheelRef} class="sleigh-wheel-turn">
         <image href={href} x="-124" y="-124" width="248" height="248" />
+      </g>
+      <g ref={knobRef} class="sleigh-knob">
+        <circle cy="5" r="31" fill="rgba(0,0,0,0.35)" />
+        <circle r="30" fill={color} stroke="#fff" stroke-width="4" />
+        <circle r="30" fill="url(#sleigh-knob-gloss)" />
+        <circle r="17" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="2" />
       </g>
     </svg>
   );
