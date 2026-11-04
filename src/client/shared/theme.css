@@ -653,6 +653,54 @@ a.btn {
   }
 }
 
+/* Evil Snowman skin (robot-skin.ts): frost-blue instead of laser red. */
+.robot-arena.snowman .tile-danger {
+  fill: rgba(90, 170, 255, 0.16);
+}
+
+.robot-arena.snowman .tile-collapse-glow {
+  fill: rgba(110, 190, 255, 0.27);
+  fill-opacity: 1;
+  animation: snow-collapse-pulse 0.7s ease-in-out infinite alternate;
+}
+
+@keyframes snow-collapse-pulse {
+  to {
+    fill: rgba(40, 90, 170, 0.4);
+  }
+}
+
+.robot-arena.snowman.attacking .tile-danger {
+  animation: frost-flash 0.25s steps(2) infinite;
+}
+
+@keyframes frost-flash {
+  to {
+    fill: rgba(150, 210, 255, 0.45);
+  }
+}
+
+.robot-arena.snowman .tile-swept {
+  fill: rgba(110, 190, 255, 0.27);
+}
+
+.snowman-eyes {
+  mix-blend-mode: screen;
+}
+
+.sweep-trail {
+  stroke: #e1f0ff;
+  stroke-linecap: round;
+}
+
+.mini-board.snowman .tile.light {
+  fill: #c4cedc;
+}
+
+.mini-board.snowman .tile.dark {
+  fill: #4a6080;
+}
+
 .robot .eyes {
   animation: eye-glow 2.4s ease-in-out infinite alternate;
 }
@@ -731,7 +779,8 @@ a.btn {
 }
 
 .piece.zapped > g {
-  animation: zapped 0.5s steps(2) 0.3s 4;
+  /* --zap-delay: when the hit lands (the snowman's claws reach each tile at a different time). */
+  animation: zapped 0.5s steps(2) var(--zap-delay, 0.3s) 4;
 }
 
 @keyframes zapped {

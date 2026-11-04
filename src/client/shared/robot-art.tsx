@@ -17,9 +17,10 @@ import reticleGlowImg from "./robot/reticle-glow.webp";
 import reticleImg from "./robot/reticle.webp";
 import doomedImg from "./robot/tile-doomed.webp";
 import { TILE_ART } from "./robot/tiles.ts";
+import { ROBOT_SKIN, SKIN_TEXT } from "./robot-skin.ts";
 
-const ARENA_W = 1200;
-const ARENA_H = 860;
+export const ARENA_W = 1200;
+export const ARENA_H = 860;
 const CX = ARENA_W / 2;
 // The granite tiles in robot/tiles/ are pre-rendered for these values (and ROBOT_BOARD):
 // changing any of them misplaces every tile. tests/robot-art.test.ts checks this.
@@ -29,20 +30,20 @@ const FAR_Y = 360;
 /** How much farther away the far row is than the near row (perspective strength). */
 const DEPTH = 0.55;
 /** Tile width at the near edge. */
-const TILE = 84;
+export const TILE = 84;
 const H0 = (NEAR_Y - FAR_Y) / (1 - 1 / (1 + DEPTH));
 const HORIZON = NEAR_Y - H0;
-const EDGE = 18;
+export const EDGE = 18;
 /** Avatars drawn on one tile before the rest collapse into a "+N" chip. */
 const STACK_SHOWN = 3;
 
 /** Board point → screen point, with the perspective scale there. */
-function project(u: number, v: number): { x: number; y: number; s: number } {
+export function project(u: number, v: number): { x: number; y: number; s: number } {
   const z = 1 + (DEPTH * (ROBOT_BOARD - v)) / ROBOT_BOARD;
   return { x: CX + ((u - ROBOT_BOARD / 2) * TILE) / z, y: HORIZON + H0 / z, s: 1 / z };
 }
 
-const quad = (u: number, v: number) => {
+export const quad = (u: number, v: number) => {
   const pts = [project(u, v), project(u + 1, v), project(u + 1, v + 1), project(u, v + 1)];
   return pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
 };
@@ -56,7 +57,7 @@ export function tileBox(u: number, v: number): { x: number; y: number; width: nu
 }
 
 /** The targeting reticle's box on tile (u, v): inset a little, squashed to the tile's perspective. */
-const reticleBox = (u: number, v: number) => {
+export const reticleBox = (u: number, v: number) => {
   const a = project(u + 0.08, v + 0.08);
   const b = project(u + 0.92, v + 0.92);
   const p0 = project(u + 0.08, v + 0.92);
@@ -107,7 +108,7 @@ function armPose(k: number, t: number | null): Pt[] {
   return out;
 }
 
-const prefersStill = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+export const prefersStill = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /**
  * Sway clock for the back arms. It stops while an attack is on (so the beams leave
@@ -135,7 +136,7 @@ function useSwayClock(attackSeq: number | null): SwayClock {
   return c;
 }
 
-interface ArenaPlayer {
+export interface ArenaPlayer {
   id: string;
   avatar: AvatarChoice;
   x: number;
@@ -243,7 +244,7 @@ function Board({ marked, inset, collapsing }: { marked: Set<number>; inset: numb
 }
 
 /** Avatars on their tiles, far rows first so nearer ones overlap them. */
-function Pieces({ players, hit, me }: { players: ArenaPlayer[]; hit: Set<string>; me: string | null }) {
+export function Pieces({ players, hit, me, zapDelay }: { players: ArenaPlayer[]; hit: Set<string>; me: string | null; /** When each hit player's flicker starts (s), if not the default. */ zapDelay?: Map<string, number> }) {
   const byTile = new Map<number, ArenaPlayer[]>();
   for (const p of players) {
     const i = p.y * ROBOT_BOARD + p.x;
@@ -271,7 +272,7 @@ function Pieces({ players, hit, me }: { players: ArenaPlayer[]; hit: Set<string>
         const art = AVATAR_ART[p.avatar.avatar] ?? AVATAR_ART.cat;
         const extra = ACCESSORY_ART[p.avatar.accessory] ?? ACCESSORY_ART.none;
         out.push(
-          <g key={p.id} class={`piece ${hit.has(p.id) ? "zapped" : ""} ${p.id === me ? "mine" : ""}`} style={{ transform: `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)` }}>
+          <g key={p.id} class={`piece ${hit.has(p.id) ? "zapped" : ""} ${p.id === me ? "mine" : ""}`} style={{ transform: `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`, ...(zapDelay?.has(p.id) ? { "--zap-delay": `${zapDelay.get(p.id)!.toFixed(2)}s` } : {}) }}>
             <ellipse cx={size / 2} cy={size * 0.98} rx={size * 0.34} ry={size * 0.09} fill="rgba(0,0,0,0.45)" />
             {p.id === me && <ellipse class="mine-ring" cx={size / 2} cy={size * 0.98} rx={size * 0.46} ry={size * 0.14} />}
             <g transform={`scale(${size / 100})`}>
@@ -416,7 +417,7 @@ function Emitter({ at, attacking }: { at: Pt; attacking: boolean }) {
 }
 
 /** The painted forge behind everything; wider than the arena so it fills a wide projector's letterbox. */
-const BACKDROP = { x: -300, y: -100, w: 1800, h: 1012.5 };
+export const BACKDROP = { x: -300, y: -100, w: 1800, h: 1012.5 };
 /** Where the square body render sits in the arena. Its pedestal runs just past the bottom edge, so the robot stands in the pit. */
 const BODY = { x: 180, y: 50, size: 840 };
 /** A point of the body render (in pixels of its 1024px source) in arena coordinates. */
@@ -505,7 +506,7 @@ export function MiniBoard({
   // The whole board slides under a fixed window so the player stays centered.
   const shift = { x: (MINI_RADIUS - me.x) * cell, y: (MINI_RADIUS - me.y) * cell };
   return (
-    <svg class="mini-board" viewBox={`0 0 ${span} ${span}`} role="img" aria-label={`You are on column ${me.x + 1}, row ${me.y + 1}`}>
+    <svg class={`mini-board ${ROBOT_SKIN}`} viewBox={`0 0 ${span} ${span}`} role="img" aria-label={`You are on column ${me.x + 1}, row ${me.y + 1}`}>
       {/* The svg box can be wider or taller than the map; show only the 7×7 window. */}
       <clipPath id="mini-window">
         <rect x={0} y={0} width={span} height={span} rx={2} />
@@ -513,14 +514,14 @@ export function MiniBoard({
       <rect x={0} y={0} width={span} height={span} rx={2} class="mini-void" />
       <g clip-path="url(#mini-window)">
         <g class="mini-scroll" style={{ transform: `translate(${shift.x}px, ${shift.y}px)` }}>
-          {/* The robot stands beyond the top edge, as on the big screen. */}
+          {/* The robot (or snowman) stands beyond the top edge, as on the big screen. */}
           <rect x={edge} y={edge - cell} width={size} height={cell - 1.5} class="mini-robot-edge" />
           {/* Repeated so one is always inside the 7-tile window. */}
           {Array.from({ length: ROBOT_BOARD / 2 }, (_, k) => 2 * k + 1)
             .filter((u) => u >= inset && u <= ROBOT_BOARD - inset)
             .map((u) => (
               <text key={u} x={u * cell} y={edge - 2.4} text-anchor="middle" class="mini-robot-label">
-                🤖
+                {SKIN_TEXT.emoji}
               </text>
             ))}
           {Array.from({ length: ROBOT_BOARD * ROBOT_BOARD }, (_, i) => {

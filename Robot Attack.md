@@ -23,3 +23,6 @@ After the attack, it goes back to quiz mode, but the quiz timer is 2 seconds sho
 
 ### Shrinking board
 Every 4 turns, the outer ring of tiles is removed, until the board is 2x2.  The ring that is about to be removed is shown when the targets are announced, as solid pulsing red tiles instead of a red X.  A player still standing on a removed tile loses a life, like on a red X, and is moved to the closest available tile.  3/4 of the tiles that remain get a red X, so there are always safe tiles to move to.
+
+### Seasonal skin: the Evil Snowman
+For the winter season the robot is replaced by an evil snowman with twig arms in a snowy forest, over a board of packed snow and blue ice. Instead of firing lasers, the snowman sweeps across the board with its clawed hands (each hand rakes its own half), cracking every tile with a target on it. The gameplay doesn't change. Switch back with `ROBOT_SKIN` in `src/client/shared/robot-skin.ts`; the robot's artwork is kept.

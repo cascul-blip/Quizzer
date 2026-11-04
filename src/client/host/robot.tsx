@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { ROBOT_LIVES, ROBOT_SHRINK_EVERY, type HostView } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { RobotArena } from "../shared/robot-art.tsx";
+import { ROBOT_SKIN, SKIN_TEXT } from "../shared/robot-skin.ts";
+import { SnowmanArena } from "../shared/snowman-art.tsx";
 import { play } from "../shared/sounds.ts";
 import { preloadVoice, say } from "../shared/voice.ts";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
@@ -9,6 +11,9 @@ import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send 
 import { Award } from "./tower.tsx";
 
 type RobotView = Extract<HostView, { kind: "robot" }>;
+
+/** The seasonal skin picks the arena; the game is the same. */
+const Arena = ROBOT_SKIN === "snowman" ? SnowmanArena : RobotArena;
 
 /** Projector screen for Robot Attack: countdown → (quiz → move → attack)… → podium. */
 export function RobotStage({ view, send }: { view: RobotView; send: Send }) {
@@ -24,8 +29,9 @@ export function RobotStage({ view, send }: { view: RobotView; send: Send }) {
       if (view.phase === "quiz" && view.round === 1) play("start");
       if (view.phase === "move") play("tickHigh");
       if (view.phase === "attack") {
-        play("laser");
-        // One verdict per blast, once the beams have hit: someone out, then anyone hit, else everyone dodged.
+        if (ROBOT_SKIN === "snowman") setTimeout(() => play("whoosh"), 800); // as the claws hit the board
+        else play("laser");
+        // One verdict per attack, once it has hit: someone out, then anyone hit, else everyone dodged.
         const a = view.lastAttack;
         const line = !a ? null : a.eliminated.length > 0 ? "only-metal-endures" : a.hit.length > 0 ? "flesh-is-weak" : "cannot-evade";
         if (line) setTimeout(() => void say(line), 1000);
@@ -59,7 +65,7 @@ export function RobotStage({ view, send }: { view: RobotView; send: Send }) {
     <div class="stage robot-stage">
       <header class="topbar">
         <div class="title">{view.quiz.title}</div>
-        <div class="pill">🤖 Robot Attack</div>
+        <div class="pill">{SKIN_TEXT.emoji} Robot Attack</div>
         {view.round > 0 && <div class="pill">Round {view.round}</div>}
         <div class="spacer" />
         <div class="pill">
@@ -78,7 +84,7 @@ export function RobotStage({ view, send }: { view: RobotView; send: Send }) {
         <>
           <PhaseBar view={view} secs={secs} />
           <main class={`robot-wrap ${attack ? "shake" : ""}`}>
-            <RobotArena players={alive} marked={view.marked} inset={view.inset} collapsing={view.collapsing} attack={attack} />
+            <Arena players={alive} marked={view.marked} inset={view.inset} collapsing={view.collapsing} attack={attack} />
             <PlayerList view={view} />
             {attack && <AttackBanner key={attack.seq} hit={attack.hit.length} out={attack.eliminated.length} names={view.players.filter((p) => attack.eliminated.includes(p.id)).map((p) => p.nickname)} />}
             {view.phase === "countdown" && (
@@ -121,7 +127,7 @@ function PhaseBar({ view, secs }: { view: RobotView; secs: number }) {
           : `Answer questions to earn moves · ${secs}s`
         : view.phase === "move"
           ? `🏃 MOVE! · ${secs}s`
-          : "🔥 FIRE!";
+          : SKIN_TEXT.banner;
   return (
     <div class={`robot-bar ${view.phase} ${view.marked.length > 0 && view.phase === "quiz" ? "warn" : ""}`}>
       {/* The key restarts the drain animation each phase; a negative delay catches up with time already passed. */}
@@ -184,7 +190,7 @@ function RobotPodium({ view, send }: { view: RobotView; send: Send }) {
   return (
     <main class="podium tower-podium robot-podium">
       <div class="podium-bg" aria-hidden="true">
-        <RobotArena players={[]} marked={[]} />
+        <Arena players={[]} marked={[]} />
       </div>
       <h1>{title}</h1>
       {showErrors ? (
