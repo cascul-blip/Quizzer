@@ -14,7 +14,7 @@
  *   a sparse whistle, flute in the gaps, anvil, whip and "hup!" stabs, the trumpet taking the tune as time
  *   runs out, and a one-shot draw sting. In D minor (the podium in D major), apart from Cup of Death's A minor.
  * Santa's Sleigh Run = public-domain Christmas carols with sleigh bells: "O Come, All Ye Faithful" (Adeste Fideles)
- *   on flute and glockenspiel in the lobby, "O Come, O Come, Emmanuel" (in E minor) for the rounds, building from
+ *   on flute and glockenspiel in the lobby, "Joy to the World" (in D) for the rounds, building from
  *   sleigh bells and pizzicato at the start of the quiz to the full band, faster, while the sleighs fly, and
  *   "Hark! The Herald Angels Sing" (Mendelssohn) on brass for the podium.
  * Any of these can be replaced by an audio file in data/music/<id>.<ext>.
@@ -1420,7 +1420,8 @@ const showdownResults: Track = {
 
 // ---------- Santa's Sleigh Run: public-domain Christmas carols ----------
 // The lobby is "O Come, All Ye Faithful" (Adeste Fideles, J. F. Wade, 18th c.), the rounds are
-// "O Come, O Come, Emmanuel" (Veni Emmanuel; the old "Joy to the World" is kept as sleighFlightJoy) and the podium is "Hark! The Herald Angels
+// "Joy to the World" (the later "O Come, O Come, Emmanuel" and "God Rest Ye Merry Gentlemen" arrangements are kept as
+// sleighFlightEmmanuel and sleighFlightGodRest) and the podium is "Hark! The Herald Angels
 // Sing" (Mendelssohn, 1840). Sleigh bells (a bright hat pattern) jingle through all three.
 // The melodies are written one bar per 16 steps (a quarter note = 4 steps); the harmony is given
 // as one chord per beat and turned into bass, pads and accompaniment by the helpers below.
@@ -1436,8 +1437,9 @@ const XMAS_CHORDS: Record<string, string> = {
   C: "G3 C4 E4",
   Am: "A3 C4 E4",
   B7: "F#3 A3 D#4",
+  Bm: "F#3 B3 D4",
 };
-const XMAS_ROOTS: Record<string, string> = { G: "G2", D: "D2", D7: "D2", A: "A2", A7: "A2", Em: "E2", C: "C3", Am: "A2", B7: "B2" };
+const XMAS_ROOTS: Record<string, string> = { G: "G2", D: "D2", D7: "D2", A: "A2", A7: "A2", Em: "E2", C: "C3", Am: "A2", B7: "B2", Bm: "B2" };
 
 /** One bar from four beats of chords: each beat's 4 steps follow `beat` ("x" = play, "-" = hold, "." = rest). */
 const beats = (q: string[], beat: string, pick: (chordName: string, step: number) => string) =>
@@ -1536,11 +1538,8 @@ const ANTIOCH_HARMONY = [
   ["A7", "D", "D", "D"], ["D", "D", "A", "A"], ["A7", "A7", "D", "G"], ["D", "D", "D", "A7"], ["D", "D", "D", "D"],
 ];
 
-/**
- * The rounds' old track, "Joy to the World", kept so it can come back: put it in TRACKS as
- * "sleigh-flight" in place of sleighFlight (and switch the notes in the header and the docs back).
- */
-export const sleighFlightJoy: Track = {
+/** The rounds' track: "Joy to the World". */
+const sleighFlight: Track = {
   id: "sleigh-flight",
   // 104 BPM as the quiz starts, about 140 once the reindeer are flying.
   bpm: 104,
@@ -1607,7 +1606,11 @@ const EMMANUEL_HARMONY = [
 /** A backbeat with a fill at the end of each line (every third bar). */
 const EMMANUEL_SNARE = Array.from({ length: 18 }, (_, i) => drum(i % 3 === 2 ? "....x...x.x.xxxx" : "....x.......x..."));
 
-const sleighFlight: Track = {
+/**
+ * An alternative rounds track, "O Come, O Come, Emmanuel", kept so it can come back: put it in TRACKS as
+ * "sleigh-flight" in place of sleighFlight (and switch the notes in the header and the docs).
+ */
+export const sleighFlightEmmanuel: Track = {
   id: "sleigh-flight",
   // 100 BPM as the quiz starts, about 140 once the reindeer are flying.
   bpm: 100,
@@ -1639,6 +1642,73 @@ const sleighFlight: Track = {
     { inst: "cymbal", bars: Array.from({ length: 18 }, (_, i) => ([0, 12].includes(i) ? once("x") : rest)), vol: 0.45, from: 0.75 },
     // The last bar's bells shake into the repeat.
     { inst: "openhat", bars: [...Array(17).fill(rest), BELLS_SHAKE], vol: 0.3, from: 0.6 },
+  ],
+};
+
+// God Rest Ye Merry Gentlemen (traditional English carol) in E minor, 4/4, read off the pianotv.net
+// sheet music (one chord per bar, as written there). Bar 19 is the first ending, whose last beat is
+// the pickup "God" back into bar 1. Bars 13-18 are the refrain ("O tidings of comfort and joy").
+const GOD_REST = [
+  seq(["E4", 4], ["B4", 4], ["B4", 4], ["A4", 4]), // rest ye mer-ry
+  seq(["G4", 4], ["F#4", 4], ["E4", 4], ["D4", 4]), // gen-tle-men, let
+  seq(["E4", 4], ["F#4", 4], ["G4", 4], ["A4", 4]), // noth-ing you dis-
+  seq(["B4", 12], ["E4", 4]), // may. Re-
+  seq(["E4", 4], ["B4", 4], ["B4", 4], ["A4", 4]), // mem-ber Christ our
+  seq(["G4", 4], ["F#4", 4], ["E4", 4], ["D4", 4]), // Sav-ior was
+  seq(["E4", 4], ["F#4", 4], ["G4", 4], ["A4", 4]), // born on Christ-mas
+  seq(["B4", 12], ["B4", 4]), // Day to
+  seq(["C5", 4], ["A4", 4], ["B4", 4], ["C5", 4]), // save us all from
+  seq(["D5", 4], ["E5", 4], ["B4", 4], ["A4", 4]), // Sa-tan's pow'r when
+  seq(["G4", 4], ["E4", 4], ["F#4", 4], ["G4", 4]), // we were gone a-
+  seq(["A4", 8], ["G4", 4], ["A4", 4]), // stray. O
+  seq(["B4", 8], ["C5", 4], ["B4", 4]), // ti-dings of
+  seq(["B4", 4], ["A4", 4], ["G4", 4], ["F#4", 4]), // com-fort and
+  seq(["E4", 8], ["G4", 2], ["F#4", 2], ["E4", 4]), // joy, com-fort and
+  seq(["A4", 8], ["G4", 4], ["A4", 4]), // joy. O
+  seq(["B4", 4], ["C5", 4], ["D5", 4], ["E5", 4]), // ti-dings of
+  seq(["B4", 4], ["A4", 4], ["G4", 4], ["F#4", 4]), // com-fort and
+  seq(["E4", 12], ["E4", 4]), // joy. God
+];
+const GOD_REST_HARMONY = ["Em", "Em", "C", "B7", "Em", "Em", "C", "B7", "Am", "Bm", "Em", "D", "G", "B7", "Em", "D", "G", "B7", "Em"].map((c) => [c, c, c, c]);
+/** A backbeat with a fill at the end of each phrase. */
+const GOD_REST_SNARE = GOD_REST.map((_, i) => drum([3, 7, 11, 15, 18].includes(i) ? "....x...x.x.xxxx" : "....x.......x..."));
+
+/**
+ * An alternative rounds track, "God Rest Ye Merry Gentlemen", kept so it can come back: put it in TRACKS as
+ * "sleigh-flight" in place of sleighFlight (and switch the notes in the header and the docs).
+ */
+export const sleighFlightGodRest: Track = {
+  id: "sleigh-flight",
+  // 100 BPM as the quiz starts, about 140 once the reindeer are flying.
+  bpm: 100,
+  bars: 19,
+  tempoBoost: 0.35,
+  reverb: 0.25,
+  layers: [
+    // Quiz start: a few sleigh bells, held strings and a root note per beat.
+    { inst: "hat", bars: [BELLS_8THS], vol: 0.4, to: 0.7 },
+    { inst: "strings", bars: GOD_REST_HARMONY.map(padBar), vol: 0.35, to: 0.75 },
+    { inst: "bass", bars: GOD_REST_HARMONY.map(rootBeats), vol: 0.6, to: 0.5 },
+    // Warming up: the tune on pizzicato, the woodblock clip-clop of hooves.
+    { inst: "pluck", bars: GOD_REST, vol: 0.55, from: 0.2, to: 0.75 },
+    { inst: "woodblock", bars: [drum("x..x....x..x....")], vol: 0.3, from: 0.3 },
+    // Building: an oom-pah piano, a bouncing bass and a soft kick.
+    { inst: "piano", bars: GOD_REST_HARMONY.map(offbeatChords), vol: 0.3, from: 0.4 },
+    { inst: "bass", bars: GOD_REST_HARMONY.map(rootBounce), vol: 0.7, from: 0.5 },
+    { inst: "kick", bars: [drum("x.......x.......")], vol: 0.6, from: 0.4, to: 0.75 },
+    // The glockenspiel takes the tune as the quiz nears its end.
+    { inst: "bell", bars: shift(GOD_REST, 1), vol: 0.4, from: 0.55 },
+    // Intro and flight: the full band, brass on the tune, faster sleigh bells, backbeat.
+    { inst: "brass", bars: GOD_REST, vol: 0.65, from: 0.75 },
+    { inst: "strings", bars: GOD_REST_HARMONY.map(brokenChords), vol: 0.35, from: 0.75 },
+    { inst: "flute", bars: shift(GOD_REST, 1), vol: 0.3, from: 0.85 },
+    { inst: "hat", bars: [BELLS_16THS], vol: 0.45, from: 0.7 },
+    { inst: "kick", bars: [drum("x...x...x...x...")], vol: 0.8, from: 0.75 },
+    { inst: "snare", bars: GOD_REST_SNARE, vol: 0.5, from: 0.75 },
+    // A cymbal at the top and at the start of the refrain.
+    { inst: "cymbal", bars: GOD_REST.map((_, i) => ([0, 12].includes(i) ? once("x") : rest)), vol: 0.45, from: 0.75 },
+    // The last bar's bells shake into the repeat.
+    { inst: "openhat", bars: [...Array(18).fill(rest), BELLS_SHAKE], vol: 0.3, from: 0.6 },
   ],
 };
 
