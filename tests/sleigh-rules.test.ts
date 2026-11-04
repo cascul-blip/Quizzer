@@ -110,7 +110,7 @@ describe("sleigh flight", () => {
     const want = 2.5;
     s = stepSleigh(s, toward(want), true, 100).sleigh;
     expect(s.heading).toBeCloseTo(MAX_TURN_RATE * 0.1, 9);
-    for (let i = 0; i < 20; i++) s = stepSleigh(s, toward(want), true, 50).sleigh;
+    for (let i = 0; i < 26; i++) s = stepSleigh(s, toward(want), true, 50).sleigh;
     expect(s.heading).toBeCloseTo(want, 9);
     const r = stepSleigh(s, toward(want), true, 50);
     expect(r.turn).toBeCloseTo(0, 9);

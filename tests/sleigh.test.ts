@@ -288,7 +288,7 @@ describe("Santa's Sleigh Run", () => {
     expect(a.flownMs).toBe(0); // but waiting isn't flying
     // It starts pointing up, so turning to point down takes a moment.
     game.steer(a.id, 0, 1);
-    clock.advance(SLEIGH_TICK_MS * 30);
+    clock.advance(SLEIGH_TICK_MS * 40);
     expect(a.sleigh.speed).toBe(1);
     expect(Math.sin(a.sleigh.heading)).toBeCloseTo(1, 6);
     expect(a.sleigh.y).toBeGreaterThan(start.y);

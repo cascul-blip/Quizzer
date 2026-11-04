@@ -32,8 +32,8 @@ const EDGE_PAD = SLEIGH_W / 2;
 
 /** Top speed, field units per second (crossing the city takes about 4 s). */
 export const SLEIGH_SPEED = 380;
-/** Fastest a sleigh turns toward the stick's direction, radians per second (a turn radius of about 150 at top speed). */
-export const MAX_TURN_RATE = 2.5;
+/** Fastest a sleigh turns toward the stick's direction, radians per second (a turn radius of 190 at top speed). */
+export const MAX_TURN_RATE = 2;
 /** A push on the phone's stick shorter than this (a fraction of its reach) counts as let go. */
 export const STICK_DEAD_ZONE = 0.15;
 /** How fast the speed follows the stick, as a fraction of top speed per second (a stopped sleigh reaches full speed in 0.4 s). */

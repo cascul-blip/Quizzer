@@ -35,7 +35,7 @@ Rounds repeat until **every present is delivered**.  Then the whole city lights 
 ## Steering
 The phone shows an analogue joystick: a knob in the sleigh's colour on the painted sleigh wheel.
 
-* **Hold** the stick the way you want to fly.  Directions match the projector (up on the phone is up on the city), and the sleigh turns to face that way at its usual turning speed (a half turn takes about 1.3 seconds), then flies straight on.
+* **Hold** the stick the way you want to fly.  Directions match the projector (up on the phone is up on the city), and the sleigh turns to face that way at its usual turning speed (a half turn takes about 1.6 seconds), then flies straight on.
 * **How far** the stick is pushed sets the speed: a little push creeps along, the edge of the wheel is full speed.  A small dead zone in the middle counts as let go.
 * **Let go** and the knob springs back to the centre and the sleigh slows to a stop (in under half a second), staying where it is.
 * The wheel turns so its marker points the way the stick was last pushed.  The arrow keys work too, on a computer.
@@ -65,7 +65,7 @@ Each correct answer is 1 point.  Wrong answers cost nothing, apart from the wait
 
 Each point is 2 seconds of flying.  Points don't carry over: the flying time for each flight comes only from that round's quiz.
 
-Sleighs move only while the stick is pushed: they turn toward its direction (at most 2.5 radians a second) and their speed follows how far it is pushed.  Flying time runs down from the start of the flight either way.
+Sleighs move only while the stick is pushed: they turn toward its direction (at most 2 radians a second, a turn radius of 190 at top speed) and their speed follows how far it is pushed.  Flying time runs down from the start of the flight either way.
 
 Sleighs fly over the houses.  Only the city's edge is a wall: a sleigh that bumps into it bounces off and slows down briefly.
 
