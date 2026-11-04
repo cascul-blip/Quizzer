@@ -45,6 +45,9 @@ export const MUSIC_TRACKS = [
   { id: "showdown", mode: "Showdown", screen: "The standoff (question and reveal)" },
   { id: "showdown-draw", mode: "Showdown", screen: "Draw sting (plays once on each reveal)" },
   { id: "showdown-results", mode: "Showdown", screen: "Final podium" },
+  { id: "sleigh-lobby", mode: "Santa's Sleigh Run", screen: "Lobby" },
+  { id: "sleigh-flight", mode: "Santa's Sleigh Run", screen: "Quiz, intro and flight" },
+  { id: "sleigh-results", mode: "Santa's Sleigh Run", screen: "Final podium" },
 ] as const;
 
 export type MusicTrackId = (typeof MUSIC_TRACKS)[number]["id"];

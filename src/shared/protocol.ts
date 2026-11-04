@@ -19,7 +19,7 @@ export interface ShuffleOptions {
 
 // ---------- Tallest Tower ----------
 
-export type GameMode = "classic" | "tower" | "submarine" | "fight" | "robot" | "land" | "racer" | "cup" | "dragon" | "bomb" | "siege" | "duel";
+export type GameMode = "classic" | "tower" | "submarine" | "fight" | "robot" | "land" | "racer" | "cup" | "dragon" | "bomb" | "siege" | "duel" | "sleigh";
 export type TowerPhase = "countdown" | "playing" | "podium";
 
 /** Each team also has a shape, so teams can be told apart without relying on colour. */
@@ -103,6 +103,9 @@ export type PlayerMsg =
   | { type: "fight.fire"; dx: number; dy: number }
   | { type: "robot.answer"; seq: number; option: number; text?: string }
   | { type: "robot.move"; dir: RobotDir }
+  | { type: "sleigh.answer"; seq: number; option: number; text?: string }
+  /** Santa's Sleigh Run, flight phase only: the phone's stick, where the thumb is from its centre in field directions (+x right, +y down), length 0…1; 0, 0 when let go. Sent at most every SLEIGH_TICK_MS while it changes. */
+  | { type: "sleigh.steer"; x: number; y: number }
   | { type: "land.answer"; seq: number; option: number; text?: string }
   | { type: "land.place"; tile: number }
   /** Leave the land early; unused claims are kept for next time. */
@@ -154,6 +157,7 @@ export type HostMsg =
   | ({ type: "host.setBomb" } & BombSettings)
   | ({ type: "host.setSiege" } & SiegeSettings)
   | ({ type: "host.setDuel" } & DuelSettings)
+  | ({ type: "host.setSleigh" } & SleighSettings)
   | { type: "host.next" }
   | { type: "host.skip" }
   | { type: "host.kick"; playerId: string }
@@ -223,7 +227,7 @@ export interface PlayerResult {
 
 export type PlayerView =
   | { kind: "none"; game: null }
-  | { kind: "none"; game: { title: string; phase: Phase | TowerPhase | SubPhase | FightPhase | RobotPhase | LandPhase | RacerPhase | CupPhase | DragonPhase | BombPhase | SiegePhase | DuelPhase } }
+  | { kind: "none"; game: { title: string; phase: Phase | TowerPhase | SubPhase | FightPhase | RobotPhase | LandPhase | RacerPhase | CupPhase | DragonPhase | BombPhase | SiegePhase | DuelPhase | SleighPhase } }
   | {
       kind: "player";
       phase: Phase;
@@ -252,7 +256,8 @@ export type PlayerView =
   | PlayerDragonView
   | PlayerBombView
   | PlayerSiegeView
-  | PlayerDuelView;
+  | PlayerDuelView
+  | PlayerSleighView;
 
 export interface TowerAwards {
   mostCorrect: { value: number; nicknames: string[] } | null;
@@ -316,6 +321,7 @@ export interface HostGameState {
   bomb: BombSettings;
   siege: SiegeSettings;
   duel: DuelSettings;
+  sleigh: SleighSettings;
   /** Team preview while the lobby is in a team mode (Tallest Tower, Tower Fight, Land Grab, Dragon's Hoard, Bomb Squad). */
   teams: (TeamInfo & { members: HostPlayer[] })[] | null;
   quiz: { id: string; title: string; questionCount: number };
@@ -1806,7 +1812,8 @@ export type HostView =
   | (HostDragonState & { join: JoinInfo })
   | (HostBombState & { join: JoinInfo })
   | (HostSiegeState & { join: JoinInfo })
-  | (HostDuelState & { join: JoinInfo });
+  | (HostDuelState & { join: JoinInfo })
+  | (HostSleighState & { join: JoinInfo });
 
 export type ServerMsg =
   /** First message on every connection. A new serverId means the server restarted (maybe with new code). */
@@ -1819,3 +1826,152 @@ export type ServerMsg =
   | { type: "kicked" }
   | { type: "resumeFailed" }
   | { type: "error"; message: string };
+
+// ---------- Santa's Sleigh Run ----------
+
+/**
+ * Santa's Sleigh Run. countdown: 3, 2, 1 before the first round. quiz: SLEIGH_QUIZ_MS of answering for points.
+ * intro: "Get ready to fly in 3, 2, 1". flight: every sleigh flies (SLEIGH_MS_PER_POINT per point) until the
+ * last one stops or SLEIGH_DRIVE_CAP_MS; flying into a house that still needs its present delivers it (first
+ * sleigh there claims it). Each round has SLEIGH_HOUSES_PER_ROUND new houses; delivering them all ends the
+ * flight early with SLEIGH_CLEARED_MS of celebration (still "flight", with `cleared` set). The game clock
+ * (SleighSettings.minutes) starts with the first quiz; once it runs out (`timeUp`) the round under way still
+ * flies, then SLEIGH_FINALE_MS of "Time's up!" (still "flight", with `finished` set) and the podium.
+ * Rules in sleigh-rules.ts.
+ */
+export type SleighPhase = "countdown" | "quiz" | "intro" | "flight" | "podium";
+
+export interface SleighSettings {
+  /** Game length (SLEIGH_MINUTES: 3, 5, 7 or 10). */
+  minutes: number;
+}
+
+export interface SleighAwards {
+  mostCorrect: SubAward | null;
+  /** Fewest bumps into the city wall among players who flew; value = bumps (0 is valid). */
+  smoothest: SubAward | null;
+  /** Most distance flown; value = field units (show with METRES_PER_UNIT). */
+  furthest: SubAward | null;
+}
+
+export interface SleighHouse {
+  id: number;
+  /** Which house of the painted town (TownSpot id in sleigh-town.ts). */
+  spot: number;
+  /** Bounding box of the roof (top-left corner and size) in field units. */
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  /** Roof outline, field units. */
+  poly: [number, number][];
+  /** Chimney centre, relative to the bounding box's top-left corner. */
+  chimney: { x: number; y: number };
+  /** Player id of the sleigh that delivered its present, or null while it's still waiting. */
+  deliveredBy: string | null;
+}
+
+/** The latest present dropped down a chimney (the screens animate each seq once). */
+export interface SleighDelivery {
+  seq: number;
+  house: number;
+  playerId: string;
+}
+
+export interface HostSleighPlayer {
+  id: string;
+  nickname: string;
+  avatar: AvatarChoice;
+  connected: boolean;
+  color: string;
+  /** Pose in field units (sleigh-rules.ts), rounded to 0.1; heading in radians. */
+  x: number;
+  y: number;
+  heading: number;
+  /** How hard it is turning, −1 (full left) … 1 (full right). */
+  turn: number;
+  /** Fraction of top speed, 0…1. */
+  speed: number;
+  /** Points earned in this round's quiz (flying time for the next flight). */
+  points: number;
+  /** Flying time left this flight, ms (0 outside the flight). */
+  fuelMs: number;
+  /** Full flying time this flight started with, ms. */
+  fuelStartMs: number;
+  /** Still moving (has fuel or is gliding to a stop). */
+  moving: boolean;
+  presents: number;
+  distance: number;
+  /** Bumps into the city wall so far; goes up on each new bump (the screen flashes). */
+  bumps: number;
+  rank: number;
+}
+
+export interface SleighStanding {
+  id: string;
+  nickname: string;
+  avatar: AvatarChoice;
+  color: string;
+  rank: number;
+  presents: number;
+  distance: number;
+  correct: number;
+  bumps: number;
+}
+
+export interface HostSleighState {
+  kind: "sleigh";
+  phase: SleighPhase;
+  quiz: { id: string; title: string; questionCount: number };
+  round: number;
+  phaseRemainingMs: number;
+  phaseDurationMs: number;
+  /** Server time of this snapshot (ms), for smoothing sleighs between ticks. */
+  tick: number;
+  /** This round's houses, delivered or not (a new set each round; ids are never reused in a game). */
+  houses: SleighHouse[];
+  /** Presents delivered this round, of `total`. */
+  delivered: number;
+  total: number;
+  lastDelivery: SleighDelivery | null;
+  /** Game clock left (ms; the full length until the first quiz starts) and its full length. */
+  gameRemainingMs: number;
+  gameDurationMs: number;
+  /** The game clock has run out: this round is the last. */
+  timeUp: boolean;
+  /** Every present of this round has been delivered: the flight has ended early and the celebration is playing. */
+  cleared: boolean;
+  /** The last flight after time ran out is over: "Time's up!" is playing before the podium. */
+  finished: boolean;
+  sleighs: HostSleighPlayer[];
+  playerCount: number;
+  standings: SleighStanding[] | null;
+  awards: SleighAwards | null;
+  errors: QuestionError[] | null;
+  hasResults: boolean;
+}
+
+export interface PlayerSleighView {
+  kind: "sleigh";
+  phase: SleighPhase;
+  title: string;
+  round: number;
+  phaseRemainingMs: number;
+  me: { id: string; nickname: string; avatar: AvatarChoice; color: string; points: number; correct: number; presents: number; rank: number };
+  playerCount: number;
+  /** Presents delivered by everyone this round, of `total`. */
+  delivered: number;
+  total: number;
+  gameRemainingMs: number;
+  timeUp: boolean;
+  cleared: boolean;
+  finished: boolean;
+  /** This player's latest delivery (seq), to buzz once per present. */
+  lastDelivery: number | null;
+  question: StreamQuestionView | null;
+  feedback: { seq: number; correct: boolean; remainingMs: number; answers: string[]; penaltyMs: number } | null;
+  /** Flight phase: flying time left (a running countdown; ms), and the full amount this flight started with. */
+  fuelMs: number;
+  fuelStartMs: number;
+  result: { rank: number; playerCount: number; presents: number; distance: number; awards: string[] } | null;
+}

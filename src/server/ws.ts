@@ -1,6 +1,6 @@
 import type { ServerWebSocket } from "bun";
 import QRCode from "qrcode";
-import type { BombSettings, ClientMsg, CupSettings, DragonSettings, DuelSettings, FightSettings, GameMode, HostView, JoinInfo, LandSettings, Pacing, PlayerView, ServerMsg, SiegeSettings, TowerSettings } from "../shared/protocol.ts";
+import type { BombSettings, ClientMsg, CupSettings, DragonSettings, DuelSettings, FightSettings, GameMode, HostView, JoinInfo, SleighSettings, LandSettings, Pacing, PlayerView, ServerMsg, SiegeSettings, TowerSettings } from "../shared/protocol.ts";
 import { answerOf } from "../shared/answer-match.ts";
 import { cleanAvatar } from "../shared/avatars.ts";
 import { ValidationError } from "../shared/quiz-schema.ts";
@@ -10,10 +10,11 @@ import { CupGame } from "./game/cup.ts";
 import { DuelGame } from "./game/duel.ts";
 import { DragonGame } from "./game/dragon.ts";
 import { FightGame } from "./game/fight.ts";
-import { DEFAULT_BOMB, DEFAULT_CUP, DEFAULT_DRAGON, DEFAULT_DUEL, DEFAULT_FIGHT, DEFAULT_LAND, DEFAULT_SIEGE, DEFAULT_TOWER, Game, GameError, type Clock } from "./game/game.ts";
+import { SleighGame } from "./game/sleigh.ts";
+import { DEFAULT_BOMB, DEFAULT_CUP, DEFAULT_DRAGON, DEFAULT_DUEL, DEFAULT_FIGHT, DEFAULT_SLEIGH, DEFAULT_LAND, DEFAULT_SIEGE, DEFAULT_TOWER, Game, GameError, type Clock } from "./game/game.ts";
 import { LandGame } from "./game/land.ts";
 import { RacerGame } from "./game/racer.ts";
-import { buildBombResultsCsv, buildCupResultsCsv, buildDragonResultsCsv, buildDuelResultsCsv, buildFightResultsCsv, buildLandResultsCsv, buildRacerResultsCsv, buildResultsCsv, buildRobotResultsCsv, buildSiegeResultsCsv, buildSubResultsCsv, buildTowerResultsCsv, writeResultsFile } from "./game/results.ts";
+import { buildBombResultsCsv, buildCupResultsCsv, buildDragonResultsCsv, buildDuelResultsCsv, buildFightResultsCsv, buildSleighResultsCsv, buildLandResultsCsv, buildRacerResultsCsv, buildResultsCsv, buildRobotResultsCsv, buildSiegeResultsCsv, buildSubResultsCsv, buildTowerResultsCsv, writeResultsFile } from "./game/results.ts";
 import { RobotGame } from "./game/robot.ts";
 import { SiegeGame } from "./game/siege.ts";
 import { SubGame } from "./game/submarine.ts";
@@ -59,7 +60,7 @@ const PACINGS = new Set<Pacing>(["manual", "auto"]);
 /** In Tallest Tower, answers stream in constantly: the acting player is updated at once, everyone else at most this often. */
 const ACTIVITY_THROTTLE_MS = 100;
 /** View fields holding "time left" (relative to when the message arrives). */
-const COUNTDOWN_KEYS = new Set(["remainingMs", "phaseRemainingMs", "decisionMs", "repairMs", "emptyMs", "lockedMs", "symbolRemainingMs", "nextMonsterMs", "protectedMs"]);
+const COUNTDOWN_KEYS = new Set(["remainingMs", "phaseRemainingMs", "decisionMs", "repairMs", "emptyMs", "lockedMs", "symbolRemainingMs", "nextMonsterMs", "protectedMs", "fuelMs"]);
 
 /**
  * A player view as JSON with each running countdown replaced by its deadline (to 100 ms),
@@ -72,7 +73,7 @@ function viewKey(view: PlayerView, now: number): string {
 /** Compress what goes to phones over Wi-Fi; the host screen is on this machine, so it isn't worth the CPU. */
 const compressFor = (ws: WS) => ws.data.role !== "host";
 
-type LiveGame = Game | TowerGame | SubGame | FightGame | RobotGame | LandGame | RacerGame | CupGame | DragonGame | BombGame | SiegeGame | DuelGame;
+type LiveGame = Game | TowerGame | SubGame | FightGame | RobotGame | LandGame | RacerGame | CupGame | DragonGame | BombGame | SiegeGame | DuelGame | SleighGame;
 
 /** Owns the single live game and every connected socket; pushes each phone its view (or a patch of it) on every change. */
 export class GameHub {
@@ -91,7 +92,7 @@ export class GameHub {
   private broadcastQueued = false;
   private activityTimer: ReturnType<typeof setTimeout> | null = null;
   /** Mode, mode settings and pacing carry over to the next lobby ("Play again"). */
-  private lastSetup: { mode: GameMode; tower: TowerSettings; fight: FightSettings; land: LandSettings; cup: CupSettings; dragon: DragonSettings; bomb: BombSettings; siege: SiegeSettings; duel: DuelSettings; protect: boolean; pacing: Pacing } = {
+  private lastSetup: { mode: GameMode; tower: TowerSettings; fight: FightSettings; land: LandSettings; cup: CupSettings; dragon: DragonSettings; bomb: BombSettings; siege: SiegeSettings; duel: DuelSettings; sleigh: SleighSettings; protect: boolean; pacing: Pacing } = {
     mode: "classic",
     tower: DEFAULT_TOWER,
     fight: DEFAULT_FIGHT,
@@ -101,6 +102,7 @@ export class GameHub {
     bomb: DEFAULT_BOMB,
     siege: DEFAULT_SIEGE,
     duel: DEFAULT_DUEL,
+    sleigh: DEFAULT_SLEIGH,
     protect: true,
     pacing: "manual",
   };
@@ -228,6 +230,12 @@ export class GameHub {
       this.activityTimer = null;
       this.broadcast();
     }, ACTIVITY_THROTTLE_MS);
+  }
+
+  /** Only the projector, e.g. on every Santa's Sleigh Run flight tick (phones don't need the sleighs' positions). */
+  private pushHost(): void {
+    let hostMsg: string | null = null;
+    for (const ws of this.sockets) if (ws.data.role === "host") ws.send((hostMsg ??= JSON.stringify({ type: "host.state", view: this.hostView() } satisfies ServerMsg)));
   }
 
   broadcast(): void {
@@ -464,6 +472,17 @@ export class GameHub {
         if (!this.game.answer(ws.data.playerId, Number(msg.index), answerOf(msg))) this.sendState(ws);
         return;
       }
+      case "sleigh.answer": {
+        if (!(this.game instanceof SleighGame) || !ws.data.playerId) return;
+        if (!this.game.answer(ws.data.playerId, Number(msg.seq), answerOf(msg))) this.sendState(ws);
+        return;
+      }
+      case "sleigh.steer": {
+        // High-frequency: a rejected steer (wrong phase, stale) needs no resync.
+        if (!(this.game instanceof SleighGame) || !ws.data.playerId) return;
+        this.game.steer(ws.data.playerId, Number(msg.x), Number(msg.y));
+        return;
+      }
       case "tower.drop": {
         if (!(this.game instanceof TowerGame) || !ws.data.playerId) return;
         if (this.game.drop(ws.data.playerId, Number(msg.zone)) === null) this.sendState(ws);
@@ -481,7 +500,7 @@ export class GameHub {
     };
     const classic = () => {
       const g = game();
-      if (!(g instanceof Game)) throw new GameError(`Not available in ${g instanceof TowerGame ? "Tallest Tower" : g instanceof SubGame ? "Submarine Squad" : g instanceof RobotGame ? "Robot Attack" : g instanceof LandGame ? "Land Grab" : g instanceof RacerGame ? "Racer" : g instanceof CupGame ? "Cup of Death" : g instanceof DragonGame ? "Dragon's Hoard" : g instanceof BombGame ? "Bomb Squad" : g instanceof SiegeGame ? "Kingdom Siege" : g instanceof DuelGame ? "Showdown" : "Tower Fight"}`);
+      if (!(g instanceof Game)) throw new GameError(`Not available in ${g instanceof TowerGame ? "Tallest Tower" : g instanceof SubGame ? "Submarine Squad" : g instanceof RobotGame ? "Robot Attack" : g instanceof LandGame ? "Land Grab" : g instanceof RacerGame ? "Racer" : g instanceof CupGame ? "Cup of Death" : g instanceof DragonGame ? "Dragon's Hoard" : g instanceof BombGame ? "Bomb Squad" : g instanceof SiegeGame ? "Kingdom Siege" : g instanceof DuelGame ? "Showdown" : g instanceof SleighGame ? "Santa's Sleigh Run" : "Tower Fight"}`);
       return g;
     };
     /** Classic, Racer and Showdown are all paced question by question: next, skip and pacing work in each. */
@@ -519,6 +538,7 @@ export class GameHub {
         if (lobby.phase === "lobby" && lobby.mode === "dragon") return this.startDragon(lobby);
         if (lobby.phase === "lobby" && lobby.mode === "bomb") return this.startBomb(lobby);
         if (lobby.phase === "lobby" && lobby.mode === "siege") return this.startSiege(lobby);
+        if (lobby.phase === "lobby" && lobby.mode === "sleigh") return this.startSleigh(lobby);
         const pacing = PACINGS.has(msg.pacing) ? msg.pacing : undefined;
         if (lobby.phase === "lobby" && lobby.mode === "racer") return this.startRacer(lobby, pacing);
         if (lobby.phase === "lobby" && lobby.mode === "duel") return this.startDuel(lobby, pacing);
@@ -572,6 +592,10 @@ export class GameHub {
       case "host.setDuel":
         classic().setDuel({ rounds: Number(msg.rounds) });
         this.lastSetup.duel = { ...classic().duel };
+        return;
+      case "host.setSleigh":
+        classic().setSleigh({ minutes: Number(msg.minutes) });
+        this.lastSetup.sleigh = { ...classic().sleigh };
         return;
       case "host.next":
         return paced().next();
@@ -662,6 +686,22 @@ export class GameHub {
     this.game = robot;
     robot.start();
     this.log(`Robot Attack started with ${robot.players.size} player(s)`);
+  }
+
+  /** Hand the lobby's players to a Santa's Sleigh Run game. Flight ticks only refresh the projector. */
+  private startSleigh(lobby: Game): void {
+    if (lobby.players.size === 0) throw new GameError("Wait for at least one player to join");
+    const sleigh = SleighGame.fromLobby(lobby, {
+      clock: this.opts.clock,
+      onChange: () => this.scheduleBroadcast(),
+      onActivity: (pid) => this.onActivity(pid),
+      onTick: () => this.pushHost(),
+      onFinish: (g) => this.onFinish(g),
+    });
+    lobby.dispose();
+    this.game = sleigh;
+    sleigh.start();
+    this.log(`Santa's Sleigh Run started with ${sleigh.players.size} player(s), ${sleigh.minutes} min`);
   }
 
   /** Hand the lobby's players to a Cup of Death game. */
@@ -808,7 +848,9 @@ export class GameHub {
                           ? buildSiegeResultsCsv(game)
                           : game instanceof DuelGame
                             ? buildDuelResultsCsv(game)
-                            : buildResultsCsv(game);
+                            : game instanceof SleighGame
+                              ? buildSleighResultsCsv(game)
+                              : buildResultsCsv(game);
     let file: string | null = null;
     try {
       file = writeResultsFile(game, csv, this.store.resultsDir);

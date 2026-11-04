@@ -6217,3 +6217,773 @@ select {
     animation: none;
   }
 }
+
+/* ---------- Santa's Sleigh Run ---------- */
+
+.sleigh-pill {
+  background: #b3121f;
+}
+
+.sleigh-count-pill {
+  background: #1f6b3a;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The game clock: red for its last 30 seconds and once time is up (the last flight). */
+.sleigh-clock-pill {
+  font-variant-numeric: tabular-nums;
+  min-width: 5.5em;
+  text-align: center;
+}
+
+.sleigh-clock-pill.low,
+.sleigh-clock-pill.up {
+  background: #b3261e;
+}
+
+.sleigh-bar .robot-bar-fill {
+  background: linear-gradient(90deg, #0f5c2a, #2fbf55);
+}
+
+.sleigh-bar-flight .robot-bar-fill {
+  background: repeating-linear-gradient(-45deg, #a80f22 0 18px, #c42032 18px 36px);
+}
+
+.sleigh-bar-intro .robot-bar-fill,
+.sleigh-bar-countdown .robot-bar-fill {
+  background: linear-gradient(90deg, #8a6a12, #f2c14e);
+}
+
+.sleigh-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+  background: #0b1226;
+}
+
+.sleigh-field-box {
+  flex: 1;
+  min-width: 0;
+  container-type: size;
+  display: grid;
+  place-items: center;
+  background: #16223f;
+}
+
+/* The town's 16:9 box, as big as fits: HTML overlays can then be placed in % of the field. */
+.sleigh-field {
+  position: relative;
+  width: min(100cqw, 100cqh * 16 / 9);
+  height: min(100cqh, 100cqw * 9 / 16);
+  overflow: hidden;
+}
+
+.sleigh-field > svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.sleigh-city {
+  /* Static: give it its own layer so the moving sleighs never repaint it. */
+  will-change: transform;
+  transition: filter 0.6s ease;
+}
+
+.sleigh-houses {
+  transition: filter 0.6s ease;
+}
+
+.sleigh-wrap.phase-quiz .sleigh-city,
+.sleigh-wrap.phase-countdown .sleigh-city,
+.sleigh-wrap.phase-quiz .sleigh-houses,
+.sleigh-wrap.phase-countdown .sleigh-houses {
+  filter: brightness(0.55) saturate(0.85);
+}
+
+.sleigh-wrap.phase-quiz .sleigh-sleighs {
+  filter: brightness(0.8);
+}
+
+/* Houses still waiting: the chimney glows and a present bobs over it. */
+.sleigh-chimney-glow {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sleigh-glow 1.6s ease-in-out infinite alternate;
+}
+
+@keyframes sleigh-glow {
+  from {
+    opacity: 0.55;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+.sleigh-gift-bob {
+  animation: sleigh-bob 1.4s ease-in-out infinite alternate;
+}
+
+.sleigh-gift-shadow {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sleigh-bob-shadow 1.4s ease-in-out infinite alternate;
+}
+
+.sleigh-house:nth-child(3n) .sleigh-gift-bob,
+.sleigh-house:nth-child(3n) .sleigh-gift-shadow,
+.sleigh-house:nth-child(3n) .sleigh-chimney-glow {
+  animation-delay: -0.5s;
+}
+
+.sleigh-house:nth-child(3n + 1) .sleigh-gift-bob,
+.sleigh-house:nth-child(3n + 1) .sleigh-gift-shadow,
+.sleigh-house:nth-child(3n + 1) .sleigh-chimney-glow {
+  animation-delay: -1s;
+}
+
+@keyframes sleigh-bob {
+  from {
+    transform: translate(0, -18px);
+  }
+  to {
+    transform: translate(0, -28px);
+  }
+}
+
+/* A dark edge and a gold halo, so the present stands out on light roofs and dark streets. */
+.sleigh-gift {
+  filter: drop-shadow(0 0 1.5px rgba(0, 0, 0, 0.9)) drop-shadow(0 0 5px rgba(255, 210, 63, 0.85));
+}
+
+@keyframes sleigh-bob-shadow {
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: scale(0.75);
+    opacity: 0.6;
+  }
+}
+
+.sleigh-gift-ring {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sleigh-ring 1.6s ease-out infinite;
+}
+
+@keyframes sleigh-ring {
+  from {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.6) rotate(60deg);
+    opacity: 0;
+  }
+}
+
+/* A delivered house lights up: its lit picture flashes in over the dark town. */
+.sleigh-lit {
+  animation: sleigh-house-lit 0.8s ease-out both;
+}
+
+@keyframes sleigh-house-lit {
+  from {
+    opacity: 0;
+    filter: brightness(2.2);
+  }
+  40% {
+    opacity: 1;
+  }
+  to {
+    filter: none;
+  }
+}
+
+.sleigh-pad-text {
+  font-family: "Arial Black", "Helvetica Neue", Arial, sans-serif;
+  font-weight: 900;
+  fill: #b3121f;
+  paint-order: stroke;
+  stroke: rgba(255, 255, 255, 0.85);
+  stroke-width: 2.5px;
+  stroke-linejoin: round;
+}
+
+/* Rudolph's nose glows (the reindeer gallop by SMIL in sleigh-art.tsx). */
+.sleigh-nose-glow {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sleigh-glow 0.9s ease-in-out infinite alternate;
+}
+
+.sleigh-dust {
+  animation: sleigh-dust 0.35s ease-in-out infinite alternate;
+}
+
+@keyframes sleigh-dust {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.sleigh-pos.offline {
+  opacity: 0.45;
+}
+
+/* The light streak behind a moving sleigh, in its team's colour, fading toward its old end. */
+.sleigh-trail {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.35));
+}
+
+.sleigh-tag-name {
+  font: 800 19px var(--font);
+  fill: #fff;
+  paint-order: stroke;
+  stroke: rgba(5, 10, 30, 0.85);
+  stroke-width: 5px;
+  stroke-linejoin: round;
+}
+
+.sleigh-tag-count {
+  fill: #ffd23f;
+}
+
+.sleigh-sleighs.crowded .sleigh-tag-name {
+  font-size: 15px;
+}
+
+.sleigh-pos.leader .sleigh-tag > circle {
+  stroke: #ffd23f;
+  stroke-width: 3.5px;
+}
+
+/* A delivery: the present arcs down the chimney, a sparkle burst and a "+1" pop. */
+.sleigh-drop {
+  animation: sleigh-drop 0.6s cubic-bezier(0.4, 0, 0.7, 1) both, sleigh-drop-out 0.25s ease-in 0.6s both;
+}
+
+@keyframes sleigh-drop {
+  from {
+    transform: translate(var(--dx), var(--dy)) scale(1.3);
+  }
+  50% {
+    transform: translate(calc(var(--dx) * 0.4), calc(var(--dy) * 0.4 - 30px)) scale(1.6);
+  }
+  to {
+    transform: translate(0, 0) scale(0.7);
+  }
+}
+
+@keyframes sleigh-drop-out {
+  to {
+    transform: scale(0);
+    opacity: 0;
+  }
+}
+
+.sleigh-burst {
+  opacity: 0;
+  animation: sleigh-burst 0.7s ease-out 0.55s both;
+}
+
+@keyframes sleigh-burst {
+  from {
+    transform: scale(0.2) rotate(0deg);
+    opacity: 1;
+  }
+  60% {
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.5) rotate(25deg);
+    opacity: 0;
+  }
+}
+
+.sleigh-pop {
+  font: 900 22px var(--font);
+  fill: #ffd23f;
+  paint-order: stroke;
+  stroke: rgba(5, 10, 30, 0.9);
+  stroke-width: 5px;
+  stroke-linejoin: round;
+  animation: sleigh-pop 1.7s ease-out both;
+}
+
+@keyframes sleigh-pop {
+  0%,
+  30% {
+    transform: translate(0, 10px) scale(0.4);
+    opacity: 0;
+  }
+  45% {
+    transform: translate(0, 0) scale(1.15);
+    opacity: 1;
+  }
+  80% {
+    transform: translate(0, -14px) scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: translate(0, -26px) scale(1);
+    opacity: 0;
+  }
+}
+
+/* A wall bump throws up a puff of snow. */
+.sleigh-puff {
+  animation: sleigh-puff 0.7s ease-out both;
+}
+
+@keyframes sleigh-puff {
+  from {
+    transform: scale(0.3);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.7);
+    opacity: 0;
+  }
+}
+
+/* Falling snow: three repeating layers of flakes, each tile moved down exactly one tile per loop. */
+.sleigh-snowfall {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.sleigh-snowfall i {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  will-change: transform;
+  animation: sleigh-snow linear infinite;
+}
+
+.sleigh-snowfall .s1 {
+  top: -160px;
+  --tile: 160px;
+  background-image: radial-gradient(circle at 20% 30%, #fff 1.2px, transparent 1.8px), radial-gradient(circle at 70% 60%, #fff 1px, transparent 1.6px), radial-gradient(circle at 45% 85%, #fff 1.1px, transparent 1.7px);
+  background-size: 160px 160px;
+  opacity: 0.55;
+  animation-duration: 11s;
+}
+
+.sleigh-snowfall .s2 {
+  top: -240px;
+  --tile: 240px;
+  background-image: radial-gradient(circle at 10% 70%, #fff 1.8px, transparent 2.6px), radial-gradient(circle at 60% 20%, #fff 2px, transparent 2.8px), radial-gradient(circle at 85% 80%, #fff 1.6px, transparent 2.4px);
+  background-size: 240px 240px;
+  opacity: 0.65;
+  animation-duration: 8s;
+}
+
+.sleigh-snowfall .s3 {
+  top: -380px;
+  --tile: 380px;
+  background-image: radial-gradient(circle at 30% 40%, #fff 2.6px, transparent 3.8px), radial-gradient(circle at 80% 10%, #fff 3px, transparent 4.2px);
+  background-size: 380px 380px;
+  opacity: 0.75;
+  animation-duration: 6.5s;
+}
+
+@keyframes sleigh-snow {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(0, var(--tile), 0);
+  }
+}
+
+.sleigh-quiz-note {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  translate: -50% -50%;
+  width: 58%;
+  padding: 2.2cqh 2cqw;
+  border-radius: var(--radius);
+  background: rgba(10, 18, 40, 0.94);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), inset 0 0 0 3px rgba(255, 255, 255, 0.08);
+  border: 4px solid transparent;
+  border-image: repeating-linear-gradient(-45deg, #d62828 0 14px, #f4f4f4 14px 28px) 6;
+  text-align: center;
+  font-size: clamp(18px, 2.6cqh, 40px);
+  font-weight: 900;
+  animation: pop-in 0.35s ease-out both;
+}
+
+.sleigh-quiz-round {
+  font-size: 0.7em;
+  color: #ffd23f;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.sleigh-quiz-sub {
+  font-size: 0.62em;
+  font-weight: 700;
+  color: var(--on-bg-soft);
+  margin-top: 0.4em;
+}
+
+.sleigh-overlay {
+  background: radial-gradient(ellipse at center, rgba(14, 28, 64, 0.72), rgba(4, 8, 22, 0.88));
+  z-index: 2;
+}
+
+/* "Get ready to fly": the team on the hilltop under the moon. */
+.sleigh-overlay.sleigh-intro {
+  background: linear-gradient(rgba(4, 8, 22, 0.25), rgba(4, 8, 22, 0.55)), var(--scene) center / cover;
+}
+
+.sleigh-overlay-title {
+  font-size: clamp(28px, 3.4vw, 64px);
+  font-weight: 900;
+  color: #ffd23f;
+  text-shadow: 0 4px 0 rgba(0, 0, 0, 0.45);
+}
+
+.sleigh-overlay .countdown-label {
+  max-width: min(1200px, 70vw);
+  font-size: clamp(20px, 2.1vw, 40px);
+  line-height: 1.35;
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.5);
+}
+
+.sleigh-overlay .countdown-num {
+  text-shadow: 0 6px 0 rgba(0, 0, 0, 0.45);
+}
+
+.sleigh-intro .sleigh-canes {
+  width: clamp(160px, 20vw, 360px);
+  height: auto;
+  animation: sleigh-sway 1.2s ease-in-out infinite alternate;
+  filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.5));
+}
+
+@keyframes sleigh-sway {
+  from {
+    transform: rotate(-4deg) scale(0.98);
+  }
+  to {
+    transform: rotate(4deg) scale(1.03);
+  }
+}
+
+/* The finale: every present delivered. */
+@keyframes sleigh-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+.sleigh-finale {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(ellipse at center, rgba(255, 210, 63, 0.18), rgba(4, 8, 22, 0.55));
+  pointer-events: none;
+  animation: sleigh-fade 0.4s ease-out both;
+}
+
+.sleigh-finale-card {
+  position: relative;
+  padding: 3vh 4vw;
+  border-radius: var(--radius);
+  background: rgba(10, 18, 40, 0.92);
+  border: 5px solid transparent;
+  border-image: repeating-linear-gradient(-45deg, #d62828 0 16px, #f4f4f4 16px 32px) 8;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  animation: pop-in 0.5s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+
+.sleigh-finale-title {
+  font-size: clamp(32px, 4.4vw, 84px);
+  font-weight: 900;
+  color: #ffd23f;
+  text-shadow: 0 5px 0 rgba(0, 0, 0, 0.4);
+}
+
+.sleigh-finale-sub {
+  margin-top: 1vh;
+  font-size: clamp(16px, 1.6vw, 30px);
+  font-weight: 700;
+}
+
+.sleigh-confetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.sleigh-confetti i {
+  position: absolute;
+  top: -4%;
+  width: 0.8vw;
+  height: 1.3vw;
+  border-radius: 2px;
+  animation: sleigh-confetti linear infinite;
+}
+
+.sleigh-confetti i.snow {
+  width: 0.7vw;
+  height: 0.7vw;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.8);
+}
+
+@keyframes sleigh-confetti {
+  from {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  to {
+    transform: translate(4vw, 110vh) rotate(720deg);
+  }
+}
+
+/* Side panel. */
+.sleigh-standings {
+  flex: none;
+  width: min(20vw, 330px);
+  padding: 1.2vh 0.8vw;
+  background: linear-gradient(180deg, rgba(14, 24, 52, 0.95), rgba(8, 14, 32, 0.95));
+  border-left: 3px solid #1f6b3a;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  font-size: clamp(13px, 1.05vw, 20px);
+}
+
+.sleigh-standings h2 {
+  margin: 0 0 0.6vh;
+  font-size: 1.05em;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #ffd23f;
+}
+
+.sleigh-standings-head,
+.sleigh-standings li {
+  display: grid;
+  grid-template-columns: 1.7em 1.6em minmax(0, 1fr) 4.2em 2em;
+  align-items: center;
+  gap: 6px;
+}
+
+.sleigh-standings-head {
+  font-size: 0.7em;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--on-bg-soft);
+  padding: 0 4px 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+.sleigh-standings-head span:nth-child(n + 4) {
+  text-align: right;
+}
+
+.sleigh-standings ul {
+  list-style: none;
+  margin: 0.5vh 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-weight: 700;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.sleigh-standings li {
+  padding: 2px 4px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border-left: 4px solid var(--car);
+}
+
+.sleigh-standings li .avatar {
+  width: 1.6em;
+  height: 1.6em;
+}
+
+.sleigh-standings li .n {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sleigh-pos-n {
+  font-weight: 900;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.sleigh-standings li:nth-child(1) .sleigh-pos-n {
+  color: #ffd23f;
+}
+
+.sleigh-standings li:nth-child(2) .sleigh-pos-n {
+  color: #d9dde3;
+}
+
+.sleigh-standings li:nth-child(3) .sleigh-pos-n {
+  color: #e39a5b;
+}
+
+.sleigh-energy,
+.sleigh-presents {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.sleigh-energy {
+  font-size: 0.85em;
+  color: var(--on-bg-soft);
+}
+
+.sleigh-presents {
+  font-weight: 900;
+  color: #ffd23f;
+}
+
+.sleigh-standings li.offline .n {
+  font-style: italic;
+  opacity: 0.6;
+}
+
+.sleigh-standings li.parked {
+  opacity: 0.6;
+}
+
+.sleigh-standings.crowded {
+  font-size: clamp(11px, 0.85vw, 16px);
+}
+
+.sleigh-standings.crowded ul {
+  gap: 1px;
+}
+
+.sleigh-standings.crowded li {
+  padding: 0 4px;
+}
+
+/* Podium. */
+.sleigh-podium {
+  background: #0b1226;
+}
+
+/* The lit-up town under fireworks, covering the whole screen behind the results. */
+.sleigh-podium .podium-bg {
+  opacity: 0.6;
+  container-type: size;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.sleigh-podium-scene {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sleigh-podium > .sleigh-snowfall {
+  position: absolute;
+  z-index: 0;
+}
+
+.sleigh-final {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: min(900px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.8vh;
+}
+
+.sleigh-final li {
+  display: flex;
+  align-items: center;
+  gap: 1.4vw;
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: var(--radius);
+  border-left: 0.5em solid var(--car);
+  padding: 0.8vh 1.6vw;
+  font-size: clamp(16px, 1.8vw, 30px);
+  font-weight: 800;
+  animation: rise 0.4s ease-out both;
+}
+
+.sleigh-final li.won {
+  background: var(--accent);
+}
+
+.sleigh-final .avatar {
+  width: 1.6em;
+  height: 1.6em;
+  flex: none;
+}
+
+.sleigh-final .lb-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sleigh-final-dist {
+  font-size: 0.72em;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.sleigh-final-dist b {
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sleigh-chimney-glow,
+  .sleigh-gift-bob,
+  .sleigh-gift-shadow,
+  .sleigh-gift-ring,
+  .sleigh-lit,
+  .sleigh-nose-glow,
+  .sleigh-dust,
+  .sleigh-snowfall i,
+  .sleigh-confetti i,
+  .sleigh-intro .sleigh-canes {
+    animation: none;
+  }
+}

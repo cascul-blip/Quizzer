@@ -16,6 +16,7 @@ const LOBBY: Record<GameMode, MusicTrackId> = {
   bomb: "bomb-lobby",
   siege: "siege-lobby",
   duel: "showdown-lobby",
+  sleigh: "sleigh-lobby",
 };
 
 let landKey = "";
@@ -167,6 +168,21 @@ export function musicFor(view: HostView | null): MusicCue {
       const busy = Math.min(1, view.monsterCount / 10);
       const intensity = Math.max(0.2, Math.min(giant ? 1 : 0.84, 0.2 + busy * 0.35 + lost * 0.45), giant ? 0.85 : 0);
       return { track: "siege-battle", intensity, key: `siege-wave-${view.wave}` };
+    }
+    case "sleigh": {
+      if (view.phase === "podium") return { track: "sleigh-results" };
+      // Time up and the last flight over: the celebration before the podium, with the extra bells and timpani.
+      if (view.finished) return { track: "sleigh-results", intensity: 0.9, key: "sleigh-finale" };
+      // One track for the whole round: a few sleigh bells and pizzicato at the start of the quiz,
+      // the carol builds as its time runs out and through "get ready to fly", and plays in full
+      // (faster) while the sleighs are in the air.
+      if (view.phase === "quiz") {
+        const elapsed = Math.max(0, Math.min(1, 1 - view.phaseRemainingMs / Math.max(1, view.phaseDurationMs)));
+        return { track: "sleigh-flight", intensity: 0.15 + elapsed * 0.4, rampTo: 0.55, rampMs: view.phaseRemainingMs, key: `sleigh-q${view.round}` };
+      }
+      if (view.phase === "intro") return { track: "sleigh-flight", intensity: 0.6, rampTo: 0.8, rampMs: view.phaseRemainingMs, key: `sleigh-intro${view.round}` };
+      if (view.phase === "flight") return { track: "sleigh-flight", intensity: 1, key: `sleigh-flight${view.round}` };
+      return { track: "sleigh-flight", intensity: 0.05, key: "sleigh-countdown" };
     }
   }
 }

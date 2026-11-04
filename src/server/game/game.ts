@@ -26,6 +26,7 @@ import {
   type FightSettings,
   type GameMode,
   type HillSetting,
+  type SleighSettings,
   type HostGameState,
   type LandSettings,
   type Pacing,
@@ -39,6 +40,7 @@ import {
   type TowerSettings,
 } from "../../shared/protocol.ts";
 import { SIEGE_WAVE_CHOICES, type SiegeWaves } from "../../shared/siege-rules.ts";
+import { SLEIGH_DEFAULT_MINUTES, SLEIGH_MINUTES } from "../../shared/sleigh-rules.ts";
 import { cleanAvatar, randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import { MAX_TYPED_ANSWER, checkAnswer, type AnswerValue } from "../../shared/answer-match.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
@@ -63,6 +65,7 @@ export const DEFAULT_DRAGON: DragonSettings = { teams: 2, toughness: "normal", b
 export const DEFAULT_BOMB: BombSettings = { game: "together", squads: 1, modules: 3, wires: 3, minutes: 5, penaltySec: 15 };
 export const DEFAULT_SIEGE: SiegeSettings = { waves: 5 };
 export const DEFAULT_DUEL: DuelSettings = { rounds: DUEL_DEFAULT_ROUNDS };
+export const DEFAULT_SLEIGH: SleighSettings = { minutes: SLEIGH_DEFAULT_MINUTES };
 
 interface Answer {
   /** Chosen option index; -1 for a typed answer. */
@@ -107,13 +110,14 @@ interface GameOptions {
   bomb?: BombSettings;
   siege?: SiegeSettings;
   duel?: DuelSettings;
+  sleigh?: SleighSettings;
   protect?: boolean;
 }
 
 /**
  * A Classic game: lobby → (intro → open → reveal → leaderboard)* → podium.
  * It also serves as the lobby for every mode; in the other modes the hub
- * hands its players to that mode's game (TowerGame, SubGame, FightGame, RobotGame, LandGame, RacerGame, CupGame, DragonGame, BombGame, SiegeGame, DuelGame) on start.
+ * hands its players to that mode's game (TowerGame, SubGame, FightGame, RobotGame, LandGame, RacerGame, CupGame, DragonGame, BombGame, SiegeGame, DuelGame, SleighGame) on start.
  */
 export class Game {
   readonly quiz: Quiz;
@@ -125,7 +129,7 @@ export class Game {
   qIndex = -1;
   pacing: Pacing;
   shuffle: ShuffleOptions;
-  /** "Protect from abuse": Tallest Tower, Submarine Squad, Tower Fight, Robot Attack, Cup of Death, Dragon's Hoard and Kingdom Siege slow down players who keep answering wrong. Bomb Squad does not use it. */
+  /** "Protect from abuse": Tallest Tower, Submarine Squad, Tower Fight, Robot Attack, Cup of Death, Dragon's Hoard, Kingdom Siege and Santa's Sleigh Run slow down players who keep answering wrong. Bomb Squad does not use it. */
   protect: boolean;
   mode: GameMode;
   tower: TowerSettings;
@@ -136,6 +140,7 @@ export class Game {
   bomb: BombSettings;
   siege: SiegeSettings;
   duel: DuelSettings;
+  sleigh: SleighSettings;
   /** When the current phase's countdown ends (intro/open), for views. */
   phaseEndsAt = 0;
   openedAt = 0;
@@ -173,6 +178,7 @@ export class Game {
     this.bomb = { ...(opts.bomb ?? DEFAULT_BOMB) };
     this.siege = { ...(opts.siege ?? DEFAULT_SIEGE) };
     this.duel = { ...(opts.duel ?? DEFAULT_DUEL) };
+    this.sleigh = { ...(opts.sleigh ?? DEFAULT_SLEIGH) };
     this.protect = opts.protect ?? true;
   }
 
@@ -269,7 +275,7 @@ export class Game {
 
   setMode(mode: GameMode): void {
     if (this.phase !== "lobby") throw new GameError("The game mode can only be changed before the game starts");
-    if (mode !== "classic" && mode !== "tower" && mode !== "submarine" && mode !== "fight" && mode !== "robot" && mode !== "land" && mode !== "racer" && mode !== "cup" && mode !== "dragon" && mode !== "bomb" && mode !== "siege" && mode !== "duel") throw new GameError("Unknown game mode");
+    if (mode !== "classic" && mode !== "tower" && mode !== "submarine" && mode !== "fight" && mode !== "robot" && mode !== "land" && mode !== "racer" && mode !== "cup" && mode !== "dragon" && mode !== "bomb" && mode !== "siege" && mode !== "duel" && mode !== "sleigh") throw new GameError("Unknown game mode");
     this.mode = mode;
     if (mode === "bomb") {
       this.bombSquadsManual = false;
@@ -364,6 +370,14 @@ export class Game {
     const rounds = Number(settings.rounds);
     if (!(DUEL_ROUNDS as readonly number[]).includes(rounds)) throw new GameError("Unsupported number of rounds");
     this.duel = { rounds };
+    this.onChange();
+  }
+
+  setSleigh(settings: SleighSettings): void {
+    if (this.phase !== "lobby") throw new GameError("Santa's Sleigh Run settings can only be changed before the game starts");
+    const minutes = Number(settings.minutes);
+    if (!(SLEIGH_MINUTES as readonly number[]).includes(minutes)) throw new GameError("Unsupported game length");
+    this.sleigh = { minutes };
     this.onChange();
   }
 
@@ -605,6 +619,7 @@ export class Game {
       bomb: this.bomb,
       siege: this.siege,
       duel: this.duel,
+      sleigh: this.sleigh,
       teams,
       quiz: { id: this.quizId, title: this.title, questionCount: this.questions.length },
       pacing: this.pacing,
