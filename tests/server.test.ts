@@ -18,6 +18,7 @@ import { QuizStore } from "../src/server/quiz/store.ts";
 import { CUP_ROLL_MS, CUP_SIP_MS, DRAGON_TRANSITION_MS, ROBOT_MOVE_MS, cupQuizMs, robotQuizMs, type ClientMsg, type HostView, type PlayerView, type ServerMsg } from "../src/shared/protocol.ts";
 import { applyPatch } from "../src/shared/view-patch.ts";
 import { FakeClock, tempDir } from "./helpers.ts";
+import { OFFERED_ACCESSORIES, OFFERED_AVATARS } from "../src/shared/avatars.ts";
 
 class TestSocket {
   msgs: ServerMsg[] = [];
@@ -218,9 +219,10 @@ describe("full game over WebSockets", () => {
 
     await host.hostState((v) => v.phase === "lobby" && v.players.length === 3);
     // Avatars: picked in the lobby, shown on the host.
-    players[0]!.send({ type: "setAvatar", avatar: "panda", accessory: "crown" });
-    await host.hostState((v) => v.phase === "lobby" && v.players.some((p) => p.nickname === "Ann" && p.avatar.avatar === "panda" && p.avatar.accessory === "crown"));
-    players[1]!.send({ type: "setAvatar", avatar: "panda", accessory: "jetpack" });
+    const look = { avatar: OFFERED_AVATARS[0]!.id, accessory: OFFERED_ACCESSORIES[1]!.id };
+    players[0]!.send({ type: "setAvatar", ...look });
+    await host.hostState((v) => v.phase === "lobby" && v.players.some((p) => p.nickname === "Ann" && p.avatar.avatar === look.avatar && p.avatar.accessory === look.accessory));
+    players[1]!.send({ type: "setAvatar", avatar: look.avatar, accessory: "jetpack" });
     expect(await players[1]!.waitFor((m) => m.type === "error")).toMatchObject({ message: "Unknown avatar" });
     host.send({ type: "host.start", pacing: "manual" });
     await host.hostState((v) => v.phase === "intro");
