@@ -8,7 +8,7 @@
  */
 import { useEffect, useRef, useState } from "preact/hooks";
 import { ROBOT_BOARD, robotRing } from "../../shared/protocol.ts";
-import { ARENA_H, ARENA_W, BACKDROP, EDGE, Pieces, TILE, prefersStill, project, quad, reticleBox, tileBox, type ArenaPlayer } from "./robot-art.tsx";
+import { ARENA_H, ARENA_W, BACKDROP, EDGE, Pieces, TILE, prefersStill, project, quad, tileBox, type ArenaPlayer } from "./robot-art.tsx";
 import elbowImg from "./snowman/arm-elbow.webp";
 import foreImg from "./snowman/arm-fore.webp";
 import shoulderImg from "./snowman/arm-shoulder.webp";
@@ -24,8 +24,6 @@ import bodyImg from "./snowman/snowman-body.webp";
 import hatImg from "./snowman/snowman-hat.webp";
 import headImg from "./snowman/snowman-head.webp";
 import scarfImg from "./snowman/snowman-scarf.webp";
-import targetGlowImg from "./snowman/target-glow.webp";
-import targetImg from "./snowman/target.webp";
 import thumbImg from "./snowman/thumb.webp";
 import doomedImg from "./snowman/tile-doomed.webp";
 import { TILE_ART } from "./snowman/tiles.ts";
@@ -520,13 +518,43 @@ function SnowBoard({ marked, inset, collapsing, attacking }: { marked: Set<numbe
   );
 }
 
+/** A six-armed snowflake in tile space (0..1, centred on 0.5), as line segments: each arm has two pairs of branches. */
+const SNOWFLAKE: [number, number, number, number][] = (() => {
+  const R = 0.4;
+  const segs: [number, number, number, number][] = [];
+  for (let k = 0; k < 6; k++) {
+    const a = (k * Math.PI) / 3 + Math.PI / 6;
+    const at = (r: number, da = 0) => [0.5 + r * Math.cos(a + da), 0.5 + r * Math.sin(a + da)] as const;
+    segs.push([0.5, 0.5, ...at(R)]);
+    for (const [r, len] of [[0.17, 0.11], [0.28, 0.08]]) {
+      const [bx, by] = at(r);
+      for (const side of [-1, 1]) {
+        const b = a + (side * Math.PI) / 3;
+        segs.push([bx, by, bx + len * Math.cos(b), by + len * Math.sin(b)]);
+      }
+    }
+  }
+  return segs;
+})();
+
+/** The snowflake projected onto tile (u, v), so it lies flat on the board. */
+function snowflakePath(u: number, v: number): string {
+  const pt = (x: number, y: number) => {
+    const p = project(u + x, v + y);
+    return `${p.x.toFixed(1)},${p.y.toFixed(1)}`;
+  };
+  return SNOWFLAKE.map(([x0, y0, x1, y1]) => `M${pt(x0, y0)}L${pt(x1, y1)}`).join("");
+}
+
+/** A marked tile: a white snowflake with a heavy black outline, readable against the snow. */
 function FrostTarget({ u, v }: { u: number; v: number }) {
-  const rb = reticleBox(u, v);
+  const d = snowflakePath(u, v);
+  const s = project(u + 0.5, v + 0.5).s;
   return (
     <g class="tile-x" style={{ animationDelay: `${((u * 7 + v * 13) % 10) * 25}ms` }}>
       <polygon points={quad(u, v)} class="tile-danger" />
-      <image href={targetGlowImg} class="reticle-glow" {...rb} preserveAspectRatio="none" />
-      <image href={targetImg} {...rb} preserveAspectRatio="none" />
+      <path d={d} fill="none" stroke="#000" stroke-width={(11 * s).toFixed(1)} stroke-linecap="round" stroke-linejoin="round" />
+      <path d={d} fill="none" stroke="#fff" stroke-width={(4.5 * s).toFixed(1)} stroke-linecap="round" stroke-linejoin="round" />
     </g>
   );
 }
