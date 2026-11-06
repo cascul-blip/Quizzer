@@ -2,7 +2,7 @@
  * The built-in soundtrack: loops composed or arranged for each game mode.
  * Classic = upbeat game show, Tallest Tower = retro chiptune,
  * Submarine Squad = deep-sea suspense, Tower Fight = medieval battle,
- * Robot Attack = Romantic orchestra (public-domain Beethoven and Grieg themes),
+ * Robot Attack = Christian Christmas carols for the snowman; Beethoven and Grieg for the robot,
  * Land Grab = calm ambient piano that grows into an orchestra as rings close,
  * Racer = sunny late-80s arcade-racing chiptune (tempo follows the car's speed), in the rich arcade sound (see rich.ts),
  * Cup of Death = original spaghetti-western themes: whistle, twangy guitar, galloping hooves,
@@ -21,6 +21,7 @@
  */
 import type { MusicTrackId } from "../../../shared/music-tracks.ts";
 import type { Track } from "./engine.ts";
+import { ROBOT_SKIN, type RobotSkin } from "../robot-skin.ts";
 
 // ---------- composing helpers (each returns one 16-step bar) ----------
 
@@ -1769,6 +1770,77 @@ const sleighResults: Track = {
   ],
 };
 
+// ---------- Evil Snowman: original arrangements of traditional Christian carols ----------
+// Melody sources and CC0 instrument provenance: samples/CREDITS.md.
+// Keep the tune present at zero intensity: late rounds can last only seven seconds.
+const snowmanLobby: Track = {
+  id: "robot-lobby", bpm: 92, bars: ADESTE.length, reverb: 0.3,
+  layers: [
+    { inst: "flute", bars: ADESTE, vol: 0.55 },
+    { inst: "bell", bars: shift(ADESTE, 1), vol: 0.22 },
+    { inst: "strings", bars: ADESTE_HARMONY.map(padBar), vol: 0.35 },
+    { inst: "piano", bars: ADESTE_HARMONY.map(rootBeats), vol: 0.45 },
+    { inst: "pluck", bars: ADESTE_HARMONY.map(brokenChords), vol: 0.25 },
+    { inst: "hat", bars: [BELLS_8THS], vol: 0.22 },
+  ],
+};
+
+const snowmanQuiz: Track = {
+  id: "robot-quiz", bpm: 90, tempoBoost: 0.5, bars: GOD_REST.length, reverb: 0.25,
+  layers: [
+    { inst: "pluck", bars: GOD_REST, vol: 0.65 },
+    { inst: "strings", bars: GOD_REST_HARMONY.map(padBar), vol: 0.3 },
+    { inst: "piano", bars: GOD_REST_HARMONY.map(rootBeats), vol: 0.4 },
+    { inst: "hat", bars: [BELLS_8THS], vol: 0.25 },
+    { inst: "strings", bars: GOD_REST, vol: 0.35, from: 0.3 },
+    { inst: "piano", bars: GOD_REST_HARMONY.map(offbeatChords), vol: 0.25, from: 0.4 },
+    { inst: "timpani", bars: GOD_REST_HARMONY.map((q) => once(XMAS_ROOTS[q[0]!]!)), vol: 0.4, from: 0.5 },
+    { inst: "bell", bars: shift(GOD_REST, 1), vol: 0.25, from: 0.55 },
+    { inst: "brass", bars: GOD_REST, vol: 0.45, from: 0.7 },
+    { inst: "snare", bars: GOD_REST_SNARE, vol: 0.35, from: 0.8 },
+    { inst: "hat", bars: [BELLS_16THS], vol: 0.2, from: 0.85 },
+  ],
+};
+
+const snowmanMove: Track = {
+  id: "robot-move", bpm: 116, bars: EMMANUEL.length, reverb: 0.25,
+  layers: [
+    { inst: "strings", bars: EMMANUEL, vol: 0.65 },
+    { inst: "brass", bars: EMMANUEL, vol: 0.4 },
+    { inst: "bell", bars: shift(EMMANUEL, 1), vol: 0.25 },
+    { inst: "strings", bars: EMMANUEL_HARMONY.map(padBar), vol: 0.3 },
+    { inst: "piano", bars: EMMANUEL_HARMONY.map(rootBounce), vol: 0.5 },
+    { inst: "timpani", bars: EMMANUEL_HARMONY.map((q) => seq([XMAS_ROOTS[q[0]!]!, 4], [".", 4], [XMAS_ROOTS[q[2]!]!, 4], [".", 4])), vol: 0.35 },
+    { inst: "hat", bars: [BELLS_8THS], vol: 0.3 },
+    { inst: "snare", bars: EMMANUEL_SNARE, vol: 0.3 },
+  ],
+};
+
+const snowmanResults: Track = {
+  id: "robot-results", bpm: 112, bars: ANTIOCH.length, reverb: 0.35,
+  layers: [
+    { inst: "brass", bars: ANTIOCH, vol: 0.65 },
+    { inst: "strings", bars: ANTIOCH, vol: 0.4 },
+    { inst: "bell", bars: shift(ANTIOCH, 1), vol: 0.3 },
+    { inst: "strings", bars: ANTIOCH_HARMONY.map(padBar), vol: 0.35 },
+    { inst: "piano", bars: ANTIOCH_HARMONY.map(rootBeats), vol: 0.5 },
+    { inst: "pluck", bars: ANTIOCH_HARMONY.map(brokenChords), vol: 0.25 },
+    { inst: "hat", bars: [BELLS_8THS], vol: 0.3 },
+    { inst: "kick", bars: [drum("x.......x.......")], vol: 0.4 },
+    { inst: "snare", bars: [drum("....x.......x...")], vol: 0.3 },
+    { inst: "cymbal", bars: [once("x"), ...Array(ANTIOCH.length - 1).fill(rest)], vol: 0.3 },
+  ],
+};
+
+type RobotMusicId = Extract<MusicTrackId, `robot-${string}`>;
+
+/** Keep custom file IDs stable while the seasonal skin changes the built-in arrangements. */
+export function robotTracksForSkin(skin: RobotSkin): Record<RobotMusicId, Track> {
+  return skin === "snowman"
+    ? { "robot-lobby": snowmanLobby, "robot-quiz": snowmanQuiz, "robot-move": snowmanMove, "robot-results": snowmanResults }
+    : { "robot-lobby": robotLobby, "robot-quiz": robotQuiz, "robot-move": robotMove, "robot-results": robotResults };
+}
+
 export const TRACKS: Record<MusicTrackId, Track> = {
   "classic-lobby": classicLobby,
   "classic-question": classicQuestion,
@@ -1784,10 +1856,7 @@ export const TRACKS: Record<MusicTrackId, Track> = {
   "fight-lobby": fightLobby,
   "fight-play": fightPlay,
   "fight-results": fightResults,
-  "robot-lobby": robotLobby,
-  "robot-quiz": robotQuiz,
-  "robot-move": robotMove,
-  "robot-results": robotResults,
+  ...robotTracksForSkin(ROBOT_SKIN),
   "land-lobby": landLobby,
   "land-play": landPlay,
   "land-results": landResults,

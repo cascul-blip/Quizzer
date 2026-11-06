@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "preact/hooks";
 import { ROBOT_BOARD, ROBOT_LIVES, robotInBounds, type ClientMsg, type PlayerRobotView, type RobotDir } from "../../shared/protocol.ts";
 import { MiniBoard } from "../shared/robot-art.tsx";
+import { SKIN_TEXT } from "../shared/robot-skin.ts";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
 import { Feedback, StreamQuestion } from "./tower.tsx";
 
@@ -17,8 +18,8 @@ export function RobotPlayer({ view, send }: { view: PlayerRobotView; send: Send 
   if (view.phase === "countdown") {
     body = (
       <main class="center">
-        <div class="robot-emoji">🤖</div>
-        <p class="muted">Answer questions to earn moves. When it's time to move, get off the red Xs before the robot fires!</p>
+        <div class="robot-emoji">{SKIN_TEXT.emoji}</div>
+        <p class="muted">Answer questions to earn moves. When it's time to move, get off the red Xs before {SKIN_TEXT.attacker} {SKIN_TEXT.attack}!</p>
         <div class="tower-count">{Math.max(1, secs)}</div>
       </main>
     );
@@ -104,7 +105,7 @@ function MoveScreen({ view, secs, send }: { view: PlayerRobotView; secs: number;
   }, []);
 
   const status = view.me.out
-    ? "💀 You're out. Watch the robot!"
+    ? `💀 You're out. Watch ${SKIN_TEXT.attacker}!`
     : onCollapse
       ? view.me.points > 0
         ? "⚠ This tile is about to collapse. Move!"
@@ -160,7 +161,7 @@ function AttackScreen({ view }: { view: PlayerRobotView }) {
     seen.current = a.seq;
     if (a.hit) navigator.vibrate?.(a.eliminated ? [300, 100, 300] : [200, 80, 120]);
   }, [a?.seq]);
-  const [icon, text] = !a || (view.me.out && !a.eliminated) ? ["🔥", "The robot fires!"] : a.eliminated ? ["💀", "Zapped! You're out of lives"] : a.hit ? ["💥", "Hit! −1 ♥"] : ["😅", "Safe!"];
+  const [icon, text] = !a || (view.me.out && !a.eliminated) ? [SKIN_TEXT.emoji, `${SKIN_TEXT.Attacker} ${SKIN_TEXT.attack}!`] : a.eliminated ? ["💀", `${SKIN_TEXT.knockedOut} You're out of lives`] : a.hit ? ["💥", "Hit! −1 ♥"] : ["😅", "Safe!"];
   return (
     <main class={`robot-attack ${a?.hit ? "hit" : "safe"}`}>
       <div class="robot-attack-icon">{icon}</div>
@@ -176,9 +177,9 @@ function RobotResult({ view }: { view: PlayerRobotView }) {
   if (!r) return null;
   return (
     <main class="center">
-      <div class="robot-emoji">{r.won ? "🏆" : "🤖"}</div>
+      <div class="robot-emoji">{r.won ? "🏆" : SKIN_TEXT.emoji}</div>
       <div class={`final-rank ${r.won ? "top" : ""}`}>{r.won ? "You win!" : `${ordinal(r.rank)} of ${r.playerCount}`}</div>
-      <p class="muted">{r.outRound === null ? (r.won ? "You outlasted the robot!" : "You survived to the end.") : `Knocked out in round ${r.outRound}.`}</p>
+      <p class="muted">{r.outRound === null ? (r.won ? `You outlasted ${SKIN_TEXT.attacker}!` : "You survived to the end.") : `Knocked out in round ${r.outRound}.`}</p>
       <p class="big-score">{view.me.correct} correct</p>
       {r.awards.map((a) => (
         <div key={a} class="award-chip">

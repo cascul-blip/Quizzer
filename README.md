@@ -183,6 +183,8 @@ Then the robot's three back arms **fire lasers at every red X**. Anyone standing
 
 **The board shrinks.** Every 4th round (rounds 4, 8, 12, 16 and 20), the robot destroys the **outer ring of tiles**, taking the board from 12×12 down to 2×2. When the targets are locked, the doomed ring shows as **solid pulsing red** instead of red Xs. Anyone still standing on it when the lasers fire loses a life, as on a red X, and is moved to the closest free tile on what's left of the board. The red Xs always leave **1/4 of the remaining board safe**, so in a shrinking round the safe tiles are all inside the ring.
 
+**Seasonal look: the Evil Snowman.** For the winter season, Robot Attack is reskinned: a fanged snowman with glowing eyes stands in a snowy forest behind a board of packed snow and ice, the targets are frost rings, and instead of lasers **the snowman rakes the board with its twig claws**. Each hand sweeps its half of the board inward, the marked tiles crack as the claws pass, players caught get a frost puff, and a collapsing ring gets swept off the edge. The rules are exactly the same. The robot's art is still in `src/client/shared/robot/`; set `ROBOT_SKIN` in `src/client/shared/robot-skin.ts` back to `"robot"` to bring it back. The snowman's art is in `src/client/shared/snowman/`, and its rig spec and art build scripts are in `scripts/snowman-art/`.
+
 **The last player standing wins.** If the last players are all knocked out by the same blast, they share the win. A game with only one player runs until they're out. If the host ends the game early, players still in the game are ranked by lives left. The podium shows the standings and awards for **Most correct answers** and **Fancy footwork** (most moves). The results CSV lists each player's rank, the round they went out in, lives left, answers, moves and laser hits.
 
 ## Land Grab mode
@@ -352,7 +354,7 @@ Every game mode has **built-in background music** on the projector (phones stay 
 | Tallest Tower | Retro arcade (chiptune) | Builds up as the game clock runs down |
 | Submarine Squad | Deep-sea suspense | Speeds up and adds layers as the anglerfish closes in; a calmer theme while diving |
 | Tower Fight | Medieval battle | Gets more intense as the towers take damage |
-| Robot Attack | Romantic orchestral: Beethoven and Grieg arranged for orchestra (*In the Hall of the Mountain King* during the quiz) | Speeds up and adds instruments as each quiz phase's timer runs out; Beethoven's Fifth during movement |
+| Robot Attack | Snowman skin: Christian Christmas carols—*O Come, All Ye Faithful* in the lobby, *God Rest Ye Merry, Gentlemen* in the quiz, *O Come, O Come, Emmanuel* during movement and attack, and *Joy to the World* for results | Quiz music builds from pizzicato and bells to strings, brass, and percussion at 90–135 BPM. Switching `ROBOT_SKIN` back to `"robot"` restores Beethoven and Grieg. Seasonal arrangements use only CC0 instrument recordings |
 | Land Grab | Calm ambient piano | Speeds up and adds an orchestra as a team gets close to closing a ring; calms down again if the ring is broken |
 | Racer | Sunny late-80s arcade-racing chiptune | Tempo and layers rise with the car's speed; slow and sparse when crashed |
 | Cup of Death | Original spaghetti-western themes: whistle, twangy guitar, galloping hooves; a honky-tonk saloon piano in the lobby | The gallop speeds up and strings, brass and a church bell join as the quiz timer runs out; a heartbeat and a tolling bell while the cups are picked and drunk |
@@ -461,7 +463,7 @@ src/client/player/  phone screen (Preact)
 tests/              bun test suites
 ```
 
-The robot's voice lines are pre-recorded MP3s in `src/client/shared/voice/`, the Sovereign takes of the four lines in `src/shared/voice-lines.ts`. They're committed, so building doesn't need espeak or ffmpeg.
+The robot's voice lines are pre-recorded MP3s in `src/client/shared/voice/`, the Sovereign takes of the four lines in `src/shared/voice-lines.ts`. The snowman uses deepened, gravelly user recordings: `lookwarm` before the attack, `frostyaim` for a miss, `coldispatient` for a hit without eliminations, and `thawout` when anyone is eliminated. Switching back to the robot restores the original four lines. All clips are committed, so building doesn't need espeak or ffmpeg.
 
 The Tallest Tower building blocks are images in `src/client/shared/tower/`, made from the generated facade tiles in `scripts/tower-blocks/`. They're committed too. To change them, replace a source PNG (the prompts are in the script) and run `python3 scripts/tower-blocks.py` (needs Pillow and numpy).
 
