@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { DRUMS, STEPS_PER_BAR, layerActive, noteFreq, stepSeconds, tokens } from "../src/client/shared/music/engine.ts";
-import { TRACKS } from "../src/client/shared/music/tracks.ts";
+import { TRACKS, robotTracksForSkin } from "../src/client/shared/music/tracks.ts";
+import { ROBOT_SKIN } from "../src/client/shared/robot-skin.ts";
 import { MUSIC_TRACKS, musicTrackForFile } from "../src/shared/music-tracks.ts";
 
 describe("notes", () => {
@@ -21,7 +22,7 @@ describe("built-in tracks", () => {
     for (const [id, t] of Object.entries(TRACKS)) expect(t.id).toBe(id);
   });
 
-  for (const [id, track] of Object.entries(TRACKS)) {
+  for (const [id, track] of Object.entries({ ...TRACKS, ...Object.fromEntries(Object.entries(robotTracksForSkin("robot")).map(([id, track]) => [`original-${id}`, track])) })) {
     test(`${id}: every bar has 16 valid steps`, () => {
       expect(track.bars).toBeGreaterThan(0);
       expect(track.bpm).toBeGreaterThan(40);
@@ -62,4 +63,46 @@ test("custom music files map to track ids", () => {
   expect(musicTrackForFile("classic-lobby.exe")).toBeNull();
   expect(musicTrackForFile("../classic-lobby.mp3")).toBeNull();
   expect(musicTrackForFile("classic-lobby")).toBeNull();
+});
+
+describe("seasonal Robot Attack music", () => {
+  test("skin selection preserves IDs and restores all four original arrangements", () => {
+    const original = robotTracksForSkin("robot");
+    const seasonal = robotTracksForSkin("snowman");
+    expect(Object.keys(original).sort()).toEqual(Object.keys(seasonal).sort());
+    for (const id of Object.keys(original) as (keyof typeof original)[]) {
+      expect(original[id].id).toBe(id);
+      expect(seasonal[id].id).toBe(id);
+      expect(seasonal[id]).not.toBe(original[id]);
+      expect(TRACKS[id]).toBe(robotTracksForSkin(ROBOT_SKIN)[id]);
+    }
+    // Beethoven's Allegretto, Mountain King, Fifth, and Ode to Joy.
+    expect(Object.values(original).map((t) => t.bpm)).toEqual([72, 80, 108, 104]);
+  });
+
+  test("carol melodies remain audible throughout the intensity range", () => {
+    const seasonal = robotTracksForSkin("snowman");
+    const melodies = {
+      "robot-lobby": ["flute", "G4"],
+      "robot-quiz": ["pluck", "E4"],
+      "robot-move": ["strings", "E4"],
+      "robot-results": ["brass", "D5"],
+    } as const;
+    for (const id of Object.keys(melodies) as (keyof typeof melodies)[]) {
+      const track = seasonal[id];
+      const [instrument, opening] = melodies[id];
+      const melody = track.layers.find((l) => l.inst === instrument)!;
+      expect(tokens(melody.bars[0]!)[0]).toBe(opening);
+      for (const intensity of [0, 0.2, 0.5, 0.8, 1]) expect(layerActive(melody, intensity)).toBe(true);
+      // Seasonal arrangements must use only the existing CC0 instrument sets.
+      for (const layer of track.layers) expect(["bass", "tribass", "twang"]).not.toContain(layer.inst);
+    }
+  });
+
+  test("Christmas quiz builds from 90 to 135 BPM with additional orchestral layers", () => {
+    const quiz = robotTracksForSkin("snowman")["robot-quiz"];
+    expect(60 / (stepSeconds(quiz, 0) * 4)).toBeCloseTo(90);
+    expect(60 / (stepSeconds(quiz, 1) * 4)).toBeCloseTo(135);
+    expect(quiz.layers.filter((l) => layerActive(l, 1)).length).toBeGreaterThan(quiz.layers.filter((l) => layerActive(l, 0)).length);
+  });
 });

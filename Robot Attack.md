@@ -26,3 +26,5 @@ Every 4 turns, the outer ring of tiles is removed, until the board is 2x2.  The 
 
 ### Seasonal skin: the Evil Snowman
 For the winter season the robot is replaced by an evil snowman with twig arms in a snowy forest, over a board of packed snow and blue ice. Instead of firing lasers, the snowman sweeps across the board with its clawed hands (each hand rakes its own half), cracking every tile with a target on it. The gameplay doesn't change. Switch back with `ROBOT_SKIN` in `src/client/shared/robot-skin.ts`; the robot's artwork is kept.
+
+The snowman skin also selects Christian Christmas carols: **O Come, All Ye Faithful** in the lobby, **God Rest Ye Merry, Gentlemen** during the quiz (building from 90 to 135 BPM), **O Come, O Come, Emmanuel** for movement and attack, and **Joy to the World** for results. These are instrumental arrangements of public-domain melodies using CC0 samples. Switching `ROBOT_SKIN` back to `"robot"` restores the original Beethoven and Grieg music. Custom `robot-*` music files still override the built-in tracks.

@@ -3,6 +3,7 @@ import { ROBOT_LIVES, ROBOT_SHRINK_EVERY, type HostView } from "../../shared/pro
 import { Avatar } from "../shared/avatar-art.tsx";
 import { RobotArena } from "../shared/robot-art.tsx";
 import { ROBOT_SKIN, SKIN_TEXT } from "../shared/robot-skin.ts";
+import { attackVoiceLine, attackerVoiceLines, warningVoiceLine } from "../shared/robot-voice.ts";
 import { SnowmanArena } from "../shared/snowman-art.tsx";
 import { play } from "../shared/sounds.ts";
 import { preloadVoice, say } from "../shared/voice.ts";
@@ -19,7 +20,7 @@ const Arena = ROBOT_SKIN === "snowman" ? SnowmanArena : RobotArena;
 export function RobotStage({ view, send }: { view: RobotView; send: Send }) {
   const secs = useCountdown(view.phaseRemainingMs, `${view.phase}-${view.round}`);
   const prev = useRef<RobotView | null>(null);
-  useEffect(() => preloadVoice(["targets-acquired", "flesh-is-weak", "only-metal-endures", "cannot-evade"]), []);
+  useEffect(() => preloadVoice(attackerVoiceLines(ROBOT_SKIN)), []);
 
   useEffect(() => {
     const p = prev.current;
@@ -32,16 +33,15 @@ export function RobotStage({ view, send }: { view: RobotView; send: Send }) {
         if (ROBOT_SKIN === "snowman") setTimeout(() => play("whoosh"), 800); // as the claws hit the board
         else play("laser");
         // One verdict per attack, once it has hit: someone out, then anyone hit, else everyone dodged.
-        const a = view.lastAttack;
-        const line = !a ? null : a.eliminated.length > 0 ? "only-metal-endures" : a.hit.length > 0 ? "flesh-is-weak" : "cannot-evade";
+        const line = attackVoiceLine(view.lastAttack, ROBOT_SKIN);
         if (line) setTimeout(() => void say(line), 1000);
       }
       if (view.phase === "podium") play("fanfare");
     }
     if (view.marked.length > 0 && p.marked.length === 0 && view.phase === "quiz") {
       play("alarm");
-      // The robot speaks once the alarm has sounded.
-      setTimeout(() => void say("targets-acquired"), 650);
+      // The attacker speaks once the alarm has sounded.
+      setTimeout(() => void say(warningVoiceLine(ROBOT_SKIN)), 650);
     }
   }, [view]);
 

@@ -1,5 +1,5 @@
 /**
- * The robot's pre-recorded voice (projector only): the Sovereign MP3 lines in
+ * The attackers' pre-recorded voices (projector only): the MP3 lines in
  * ./voice/. Plays through the shared AudioContext, follows the mute
  * button, and ducks the music while it speaks.
  */
@@ -11,7 +11,17 @@ import fleshIsWeak from "./voice/flesh-is-weak.mp3";
 import onlyMetalEndures from "./voice/only-metal-endures.mp3";
 import targetsAcquired from "./voice/targets-acquired.mp3";
 
+
+import lookWarm from "./voice/lookwarm.mp3";
+import frostyAim from "./voice/frostyaim.mp3";
+import coldIsPatient from "./voice/coldispatient.mp3";
+import thawOut from "./voice/thawout.mp3";
+
 const CLIPS: Record<VoiceLineId, string> = {
+  "lookwarm": lookWarm,
+  "frostyaim": frostyAim,
+  "coldispatient": coldIsPatient,
+  "thawout": thawOut,
   "targets-acquired": targetsAcquired,
   "flesh-is-weak": fleshIsWeak,
   "only-metal-endures": onlyMetalEndures,
