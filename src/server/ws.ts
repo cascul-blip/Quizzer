@@ -595,7 +595,7 @@ export class GameHub {
         this.lastSetup.siege = { ...classic().siege };
         return;
       case "host.setDuel":
-        classic().setDuel({ rounds: Number(msg.rounds) });
+        classic().setDuel({ rounds: Number(msg.rounds), theme: msg.theme });
         this.lastSetup.duel = { ...classic().duel };
         return;
       case "host.setSleigh":

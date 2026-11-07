@@ -2722,3 +2722,35 @@ a.btn {
 .siege-christmas .siege-cell.has { background: #fff2d0 !important; }
 .siege-christmas .siege-build.ready { background: #a8312b; color: #fff3d5; }
 .siege-board.siege-christmas { border: 2px solid #c4a262; }
+
+/* North Pole Snowball Showdown: shared host/phone painting and avatar layers. */
+.snowball-scene { position:absolute; inset:0; overflow:hidden; background:#afc6ed; }
+.snowball-backdrop { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+.snowball-world { position:absolute; top:0; left:50%; height:100%; aspect-ratio:16/9; transform:translateX(-50%); }
+.snowball-elf { position:absolute; aspect-ratio:1; }
+.snowball-elf.away { opacity:.55; }
+.snowball-elf.departed { opacity:0; transition:opacity .25s; }
+.snowball-body { position:absolute; inset:0; background-size:400% 200%; background-repeat:no-repeat; z-index:2; }
+.snowball-body.mirrored { transform:scaleX(-1); }
+.snowball-head { position:absolute; width:38%; aspect-ratio:1; z-index:1; }
+.snowball-head .avatar { width:100%; height:100%; display:block; }
+.snowball-shadow { position:absolute; left:22%; top:92%; width:58%; height:5%; border-radius:50%; background:#19345755; filter:blur(3px); }
+.snowball-ready { position:absolute; right:6%; top:35%; z-index:3; font-size:clamp(10px,1.5vw,22px); background:#164b37; border-radius:50%; padding:0 5px; color:#fff; }
+.snowball-projectile { position:absolute; width:2%; aspect-ratio:1; border-radius:50%; background:radial-gradient(circle at 30% 25%, white 20%, #ecf6ff 55%, #9cafcf); transform:translate(-50%,-50%); box-shadow:0 2px 4px #2b4c7655; z-index:4; }
+.snowball-impact { position:absolute; width:20%; height:auto; aspect-ratio:1; object-fit:contain; z-index:5; pointer-events:none; }
+.snowball-impact.miss { width:14%; }
+.snowball-label { position:absolute; top:90%; z-index:6; transform:translateX(-50%); max-width:30%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:clamp(9px,1vw,15px); color:white; background:#102039dc; padding:2px 8px; border-radius:20px; }
+.snowball-label.slot2 { top:61%; }
+.snowball-lobby-preview { position:relative; aspect-ratio:16/6; width:min(760px,100%); margin:16px auto; overflow:hidden; border-radius:16px; }
+.snowball-lobby-preview > span { position:absolute; top:10px; left:50%; transform:translateX(-50%); background:#102039dc; padding:6px 16px; border-radius:20px; color:white; white-space:nowrap; }
+.duel-panel.christmas .duel-sign { background:#102039dc; color:#f1fafc; }
+.duel-panel.christmas .duel-name { background:#102039e8; color:#fff; }
+.duel-panel.christmas .duel-draw { background:#102039e8; color:#fff; }
+.duel-podium.christmas .sd-wanted { background:linear-gradient(140deg,#e8f7ff,#b4d7e7); border:3px solid #8fbbcd; border-radius:18px; box-shadow:0 6px 24px #05182a66; }
+.duel-podium.christmas .sd-wanted-heading { color:#193e56; }
+.duel-snow-strip { position:relative; height:clamp(108px,21vh,178px); flex:none; overflow:hidden; border-bottom:3px solid #92bdd2; }
+.duel-snow-strip .duel-caption { z-index:7; background:#102039dc; }
+@media(prefers-reduced-motion:reduce) { .snowball-elf.departed { transition:none; } }
+.snowball-poster { background:linear-gradient(140deg,#e8f7ff,#b4d7e7); border:3px solid #8fbbcd; border-radius:18px; box-shadow:0 6px 24px #05182a66; }
+.snowball-poster .sd-wanted-heading { color:#193e56; }
+.snowball-poster .sd-wanted-face { filter:none; border-color:#78a4bd; background:#f2fbff; }

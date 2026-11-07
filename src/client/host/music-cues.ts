@@ -1,3 +1,4 @@
+import { duelTheme } from "../../shared/duel-theme.ts";
 import { landTheme } from "../../shared/land-theme.ts";
 import { towerTheme } from "../../shared/tower-theme.ts";
 import { racerTheme } from "../../shared/racer-theme.ts";
@@ -43,6 +44,7 @@ export function musicFor(view: HostView | null): MusicCue {
   switch (view.kind) {
     case "classic": {
       if (view.phase === "lobby" && view.mode === "land") return { track: landTheme(view.land.theme) === "christmas" ? "land-christmas-lobby" : "land-lobby" };
+      if (view.phase === "lobby" && view.mode === "duel" && duelTheme(view.duel.theme) === "christmas") return { track: "tower-christmas-lobby" };
       if (view.phase === "lobby" && view.mode === "siege") return { track: siegeTheme(view.siege.theme) === "christmas" ? "siege-christmas-lobby" : "siege-lobby" };
       if (view.phase === "lobby" && view.mode === "racer") return { track: racerTheme(view.racer.theme) === "christmas" ? "racer-christmas-lobby" : "racer-lobby" };
       if (view.phase === "lobby") return { track: (view.mode === "tower" && towerTheme(view.tower.theme) === "christmas") || (view.mode === "cup" && cupTheme(view.cup.theme) === "christmas") ? "tower-christmas-lobby" : LOBBY[view.mode] ?? "classic-lobby" };
@@ -155,6 +157,7 @@ export function musicFor(view: HostView | null): MusicCue {
       return { track: "bomb-defuse", intensity, rampTo: 1, rampMs: view.remainingMs, key: `bomb-${view.timerRev}-${timers}-${last30 ? "end" : "run"}` };
     }
     case "duel": {
+      if (duelTheme(view.theme) === "christmas") return { track: view.phase === "podium" ? "tower-christmas-results" : "tower-christmas-play", intensity: view.phase === "open" ? 0.6 : 0.25 };
       if (view.phase === "podium") return { track: "showdown-results" };
       // Rounds are quick, so the build starts in the intro (the whistle is already on the tune)
       // and reaches full gallop halfway through the question's time.

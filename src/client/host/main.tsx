@@ -1,3 +1,5 @@
+import { duelName, duelTheme, type DuelTheme } from "../../shared/duel-theme.ts";
+import { SnowballLobbyPreview } from "../shared/duel-christmas.tsx";
 import { landTheme, type LandTheme } from "../../shared/land-theme.ts";
 import { fightTheme, type FightTheme } from "../../shared/fight-theme.ts";
 import { racerTheme, type RacerTheme } from "../../shared/racer-theme.ts";
@@ -377,7 +379,7 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
               <option value="dragon">🐉 Dragon's Hoard</option>
               <option value="bomb">💣 Bomb Squad</option>
               <option value="siege">🛡️ Kingdom Siege</option>
-              <option value="duel">🤠 Showdown</option>
+              <option value="duel">{duelTheme(view.duel.theme) === "christmas" ? "❄️ Snowball Showdown" : "🤠 Showdown"}</option>
             </select>
           </label>
           {view.mode === "racer" && (
@@ -566,7 +568,7 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
                 <>
                   <label class="opt">
                     Rounds
-                    <select value={view.duel.rounds} onChange={(e) => send({ type: "host.setDuel", rounds: Number(e.currentTarget.value) })}>
+                    <select aria-label="Showdown rounds" value={view.duel.rounds} onChange={(e) => send({ type: "host.setDuel", ...view.duel, rounds: Number(e.currentTarget.value) })}>
                       {DUEL_ROUNDS.map((r) => (
                         <option key={r} value={r}>
                           {r} rounds
@@ -574,7 +576,13 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
                       ))}
                     </select>
                   </label>
-                  <span class="opt mode-hint">Everyone duels at once. Win to climb toward High Noon, lose and you drop an arena.</span>
+                  <label class="opt">Theme
+                    <select aria-label="Showdown theme" value={duelTheme(view.duel.theme)} onChange={(e) => send({ type: "host.setDuel", ...view.duel, theme: e.currentTarget.value as DuelTheme })}>
+                      <option value="christmas">North Pole Snowball Showdown</option>
+                      <option value="classic">Classic Showdown</option>
+                    </select>
+                  </label>
+                  <span class="opt mode-hint">{duelName(view.duel.theme)}: everyone duels at once. Win to climb toward {duelTheme(view.duel.theme) === "christmas" ? "North Pole Plaza" : "High Noon"}, lose and you drop an arena.</span>
                 </>
               )}
             </>
@@ -601,6 +609,7 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
         )}
         {view.mode === "bomb" && <BombLobbyPreview settings={view.bomb} />}
         {view.mode === "siege" && <SiegeLobbyPreview theme={view.siege.theme} />}
+        {view.mode === "duel" && duelTheme(view.duel.theme) === "christmas" && <SnowballLobbyPreview />}
         {connected === 0 ? (
           <div class="waiting">Waiting for players…</div>
         ) : view.teams ? (

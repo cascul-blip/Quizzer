@@ -157,18 +157,20 @@ export function PhoneHolster({ class: cls = "" }: { class?: string }) {
 export function WantedPoster({
   avatar,
   children,
+  winter = false,
   heading = "WANTED",
   class: cls = "",
 }: {
   avatar: AvatarChoice;
   children?: ComponentChildren;
+  winter?: boolean;
   /** Painted above the avatar; null for none. */
   heading?: string | null;
   class?: string;
 }) {
   const f = DUEL_FILES["wanted-frame"]!.projector!;
   return (
-    <div class={`sd-wanted ${cls}`} style={{ aspectRatio: `${f[0]} / ${f[1]}`, backgroundImage: `url(${duelArt("wanted-frame")})` }}>
+    <div class={`sd-wanted ${winter ? "snowball-poster" : ""} ${cls}`} style={{ aspectRatio: `${f[0]} / ${f[1]}`, backgroundImage: winter ? undefined : `url(${duelArt("wanted-frame")})` }}>
       {heading && <div class="sd-wanted-heading">{heading}</div>}
       <div class="sd-wanted-face">
         <Avatar choice={avatar} />

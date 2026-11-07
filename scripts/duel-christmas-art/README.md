@@ -1,0 +1,42 @@
+# North Pole Snowball Showdown artwork
+
+Generated with the built-in image_gen tool. The approved North Pole concept established the hand-painted village, elf winter clothes, blue snow, warm lamps, and teal aurora. Original PNG sources are preserved in this folder. Runtime WebPs and half-size phone copies live in `src/client/shared/duel/christmas/`. Regenerate them with `python scripts/duel-christmas-art.py` (Pillow required).
+
+Arena 1 uses North Pole Plaza (the original workshop street). Arenas 2–4 show the market square, stable courtyard and frozen canal district respectively; later arenas cycle those three locations. All four backgrounds depict the same village on the same night, with open snowy foregrounds for the duelists.
+
+The headless elf sheet has eight square cells in a 4×2 layout: ready, anticipation, wind-up, swing, release, follow-through, recovery, and hit reaction. Avatars attach to measured collar anchors. Player accessories are preserved, with a Santa hat when no accessory is selected. Bodies mirror while avatars remain upright. Snowball flight is separate from the sheet. Release is at 930 ms, impact at 1450 ms, and the puff lasts 650 ms. Only a losing player receives a hit; draws and rounds without a loser miss into the snow. A three-way round with tied leaders can have both leaders throw at the sole loser.
+
+The production scene is shared by host and phones. Elapsed reveal time from the server prevents reconnects or pacing changes from replaying the throw or hit. Reduced motion holds the figures still and shows a static puff. Host music uses existing Christmas tracks, with a soft impact sound instead of the Western gunshot and draw sting. Christmas results use winter champion cards.
+
+## Background prompts
+
+### street-1
+
+Use case: stylized-concept. Production background only for North Pole Snowball Showdown. Reference image establishes exact village identity, hand-painted detailed game-art finish, cool blue snow, warm amber window lights, red/green timber architecture, garlands, candy-cane lampposts, navy blue night sky with teal aurora. Same city and same time of night, but clearly DIFFERENT LOCATION and buildings, not a recolor. Wide landscape 16:9 composition with perspective horizon around 45% height. Lower 50% is broad flat open snow-covered ground for overlaying players; no foreground obstructions. Keep lighting and scale consistent with reference. No people, characters, animals, text, lettering, UI, watermark, snowballs or impact puffs. Village Christmas market square: low cozy chalet market stalls clustered along left and right edges, closed striped red-and-cream awnings, wooden crates of wrapped gifts, gingerbread bakery with round window on left, small clockless market hall in distance, central distant decorated fir tree, string lights crossing high over square. Distinct market architecture rather than workshop street.
+
+### street-2
+
+Use case: stylized-concept. Production background only for North Pole Snowball Showdown. Reference image establishes exact village identity, hand-painted detailed game-art finish, cool blue snow, warm amber window lights, red/green timber architecture, garlands, candy-cane lampposts, navy blue night sky with teal aurora. Same city and same time of night, but clearly DIFFERENT LOCATION and buildings, not a recolor. Wide landscape 16:9 composition with perspective horizon around 45% height. Lower 50% is broad flat open snow-covered ground for overlaying players; no foreground obstructions. Keep lighting and scale consistent with reference. No people, characters, animals, text, lettering, UI, watermark, snowballs or impact puffs. Reindeer stable courtyard: large green timber stable with arched double barn doors and red trim on left, low wooden sleigh repair shed with stacked spare runners on right, empty red sleigh parked well back by shed, snowy fenced paddocks and tall firs in background, warm lanterns, wreaths and a distant village roofline. No reindeer or other animals, no clock tower. Broad clear snow courtyard foreground.
+
+### street-3
+
+Use case: stylized-concept. Production background only for North Pole Snowball Showdown. Reference image establishes exact village identity, hand-painted detailed game-art finish, cool blue snow, warm amber window lights, red/green timber architecture, garlands, candy-cane lampposts, navy blue night sky with teal aurora. Same city and same time of night, but clearly DIFFERENT LOCATION and buildings, not a recolor. Wide landscape 16:9 composition with perspective horizon around 45% height. Lower 50% is broad flat open snow-covered ground for overlaying players; no foreground obstructions. Keep lighting and scale consistent with reference. No people, characters, animals, text, lettering, UI, watermark, snowballs or impact puffs. Frozen canal bridge district: snow-covered quay in foreground, low stone bridge spanning a frozen narrow canal far behind playable foreground, cozy tall narrow red-and-green timber houses with steep snowy roofs along background canal, small parcel post office with round golden window to right, snow-covered stone balustrades near distant bridge, festive lanterns and evergreen garlands. Canal is only in distant background; entire lower half solid flat snowy plaza for players, no water or railing in play area.
+
+## Original prototype prompts
+
+### sheet
+
+Use case: stylized-concept. Asset type: production animation sprite sheet on transparent background for the elf in reference 1, Christmas snowball duel game. Reference is style only. Exactly EIGHT headless body sprites in a precisely uniform 4 column by 2 row grid, each cell equal size. All cells same scale and feet at 92% cell height; body centered at x50%, collar at y33%. BLANK TRANSPARENT head region above collar, no head, face, hair, ears or hat anywhere. Full body includes rich red long winter coat, cream fur collar cuffs hem, gold embroidered snowflakes, green trousers, leather belt, snowball pouch at hip, mittens and brown chunky boots. Match same character clothing in all frames. Body three-quarter view facing RIGHT. Frame reading order: 1 ready with right mitten down holding snowball; 2 anticipation bending knees; 3 windup right hand back raised behind shoulder holding snowball; 4 arm swinging forward still holding snowball; 5 release right arm extended forward at shoulder height EMPTY mitten; 6 follow-through empty hand across body; 7 recover toward ready empty right hand; 8 hit reaction leans backward with arms raised EMPTY hands. Leave upper central third each cell empty for separate avatar. No scenery, ground, shadows under feet, lettering, grid lines, UI or watermark. Critical consistent anatomy and identical costumes in every frame, clearly separated cells, no sprite crossing a cell boundary.
+
+### background
+
+Use case: stylized-concept. Asset type: wide 16:9 background painting for North Pole Snowball Showdown game prototype. Use reference only for style and architecture. Recreate the snowy North Pole workshop village, warm golden windows, festive red and green timber workshops, garlands tiny lights, candy cane lampposts, distant clock tower, blue night sky and luminous teal aurora. Entire foreground and lower half an open flat snow street for composited duelists. NO characters, elves, people, animals, snowballs, snow bursts or foreground props. Crisp charming detailed painted game art, cool blue snow and warm amber windows. No text UI watermark.
+
+### puff
+
+Use case: stylized-concept. Asset type: isolated impact effect sprite for a Christmas snowball game. A single soft white snow impact puff exploding outward from center, small fluffy powder cloud with distinct snowy clumps and sparse sparkling ice particles, cool pale blue lavender shadows, painterly style matching a cozy illustrated winter game. Radial roughly circular silhouette, soft transparent edges. No snowball, characters, scenery, text, backdrop or ground. Transparent background.
+
+### Elf transparency refinement
+
+Use case: background-extraction. Edit target: attached eight-pose headless elf sprite sheet. Remove ONLY the white background and its shadows, replacing all space around and between the eight bodies including all empty head areas with genuinely fully transparent alpha (alpha zero). Preserve all eight body drawings, poses, costumes, their exact scale, canvas layout and positions. Keep white fur trim and snowballs opaque. No new artwork or changes to character silhouettes. Output transparent-background PNG.
+

@@ -1,0 +1,65 @@
+// Run the app on port 8103 with an isolated temporary data directory first.
+import assert from 'node:assert/strict';
+import { mkdir } from 'node:fs/promises';
+const { chromium } = await import(process.env.QUIZZER_PLAYWRIGHT_MODULE || 'playwright');
+const browser = await chromium.launch({ executablePath: process.env.QUIZZER_CHROMIUM || undefined, headless: true, args: ['--no-sandbox'] });
+const base = 'http://localhost:8103';
+const out = new URL('../../output/duel-christmas-review/', import.meta.url).pathname;
+await mkdir(out, { recursive: true });
+try {
+  const context = await browser.newContext({ viewport: { width: 1600, height: 1000 } });
+  const errors = [];
+  const response = await context.request.post(base + '/api/quizzes', { data: { title: 'North Pole Showdown Review', questions: [{ type: 'multiple_choice', text: 'Which reindeer has a red nose?', options: ['Rudolph', 'Comet'], correct: [0], timeLimitSec: 30 }] } });
+  assert.equal(response.status(), 201);
+  const quiz = await response.json();
+  const host = await context.newPage();
+  host.on('pageerror', e => errors.push(e.message));
+  host.on('response', r => { if (r.status() >= 400) errors.push(`${r.status()} ${r.url()}`); });
+  await host.goto(base + '/host?quiz=' + quiz.id);
+  await host.getByLabel('Game mode').selectOption('duel');
+  const selector = host.getByLabel('Showdown theme', { exact: true });
+  await selector.waitFor();
+  assert.equal(await selector.inputValue(), 'christmas');
+  await host.locator('.snowball-lobby-preview').waitFor();
+  await host.screenshot({ path: out + 'actual-lobby.png' });
+  await selector.selectOption('classic');
+  await host.locator('.snowball-lobby-preview').waitFor({ state: 'detached' });
+  await host.getByLabel('Showdown rounds', { exact: true }).selectOption('10');
+  assert.equal(await selector.inputValue(), 'classic');
+  await selector.selectOption('christmas');
+  await host.reload();
+  assert.equal(await selector.inputValue(), 'christmas');
+  assert.equal(await host.getByLabel('Showdown rounds', { exact: true }).inputValue(), '10');
+  const phones = [];
+  for (const name of ['Holly', 'Noel']) {
+    const pc = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const phone = await pc.newPage(); phone.on('pageerror', e => errors.push(e.message));
+    await phone.goto(base + '/');
+    await phone.getByLabel('Your nickname').fill(name);
+    await phone.getByRole('button', { name: 'Join', exact: true }).click();
+    await host.getByText(name, { exact: true }).first().waitFor();
+    phones.push(phone);
+  }
+  await host.getByRole('button', { name: 'Start', exact: true }).click();
+  await host.locator('.duel-stage.christmas .snowball-scene').waitFor();
+  await phones[0].locator('.duel-game.christmas .duel-snow-strip').waitFor();
+  await host.keyboard.press('s');
+  await phones[0].getByRole('button', { name: /Rudolph/ }).click();
+  await phones[1].getByRole('button', { name: /Comet/ }).click();
+  await host.locator('.snowball-impact.hit').waitFor();
+  await host.screenshot({ path: out + 'actual-host-impact.png' });
+  await phones[1].screenshot({ path: out + 'actual-phone-result.png' });
+  await host.waitForTimeout(3000);
+  await host.reload();
+  await host.locator('.duel-stage.christmas .snowball-scene').waitFor();
+  assert.equal(await host.locator('.snowball-impact, .snowball-projectile').count(), 0);
+  host.on('dialog', d => d.accept());
+  await host.getByRole('button', { name: 'End game', exact: true }).click();
+  await host.locator('.snowball-poster').first().waitFor();
+  await host.getByRole('button', { name: /Play again/ }).click();
+  await selector.waitFor();
+  assert.equal(await selector.inputValue(), 'christmas');
+  assert.equal(await host.getByLabel('Showdown rounds', { exact: true }).inputValue(), '10');
+  assert.deepEqual(errors, []);
+  console.log('PASS: compiled app; actual lobby Christmas default, theme/round persistence and reload; two phones; live throw and loser puff; reconnect; winter podium; Play again; bundled art; no browser errors.');
+} finally { await browser.close(); }
