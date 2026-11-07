@@ -32,3 +32,20 @@ The existing synthesized fallback also works without external recordings.
 All four `submarine-*` cues now use original game arrangements of **Jingle Bells / The One Horse Open Sleigh**, by James Lord Pierpont (1857, revised 1859), a public-domain composition in the United States. Historical source: [Project Gutenberg's public-domain score](https://www.gutenberg.org/ebooks/10535) and [Library of Congress's 1857 edition](https://www.loc.gov/item/2023812429/). The familiar refrain is arranged in C major with newly written accompaniment; no commercial song recording or modern published arrangement is included.
 
 The intro/lobby uses flute, glockenspiel, strings, plucked accompaniment, piano bass, and light jingling percussion. The chase adds brass and drums and builds from 120 to 150 BPM as the goblin approaches. The trail challenge uses quiet piano and bells; the score screen uses a warm festive brass arrangement. All instruments in these four tracks use the existing CC0 VSCO 2 CE / VCSL samples listed above, with the standard synthesized fallback. No FluidR3 bass or guitar recordings are used.
+
+## North Pole Tower Christmas arrangements
+
+The Christmas theme selects these built-in cues; the classic theme retains the
+original chiptune cues. These reuse the game's carol melodies and accompaniment,
+with no third-party song recordings or modern published arrangements:
+
+| Cue | Public-domain melody | Source |
+|---|---|---|
+| `tower-christmas-lobby` | O Come, All Ye Faithful (ADESTE FIDELES, attributed to John Francis Wade, 18th century) | [Hymnary: tune and public-domain status](https://hymnary.org/tune/adeste_fideles_wade) |
+| `tower-christmas-play` | Joy to the World (ANTIOCH, Lowell Mason, 19th century) | [Hymnary: tune and public-domain status](https://hymnary.org/tune/antioch_handel) |
+| `tower-christmas-results` | Hark! The Herald Angels Sing (MENDELSSOHN, Felix Mendelssohn, 1840; adapted by William H. Cummings, 1855) | [Hymnary: tune and public-domain status](https://hymnary.org/tune/mendelssohn_mendelssohn) |
+
+The underlying compositions are public domain in the United States. All instrument
+recordings in these cues come from the CC0 VSCO 2 CE and VCSL libraries above;
+piano replaces the FluidR3 bass in the podium arrangement. The building cue keeps
+Joy to the World's melody audible at every intensity and builds from 104 to 130 BPM.

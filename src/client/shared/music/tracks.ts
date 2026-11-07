@@ -1,6 +1,6 @@
 /**
  * The built-in soundtrack: loops composed or arranged for each game mode.
- * Classic = upbeat game show, Tallest Tower = retro chiptune,
+ * Classic = upbeat game show, Tallest Tower = Christian Christmas carols for North Pole Tower; retro chiptune for the classic theme,
  * Sled Squad (submarine IDs) = Jingle Bells, arranged for a vintage Christmas band, Tower Fight = medieval battle,
  * Robot Attack = Christian Christmas carols for the snowman; Beethoven and Grieg for the robot,
  * Land Grab = calm ambient piano that grows into an orchestra as rings close,
@@ -1847,6 +1847,36 @@ const snowmanResults: Track = {
   ],
 };
 
+// ---------- North Pole Tower: recognizable carols with CC0 instruments ----------
+// Reuse the traditional melodies and our arrangements; provenance: samples/CREDITS.md.
+const christmasTowerLobby: Track = { ...snowmanLobby, id: "tower-christmas-lobby" };
+
+const christmasTowerPlay: Track = {
+  id: "tower-christmas-play", bpm: 104, tempoBoost: 0.25, bars: ANTIOCH.length, reverb: 0.25,
+  layers: [
+    // Keep the complete tune audible even at the start of a long building game.
+    { inst: "flute", bars: ANTIOCH, vol: 0.55 },
+    { inst: "bell", bars: shift(ANTIOCH, 1), vol: 0.22 },
+    { inst: "strings", bars: ANTIOCH_HARMONY.map(padBar), vol: 0.3 },
+    { inst: "piano", bars: ANTIOCH_HARMONY.map(rootBounce), vol: 0.45 },
+    { inst: "pluck", bars: ANTIOCH_HARMONY.map(brokenChords), vol: 0.25 },
+    { inst: "hat", bars: [BELLS_8THS], vol: 0.25 },
+    { inst: "piano", bars: ANTIOCH_HARMONY.map(offbeatChords), vol: 0.22, from: 0.3 },
+    { inst: "brass", bars: ANTIOCH, vol: 0.45, from: 0.5 },
+    { inst: "kick", bars: [drum("x.......x.......")], vol: 0.4, from: 0.5 },
+    { inst: "snare", bars: [drum("....x.......x...")], vol: 0.3, from: 0.75 },
+    { inst: "hat", bars: [BELLS_16THS], vol: 0.2, from: 0.85 },
+    { inst: "timpani", bars: ANTIOCH_HARMONY.map((q) => once(XMAS_ROOTS[q[0]!]!)), vol: 0.3, from: 0.85 },
+  ],
+};
+
+const christmasTowerResults: Track = {
+  ...sleighResults,
+  id: "tower-christmas-results",
+  // Piano bass keeps all samples in the CC0 libraries.
+  layers: sleighResults.layers.map((layer) => layer.inst === "bass" ? { ...layer, inst: "piano" } : layer),
+};
+
 type RobotMusicId = Extract<MusicTrackId, `robot-${string}`>;
 
 /** Keep custom file IDs stable while the seasonal skin changes the built-in arrangements. */
@@ -1864,6 +1894,9 @@ export const TRACKS: Record<MusicTrackId, Track> = {
   "tower-lobby": towerLobby,
   "tower-play": towerPlay,
   "tower-results": towerResults,
+  "tower-christmas-lobby": christmasTowerLobby,
+  "tower-christmas-play": christmasTowerPlay,
+  "tower-christmas-results": christmasTowerResults,
   "submarine-lobby": submarineLobby,
   "submarine-chase": submarineChase,
   "submarine-dive": submarineDive,

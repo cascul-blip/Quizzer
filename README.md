@@ -353,7 +353,7 @@ Every game mode has **built-in background music** on the projector (phones stay 
 | Mode | Style | Reacts to the game |
 |---|---|---|
 | Classic | Upbeat game show | Questions get faster and more intense as the timer runs out |
-| Tallest Tower | Retro arcade (chiptune) | Builds up as the game clock runs down |
+| Tallest Tower | Christmas theme: *O Come, All Ye Faithful* in the lobby, *Joy to the World* while building, *Hark! The Herald Angels Sing* on the podium. Classic theme: retro chiptune | The Christmas tune plays from the start, growing from flute and bells to brass and drums at 104–130 BPM as the clock runs down. Uses public-domain melodies and CC0 samples |
 | Sled Squad | Jingle Bells: flute and glockenspiel for the intro, a festive brass band for the chase and score screen | The chase builds from 120 to 150 BPM as the goblin approaches; quiet piano and bells during the trail challenge |
 | Tower Fight | Medieval battle | Gets more intense as the towers take damage |
 | Robot Attack | Snowman skin: Christian Christmas carols—*O Come, All Ye Faithful* in the lobby, *God Rest Ye Merry, Gentlemen* in the quiz, *O Come, O Come, Emmanuel* during movement and attack, and *Joy to the World* for results | Quiz music builds from pizzicato and bells to strings, brass, and percussion at 90–135 BPM. Switching `ROBOT_SKIN` back to `"robot"` restores Beethoven and Grieg. Seasonal arrangements use only CC0 instrument recordings |
@@ -375,7 +375,8 @@ Put audio files (MP3, OGG, M4A, WAV, WebM or FLAC) in the **`data/music`** folde
 | File name | Plays during |
 |---|---|
 | `classic-lobby` · `classic-question` · `classic-leaderboard` · `classic-results` | Classic: lobby, questions, answer reveal and leaderboard, final podium |
-| `tower-lobby` · `tower-play` · `tower-results` | Tallest Tower |
+| `tower-lobby` · `tower-play` · `tower-results` | Tallest Tower, classic theme |
+| `tower-christmas-lobby` · `tower-christmas-play` · `tower-christmas-results` | North Pole Tower, Christmas theme |
 | `submarine-lobby` · `submarine-chase` · `submarine-dive` · `submarine-results` | Submarine Squad |
 | `fight-lobby` · `fight-play` · `fight-results` | Tower Fight |
 | `robot-lobby` · `robot-quiz` · `robot-move` · `robot-results` | Robot Attack: lobby, quiz phase, movement and laser attack, final results |

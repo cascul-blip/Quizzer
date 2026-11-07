@@ -129,3 +129,40 @@ test("Sled Squad routes the intro, chase, trail challenge, and score screen to t
   expect(musicFor(view("dive")).track).toBe("submarine-dive");
   expect(musicFor(view("podium")).track).toBe("submarine-results");
 });
+
+describe("North Pole Tower Christmas music", () => {
+  test("theme selects carols in the lobby, countdown, building and podium", () => {
+    for (const theme of ["christmas", "classic", undefined] as const) {
+      const prefix = theme === "classic" ? "tower" : "tower-christmas";
+      const lobby = { kind: "classic", phase: "lobby", mode: "tower", tower: { theme } } as HostView;
+      expect(musicFor(lobby).track).toBe(`${prefix}-lobby`);
+      for (const phase of ["countdown", "playing", "podium"] as const) {
+        const view = { kind: "tower", theme, phase, remainingMs: 150_000 } as HostView;
+        const cue = musicFor(view);
+        expect(cue.track).toBe(`${prefix}-${phase === "podium" ? "results" : "play"}`);
+        if (phase === "playing") {
+          expect(cue.intensity).toBe(0.5);
+          expect(cue.rampTo).toBe(1);
+          expect(cue.rampMs).toBe(150_000);
+        }
+      }
+    }
+  });
+
+  test("recognizable melodies play at every intensity using only CC0 instruments", () => {
+    for (const [id, inst, opening] of [
+      ["tower-christmas-lobby", "flute", "G4"],
+      ["tower-christmas-play", "flute", "D5"],
+      ["tower-christmas-results", "brass", "D4"],
+    ] as const) {
+      const track = TRACKS[id];
+      const melody = track.layers.find(l => l.inst === inst)!;
+      expect(tokens(melody.bars[0]!)[0]).toBe(opening);
+      for (const intensity of [0, 0.25, 0.5, 0.75, 1]) expect(layerActive(melody, intensity)).toBe(true);
+      for (const layer of track.layers) expect(["bass", "tribass", "twang"]).not.toContain(layer.inst);
+    }
+    const play = TRACKS["tower-christmas-play"];
+    expect(60 / (stepSeconds(play, 1) * 4)).toBeCloseTo(130);
+    expect(play.layers.filter(l => layerActive(l, 1)).length).toBeGreaterThan(play.layers.filter(l => layerActive(l, 0)).length);
+  });
+});
