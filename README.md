@@ -138,25 +138,27 @@ If nobody reaches the egg, it stays until someone does or the game ends. Phones 
 
 The projector shows only the teams' towers, side by side and at the same scale, plus the timer. Each phone shows only that player's question, or their own team's tower while they're building. The results CSV has one row per player: team, rank, floors, correct/wrong, accuracy, and blocks placed and missed.
 
-## Submarine Squad mode
+## Sled Squad mode (Submarine Squad rules)
 
-A cooperative mode based on Kahoot's Submarine Squad. The whole class is one squad trying to keep a submarine away from a giant **anglerfish**. Choose **Game mode → 🐟 Submarine Squad** in the lobby. There's no timer: **the game ends when the fish catches the sub**, and the score is how deep the squad got.
+A cooperative mode based on Kahoot's Submarine Squad. The whole class is one squad trying to keep a dog sled away from a sneaking **Christmas goblin**. Choose **Game mode → 🛷 Sled Squad** in the lobby. There's no timer: **the game ends when the goblin catches the sled**, and the score is how far the squad traveled.
 
-**Submarine mode**
+**Sled chase**
 - Everyone answers questions on their phone at their own pace, with the correct answer shown after a wrong one.
 - Every 4 correct answers gives that player a **boost button**. They hold it down: a ring charges over about 2 seconds while the phone revs like an engine. Letting go drains the charge.
-- When the ring is full, the submarine surges away from the fish on the projector.
-- The fish closes in steadily, and **its jaws open wider the closer it gets**.
+- When the ring is full, the sled races away from the goblin on the projector.
+- The green goblin tiptoes closer with a sack over his shoulder, leaning toward the sled as he approaches.
 - Filling the boost bar (**3 + number of players** boosts) clears the level.
 
-**Diving mode** (after each level)
+**Trail challenge** (after each level)
 - One or more players (1 per 6 players, up to 4) become **instructors**. Each sees a symbol, such as "the red octopus", and describes it out loud.
 - Everyone else is secretly assigned to an instructor and must tap that instructor's symbol in a grid of look-alikes. Players have to work out which instructor is describing *their* symbols.
 - An instructor moves on when 70% of their group finds the symbol (or after 8 seconds, shown as a shrinking red bar on the phones). Each instructor has 5 symbols.
-- Every correct tap takes the sub 2 m deeper. Wrong taps lock the player out for a second.
-- Players who join mid-dive wait for the next level.
+- Every correct tap takes the sled 2 m farther. Wrong taps lock the player out for a second.
+- Players who join mid-challenge wait for the next level.
 
-Each level is worth 100 m. **Deeper levels have a faster fish.** The podium shows the final depth and awards for **Top booster**, **Sharpest eyes** (most symbols found) and **Most correct answers**. The results CSV lists each player's answers, boosts, dive taps and instructor rounds.
+Each level is worth 100 m. **Later levels have a faster goblin.** The podium shows the final distance and awards for **Top booster**, **Sharpest eyes** (most symbols found) and **Most correct answers**. The results CSV lists each player's answers, boosts, dive taps and instructor rounds.
+
+The profile-view red sled carries player avatars and a Christmas tree over the back. Ornaments swing and drop into the snow every 2.4 seconds. A pair of painted animated huskies pulls through a scrolling, vintage Christmas-tin countryside with red barns, evergreens, and lit houses. The standalone art preview and recording notes are in `scripts/winter-art/README.md`.
 
 ## Tower Fight mode
 
@@ -352,7 +354,7 @@ Every game mode has **built-in background music** on the projector (phones stay 
 |---|---|---|
 | Classic | Upbeat game show | Questions get faster and more intense as the timer runs out |
 | Tallest Tower | Retro arcade (chiptune) | Builds up as the game clock runs down |
-| Submarine Squad | Deep-sea suspense | Speeds up and adds layers as the anglerfish closes in; a calmer theme while diving |
+| Sled Squad | Jingle Bells: flute and glockenspiel for the intro, a festive brass band for the chase and score screen | The chase builds from 120 to 150 BPM as the goblin approaches; quiet piano and bells during the trail challenge |
 | Tower Fight | Medieval battle | Gets more intense as the towers take damage |
 | Robot Attack | Snowman skin: Christian Christmas carols—*O Come, All Ye Faithful* in the lobby, *God Rest Ye Merry, Gentlemen* in the quiz, *O Come, O Come, Emmanuel* during movement and attack, and *Joy to the World* for results | Quiz music builds from pizzicato and bells to strings, brass, and percussion at 90–135 BPM. Switching `ROBOT_SKIN` back to `"robot"` restores Beethoven and Grieg. Seasonal arrangements use only CC0 instrument recordings |
 | Land Grab | Calm ambient piano | Speeds up and adds an orchestra as a team gets close to closing a ring; calms down again if the ring is broken |

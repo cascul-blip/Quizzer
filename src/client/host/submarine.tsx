@@ -1,9 +1,8 @@
 import type { RefObject } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
-import type { AvatarChoice } from "../../shared/avatars.ts";
 import type { HostView, SubAward } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
-import { Anglerfish, SeaBackdrop, Submarine, oceanGradient, seaLook, type PortholeFace } from "../shared/sea-art.tsx";
+import { ChristmasGoblin, DogSled, WinterBackdrop, winterGradient, type SledRider } from "../shared/winter-art.tsx";
 import { play } from "../shared/sounds.ts";
 import { useEventFlash } from "../shared/tower-art.tsx";
 import { useCountdown } from "../shared/ui.tsx";
@@ -11,7 +10,7 @@ import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send 
 
 type SubView = Extract<HostView, { kind: "sub" }>;
 
-/** Distance to the fish, animated locally between server updates. */
+/** Distance to the goblin, animated locally between server updates. */
 function useLiveGap(view: SubView): number {
   const base = useRef({ gap: view.gap, at: performance.now() });
   const last = useRef(view);
@@ -35,18 +34,18 @@ function useLiveGap(view: SubView): number {
 }
 
 /**
- * Fish placement (left edge, % of the sea). At gap 0 the front of its open mouth
- * touches the sub's propeller; at the max gap it's mostly off-screen.
+ * Goblin placement (left edge, % of the field). At gap 0 its hands
+ * reach the back of the sled; at the max gap it's mostly off-screen.
  */
-const FISH_TOUCH_LEFT = 27;
-const FISH_FAR_LEFT = -24;
-/** On a catch: lunge this far with jaws wide (the propeller goes in), then snap shut. */
-const LUNGE_LEFT = 8;
+const GOBLIN_TOUCH_LEFT = 32;
+const GOBLIN_FAR_LEFT = -15;
+/** On a catch, the goblin lunges and the sled jolts to a stop. */
+const LUNGE_LEFT = 3;
 const LUNGE_MS = 450;
-const SNAP_MS = 140;
-const SWALLOW_AT_MS = LUNGE_MS + SNAP_MS + 60;
+const GRAB_MS = 140;
+const GRAB_AT_MS = LUNGE_MS + GRAB_MS + 60;
 
-/** Milliseconds since the catch began, re-rendering every frame until the bite is over. */
+/** Milliseconds since the catch began, re-rendering every frame until the grab is over. */
 function useCatchClock(caught: boolean): number {
   const start = useRef(0);
   const [, tick] = useState(0);
@@ -56,7 +55,7 @@ function useCatchClock(caught: boolean): number {
     let raf = 0;
     const loop = () => {
       tick((n) => n + 1);
-      if (performance.now() - start.current < SWALLOW_AT_MS + 100) raf = requestAnimationFrame(loop);
+      if (performance.now() - start.current < GRAB_AT_MS + 100) raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
@@ -65,13 +64,6 @@ function useCatchClock(caught: boolean): number {
 }
 
 const easeOut = (t: number) => 1 - (1 - Math.max(0, Math.min(1, t))) ** 3;
-
-/** How far a dive has gone, 0–1, so the water can fade into the next level before the level number ticks up. */
-function diveBlend(view: SubView): number {
-  const ins = view.phase === "dive" ? view.dive?.instructors : null;
-  if (!ins?.length) return 0;
-  return ins.reduce((sum, i) => sum + (i.total ? i.index / i.total : 0), 0) / ins.length;
-}
 
 /** Scroll speed as a multiple of the cruise pace. The host writes this into a ref; the backdrop reads it. */
 function paceFor(phase: SubView["phase"], level: number, boosting: boolean): number {
@@ -83,80 +75,43 @@ function paceFor(phase: SubView["phase"], level: number, boosting: boolean): num
   return 0;
 }
 
-/** How long a boost notice stays next to the sub, and how many can stack. */
+/** How long a boost notice stays next to the sled, and how many can stack. */
 const POP_MS = 2600;
 const MAX_POPS = 3;
-/** Someone looks out of a porthole every PEEK_EVERY_MS..+PEEK_JITTER_MS, for PEEK_MS. */
-const PEEK_MS = 3000;
-const PEEK_EVERY_MS = 3000;
-const PEEK_JITTER_MS = 3000;
-const PORTHOLE_COUNT = 3;
-const MIDDLE_PORTHOLE = 1;
-
-/** Players' avatars occasionally look out of the portholes; the latest booster pops into the middle one. */
-function usePortholeFaces(players: SubView["players"], boost: SubView["lastBoost"]): (PortholeFace | null)[] {
-  const [faces, setFaces] = useState<(PortholeFace | null)[]>(() => Array(PORTHOLE_COUNT).fill(null));
-  const facesRef = useRef(faces);
-  facesRef.current = faces;
-  const playersRef = useRef(players);
-  playersRef.current = players;
-  const timers = useRef(new Set<ReturnType<typeof setTimeout>>());
-
-  const later = (fn: () => void, ms: number) => {
-    const t = setTimeout(() => {
-      timers.current.delete(t);
-      fn();
-    }, ms);
-    timers.current.add(t);
-  };
-  const show = (slot: number, choice: AvatarChoice) => {
-    const key = `${performance.now()}-${slot}`;
-    setFaces((f) => f.map((x, i) => (i === slot ? { key, choice } : x)));
-    later(() => setFaces((f) => f.map((x, i) => (i === slot && x?.key === key ? null : x))), PEEK_MS);
-  };
-
+/** Keep three visible riders on the sled; rotate the rest of the squad through. */
+function useSledRiders(players: SubView["players"], boost: SubView["lastBoost"]): SledRider[] {
+  const [offset, setOffset] = useState(0);
   useEffect(() => {
-    const tick = () => {
-      // Prefer players who aren't already at a window.
-      const showing = new Set(facesRef.current.map((f) => (f ? `${f.choice.avatar}/${f.choice.accessory}` : "")));
-      const connected = playersRef.current.filter((p) => p.connected);
-      const fresh = connected.filter((p) => !showing.has(`${p.avatar.avatar}/${p.avatar.accessory}`));
-      const pool = fresh.length ? fresh : connected;
-      const empty = facesRef.current.map((f, i) => (f ? -1 : i)).filter((i) => i >= 0);
-      if (pool.length && empty.length) {
-        const slot = empty[Math.floor(Math.random() * empty.length)]!;
-        show(slot, pool[Math.floor(Math.random() * pool.length)]!.avatar);
-      }
-      later(tick, PEEK_EVERY_MS + Math.random() * PEEK_JITTER_MS);
-    };
-    later(tick, 1500);
-    return () => {
-      for (const t of timers.current) clearTimeout(t);
-      timers.current.clear();
-    };
+    const timer = setInterval(() => setOffset(n => n + 1), 6000);
+    return () => clearInterval(timer);
   }, []);
-
-  useEffect(() => {
-    if (boost) show(MIDDLE_PORTHOLE, boost.avatar);
-  }, [boost?.seq]);
-
-  return faces;
+  const connected = players.filter(p => p.connected);
+  const pool = connected.length ? connected : players;
+  const riders = Array.from({ length: Math.min(3, pool.length) }, (_, i) => {
+    const p = pool[(offset + i) % pool.length]!;
+    return { key: p.id, choice: p.avatar };
+  });
+  if (boost) {
+    const existing = riders.findIndex(r => r.choice.avatar === boost.avatar.avatar && r.choice.accessory === boost.avatar.accessory);
+    if (existing >= 0) riders.splice(existing, 1);
+    riders.splice(1, 0, { key: `boost-${boost.seq}`, choice: boost.avatar });
+  }
+  return riders.slice(0, 3);
 }
 
 export function SubStage({ view, send }: { view: SubView; send: Send }) {
   const gap = useLiveGap(view);
   const caught = view.phase === "caught";
   const closeness = caught ? 1 : Math.max(0, Math.min(1, 1 - gap / view.maxGap));
-  // The catch: lunge with the mouth wide open around the propeller, then the jaw snaps shut.
-  const biteMs = useCatchClock(caught);
-  const fishLeft = caught
-    ? FISH_TOUCH_LEFT + LUNGE_LEFT * easeOut(biteMs / LUNGE_MS)
-    : FISH_TOUCH_LEFT - (gap / view.maxGap) * (FISH_TOUCH_LEFT - FISH_FAR_LEFT);
-  const openness = caught ? 1 - easeOut((biteMs - LUNGE_MS) / SNAP_MS) : closeness ** 2.2;
-  const swallowed = caught && biteMs >= SWALLOW_AT_MS;
+  // Reach the sled, then bring it to a halt.
+  const catchMs = useCatchClock(caught);
+  const goblinLeft = caught
+    ? GOBLIN_TOUCH_LEFT + LUNGE_LEFT * easeOut(catchMs / LUNGE_MS)
+    : GOBLIN_TOUCH_LEFT - (gap / view.maxGap) * (GOBLIN_TOUCH_LEFT - GOBLIN_FAR_LEFT);
+  const grabbed = caught && catchMs >= GRAB_AT_MS;
   const secs = useCountdown(view.phaseRemainingMs, `${view.phase}:${view.level}`);
 
-  // Boost notices next to the sub, each with the booster's avatar.
+  // Boost notices next to the sled, each with the booster's avatar.
   const boost = useEventFlash(view.lastBoost, view.lastBoost?.seq, 700);
   const [pops, setPops] = useState<NonNullable<SubView["lastBoost"]>[]>([]);
   // Each pop's removal timer lives here, not in the effect cleanup, which also runs when the flash ends.
@@ -176,34 +131,11 @@ export function SubStage({ view, send }: { view: SubView; send: Send }) {
   useEffect(() => {
     if (view.phase !== "chase") setPops([]);
   }, [view.phase]);
-  const faces = usePortholeFaces(view.players, boost);
-  const blend = diveBlend(view);
-  const look = seaLook(view.level, blend);
+  const faces = useSledRiders(view.players, boost);
   const paceRef = useRef(0);
   paceRef.current = paceFor(view.phase, view.level, !!boost);
   const seaRef = useRef<HTMLElement>(null);
   const craftRef = useRef<HTMLDivElement>(null);
-  // The headlight mask follows the nose, including while the hull bobs or dashes.
-  useEffect(() => {
-    let raf = 0;
-    const loop = () => {
-      const sea = seaRef.current;
-      const craft = craftRef.current;
-      if (sea && craft) {
-        const s = sea.getBoundingClientRect();
-        const b = craft.getBoundingClientRect();
-        const x = ((b.left + b.width * 0.97 - s.left) / s.width) * 100;
-        const y = ((b.top + b.height * 0.7 - s.top) / s.height) * 100;
-        sea.style.setProperty("--beam-x", `${x}%`);
-        sea.style.setProperty("--beam-y", `${y}%`);
-        sea.style.setProperty("--pool-x", `${Math.min(94, x + 7)}%`);
-      }
-      raf = requestAnimationFrame(loop);
-    };
-    raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
-  }, []);
-
   // Sound cues.
   const prevPhase = useRef(view.phase);
   useEffect(() => {
@@ -232,10 +164,10 @@ export function SubStage({ view, send }: { view: SubView; send: Send }) {
   }, []);
 
   return (
-    <div class="stage">
+    <div class="stage winter-game">
       <header class="topbar">
         <div class="title">{view.quiz.title}</div>
-        <div class="pill">🐟 Submarine Squad</div>
+        <div class="pill">🛷 Sled Squad</div>
         <div class="spacer" />
         <div class="depth-badge">
           Level {view.level} · <b>{view.depth} m</b>
@@ -254,12 +186,10 @@ export function SubStage({ view, send }: { view: SubView; send: Send }) {
       ) : (
         <main
           ref={seaRef}
-          class={`sea ${danger ? "danger" : ""}`}
-          style={{ background: look.background, "--ambient": String(look.ambient), "--beam": String(look.beam) }}
+          class={`sea winter-stage ${danger ? "danger" : ""}`}
+          style={{ background: winterGradient() }}
         >
-          <SeaBackdrop level={view.level} blend={blend} paceRef={paceRef} />
-          <div class="light-rays" style={{ opacity: look.rays }} />
-          <Bubbles dim={1 - look.ambient} />
+          <WinterBackdrop paceRef={paceRef} />
           {view.phase === "dive" ? (
             <Dive view={view} faces={faces} craftRef={craftRef} />
           ) : (
@@ -272,11 +202,11 @@ export function SubStage({ view, send }: { view: SubView; send: Send }) {
                   <div class="boost-fill" style={{ width: `${(100 * view.boosts) / view.required}%` }} />
                 </div>
               </div>
-              <div class={`fish-pos ${caught ? "biting" : ""}`} style={{ left: `${fishLeft}%` }}>
-                {/* Mouth stays nearly shut while far away and gapes as the fish closes in. */}
-                <Anglerfish openness={openness} fish={look.fish} eye={look.eye} glint={look.glint} />
+              <div class={`fish-pos ${caught ? "biting" : ""}`} style={{ left: `${goblinLeft}%` }}>
+                {/* The supplied goblin speeds up and leans toward the sled as the gap closes. */}
+                <ChristmasGoblin closeness={closeness} caught={caught} />
               </div>
-              <div ref={craftRef} class={`sub-pos ${boost ? "boosting" : ""} ${view.phase === "escaped" ? "escaping" : ""} ${caught ? "in-mouth" : ""} ${swallowed ? "eaten" : ""}`}>
+              <div ref={craftRef} class={`sub-pos ${boost ? "boosting" : ""} ${view.phase === "escaped" ? "escaping" : ""} ${caught ? "in-mouth" : ""} ${grabbed ? "eaten" : ""}`}>
                 {boost && <div class="speed-lines" />}
                 <div class="boost-pops">
                   {pops.map((b, i) => (
@@ -288,18 +218,18 @@ export function SubStage({ view, send }: { view: SubView; send: Send }) {
                     </div>
                   ))}
                 </div>
-                <Submarine faces={faces} />
+                <DogSled riders={faces} moving={view.phase === "chase" || view.phase === "escaped"} boosting={!!boost} />
               </div>
               {view.phase === "countdown" && (
                 <div class="countdown-overlay">
-                  <div class="countdown-label">Answer questions to earn boosts. Keep the sub away from the anglerfish!</div>
+                  <div class="countdown-label">Answer questions to earn boosts. Keep the sled away from the Christmas goblin!</div>
                   <div class="countdown-num" key={secs}>
                     {Math.max(1, secs)}
                   </div>
                 </div>
               )}
-              {view.phase === "escaped" && <div class="sea-banner good">🎉 Level {view.level} cleared! Get ready to dive!</div>}
-              {view.phase === "caught" && <div class="sea-banner bad">CHOMP! The anglerfish caught the submarine at {view.depth} m</div>}
+              {view.phase === "escaped" && <div class="sea-banner good">🎉 Level {view.level} cleared! Get ready for the trail challenge!</div>}
+              {view.phase === "caught" && <div class="sea-banner bad">SNATCH! The Christmas goblin caught the sled at {view.depth} m</div>}
             </>
           )}
         </main>
@@ -308,7 +238,7 @@ export function SubStage({ view, send }: { view: SubView; send: Send }) {
   );
 }
 
-function Dive({ view, faces, craftRef }: { view: SubView; faces: (PortholeFace | null)[]; craftRef: RefObject<HTMLDivElement> }) {
+function Dive({ view, faces, craftRef }: { view: SubView; faces: SledRider[]; craftRef: RefObject<HTMLDivElement> }) {
   const dive = view.dive!;
   return (
     <>
@@ -326,22 +256,12 @@ function Dive({ view, faces, craftRef }: { view: SubView; faces: (PortholeFace |
         ))}
       </div>
       <div class="dive-sub" ref={craftRef}>
-        <Submarine faces={faces} />
+        <DogSled riders={faces} moving={view.phase === "chase" || view.phase === "escaped"} />
       </div>
       <div class="dive-help">
-        <b>Diving!</b> Instructors: describe the symbol on your phone. Everyone else: find it on yours!
+        <b>Trail challenge!</b> Instructors: describe the symbol on your phone. Everyone else: find it on yours!
       </div>
     </>
-  );
-}
-
-function Bubbles({ dim }: { dim: number }) {
-  return (
-    <div class="bubbles" aria-hidden="true" style={{ opacity: 1 - dim * 0.85 }}>
-      {Array.from({ length: 14 }, (_, i) => (
-        <span key={i} style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i * 0.9) % 7}s`, animationDuration: `${6 + (i % 5)}s`, width: `${6 + (i % 4) * 4}px`, height: `${6 + (i % 4) * 4}px` }} />
-      ))}
-    </div>
   );
 }
 
@@ -349,8 +269,8 @@ function SubPodium({ view, send }: { view: SubView; send: Send }) {
   const [showErrors, setShowErrors] = useState(false);
   const a = view.awards;
   return (
-    <main class="podium sub-podium" style={{ background: oceanGradient(view.level) }}>
-      <h1>🐟 Caught at {view.depth} m</h1>
+    <main class="podium sub-podium winter-podium" style={{ background: winterGradient() }}>
+      <h1>🛷 Caught at {view.depth} m</h1>
       {showErrors ? (
         <ErrorsTable errors={view.errors ?? []} />
       ) : (

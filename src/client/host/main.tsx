@@ -361,7 +361,7 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
             <select value={view.mode} onChange={(e) => send({ type: "host.setMode", mode: e.currentTarget.value as GameMode })}>
               <option value="classic">Classic</option>
               <option value="tower">🏗 Tallest Tower</option>
-              <option value="submarine">🐟 Submarine Squad</option>
+              <option value="submarine">🛷 Sled Squad</option>
               <option value="fight">🏰 Tower Fight</option>
               <option value="robot">🤖 Robot Attack</option>
               <option value="land">🚩 Land Grab</option>
@@ -493,7 +493,7 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
               <span class="opt mode-hint">The whole class defends one castle. Every right answer earns you gold to spend on archers, knights and stone walls before the monsters reach the wall.</span>
             </>
           ) : view.mode === "submarine" ? (
-            <span class="opt mode-hint">Everyone works together to outrun the anglerfish. The game ends when it catches you.</span>
+            <span class="opt mode-hint">Everyone works together to outrun the Christmas goblin. The game ends when it catches you.</span>
           ) : (
             <>
               <label class="opt">

@@ -1,7 +1,7 @@
 /**
  * The built-in soundtrack: loops composed or arranged for each game mode.
  * Classic = upbeat game show, Tallest Tower = retro chiptune,
- * Submarine Squad = deep-sea suspense, Tower Fight = medieval battle,
+ * Sled Squad (submarine IDs) = Jingle Bells, arranged for a vintage Christmas band, Tower Fight = medieval battle,
  * Robot Attack = Christian Christmas carols for the snowman; Beethoven and Grieg for the robot,
  * Land Grab = calm ambient piano that grows into an orchestra as rings close,
  * Racer = sunny late-80s arcade-racing chiptune (tempo follows the car's speed), in the rich arcade sound (see rich.ts),
@@ -233,76 +233,91 @@ const towerResults: Track = {
   ],
 };
 
-// ---------- Submarine Squad: deep-sea suspense ----------
-
-const SUB_PAD = [hold(chord("D3 F3 A3")), hold(chord("Bb2 D3 F3")), hold(chord("G2 Bb2 D3")), hold(chord("A2 C#3 E3"))];
+// ---------- Sled Squad: original arrangements of the public-domain Jingle Bells ----------
+// James Lord Pierpont, 1857/1859. Familiar refrain in C major, with new accompaniment.
+// Source/provenance: samples/CREDITS.md. Keep the tune present even at zero intensity.
+const JINGLE_BELLS = [
+  seq(["E5", 4], ["E5", 4], ["E5", 8]),
+  seq(["E5", 4], ["E5", 4], ["E5", 8]),
+  seq(["E5", 4], ["G5", 4], ["C5", 6], ["D5", 2]),
+  hold("E5"),
+  seq(["F5", 4], ["F5", 4], ["F5", 6], ["F5", 2]),
+  seq(["F5", 4], ["E5", 4], ["E5", 4], ["E5", 2], ["E5", 2]),
+  seq(["E5", 4], ["D5", 4], ["D5", 4], ["E5", 4]),
+  seq(["D5", 8], ["G5", 8]),
+  seq(["E5", 4], ["E5", 4], ["E5", 8]),
+  seq(["E5", 4], ["E5", 4], ["E5", 8]),
+  seq(["E5", 4], ["G5", 4], ["C5", 6], ["D5", 2]),
+  hold("E5"),
+  seq(["F5", 4], ["F5", 4], ["F5", 4], ["F5", 4]),
+  seq(["F5", 4], ["E5", 4], ["E5", 4], ["E5", 2], ["E5", 2]),
+  seq(["G5", 4], ["G5", 4], ["F5", 4], ["D5", 4]),
+  seq(["C5", 12], [".", 4]),
+];
+const JINGLE_CHORDS = ["C", "C", "C", "C", "F", "C", "G7", "G7", "C", "C", "C", "C", "F", "C", "G7", "C"];
+const JINGLE_VOICINGS: Record<string, string> = { C: "C4+E4+G4", F: "C4+F4+A4", G7: "B3+D4+F4+G4" };
+const JINGLE_ROOTS: Record<string, [string, string]> = { C: ["C2", "G2"], F: ["F2", "C3"], G7: ["G2", "D3"] };
+const JINGLE_PADS = JINGLE_CHORDS.map(c => hold(JINGLE_VOICINGS[c]!));
+const JINGLE_COMP = JINGLE_CHORDS.map(c => pump(JINGLE_VOICINGS[c]!, "....x.......x..."));
+const JINGLE_BASS = JINGLE_CHORDS.map(c => {
+  const [root, fifth] = JINGLE_ROOTS[c]!;
+  return seq([root, 3], [".", 1], [fifth, 3], [".", 1], [root, 3], [".", 1], [fifth, 3], [".", 1]);
+});
+const JINGLE_BELLS_UP = JINGLE_BELLS.map(bar => bar.replace(/([A-G][#b]?)(\d)/g, (_, n, oct) => `${n}${Number(oct) + 1}`));
+const JINGLE_BELLS_DOWN = JINGLE_BELLS.map(bar => bar.replace(/([A-G][#b]?)(\d)/g, (_, n, oct) => `${n}${Number(oct) - 1}`));
+const SLED_BELLS = drum("o.x.x.x.o.x.x.x.");
 
 const submarineLobby: Track = {
-  id: "submarine-lobby",
-  bpm: 70,
-  bars: 4,
+  id: "submarine-lobby", bpm: 100, bars: JINGLE_BELLS.length, reverb: .3,
   layers: [
-    { inst: "pad", bars: SUB_PAD, vol: 0.9 },
-    { inst: "tribass", bars: [hold("D2"), hold("Bb1"), hold("G1"), hold("A1")], vol: 0.8 },
-    { inst: "sonar", bars: [once("A5"), rest], vol: 0.7 },
-    { inst: "bubble", bars: [drum(".....x.......x.."), drum("..x.......x.....")], vol: 0.6 },
-    {
-      inst: "bell",
-      bars: [seq(["A4", 4], ["F4", 4], ["D5", 8]), seq(["D5", 4], ["C5", 4], ["Bb4", 8]), seq(["G4", 4], ["Bb4", 4], ["D5", 8]), seq(["E5", 4], ["C#5", 4], ["A4", 8])],
-      vol: 0.5,
-    },
+    { inst: "flute", bars: JINGLE_BELLS, vol: .5 },
+    { inst: "bell", bars: JINGLE_BELLS_UP, vol: .18 },
+    { inst: "strings", bars: JINGLE_PADS, vol: .28 },
+    { inst: "piano", bars: JINGLE_BASS, vol: .4 },
+    { inst: "pluck", bars: JINGLE_COMP, vol: .25 },
+    { inst: "hat", bars: [SLED_BELLS], vol: .22 },
   ],
 };
 
 const submarineChase: Track = {
-  id: "submarine-chase",
-  bpm: 84,
-  bars: 4,
-  tempoBoost: 0.5,
+  id: "submarine-chase", bpm: 120, bars: JINGLE_BELLS.length, tempoBoost: .25, swing: .06, reverb: .25,
   layers: [
-    { inst: "heart", bars: [drum("x.......x.......")], vol: 0.8 },
-    { inst: "pad", bars: SUB_PAD, vol: 0.6 },
-    { inst: "sonar", bars: [once("D6")], vol: 0.6 },
-    { inst: "bass", bars: [pump("D2", "x.x.x.x.x.x.x.x."), pump("Bb1", "x.x.x.x.x.x.x.x."), pump("G1", "x.x.x.x.x.x.x.x."), pump("A1", "x.x.x.x.x.x.x.x.")], vol: 0.8, from: 0.3 },
-    { inst: "pulse", bars: [arp(["D4", "F4", "A4", "F4"]), arp(["Bb3", "D4", "F4", "D4"]), arp(["G3", "Bb3", "D4", "Bb3"]), arp(["A3", "C#4", "E4", "C#4"])], vol: 0.4, from: 0.5 },
-    { inst: "hat", bars: [drum("x.xxx.xxx.xxx.xx")], vol: 0.4, from: 0.7 },
-    { inst: "taiko", bars: [drum("o.......o...x...")], vol: 0.55, from: 0.7 },
-    {
-      inst: "lead",
-      bars: [seq(["A5", 2], ["G#5", 2], ["A5", 2], ["G#5", 2], ["A5", 2], ["Bb5", 2], ["A5", 4])],
-      vol: 0.55,
-      from: 0.85,
-    },
+    { inst: "brass", bars: JINGLE_BELLS, vol: .58 },
+    { inst: "bell", bars: JINGLE_BELLS_UP, vol: .2 },
+    { inst: "piano", bars: JINGLE_BASS, vol: .55 },
+    { inst: "pluck", bars: JINGLE_COMP, vol: .36 },
+    { inst: "strings", bars: JINGLE_PADS, vol: .3 },
+    { inst: "hat", bars: [SLED_BELLS], vol: .32 },
+    { inst: "kick", bars: [drum("x.......x.......")], vol: .3 },
+    { inst: "snare", bars: [drum("....x.......x...")], vol: .24, from: .35 },
+    { inst: "flute", bars: JINGLE_BELLS, vol: .3, from: .65 },
+    { inst: "hat", bars: [drum("..x...x...x...x.")], vol: .22, from: .8 },
+    { inst: "cymbal", bars: [once("x"), ...Array(15).fill(rest)], vol: .22, from: .8 },
   ],
 };
 
+// Quiet piano and glockenspiel leave room for spoken symbol instructions.
 const submarineDive: Track = {
-  id: "submarine-dive",
-  bpm: 76,
-  bars: 4,
+  id: "submarine-dive", bpm: 88, bars: JINGLE_BELLS.length, reverb: .25,
   layers: [
-    { inst: "pad", bars: [hold(chord("D3 F3 A3")), hold(chord("G2 Bb2 D3")), hold(chord("Bb2 D3 F3")), hold(chord("A2 C#3 E3"))], vol: 0.8 },
-    { inst: "tribass", bars: [seq(["D2", 8], ["A1", 8]), seq(["G1", 8], ["D2", 8]), seq(["Bb1", 8], ["F2", 8]), seq(["A1", 8], ["E2", 8])], vol: 0.7 },
-    { inst: "bell", bars: [arp(["D5", "F5", "A5", "C6"], 2), arp(["G4", "Bb4", "D5", "F5"], 2), arp(["Bb4", "D5", "F5", "A5"], 2), arp(["A4", "C#5", "E5", "G5"], 2)], vol: 0.4 },
-    { inst: "sonar", bars: [once("F5"), rest], vol: 0.6 },
-    { inst: "bubble", bars: [drum("...x......x....x")], vol: 0.6 },
+    { inst: "piano", bars: JINGLE_BELLS_DOWN, vol: .32 },
+    { inst: "bell", bars: JINGLE_BELLS, vol: .12 },
+    { inst: "strings", bars: JINGLE_PADS, vol: .18 },
+    { inst: "pluck", bars: JINGLE_CHORDS.map(c => hold(JINGLE_ROOTS[c]![0].replace(/(\d)$/, n => String(Number(n) + 1)))), vol: .24 },
   ],
 };
 
 const submarineResults: Track = {
-  id: "submarine-results",
-  bpm: 66,
-  bars: 4,
+  id: "submarine-results", bpm: 108, bars: JINGLE_BELLS.length, reverb: .35,
   layers: [
-    { inst: "pad", bars: [hold(chord("D3 F#3 A3")), hold(chord("B2 D3 F#3")), hold(chord("G2 B2 D3")), hold(chord("A2 C#3 E3"))], vol: 0.9 },
-    { inst: "tribass", bars: [hold("D2"), hold("B1"), hold("G1"), hold("A1")], vol: 0.7 },
-    {
-      inst: "bell",
-      bars: [seq(["F#5", 4], ["A5", 4], ["D6", 8]), seq(["D6", 4], ["C#6", 4], ["B5", 8]), seq(["B5", 4], ["A5", 4], ["G5", 8]), seq(["A5", 4], ["E5", 4], ["C#5", 8])],
-      vol: 0.55,
-    },
-    { inst: "sonar", bars: [rest, once("A5")], vol: 0.45 },
-    { inst: "bubble", bars: [drum("......x.........")], vol: 0.5 },
+    { inst: "brass", bars: JINGLE_BELLS, vol: .6 },
+    { inst: "bell", bars: JINGLE_BELLS_UP, vol: .26 },
+    { inst: "strings", bars: JINGLE_PADS, vol: .36 },
+    { inst: "piano", bars: JINGLE_BASS, vol: .5 },
+    { inst: "pluck", bars: JINGLE_COMP, vol: .28 },
+    { inst: "hat", bars: [SLED_BELLS], vol: .25 },
+    { inst: "snare", bars: [drum("....x.......x...")], vol: .2 },
+    { inst: "cymbal", bars: [once("x"), ...Array(15).fill(rest)], vol: .2 },
   ],
 };
 
