@@ -3,7 +3,8 @@
  * Classic = upbeat game show, Tallest Tower = Christian Christmas carols for North Pole Tower; retro chiptune for the classic theme,
  * Sled Squad (submarine IDs) = Jingle Bells, arranged for a vintage Christmas band, Tower Fight = Luther’s A Mighty Fortress Is Our God in battle,
  * Robot Attack = Christian Christmas carols for the snowman; Beethoven and Grieg for the robot,
- * Land Grab = calm ambient piano that grows into an orchestra as rings close,
+ * Land Grab = Silent Night for the North Pole theme, with calm piano growing as rings close;
+ *   the classic theme retains the original ambient piano and orchestra,
  * Racer = sunny late-80s arcade-racing chiptune (tempo follows the car's speed), in the rich arcade sound (see rich.ts),
  *   or Christian Christmas carols for Neon Noel Racer: Angels We Have Heard on High, God Rest Ye Merry,
  *   Gentlemen, and Hark! The Herald Angels Sing, with arcade synths, FM bells and brass,
@@ -27,7 +28,7 @@ import { ROBOT_SKIN, type RobotSkin } from "../robot-skin.ts";
 
 // ---------- composing helpers (each returns one 16-step bar) ----------
 
-/** Notes with lengths in 16th steps: seq(["C5", 2], [".", 2], ["E5", 4], …). Must total 16. */
+/** Notes with lengths in 16th steps; total the track's bar length (normally 16, or 12 for triple meter). */
 const seq = (...parts: [string, number][]) =>
   parts.flatMap(([tok, len]) => (tok === "." ? Array(len).fill(".") : [tok, ...Array(len - 1).fill("-")])).join(" ");
 /** A note or chord held for the whole bar. */
@@ -570,6 +571,86 @@ const robotResults: Track = {
 const rolled = (notes: string) => arp(notes.split(" "), 2);
 /** Steady eighth notes. */
 const eighths = (tok: string) => pump(tok, "x.x.x.x.x.x.x.x.");
+
+// North Pole: Silent Night (Gruber, 1818), original gentle C-major arrangement.
+// Public-domain source: https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=81
+// Double the original 6/8 note values into 24 lilting 3/4 bars, preserving the tune.
+// Twelve steps keep its three-beat phrasing intact instead of padding each bar to 4/4.
+const lullaby = (...parts: [string, number][]) => seq(...parts);
+const SILENT_NIGHT = [
+  lullaby(["G4", 6], ["A4", 2], ["G4", 4]), lullaby(["E4", 12]),
+  lullaby(["G4", 6], ["A4", 2], ["G4", 4]), lullaby(["E4", 12]),
+  lullaby(["D5", 8], ["D5", 4]), lullaby(["B4", 12]),
+  lullaby(["C5", 8], ["C5", 4]), lullaby(["G4", 12]),
+  lullaby(["A4", 8], ["A4", 4]), lullaby(["C5", 6], ["B4", 2], ["A4", 4]),
+  lullaby(["G4", 6], ["A4", 2], ["G4", 4]), lullaby(["E4", 12]),
+  lullaby(["A4", 8], ["A4", 4]), lullaby(["C5", 6], ["B4", 2], ["A4", 4]),
+  lullaby(["G4", 6], ["A4", 2], ["G4", 4]), lullaby(["E4", 12]),
+  lullaby(["D5", 8], ["D5", 4]), lullaby(["F5", 6], ["D5", 2], ["B4", 4]),
+  lullaby(["C5", 12]), lullaby(["E5", 12]),
+  lullaby(["C5", 4], ["G4", 4], ["E4", 4]), lullaby(["G4", 6], ["F4", 2], ["D4", 4]),
+  lullaby(["C4", 12]), lullaby(["C4", 8], [".", 4]),
+];
+// New accompaniment, aligned to all 24 melody bars, rather than an unrelated short loop.
+const SILENT_HARMONY = [
+  "C3 E3 G3", "C3 E3 G3", "C3 E3 G3", "C3 E3 G3",
+  "G2 B2 D3", "G2 B2 D3", "C3 E3 G3", "C3 E3 G3",
+  "F2 A2 C3", "F2 A2 C3", "C3 E3 G3", "C3 E3 G3",
+  "F2 A2 C3", "F2 A2 C3", "C3 E3 G3", "C3 E3 G3",
+  "G2 B2 D3", "G2 B2 D3", "C3 E3 G3", "C3 E3 G3",
+  "C3 E3 G3", "G2 B2 D3", "C3 E3 G3", "C3 E3 G3",
+];
+const silentChords = SILENT_HARMONY.map(notes => lullaby([chord(notes), 6], [".", 6]));
+const silentStrings = SILENT_HARMONY.map(notes => lullaby([chord(notes), 12]));
+const silentHarp = SILENT_HARMONY.map(notes => {
+  const [root, third, fifth] = notes.split(" ") as [string, string, string];
+  return lullaby([root, 2], [fifth, 2], [third, 2], [fifth, 2], [third, 2], [fifth, 2]);
+});
+const silentBells = SILENT_HARMONY.map((_, bar) => bar % 4 === 0 ? lullaby(["G5", 2], [".", 10]) : lullaby([".", 12]));
+
+const christmasLandLobby: Track = {
+  id: "land-christmas-lobby", bpm: 60, bars: 24, stepsPerBar: 12, reverb: 0.28,
+  layers: [
+    { inst: "piano", bars: SILENT_NIGHT, vol: 0.7 },
+    { inst: "piano", bars: silentChords, vol: 0.3 },
+    { inst: "strings", bars: silentStrings, vol: 0.16 },
+    { inst: "bell", bars: silentBells, vol: 0.12 },
+  ],
+};
+const christmasLandPlay: Track = {
+  id: "land-christmas-play", bpm: 60, bars: 24, stepsPerBar: 12, tempoBoost: 1, reverb: 0.28,
+  layers: [
+    // The complete melody stays on piano from calm to capture, without restarting.
+    ...christmasLandLobby.layers,
+    { inst: "pluck", bars: silentHarp, vol: 0.28, from: 0.25 },
+    { inst: "strings", bars: SILENT_NIGHT, vol: 0.3, from: 0.45 },
+    { inst: "piano", bars: SILENT_HARMONY.map(notes => {
+      const root = notes.split(" ")[0]!;
+      return lullaby([root, 4], [".", 2], [root, 4], [".", 2]);
+    }), vol: 0.3, from: 0.65 },
+    { inst: "flute", bars: SILENT_NIGHT, vol: 0.32, from: 0.8 },
+    // Closing ring: moving low strings and a warm horn double give the tune momentum.
+    { inst: "strings", bars: silentHarp, vol: 0.4, from: 0.65 },
+    { inst: "brass", bars: SILENT_NIGHT, vol: 0.32, from: 0.8 },
+    { inst: "snare", bars: [drum("....x.....x.")], vol: 0.22, from: 0.8 },
+    { inst: "timpani", bars: SILENT_HARMONY.map(notes => {
+      const [root, , fifth] = notes.split(" ");
+      return lullaby([root!, 2], [".", 2], [root!, 2], [".", 2], [fifth!, 2], [".", 2]);
+    }), vol: 0.28, from: 0.85 },
+    { inst: "bell", bars: shift(SILENT_NIGHT, 1), vol: 0.2, from: 0.9 },
+    { inst: "cymbal", bars: [lullaby(["x", 1], [".", 11]), lullaby([".", 12]), lullaby([".", 12]), lullaby([".", 12])], vol: 0.12, from: 0.9 },
+  ],
+};
+const christmasLandResults: Track = {
+  id: "land-christmas-results", bpm: 68, bars: 24, stepsPerBar: 12, reverb: 0.3,
+  layers: [
+    { inst: "piano", bars: SILENT_NIGHT, vol: 0.75 },
+    { inst: "piano", bars: silentChords, vol: 0.3 },
+    { inst: "strings", bars: silentStrings, vol: 0.25 },
+    { inst: "pluck", bars: silentHarp, vol: 0.22 },
+    { inst: "bell", bars: silentBells, vol: 0.18 },
+  ],
+};
 
 const landLobby: Track = {
   id: "land-lobby",
@@ -2016,6 +2097,9 @@ export const TRACKS: Record<MusicTrackId, Track> = {
   "land-lobby": landLobby,
   "land-play": landPlay,
   "land-results": landResults,
+  "land-christmas-lobby": christmasLandLobby,
+  "land-christmas-play": christmasLandPlay,
+  "land-christmas-results": christmasLandResults,
   "racer-lobby": racerLobby,
   "racer-drive": racerDrive,
   "racer-results": racerResults,

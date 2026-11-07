@@ -1,3 +1,4 @@
+import { landTheme } from "../../shared/land-theme.ts";
 import { towerTheme } from "../../shared/tower-theme.ts";
 import { racerTheme } from "../../shared/racer-theme.ts";
 import { cupTheme } from "../../shared/cup-theme.ts";
@@ -40,6 +41,7 @@ export function musicFor(view: HostView | null): MusicCue {
   if (!view || view.kind === "idle") return { track: null };
   switch (view.kind) {
     case "classic": {
+      if (view.phase === "lobby" && view.mode === "land") return { track: landTheme(view.land.theme) === "christmas" ? "land-christmas-lobby" : "land-lobby" };
       if (view.phase === "lobby" && view.mode === "racer") return { track: racerTheme(view.racer.theme) === "christmas" ? "racer-christmas-lobby" : "racer-lobby" };
       if (view.phase === "lobby") return { track: (view.mode === "tower" && towerTheme(view.tower.theme) === "christmas") || (view.mode === "cup" && cupTheme(view.cup.theme) === "christmas") ? "tower-christmas-lobby" : LOBBY[view.mode] ?? "classic-lobby" };
       if (view.phase === "podium") return { track: "classic-results" };
@@ -97,11 +99,13 @@ export function musicFor(view: HostView | null): MusicCue {
       return { track: "cup-quiz", intensity: 0, key: `cup-${view.phase}-${view.round}` };
     }
     case "land": {
-      if (view.phase === "podium") return { track: "land-results" };
-      if (view.phase === "conquered") return { track: "land-play", intensity: 1 };
+      const christmas = landTheme(view.theme) === "christmas";
+      const play = christmas ? "land-christmas-play" : "land-play";
+      if (view.phase === "podium") return { track: christmas ? "land-christmas-results" : "land-results" };
+      if (view.phase === "conquered") return { track: play, intensity: 1 };
       // Calm until a team gets close to closing a ring. No key, so the music glides
       // up as the ring grows and back down if it is broken.
-      return { track: "land-play", intensity: view.phase === "playing" ? landThreat(view.board) : 0 };
+      return { track: play, intensity: view.phase === "playing" ? landThreat(view.board) : 0 };
     }
     case "racer": {
       const christmas = racerTheme(view.theme) === "christmas";

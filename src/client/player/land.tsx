@@ -1,3 +1,4 @@
+import { LandThemeProvider, useNorthPole } from "../shared/land-skin.tsx";
 import type { ComponentChildren } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { EMPTY, placementCost } from "../../shared/land-board.ts";
@@ -17,6 +18,11 @@ const OPEN_ZOOM = 1.5;
 
 /** Phone screen for Land Grab: three questions, then place the tiles they earned. */
 export function LandPlayer({ view, send }: { view: PlayerLandView; send: Send }) {
+  return <LandThemeProvider theme={view.theme}><LandPlayerContent view={view} send={send} /></LandThemeProvider>;
+}
+
+function LandPlayerContent({ view, send }: { view: PlayerLandView; send: Send }) {
+  const christmas = useNorthPole();
   const secs = useCountdown(view.remainingMs, view.phase);
 
   // The server sends the player back to questions the moment their last claim is spent;
@@ -75,7 +81,7 @@ export function LandPlayer({ view, send }: { view: PlayerLandView; send: Send })
   }
 
   return (
-    <div class="game tower-game land-game" style={teamVars(view.team.color)}>
+    <div class={`game tower-game land-game ${christmas ? "land-christmas" : ""}`} style={teamVars(view.team.color)}>
       <header class="bar team-bar">
         <span class="name">{view.me.nickname}</span>
         {playing && (
@@ -180,7 +186,7 @@ function ClaimMode(props: { board: LandBoard; live: boolean; claims: number; tea
       <div class="build-head">
         <b>{live ? `Place your tiles! ${claims} left` : "Tile placed!"}</b>
         <span>
-          Grass costs 1 · tiles marked with a number cost that many · pinch to zoom
+          Unclaimed land costs 1 · numbered tiles cost that many · pinch to zoom
         </span>
       </div>
       <PanZoom focus={() => focusTiles(board, team)} onTap={(tile) => live && setSelected(tile === selected ? null : tile)}>
@@ -213,6 +219,7 @@ function focusTiles(board: LandBoard, team: number): number[] {
  * Opens at OPEN_ZOOM, centred on the `focus` tiles.
  */
 function PanZoom({ children, focus, onTap }: { children: ComponentChildren; focus?: () => number[]; onTap: (tile: number) => void }) {
+  const christmas = useNorthPole();
   const box = useRef<HTMLDivElement>(null);
   const inner = useRef<HTMLDivElement>(null);
   const view = useRef({ s: 1, x: 0, y: 0 });
@@ -312,7 +319,7 @@ function PanZoom({ children, focus, onTap }: { children: ComponentChildren; focu
   };
 
   return (
-    <div class="land-area" style={{ backgroundImage: `url(${landArt("felt-tile")})` }} ref={box} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} onPointerLeave={onUp}>
+    <div class="land-area" style={{ backgroundImage: christmas ? undefined : `url(${landArt("felt-tile")})` }} ref={box} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} onPointerLeave={onUp}>
       <div class="land-pan" ref={inner}>
         {children}
       </div>

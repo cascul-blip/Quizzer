@@ -4041,3 +4041,13 @@ h1 {
   background: linear-gradient(180deg, #ffd977, var(--sleigh-gold));
   box-shadow: 0 2px 0 #9a6a12;
 }
+
+.land-game.land-christmas { background: #f3eee2; color: #322b23; }
+.land-christmas .land-area { background: #6b452b; border: 1px solid #4b301e; }
+.land-christmas .land-foot { background: #eee6d5; color: #322b23; }
+.land-christmas .build-head { background: #f3eee2; color: #322b23; }
+.land-christmas .land-hint { color: #514637; }
+.land-christmas .land-foot .btn.ghost { color: #514637; border-color: #a29179; }
+.land-christmas .muted { color: #65594b; }
+
+.land-christmas .build-head span { color: #65594b; }

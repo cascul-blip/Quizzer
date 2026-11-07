@@ -69,7 +69,23 @@ describe("lobby → land", () => {
     expect(() => lobby.setLand({ teams: 7, minutes: 5 })).toThrow();
     expect(() => lobby.setLand({ teams: 2, minutes: 4 })).toThrow();
     for (const minutes of [3, 5, 7, 10]) lobby.setLand({ teams: 2, minutes });
-    expect(lobby.hostView().land).toEqual({ teams: 2, minutes: 10 });
+    expect(lobby.hostView().land).toEqual({ teams: 2, minutes: 10, theme: "christmas" });
+  });
+
+  test("Christmas defaults, Classic persists across settings edits and reaches both screens", () => {
+    const { lobby } = setup(["A", "B"]);
+    expect(lobby.land.theme).toBe("christmas");
+    lobby.setLand({ teams: 2, minutes: 5, theme: "classic" });
+    lobby.setLand({ teams: 3, minutes: 7 });
+    expect(lobby.land.theme).toBe("classic");
+    const game = LandGame.fromLobby(lobby);
+    expect(game.hostView().theme).toBe("classic");
+    expect(game.playerView([...game.players.keys()][0]!)!.theme).toBe("classic");
+    expect(() => lobby.setLand({ teams: 3, minutes: 7, theme: "invalid" as "classic" })).toThrow("Unknown Land Grab theme");
+    lobby.setLand({ teams: 3, minutes: 7, theme: "christmas" });
+    const winter = LandGame.fromLobby(lobby);
+    expect(winter.hostView().theme).toBe("christmas");
+    expect(winter.playerView([...winter.players.keys()][0]!)!.theme).toBe("christmas");
   });
 
   test("board size follows the team count and each team owns its starting tile", () => {

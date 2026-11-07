@@ -1,3 +1,4 @@
+import { useNorthPole, northPoleArt } from "./land-skin.tsx";
 import { useEffect, useState } from "preact/hooks";
 import { EMPTY, borderEdges, boardExtent, hexCenter, isProtected, placementCost } from "../../shared/land-board.ts";
 import { LAND_GUARD_COST, LAND_STEAL_COST, TEAMS, type LandBoard, type LandCapture, type LandPlace } from "../../shared/protocol.ts";
@@ -229,6 +230,7 @@ interface HexBoardProps {
  * traced back to it; everything drawn after the tiles lets taps through.
  */
 export function HexBoard({ board, viewer, selected, placed, capture, label }: HexBoardProps) {
+  const christmas = useNorthPole();
   const { size, owners, starts } = board;
   const { width, height } = boardExtent(size);
   const centres = owners.map((_, tile) => {
@@ -237,8 +239,8 @@ export function HexBoard({ board, viewer, selected, placed, capture, label }: He
   });
   const top = (tile: number) => centres[tile]!;
   const [mapFailed, setMapFailed] = useState<string | null>(null);
-  const mapId = MAPS[size];
-  const map = mapId !== undefined && mapFailed !== mapId ? landArt(mapId) : null;
+  const mapId = christmas ? "north-pole" : MAPS[size];
+  const map = mapId !== undefined && mapFailed !== mapId ? (christmas ? northPoleArt().map : landArt(mapId as LandArtId)) : null;
   const mapW = (width * R).toFixed(2);
   const mapH = (height * R).toFixed(2);
   const flipped = capture ? new Map(capture.tiles.map((t, i) => [t, i])) : null;
@@ -317,6 +319,8 @@ export function HexBoard({ board, viewer, selected, placed, capture, label }: He
       return (
         <image
           key={s.team}
+          class="hex-base"
+          opacity={christmas ? (s.out ? 0.25 : 0.45) : undefined}
           href={landArt(s.out ? "keep-out" : KEEPS[s.team % KEEPS.length]!)}
           x={(t.x - KEEP_W * KEEP_ANCHOR.x).toFixed(2)}
           y={(t.y - KEEP_H * KEEP_ANCHOR.y).toFixed(2)}
@@ -358,13 +362,16 @@ export function HexBoard({ board, viewer, selected, placed, capture, label }: He
 
   return (
     <svg
-      class="hex-board"
+      class={`hex-board ${christmas ? "hex-north-pole" : ""}`}
       viewBox={`${-MARGIN} ${-MARGIN} ${(width * R + 2 * MARGIN).toFixed(2)} ${(height * R + 2 * MARGIN).toFixed(2)}`}
       preserveAspectRatio="xMidYMid meet"
       role="img"
-      aria-label={label ?? "The land"}
+      aria-label={label ?? (christmas ? "North Pole territory map" : "The land")}
     >
       <defs>
+        {christmas && map && <mask id="north-pole-paper" maskUnits="userSpaceOnUse" x="0" y="0" width={mapW} height={mapH} style={{ maskType: "alpha" }}>
+          <image href={map} x="0" y="0" width={mapW} height={mapH} preserveAspectRatio="none" />
+        </mask>}
         <clipPath id={CLIP_ID}>
           <polygon points={TILE} />
         </clipPath>
@@ -385,24 +392,26 @@ export function HexBoard({ board, viewer, selected, placed, capture, label }: He
           </clipPath>
         )}
       </defs>
-      <g class="hex-tray">
-        <g filter={`url(#${SHADOW_ID})`} style={{ fill: INK }}>
-          {edge(EDGE_INK_R)}
+      <g mask={christmas && map ? "url(#north-pole-paper)" : undefined}>
+        <g class="hex-tray" style={christmas ? { display: "none" } : undefined}>
+          <g filter={`url(#${SHADOW_ID})`} style={{ fill: INK }}>
+            {edge(EDGE_INK_R)}
+          </g>
+          <g style={{ fill: `url(#${WOOD_ID})` }}>{edge(EDGE_R)}</g>
         </g>
-        <g style={{ fill: `url(#${WOOD_ID})` }}>{edge(EDGE_R)}</g>
-      </g>
-      {map && <image class="hex-map" href={map} x="0" y="0" width={mapW} height={mapH} preserveAspectRatio="none" clip-path={`url(#${MAP_CLIP_ID})`} onError={() => setMapFailed(mapId!)} />}
-      {tiles}
-      <g class="hex-borders">{borders}</g>
-      <g class="hex-overlay">{keeps}</g>
-      <g class="hex-overlay">
-        {states}
-        {sel && <polygon class="hex-hatch" points={hexPoints(TILE_R, sel.x, sel.y)} style={{ fill: `url(#${HATCH_ID})` }} />}
-        {sel && <TileImage id="state-selected" x={sel.x} y={sel.y} scale={SELECTED} class="hex-selected" />}
-      </g>
-      <g class="hex-overlay hex-fx">
-        {pop && <image key={placed!.seq} class="fx-pop" href={landArt("place-pop")} x={(pop.x - POP / 2).toFixed(2)} y={(pop.y - POP / 2).toFixed(2)} width={POP.toFixed(2)} height={POP.toFixed(2)} />}
-        {flashes}
+        {map && <image class="hex-map" href={map} x="0" y="0" width={mapW} height={mapH} preserveAspectRatio="none" clip-path={christmas ? undefined : `url(#${MAP_CLIP_ID})`} onError={() => setMapFailed(mapId!)} />}
+        {tiles}
+        <g class="hex-borders">{borders}</g>
+        <g class="hex-overlay">{keeps}</g>
+        <g class="hex-overlay">
+          {states}
+          {sel && <polygon class="hex-hatch" points={hexPoints(TILE_R, sel.x, sel.y)} style={{ fill: `url(#${HATCH_ID})` }} />}
+          {sel && <TileImage id="state-selected" x={sel.x} y={sel.y} scale={SELECTED} class="hex-selected" />}
+        </g>
+        <g class="hex-overlay hex-fx">
+          {pop && <image key={placed!.seq} class="fx-pop" href={landArt("place-pop")} x={(pop.x - POP / 2).toFixed(2)} y={(pop.y - POP / 2).toFixed(2)} width={POP.toFixed(2)} height={POP.toFixed(2)} />}
+          {flashes}
+        </g>
       </g>
     </svg>
   );

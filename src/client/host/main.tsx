@@ -1,3 +1,4 @@
+import { landTheme, type LandTheme } from "../../shared/land-theme.ts";
 import { fightTheme, type FightTheme } from "../../shared/fight-theme.ts";
 import { racerTheme, type RacerTheme } from "../../shared/racer-theme.ts";
 import { towerTheme, towerWords, type TowerTheme } from "../../shared/tower-theme.ts";
@@ -449,6 +450,13 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
             </>
           ) : view.mode === "land" ? (
             <>
+              <label class="opt">
+                Theme
+                <select aria-label="Land Grab theme" value={landTheme(view.land.theme)} onChange={(e) => send({ type: "host.setLand", teams: view.land.teams, minutes: view.land.minutes, theme: e.currentTarget.value as LandTheme })}>
+                  <option value="christmas">🎄 North Pole</option>
+                  <option value="classic">🚩 Classic</option>
+                </select>
+              </label>
               <label class="opt">
                 Teams
                 <select value={view.land.teams} onChange={(e) => send({ type: "host.setLand", teams: Number(e.currentTarget.value), minutes: view.land.minutes })}>

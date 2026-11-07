@@ -1,7 +1,8 @@
+import { startTiles, hexDistance } from "../src/shared/land-board.ts";
 import { describe, expect, test } from "bun:test";
 import { musicFor } from "../src/client/host/music-cues.ts";
 import type { HostView, SubPhase } from "../src/shared/protocol.ts";
-import { DRUMS, STEPS_PER_BAR, layerActive, noteFreq, stepSeconds, tokens, usesSamples } from "../src/client/shared/music/engine.ts";
+import { DRUMS, stepsPerBar, layerActive, noteFreq, stepSeconds, tokens, usesSamples } from "../src/client/shared/music/engine.ts";
 import { TRACKS, robotTracksForSkin } from "../src/client/shared/music/tracks.ts";
 import { ROBOT_SKIN } from "../src/client/shared/robot-skin.ts";
 import { MUSIC_TRACKS, musicTrackForFile } from "../src/shared/music-tracks.ts";
@@ -25,7 +26,7 @@ describe("built-in tracks", () => {
   });
 
   for (const [id, track] of Object.entries({ ...TRACKS, ...Object.fromEntries(Object.entries(robotTracksForSkin("robot")).map(([id, track]) => [`original-${id}`, track])) })) {
-    test(`${id}: every bar has 16 valid steps`, () => {
+    test(`${id}: every bar has valid steps for its meter`, () => {
       expect(track.bars).toBeGreaterThan(0);
       expect(track.bpm).toBeGreaterThan(40);
       expect(track.bpm).toBeLessThan(220);
@@ -34,7 +35,7 @@ describe("built-in tracks", () => {
         expect(track.bars % layer.bars.length).toBe(0); // loops line up
         for (const bar of layer.bars) {
           const toks = tokens(bar);
-          expect(toks).toHaveLength(STEPS_PER_BAR);
+          expect(toks).toHaveLength(stepsPerBar(track));
           expect(toks[0]).not.toBe("-"); // a hold needs a note before it in the same bar
           for (const tok of toks) {
             if (tok === "." || tok === "-") continue;
@@ -217,5 +218,62 @@ describe("Neon Noel Racer Christmas music", () => {
     expect(60 / (stepSeconds(drive, 1) * 4)).toBeCloseTo(162.4);
     expect(drive.layers.filter(l => layerActive(l, 1)).length).toBeGreaterThan(drive.layers.filter(l => layerActive(l, 0)).length);
     expect(musicTrackForFile("racer-christmas-drive.mp3")).toBe("racer-christmas-drive");
+  });
+});
+
+describe("North Pole Land Grab Christmas music", () => {
+  test("lobby, countdown, play, conquest and podium follow the selected theme", () => {
+    for (const theme of ["christmas", "classic", undefined] as const) {
+      const prefix = theme === "classic" ? "land" : "land-christmas";
+      expect(musicFor({ kind: "classic", phase: "lobby", mode: "land", land: { theme } } as HostView)).toEqual({ track: `${prefix}-lobby` });
+      expect(musicFor({ kind: "land", theme, phase: "countdown" } as HostView)).toEqual({ track: `${prefix}-play`, intensity: 0 });
+      expect(musicFor({ kind: "land", theme, phase: "conquered" } as HostView)).toEqual({ track: `${prefix}-play`, intensity: 1 });
+      expect(musicFor({ kind: "land", theme, phase: "podium" } as HostView)).toEqual({ track: `${prefix}-results` });
+    }
+  });
+
+  test("a real growing ring speeds the same cue up; breaking it calms the music", () => {
+    const size = 10;
+    const [red, blue] = startTiles(2) as [number, number];
+    const owners = Array<number>(size * size).fill(-1);
+    owners[red] = 0; owners[blue] = 1;
+    const starts = [{ team: 0, tile: red, out: false }, { team: 1, tile: blue, out: false }];
+    const ring = owners.map((_, t) => t).filter(t => hexDistance(size, blue, t) === 2);
+    const cue = () => musicFor({ kind: "land", theme: "christmas", phase: "playing", board: { size, owners, starts } } as HostView);
+    expect(cue()).toEqual({ track: "land-christmas-play", intensity: 0 });
+    for (const tile of ring.slice(0, 11)) owners[tile] = 0;
+    expect(cue()).toEqual({ track: "land-christmas-play", intensity: 1 });
+    owners[ring[0]!] = 1;
+    expect(cue().intensity).toBeLessThan(1);
+    for (const tile of ring) owners[tile] = -1;
+    expect(cue()).toEqual({ track: "land-christmas-play", intensity: 0 });
+    // No phase or threat key: the existing player glides instead of restarting.
+    expect(cue().key).toBeUndefined();
+  });
+
+  test("Silent Night stays audible at all threats and builds from a calm 60 to an urgent 120 BPM", () => {
+    const play = TRACKS["land-christmas-play"];
+    for (const id of ["land-christmas-lobby", "land-christmas-play", "land-christmas-results"] as const) {
+      const track = TRACKS[id];
+      expect(track.stepsPerBar).toBe(12);
+      expect(track.bars).toBe(24);
+      const melody = track.layers[0]!;
+      expect(melody.inst).toBe("piano");
+      expect(melody.bars).toHaveLength(24);
+      expect(tokens(melody.bars[0]!).filter(n => n !== "-")).toEqual(["G4", "A4", "G4"]);
+      expect(tokens(melody.bars[1]!)[0]).toBe("E4");
+      for (const intensity of [0, .25, .5, .8, 1]) expect(layerActive(melody, intensity)).toBe(true);
+      for (const layer of track.layers) expect(["piano", "strings", "bell", "pluck", "flute", "timpani", "brass", "snare", "cymbal"]).toContain(layer.inst);
+      expect(usesSamples(track)).toBe(true);
+    }
+    expect(60 / (stepSeconds(play, 0) * 4)).toBeCloseTo(60);
+    expect(60 / (stepSeconds(play, 1) * 4)).toBeCloseTo(120);
+    expect(play.layers.filter(l => layerActive(l, 1)).length).toBeGreaterThan(play.layers.filter(l => layerActive(l, 0)).length);
+    for (const inst of ["brass", "snare", "cymbal"] as const) {
+      const layer = play.layers.find(l => l.inst === inst)!;
+      expect(layerActive(layer, 0.5)).toBe(false);
+      expect(layerActive(layer, 1)).toBe(true);
+    }
+    expect(musicTrackForFile("land-christmas-play.mp3")).toBe("land-christmas-play");
   });
 });

@@ -3,7 +3,7 @@
  * tracks.ts (or a custom audio file dropped into data/music/), with smooth
  * crossfades and an "intensity" that speeds the music up and adds layers.
  *
- * Patterns are 16 steps per bar. Melodic steps are note names ("C4", "F#3",
+ * Patterns default to 16 steps per bar; triple-meter tracks use 12. Melodic steps are note names ("C4", "F#3",
  * "Bb2", chords as "C4+E4+G4"), "-" holds the previous note, "." is a rest.
  * Drum steps are "x" (hit), "o" (accent) or ".".
  *
@@ -64,6 +64,8 @@ export interface Track {
   id: string;
   bpm: number;
   bars: number;
+  /** Sixteenth-note steps per bar; defaults to 16 (4/4). Use 12 for 3/4 or 6/8. */
+  stepsPerBar?: number;
   /** Extra tempo at full intensity, e.g. 0.3 = up to 30% faster. */
   tempoBoost?: number;
   /** Delay every other 16th by this fraction of a step (shuffle feel). */
@@ -89,6 +91,7 @@ export interface Track {
 export const usesSamples = (track: Track): boolean => track.samples ?? richStyle(track.rich) !== "arcade";
 
 export const STEPS_PER_BAR = 16;
+export const stepsPerBar = (track: Track): number => track.stepsPerBar ?? STEPS_PER_BAR;
 
 // ---------- notes ----------
 
@@ -518,11 +521,12 @@ interface Sends {
   echo?: AudioNode;
 }
 
-/** Schedule everything that starts on `step` (0 … bars*16-1) at time t. */
+/** Schedule everything that starts on `step` (0 … bars*stepsPerBar-1) at time t. */
 export function scheduleStep(ctx: Ctx, dest: AudioNode, track: Track, step: number, t: number, intensity: number, sends: Sends = {}): void {
   const dur = stepSeconds(track, intensity);
-  const bar = Math.floor(step / STEPS_PER_BAR) % track.bars;
-  const s = step % STEPS_PER_BAR;
+  const steps = stepsPerBar(track);
+  const bar = Math.floor(step / steps) % track.bars;
+  const s = step % steps;
   const style = richStyle(track.rich);
   const sampled = usesSamples(track);
   track.layers.forEach((layer, li) => {
@@ -559,7 +563,7 @@ export function scheduleStep(ctx: Ctx, dest: AudioNode, track: Track, step: numb
       return;
     }
     let held = 1;
-    while (s + held < STEPS_PER_BAR && toks[s + held] === "-") held++;
+    while (s + held < steps && toks[s + held] === "-") held++;
     tok.split("+").forEach((n, i) => {
       const f = noteFreq(n);
       if (!f) return;
@@ -686,7 +690,7 @@ export class MusicPlayer {
         gain.connect(send).connect(this.ensureReverb(ctx, master));
       }
       let t = now + 0.02;
-      for (let step = 0; step < track.bars * STEPS_PER_BAR; step++) {
+      for (let step = 0; step < track.bars * stepsPerBar(track); step++) {
         scheduleStep(ctx, gain, track, step, t, 0);
         t += stepSeconds(track, 0) * (step % 2 === 0 ? 1 + (track.swing ?? 0) : 1 - (track.swing ?? 0));
       }
@@ -759,7 +763,7 @@ export class MusicPlayer {
       scheduleStep(ctx, cur.gain, cur.track, cur.step, cur.nextTime, this.intensity, { echo: cur.echo?.input });
       const swing = cur.track.swing ?? 0;
       cur.nextTime += stepSeconds(cur.track, this.intensity) * (cur.step % 2 === 0 ? 1 + swing : 1 - swing);
-      cur.step = (cur.step + 1) % (cur.track.bars * STEPS_PER_BAR);
+      cur.step = (cur.step + 1) % (cur.track.bars * stepsPerBar(cur.track));
     }
   }
 
