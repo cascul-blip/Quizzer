@@ -1,4 +1,5 @@
 import type { AnswerValue } from "../../shared/answer-match.ts";
+import { cupTheme, type CupTheme } from "../../shared/cup-theme.ts";
 import {
   CUP_ALL_SAFE_MS,
   CUP_DEFAULT_CUPS,
@@ -69,6 +70,7 @@ interface CupOptions {
 }
 
 interface CupGameSettings {
+  theme?: CupTheme;
   /** Cups in front of each player at the start (default CUP_DEFAULT_CUPS). */
   cups?: number;
   shuffleAnswers: boolean;
@@ -78,6 +80,7 @@ interface CupGameSettings {
 
 /** Cup of Death: roll a die, answer that many questions in time, or drink one of your cups. One is poisoned. Last one standing wins. */
 export class CupGame {
+  readonly theme: CupTheme;
   readonly quizId: string;
   readonly title: string;
   readonly questions: Question[];
@@ -108,6 +111,7 @@ export class CupGame {
     this.title = quiz.title;
     this.questions = quiz.questions;
     this.startCups = settings.cups ?? CUP_DEFAULT_CUPS;
+    this.theme = cupTheme(settings.theme);
     this.clock = opts.clock ?? realClock;
     this.rng = opts.rng ?? Math.random;
     this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock, settings.protect);
@@ -118,7 +122,7 @@ export class CupGame {
 
   /** Take over a lobby's players (same ids and tokens). */
   static fromLobby(lobby: Game, opts: CupOptions = {}): CupGame {
-    const game = new CupGame(lobby.quiz, { cups: lobby.cup.cups, shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
+    const game = new CupGame(lobby.quiz, { cups: lobby.cup.cups, theme: lobby.cup.theme, shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
     for (const p of lobby.players.values()) {
       game.roster.adopt(game.newPlayer({ id: p.id, nickname: p.nickname, token: p.token, connected: p.connected, avatar: p.avatar }));
     }
@@ -455,6 +459,7 @@ export class CupGame {
     const drinking = this.phase === "drink";
     return {
       kind: "cup",
+      theme: this.theme,
       phase: this.phase,
       quiz: { id: this.quizId, title: this.title, questionCount: this.questions.length },
       round: this.round,
@@ -501,7 +506,7 @@ export class CupGame {
           ...(won(aw.mostCorrect) ? ["Most correct answers"] : []),
           ...(won(aw.luckiest) ? ["Luckiest drinker"] : []),
           ...(won(aw.neverThirsty) ? ["Never thirsty"] : []),
-          ...(won(aw.unluckiest) ? ["Unluckiest"] : []),
+          ...(won(aw.unluckiest) ? [this.theme === "christmas" ? "First flight" : "Unluckiest"] : []),
         ],
       };
     }
@@ -509,6 +514,7 @@ export class CupGame {
     const mineAt = reveal ? reveal.drinks.findIndex((d) => d.id === p.id) : -1;
     return {
       kind: "cup",
+      theme: this.theme,
       phase: this.phase,
       title: this.title,
       round: this.round,

@@ -2162,6 +2162,19 @@ h1 {
 
 /* ----- Cup of Death ----- */
 
+.cup-game.cup-christmas, .cup-game.cup-christmas.ghost {
+  background: radial-gradient(ellipse at top, #265241, #102b25 75%);
+}
+.cup-christmas .bar { background: #143c31; border-bottom-color: #c6a25d; }
+.cup-christmas .cup-btn {
+  border-color: #b69256;
+  background: linear-gradient(155deg, #214d3d, #15352d);
+}
+.cup-christmas .cup-btn.chosen { border-color: #ffe097; box-shadow: 0 0 20px #efc96b55; }
+.cup-christmas .cheer-blastoff h1 { color: #ffe098; }
+.cheer-phone-launch { width: 160px; height: 220px; overflow: visible; }
+.cup-christmas .ghost-note { background: #254b40; color: #ffe8b2; }
+
 .cup-game {
   background: radial-gradient(120% 80% at 50% 0%, #6b3a1a 0%, #2a1206 100%);
   min-height: 100dvh;

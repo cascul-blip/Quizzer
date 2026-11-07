@@ -688,8 +688,10 @@ describe("Cup of Death over WebSockets", () => {
     await host.hostState((v) => v.kind === "classic" && v.mode === "cup" && v.teams === null && v.cup.cups === 3);
     host.send({ type: "host.setCup", cups: 7 });
     expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: expect.stringContaining("between 1 and 6") });
-    host.send({ type: "host.setCup", cups: 5 });
-    await host.hostState((v) => v.kind === "classic" && v.cup.cups === 5);
+    host.send({ type: "host.setCup", cups: 5, theme: "classic" });
+    await host.hostState((v) => v.kind === "classic" && v.cup.cups === 5 && v.cup.theme === "classic");
+    host.send({ type: "host.setCup", cups: 5, theme: "christmas" });
+    await host.hostState((v) => v.kind === "classic" && v.cup.theme === "christmas");
 
     const names = ["Ann", "Bob"];
     const players = await Promise.all(names.map(() => TestSocket.open(wsUrl)));
@@ -701,7 +703,8 @@ describe("Cup of Death over WebSockets", () => {
     await host.hostState((v) => v.kind === "classic" && v.players.length === 2);
 
     host.send({ type: "host.start", pacing: "manual" });
-    await host.hostState((v) => v.kind === "cup" && v.phase === "countdown");
+    await host.hostState((v) => v.kind === "cup" && v.phase === "countdown" && v.theme === "christmas");
+    await players[0]!.playerState((v) => v.kind === "cup" && v.theme === "christmas");
     clock.advance(CUP_COUNTDOWN_MS);
     srv.hub.broadcast();
     const rolled = await host.hostState((v) => v.kind === "cup" && v.phase === "roll");
@@ -743,9 +746,9 @@ describe("Cup of Death over WebSockets", () => {
     expect(csv).toContain("Rank,Nickname,Status,Cups left");
     expect(csv).toContain("Bob,");
 
-    // Play again keeps Cup of Death.
+    // Play again keeps the Cup of Cheer theme and cup count.
     host.send({ type: "host.open", quizId: quiz.id });
-    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "cup");
+    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "cup" && v.cup.theme === "christmas" && v.cup.cups === 5);
     host.send({ type: "host.close" });
     [host, ...players].forEach((s) => s.close());
   });

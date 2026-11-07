@@ -11,6 +11,9 @@ import { CUP_DEFAULT_CUPS, CUP_DIE_SIDES, type CupDrinkView } from "../../shared
 import { ACCESSORY_ART, AVATAR_ART } from "./avatar-art.tsx";
 import saloonImg from "./cup/saloon.webp";
 import tableImg from "./cup/table.webp";
+import workshopImg from "./cup/christmas/workshop.webp";
+import cheerTableImg from "./cup/christmas/table.webp";
+import { useChristmasCup } from "./cup-skin.tsx";
 
 const SALOON_W = 1200;
 const SALOON_H = 800;
@@ -144,6 +147,8 @@ export function RollingDie({ value, rollMs, class: cls, onLand }: { value: numbe
 
 /** A tin cup of bubbling green liquid, `w` wide, standing with its base centred on (0, 0). */
 function CupShape({ w, bubbles = true }: { w: number; bubbles?: boolean }) {
+  const christmas = useChristmasCup();
+  if (christmas) return <CheerMug w={w} steam={bubbles} />;
   const h = w * 1.15;
   const top = w / 2;
   const bottom = w * 0.4;
@@ -166,10 +171,34 @@ function CupShape({ w, bubbles = true }: { w: number; bubbles?: boolean }) {
   );
 }
 
+/** Identical cocoa mugs: the supercharged one never gives itself away. */
+function CheerMug({ w, steam }: { w: number; steam: boolean }) {
+  return <g transform={`scale(${w / 80})`}>
+    <ellipse cy="3" rx="43" ry="9" fill="rgba(0,0,0,.25)" />
+    <path d="M34 -71 C74 -83 74 -20 34 -26" fill="none" stroke="#28654a" stroke-width="13" />
+    <path d="M35 -71 C72 -81 73 -23 35 -26" fill="none" stroke="#fff1d2" stroke-width="8" />
+    <path d="M46 -72 L54 -66 M58 -55 L59 -46 M52 -33 L44 -28" stroke="#c9443d" stroke-width="8" />
+    <path d="M-40 -78 L-35 -12 Q-33 7 0 7 Q33 7 35 -12 L40 -78Z" fill="url(#cheer-ceramic)" stroke="#9f6739" stroke-width="2.5" />
+    <ellipse cy="-78" rx="40" ry="13" fill="#fff5dc" stroke="#bd8a52" stroke-width="2" />
+    <ellipse cy="-77" rx="33" ry="8" fill="#71402c" />
+    {[-17, 0, 17].map((x, i) => <rect key={x} x={x - 7} y={-84 + i % 2 * 3} width="14" height="10" rx="4" fill="#fff8e8" />)}
+    <path d="M0 -60 L5 -48 18 -47 8 -38 11 -25 0 -32 -11 -25 -8 -38 -18 -47 -5 -48Z" fill="#e4ac35" stroke="#bc7a1d" stroke-width="1.5" />
+    {steam && <g class="cheer-steam" fill="none" stroke="#fff6de" stroke-width="3" stroke-linecap="round" opacity=".65">
+      <path d="M-15 -94 Q-24 -105 -15 -114 Q-6 -123 -15 -133" />
+      <path d="M12 -94 Q3 -105 12 -114 Q21 -123 12 -133" />
+    </g>}
+  </g>;
+}
+
 /** Gradients the cups need; put once inside any <svg> that draws cups. */
 function CupDefs() {
   return (
     <>
+      <linearGradient id="cheer-ceramic">
+        <stop offset="0" stop-color="#d9bc8b" />
+        <stop offset=".35" stop-color="#fff6dc" />
+        <stop offset="1" stop-color="#e9ce9c" />
+      </linearGradient>
       <linearGradient id="cup-tin" x1="0" x2="1">
         <stop offset="0" stop-color="#8d929a" />
         <stop offset="0.35" stop-color="#d7dade" />
@@ -187,7 +216,7 @@ function CupDefs() {
 /** One big cup as its own <svg>, for the phone's cup picker. */
 export function CupArt({ class: cls }: { class?: string }) {
   return (
-    <svg class={`cup-art ${cls ?? ""}`} viewBox="-60 -110 120 125" aria-hidden="true">
+    <svg class={`cup-art ${cls ?? ""}`} viewBox={useChristmasCup() ? "-60 -142 130 160" : "-60 -110 120 125"} aria-hidden="true">
       <defs>
         <CupDefs />
       </defs>
@@ -200,34 +229,40 @@ export function CupArt({ class: cls }: { class?: string }) {
 
 /** The room behind the table, fading into the dark on screens wider than the picture. */
 function Backdrop() {
-  const x0 = CX - ROOM_W / 2;
+  const christmas = useChristmasCup();
+  const roomH = christmas ? 840 : ROOM_H;
+  const roomY = christmas ? -10 : ROOM_Y;
+  const roomW = christmas ? roomH * (1672 / 941) : ROOM_W;
+  const x0 = CX - roomW / 2;
   const fade = 160;
   return (
     <g class="saloon-backdrop">
       <rect x={-BLEED} y="-200" width={SALOON_W + 2 * BLEED} height={SALOON_H + 400} fill="#1d0d04" />
-      <image href={saloonImg} x={x0} y={ROOM_Y} width={ROOM_W} height={ROOM_H} preserveAspectRatio="none" />
+      <image href={christmas ? workshopImg : saloonImg} x={x0} y={roomY} width={roomW} height={roomH} preserveAspectRatio="none" />
       {/* The sign over the door (blanked in the picture, at 677, 196 of its 1344×768 pixels). */}
-      <text class="saloon-sign" x={x0 + (677 / 1344) * ROOM_W} y={ROOM_Y + (196 / 768) * ROOM_H + 9} text-anchor="middle">
+      {!christmas && <text class="saloon-sign" x={x0 + (677 / 1344) * ROOM_W} y={ROOM_Y + (196 / 768) * ROOM_H + 9} text-anchor="middle">
         SALOON
-      </text>
-      <rect x={x0} y={ROOM_Y} width={fade} height={ROOM_H} fill="url(#saloon-fade-l)" />
-      <rect x={x0 + ROOM_W - fade} y={ROOM_Y} width={fade} height={ROOM_H} fill="url(#saloon-fade-r)" />
+      </text>}
+      <rect x={x0} y={roomY} width={fade} height={roomH} fill="url(#saloon-fade-l)" />
+      <rect x={x0 + roomW - fade} y={roomY} width={fade} height={roomH} fill="url(#saloon-fade-r)" />
     </g>
   );
 }
 
 /** The table picture, stretched so its tabletop lands on the table ellipse. */
 function Table({ children }: { children?: ComponentChildren }) {
-  const w = TABLE_RX / TOP_FRX;
-  const h = TABLE_RY / TOP_FRY;
-  const x = CX - TOP_FX * w;
-  const y = CY - TOP_FY * h;
+  const christmas = useChristmasCup();
+  // Christmas sprite is cropped to its alpha bounds; tabletop measured in source.
+  const w = TABLE_RX / (christmas ? 0.499 : TOP_FRX);
+  const h = TABLE_RY / (christmas ? 0.30 : TOP_FRY);
+  const x = CX - (christmas ? 0.50 : TOP_FX) * w;
+  const y = CY - (christmas ? 0.30 : TOP_FY) * h;
   // The tabletop is drawn about this far above the floor; its shadow falls straight down under the lamps.
   const lift = h * 0.62;
   return (
     <g class="saloon-table">
       <ellipse cx={CX} cy={CY + lift} rx={TABLE_RX * 0.95} ry={TABLE_RY * 0.9} fill="url(#saloon-table-shadow)" />
-      <image href={tableImg} x={x} y={y} width={w} height={h} preserveAspectRatio="none" />
+      <image href={christmas ? cheerTableImg : tableImg} x={x} y={y} width={w} height={h} preserveAspectRatio="none" />
       <g class="table-center">{children}</g>
     </g>
   );
@@ -287,10 +322,10 @@ function SeatAvatar({ s, cls, children }: { s: Seat; cls: string; children?: Com
     <g class={`seat ${cls}`} style={{ transform: `translate(${s.x.toFixed(1)}px, ${s.y.toFixed(1)}px)` }}>
       <ellipse class="seat-glow" cx="0" cy={size * 0.42} rx={size * 0.5} ry={size * 0.16} />
       <g class="seat-body" style={{ transformOrigin: `0px ${size * 0.45}px` }}>
-        <g transform={`translate(${-size / 2} ${-size / 2}) scale(${size / 100})`}>
+        {cls.includes("launching") ? <g transform={`scale(${size / 100})`}><RocketHead choice={s.p.avatar} /></g> : <g transform={`translate(${-size / 2} ${-size / 2}) scale(${size / 100})`}>
           {art()}
           {extra()}
-        </g>
+        </g>}
       </g>
       {/* On the far side, below the player is the table: the name goes above instead. */}
       <text class="seat-name" x="0" y={farSide(s) ? -size / 2 - 8 : size * 0.5 + 16} text-anchor="middle" font-size={Math.max(13, size * 0.17)}>
@@ -388,6 +423,7 @@ export function SaloonScene({
   /** Drawn in the middle of the table. */
   children?: ComponentChildren;
 }) {
+  const christmas = useChristmasCup();
   const drinkOf = new Map(drinks.map((d, i) => [d.id, { d, i }]));
   const all = seats(players);
   const far = all.filter((s) => Math.sin(s.angle) < -0.05);
@@ -401,7 +437,7 @@ export function SaloonScene({
       mode === "drink" && s.p.drinker ? "drinker" : "",
       (mode === "quiz" || mode === "drink") && s.p.safe ? "safe" : "",
       spotlit ? "spotlight" : "",
-      r?.d.verdict === "poison" ? "dying" : r?.d.verdict === "safe" && spotlit ? "survived" : "",
+      r?.d.verdict === "poison" ? christmas ? "launching" : "dying" : r?.d.verdict === "safe" && spotlit ? "survived" : "",
     ].join(" ");
   };
 
@@ -410,7 +446,7 @@ export function SaloonScene({
     return (
       <SeatAvatar key={s.p.id} s={s} cls={seatClass(s)}>
         <SeatBadge key={`${rollKey}-${s.p.id}`} s={s} mode={mode} />
-        {r?.d.verdict === "poison" && (
+        {r?.d.verdict === "poison" && !christmas && (
           <text class="seat-skull" x="0" y={-s.size * 0.62} text-anchor="middle" font-size={s.size * 0.5}>
             ☠
           </text>
@@ -429,11 +465,11 @@ export function SaloonScene({
       // Lift the cup most of the way to the drinker's mouth.
       const tx = lifted ? (s.x - c.x) * 0.72 : 0;
       const ty = lifted ? (s.y - c.y) * 0.72 + s.size * 0.12 : 0;
-      const cls = ["table-cup", drunk ? "chosen" : "", lifted ? "lifted" : "", drunk && r.d.verdict === "poison" ? "poisoned" : "", drunk && r.d.verdict === "safe" ? "drained" : ""].join(" ");
+      const cls = ["table-cup", drunk ? "chosen" : "", lifted ? "lifted" : "", drunk && r.d.verdict === "poison" ? christmas ? "supercharged" : "poisoned" : "", drunk && r.d.verdict === "safe" ? "drained" : ""].join(" ");
       return (
         <g key={`${s.p.id}-${k}`} class={cls} style={{ transform: `translate(${(c.x + tx).toFixed(1)}px, ${(c.y + ty).toFixed(1)}px)` }}>
           <CupShape w={c.w} bubbles={!(drunk && r.d.verdict)} />
-          {drunk && r.d.verdict === "poison" && (
+          {drunk && r.d.verdict === "poison" && !christmas && (
             <text x="0" y={-c.w * 1.5} text-anchor="middle" font-size={c.w * 0.9} class="cup-skull">
               ☠
             </text>
@@ -444,7 +480,7 @@ export function SaloonScene({
   };
 
   return (
-    <svg class={`saloon mode-${mode}`} viewBox={`0 0 ${SALOON_W} ${SALOON_H}`} preserveAspectRatio="xMidYMid meet" role="img" aria-label="Players around the saloon table">
+    <svg class={`saloon ${christmas ? "cheer-workshop" : ""} mode-${mode}`} viewBox={`0 0 ${SALOON_W} ${SALOON_H}`} preserveAspectRatio="xMidYMid meet" role="img" aria-label={christmas ? "Players around the cocoa table in Santa's workshop" : "Players around the saloon table"}>
       <defs>
         <linearGradient id="saloon-fade-l">
           <stop offset="0" stop-color="#1d0d04" />
@@ -470,14 +506,35 @@ export function SaloonScene({
       </defs>
       <Backdrop />
       <ellipse cx={CX} cy={CY} rx={TABLE_RX + 230} ry={TABLE_RY + 170} fill="url(#saloon-pool)" />
-      <g class="seats far">{far.map(renderSeat)}</g>
+      <g class="seats far">{far.filter(s => !(christmas && drinkOf.get(s.p.id)?.d.verdict === "poison")).map(renderSeat)}</g>
       <Table>{children}</Table>
       <g class="cups">{all.map(renderCups)}</g>
-      <g class="seats near">{near.map(renderSeat)}</g>
+      <g class="seats near">{near.filter(s => !(christmas && drinkOf.get(s.p.id)?.d.verdict === "poison")).map(renderSeat)}</g>
       <rect class="saloon-vignette" x={-BLEED} y="-200" width={SALOON_W + 2 * BLEED} height={SALOON_H + 400} fill="url(#saloon-vignette)" pointer-events="none" />
+      {christmas && <g class="cheer-launches">{all.filter(s => drinkOf.get(s.p.id)?.d.verdict === "poison").map(renderSeat)}</g>}
     </svg>
   );
 }
 
 /** Table centre, for text drawn on the table. */
 export const TABLE_CENTER = { x: CX, y: CY };
+
+/** Head-only avatars power up, then leave a sparkling rocket trail. */
+export function RocketHead({ choice }: { choice: AvatarChoice }) {
+  const art = AVATAR_ART[choice.avatar] ?? AVATAR_ART.cat;
+  const extra = ACCESSORY_ART[choice.accessory] ?? ACCESSORY_ART.none;
+  return <g class="cheer-rocket-motion">
+    <g class="cheer-rocket-trail" aria-hidden="true">
+      {Array.from({ length: 22 }, (_, i) => {
+        const x = Math.sin(i * 2.4) * (10 + i * 1.3);
+        const y = 40 + i * 16;
+        const r = 3 + i % 4 * 1.5;
+        return <path key={i} class="cheer-sparkle" d={`M${x} ${y-r*2} L${x+r/2} ${y-r/2} L${x+r*1.5} ${y} L${x+r/2} ${y+r/2} L${x} ${y+r*2} L${x-r/2} ${y+r/2} L${x-r*1.5} ${y} L${x-r/2} ${y-r/2}Z`} fill={["#fff9dd", "#ffd05a", "#8ce5c4"][i % 3]} style={{ animationDelay: `${650 + i * 17}ms` }} />;
+      })}
+    </g>
+    <g class="cheer-energy-head">
+      <circle class="cheer-energy-ring" r="48" fill="none" stroke="#ffe49b" stroke-width="2" />
+      <g transform="translate(-50 -50)">{art()}{extra()}</g>
+    </g>
+  </g>;
+}

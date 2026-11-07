@@ -1653,6 +1653,59 @@ a.btn {
   margin-top: -12px;
 }
 
+/* Cup of Cheer: the existing avatar head is the rocket; no body sprite needed. */
+.cheer-rocket-motion {
+  animation: cheer-liftoff 1.7s both;
+}
+.cheer-energy-head {
+  animation: cheer-charge .65s linear both;
+  transform-origin: 0 0;
+}
+.cheer-energy-ring {
+  animation: cheer-energy .16s ease-in-out 4 alternate;
+  transform-origin: 0 0;
+}
+.cheer-sparkle {
+  opacity: 0;
+  animation: cheer-glitter .65s ease-out both;
+}
+.cheer-steam {
+  animation: cheer-steam 2s ease-in-out infinite alternate;
+}
+@keyframes cheer-charge {
+  0% { transform: translateX(0) scale(1); }
+  15%, 35%, 55%, 75% { transform: translateX(-5px) rotate(-5deg) scale(1.08); }
+  25%, 45%, 65%, 85% { transform: translateX(5px) rotate(5deg) scale(1.12); }
+  100% { transform: translateY(4px) scale(.95, 1.15); }
+}
+@keyframes cheer-energy {
+  from { opacity: .2; transform: scale(.95); }
+  to { opacity: .9; transform: scale(1.22); }
+}
+@keyframes cheer-liftoff {
+  0%, 38% { transform: translate(0, 0); opacity: 1; }
+  44% { transform: translate(-2px, -12px); animation-timing-function: cubic-bezier(.55, 0, 1, .5); }
+  80% { opacity: 1; }
+  85%, 100% { transform: translate(-160px, -1500px); opacity: 0; }
+}
+@keyframes cheer-glitter {
+  0% { opacity: 0; }
+  15%, 50% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes cheer-steam {
+  to { opacity: .3; transform: translateY(-5px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cheer-rocket-motion { animation: cheer-reduced-launch 1s both; }
+  .cheer-energy-head, .cheer-energy-ring, .cheer-steam { animation: none; }
+  .cheer-sparkle { animation: none; opacity: 0; }
+}
+@keyframes cheer-reduced-launch {
+  0%, 60% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 /* ----- Cup of Death: dice and bubbling cups (projector and phones) ----- */
 
 .cup-bubbles circle {

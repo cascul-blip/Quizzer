@@ -3479,6 +3479,38 @@ select {
 
 /* ----- Cup of Death stage ----- */
 
+.cup-christmas .cup-bar {
+  background: #143e32;
+}
+.cup-christmas .topbar {
+  background: #12392f;
+  border-bottom-color: #bb913f;
+}
+.cup-christmas .cup-wrap, .cup-stage.cup-christmas {
+  background: #1d0d04;
+}
+.cup-christmas .cheer-workshop .table-big {
+  fill: #663022;
+  stroke: #fff2ce;
+  stroke-width: 2px;
+}
+.cup-christmas .cheer-workshop .table-small {
+  fill: #4b2e21;
+  stroke: #fff2ce;
+  stroke-width: 1px;
+}
+.cup-christmas .cheer-workshop .table-text.bad .table-big { fill: #a52d28; }
+.cup-christmas .cheer-workshop .table-text.good .table-big { fill: #18563d; }
+.saloon .seat.launching .seat-body { transform: none; }
+.saloon .seat.launching .seat-name, .saloon .seat.launching .seat-glow {
+  animation: cheer-label-away .7s forwards;
+}
+.saloon .table-cup.supercharged {
+  filter: drop-shadow(0 0 10px #ffdf7d);
+  animation: cheer-label-away 1.2s forwards;
+}
+@keyframes cheer-label-away { 60% { opacity: 1; } 100% { opacity: 0; } }
+
 .cup-stage {
   background: #1d0d04;
 }

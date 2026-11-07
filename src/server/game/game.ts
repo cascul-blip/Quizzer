@@ -1,4 +1,5 @@
 import { DEFAULT_RACER_THEME } from "../../shared/racer-theme.ts";
+import { DEFAULT_CUP_THEME } from "../../shared/cup-theme.ts";
 import { DEFAULT_TOWER_THEME } from "../../shared/tower-theme.ts";
 import {
   BOMB_MAX_SQUADS,
@@ -64,7 +65,7 @@ export const DEFAULT_RACER: RacerSettings = { theme: DEFAULT_RACER_THEME };
 export const DEFAULT_TOWER: TowerSettings = { teams: 2, minutes: 5, monster: true, theme: DEFAULT_TOWER_THEME };
 export const DEFAULT_FIGHT: FightSettings = { hill: "random" };
 export const DEFAULT_LAND: LandSettings = { teams: 2, minutes: 5 };
-export const DEFAULT_CUP: CupSettings = { cups: CUP_DEFAULT_CUPS };
+export const DEFAULT_CUP: CupSettings = { cups: CUP_DEFAULT_CUPS, theme: DEFAULT_CUP_THEME };
 export const DEFAULT_DRAGON: DragonSettings = { teams: 2, toughness: "normal", battleMinutes: 5, fireSec: 45, scrambleMinutes: 3 };
 export const DEFAULT_BOMB: BombSettings = { game: "together", squads: 1, modules: 3, wires: 3, minutes: 5, penaltySec: 15 };
 export const DEFAULT_SIEGE: SiegeSettings = { waves: 5 };
@@ -330,7 +331,8 @@ export class Game {
     if (this.phase !== "lobby") throw new GameError("Cup of Death settings can only be changed before the game starts");
     const cups = Number(settings.cups);
     if (!(Number.isInteger(cups) && cups >= CUP_MIN_CUPS && cups <= CUP_MAX_CUPS)) throw new GameError(`Cups must be between ${CUP_MIN_CUPS} and ${CUP_MAX_CUPS}`);
-    this.cup = { cups };
+    if (settings.theme !== undefined && settings.theme !== "classic" && settings.theme !== "christmas") throw new GameError("Unknown cup theme");
+    this.cup = { cups, theme: settings.theme ?? this.cup.theme ?? DEFAULT_CUP_THEME };
     this.onChange();
   }
 
