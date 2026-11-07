@@ -1,3 +1,5 @@
+import { towerWords } from "../../shared/tower-theme.ts";
+import { TowerThemeProvider, useChristmasTower, ChristmasBackdrop } from "../shared/tower-skin.tsx";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { EGG_LEVELS_ABOVE, MONSTER_DAMAGE, type HostTowerTeam, type HostView, type MonsterAttack, type MonsterEggs } from "../../shared/protocol.ts";
 import { play } from "../shared/sounds.ts";
@@ -25,7 +27,13 @@ import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send 
 type TowerView = Extract<HostView, { kind: "tower" }>;
 
 /** Projector screen for Tallest Tower: countdown → live towers → podium. */
-export function TowerStage({ view, send }: { view: TowerView; send: Send }) {
+export function TowerStage(props: { view: TowerView; send: Send }) {
+  return <TowerThemeProvider theme={props.view.theme}><TowerStageContent {...props} /></TowerThemeProvider>;
+}
+
+function TowerStageContent({ view, send }: { view: TowerView; send: Send }) {
+  const christmas = useChristmasTower();
+  const words = towerWords(view.theme);
   const secs = useCountdown(view.remainingMs, view.phase);
   const prev = useRef<TowerView | null>(null);
   const totalFloors = view.teams.reduce((n, t) => n + t.floors, 0);
@@ -52,8 +60,8 @@ export function TowerStage({ view, send }: { view: TowerView; send: Send }) {
   const monsterSecs = useCountdown(view.nextMonsterMs ?? 0, `m${Math.round((performance.now() + (view.nextMonsterMs ?? 0)) / 2000)}`);
   const teamName = (i: number) => `Team ${view.teams[i]?.name ?? "?"}`;
   let banner: string | null = null;
-  if (attack) banner = `🐣 ${teamName(attack.byTeam)} hatched the monster! It smashed ${teamName(attack.target)} (−${MONSTER_DAMAGE} floors)`;
-  else if (eggNews) banner = `👾 Monster eggs appeared, ${EGG_LEVELS_ABOVE} levels above each tower! First team to land a block on its egg hatches the monster`;
+  if (attack) banner = `${words.creatureIcon} ${teamName(attack.byTeam)} ${words.action}! It smashed ${teamName(attack.target)} (−${MONSTER_DAMAGE} floors)`;
+  else if (eggNews) banner = `${words.itemIcon} ${christmas ? "Bells" : "Monster eggs"} appeared, ${EGG_LEVELS_ABOVE} levels above each tower! First team to land a block on its ${words.item} ${christmas ? "summons the yeti" : "hatches the monster"}`;
 
   const lastTick = useRef(-1);
   useEffect(() => {
@@ -71,16 +79,16 @@ export function TowerStage({ view, send }: { view: TowerView; send: Send }) {
   }, []);
 
   return (
-    <div class="stage">
+    <div class={`stage tower-stage ${christmas ? "tower-christmas" : ""}`}>
       <header class="topbar">
         <div class="title">{view.quiz.title}</div>
-        <div class="pill">🏗 Tallest Tower</div>
+        <div class="pill">{words.icon} {words.name}</div>
         <div class="spacer" />
         {view.phase === "playing" && <div class={`tower-clock ${secs <= 30 ? "urgent" : ""}`}>{formatClock(secs)}</div>}
-        {view.phase === "playing" && view.egg && <div class="pill monster-pill">🥚 Egg is out!</div>}
+        {view.phase === "playing" && view.egg && <div class="pill monster-pill">{words.itemIcon} {christmas ? "Bell" : "Egg"} is out!</div>}
         {view.phase === "playing" && !view.egg && view.nextMonsterMs !== null && (
-          <div class="pill monster-pill" title="Next monster egg">
-            👾 {formatClock(monsterSecs)}
+          <div class="pill monster-pill" title={`Next ${words.item}`}>
+            {words.creatureIcon} {formatClock(monsterSecs)}
           </div>
         )}
         <div class="spacer" />
@@ -151,6 +159,8 @@ function Scene({ teams, phase, egg, attack }: { teams: HostTowerTeam[]; phase: T
 }
 
 function Sky({ stage }: { stage: number }) {
+  const christmas = useChristmasTower();
+  if (christmas) return <ChristmasBackdrop />;
   return (
     <div class="sky" aria-hidden="true">
       {SKY_STAGES.map((st, i) => (
@@ -176,12 +186,13 @@ function Sky({ stage }: { stage: number }) {
 }
 
 function Towers({ teams, phase, egg, attack }: { teams: HostTowerTeam[]; phase: TowerView["phase"] } & MonsterProps) {
+  const christmas = useChristmasTower();
   // One shared vertical scale so heights compare fairly between teams (egg and smashed blocks included).
   const rows = Math.max(8, ...teams.map((t) => Math.max(...t.columns) + 2), egg ? Math.max(...egg.cells.map((c) => c.row)) + 2 : 0, attack ? Math.max(...attack.before) + 1 : 0);
   const leader = Math.max(...teams.map((t) => t.floors));
   return (
     <div class={`towers n${teams.length}`}>
-      <SkylineSvg />
+      {!christmas && <SkylineSvg />}
       {teams.map((t) => (
         <section key={t.index} class="tower-col" style={teamVars(t.color)}>
           <header class="tower-chip">
@@ -208,6 +219,7 @@ function Towers({ teams, phase, egg, attack }: { teams: HostTowerTeam[]; phase: 
 }
 
 function TowerSvg({ team, rows, phase, egg, attack }: { team: HostTowerTeam; rows: number; phase: TowerView["phase"] } & MonsterProps) {
+  const christmas = useChristmasTower();
   const isFresh = useFreshKeys();
   const newFloor = useNewFloor(team.floors);
   const W = 3 * UNIT + 2 * SIDE;
@@ -248,8 +260,8 @@ function TowerSvg({ team, rows, phase, egg, attack }: { team: HostTowerTeam; row
   return (
     <svg class="tower-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMax meet" role="img" aria-label={`Team ${team.name}: ${team.floors} floors`}>
       {marks}
-      <Tree x={SIDE / 2 - 0.5} y={H} size={7} seed={team.index * 2} />
-      <Tree x={W - SIDE / 2 + 0.5} y={H} size={7} seed={team.index * 2 + 1} />
+      {!christmas && <Tree x={SIDE / 2 - 0.5} y={H} size={7} seed={team.index * 2} />}
+      {!christmas && <Tree x={W - SIDE / 2 + 0.5} y={H} size={7} seed={team.index * 2 + 1} />}
       {blocks}
       {newFloor !== null && newFloor <= team.floors && (
         <FloorSparkle key={`s${newFloor}`} x={SIDE} y={H - newFloor * UNIT} width={3 * UNIT} size={UNIT} />
@@ -271,7 +283,7 @@ function TowerSvg({ team, rows, phase, egg, attack }: { team: HostTowerTeam; row
             );
           }),
         )}
-      {phase === "playing" && <Crane x={roofX} y={roofY} x0={SIDE - 3} x1={W - SIDE + 3} size={UNIT} />}
+      {phase === "playing" && <Crane x={roofX} y={roofY} x0={SIDE - 3} x1={W - SIDE + 3} size={UNIT} color={team.color} />}
       {phase === "podium" && top > 0 && <RoofFlag x={roofX} y={roofY} size={UNIT} color={team.color} />}
       {egg?.cells[team.index] && phase === "playing" && (
         <EggCell x={SIDE + egg.cells[team.index]!.col * UNIT} y={H - (egg.cells[team.index]!.row + 1) * UNIT} size={UNIT} />
@@ -294,7 +306,7 @@ function TowerPodium({ view, send }: { view: TowerView; send: Send }) {
       <div class="podium-bg scene" aria-hidden="true">
         <Scene teams={view.teams} phase="podium" />
       </div>
-      <h1>🏆 Tallest tower</h1>
+      <h1>🏆 {towerWords(view.theme).name}</h1>
       {showErrors ? (
         <ErrorsTable errors={view.errors ?? []} />
       ) : (

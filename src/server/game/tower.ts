@@ -1,3 +1,4 @@
+import { towerTheme } from "../../shared/tower-theme.ts";
 import type { AnswerValue } from "../../shared/answer-match.ts";
 import {
   BLOCKS_PER_BUILD,
@@ -358,6 +359,7 @@ export class TowerGame {
     const players = [...this.players.values()];
     return {
       kind: "tower",
+      theme: towerTheme(this.settings.theme),
       phase: this.phase,
       quiz: { id: this.quizId, title: this.title, questionCount: this.questions.length },
       remainingMs: this.remainingMs(),
@@ -419,6 +421,7 @@ export class TowerGame {
     }
     return {
       kind: "tower",
+      theme: towerTheme(this.settings.theme),
       phase: this.phase,
       title: this.title,
       remainingMs: this.remainingMs(),

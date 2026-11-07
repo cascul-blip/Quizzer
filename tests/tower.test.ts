@@ -63,6 +63,30 @@ function answer(game: TowerGame, clock: FakeClock, p: TowerPlayer, right: boolea
 }
 
 describe("lobby → tower", () => {
+  test("themes survive lobby edits and are shared by host and players", () => {
+    const clock = new FakeClock();
+    const lobby = new Game(quiz(), { clock });
+    lobby.setMode("tower");
+    const player = lobby.join("Builder");
+    expect(lobby.tower.theme).toBe("christmas");
+    for (const theme of ["classic", "christmas"] as const) {
+      lobby.setTower({ teams: 2, minutes: 5, theme });
+      lobby.setTower({ teams: 3, minutes: 3 });
+      expect(lobby.tower.theme).toBe(theme);
+      const game = TowerGame.fromLobby(lobby, { clock });
+      expect(game.hostView().theme).toBe(theme);
+      expect(game.playerView(player.id)?.theme).toBe(theme);
+      game.start();
+      clock.advance(COUNTDOWN_MS);
+      expect(game.playerView(player.id)?.theme).toBe(theme);
+      game.end();
+      expect(game.hostView().theme).toBe(theme);
+    }
+    const previous = { ...lobby.tower };
+    expect(() => lobby.setTower({ teams: 2, minutes: 5, theme: "invalid" as never })).toThrow("Unknown tower theme");
+    expect(lobby.tower).toEqual(previous);
+  });
+
   test("lobby previews teams round-robin by join order and players keep their identity", () => {
     const { lobby, game } = setup(["A", "B", "C", "D", "E"], { teams: 3 });
     const preview = lobby.hostView().teams!;

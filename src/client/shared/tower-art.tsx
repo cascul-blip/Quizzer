@@ -1,9 +1,10 @@
 /**
- * Skyscraper art for Tallest Tower. The building blocks are generated images
- * (see scripts/tower-blocks.py); everything else is drawn in SVG so it stays
- * crisp on a projector. Shared by host and phones.
+ * Tallest Tower artwork, shared by the projector and phones. Classic uses
+ * generated facade overlays and SVG scenery; North Pole uses the separate
+ * seasonal asset pack with team-tinted trim and SVG flags/snow effects.
  */
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useId, useRef, useState } from "preact/hooks";
+import { christmasTiles, christmasCrane, christmasCraneMask, christmasBell, christmasYeti, useChristmasTower } from "./tower-skin.tsx";
 import lobbyTile from "./tower/lobby.webp";
 import office1Tile from "./tower/office-1.webp";
 import office2Tile from "./tower/office-2.webp";
@@ -145,8 +146,9 @@ export function blockTile(team: number, col: number, row: number): "lobby" | "sh
  * translucent over their walls, so the team color underneath shows through.
  */
 export function BuildingBlock({ x, y, size: s, color, team, col, row, fullFloor, fresh }: BlockProps) {
+  const christmas = useChristmasTower();
   const tile = blockTile(team, col, row);
-  const tiles = isPhoneArt() ? PHONE_TILES : TILES;
+  const tiles = christmas ? christmasTiles() : isPhoneArt() ? PHONE_TILES : TILES;
   const href = tile === "lobby" ? tiles.lobby : tile === "shop" ? tiles.shop : tiles.offices[tile]!;
   return (
     <g class={`bb ${fresh ? "land" : ""}`}>
@@ -154,7 +156,7 @@ export function BuildingBlock({ x, y, size: s, color, team, col, row, fullFloor,
       <image href={href} x={x} y={y} width={s} height={s} preserveAspectRatio="none" />
       {fullFloor && (
         <>
-          <rect x={x - s * 0.02} y={y} width={s * 1.04} height={s * 0.08} fill="rgba(255,255,255,0.7)" />
+          <rect x={x - s * 0.02} y={y} width={s * 1.04} height={s * 0.08} rx={christmas ? s * 0.03 : 0} fill={christmas ? "#f1f7ff" : "rgba(255,255,255,0.7)"} />
           <rect x={x} y={y + s * 0.08} width={s} height={s * 0.03} fill="rgba(0,0,0,0.18)" />
         </>
       )}
@@ -164,22 +166,26 @@ export function BuildingBlock({ x, y, size: s, color, team, col, row, fullFloor,
 
 /** A puff of dust at a landing point (x = center, y = bottom). */
 export function DustPuff({ x, y, size: s }: { x: number; y: number; size: number }) {
+  const christmas = useChristmasTower();
   return (
-    <g class="puff" aria-hidden="true">
+    <g class={`puff ${christmas ? "tower-snow-puff" : ""}`} aria-hidden="true">
       <circle cx={x - s * 0.45} cy={y} r={s * 0.16} />
       <circle cx={x} cy={y + s * 0.02} r={s * 0.2} />
       <circle cx={x + s * 0.45} cy={y} r={s * 0.16} />
+      {christmas && [-0.6, -0.25, 0.2, 0.65].map((dx, i) => <circle key={i} cx={x + s * dx} cy={y - s * (0.14 + i % 2 * 0.12)} r={s * 0.045} />)}
     </g>
   );
 }
 
 /** Sparkles along a newly completed floor. */
 export function FloorSparkle({ x, y, width, size: s }: { x: number; y: number; width: number; size: number }) {
+  const christmas = useChristmasTower();
   const stars = Array.from({ length: 7 }, (_, i) => {
     const cx = x + (width * (i + 0.5)) / 7;
     const r = s * (0.12 + hash01(i, 7) * 0.1);
     const d = `M${cx},${y - r} L${cx + r * 0.3},${y - r * 0.3} L${cx + r},${y} L${cx + r * 0.3},${y + r * 0.3} L${cx},${y + r} L${cx - r * 0.3},${y + r * 0.3} L${cx - r},${y} L${cx - r * 0.3},${y - r * 0.3} Z`;
-    return <path key={i} d={d} style={{ animationDelay: `${i * 40}ms` }} />;
+    const snowflake = `M${cx},${y-r}v${2*r} M${cx-r*0.87},${y-r*0.5}l${r*1.74},${r} M${cx-r*0.87},${y+r*0.5}l${r*1.74},${-r}`;
+    return <path key={i} d={christmas && i % 2 === 0 ? snowflake : d} class={christmas && i % 2 === 0 ? "tower-snowflake" : ""} style={{ animationDelay: `${i * 40}ms` }} />;
   });
   return (
     <g class="sparkle" aria-hidden="true">
@@ -189,7 +195,25 @@ export function FloorSparkle({ x, y, width, size: s }: { x: number; y: number; w
 }
 
 /** Tower crane standing on a roof at (x = mast center, y = roof top), jib spanning x0…x1. */
-export function Crane({ x, y, x0, x1, size: s }: { x: number; y: number; x0: number; x1: number; size: number }) {
+export function Crane({ x, y, x0, x1, size: s, color = "#17633a" }: { x: number; y: number; x0: number; x1: number; size: number; color?: string }) {
+  const christmas = useChristmasTower();
+  const id = useId();
+  if (christmas) {
+    // Stay below the bell in the cell two levels above this rooftop.
+    const w = s * 1.62;
+    const h = s * 1.08;
+    const left = -w * 0.30;
+    const top = -h * 0.974;
+    return <g transform={`translate(${x} ${y}) scale(${x > (x0+x1)/2 ? -1 : 1} 1)`} aria-hidden="true">
+      <defs><mask id={id} style={{ maskType: "alpha" }} maskUnits="userSpaceOnUse" x={left} y={top} width={w} height={h}>
+        <image href={christmasCraneMask()} x={left} y={top} width={w} height={h} />
+      </mask></defs>
+      <g class="tower-workshop-hoist">
+        <rect x={left} y={top} width={w} height={h} fill={color} mask={`url(#${id})`} />
+        <image href={christmasCrane()} x={left} y={top} width={w} height={h} />
+      </g>
+    </g>;
+  }
   const mastTop = y - s * 1.55;
   const w = s * 0.16;
   const rungs = Array.from({ length: 6 }, (_, i) => {
@@ -215,6 +239,16 @@ export function Crane({ x, y, x0, x1, size: s }: { x: number; y: number; x0: num
 
 /** Flagpole with a team flag, standing on (x, y). */
 export function RoofFlag({ x, y, size: s, color }: { x: number; y: number; size: number; color: string }) {
+  const christmas = useChristmasTower();
+  if (christmas) return <g class="roof-flag" aria-hidden="true">
+    <rect x={x-s*0.035} y={y-s*1.15} width={s*0.07} height={s*1.15} rx={s*0.025} fill="#fff7e6" />
+    {[0,1,2,3,4].map(i=><path key={i} d={`M${x-s*0.035},${y-s*(0.12+i*0.2)}l${s*0.07},${-s*0.055}`} stroke="#c93140" stroke-width={s*0.04} />)}
+    <circle cx={x} cy={y-s*1.18} r={s*0.07} fill="#f6ce63" />
+    <g class="flag-cloth">
+      <path d={`M${x+s*0.035},${y-s*1.1}h${s*0.64}l${-s*0.15},${s*0.26}l${s*0.15},${s*0.26}h${-s*0.64}z`} fill={color} stroke="#f6ce63" stroke-width={s*0.025} />
+      <path d={`M${x+s*0.29},${y-s*1.01}v${s*0.32}m${-s*0.14},${-s*0.24}l${s*0.28},${s*0.16}m${-s*0.28},0l${s*0.28},${-s*0.16}`} fill="none" stroke="#fff6d6" stroke-width={s*0.03} />
+    </g>
+  </g>;
   return (
     <g class="roof-flag" aria-hidden="true">
       <rect x={x - s * 0.03} y={y - s * 1.1} width={s * 0.06} height={s * 1.1} fill="#e6e6ee" />
@@ -259,6 +293,14 @@ export const COLUMN_NAMES = ["left", "center", "right"] as const;
 
 /** The monster egg waiting on a cell (x, y = the cell's top-left, s = cell size). */
 export function EggCell({ x, y, size: s }: { x: number; y: number; size: number }) {
+  const christmas = useChristmasTower();
+  if (christmas) return <g class="egg-cell tower-bell-cell" aria-hidden="true">
+    <rect x={x+s*0.04} y={y+s*0.04} width={s*0.92} height={s*0.92} rx={s*0.12} class="egg-slot" />
+    <g class="egg" style={{ transformOrigin: `${x+s/2}px ${y+s*0.18}px` }}>
+      <ellipse cx={x+s/2} cy={y+s*0.56} rx={s*0.29} ry={s*0.34} class="egg-glow" />
+      <image href={christmasBell()} x={x+s*0.12} y={y+s*0.1} width={s*0.76} height={s*0.8} />
+    </g>
+  </g>;
   return (
     <g class="egg-cell" aria-hidden="true">
       <rect x={x + s * 0.04} y={y + s * 0.04} width={s * 0.92} height={s * 0.92} rx={s * 0.08} class="egg-slot" />
@@ -276,6 +318,10 @@ export function EggCell({ x, y, size: s }: { x: number; y: number; size: number 
 
 /** The tyrant monster (viewBox 0 0 200 220), facing left. Parts are classed for animation. */
 export function MonsterSvg() {
+  const christmas = useChristmasTower();
+  if (christmas) return <svg class="monster-svg tower-yeti" viewBox="0 0 200 220" aria-hidden="true">
+    <g class="tower-yeti-smash"><image href={christmasYeti()} x="-10" y="0" width="220" height="220" /></g>
+  </svg>;
   return (
     <svg class="monster-svg" viewBox="0 0 200 220" aria-hidden="true">
       {/* tail */}

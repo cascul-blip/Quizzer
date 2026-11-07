@@ -1,3 +1,5 @@
+import { towerWords } from "../../shared/tower-theme.ts";
+import { TowerThemeProvider, useChristmasTower, useTowerTheme, ChristmasBackdrop } from "../shared/tower-skin.tsx";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { BLOCKS_PER_BUILD, DROP_ZONES, MONSTER_DAMAGE, type ClientMsg, type MonsterEgg, type PlayerTowerView } from "../../shared/protocol.ts";
 import { BuildingBlock, COLUMN_NAMES, EggCell, useEventFlash, viewBaseRow, DustPuff, FloorSparkle, SKY_STAGES, SkylineSvg, skyStage, useFreshKeys, useNewFloor } from "../shared/tower-art.tsx";
@@ -14,7 +16,13 @@ const FALL_MS = 450;
 const LAST_BLOCK_PAUSE_MS = 500;
 
 /** Phone screen for Tallest Tower: own questions at own pace, then build mode every 4 correct answers. */
-export function TowerPlayer({ view, send }: { view: PlayerTowerView; send: Send }) {
+export function TowerPlayer(props: { view: PlayerTowerView; send: Send }) {
+  return <TowerThemeProvider theme={props.view.theme}><TowerPlayerContent {...props} /></TowerThemeProvider>;
+}
+
+function TowerPlayerContent({ view, send }: { view: PlayerTowerView; send: Send }) {
+  const christmas = useChristmasTower();
+  const words = towerWords(view.theme);
   const secs = useCountdown(view.remainingMs, view.phase);
 
   // When the last block is dropped, hold build mode (from the tap, before the server even replies)
@@ -50,7 +58,7 @@ export function TowerPlayer({ view, send }: { view: PlayerTowerView; send: Send 
       <>
         {view.egg && (
           <div class="egg-chip">
-            🥚 Monster egg at level {view.egg.row + 1} ({COLUMN_NAMES[view.egg.col]}): build to it first!
+            {words.itemIcon} {christmas ? "Yeti bell" : "Monster egg"} at level {view.egg.row + 1} ({COLUMN_NAMES[view.egg.col]}): build to it first!
           </div>
         )}
         <StreamQuestion question={view.question} onAnswer={(seq, option, text) => send({ type: "tower.answer", seq, option, text })} />
@@ -65,7 +73,7 @@ export function TowerPlayer({ view, send }: { view: PlayerTowerView; send: Send 
   }
 
   return (
-    <div class="game tower-game" style={teamVars(view.team.color)}>
+    <div class={`game tower-game ${christmas ? "tower-christmas" : ""}`} style={teamVars(view.team.color)}>
       <header class="bar team-bar">
         <span class="name">{view.me.nickname}</span>
         {view.phase === "playing" && (
@@ -146,6 +154,8 @@ export function StreamQuestion({ question, onAnswer }: { question: NonNullable<P
 
 /** Monster news: a new egg (everyone), your team hatched it, or your tower got smashed. */
 function MonsterNotice({ event, egg }: { event: PlayerTowerView["monsterEvent"]; egg: MonsterEgg | null }) {
+  const christmas = useChristmasTower();
+  const words = towerWords(useTowerTheme());
   const shown = useEventFlash(event, event?.seq, 2200);
   useEffect(() => {
     if (shown) navigator.vibrate?.(shown.kind === "smashed" ? [200, 80, 200] : [80, 40, 80]);
@@ -153,10 +163,10 @@ function MonsterNotice({ event, egg }: { event: PlayerTowerView["monsterEvent"];
   if (!shown) return null;
   const [icon, title, detail] =
     shown.kind === "egg"
-      ? ["🥚", "A monster egg appeared!", egg ? `Land a block on level ${egg.row + 1}, ${COLUMN_NAMES[egg.col]} column, before the other teams.` : "Build to it first!"]
+      ? [words.itemIcon, christmas ? "A yeti bell appeared!" : "A monster egg appeared!", egg ? `Land a block on level ${egg.row + 1}, ${COLUMN_NAMES[egg.col]} column, before the other teams.` : "Build to it first!"]
       : shown.kind === "hatched"
-        ? ["🐣", "Your team hatched the monster!", `You're safe. It smashed Team ${shown.target} (−${MONSTER_DAMAGE} floors).`]
-        : ["👾", "The monster smashed your tower!", `−${MONSTER_DAMAGE} floors. Team ${shown.byTeam} hatched it.`];
+        ? [words.creatureIcon, christmas ? "Your team summoned the yeti!" : "Your team hatched the monster!", `You're safe. It smashed Team ${shown.target} (−${MONSTER_DAMAGE} floors).`]
+        : [words.creatureIcon, `The ${words.creature} smashed your tower!`, `−${MONSTER_DAMAGE} floors. Team ${shown.byTeam} ${christmas ? "rang the bell" : "hatched it"}.`];
   return (
     <div class={`flash monster-flash ${shown.kind}`} role="alert">
       <div class="flash-icon">{icon}</div>
@@ -222,6 +232,7 @@ function Piece({ color, team }: { color: string; team: number }) {
 }
 
 function BuildMode(props: { build: Build; blocksHeld: number; color: string; team: number; egg: MonsterEgg | null; send: Send; onLastDrop: (b: Build) => void }) {
+  const christmas = useChristmasTower();
   const { build, blocksHeld, color, team, egg, send } = props;
   const isFresh = useFreshKeys();
   const newFloor = useNewFloor(build.floors);
@@ -317,10 +328,10 @@ function BuildMode(props: { build: Build; blocksHeld: number; color: string; tea
           Tap anywhere to drop · Team tower: {build.floors} floor{build.floors === 1 ? "" : "s"}
         </span>
       </div>
-      <div class="build-area" ref={areaRef} style={{ "--team": color, background: `linear-gradient(${sky.top}, ${sky.bottom})` }}>
-        <div class="phone-skyline" style={{ bottom: `${ground}px` }}>
+      <div class="build-area" ref={areaRef} style={{ "--team": color, background: christmas ? "#102759" : `linear-gradient(${sky.top}, ${sky.bottom})` }}>
+        {christmas ? <ChristmasBackdrop /> : <div class="phone-skyline" style={{ bottom: `${ground}px` }}>
           <SkylineSvg />
-        </div>
+        </div>}
         <div class="zone miss left" style={{ width: `${cell}px` }}>
           ✕
         </div>

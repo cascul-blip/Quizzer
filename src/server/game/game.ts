@@ -1,3 +1,4 @@
+import { DEFAULT_TOWER_THEME } from "../../shared/tower-theme.ts";
 import {
   BOMB_MAX_SQUADS,
   BOMB_MINUTES,
@@ -57,7 +58,7 @@ export const AUTO_LEADERBOARD_MS = 5000;
 /** Answers sent just before the deadline may arrive slightly after it. */
 export const GRACE_MS = 500;
 const LEADERBOARD_SIZE = 10;
-export const DEFAULT_TOWER: TowerSettings = { teams: 2, minutes: 5, monster: true };
+export const DEFAULT_TOWER: TowerSettings = { teams: 2, minutes: 5, monster: true, theme: DEFAULT_TOWER_THEME };
 export const DEFAULT_FIGHT: FightSettings = { hill: "random" };
 export const DEFAULT_LAND: LandSettings = { teams: 2, minutes: 5 };
 export const DEFAULT_CUP: CupSettings = { cups: CUP_DEFAULT_CUPS };
@@ -290,7 +291,8 @@ export class Game {
     const minutes = Number(settings.minutes);
     if (!(teams >= 1 && teams <= MAX_TEAMS)) throw new GameError(`Teams must be between 1 and ${MAX_TEAMS}`);
     if (!(TOWER_MINUTES as readonly number[]).includes(minutes)) throw new GameError("Unsupported game length");
-    this.tower = { teams, minutes, monster: settings.monster === undefined ? this.tower.monster : !!settings.monster };
+    if (settings.theme !== undefined && settings.theme !== "classic" && settings.theme !== "christmas") throw new GameError("Unknown tower theme");
+    this.tower = { teams, minutes, monster: settings.monster === undefined ? this.tower.monster : !!settings.monster, theme: settings.theme ?? this.tower.theme };
     this.onChange();
   }
 
