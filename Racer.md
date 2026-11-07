@@ -53,3 +53,16 @@ A turn while the car is crashed has no driver.
 There are awards for "Most correct answers" and "Best driver" (most mph gained while driving).
 
 Pacing is Manual or Auto-advance, the same as in Classic.
+
+## Themes
+The lobby's Racer theme selector switches between **Normal** (the original city,
+palms and orange car) and **Neon Noel** (Christmas). Normal is the default.
+Neon Noel keeps the purple arcade city and orange 911, adding snowy rooftops,
+Christmas lights, illuminated fir trees, a Santa hat and wreath on the car,
+a pink sun, square snowflakes and cyan road markings. The host and phone scenes,
+including the wrecked car and results scene, use the chosen theme. The theme
+carries over when opening the next quiz, like the Tower settings. All driving,
+crash, repair, ejection and space-flight rules are shared between the two looks.
+
+The built-in ImageGen sources and prompts are in `scripts/racer-christmas-art/`;
+`python3 scripts/racer-christmas-art.py` prepares the small hard-alpha WebPs.

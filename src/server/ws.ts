@@ -1,6 +1,6 @@
 import type { ServerWebSocket } from "bun";
 import QRCode from "qrcode";
-import type { BombSettings, ClientMsg, CupSettings, DragonSettings, DuelSettings, FightSettings, GameMode, HostView, JoinInfo, SleighSettings, LandSettings, Pacing, PlayerView, ServerMsg, SiegeSettings, TowerSettings } from "../shared/protocol.ts";
+import type { BombSettings, ClientMsg, CupSettings, DragonSettings, DuelSettings, FightSettings, GameMode, HostView, JoinInfo, SleighSettings, LandSettings, Pacing, PlayerView, ServerMsg, SiegeSettings, TowerSettings, RacerSettings } from "../shared/protocol.ts";
 import { answerOf } from "../shared/answer-match.ts";
 import { cleanAvatar } from "../shared/avatars.ts";
 import { ValidationError } from "../shared/quiz-schema.ts";
@@ -11,7 +11,7 @@ import { DuelGame } from "./game/duel.ts";
 import { DragonGame } from "./game/dragon.ts";
 import { FightGame } from "./game/fight.ts";
 import { SleighGame } from "./game/sleigh.ts";
-import { DEFAULT_BOMB, DEFAULT_CUP, DEFAULT_DRAGON, DEFAULT_DUEL, DEFAULT_FIGHT, DEFAULT_SLEIGH, DEFAULT_LAND, DEFAULT_SIEGE, DEFAULT_TOWER, Game, GameError, type Clock } from "./game/game.ts";
+import { DEFAULT_RACER, DEFAULT_BOMB, DEFAULT_CUP, DEFAULT_DRAGON, DEFAULT_DUEL, DEFAULT_FIGHT, DEFAULT_SLEIGH, DEFAULT_LAND, DEFAULT_SIEGE, DEFAULT_TOWER, Game, GameError, type Clock } from "./game/game.ts";
 import { LandGame } from "./game/land.ts";
 import { RacerGame } from "./game/racer.ts";
 import { buildBombResultsCsv, buildCupResultsCsv, buildDragonResultsCsv, buildDuelResultsCsv, buildFightResultsCsv, buildSleighResultsCsv, buildLandResultsCsv, buildRacerResultsCsv, buildResultsCsv, buildRobotResultsCsv, buildSiegeResultsCsv, buildSubResultsCsv, buildTowerResultsCsv, writeResultsFile } from "./game/results.ts";
@@ -92,8 +92,9 @@ export class GameHub {
   private broadcastQueued = false;
   private activityTimer: ReturnType<typeof setTimeout> | null = null;
   /** Mode, mode settings and pacing carry over to the next lobby ("Play again"). */
-  private lastSetup: { mode: GameMode; tower: TowerSettings; fight: FightSettings; land: LandSettings; cup: CupSettings; dragon: DragonSettings; bomb: BombSettings; siege: SiegeSettings; duel: DuelSettings; sleigh: SleighSettings; protect: boolean; pacing: Pacing } = {
+  private lastSetup: { mode: GameMode; racer: RacerSettings; tower: TowerSettings; fight: FightSettings; land: LandSettings; cup: CupSettings; dragon: DragonSettings; bomb: BombSettings; siege: SiegeSettings; duel: DuelSettings; sleigh: SleighSettings; protect: boolean; pacing: Pacing } = {
     mode: "classic",
+    racer: DEFAULT_RACER,
     tower: DEFAULT_TOWER,
     fight: DEFAULT_FIGHT,
     land: DEFAULT_LAND,
@@ -560,6 +561,10 @@ export class GameHub {
       case "host.setMode":
         classic().setMode(msg.mode);
         this.lastSetup.mode = classic().mode;
+        return;
+      case "host.setRacer":
+        classic().setRacer({ theme: msg.theme });
+        this.lastSetup.racer = { ...classic().racer };
         return;
       case "host.setTower":
         classic().setTower({ teams: Number(msg.teams), minutes: Number(msg.minutes), monster: msg.monster, theme: msg.theme });

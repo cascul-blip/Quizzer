@@ -1113,6 +1113,9 @@ describe("Racer over WebSockets", () => {
     host.send({ type: "host.setMode", mode: "racer" });
     await host.hostState((v) => v.kind === "classic" && v.mode === "racer" && v.teams === null);
 
+    host.send({ type: "host.setRacer", theme: "christmas" });
+    await host.hostState((v) => v.kind === "classic" && v.racer.theme === "christmas");
+
     const names = ["Ann", "Bob"];
     const players = await Promise.all(names.map(() => TestSocket.open(wsUrl)));
     for (const [i, p] of players.entries()) {
@@ -1126,12 +1129,12 @@ describe("Racer over WebSockets", () => {
     host.send({ type: "host.start", pacing: "manual" });
     const started = await host.hostState((v) => v.kind === "racer" && v.phase === "confidence");
     const first = started.view.kind === "racer" ? started.view : null;
-    expect(first).toMatchObject({ pacing: "manual", lever: "low", confidence: null, playerCount: 2, car: { speed: 30, crashed: false } });
+    expect(first).toMatchObject({ theme: "christmas", pacing: "manual", lever: "low", confidence: null, playerCount: 2, car: { speed: 30, crashed: false } });
     expect(first!.question).toMatchObject({ index: 0, total: 3, text: "Q1", options: [] });
     const driverName = first!.driver!.nickname;
     const driver = players[names.indexOf(driverName)]!;
     const other = players[1 - names.indexOf(driverName)]!;
-    await driver.playerState((v) => v.kind === "racer" && v.phase === "confidence" && v.isDriver);
+    await driver.playerState((v) => v.kind === "racer" && v.phase === "confidence" && v.theme === "christmas" && v.isDriver);
     await other.playerState((v) => v.kind === "racer" && v.phase === "confidence" && !v.isDriver && v.driver?.nickname === driverName);
 
     // Only the driver has the lever: the other phone's attempts are rejected and its state is sent again.
@@ -1213,7 +1216,7 @@ describe("Racer over WebSockets", () => {
 
     // Play again keeps Racer and the pacing.
     host.send({ type: "host.open", quizId: quiz.id });
-    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "racer" && v.pacing === "auto");
+    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "racer" && v.pacing === "auto" && v.racer.theme === "christmas");
     host.send({ type: "host.setPacing", pacing: "manual" });
     await host.hostState((v) => v.kind === "classic" && v.pacing === "manual");
     host.send({ type: "host.close" });
