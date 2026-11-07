@@ -11,8 +11,8 @@
 .winter-snow i { position: absolute; top: -5%; width: 4px; height: 4px; background: #fff7e4; border-radius: 50%; animation: christmas-snow linear infinite; opacity: .8; }
 @keyframes christmas-snow { to { transform: translate(-8vw, 100vh); } }
 .winter-stage .fish-pos { top: auto; bottom: 13%; width: 22%; z-index: 3; }
-.christmas-goblin { position: relative; display: block; width: 100%; aspect-ratio: 348 / 516; transform-origin: 50% 98%; filter: drop-shadow(1px 3px 1px #334c4322); }
-.goblin-video-sprite { position: absolute; inset: 0; background-size: 800% 900%; background-repeat: no-repeat; }
+.christmas-goblin { position: relative; display: block; width: 100%; aspect-ratio: 295 / 375; transform-origin: 50% 98%; filter: drop-shadow(1px 3px 1px #334c4322); }
+.goblin-video-sprite { position: absolute; inset: 0; background-size: 800% 500%; background-repeat: no-repeat; }
 .winter-stage .sub-pos { top: auto; bottom: 12%; left: 45%; width: 53%; animation: sled-jostle .4s ease-in-out infinite alternate; z-index: 2; }
 .dog-sled { position: relative; width: 100%; overflow: visible; }
 .sled-art { width: 100%; display: block; overflow: visible; }

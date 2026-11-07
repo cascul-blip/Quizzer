@@ -111,14 +111,18 @@ export function DogSled({ riders = [], moving = true, boosting = false }: { ride
   </div>;
 }
 
-/** The supplied goblin, flipped and keyed from magenta into a transparent frame sheet. */
+// Layout printed by scripts/winter-art/prepare-goblin.py: 12 fps, row-major cells of 295 × 375.
+const GOBLIN_FRAMES = 36, GOBLIN_COLS = 8, GOBLIN_ROWS = 5;
+
+/** The supplied claymation goblin, keyed from magenta into a transparent frame sheet. */
 export function ChristmasGoblin({ closeness = 0, caught = false }: { closeness?: number; caught?: boolean }) {
   const reach = Math.max(0, Math.min(1, closeness));
   const time = useArtClock(!caught, .8 + reach * .4);
-  const frame = Math.floor(time * 12) % 72;
+  const frame = Math.floor(time * 12) % GOBLIN_FRAMES;
+  const col = frame % GOBLIN_COLS, row = Math.floor(frame / GOBLIN_COLS);
   return <div class={`christmas-goblin ${caught ? "grabbing" : ""}`} role="img"
-    aria-label="Green Christmas goblin tiptoeing toward the sled with a sack over his shoulder"
+    aria-label="Green Christmas goblin in a burlap hat sneaking toward the sled with a sack over his shoulder"
     data-lean={reach * 4} style={{ transform: `rotate(${reach * 4}deg)` }}>
-    <div class="goblin-video-sprite" data-frame={frame} style={{ backgroundImage: `url(${goblinSheet})`, backgroundPosition: `${frame % 8 / 7 * 100}% ${Math.floor(frame / 8) / 8 * 100}%` }} />
+    <div class="goblin-video-sprite" data-frame={frame} style={{ backgroundImage: `url(${goblinSheet})`, backgroundPosition: `${col / (GOBLIN_COLS - 1) * 100}% ${row / (GOBLIN_ROWS - 1) * 100}%` }} />
   </div>;
 }
