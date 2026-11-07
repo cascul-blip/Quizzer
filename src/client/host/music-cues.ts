@@ -1,3 +1,4 @@
+import { towerTheme } from "../../shared/tower-theme.ts";
 import { captureThreat } from "../../shared/land-board.ts";
 import { LAND_GUARD_COST, LAND_STEAL_COST, TOWER_MAX_DAMAGE, type GameMode, type HostView, type LandBoard } from "../../shared/protocol.ts";
 import type { MusicTrackId } from "../../shared/music-tracks.ts";
@@ -37,7 +38,7 @@ export function musicFor(view: HostView | null): MusicCue {
   if (!view || view.kind === "idle") return { track: null };
   switch (view.kind) {
     case "classic": {
-      if (view.phase === "lobby") return { track: LOBBY[view.mode] ?? "classic-lobby" };
+      if (view.phase === "lobby") return { track: view.mode === "tower" && towerTheme(view.tower.theme) === "christmas" ? "tower-christmas-lobby" : LOBBY[view.mode] ?? "classic-lobby" };
       if (view.phase === "podium") return { track: "classic-results" };
       if (view.phase === "reveal" || view.phase === "leaderboard") return { track: "classic-leaderboard" };
       // Questions: tension builds over the time limit.
@@ -48,12 +49,14 @@ export function musicFor(view: HostView | null): MusicCue {
       return { track: "classic-question", intensity: 0.1, key: `q${q?.index ?? 0}-intro` };
     }
     case "tower": {
-      if (view.phase === "podium") return { track: "tower-results" };
+      const christmas = towerTheme(view.theme) === "christmas";
+      const play = christmas ? "tower-christmas-play" : "tower-play";
+      if (view.phase === "podium") return { track: christmas ? "tower-christmas-results" : "tower-results" };
       // Builds over the last few minutes of the timer.
       const start = Math.max(0, Math.min(1, 1 - view.remainingMs / 300_000));
       return view.phase === "playing"
-        ? { track: "tower-play", intensity: start, rampTo: 1, rampMs: view.remainingMs, key: "tower-playing" }
-        : { track: "tower-play", intensity: 0, key: "tower-countdown" };
+        ? { track: play, intensity: start, rampTo: 1, rampMs: view.remainingMs, key: "tower-playing" }
+        : { track: play, intensity: 0, key: "tower-countdown" };
     }
     case "sub": {
       if (view.phase === "podium") return { track: "submarine-results" };

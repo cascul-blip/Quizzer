@@ -167,7 +167,7 @@ describe("playSample", () => {
 
 describe("tracks", () => {
   test("Tallest Tower (chiptune) and Racer (arcade) keep their synth voices; the rest use recordings", () => {
-    for (const t of Object.values(TRACKS)) expect(usesSamples(t)).toBe(!t.id.startsWith("tower-") && !t.id.startsWith("racer-"));
+    for (const t of Object.values(TRACKS)) expect(usesSamples(t)).toBe((!t.id.startsWith("tower-") || t.id.startsWith("tower-christmas-")) && !t.id.startsWith("racer-"));
   });
 
   test("a track on recordings makes far fewer audio nodes than on synth voices", async () => {

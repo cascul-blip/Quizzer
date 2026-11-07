@@ -1286,6 +1286,55 @@ select {
   color: var(--ink-soft);
 }
 
+.tower-christmas .street {
+  background: linear-gradient(#f4f8ff, #c3dbf1);
+  box-shadow: 0 -2px 0 #ffffffaa;
+}
+
+.tower-christmas > .topbar {
+  background: #123d38;
+  border-bottom: 2px solid #e2c57c;
+}
+
+.tower-christmas .towers.n6 .tower-chip {
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  width: 100%;
+  padding-inline: 0.5vw;
+}
+
+.tower-christmas .towers.n6 .tower-name {
+  font-size: clamp(13px, 1.2vw, 22px);
+  max-width: 100%;
+}
+
+.tower-christmas .towers.n6 .tower-floors b {
+  font-size: 1.2em;
+}
+
+.tower-christmas .members-row {
+  background: #102b45;
+  border-top: 2px solid #e2c57c;
+}
+
+.tower-christmas .monster-pill,
+.tower-christmas .monster-banner {
+  background: #174b43;
+  border-color: #f0ce79;
+}
+
+.tower-christmas .monster-banner.attack {
+  background: #8c293c;
+  border-color: #f0ce79;
+}
+
+.tower-christmas .tower-podium .place .team-block {
+  border: 3px solid #f0ce79;
+  border-top: 9px solid #f4f8ff;
+  border-radius: 12px 12px 4px 4px;
+}
+
 /* ----- monster ----- */
 
 .monster-pill {

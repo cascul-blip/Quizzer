@@ -1,3 +1,4 @@
+import type { TowerTheme } from "./tower-theme.ts";
 import type { AvatarChoice } from "./avatars.ts";
 import type { HillHeight, ShotImpact } from "./fight-physics.ts";
 import type { LandStart } from "./land-board.ts";
@@ -41,6 +42,8 @@ export const BLOCKS_PER_BUILD = 4;
 export const DROP_ZONES = 5;
 
 export interface TowerSettings {
+  /** Optional for older callers; defaults to the seasonal look. */
+  theme?: TowerTheme;
   teams: number;
   minutes: number;
   /** Monster eggs 4 times per game, evenly spaced (needs 2+ teams). */
@@ -149,7 +152,7 @@ export type HostMsg =
   | { type: "host.setShuffle"; questions: boolean; answers: boolean }
   | { type: "host.setProtect"; on: boolean }
   | { type: "host.setMode"; mode: GameMode }
-  | { type: "host.setTower"; teams: number; minutes: number; monster?: boolean }
+  | { type: "host.setTower"; teams: number; minutes: number; monster?: boolean; theme?: TowerTheme }
   | { type: "host.setFight"; hill: HillSetting }
   | { type: "host.setLand"; teams: number; minutes: number }
   | { type: "host.setCup"; cups: number }
@@ -266,6 +269,7 @@ export interface TowerAwards {
 
 export interface PlayerTowerView {
   kind: "tower";
+  theme?: TowerTheme;
   phase: TowerPhase;
   title: string;
   /** Countdown to play (countdown phase) or to the end of the game (playing). */
@@ -354,6 +358,7 @@ export interface HostTowerTeam extends TeamInfo {
 
 export interface HostTowerState {
   kind: "tower";
+  theme?: TowerTheme;
   phase: TowerPhase;
   quiz: { id: string; title: string; questionCount: number };
   remainingMs: number;

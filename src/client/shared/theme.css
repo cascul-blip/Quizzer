@@ -402,6 +402,87 @@ a.btn {
   overflow: visible;
 }
 
+/* North Pole Tower: scoped to the selected theme on host and phones. */
+.tower-christmas {
+  background: #102759;
+}
+
+.tower-winter-backdrop {
+  position: absolute;
+  inset: 0;
+  background-color: #102759;
+  background-size: cover;
+  background-position: center bottom;
+  pointer-events: none;
+}
+
+.tower-christmas .tower-bell-cell .egg-slot {
+  stroke: #ffdc73;
+  fill: #ffd56822;
+  animation-name: tower-bell-slot;
+}
+
+@keyframes tower-bell-slot {
+  to { fill: #ffd56855; }
+}
+
+.tower-christmas .tower-bell-cell .egg-glow {
+  fill: #ffdc73;
+}
+
+.tower-snow-puff circle {
+  fill: #f1f9ff;
+  stroke: #b8d9ed;
+  stroke-width: 0.06;
+}
+
+.tower-christmas .sparkle path {
+  fill: #f7cf66;
+  stroke: #fff4c8;
+}
+
+.tower-christmas .sparkle .tower-snowflake {
+  fill: none;
+  stroke: #e3f6ff;
+  stroke-width: 0.35;
+  stroke-linecap: round;
+}
+
+.tower-workshop-hoist {
+  transform-origin: 0 0;
+  animation: workshop-hoist-sway 6s ease-in-out infinite alternate;
+}
+
+@keyframes workshop-hoist-sway {
+  from { transform: rotate(-1deg); }
+  to { transform: rotate(1deg); }
+}
+
+/* One complete painted sprite: stomp, wind up and lunge at the debris cue. */
+.tower-yeti-smash {
+  transform-origin: 100px 212px;
+  animation: tower-yeti-smash 3.4s ease-in-out both;
+}
+
+@keyframes tower-yeti-smash {
+  0%, 12%, 22%, 30% { transform: translateY(0); }
+  8%, 18%, 26% { transform: translateY(-6px) rotate(3deg); }
+  34% { transform: translateX(8px) rotate(12deg) scale(0.94, 1.05); }
+  40% { transform: translateX(-24px) rotate(-18deg) scale(1.1, 0.9); }
+  48% { transform: translateX(-6px) rotate(-4deg); }
+  58%, 100% { transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tower-christmas .tower-workshop-hoist,
+  .tower-christmas .tower-yeti-smash,
+  .tower-christmas .flag-cloth,
+  .tower-christmas .egg,
+  .tower-christmas .egg-slot {
+    animation: none;
+  }
+}
+
 /* ----- Tower Fight battlefield (shared by projector and phones) ----- */
 
 .battlefield {

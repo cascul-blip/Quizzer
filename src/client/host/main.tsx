@@ -1,3 +1,4 @@
+import { towerTheme, towerWords, type TowerTheme } from "../../shared/tower-theme.ts";
 import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { BOMB_MAX_SQUADS, BOMB_MINUTES, BOMB_MODULES, BOMB_PENALTIES, BOMB_WIRES, CUP_MAX_CUPS, CUP_MIN_CUPS, DRAGON_BATTLE_MINUTES, DRAGON_FIRE_SECONDS, DRAGON_MIN_TEAMS, DRAGON_SCRAMBLE_MINUTES, DRAGON_TOUGHNESS, DUEL_ROUNDS, HILL_SETTINGS, type BombSettings, type BombStyle, type DragonSettings, type DragonToughness, LAND_MINUTES, LAND_MIN_TEAMS, MAX_TEAMS, TOWER_MINUTES, type GameMode, type HillSetting, type HostPlayer, type HostView, type Pacing, type ServerMsg } from "../../shared/protocol.ts";
@@ -377,6 +378,13 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
           {tower ? (
             <>
               <label class="opt">
+                Theme
+                <select aria-label="Tower theme" value={towerTheme(view.tower.theme)} onChange={(e) => send({ type: "host.setTower", teams: view.tower.teams, minutes: view.tower.minutes, theme: e.currentTarget.value as TowerTheme })}>
+                  <option value="christmas">🎄 North Pole Workshop</option>
+                  <option value="classic">🏗 Normal</option>
+                </select>
+              </label>
+              <label class="opt">
                 Teams
                 <select value={view.tower.teams} onChange={(e) => send({ type: "host.setTower", teams: Number(e.currentTarget.value), minutes: view.tower.minutes })}>
                   {Array.from({ length: MAX_TEAMS }, (_, i) => (
@@ -396,14 +404,14 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
                   ))}
                 </select>
               </label>
-              <label class="opt check" title={view.tower.teams < 2 ? "The monster needs 2 or more teams" : "Monster eggs appear 4 times per game"}>
+              <label class="opt check" title={view.tower.teams < 2 ? "Needs 2 or more teams" : `${towerWords(view.tower.theme).item === "bell" ? "Bells" : "Monster eggs"} appear 4 times per game`}>
                 <input
                   type="checkbox"
                   disabled={view.tower.teams < 2}
                   checked={view.tower.monster && view.tower.teams >= 2}
                   onChange={(e) => send({ type: "host.setTower", teams: view.tower.teams, minutes: view.tower.minutes, monster: e.currentTarget.checked })}
                 />
-                👾 Monster{view.tower.teams < 2 ? " (needs 2+ teams)" : ""}
+                {towerWords(view.tower.theme).creatureIcon} {towerTheme(view.tower.theme) === "christmas" ? "Yeti" : "Monster"}{view.tower.teams < 2 ? " (needs 2+ teams)" : ""}
               </label>
             </>
           ) : view.mode === "fight" ? (

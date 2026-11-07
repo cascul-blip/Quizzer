@@ -656,6 +656,30 @@ h1 {
   border-radius: 999px;
 }
 
+.tower-christmas .build-svg .sidewalk {
+  fill: #dbeefa;
+}
+
+.tower-christmas .build-area {
+  isolation: isolate;
+}
+
+.tower-christmas .build-area .tower-winter-backdrop {
+  z-index: -1;
+  background-size: auto 100%;
+}
+
+.tower-christmas .egg-chip {
+  background: #174b43;
+  border-color: #f0ce79;
+  color: #fff7dc;
+}
+
+.tower-christmas .flash.monster-flash.egg,
+.tower-christmas .flash.monster-flash.hatched {
+  background: #174b43;
+}
+
 /* ----- monster ----- */
 
 .egg-chip {

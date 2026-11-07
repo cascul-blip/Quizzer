@@ -562,7 +562,7 @@ export class GameHub {
         this.lastSetup.mode = classic().mode;
         return;
       case "host.setTower":
-        classic().setTower({ teams: Number(msg.teams), minutes: Number(msg.minutes), monster: msg.monster });
+        classic().setTower({ teams: Number(msg.teams), minutes: Number(msg.minutes), monster: msg.monster, theme: msg.theme });
         this.lastSetup.tower = { ...classic().tower };
         return;
       case "host.setFight":

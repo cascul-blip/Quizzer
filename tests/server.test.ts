@@ -333,7 +333,7 @@ describe("Tallest Tower over WebSockets", () => {
     host.send({ type: "host.open", quizId: quiz.id });
     await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
     host.send({ type: "host.setMode", mode: "tower" });
-    host.send({ type: "host.setTower", teams: 2, minutes: 2 });
+    host.send({ type: "host.setTower", teams: 2, minutes: 2, theme: "classic" });
     await host.hostState((v) => v.kind === "classic" && v.mode === "tower" && v.tower.minutes === 2);
 
     const names = ["Ann", "Bob", "Cy"];
@@ -349,7 +349,10 @@ describe("Tallest Tower over WebSockets", () => {
     expect(annLobby.view.kind === "player" && annLobby.view.team?.name).toBe("Red");
 
     host.send({ type: "host.start", pacing: "manual" });
-    await host.hostState((v) => v.kind === "tower" && v.phase === "countdown");
+    const themedHost = await host.hostState((v) => v.kind === "tower" && v.phase === "countdown");
+    expect(themedHost.view.kind === "tower" && themedHost.view.theme).toBe("classic");
+    const themedPlayer = await players[0]!.playerState((v) => v.kind === "tower");
+    expect(themedPlayer.view.kind === "tower" && themedPlayer.view.theme).toBe("classic");
     host.send({ type: "host.next" });
     expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: expect.stringContaining("Tallest Tower") });
     clock.advance(COUNTDOWN_MS);
@@ -403,7 +406,7 @@ describe("Tallest Tower over WebSockets", () => {
 
     // Play again keeps Tallest Tower selected.
     host.send({ type: "host.open", quizId: quiz.id });
-    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "tower" && v.tower.teams === 2);
+    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "tower" && v.tower.teams === 2 && v.tower.theme === "classic");
     host.send({ type: "host.close" });
     [host, ...players].forEach((s) => s.close());
   });
