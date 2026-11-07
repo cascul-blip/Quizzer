@@ -1,3 +1,4 @@
+import { LandThemeProvider, useNorthPole, northPoleArt } from "../shared/land-skin.tsx";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { HostLandTeam, HostView } from "../../shared/protocol.ts";
 import { BANNER_CAPTURE, BANNER_KNOCKOUT, HexBoard, LandShape, Plinth, landArt, useBanner, useTeamCard } from "../shared/land-art.tsx";
@@ -13,6 +14,11 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 /** Projector screen for Land Grab: countdown → the land → podium. */
 export function LandStage({ view, send }: { view: LandView; send: Send }) {
+  return <LandThemeProvider theme={view.theme}><LandStageContent view={view} send={send} /></LandThemeProvider>;
+}
+
+function LandStageContent({ view, send }: { view: LandView; send: Send }) {
+  const christmas = useNorthPole();
   const secs = useCountdown(view.remainingMs, view.phase);
   const prevPhase = useRef(view.phase);
   useEffect(() => {
@@ -51,10 +57,10 @@ export function LandStage({ view, send }: { view: LandView; send: Send }) {
   else if (capture) banner = { text: `🚩 ${capture.nickname} closed the ring: ${teamName(capture.team)} takes ${plural(capture.tiles.length, "tile")}`, color: BANNER_CAPTURE };
 
   return (
-    <div class="stage">
+    <div class={`stage ${christmas ? "land-christmas" : ""}`}>
       <header class="topbar">
         <div class="title">{view.quiz.title}</div>
-        <div class="pill">🚩 Land Grab</div>
+        <div class="pill">{christmas ? "🎄 North Pole" : "🚩 Land Grab"}</div>
         <div class="spacer" />
         {view.phase === "playing" && <div class={`tower-clock ${secs <= 30 ? "urgent" : ""}`}>{formatClock(secs)}</div>}
         <div class="spacer" />
@@ -69,9 +75,9 @@ export function LandStage({ view, send }: { view: LandView; send: Send }) {
       {view.phase === "podium" ? (
         <LandPodium view={view} send={send} />
       ) : (
-        <main class="land-wrap" style={{ backgroundImage: `url(${landArt("background")})` }}>
+        <main class="land-wrap" style={{ backgroundImage: `url(${christmas ? northPoleArt().table : landArt("background")})` }}>
           <div class="land-board">
-            <img class="land-compass" src={landArt("compass-rose")} alt="" draggable={false} />
+            {!christmas && <img class="land-compass" src={landArt("compass-rose")} alt="" draggable={false} />}
             <HexBoard board={view.board} placed={placed} capture={capture} />
           </div>
           <aside class="land-side">

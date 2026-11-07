@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { STEPS_PER_BAR, renderInto, scheduleStep, stepSeconds, type Track } from "../src/client/shared/music/engine.ts";
+import { stepsPerBar, renderInto, scheduleStep, stepSeconds, type Track } from "../src/client/shared/music/engine.ts";
 import { ARCADE_TIGHTNESS, ECHO_STEPS, HUMAN_GAIN, HUMAN_TIME_S, STRUM_S, createEcho, createRichBus, humanize, impulseResponse, playRich, richStyle, saturationCurve, seeded } from "../src/client/shared/music/rich.ts";
 import { TRACKS } from "../src/client/shared/music/tracks.ts";
 
@@ -72,7 +72,7 @@ const dest = (ctx: FakeCtx) => new FakeNode("dest", ctx) as unknown as AudioNode
 function playLoop(ctx: FakeCtx & BaseAudioContext, track: Track, intensity: number, echo?: AudioNode): number[] {
   const grid: number[] = [];
   let t = 1;
-  for (let step = 0; step < track.bars * STEPS_PER_BAR; step++) {
+  for (let step = 0; step < track.bars * stepsPerBar(track); step++) {
     grid.push(t);
     scheduleStep(ctx, dest(ctx), track, step, t, intensity, { echo });
     t += stepSeconds(track, intensity);
@@ -283,5 +283,17 @@ describe("the rich bus", () => {
     expect(["shaper", "compressor", "convolver"].every((k) => ctx.kinds().has(k))).toBe(true);
     bus.dispose();
     expect(ctx.made.every((n) => n.disconnected)).toBe(true);
+  });
+});
+
+describe("triple-meter sequencing", () => {
+  test("a three-beat bar advances and loops without an extra silent beat", () => {
+    const track: Track = { id: "triple", bpm: 60, bars: 2, stepsPerBar: 12, samples: false, layers: [{ inst: "piano", bars: ["C4 - - - - - - - - - - -", "E4 - - - - - - - - - - -"] }] };
+    const ctx = fake();
+    renderInto(ctx, dest(ctx), track, 7, 0);
+    // Piano has several oscillators per note; count distinct attack times.
+    expect([...new Set(ctx.starts)]).toEqual([.05, 3.05, 6.05]);
+    expect(stepsPerBar(TRACKS["land-play"])).toBe(16);
+    expect(stepsPerBar(TRACKS["land-christmas-play"])).toBe(12);
   });
 });

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync } from "node:fs";
-import { STEPS_PER_BAR, instrumentsOf, renderInto, stepSeconds, tokens, usesSamples, noteFreq, type Track } from "../src/client/shared/music/engine.ts";
+import { STEPS_PER_BAR, stepsPerBar, instrumentsOf, renderInto, stepSeconds, tokens, usesSamples, noteFreq, type Track } from "../src/client/shared/music/engine.ts";
 import { VOICES, loadSamples, nearestZone, playSample, samplesReady, setSamplesEnabled, urlsFor } from "../src/client/shared/music/samples.ts";
 import { SAMPLE_SETS } from "../src/client/shared/music/samples/manifest.ts";
 import { TRACKS } from "../src/client/shared/music/tracks.ts";
@@ -67,7 +67,7 @@ function notesOf(inst: string): { midi: number; len: number }[] {
         const toks = tokens(bar);
         toks.forEach((tok, s) => {
           let held = 1;
-          while (s + held < STEPS_PER_BAR && toks[s + held] === "-") held++;
+          while (s + held < stepsPerBar(t) && toks[s + held] === "-") held++;
           for (const n of tok.split("+")) {
             const f = noteFreq(n);
             if (f) out.push({ midi: midiOf(f), len: held * stepSeconds(t, 0) * 0.95 });

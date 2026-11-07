@@ -1,3 +1,4 @@
+import type { LandTheme } from "./land-theme.ts";
 import type { FightTheme } from "./fight-theme.ts";
 import type { RacerTheme } from "./racer-theme.ts";
 import type { TowerTheme } from "./tower-theme.ts";
@@ -162,7 +163,7 @@ export type HostMsg =
   | { type: "host.setRacer"; theme: RacerTheme }
   | { type: "host.setTower"; teams: number; minutes: number; monster?: boolean; theme?: TowerTheme }
   | { type: "host.setFight"; hill?: HillSetting; theme?: FightTheme }
-  | { type: "host.setLand"; teams: number; minutes: number }
+  | { type: "host.setLand"; teams: number; minutes: number; theme?: LandTheme }
   | { type: "host.setCup"; cups: number; theme?: CupTheme }
   | ({ type: "host.setDragon" } & DragonSettings)
   | ({ type: "host.setBomb" } & BombSettings)
@@ -833,6 +834,7 @@ export const LAND_GUARD_COST = 2;
 export const LAND_EMPTY_MS = 4000;
 
 export interface LandSettings {
+  theme?: LandTheme;
   teams: number;
   minutes: number;
 }
@@ -881,6 +883,7 @@ export interface HostLandTeam extends TeamInfo {
 }
 
 export interface HostLandState {
+  theme?: LandTheme;
   kind: "land";
   phase: LandPhase;
   quiz: { id: string; title: string; questionCount: number };
@@ -897,6 +900,7 @@ export interface HostLandState {
 }
 
 export interface PlayerLandView {
+  theme?: LandTheme;
   kind: "land";
   phase: LandPhase;
   title: string;

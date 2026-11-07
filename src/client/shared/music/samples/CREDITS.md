@@ -80,3 +80,26 @@ Brass, organ, strings, piano, timpani and percussion use only the existing CC0
 VSCO 2 CE / VCSL samples listed above, with the synthesized fallback available.
 Both Tower Fight themes use this battle arrangement; lobby and results cues retain
 their original music.
+
+## North Pole Land Grab: Silent Night
+
+The Christmas lobby, land and podium use a new game arrangement of **Silent Night /
+STILLE NACHT**, Franz Xaver Gruber (1818). The composition is public domain:
+[Silent Night Society: historical authorship](https://www.stillenacht.at/en/text-and-music),
+[the publisher of Lift Up Your Hearts: explicit public-domain designation](https://liftupyourheartshymnal.org/songs/silent-night-holy-night),
+and [Mutopia's public-domain score](https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=81).
+The familiar tune is in C major, with doubled 6/8 note values phrased as 24 3/4 bars;
+the harmony and accompaniment are newly written for this game. No commercial song
+recording or modern published accompaniment is included.
+
+Quiet piano carries the complete melody at all intensities, above sparse piano
+chords, low strings, and occasional glockenspiel notes. The play cue builds from
+60 to 120 quarter-note BPM as the existing capture-threat calculation rises,
+adding harp, melodic strings, a low piano pulse and flute. Close captures add
+moving low strings, warm brass, snare, pulsing timpani, high bells and light cymbal
+accents. It eases
+back when a ring is broken, without restarting the melody or changing its pitch.
+Lobby stays at 60 BPM; podium is a gentle 68 BPM arrangement.
+
+All instrument recordings used by these cues come from the CC0 VSCO 2 CE / VCSL
+libraries listed above. Classic Land Grab keeps its original soundtrack.

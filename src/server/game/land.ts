@@ -1,3 +1,4 @@
+import { landTheme } from "../../shared/land-theme.ts";
 import type { AnswerValue } from "../../shared/answer-match.ts";
 import {
   LAND_EMPTY_MS,
@@ -426,6 +427,7 @@ export class LandGame {
     const playing = this.phase === "playing";
     return {
       kind: "land",
+      theme: landTheme(this.settings.theme),
       phase: this.phase,
       quiz: { id: this.quizId, title: this.title, questionCount: this.questions.length },
       remainingMs: this.remainingMs(),
@@ -479,6 +481,7 @@ export class LandGame {
     }
     return {
       kind: "land",
+      theme: landTheme(this.settings.theme),
       phase: this.phase,
       title: this.title,
       remainingMs: this.remainingMs(),

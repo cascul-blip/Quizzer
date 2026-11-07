@@ -7068,3 +7068,30 @@ select {
     animation: none;
   }
 }
+
+/* North Pole: rolled ink map on an oak table; refreshments stay left of play. */
+.land-christmas > .topbar {
+  background: #29221b;
+  border-bottom: 1px solid #b8a17c;
+}
+.land-christmas .land-wrap {
+  padding: 2vh 1.5vw 2vh 16vw;
+  gap: 1.5vw;
+  background-color: #684021;
+  background-size: 100% 100%;
+}
+.land-christmas .land-side {
+  --card-w: clamp(200px, 21vw, 420px);
+  justify-content: center;
+}
+.land-christmas .land-board .hex-board {
+  filter: drop-shadow(3px 6px 5px #180d08a0);
+}
+.land-christmas .land-podium {
+  background: #33271d;
+}
+@media (max-width: 1100px) {
+  .land-christmas .land-wrap { gap: 1vw; padding-right: 1vw; }
+  .land-christmas .land-side { --card-w: clamp(180px, 23vw, 250px); }
+  .land-christmas .land-team header { flex-wrap: wrap; gap: 0; }
+}

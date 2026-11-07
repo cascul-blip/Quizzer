@@ -575,7 +575,7 @@ export class GameHub {
         this.lastSetup.fight = { ...classic().fight };
         return;
       case "host.setLand":
-        classic().setLand({ teams: Number(msg.teams), minutes: Number(msg.minutes) });
+        classic().setLand({ teams: Number(msg.teams), minutes: Number(msg.minutes), theme: msg.theme });
         this.lastSetup.land = { ...classic().land };
         return;
       case "host.setCup":

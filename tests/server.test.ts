@@ -1033,8 +1033,10 @@ describe("Land Grab over WebSockets", () => {
     host.send({ type: "host.setMode", mode: "land" });
     host.send({ type: "host.setLand", teams: 1, minutes: 3 });
     expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: expect.stringContaining("between 2 and 6") });
-    host.send({ type: "host.setLand", teams: 2, minutes: 3 });
-    await host.hostState((v) => v.kind === "classic" && v.mode === "land" && v.land.minutes === 3);
+    host.send({ type: "host.setLand", teams: 2, minutes: 3, theme: "classic" });
+    await host.hostState((v) => v.kind === "classic" && v.mode === "land" && v.land.minutes === 3 && v.land.theme === "classic");
+    host.send({ type: "host.setLand", teams: 2, minutes: 3, theme: "christmas" });
+    await host.hostState((v) => v.kind === "classic" && v.land.theme === "christmas");
 
     const names = ["Ann", "Bob"];
     const players = await Promise.all(names.map(() => TestSocket.open(wsUrl)));
@@ -1049,6 +1051,7 @@ describe("Land Grab over WebSockets", () => {
     host.send({ type: "host.start", pacing: "manual" });
     const started = await host.hostState((v) => v.kind === "land" && v.phase === "countdown");
     expect(started.view.kind === "land" && started.view.board.size).toBe(10);
+    expect(started.view.kind === "land" && started.view.theme).toBe("christmas");
     host.send({ type: "host.next" });
     expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: expect.stringContaining("Land Grab") });
     clock.advance(LAND_COUNTDOWN_MS);

@@ -1,3 +1,4 @@
+import { DEFAULT_LAND_THEME, landTheme } from "../../shared/land-theme.ts";
 import { DEFAULT_RACER_THEME } from "../../shared/racer-theme.ts";
 import { DEFAULT_CUP_THEME } from "../../shared/cup-theme.ts";
 import { DEFAULT_TOWER_THEME } from "../../shared/tower-theme.ts";
@@ -65,7 +66,7 @@ const LEADERBOARD_SIZE = 10;
 export const DEFAULT_RACER: RacerSettings = { theme: DEFAULT_RACER_THEME };
 export const DEFAULT_TOWER: TowerSettings = { teams: 2, minutes: 5, monster: true, theme: DEFAULT_TOWER_THEME };
 export const DEFAULT_FIGHT: FightSettings = { hill: "random", theme: DEFAULT_FIGHT_THEME };
-export const DEFAULT_LAND: LandSettings = { teams: 2, minutes: 5 };
+export const DEFAULT_LAND: LandSettings = { teams: 2, minutes: 5, theme: DEFAULT_LAND_THEME };
 export const DEFAULT_CUP: CupSettings = { cups: CUP_DEFAULT_CUPS, theme: DEFAULT_CUP_THEME };
 export const DEFAULT_DRAGON: DragonSettings = { teams: 2, toughness: "normal", battleMinutes: 5, fireSec: 45, scrambleMinutes: 3 };
 export const DEFAULT_BOMB: BombSettings = { game: "together", squads: 1, modules: 3, wires: 3, minutes: 5, penaltySec: 15 };
@@ -181,7 +182,7 @@ export class Game {
     this.racer = { ...(opts.racer ?? DEFAULT_RACER) };
     this.tower = { ...(opts.tower ?? DEFAULT_TOWER) };
     this.fight = { ...(opts.fight ?? DEFAULT_FIGHT) };
-    this.land = { ...(opts.land ?? DEFAULT_LAND) };
+    this.land = { ...(opts.land ?? DEFAULT_LAND), theme: landTheme(opts.land?.theme) };
     this.cup = { ...(opts.cup ?? DEFAULT_CUP) };
     this.dragon = { ...(opts.dragon ?? DEFAULT_DRAGON) };
     this.bomb = { ...(opts.bomb ?? DEFAULT_BOMB) };
@@ -325,7 +326,8 @@ export class Game {
     const minutes = Number(settings.minutes);
     if (!(teams >= LAND_MIN_TEAMS && teams <= MAX_TEAMS)) throw new GameError(`Teams must be between ${LAND_MIN_TEAMS} and ${MAX_TEAMS}`);
     if (!(LAND_MINUTES as readonly number[]).includes(minutes)) throw new GameError("Unsupported game length");
-    this.land = { teams, minutes };
+    if (settings.theme !== undefined && settings.theme !== "classic" && settings.theme !== "christmas") throw new GameError("Unknown Land Grab theme");
+    this.land = { teams, minutes, theme: landTheme(settings.theme ?? this.land.theme) };
     this.onChange();
   }
 
