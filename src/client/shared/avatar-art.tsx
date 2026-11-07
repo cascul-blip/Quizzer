@@ -110,6 +110,16 @@ import unicornImg from "./avatar/unicorn.webp";
 import vikingImg from "./avatar/viking.webp";
 import wizardImg from "./avatar/wizard.webp";
 import xmasscarfImg from "./avatar/xmasscarf.webp";
+import santaclausImg from "./avatar/santaclaus.webp";
+import mrsclausImg from "./avatar/mrsclaus.webp";
+import yeticubImg from "./avatar/yeticub.webp";
+import robinImg from "./avatar/robin.webp";
+import walrusImg from "./avatar/walrus.webp";
+import snowgogglesImg from "./avatar/snowgoggles.webp";
+import giftbowImg from "./avatar/giftbow.webp";
+import wintercrownImg from "./avatar/wintercrown.webp";
+import puddinghatImg from "./avatar/puddinghat.webp";
+import festivebowtieImg from "./avatar/festivebowtie.webp";
 
 /** Layout of the phone sheets, as written by scripts/phone-art.py. */
 const CELL = 192;
@@ -187,6 +197,11 @@ const FACE_IMG: Record<AvatarId, string> = {
   moose: mooseImg,
   sheep: sheepImg,
   angelkid: angelkidImg,
+  santaclaus: santaclausImg,
+  mrsclaus: mrsclausImg,
+  yeticub: yeticubImg,
+  robin: robinImg,
+  walrus: walrusImg,
 };
 
 const GEAR_IMG: Record<Exclude<AccessoryId, "none">, string> = {
@@ -234,6 +249,11 @@ const GEAR_IMG: Record<Exclude<AccessoryId, "none">, string> = {
   candycane: candycaneImg,
   mittens: mittensImg,
   crownwreath: crownwreathImg,
+  snowgoggles: snowgogglesImg,
+  giftbow: giftbowImg,
+  wintercrown: wintercrownImg,
+  puddinghat: puddinghatImg,
+  festivebowtie: festivebowtieImg,
 };
 
 export const AVATAR_ART = Object.fromEntries(AVATARS.map((a, i) => [a.id, painted(FACE_IMG[a.id], facesSheet, i, AVATARS.length)])) as Record<AvatarId, () => JSX.Element>;

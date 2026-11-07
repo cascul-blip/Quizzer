@@ -4,7 +4,7 @@ import { ACCESSORY_ART, AVATAR_ART } from "../src/client/shared/avatar-art.tsx";
 import { Game, GameError } from "../src/server/game/game.ts";
 import { SubGame } from "../src/server/game/submarine.ts";
 import { TowerGame } from "../src/server/game/tower.ts";
-import { ACCESSORIES, AVATARS, cleanAvatar, OFFERED_ACCESSORIES, OFFERED_AVATARS, randomAvatar } from "../src/shared/avatars.ts";
+import { ACCESSORIES, AVATARS, AVATAR_SET, cleanAvatar, OFFERED_ACCESSORIES, OFFERED_AVATARS, randomAvatar } from "../src/shared/avatars.ts";
 
 // Ids from whichever set is offered, so these tests pass with either AVATAR_SET.
 const [A1, A2, A3] = OFFERED_AVATARS.map((a) => a.id) as [AvatarId, AvatarId, AvatarId];
@@ -27,6 +27,12 @@ describe("catalog", () => {
     expect(OFFERED_AVATARS.length).toBeLessThan(AVATARS.length);
     expect(OFFERED_ACCESSORIES.length).toBeLessThan(ACCESSORIES.length);
     expect(OFFERED_ACCESSORIES[0]!.id).toBe("none");
+  });
+
+  test("the Christmas collection has 20 characters and 20 wearable accessories", () => {
+    if (AVATAR_SET !== "christmas") return;
+    expect(OFFERED_AVATARS).toHaveLength(20);
+    expect(OFFERED_ACCESSORIES.filter((a) => a.id !== "none")).toHaveLength(20);
   });
 
   test("cleanAvatar only accepts offered ids", () => {
