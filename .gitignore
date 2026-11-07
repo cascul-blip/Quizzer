@@ -9,3 +9,6 @@ scripts/winter-art/captures/
 
 # Local preview screenshots and concept art from graphics work.
 output/
+
+# Claude Code per-machine settings
+.claude/settings.local.json
