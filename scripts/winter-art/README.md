@@ -19,12 +19,19 @@ The user supplied `quizzer-sled-chase-video-sprites/video-sprites/dogs/dogs-pair
 
 The painted sled, tree, and ornaments come from the accompanying `quizzer-sled-chase/sled-chase/sleigh` bundle. Avatars sit between rear and front sled layers. Ornament hooks follow the reclining tree while strings hang vertically. A bauble falls every 2.4 seconds, bounces, and trails offscreen; ornaments replenish in a repeating loop.
 
-The replacement goblin comes from the user's `goblin.mp4`. Rebuild with `bash scripts/winter-art/prepare-goblin.sh /path/to/goblin.mp4`. FFmpeg flips the source horizontally, removes magenta with soft alpha edges, and reduces color spill. Outputs:
+The goblin is a claymation clip supplied by the user, preserved as `sources/goblin-v2-raw.mp4` (736 × 416, 24 fps, magenta screen ≈ RGB 251,6,192). He already faces the sled, so the clip is not flipped. Rebuild with:
 
-- `goblin-loop.webm`: six seconds of transparent VP9 at the original resolution and frame rate.
-- `goblin-sheet.webp`: 72 transparent frames, 8 × 9 cells, 348 × 516 per cell, 12 fps. The runtime uses this for consistent transparency and explicit pause control.
+```
+uv run --with numpy,opencv-python-headless,scipy,pillow \
+  python scripts/winter-art/prepare-goblin.py scripts/winter-art/sources/goblin-v2-raw.mp4
+```
 
-The goblin preserves the supplied actor's hand movements and sack. As the gap closes he leans slightly toward the sled and speeds up; capture freezes him. The animation clock reads playback rate through a ref so continuous gap updates cannot restart its timer.
+The script builds a soft matte from magenta excess, despills, rebuilds fringe colours from the nearest solid interior pixel, and drops stray key residue. It also removes the clip's sideways drift (keeping the vertical bob), picks the loop whose end best matches its start (raw frames 19–89), and blends the last three frames into the first. Outputs:
+
+- `goblin-sheet.webp`: 36 transparent frames, 8 × 5 cells, 295 × 375 per cell, 12 fps. The runtime uses this for consistent transparency and explicit pause control. If the layout changes, update `GOBLIN_FRAMES`/`GOBLIN_COLS`/`GOBLIN_ROWS` in `winter-art.tsx` and the aspect ratio and background size in `winter-art.css`.
+- `goblin-loop.webm`: the 71-frame loop as 24 fps transparent VP9 (not used at runtime).
+
+As the gap closes he leans slightly toward the sled and speeds up; capture freezes him. The animation clock reads playback rate through a ref so continuous gap updates cannot restart its timer.
 
 ## Snowy path and repeatable fence
 
