@@ -56,6 +56,11 @@ export const AVATARS = [
   { id: "moose", name: "Moose" },
   { id: "sheep", name: "Lamb" },
   { id: "angelkid", name: "Angel Child" },
+  { id: "santaclaus", name: "Santa Claus" },
+  { id: "mrsclaus", name: "Mrs. Claus" },
+  { id: "yeticub", name: "Yeti Cub" },
+  { id: "robin", name: "Winter Robin" },
+  { id: "walrus", name: "Walrus" },
 ] as const;
 
 export const ACCESSORIES = [
@@ -105,6 +110,11 @@ export const ACCESSORIES = [
   { id: "candycane", name: "Candy Cane" },
   { id: "mittens", name: "Mitten Wave" },
   { id: "crownwreath", name: "Wreath Crown" },
+  { id: "snowgoggles", name: "Snow Goggles" },
+  { id: "giftbow", name: "Gift Bow" },
+  { id: "wintercrown", name: "Winter Crown" },
+  { id: "puddinghat", name: "Pudding Hat" },
+  { id: "festivebowtie", name: "Festive Bow Tie" },
 ] as const;
 
 export type AvatarId = (typeof AVATARS)[number]["id"];
@@ -123,10 +133,12 @@ export const AVATAR_SET = "christmas" as AvatarSet;
 const CHRISTMAS_AVATARS = new Set<string>([
   "snowman", "reindeer", "polarbear", "gingerbread", "elf", "nutcracker", "snowyowl", "arcticfox",
   "emperorchick", "seal", "husky", "snowbunny", "moose", "sheep", "angelkid",
+  "santaclaus", "mrsclaus", "yeticub", "robin", "walrus",
 ]);
 const CHRISTMAS_ACCESSORIES = new Set<string>([
   "santahat", "elfhat", "bobble", "earmuffs", "xmasscarf", "holly", "mistletoe", "stars",
   "snowflakes", "reindeerband", "star", "bellcollar", "candycane", "mittens", "crownwreath",
+  "snowgoggles", "giftbow", "wintercrown", "puddinghat", "festivebowtie",
 ]);
 
 const inSet = (christmas: Set<string>) => (item: { id: string }) => item.id === "none" || christmas.has(item.id) === (AVATAR_SET === "christmas");
