@@ -1,3 +1,4 @@
+import type { RacerTheme } from "./racer-theme.ts";
 import type { TowerTheme } from "./tower-theme.ts";
 import type { AvatarChoice } from "./avatars.ts";
 import type { HillHeight, ShotImpact } from "./fight-physics.ts";
@@ -40,6 +41,10 @@ export const TOWER_MINUTES = [2, 3, 5, 7, 10] as const;
 export const BLOCKS_PER_BUILD = 4;
 /** Drop zones across the build screen: miss · left · center · right · miss. */
 export const DROP_ZONES = 5;
+
+export interface RacerSettings {
+  theme: RacerTheme;
+}
 
 export interface TowerSettings {
   /** Optional for older callers; defaults to the seasonal look. */
@@ -152,6 +157,7 @@ export type HostMsg =
   | { type: "host.setShuffle"; questions: boolean; answers: boolean }
   | { type: "host.setProtect"; on: boolean }
   | { type: "host.setMode"; mode: GameMode }
+  | { type: "host.setRacer"; theme: RacerTheme }
   | { type: "host.setTower"; teams: number; minutes: number; monster?: boolean; theme?: TowerTheme }
   | { type: "host.setFight"; hill: HillSetting }
   | { type: "host.setLand"; teams: number; minutes: number }
@@ -317,6 +323,7 @@ export interface HostGameState {
   phase: Phase;
   /** Lobby choice; anything but "classic" hands the players over to that mode's game on start. */
   mode: GameMode;
+  racer: RacerSettings;
   tower: TowerSettings;
   fight: FightSettings;
   land: LandSettings;
@@ -978,6 +985,7 @@ export interface HostRacerPlayer {
 
 export interface HostRacerState {
   kind: "racer";
+  theme?: RacerTheme;
   phase: RacerPhase;
   quiz: { id: string; title: string; questionCount: number };
   /** Manual waits for host.next on the reveal; auto moves on after 5 s. host.setPacing works mid-game. */
@@ -1019,6 +1027,7 @@ export interface HostRacerState {
 /** A phone's complete snapshot: enough to redraw from scratch after a reconnect in any phase. */
 export interface PlayerRacerView {
   kind: "racer";
+  theme?: RacerTheme;
   phase: RacerPhase;
   title: string;
   /** Totals over the questions closed so far (they don't move while a question is open). */

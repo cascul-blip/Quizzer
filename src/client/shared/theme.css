@@ -2505,3 +2505,64 @@ a.btn {
     animation: none;
   }
 }
+
+/* Neon Noel uses the same geometry and motion as the normal Racer scene. */
+.racer-scene[data-theme="christmas"] .racer-scene-sky {
+  background: linear-gradient(to bottom, #20104c 0 20%, #321063 20% 40%, #46147d 40% 60%, #57188b 60% 80%, #671e98 80%);
+}
+
+.racer-scene[data-theme="christmas"] .racer-scene-sun {
+  background: #f42dce;
+}
+
+.racer-scene[data-theme="christmas"] .racer-scene-road {
+  background: #251044;
+  border-top-color: #b8faff;
+  box-shadow: 0 calc(var(--racer-u) * -2) 0 #50d9fa;
+}
+
+.racer-scene[data-theme="christmas"] .racer-scene-dashes {
+  background-image: linear-gradient(to right, #56eeff 0 47%, transparent 47% 100%);
+}
+
+.racer-scene[data-theme="christmas"] .racer-scene-road::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: calc(var(--racer-u) * 2);
+  background: #bbf9ff;
+  border-top: calc(var(--racer-u) * 1) solid #50d9fa;
+}
+
+/* Sparse square flakes, part of the world so they disappear during space flight. */
+.racer-scene-snow {
+  inset: 0 0 var(--racer-road) 0;
+  pointer-events: none;
+}
+.racer-scene-snow::before,
+.racer-scene-snow::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: calc(var(--racer-u) * 0.8);
+  height: calc(var(--racer-u) * 0.8);
+  background: #e9fcff;
+  box-shadow:
+    calc(var(--racer-w, 1000px) * 0.08) calc(var(--racer-u) * 6) #e9fcff,
+    calc(var(--racer-w, 1000px) * 0.19) calc(var(--racer-u) * 20) #e9fcff,
+    calc(var(--racer-w, 1000px) * 0.28) calc(var(--racer-u) * 2) #e9fcff,
+    calc(var(--racer-w, 1000px) * 0.38) calc(var(--racer-u) * 14) #e9fcff,
+    calc(var(--racer-w, 1000px) * 0.49) calc(var(--racer-u) * 8) #e9fcff,
+    calc(var(--racer-w, 1000px) * 0.58) calc(var(--racer-u) * 26) #e9fcff,
+    calc(var(--racer-w, 1000px) * 0.69) calc(var(--racer-u) * 4) #e9fcff,
+    calc(var(--racer-w, 1000px) * 0.79) calc(var(--racer-u) * 18) #e9fcff,
+    calc(var(--racer-w, 1000px) * 0.91) calc(var(--racer-u) * 10) #e9fcff,
+    calc(var(--racer-w, 1000px) * 0.98) calc(var(--racer-u) * 30) #e9fcff;
+}
+.racer-scene-snow::after {
+  transform: translate(calc(var(--racer-w, 1000px) * 0.04), calc(var(--racer-u) * 24));
+  opacity: 0.55;
+}

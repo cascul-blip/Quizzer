@@ -1,3 +1,4 @@
+import { racerTheme, type RacerTheme } from "../../shared/racer-theme.ts";
 import type {
   HostRacerState,
   Pacing,
@@ -60,6 +61,7 @@ interface RacerOptions {
 }
 
 interface RacerGameSettings {
+  theme?: RacerTheme;
   shuffle: ShuffleOptions;
   pacing?: Pacing;
 }
@@ -70,6 +72,7 @@ interface RacerGameSettings {
  * Every question is asked once, then the podium.
  */
 export class RacerGame {
+  readonly theme: RacerTheme;
   readonly quizId: string;
   readonly title: string;
   /** Play order, shuffled if the lobby asked for it. */
@@ -105,6 +108,7 @@ export class RacerGame {
 
   constructor(quiz: Quiz, settings: RacerGameSettings, opts: RacerOptions = {}) {
     if (quiz.questions.length === 0) throw new GameError("This quiz has no questions");
+    this.theme = racerTheme(settings.theme);
     this.quizId = quiz.id;
     this.title = quiz.title;
     this.clock = opts.clock ?? realClock;
@@ -118,7 +122,7 @@ export class RacerGame {
 
   /** Take over a lobby's players (same ids and tokens), its shuffle choices and its pacing. */
   static fromLobby(lobby: Game, opts: RacerOptions = {}): RacerGame {
-    const game = new RacerGame(lobby.quiz, { shuffle: lobby.shuffle, pacing: lobby.pacing }, opts);
+    const game = new RacerGame(lobby.quiz, { shuffle: lobby.shuffle, pacing: lobby.pacing, theme: lobby.racer.theme }, opts);
     for (const p of lobby.players.values()) {
       game.roster.adopt(game.newPlayer({ id: p.id, nickname: p.nickname, token: p.token, connected: p.connected, avatar: p.avatar }));
     }
@@ -442,6 +446,7 @@ export class RacerGame {
     const answered = answering ? [...this.players.values()].map((p) => p.answers[this.qIndex]).filter((a): a is RacerAnswer => !!a) : [];
     return {
       kind: "racer",
+      theme: this.theme,
       phase: this.phase,
       quiz: { id: this.quizId, title: this.title, questionCount: this.questions.length },
       pacing: this.pacing,
@@ -495,6 +500,7 @@ export class RacerGame {
     }
     return {
       kind: "racer",
+      theme: this.theme,
       phase: this.phase,
       title: this.title,
       me: { id: p.id, nickname: p.nickname, avatar: p.avatar, correct: p.correct, wrong: p.wrong, turnsDriven: p.turnsDriven, mphGained: p.mphGained, failsAsDriver: p.failsAsDriver },

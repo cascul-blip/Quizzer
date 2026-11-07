@@ -1,3 +1,4 @@
+import { racerTheme, type RacerTheme } from "../../shared/racer-theme.ts";
 import { towerTheme, towerWords, type TowerTheme } from "../../shared/tower-theme.ts";
 import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
@@ -375,6 +376,15 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
               <option value="duel">🤠 Showdown</option>
             </select>
           </label>
+          {view.mode === "racer" && (
+            <label class="opt">
+              Theme
+              <select aria-label="Racer theme" value={racerTheme(view.racer?.theme)} onChange={(e) => send({ type: "host.setRacer", theme: e.currentTarget.value as RacerTheme })}>
+                <option value="classic">🏎 Normal</option>
+                <option value="christmas">🎄 Neon Noel</option>
+              </select>
+            </label>
+          )}
           {tower ? (
             <>
               <label class="opt">

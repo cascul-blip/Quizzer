@@ -682,3 +682,33 @@ describe("Racer", () => {
     expect(game.playerView(byName(game, "A").id)!.result!.awards).toEqual([]);
   });
 });
+
+describe("Racer themes", () => {
+  test("lobby switches looks and both game views retain the chosen theme", () => {
+    const lobby = new Game(quiz(), { clock: new FakeClock() });
+    expect(lobby.hostView().racer.theme).toBe("classic");
+    lobby.setMode("racer");
+    const p = lobby.join("Ann");
+    for (const theme of ["christmas", "classic"] as const) {
+      lobby.setRacer({ theme });
+      expect(lobby.hostView().racer.theme).toBe(theme);
+      const game = RacerGame.fromLobby(lobby, { clock: new FakeClock() });
+      game.start();
+      expect(game.hostView().theme).toBe(theme);
+      expect(game.playerView(p.id)!.theme).toBe(theme);
+      expect(game.car.speed).toBe(30);
+      game.end();
+      expect(game.hostView().theme).toBe(theme);
+      game.dispose();
+    }
+  });
+
+  test("invalid or mid-game theme changes are rejected", () => {
+    const lobby = new Game(quiz(), { clock: new FakeClock() });
+    expect(() => lobby.setRacer({ theme: "bad" as never })).toThrow("Unknown racer theme");
+    lobby.join("Ann");
+    lobby.start();
+    expect(() => lobby.setRacer({ theme: "christmas" })).toThrow("before the game starts");
+    lobby.dispose();
+  });
+});

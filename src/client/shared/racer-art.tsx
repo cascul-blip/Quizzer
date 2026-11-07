@@ -6,6 +6,11 @@
  * question wrong fall out of the back: on the road they bounce away down it, in space they
  * drift off. Shared by the projector and the phones.
  */
+import { racerTheme, type RacerTheme } from "../../shared/racer-theme.ts";
+import christmasCar from "./racer/christmas/car.webp";
+import christmasCrash from "./racer/christmas/car-crashed.webp";
+import christmasSkyline from "./racer/christmas/skyline.webp";
+import christmasTree from "./racer/christmas/tree.webp";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { Avatar } from "./avatar-art.tsx";
@@ -74,6 +79,7 @@ function newStar(x: number): Star {
 }
 
 interface RacerSceneProps {
+  theme?: RacerTheme;
   /** Miles per hour. The scene eases toward it, so it may jump. */
   speed: number;
   /** Wrecked: the car smokes and the scene coasts to a stop, whatever the speed. */
@@ -93,7 +99,8 @@ interface Ejection {
 }
 
 /** Fills its container; everything is sized from the container's height. */
-export function RacerScene({ speed, crashed, onLand, ejected, class: cls }: RacerSceneProps) {
+export function RacerScene({ speed, crashed, onLand, ejected, theme, class: cls }: RacerSceneProps) {
+  const christmas = racerTheme(theme) === "christmas";
   const target = crashed ? 0 : Math.max(0, speed);
   const root = useRef<HTMLDivElement>(null);
   const skyline = useRef<HTMLDivElement>(null);
@@ -302,15 +309,16 @@ export function RacerScene({ speed, crashed, onLand, ejected, class: cls }: Race
     return () => clearTimeout(t);
   }, [ejection]);
 
-  const palmRow = PALMS.map((left) => <img key={left} class="racer-scene-palm" src={palmImg} alt="" style={{ left: `${left}%` }} />);
+  const palmRow = PALMS.map((left) => <img key={left} class="racer-scene-palm" src={christmas ? christmasTree : palmImg} alt="" style={{ left: `${left}%` }} />);
   return (
-    <div ref={root} class={`racer-scene ${crashed ? "crashed" : ""} ${cls ?? ""}`} aria-hidden="true">
+    <div ref={root} class={`racer-scene ${crashed ? "crashed" : ""} ${cls ?? ""}`} data-theme={racerTheme(theme)} aria-hidden="true">
       <canvas ref={stars} class="racer-scene-stars" />
       {/* Everything but the car: it slides down out of view while the car is in space. */}
       <div class="racer-scene-world">
         <div class="racer-scene-sky" />
         <div class="racer-scene-sun" />
-        <div ref={skyline} class="racer-scene-skyline" style={{ backgroundImage: `url(${skylineImg})` }} />
+        {christmas && <div class="racer-scene-snow" />}
+        <div ref={skyline} class="racer-scene-skyline" style={{ backgroundImage: `url(${christmas ? christmasSkyline : skylineImg})` }} />
         {/* Two copies side by side, one scene wide each: as one slides out on the right, the other has slid in. */}
         <div ref={palms} class="racer-scene-palms">
           <div class="racer-scene-palm-row">{palmRow}</div>
@@ -321,7 +329,7 @@ export function RacerScene({ speed, crashed, onLand, ejected, class: cls }: Race
         </div>
       </div>
       <div ref={car} class="racer-scene-car">
-        <img src={crashed ? carCrashedImg : carImg} alt="" />
+        <img src={christmas ? (crashed ? christmasCrash : christmasCar) : (crashed ? carCrashedImg : carImg)} alt="" />
         {crashed && (
           <div class="racer-scene-smoke">
             <i />

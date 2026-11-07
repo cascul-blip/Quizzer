@@ -1,3 +1,4 @@
+import { racerName } from "../../shared/racer-theme.ts";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { HostView, RacerTurn } from "../../shared/protocol.ts";
 import { RACER_CONFIDENCE, RACER_CONFIDENCE_LEVELS, RACER_REPAIR_MPH } from "../../shared/racer-rules.ts";
@@ -79,7 +80,7 @@ export function RacerStage({ view, send }: { view: RacerView; send: Send }) {
     <div class="stage racer-stage">
       <header class="topbar">
         <div class="title">{view.quiz.title}</div>
-        <div class="pill">🏎 Racer</div>
+        <div class="pill">{racerName(view.theme)}</div>
         {q && !podium && (
           <div class="pill">
             Question {q.index + 1} / {q.total}
@@ -122,6 +123,7 @@ export function RacerStage({ view, send }: { view: RacerView; send: Send }) {
           <main class="racer-upper">{q && <Turn view={view} send={send} secs={secs} />}</main>
           <section class="racer-lower">
             <RacerScene
+              theme={view.theme}
               speed={view.car.speed}
               crashed={view.car.crashed}
               onLand={() => play("land")}
@@ -387,7 +389,7 @@ function RacerPodium({ view, send }: { view: RacerView; send: Send }) {
         </button>
       </footer>
       <div class="racer-podium-strip">
-        <RacerScene speed={0} crashed={view.car.crashed} />
+        <RacerScene theme={view.theme} speed={0} crashed={view.car.crashed} />
       </div>
     </main>
   );

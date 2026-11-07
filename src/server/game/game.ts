@@ -1,3 +1,4 @@
+import { DEFAULT_RACER_THEME } from "../../shared/racer-theme.ts";
 import { DEFAULT_TOWER_THEME } from "../../shared/tower-theme.ts";
 import {
   BOMB_MAX_SQUADS,
@@ -38,6 +39,7 @@ import {
   type RankedEntry,
   type ShuffleOptions,
   type SiegeSettings,
+  type RacerSettings,
   type TowerSettings,
 } from "../../shared/protocol.ts";
 import { SIEGE_WAVE_CHOICES, type SiegeWaves } from "../../shared/siege-rules.ts";
@@ -58,6 +60,7 @@ export const AUTO_LEADERBOARD_MS = 5000;
 /** Answers sent just before the deadline may arrive slightly after it. */
 export const GRACE_MS = 500;
 const LEADERBOARD_SIZE = 10;
+export const DEFAULT_RACER: RacerSettings = { theme: DEFAULT_RACER_THEME };
 export const DEFAULT_TOWER: TowerSettings = { teams: 2, minutes: 5, monster: true, theme: DEFAULT_TOWER_THEME };
 export const DEFAULT_FIGHT: FightSettings = { hill: "random" };
 export const DEFAULT_LAND: LandSettings = { teams: 2, minutes: 5 };
@@ -103,6 +106,7 @@ interface GameOptions {
   onFinish?: (game: Game) => void;
   /** Initial lobby choices (e.g. carried over from the previous game). */
   mode?: GameMode;
+  racer?: RacerSettings;
   tower?: TowerSettings;
   fight?: FightSettings;
   land?: LandSettings;
@@ -133,6 +137,7 @@ export class Game {
   /** "Protect from abuse": Tallest Tower, Submarine Squad, Tower Fight, Robot Attack, Cup of Death, Dragon's Hoard, Kingdom Siege and Santa's Sleigh Run slow down players who keep answering wrong. Bomb Squad does not use it. */
   protect: boolean;
   mode: GameMode;
+  racer: RacerSettings;
   tower: TowerSettings;
   fight: FightSettings;
   land: LandSettings;
@@ -171,6 +176,7 @@ export class Game {
     this.onChange = opts.onChange ?? (() => {});
     this.onFinish = opts.onFinish ?? (() => {});
     this.mode = opts.mode ?? "classic";
+    this.racer = { ...(opts.racer ?? DEFAULT_RACER) };
     this.tower = { ...(opts.tower ?? DEFAULT_TOWER) };
     this.fight = { ...(opts.fight ?? DEFAULT_FIGHT) };
     this.land = { ...(opts.land ?? DEFAULT_LAND) };
@@ -282,6 +288,13 @@ export class Game {
       this.bombSquadsManual = false;
       this.bomb = { ...this.bomb, squads: BombGame.recommendSquads(this.players.size, this.bomb.game) };
     }
+    this.onChange();
+  }
+
+  setRacer(settings: RacerSettings): void {
+    if (this.phase !== "lobby") throw new GameError("Racer settings can only be changed before the game starts");
+    if (settings.theme !== "classic" && settings.theme !== "christmas") throw new GameError("Unknown racer theme");
+    this.racer = { theme: settings.theme };
     this.onChange();
   }
 
@@ -613,6 +626,7 @@ export class Game {
       kind: "classic",
       phase: this.phase,
       mode: this.mode,
+      racer: this.racer,
       tower: this.tower,
       fight: this.fight,
       land: this.land,
