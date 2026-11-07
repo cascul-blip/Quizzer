@@ -67,6 +67,27 @@ song recordings, instrument recordings, or modern copyrighted arrangements are
 included in these cues. Driving keeps the complete melody audible while its
 rhythm section builds with speed, from 112 to 162.4 BPM at full intensity.
 
+## Christmas Toybox: Patapan
+
+`siege-christmas-lobby`, `siege-christmas-battle`, and `siege-christmas-results`
+use the traditional Burgundian **Patapan / Guillô, pran ton tamborin** melody,
+associated with Bernard de la Monnoye (c. 1700). The complete 48-beat soprano melody
+in A minor is transcribed from Douglas D. Anderson's score, explicitly marked
+"Released to the Public Domain": [score and dedication](https://www.hymnsandcarolsofchristmas.com/Hymns_and_Carols/PDF/Guillo_pran_ton_tamborin-da.pdf).
+[Hymnary's tune record](https://hymnary.org/tune/guillaume_prends_ton_tambourin_11554)
+also identifies the traditional tune as public domain. The score's Charles Wood
+SATB harmonization is not used; accompaniment and orchestration are written for
+this game. The two-beat pickup begins the 12-bar loop, with the final two beats
+completing its last bar.
+
+The lobby uses flute, bells, plucked accompaniment, piano bass and light toy-like
+woodblock/snare percussion. The battle keeps the tune audible during build breaks
+and adds strings, brass, drums and timpani as danger increases. Results use a
+brighter bell-and-brass setting for victory and a gentler flute/piano setting for
+a fallen castle. All instrument recordings used here are CC0 VSCO 2 CE / VCSL
+samples listed above; no commercial performance, modern song arrangement,
+FluidR3 bass or guitar is included. Synthesized fallback remains available.
+
 ## Tower Fight: A Mighty Fortress Is Our God
 
 The battle cue (`fight-play`) uses **EIN FESTE BURG / A Mighty Fortress Is Our God**

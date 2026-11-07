@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "preact/hooks";
+import { siegeDefenderLabel } from "../../shared/siege-theme.ts";
+import { SiegeThemeProvider, useChristmasSiege, useSiegeTheme } from "../shared/siege-skin.tsx";
 import type { ClientMsg, PlayerSiegeView } from "../../shared/protocol.ts";
 import {
   SIEGE_BUILD_SQUARES,
@@ -24,6 +26,11 @@ const ALERT_TEXT = { giant: "⚠️ A giant approaches!", wall: "💥 The wall w
 
 /** Phone screen for Kingdom Siege: answer questions for gold, and tap Build to place or upgrade defenders on the lane map. */
 export function SiegePlayer({ view, send }: { view: PlayerSiegeView; send: Send }) {
+  return <SiegeThemeProvider theme={view.theme}><SiegePlayerContent view={view} send={send} /></SiegeThemeProvider>;
+}
+
+function SiegePlayerContent({ view, send }: { view: PlayerSiegeView; send: Send }) {
+  const christmas = useChristmasSiege();
   const playing = view.phase === "build" || view.phase === "wave";
   const [mapOpen, setMapOpen] = useState(false);
   const openMap = (open: boolean) => {
@@ -52,7 +59,7 @@ export function SiegePlayer({ view, send }: { view: PlayerSiegeView; send: Send 
     );
 
   return (
-    <div class="game siege-game">
+    <div class={`game siege-game ${christmas ? "siege-christmas" : ""}`}>
       <header class="bar siege-bar">
         <span class="siege-bar-hearts" aria-label={`${view.hearts} of ${SIEGE_HEARTS} hearts`}>
           <SiegeIcon kind="heart" /> <b>{view.hearts}</b>
@@ -120,6 +127,7 @@ function defaultPick(view: PlayerSiegeView): SiegeDefenderType {
 
 /** The top-down 5 × 7 map of buildable squares (plus the entry squares, where monsters show up). */
 function LaneMap({ view, send, onClose }: { view: PlayerSiegeView; send: Send; onClose: () => void }) {
+  const theme = useSiegeTheme();
   const [pick, setPick] = useState<SiegeDefenderType>(() => defaultPick(view));
   const [bubble, setBubble] = useState<{ lane: number; square: number } | null>(null);
   const [touched, setTouched] = useState(0);
@@ -172,7 +180,7 @@ function LaneMap({ view, send, onClose }: { view: PlayerSiegeView; send: Send; o
                 }}
               >
                 <SiegeIcon kind={t} />
-                <span class="siege-pick-name">{SIEGE_DEFENDERS[t].label}</span>
+                <span class="siege-pick-name">{siegeDefenderLabel(t, theme)}</span>
                 <span class="siege-pick-cost">
                   <SiegeIcon kind="coin" /> {cost}
                 </span>
@@ -199,7 +207,7 @@ function LaneMap({ view, send, onClose }: { view: PlayerSiegeView; send: Send; o
                   key={square}
                   class={`siege-cell ${entry ? "entry" : ""} ${d ? `has ${d.type}` : ""} ${isBubble ? "picked" : ""}`}
                   disabled={entry || (!d && dots > 0)}
-                  aria-label={d ? `${SIEGE_DEFENDERS[d.type].label} level ${d.level}, lane ${lane + 1} square ${square}` : `Lane ${lane + 1} square ${square}`}
+                  aria-label={d ? `${siegeDefenderLabel(d.type, theme)} level ${d.level}, lane ${lane + 1} square ${square}` : `Lane ${lane + 1} square ${square}`}
                   onClick={() => tapSquare(lane, square)}
                 >
                   {d && (
@@ -219,17 +227,17 @@ function LaneMap({ view, send, onClose }: { view: PlayerSiegeView; send: Send; o
         <div class="siege-bubble">
           {upgradeCost === null ? (
             <>
-              {SIEGE_DEFENDERS[selected.type].label} Lv {selected.level}: <b>Max level</b>
+              {siegeDefenderLabel(selected.type, theme)} Lv {selected.level}: <b>Max level</b>
             </>
           ) : (
             <>
-              {SIEGE_DEFENDERS[selected.type].label} Lv {selected.level} → Lv {selected.level + 1}: <b>{upgradeCost} gold</b>
+              {siegeDefenderLabel(selected.type, theme)} Lv {selected.level} → Lv {selected.level + 1}: <b>{upgradeCost} gold</b>
               <span class="muted">{view.gold >= upgradeCost ? " · tap again to buy" : " · not enough gold"}</span>
             </>
           )}
         </div>
       ) : (
-        <p class="siege-map-hint muted">Tap an empty square to place {pick === "archer" ? "an" : "a"} {SIEGE_DEFENDERS[pick].label.toLowerCase()}. Tap a defender to upgrade it.</p>
+        <p class="siege-map-hint muted">Tap an empty square to place {pick === "archer" ? "an" : "a"} {siegeDefenderLabel(pick, theme).toLowerCase()}. Tap a defender to upgrade it.</p>
       )}
     </div>
   );

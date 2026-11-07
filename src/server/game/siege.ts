@@ -1,3 +1,4 @@
+import { siegeTheme, siegeDefenderLabel } from "../../shared/siege-theme.ts";
 import type { AnswerValue } from "../../shared/answer-match.ts";
 import {
   type HostSiegeState,
@@ -232,6 +233,12 @@ export class SiegeGame {
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: SiegeGame) => void;
+
+  private defenderName(type: SiegeDefenderType): string {
+    if (siegeTheme(this.settings.theme) !== "christmas") return DEFENDER_NAMES[type];
+    const label = siegeDefenderLabel(type, this.settings.theme).toLowerCase();
+    return `${type === "archer" ? "an" : "a"} ${label}`;
+  }
 
   constructor(quiz: Quiz, settings: SiegeGameSettings, opts: SiegeOptions = {}) {
     if (quiz.questions.length === 0) throw new GameError("This quiz has no questions");
@@ -723,7 +730,7 @@ export class SiegeGame {
     p.lastPlaced = t;
     const health = SIEGE_DEFENDERS[t].health[0];
     this.defenders.push({ id: ++this.ids, type: t, lane: l, square: s, level: 1, health, maxHealth: health, owner: p, cooldown: 0, hitSeq: 0, attackSeq: 0 });
-    this.addEvent(p, `placed ${DEFENDER_NAMES[t]}`);
+    this.addEvent(p, `placed ${this.defenderName(t)}`);
     this.onChange();
     return null;
   }
@@ -748,7 +755,7 @@ export class SiegeGame {
     const maxHealth = stats.health[d.level - 1]!;
     d.health += maxHealth - d.maxHealth;
     d.maxHealth = maxHealth;
-    this.addEvent(p, `upgraded ${DEFENDER_NAMES[d.type]} to Lv ${d.level}`);
+    this.addEvent(p, `upgraded ${this.defenderName(d.type)} to Lv ${d.level}`);
     this.onChange();
     return null;
   }
@@ -953,7 +960,7 @@ export class SiegeGame {
       kind: "siege",
       phase: this.phase,
       quiz: { id: this.quizId, title: this.title, questionCount: this.questions.length },
-      settings: { waves: this.settings.waves },
+      settings: { waves: this.settings.waves, theme: siegeTheme(this.settings.theme) },
       wave: this.wave,
       gold: players.reduce((sum, p) => sum + p.gold, 0),
       hearts: this.hearts,
@@ -1026,6 +1033,7 @@ export class SiegeGame {
       phase: this.phase,
       title: this.title,
       phaseRemainingMs: this.phase === "wave" || podium ? 0 : this.remaining(this.phaseEndsAt),
+      theme: siegeTheme(this.settings.theme),
       phaseDurationMs: this.phaseDurationMs,
       wave: this.wave,
       waves: this.settings.waves,

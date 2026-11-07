@@ -1,0 +1,159 @@
+{
+  "castle": {
+    "canvas": [
+      360,
+      768
+    ],
+    "registration": {
+      "castle-wall": {
+        "sourceGround": [
+          82,
+          661
+        ],
+        "boardGround": [
+          58,
+          664
+        ],
+        "scaleY": 1.0466321243523315,
+        "offsetY": -28
+      },
+      "castle-wall-cracked": {
+        "sourceGround": [
+          82,
+          661
+        ],
+        "boardGround": [
+          58,
+          664
+        ],
+        "scaleY": 1.0466321243523315,
+        "offsetY": -28
+      },
+      "castle-wall-fallen": {
+        "sourceGround": [
+          53,
+          662
+        ],
+        "boardGround": [
+          58,
+          664
+        ],
+        "scaleY": 0.9950738916256158,
+        "offsetY": 5
+      }
+    }
+  },
+  "knight": {
+    "size": [
+      200,
+      240
+    ],
+    "anchor": [
+      99,
+      205
+    ],
+    "baseWidth": 116.88198757763976,
+    "pivots": {
+      "body": [
+        100.33,
+        143.92
+      ],
+      "head": [
+        100.33,
+        91.83
+      ],
+      "sword": [
+        73.28,
+        101.59
+      ],
+      "shield": [
+        127.16,
+        101.59
+      ]
+    }
+  },
+  "giant": {
+    "size": [
+      420,
+      520
+    ],
+    "anchor": [
+      226,
+      440
+    ],
+    "baseWidth": 310.0,
+    "pivots": {
+      "torso": [
+        227.19,
+        303.26
+      ],
+      "head": [
+        215.81,
+        203.66
+      ],
+      "right": [
+        158.92,
+        193.28
+      ],
+      "left": [
+        295.46,
+        182.91
+      ]
+    }
+  },
+  "archer": {
+    "size": [
+      180,
+      220
+    ],
+    "anchor": [
+      82,
+      188
+    ],
+    "baseWidth": 119.71276595744682
+  },
+  "wall": {
+    "size": [
+      200,
+      180
+    ],
+    "anchor": [
+      91,
+      135
+    ],
+    "baseWidth": 172.0
+  },
+  "goblin": {
+    "size": [
+      210,
+      220
+    ],
+    "anchor": [
+      130,
+      185
+    ],
+    "baseWidth": 91.0
+  },
+  "wolf": {
+    "size": [
+      220,
+      160
+    ],
+    "anchor": [
+      113,
+      123
+    ],
+    "baseWidth": 140.0
+  },
+  "troll": {
+    "size": [
+      330,
+      300
+    ],
+    "anchor": [
+      200,
+      252
+    ],
+    "baseWidth": 182.0
+  }
+}

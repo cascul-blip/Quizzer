@@ -13,6 +13,7 @@
  * Bomb Squad = spy-jazz (bass, brushes, vibraphone) that picks up a tick and more layers as the bomb runs down.
  * Kingdom Siege = a pastoral recorder-and-lute lobby, a marching battle with snare, tabor, recorders and brass,
  *   church bells for a victory and a low brass lament for a fallen castle. These three use the rich sound (see rich.ts).
+ *   Christmas Toybox uses Patapan on flute, bells and toy percussion, adding marching drums and brass as danger grows.
  * Showdown = original Spaghetti Western music in the shape of a title theme: electric-guitar tremolo,
  *   a sparse whistle, flute in the gaps, anvil, whip and "hup!" stabs, the trumpet taking the tune as time
  *   runs out, and a one-shot draw sting. In D minor (the podium in D major), apart from Cup of Death's A minor.
@@ -1393,6 +1394,84 @@ const siegeResults: Track = {
   ],
 };
 
+// ---------- Christmas Toybox: Patapan, with flute, toy percussion and bells ----------
+// Traditional Burgundian melody, A minor. Soprano transcription from the score explicitly
+// released to the public domain by Douglas D. Anderson; see samples/CREDITS.md.
+// The two-beat pickup starts the loop; the final two beats complete twelve 4/4 bars.
+const PATAPAN = [
+  seq(["A4", 4], ["A4", 4], ["E5", 4], ["E5", 4]),
+  seq(["D5", 4], ["E5", 4], ["C5", 4], ["B4", 2], ["C5", 2]),
+  seq(["D5", 4], ["B4", 4], ["E5", 8]),
+  seq(["C5", 8], ["B4", 8]),
+  seq(["B4", 4], ["C5", 4], ["B4", 4], ["G#4", 4]),
+  seq(["A4", 4], ["B4", 4], ["C5", 8]),
+  seq(["A4", 2], ["B4", 2], ["C5", 2], ["D5", 2], ["E5", 8]),
+  seq(["D5", 2], ["E5", 2], ["D5", 2], ["C5", 2], ["B4", 8]),
+  seq(["B4", 4], ["C5", 4], ["B4", 4], ["G#4", 4]),
+  seq(["A4", 4], ["B4", 4], ["C5", 4], ["B4", 2], ["C5", 2]),
+  seq(["D5", 4], ["C5", 2], ["B4", 2], ["E5", 8]),
+  seq(["B4", 8], ["A4", 8]),
+];
+// Newly written accompaniment, not a copy of the score's SATB harmonization.
+const PATAPAN_CHORDS: Record<string, string[]> = {
+  Am: ["A3", "C4", "E4"], E: ["E3", "G#3", "B3"], Dm: ["D3", "F3", "A3"],
+};
+const PATAPAN_HARMONY = [
+  ["Am", "E"], ["Dm", "Am"], ["E", "Am"], ["Am", "E"],
+  ["E", "E"], ["Am", "Am"], ["Am", "Am"], ["Dm", "E"],
+  ["E", "E"], ["Am", "Am"], ["Dm", "Am"], ["E", "Am"],
+];
+const patapanPad = PATAPAN_HARMONY.map(([a, b]) => seq([chord(PATAPAN_CHORDS[a!]!.join(" ")), 8], [chord(PATAPAN_CHORDS[b!]!.join(" ")), 8]));
+const patapanBass = PATAPAN_HARMONY.map(([a, b]) => {
+  const root = (name: string) => PATAPAN_CHORDS[name]![0]!.replace("3", "2");
+  return seq([root(a!), 4], [".", 4], [root(b!), 4], [".", 4]);
+});
+const patapanPluck = PATAPAN_HARMONY.map(([a, b]) => arp([...PATAPAN_CHORDS[a!]!, PATAPAN_CHORDS[a!]![1]!, ...PATAPAN_CHORDS[b!]!, PATAPAN_CHORDS[b!]![1]!], 2));
+
+const christmasSiegeLobby: Track = {
+  id: "siege-christmas-lobby", rich: true, bpm: 96, bars: PATAPAN.length, reverb: 0.25,
+  layers: [
+    { inst: "flute", bars: PATAPAN, vol: 0.55 },
+    { inst: "bell", bars: shift(PATAPAN, 1), vol: 0.16 },
+    { inst: "pluck", bars: patapanPluck, vol: 0.38 },
+    { inst: "piano", bars: patapanBass, vol: 0.38 },
+    { inst: "pad", bars: patapanPad, vol: 0.18 },
+    { inst: "woodblock", bars: [drum("x...x.x.x...x.x.")], vol: 0.23 },
+    { inst: "snare", bars: [drum("....x.......x...")], vol: 0.13 },
+  ],
+};
+const christmasSiegeBattle: Track = {
+  id: "siege-christmas-battle", rich: true, bpm: 112, tempoBoost: 0.15, bars: PATAPAN.length, reverb: 0.2,
+  layers: [
+    // Keep the recognizable carol audible during countdowns and build breaks too.
+    { inst: "flute", bars: PATAPAN, vol: 0.55 },
+    { inst: "bell", bars: shift(PATAPAN, 1), vol: 0.16 },
+    { inst: "pluck", bars: patapanPluck, vol: 0.35 },
+    { inst: "piano", bars: patapanBass, vol: 0.45 },
+    { inst: "pad", bars: patapanPad, vol: 0.2 },
+    { inst: "woodblock", bars: [drum("x...x.x.x...x.x.")], vol: 0.3 },
+    { inst: "snare", bars: [drum("x..xx.x.x..xx.x."), drum("x..xx.x.x..xx.x."), drum("x..xx.x.x..xx.x."), drum("x..xx.x.x.xxxxxx")], vol: 0.28, from: 0.2 },
+    { inst: "hat", bars: [drum("o.x.x.x.o.x.x.x.")], vol: 0.22, from: 0.35 },
+    { inst: "strings", bars: patapanPad, vol: 0.3, from: 0.4 },
+    { inst: "brass", bars: PATAPAN, vol: 0.28, from: 0.6 },
+    { inst: "kick", bars: [drum("x.......x.......")], vol: 0.3, from: 0.65 },
+    { inst: "timpani", bars: patapanBass, vol: 0.35, from: 0.85 },
+  ],
+};
+const christmasSiegeResults: Track = {
+  id: "siege-christmas-results", rich: true, bpm: 100, bars: PATAPAN.length, reverb: 0.32,
+  layers: [
+    { inst: "flute", bars: PATAPAN, vol: 0.45 },
+    { inst: "piano", bars: patapanBass, vol: 0.35 },
+    { inst: "pad", bars: patapanPad, vol: 0.22 },
+    { inst: "bell", bars: shift(PATAPAN, 1), vol: 0.22, from: 0.5 },
+    { inst: "brass", bars: PATAPAN, vol: 0.35, from: 0.5 },
+    { inst: "pluck", bars: patapanPluck, vol: 0.3, from: 0.5 },
+    { inst: "woodblock", bars: [drum("x...x.x.x...x.x.")], vol: 0.2, from: 0.5 },
+    { inst: "snare", bars: [drum("....x.......x...")], vol: 0.25, from: 0.5 },
+  ],
+};
+
 // ---------- Showdown: a quick-draw standoff at High Noon ----------
 // Original title-theme shape, not a transcription of any film cue. D minor: a 16th-note electric-guitar
 // tremolo on the chord, a low root on beats 1 and 3, and a sparse whistle that leaves gaps for the flute.
@@ -2121,6 +2200,9 @@ export const TRACKS: Record<MusicTrackId, Track> = {
   "siege-lobby": siegeLobby,
   "siege-battle": siegeBattle,
   "siege-results": siegeResults,
+  "siege-christmas-lobby": christmasSiegeLobby,
+  "siege-christmas-battle": christmasSiegeBattle,
+  "siege-christmas-results": christmasSiegeResults,
   "showdown-lobby": showdownLobby,
   showdown,
   "showdown-draw": showdownDraw,

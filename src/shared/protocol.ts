@@ -1,4 +1,5 @@
 import type { LandTheme } from "./land-theme.ts";
+import type { SiegeTheme } from "./siege-theme.ts";
 import type { FightTheme } from "./fight-theme.ts";
 import type { RacerTheme } from "./racer-theme.ts";
 import type { TowerTheme } from "./tower-theme.ts";
@@ -1652,6 +1653,7 @@ export interface PlayerBombView {
 export type SiegePhase = "countdown" | "build" | "wave" | "stands" | "fallen" | "podium";
 
 export interface SiegeSettings {
+  theme?: SiegeTheme;
   /** 5, 10 or "endless". */
   waves: SiegeWaves;
 }
@@ -1795,6 +1797,7 @@ export interface SiegeMapView {
 
 export interface PlayerSiegeView {
   kind: "siege";
+  theme?: SiegeTheme;
   phase: SiegePhase;
   title: string;
   phaseRemainingMs: number;
