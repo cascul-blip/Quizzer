@@ -1,3 +1,46 @@
+import { useChristmasSiege } from "./siege-skin.tsx";
+import toyboxManifest from "./siege/christmas/manifest.json";
+import christmasArcherDrawImg from "./siege/christmas/archer-draw.webp";
+import christmasArcherReadyImg from "./siege/christmas/archer-ready.webp";
+import christmasArrowImg from "./siege/christmas/arrow.webp";
+import christmasBannerClothImg from "./siege/christmas/banner-cloth.webp";
+import christmasBoardImg from "./siege/christmas/board.webp";
+import christmasCastleCrackedImg from "./siege/christmas/castle-wall-cracked.webp";
+import christmasCastleFallenImg from "./siege/christmas/castle-wall-fallen.webp";
+import christmasCastleImg from "./siege/christmas/castle-wall.webp";
+import christmasCoinImg from "./siege/christmas/coin.webp";
+import christmasDustImg from "./siege/christmas/dust-puff.webp";
+import christmasGiantHeadImg from "./siege/christmas/giant-head.webp";
+import christmasGiantLeftArmImg from "./siege/christmas/giant-left-arm.webp";
+import christmasGiantLegsImg from "./siege/christmas/giant-legs.webp";
+import christmasGiantRightArmImg from "./siege/christmas/giant-right-arm.webp";
+import christmasGiantTorsoImg from "./siege/christmas/giant-torso.webp";
+import christmasGoblinAttackImg from "./siege/christmas/goblin-attack.webp";
+import christmasGoblinWalkImg from "./siege/christmas/goblin-walk.webp";
+import christmasHeartImg from "./siege/christmas/heart.webp";
+import christmasKnightBodyImg from "./siege/christmas/knight-body.webp";
+import christmasKnightHeadImg from "./siege/christmas/knight-head.webp";
+import christmasKnightLegsImg from "./siege/christmas/knight-legs.webp";
+import christmasKnightShieldArmImg from "./siege/christmas/knight-shield-arm.webp";
+import christmasKnightSwordArmImg from "./siege/christmas/knight-sword-arm.webp";
+import christmasLv2PennantArcherImg from "./siege/christmas/lv2-pennant-archer.webp";
+import christmasLv2PennantKnightImg from "./siege/christmas/lv2-pennant-knight.webp";
+import christmasLv2WallCourseImg from "./siege/christmas/lv2-wall-course.webp";
+import christmasLv3TrimArcherImg from "./siege/christmas/lv3-trim-archer.webp";
+import christmasLv3TrimKnightImg from "./siege/christmas/lv3-trim-knight.webp";
+import christmasLv3TrimWallImg from "./siege/christmas/lv3-trim-wall.webp";
+import christmasLv3WallSpikesImg from "./siege/christmas/lv3-wall-spikes.webp";
+import christmasPhoneArcherIconImg from "./siege/christmas/phone/archer-icon.webp";
+import christmasPhoneCoinImg from "./siege/christmas/phone/coin.webp";
+import christmasPhoneHeartImg from "./siege/christmas/phone/heart.webp";
+import christmasPhoneKnightIconImg from "./siege/christmas/phone/knight-icon.webp";
+import christmasPhoneWallIconImg from "./siege/christmas/phone/stone-wall-icon.webp";
+import christmasStoneWallCrackedImg from "./siege/christmas/stone-wall-cracked.webp";
+import christmasStoneWallImg from "./siege/christmas/stone-wall.webp";
+import christmasTrollSmashImg from "./siege/christmas/troll-smash.webp";
+import christmasTrollWalkImg from "./siege/christmas/troll-walk.webp";
+import christmasWolfLeapImg from "./siege/christmas/wolf-leap.webp";
+import christmasWolfRunImg from "./siege/christmas/wolf-run.webp";
 /**
  * Kingdom Siege art: a hand-painted tabletop diorama with a castle wall on the left and 5
  * lanes of meadow, painted miniatures for the defenders and monsters, and the effects drawn
@@ -53,6 +96,56 @@ import trollWalkImg from "./siege/troll-walk.webp";
 import wolfLeapImg from "./siege/wolf-leap.webp";
 import wolfRunImg from "./siege/wolf-run.webp";
 import { pickArt } from "./phone-art.ts";
+
+const TOYBOX_ART: Record<string, string> = {
+  [archerDrawImg]: christmasArcherDrawImg,
+  [archerReadyImg]: christmasArcherReadyImg,
+  [arrowImg]: christmasArrowImg,
+  [bannerClothImg]: christmasBannerClothImg,
+  [boardImg]: christmasBoardImg,
+  [castleCrackedImg]: christmasCastleCrackedImg,
+  [castleFallenImg]: christmasCastleFallenImg,
+  [castleImg]: christmasCastleImg,
+  [coinImg]: christmasCoinImg,
+  [dustImg]: christmasDustImg,
+  [giantHeadImg]: christmasGiantHeadImg,
+  [giantLeftArmImg]: christmasGiantLeftArmImg,
+  [giantLegsImg]: christmasGiantLegsImg,
+  [giantRightArmImg]: christmasGiantRightArmImg,
+  [giantTorsoImg]: christmasGiantTorsoImg,
+  [goblinAttackImg]: christmasGoblinAttackImg,
+  [goblinWalkImg]: christmasGoblinWalkImg,
+  [heartImg]: christmasHeartImg,
+  [knightBodyImg]: christmasKnightBodyImg,
+  [knightHeadImg]: christmasKnightHeadImg,
+  [knightLegsImg]: christmasKnightLegsImg,
+  [knightShieldArmImg]: christmasKnightShieldArmImg,
+  [knightSwordArmImg]: christmasKnightSwordArmImg,
+  [lv2PennantArcherImg]: christmasLv2PennantArcherImg,
+  [lv2PennantKnightImg]: christmasLv2PennantKnightImg,
+  [lv2WallCourseImg]: christmasLv2WallCourseImg,
+  [lv3TrimArcherImg]: christmasLv3TrimArcherImg,
+  [lv3TrimKnightImg]: christmasLv3TrimKnightImg,
+  [lv3TrimWallImg]: christmasLv3TrimWallImg,
+  [lv3WallSpikesImg]: christmasLv3WallSpikesImg,
+  [phoneArcherIconImg]: christmasPhoneArcherIconImg,
+  [phoneCoinImg]: christmasPhoneCoinImg,
+  [phoneHeartImg]: christmasPhoneHeartImg,
+  [phoneKnightIconImg]: christmasPhoneKnightIconImg,
+  [phoneWallIconImg]: christmasPhoneWallIconImg,
+  [stoneWallCrackedImg]: christmasStoneWallCrackedImg,
+  [stoneWallImg]: christmasStoneWallImg,
+  [trollSmashImg]: christmasTrollSmashImg,
+  [trollWalkImg]: christmasTrollWalkImg,
+  [wolfLeapImg]: christmasWolfLeapImg,
+  [wolfRunImg]: christmasWolfRunImg,
+};
+
+/** Resolve the skin at render time so lobby changes and both clients share one art path. */
+function ArtImage({ src, ...props }: JSX.IntrinsicElements["img"]) {
+  const christmas = useChristmasSiege();
+  return <img {...props} src={christmas && typeof src === "string" ? TOYBOX_ART[src] ?? src : src} />;
+}
 
 // ---------- the numbers from ./siege/manifest.md ----------
 
@@ -138,10 +231,10 @@ function placeStyle(c: Canvas, p: { px: number; py: number; scale: number }): JS
 }
 
 /** A layer on a figure canvas (full size unless given), placed in the canvas's own px. */
-function Layer({ src, c, box, origin, class: cls = "", style }: { src: string; c: Canvas; box?: [number, number, number, number]; origin?: readonly [number, number]; class?: string; style?: JSX.CSSProperties }) {
+function Layer({ src, c, box, origin, class: cls = "", style }: { src: string; c: Canvas; box?: [number, number, number, number]; origin?: readonly number[]; class?: string; style?: JSX.CSSProperties }) {
   const [x, y, w, h] = box ?? [0, 0, c.w, c.h];
   return (
-    <img
+    <ArtImage
       class={`siege-layer ${cls}`}
       src={src}
       alt=""
@@ -169,24 +262,25 @@ const flip = (name: string, seq: number) => (seq > 0 ? `${name}-${seq % 2 ? "a" 
 // ---------- the board ----------
 
 export function SiegeBoard({ hearts, castle = "auto", children, class: cls = "" }: { hearts: number; castle?: "auto" | "crumble" | "fallen"; children?: ComponentChildren; class?: string }) {
+  const christmas = useChristmasSiege();
   const layer = castle === "fallen" ? castleFallenImg : hearts <= SIEGE_CRACKED_HEARTS ? castleCrackedImg : castleImg;
   return (
-    <div class={`siege-board ${cls}`} style={{ aspectRatio: `${BOARD.w} / ${BOARD.h}` }}>
-      <img class="siege-board-img" src={boardImg} alt="" draggable={false} />
+    <div class={`siege-board ${christmas ? "siege-christmas" : ""} ${cls}`} style={{ aspectRatio: `${BOARD.w} / ${BOARD.h}` }}>
+      <ArtImage class="siege-board-img" src={boardImg} alt="" draggable={false} />
       <div class={`siege-castle ${castle}`} style={{ width: pct(CASTLE.w, BOARD.w) }}>
         {castle === "crumble" ? (
           <>
-            <img class="castle-fallen-under" src={castleFallenImg} alt="" draggable={false} />
-            <img class="castle-crumbling" src={castleCrackedImg} alt="" draggable={false} />
+            <ArtImage class="castle-fallen-under" src={castleFallenImg} alt="" draggable={false} />
+            <ArtImage class="castle-crumbling" src={castleCrackedImg} alt="" draggable={false} />
           </>
         ) : (
-          <img src={layer} alt="" draggable={false} />
+          <ArtImage src={layer} alt="" draggable={false} />
         )}
       </div>
       {castle === "crumble" && (
         <div class="castle-dust" aria-hidden="true">
           {Array.from({ length: 7 }, (_, i) => (
-            <img key={i} src={dustImg} alt="" style={{ "--i": String(i), top: `${12 + i * 12}%` }} />
+            <ArtImage key={i} src={dustImg} alt="" style={{ "--i": String(i), top: `${12 + i * 12}%` }} />
           ))}
         </div>
       )}
@@ -259,7 +353,7 @@ function Archer({ level, drawing }: { level: number; drawing: boolean }) {
 /** The knight's cut-out: legs, (Lv 2 banner behind his back), body, head, sword arm, shield arm. Each strike swings the sword arm and leans the body. */
 function Knight({ level, attackSeq }: { level: number; attackSeq: number }) {
   const c = FIGURES.knight;
-  const P = KNIGHT_PIVOT;
+  const P = useChristmasSiege() ? toyboxManifest.knight.pivots : KNIGHT_PIVOT;
   return (
     <>
       <Layer src={knightLegsImg} c={c} />
@@ -291,7 +385,8 @@ function StoneWall({ level, cracked }: { level: number; cracked: boolean }) {
 
 /** A monster at position x (in squares). Walking ones bob; attacking ones switch pose on each hit. */
 export function MonsterFigure({ m, x, posed }: { m: HostSiegeMonster; x: number; posed: boolean }) {
-  const c = FIGURES[m.type];
+  const christmas = useChristmasSiege();
+  const c = monsterCanvas(m.type, christmas);
   const p = boardPoint(m.lane, x);
   const walking = m.state === "walk";
   return (
@@ -306,6 +401,13 @@ export function MonsterFigure({ m, x, posed }: { m: HostSiegeMonster; x: number;
   );
 }
 
+/** Pose canvases can extend around a weapon while their base stays on the same lane point. */
+function monsterCanvas(type: SiegeMonsterType, christmas: boolean): Canvas {
+  if (!christmas) return FIGURES[type];
+  const { size, anchor } = toyboxManifest[type];
+  return { w: size[0]!, h: size[1]!, ax: anchor[0]!, ay: anchor[1]! };
+}
+
 function monsterPose(type: Exclude<SiegeMonsterType, "giant">, action: boolean): string {
   if (type === "goblin") return action ? goblinAttackImg : goblinWalkImg;
   if (type === "wolf") return action ? wolfLeapImg : wolfRunImg;
@@ -315,7 +417,7 @@ function monsterPose(type: Exclude<SiegeMonsterType, "giant">, action: boolean):
 /** The giant's cut-out: legs, torso, head, right arm with the club, left arm. Each stomp swings the club down. */
 function Giant({ attackSeq }: { attackSeq: number }) {
   const c = FIGURES.giant;
-  const P = GIANT_PIVOT;
+  const P = useChristmasSiege() ? toyboxManifest.giant.pivots : GIANT_PIVOT;
   return (
     <>
       <Layer src={giantLegsImg} c={c} />
@@ -331,7 +433,8 @@ function Giant({ attackSeq }: { attackSeq: number }) {
 
 /** A defeated monster tips over on its base and fades; one that reached the wall fades into a puff of dust. */
 export function FallenFigure({ type, lane, x, reachedWall }: { type: SiegeMonsterType; lane: number; x: number; reachedWall: boolean }) {
-  const c = FIGURES[type];
+  const christmas = useChristmasSiege();
+  const c = monsterCanvas(type, christmas);
   const p = boardPoint(lane, x);
   return (
     <div class={`siege-fig fallen ${reachedWall ? "at-wall" : "tipped"}`} style={placeStyle(c, p)} aria-hidden="true">
@@ -343,11 +446,11 @@ export function FallenFigure({ type, lane, x, reachedWall }: { type: SiegeMonste
 
 /** Dust from a defeat, a destroyed defender or a stomp: grows and fades. Bottom-middle on the ground. */
 export function DustPuff({ at }: { at?: { lane: number; x: number } }) {
-  if (!at) return <img class="siege-dust" src={dustImg} alt="" />;
+  if (!at) return <ArtImage class="siege-dust" src={dustImg} alt="" />;
   const p = boardPoint(at.lane, at.x);
   const w = 160 * p.scale;
   const h = 120 * p.scale;
-  return <img class="siege-dust loose" src={dustImg} alt="" style={{ left: pct(p.px - w / 2, BOARD.w), top: pct(p.py - h, BOARD.h), width: pct(w, BOARD.w), height: pct(h, BOARD.h), zIndex: Math.round(p.py) + 1 }} />;
+  return <ArtImage class="siege-dust loose" src={dustImg} alt="" style={{ left: pct(p.px - w / 2, BOARD.w), top: pct(p.py - h, BOARD.h), width: pct(w, BOARD.w), height: pct(h, BOARD.h), zIndex: Math.round(p.py) + 1 }} />;
 }
 
 /** An arrow flying from an archer to where it lands. */
@@ -358,7 +461,7 @@ export function ArrowShot({ lane, from, to }: { lane: number; from: number; to: 
   const w = 64 * a.scale;
   const h = 16 * a.scale;
   return (
-    <img
+    <ArtImage
       class="siege-arrow"
       src={arrowImg}
       alt=""
@@ -393,7 +496,7 @@ export function RisingBanners() {
   return (
     <div class="siege-rising-banners" aria-hidden="true">
       {[0, 1, 2, 3, 4].map((i) => (
-        <img key={i} src={bannerClothImg} alt="" style={{ "--i": String(i) }} />
+        <ArtImage key={i} src={bannerClothImg} alt="" style={{ "--i": String(i) }} />
       ))}
     </div>
   );
@@ -409,7 +512,7 @@ const DEFENDER_ICON: Record<SiegeDefenderType, string> = {
 
 export function SiegeIcon({ kind, class: cls = "" }: { kind: "coin" | "heart" | SiegeDefenderType; class?: string }) {
   const src = kind === "coin" ? pickArt(coinImg, phoneCoinImg) : kind === "heart" ? pickArt(heartImg, phoneHeartImg) : DEFENDER_ICON[kind];
-  return <img class={`siege-icon ${cls}`} src={src} alt="" draggable={false} />;
+  return <ArtImage class={`siege-icon ${cls}`} src={src} alt="" draggable={false} />;
 }
 
 export const DEFENDER_EMOJI: Record<SiegeDefenderType, string> = { archer: "🏹", knight: "⚔️", wall: "🧱" };

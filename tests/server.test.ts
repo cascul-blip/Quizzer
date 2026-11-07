@@ -841,10 +841,11 @@ describe("Kingdom Siege over WebSockets", () => {
     host.send({ type: "host.open", quizId: quiz.id });
     await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
     host.send({ type: "host.setMode", mode: "siege" });
-    await host.hostState((v) => v.kind === "classic" && v.mode === "siege" && v.siege.waves === 5 && v.teams === null);
+    const siegeLobby = await host.hostState((v) => v.kind === "classic" && v.mode === "siege" && v.siege.waves === 5 && v.teams === null);
+    expect(siegeLobby.view.kind === "classic" && siegeLobby.view.siege.theme).toBe("christmas");
     host.send({ type: "host.setSiege", waves: 7 as never });
     expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: expect.stringContaining("waves") });
-    host.send({ type: "host.setSiege", waves: "endless" });
+    host.send({ type: "host.setSiege", waves: "endless", theme: "classic" });
     await host.hostState((v) => v.kind === "classic" && v.siege.waves === "endless");
 
     const names = ["Ann", "Bob"];
@@ -857,10 +858,12 @@ describe("Kingdom Siege over WebSockets", () => {
     const [ann, bob] = players as [TestSocket, TestSocket];
 
     host.send({ type: "host.start", pacing: "manual" });
-    await host.hostState((v) => v.kind === "siege" && v.phase === "countdown" && v.gold === 100);
+    const siegeCountdown = await host.hostState((v) => v.kind === "siege" && v.phase === "countdown" && v.gold === 100);
+    expect(siegeCountdown.view.kind === "siege" && siegeCountdown.view.settings.theme).toBe("classic");
     clock.advance(SIEGE_COUNTDOWN_MS);
     srv.hub.broadcast();
     const st = await ann.playerState((v) => v.kind === "siege" && v.phase === "build" && !!v.question);
+    expect(st.view.kind === "siege" && st.view.theme).toBe("classic");
     const q = st.view.kind === "siege" ? st.view.question! : null;
     ann.send({ type: "siege.answer", seq: q!.seq, option: 0 });
     await ann.playerState((v) => v.kind === "siege" && v.gold === 75);
@@ -912,7 +915,8 @@ describe("Kingdom Siege over WebSockets", () => {
 
     // Play again keeps Kingdom Siege and Endless, and the next run knows the record.
     host.send({ type: "host.open", quizId: quiz.id });
-    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "siege" && v.siege.waves === "endless");
+    const siegeAgain = await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "siege" && v.siege.waves === "endless");
+    expect(siegeAgain.view.kind === "classic" && siegeAgain.view.siege.theme).toBe("classic");
     for (const [i, p] of players.entries()) {
       p.send({ type: "join", nickname: names[i]! });
       await p.waitFor((m) => m.type === "joined");

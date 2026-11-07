@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "preact/hooks";
+import { siegeName, type SiegeTheme } from "../../shared/siege-theme.ts";
+import { SiegeThemeProvider, useChristmasSiege } from "../shared/siege-skin.tsx";
 import type { HostView, SiegeSettings } from "../../shared/protocol.ts";
 import { SIEGE_HEARTS } from "../../shared/siege-rules.ts";
 import {
@@ -33,6 +35,11 @@ function waveLabel(wave: number, waves: SiegeSettings["waves"]): string {
 
 /** Projector screen for Kingdom Siege: countdown → build break → waves (with breaks) → the kingdom stands or the castle falls → podium. */
 export function SiegeStage({ view, send }: { view: SiegeView; send: Send }) {
+  return <SiegeThemeProvider theme={view.settings.theme}><SiegeStageContent view={view} send={send} /></SiegeThemeProvider>;
+}
+
+function SiegeStageContent({ view, send }: { view: SiegeView; send: Send }) {
+  const christmas = useChristmasSiege();
   useSiegeSounds(view);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -43,10 +50,10 @@ export function SiegeStage({ view, send }: { view: SiegeView; send: Send }) {
   }, []);
   const battle = view.phase !== "podium";
   return (
-    <div class="stage siege-stage">
+    <div class={`stage siege-stage ${christmas ? "siege-christmas" : ""}`}>
       <header class="topbar">
         <div class="title">{view.quiz.title}</div>
-        <div class="pill">🛡️ Kingdom Siege</div>
+        <div class="pill">{christmas ? "🎄" : "🛡️"} {siegeName(view.settings.theme)}</div>
         {view.wave > 0 && battle && <div class="pill">{waveLabel(view.wave, view.settings.waves)}</div>}
         <div class="spacer" />
         {battle && <Treasury gold={view.gold} hearts={view.hearts} />}
@@ -258,7 +265,7 @@ function Countdown({ view }: { view: SiegeView }) {
       <div class="countdown-label">
         Defend the kingdom together!
         <br />
-        Every right answer adds 25 gold to your own purse. Spend it on archers, knights and stone walls.
+        Every right answer adds 25 gold to your own purse. Spend it on {view.settings.theme === "christmas" ? "elf archers, nutcrackers and present barricades" : "archers, knights and stone walls"}.
       </div>
       <div class="countdown-num" key={n}>
         {Math.max(1, n)}
@@ -304,11 +311,13 @@ function Fallen({ view }: { view: SiegeView }) {
 // ---------- lobby ----------
 
 /** The empty diorama board with the castle wall, under the lobby's settings. */
-export function SiegeLobbyPreview() {
+export function SiegeLobbyPreview({ theme }: { theme?: SiegeTheme }) {
   return (
+    <SiegeThemeProvider theme={theme}>
     <div class="siege-lobby-preview" aria-hidden="true">
       <SiegeBoard hearts={SIEGE_HEARTS} />
     </div>
+    </SiegeThemeProvider>
   );
 }
 

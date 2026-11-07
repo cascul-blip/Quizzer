@@ -591,7 +591,7 @@ export class GameHub {
         this.lastSetup.bomb = { ...classic().bomb };
         return;
       case "host.setSiege":
-        classic().setSiege({ waves: msg.waves });
+        classic().setSiege({ waves: msg.waves, theme: msg.theme });
         this.lastSetup.siege = { ...classic().siege };
         return;
       case "host.setDuel":

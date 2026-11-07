@@ -1,4 +1,5 @@
 import { DEFAULT_LAND_THEME, landTheme } from "../../shared/land-theme.ts";
+import { DEFAULT_SIEGE_THEME, siegeTheme } from "../../shared/siege-theme.ts";
 import { DEFAULT_RACER_THEME } from "../../shared/racer-theme.ts";
 import { DEFAULT_CUP_THEME } from "../../shared/cup-theme.ts";
 import { DEFAULT_TOWER_THEME } from "../../shared/tower-theme.ts";
@@ -70,7 +71,7 @@ export const DEFAULT_LAND: LandSettings = { teams: 2, minutes: 5, theme: DEFAULT
 export const DEFAULT_CUP: CupSettings = { cups: CUP_DEFAULT_CUPS, theme: DEFAULT_CUP_THEME };
 export const DEFAULT_DRAGON: DragonSettings = { teams: 2, toughness: "normal", battleMinutes: 5, fireSec: 45, scrambleMinutes: 3 };
 export const DEFAULT_BOMB: BombSettings = { game: "together", squads: 1, modules: 3, wires: 3, minutes: 5, penaltySec: 15 };
-export const DEFAULT_SIEGE: SiegeSettings = { waves: 5 };
+export const DEFAULT_SIEGE: SiegeSettings = { waves: 5, theme: DEFAULT_SIEGE_THEME };
 export const DEFAULT_DUEL: DuelSettings = { rounds: DUEL_DEFAULT_ROUNDS };
 export const DEFAULT_SLEIGH: SleighSettings = { minutes: SLEIGH_DEFAULT_MINUTES };
 
@@ -382,7 +383,9 @@ export class Game {
     if (this.phase !== "lobby") throw new GameError("Kingdom Siege settings can only be changed before the game starts");
     const waves = settings.waves === "endless" ? "endless" : Number(settings.waves);
     if (!(SIEGE_WAVE_CHOICES as readonly unknown[]).includes(waves)) throw new GameError("Unsupported number of waves");
-    this.siege = { waves: waves as SiegeWaves };
+    const theme = settings.theme ?? siegeTheme(this.siege.theme);
+    if (theme !== "classic" && theme !== "christmas") throw new GameError("Unsupported Kingdom Siege theme");
+    this.siege = { waves: waves as SiegeWaves, theme };
     this.onChange();
   }
 

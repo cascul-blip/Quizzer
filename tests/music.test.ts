@@ -145,6 +145,35 @@ test("Sled Squad routes the intro, chase, trail challenge, and score screen to t
   expect(musicFor(view("podium")).track).toBe("submarine-results");
 });
 
+describe("Christmas Toybox Patapan music", () => {
+  test("theme selects Patapan throughout the game and keeps the classic soundtrack selectable", () => {
+    for (const theme of ["christmas", "classic", undefined] as const) {
+      const prefix = theme === "classic" ? "siege" : "siege-christmas";
+      expect(musicFor({ kind: "classic", phase: "lobby", mode: "siege", siege: { waves: 5, theme } } as HostView).track).toBe(`${prefix}-lobby`);
+      for (const phase of ["countdown", "build", "wave", "stands", "fallen", "podium"] as const) {
+        const cue = musicFor({ kind: "siege", phase, settings: { waves: 5, theme }, wave: 3, hearts: 8, maxHearts: 10, monsterCount: 4, monsters: [], phaseRemainingMs: 5000, result: null } as unknown as HostView);
+        expect(cue.track).toBe(`${prefix}-${["stands", "fallen", "podium"].includes(phase) ? "results" : "battle"}`);
+        if (phase === "build") expect(cue.rampMs).toBe(5000);
+      }
+    }
+  });
+
+  test("complete Patapan melody stays audible and battle layers increase with intensity", () => {
+    for (const id of ["siege-christmas-lobby", "siege-christmas-battle", "siege-christmas-results"] as const) {
+      const track = TRACKS[id];
+      const melody = track.layers.find(l => l.inst === "flute")!;
+      expect(track.bars).toBe(12);
+      expect(tokens(melody.bars[0]!).filter(t => t !== "-")).toEqual(["A4", "A4", "E5", "E5"]);
+      expect(tokens(melody.bars[11]!).filter(t => t !== "-")).toEqual(["B4", "A4"]);
+      for (const intensity of [0, 0.05, 0.5, 0.85, 1]) expect(layerActive(melody, intensity)).toBe(true);
+      for (const layer of track.layers) expect(["bass", "tribass", "twang"]).not.toContain(layer.inst);
+    }
+    const battle = TRACKS["siege-christmas-battle"];
+    expect(battle.layers.filter(l => layerActive(l, 0.9)).length).toBeGreaterThan(battle.layers.filter(l => layerActive(l, 0.05)).length);
+    expect(stepSeconds(battle, 0.9)).toBeLessThan(stepSeconds(battle, 0.05));
+  });
+});
+
 describe("North Pole Tower Christmas music", () => {
   test("theme selects carols in the lobby, countdown, building and podium", () => {
     for (const theme of ["christmas", "classic", undefined] as const) {

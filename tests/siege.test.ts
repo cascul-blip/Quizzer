@@ -62,7 +62,7 @@ function setup({ players = 3, waves = 5 as SiegeWaves, protect = false, seed = 4
   let finished = 0;
   const lobby = new Game(quiz(), { clock, protect });
   lobby.setMode("siege");
-  lobby.setSiege({ waves });
+  lobby.setSiege({ waves, theme: "classic" });
   for (const n of NAMES.slice(0, players)) lobby.join(n);
   const game = SiegeGame.fromLobby(lobby, { clock, rng: seeded(seed), onFinish: () => finished++ });
   game.start();

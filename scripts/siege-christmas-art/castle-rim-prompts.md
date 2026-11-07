@@ -1,0 +1,26 @@
+# Left-rim footprint correction (v5)
+
+Measured on the normalized intact runtime image, the left edge at the back border moves from x=136 in v4 to x=94 in v5; the board's left rim is x=80 there. Clearance at the front stays approximately 16 px, so the far end no longer pulls away. The browser check compares these clearances for intact and cracked states.
+## Final surface-damage refinement
+
+The first damaged variant moved the far section again, so the final cracked source uses this surface-only edit of the intact v5 source:
+
+Edit the attached image: add ONLY fine dark cracks and a few small chipped red paint marks on the wooden castle blocks. Keep every single object, all edges, every pixel position, the 45-degree camera, the full wide transparent canvas, all empty margins, all towers and walkways EXACTLY where they are. Do not move, resize, shift, warp, reconstruct, add or remove any part of the castle. No changes to banners or lights or snow. No reframing or cropping. Transparent background preserved. This is a surface-damage texture edit only.
+
+Built-in image_gen edits of the approved v4 high-camera wall. Camera elevation, y placement and front tower are retained; the far section moves left by roughly 60 board pixels and the middle section by roughly 27 pixels. Connecting walkways are repainted around upright towers instead of applying a global skew. This removes the widening gap between the far outer wall and the board's left rim. Runtime depth registration remains at y=58..664.
+
+## Intact
+
+Use case: precise-object-edit. Reference 1 is the EXACT registered castle overlay to edit; its HIGH 45-degree viewpoint is NOW CORRECT. Reference 2 is the board and reference 3 the user's crop showing a triangular gap between the far wall and the LEFT rim. Fix ONLY THE HORIZONTAL POSITION ALONG THE BOARD. Preserve ALL VERTICAL positions, total projected length, foreground ground baseline, short vertical faces, high camera elevation, long visible walkways, wood textures and design.
+Keep the EXACT FULL WIDE 16:9 canvas, same bottom 13.5% transparent margin, blank right 81.5%, no recropping or zooming.
+The far/background tower and far walkway are too far RIGHT. MOVE the BACK tower and its attached far wall LEFT by about 4.5% of full canvas width (roughly 60 pixels on the 1344-wide board). MOVE the MIDDLE tower LEFT by about 2% of full canvas width (roughly 27 pixels). Keep the FOREGROUND tower in its current horizontal location. Reconnect/redraw the two long walkways to these new positions. All tower verticals stay upright; do not shear or rotate towers.
+Ground-contact targets in the 1344x768 board coordinates: back tower footprint LEFT edge at x=80, RIGHT edge at x=180, near y=58; middle footprint LEFT edge x=40, right x=155 near y=350; near footprint left x=10, right x=180 near y=664. The outer left BASE of the wall must follow the board's outer left rim from approximately (10,664) to (80,58), with NO widening triangular gap at the far end. Keep the wall just INSIDE the rim. Do NOT move the far section UP or DOWN, do NOT alter viewing angle, do NOT shorten it. Far battlements may remain clipped by top canvas edge as in reference 1.
+Keep red wooden Christmas blocks, green golden-star banners, snow, garlands and warm lights. Output ONLY the corrected transparent castle overlay, no board, no floor, no scenery, no text/UI. This is a localized horizontal footprint correction. The approved high-angle camera MUST stay unchanged.
+
+## castle-camera-cracked-v5
+
+Use case: precise-object-edit. Edit attached exact registered high-camera castle overlay into damaged state. Keep EXACT full wide canvas, transparency, positions, upright towers, y coordinates and near-vertical footprint hugging the left board edge. The far tower has been moved LEFT to remove a gap; keep it there, do NOT move it right. Preserve 45-degree camera, long visible walkways, short wall faces, all ground contact points and bottom empty strip. Only add cracks, chipped snowy crenellations, a few broken bulbs and torn green golden-star banner bottoms. All towers stand. Same materials, snow and lights. Do not crop, recenter, zoom, rotate or shear. No scenery, board, ground, people, text/UI. Actual transparency.
+
+## castle-camera-fallen-v5
+
+Use case: precise-object-edit. Edit attached exact registered high-camera castle overlay into low collapsed ruins. Keep EXACT full wide canvas, transparency, high 45-degree camera, projected footprint and x/y placement of all THREE bases. The far tower is near x=8% canvas width and its ruined footprint MUST remain there, NOT drift right. Outer left rubble edge follows near-vertical board left rim, no widening triangular gap. Preserve the FULL footprint depth from back near y=8% to front y=86.5%; do NOT shorten or recenter. Replace upper tower faces and walls with LOW broken stumps, fallen red wooden blocks, snow, broken green star banners, garlands and lights. Mostly visible top faces, tiny vertical faces. Back base remains near top; near base stays on original bottom baseline. Keep right 81.5% and bottom13.5% transparent. No board, floor, scenery, people, text/UI, smoke, floating remnants or tall towers. Preserve canvas and ground footprint precisely.

@@ -3,6 +3,7 @@ import { fightTheme, type FightTheme } from "../../shared/fight-theme.ts";
 import { racerTheme, type RacerTheme } from "../../shared/racer-theme.ts";
 import { towerTheme, towerWords, type TowerTheme } from "../../shared/tower-theme.ts";
 import { cupTheme, type CupTheme } from "../../shared/cup-theme.ts";
+import { siegeTheme, type SiegeTheme } from "../../shared/siege-theme.ts";
 import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { BOMB_MAX_SQUADS, BOMB_MINUTES, BOMB_MODULES, BOMB_PENALTIES, BOMB_WIRES, CUP_MAX_CUPS, CUP_MIN_CUPS, DRAGON_BATTLE_MINUTES, DRAGON_FIRE_SECONDS, DRAGON_MIN_TEAMS, DRAGON_SCRAMBLE_MINUTES, DRAGON_TOUGHNESS, DUEL_ROUNDS, HILL_SETTINGS, type BombSettings, type BombStyle, type DragonSettings, type DragonToughness, LAND_MINUTES, LAND_MIN_TEAMS, MAX_TEAMS, TOWER_MINUTES, type GameMode, type HillSetting, type HostPlayer, type HostView, type Pacing, type ServerMsg } from "../../shared/protocol.ts";
@@ -523,8 +524,15 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
           ) : view.mode === "siege" ? (
             <>
               <label class="opt">
+                Theme
+                <select aria-label="Kingdom Siege theme" value={siegeTheme(view.siege.theme)} onChange={(e) => send({ type: "host.setSiege", ...view.siege, theme: e.currentTarget.value as SiegeTheme })}>
+                  <option value="classic">🛡️ Classic Kingdom Siege</option>
+                  <option value="christmas">🎄 Christmas Toybox</option>
+                </select>
+              </label>
+              <label class="opt">
                 Waves
-                <select value={String(view.siege.waves)} onChange={(e) => send({ type: "host.setSiege", waves: e.currentTarget.value === "endless" ? "endless" : (Number(e.currentTarget.value) as 5 | 10) })}>
+                <select aria-label="Kingdom Siege waves" value={String(view.siege.waves)} onChange={(e) => send({ type: "host.setSiege", ...view.siege, waves: e.currentTarget.value === "endless" ? "endless" : (Number(e.currentTarget.value) as 5 | 10) })}>
                   {SIEGE_WAVE_CHOICES.map((w) => (
                     <option key={w} value={String(w)}>
                       {w === "endless" ? "♾ Endless" : `${w} waves`}
@@ -532,7 +540,7 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
                   ))}
                 </select>
               </label>
-              <span class="opt mode-hint">The whole class defends one castle. Every right answer earns you gold to spend on archers, knights and stone walls before the monsters reach the wall.</span>
+              <span class="opt mode-hint">The whole class defends one castle. Every right answer earns you gold to spend on {siegeTheme(view.siege.theme) === "christmas" ? "elf archers, nutcrackers and present barricades" : "archers, knights and stone walls"} before the monsters reach the wall.</span>
             </>
           ) : view.mode === "submarine" ? (
             <span class="opt mode-hint">Everyone works together to outrun the Christmas goblin. The game ends when it catches you.</span>
@@ -592,7 +600,7 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
           </div>
         )}
         {view.mode === "bomb" && <BombLobbyPreview settings={view.bomb} />}
-        {view.mode === "siege" && <SiegeLobbyPreview />}
+        {view.mode === "siege" && <SiegeLobbyPreview theme={view.siege.theme} />}
         {connected === 0 ? (
           <div class="waiting">Waiting for players…</div>
         ) : view.teams ? (
