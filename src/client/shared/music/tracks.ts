@@ -1,10 +1,12 @@
 /**
  * The built-in soundtrack: loops composed or arranged for each game mode.
  * Classic = upbeat game show, Tallest Tower = Christian Christmas carols for North Pole Tower; retro chiptune for the classic theme,
- * Sled Squad (submarine IDs) = Jingle Bells, arranged for a vintage Christmas band, Tower Fight = medieval battle,
+ * Sled Squad (submarine IDs) = Jingle Bells, arranged for a vintage Christmas band, Tower Fight = Luther’s A Mighty Fortress Is Our God in battle,
  * Robot Attack = Christian Christmas carols for the snowman; Beethoven and Grieg for the robot,
  * Land Grab = calm ambient piano that grows into an orchestra as rings close,
  * Racer = sunny late-80s arcade-racing chiptune (tempo follows the car's speed), in the rich arcade sound (see rich.ts),
+ *   or Christian Christmas carols for Neon Noel Racer: Angels We Have Heard on High, God Rest Ye Merry,
+ *   Gentlemen, and Hark! The Herald Angels Sing, with arcade synths, FM bells and brass,
  * Cup of Death = original spaghetti-western themes: whistle, twangy guitar, galloping hooves,
  * Dragon's Hoard = a dark cave, a heroic battle with brass and choir, war drums under the fire, a plucky scramble,
  * Bomb Squad = spy-jazz (bass, brushes, vibraphone) that picks up a tick and more layers as the bomb runs down.
@@ -344,38 +346,57 @@ const fightLobby: Track = {
   ],
 };
 
+// EIN FESTE BURG (Luther, 1529), complete melody in C major, with the pickup
+// moved to step 0. Public-domain notation: Mutopia-2008/01/13-1237.
+// Original game accompaniment; see samples/CREDITS.md for source and licenses.
+const fortressMelody = [
+  seq(["C5", 4], ["C5", 4], ["C5", 4], ["G4", 2], ["A4", 2]),
+  seq(["B4", 4], ["C5", 2], ["B4", 2], ["A4", 4], ["G4", 4]),
+  seq(["C5", 4], ["B4", 4], ["A4", 4], ["G4", 4]),
+  seq(["A4", 4], ["F4", 2], ["E4", 2], ["D4", 4], ["C4", 4]),
+  seq(["C5", 4], ["C5", 4], ["C5", 4], ["G4", 2], ["A4", 2]),
+  seq(["B4", 4], ["C5", 2], ["B4", 2], ["A4", 4], ["G4", 4]),
+  seq(["C5", 4], ["B4", 4], ["A4", 4], ["G4", 4]),
+  seq(["A4", 4], ["F4", 2], ["E4", 2], ["D4", 4], ["C4", 4]),
+  seq(["C4", 4], ["G4", 4], ["A4", 4], ["G4", 4]),
+  seq(["F#4", 4], ["G4", 12]),
+  seq(["C4", 4], ["G4", 4], ["G4", 4], ["A4", 4]),
+  seq(["B4", 4], ["C5", 12]),
+  seq(["B4", 4], ["C5", 4], ["B4", 4], ["A4", 4]),
+  seq(["A4", 4], ["G4", 12]),
+  seq(["A4", 4], ["A4", 4], ["G4", 4], ["A4", 4]),
+  seq(["F4", 4], ["E4", 12]),
+  seq(["C5", 4], ["B4", 4], ["A4", 4], ["G4", 4]),
+  seq(["A4", 4], ["F4", 2], ["E4", 2], ["D4", 4], ["C4", 4]),
+];
+const fortressHarmony = [
+  ["C3 E3 G3", "C3 E3 G3"], ["G2 B2 D3", "D3 F#3 A3"],
+  ["C3 E3 G3", "A2 C3 E3"], ["F2 A2 C3", "G2 B2 D3"],
+  ["C3 E3 G3", "C3 E3 G3"], ["G2 B2 D3", "D3 F#3 A3"],
+  ["C3 E3 G3", "A2 C3 E3"], ["F2 A2 C3", "G2 B2 D3"],
+  ["C3 E3 G3", "A2 C3 E3"], ["D3 F#3 A3", "G2 B2 D3"],
+  ["C3 E3 G3", "F2 A2 C3"], ["G2 B2 D3", "C3 E3 G3"],
+  ["E3 G#3 B3", "A2 C3 E3"], ["D3 F#3 A3", "G2 B2 D3"],
+  ["F2 A2 C3", "A2 C#3 E3"], ["D3 F3 A3", "E3 G#3 B3"],
+  ["C3 E3 G3", "A2 C3 E3"], ["F2 A2 C3", "C3 E3 G3"],
+];
+
 const fightPlay: Track = {
   id: "fight-play",
-  bpm: 116,
-  bars: 4,
-  tempoBoost: 0.25,
+  bpm: 112,
+  bars: fortressMelody.length,
+  tempoBoost: 0.15,
+  rich: true,
   layers: [
-    { inst: "taiko", bars: [drum("o..x..x.o..x.x..")], vol: 0.7 },
-    { inst: "kick", bars: [drum("x...x...x...x...")], vol: 0.4 },
-    {
-      inst: "bass",
-      bars: [
-        arp(["D2", ".", "D2", ".", "F2", ".", "D2", ".", "A2", ".", "D2", ".", "F2", ".", "E2", "."]),
-        arp(["Bb1", ".", "Bb1", ".", "D2", ".", "Bb1", ".", "F2", ".", "Bb1", ".", "D2", ".", "C2", "."]),
-        arp(["C2", ".", "C2", ".", "E2", ".", "C2", ".", "G2", ".", "C2", ".", "E2", ".", "D2", "."]),
-        arp(["A1", ".", "A1", ".", "C#2", ".", "A1", ".", "E2", ".", "A1", ".", "C#2", ".", "E2", "."]),
-      ],
-      vol: 0.65,
-    },
-    { inst: "pad", bars: [hold(chord("D3 F3 A3")), hold(chord("Bb2 D3 F3")), hold(chord("C3 E3 G3")), hold(chord("A2 C#3 E3"))], vol: 0.6 },
-    {
-      inst: "brass",
-      bars: [
-        seq(["D5", 3], ["A4", 1], ["D5", 2], ["F5", 2], ["E5", 3], ["D5", 1], ["C5", 2], ["A4", 2]),
-        seq(["Bb4", 4], ["D5", 2], ["F5", 2], ["G5", 4], ["F5", 2], ["D5", 2]),
-        seq(["C5", 3], ["G4", 1], ["C5", 2], ["E5", 2], ["G5", 4], ["E5", 2], ["C5", 2]),
-        seq(["A4", 2], ["C#5", 2], ["E5", 2], ["A5", 6], ["G5", 2], ["E5", 2]),
-      ],
-      from: 0.3,
-    },
-    { inst: "snare", bars: [drum("....x.......x.xx")], vol: 0.7, from: 0.6 },
-    { inst: "hat", bars: [drum("x.x.x.x.x.x.x.x.")], vol: 0.45, from: 0.6 },
-    { inst: "taiko", bars: [drum("x.x.x.x.x.x.x.x.")], vol: 0.28, from: 0.8 },
+    // Keep the tune present even at the start of the battle.
+    { inst: "brass", bars: fortressMelody, vol: 0.85 },
+    { inst: "organ", bars: fortressHarmony.map(([a, b]) => seq([chord(a!), 8], [chord(b!), 8])), vol: 0.35 },
+    { inst: "piano", bars: fortressHarmony.map(([a, b]) => seq([a!.split(" ")[0]!, 8], [b!.split(" ")[0]!, 8])), vol: 0.65 },
+    { inst: "strings", bars: fortressHarmony.map(([a, b]) => seq([chord(a!), 8], [chord(b!), 8])), vol: 0.4, from: 0.3 },
+    { inst: "taiko", bars: [drum("o.......x...x...")], vol: 0.45 },
+    { inst: "snare", bars: [drum("....x.......x.xx")], vol: 0.55, from: 0.6 },
+    { inst: "hat", bars: [drum("x.x.x.x.x.x.x.x.")], vol: 0.3, from: 0.6 },
+    { inst: "timpani", bars: [seq(["C2", 4], [".", 4], ["G2", 4], [".", 4])], vol: 0.25, from: 0.8 },
   ],
 };
 
@@ -1877,6 +1898,93 @@ const christmasTowerResults: Track = {
   layers: sleighResults.layers.map((layer) => layer.inst === "bass" ? { ...layer, inst: "piano" } : layer),
 };
 
+// ---------- Neon Noel Racer: carols over the arcade rhythm section ----------
+// Traditional GLORIA in G, 4/4, including both cascading Gloria refrains.
+// Public-domain melody sources and original arrangement credits: samples/CREDITS.md.
+const GLORIA_VERSE = [
+  seq(["B4", 4], ["B4", 4], ["B4", 4], ["D5", 4]),
+  seq(["D5", 6], ["C5", 2], ["B4", 8]),
+  seq(["B4", 4], ["A4", 4], ["B4", 4], ["D5", 4]),
+  seq(["B4", 6], ["A4", 2], ["G4", 8]),
+];
+const GLORIA_REFRAIN = [
+  seq(["D5", 8], ["E5", 2], ["D5", 2], ["C5", 2], ["B4", 2]),
+  seq(["C5", 8], ["D5", 2], ["C5", 2], ["B4", 2], ["A4", 2]),
+  seq(["B4", 8], ["C5", 2], ["B4", 2], ["A4", 2], ["G4", 2]),
+  seq(["A4", 6], ["D4", 2], ["D4", 8]),
+  seq(["G4", 4], ["A4", 4], ["B4", 4], ["C5", 4]),
+  seq(["B4", 8], ["A4", 8]),
+];
+const GLORIA = [...GLORIA_VERSE, ...GLORIA_VERSE, ...GLORIA_REFRAIN, ...GLORIA_REFRAIN, hold("G4")];
+const GLORIA_VERSE_HARMONY = [
+  ["G", "G", "Em", "G"], ["C", "D7", "G", "G"],
+  ["G", "D", "G", "G"], ["G", "D7", "G", "G"],
+];
+const GLORIA_REFRAIN_HARMONY = [
+  ["G", "G", "Em", "Em"], ["Am", "Am", "D7", "D7"],
+  ["G", "G", "C", "C"], ["D", "D", "D", "D"],
+  ["G", "D", "G", "C"], ["G", "G", "D7", "D7"],
+];
+const GLORIA_HARMONY = [
+  ...GLORIA_VERSE_HARMONY, ...GLORIA_VERSE_HARMONY,
+  ...GLORIA_REFRAIN_HARMONY, ...GLORIA_REFRAIN_HARMONY, ["G", "G", "G", "G"],
+];
+
+/** Arcade sixteenth-note sparkle, following each beat's harmony. */
+const carolArcadeArp = (q: string[]) => beats(q, "xxxx", (c, step) => {
+  const notes = XMAS_CHORDS[c]!.split(" ");
+  return octaveUp(notes[[0, 1, 2, 1][step % 4]!]!, 2);
+});
+const carolArcadeStabs = (q: string[]) => beats(q, "..x.", c => chord(XMAS_CHORDS[c]!.split(" ").map(n => octaveUp(n)).join(" ")));
+
+const christmasRacerLobby: Track = {
+  id: "racer-christmas-lobby", rich: "arcade", bpm: 104, bars: GLORIA.length,
+  layers: [
+    { inst: "bell", bars: shift(GLORIA, 1), vol: 0.42 },
+    { inst: "lead", bars: GLORIA, vol: 0.35, echo: 0.2 },
+    { inst: "tribass", bars: GLORIA_HARMONY.map(rootBounce), vol: 0.6 },
+    { inst: "pulse", bars: GLORIA_HARMONY.map(carolArcadeStabs), vol: 0.25 },
+    { inst: "kick", bars: [drum("x.......x.......")], vol: 0.5 },
+    { inst: "chipnoise", bars: [drum("....o.......o...")], vol: 0.35 },
+    { inst: "hat", bars: [BELLS_8THS], vol: 0.35 },
+  ],
+};
+
+const christmasRacerDrive: Track = {
+  id: "racer-christmas-drive", rich: "arcade", bpm: 112, tempoBoost: 0.45, bars: GOD_REST.length,
+  layers: [
+    // Keep the carol recognizable at every speed, with a sparse rhythm while crashed.
+    { inst: "lead", bars: GOD_REST, vol: 0.7, echo: 0.25 },
+    { inst: "kick", bars: [drum("x.......x.......")], vol: 0.65, to: 0.15 },
+    { inst: "tribass", bars: GOD_REST_HARMONY.map(rootBeats), vol: 0.6, to: 0.15 },
+    { inst: "hat", bars: [BELLS_8THS], vol: 0.3, to: 0.75 },
+    { inst: "kick", bars: [drum("x...x...x...x...")], vol: 0.75, from: 0.15 },
+    { inst: "tribass", bars: GOD_REST_HARMONY.map(rootBounce), vol: 0.85, from: 0.15 },
+    { inst: "chipnoise", bars: [drum("....o.......o...")], vol: 0.55, from: 0.15 },
+    { inst: "pulse", bars: GOD_REST_HARMONY.map(carolArcadeStabs), vol: 0.3, from: 0.25 },
+    { inst: "bell", bars: shift(GOD_REST, 1), vol: 0.25, from: 0.35 },
+    { inst: "snare", bars: GOD_REST_SNARE, vol: 0.4, from: 0.5 },
+    { inst: "pulse", bars: GOD_REST_HARMONY.map(carolArcadeArp), vol: 0.2, from: 0.6 },
+    { inst: "hat", bars: [BELLS_16THS], vol: 0.4, from: 0.75 },
+    { inst: "openhat", bars: [drum("..x...x...x...x.")], vol: 0.35, from: 0.75 },
+    { inst: "brass", bars: GOD_REST, vol: 0.25, from: 0.87 },
+  ],
+};
+
+const christmasRacerResults: Track = {
+  id: "racer-christmas-results", rich: "arcade", bpm: 126, bars: HARK.length,
+  layers: [
+    { inst: "brass", bars: HARK, vol: 0.6 },
+    { inst: "bell", bars: shift(HARK, 1), vol: 0.3 },
+    { inst: "lead", bars: HARK, vol: 0.3, echo: 0.2 },
+    { inst: "tribass", bars: HARK_HARMONY.map(rootBounce), vol: 0.7 },
+    { inst: "pulse", bars: HARK_HARMONY.map(carolArcadeArp), vol: 0.2 },
+    { inst: "kick", bars: [drum("x...x...x...x...")], vol: 0.65 },
+    { inst: "chipnoise", bars: [drum("....o.......o...")], vol: 0.45 },
+    { inst: "hat", bars: [BELLS_8THS], vol: 0.4 },
+  ],
+};
+
 type RobotMusicId = Extract<MusicTrackId, `robot-${string}`>;
 
 /** Keep custom file IDs stable while the seasonal skin changes the built-in arrangements. */
@@ -1911,6 +2019,9 @@ export const TRACKS: Record<MusicTrackId, Track> = {
   "racer-lobby": racerLobby,
   "racer-drive": racerDrive,
   "racer-results": racerResults,
+  "racer-christmas-lobby": christmasRacerLobby,
+  "racer-christmas-drive": christmasRacerDrive,
+  "racer-christmas-results": christmasRacerResults,
   "cup-lobby": cupLobby,
   "cup-quiz": cupQuiz,
   "cup-drink": cupDrink,

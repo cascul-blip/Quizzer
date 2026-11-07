@@ -49,3 +49,34 @@ The underlying compositions are public domain in the United States. All instrume
 recordings in these cues come from the CC0 VSCO 2 CE and VCSL libraries above;
 piano replaces the FluidR3 bass in the podium arrangement. The building cue keeps
 Joy to the World's melody audible at every intensity and builds from 104 to 130 BPM.
+
+## Neon Noel Racer Christmas arrangements
+
+The Christmas racer uses original game arrangements of these public-domain
+melodies. The classic theme retains its original arcade soundtrack.
+
+| Cue | Public-domain melody | Source |
+|---|---|---|
+| `racer-christmas-lobby` | Angels We Have Heard on High (GLORIA, traditional French carol) | [Hymnary: public-domain score](https://hymnary.org/media/fetch/100443); [public-domain melody transcription by Douglas D. Anderson](https://abcnotation.com/tunePage?a=trillian.mit.edu%2F~jc%2Fmusic%2Fabc%2Fmirror%2Fwww.stephenmerrony.co.uk%2FAngels_We_Have_Heard_On_High%2F0000) |
+| `racer-christmas-drive` | God Rest Ye Merry, Gentlemen (traditional English carol) | [Hymnary: public-domain tune](https://hymnary.org/tune/god_rest_you_merry_11554) |
+| `racer-christmas-results` | Hark! The Herald Angels Sing (MENDELSSOHN, Felix Mendelssohn, 1840; adapted by William H. Cummings, 1855) | [Hymnary: public-domain tune](https://hymnary.org/tune/mendelssohn_mendelssohn) |
+
+The underlying compositions are public domain in the United States. All voices
+are synthesized in WebAudio, including the FM bells and brass: no third-party
+song recordings, instrument recordings, or modern copyrighted arrangements are
+included in these cues. Driving keeps the complete melody audible while its
+rhythm section builds with speed, from 112 to 162.4 BPM at full intensity.
+
+## Tower Fight: A Mighty Fortress Is Our God
+
+The battle cue (`fight-play`) uses **EIN FESTE BURG / A Mighty Fortress Is Our God**
+by Martin Luther (1529), with original accompaniment arranged in code for the game.
+The complete melody in C major is transcribed from the public-domain soprano part in
+[Mutopia-2008/01/13-1237](https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=1237),
+typeset by Steve Dunlop from the Cyber Hymnal. The pickup starts on the first step
+of the game loop. No commercial song recording or modern published arrangement is used.
+
+Brass, organ, strings, piano, timpani and percussion use only the existing CC0
+VSCO 2 CE / VCSL samples listed above, with the synthesized fallback available.
+Both Tower Fight themes use this battle arrangement; lobby and results cues retain
+their original music.

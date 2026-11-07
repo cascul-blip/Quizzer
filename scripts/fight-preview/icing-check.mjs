@@ -1,0 +1,52 @@
+import assert from 'node:assert/strict';
+import { mkdir } from 'node:fs/promises';
+const { chromium } = await import(process.env.QUIZZER_PLAYWRIGHT_MODULE || 'playwright');
+const browser = await chromium.launch({ executablePath: process.env.QUIZZER_CHROMIUM || undefined, headless: true, args: ['--no-sandbox'] });
+const out = new URL('../../output/fight-christmas-review/', import.meta.url).pathname;
+await mkdir(out, { recursive: true });
+try {
+ const page=await browser.newPage({viewport:{width:1600,height:900}});
+ const errors=[];
+ page.on('pageerror',e=>errors.push(e.message));
+ page.on('response',r=>{if(r.status()>=400)errors.push(`${r.status()} ${r.url()}`);});
+ await page.goto('http://127.0.0.1:8099/');
+ await page.waitForTimeout(300);
+ assert.equal(await page.locator('.ginger-team-trim').count(),0);
+ assert.equal(await page.locator('.ginger-team-flag').count(),2);
+ assert.equal(await page.locator('.ginger-team-flag > image').count(),2);
+ assert.equal(await page.locator('.ginger-team-stripes').count(),2);
+ assert.equal(await page.locator('.ginger-team-gumdrops').count(),2);
+ assert.equal(await page.locator('.ginger-team-gumdrops clipPath > g').count(),0,'Candy clipping must use direct SVG shapes');
+ assert.equal(await page.locator('.ginger-team-gumdrops clipPath > path').count(),18);
+ const sources=[];
+ for(const hill of ['low','medium','high']) {
+  await page.getByLabel('Hill',{exact:true}).selectOption(hill);
+  await page.waitForTimeout(150);
+  const image=page.locator('.bf-terrain image').first();
+  const href=await image.getAttribute('href');
+  const y=await image.getAttribute('y');
+  const originalPath=await page.locator('#bf-ground path').getAttribute('d');
+  sources.push(href);
+  assert.equal(await page.locator('.bf-terrain path[stroke]').count(),0,'Icing must not be repainted along a crater');
+  await page.locator('.fight-stage').screenshot({path:`${out}/icing-${hill}.png`});
+  for(let i=0;i<3;i++)await page.getByRole('button',{name:'Crater',exact:true}).click();
+  assert.equal(await image.getAttribute('href'),href,'The original icing image remains fixed');
+  assert.equal(await image.getAttribute('y'),y);
+  assert.notEqual(await page.locator('#bf-ground path').getAttribute('d'),originalPath,'Damage cuts away the original ground');
+  await page.locator('.fight-stage').screenshot({path:`${out}/icing-${hill}-crater.png`});
+ }
+ assert.equal(new Set(sources).size,3);
+ await page.getByLabel('Damage',{exact:true}).selectOption('4');
+ await page.locator('.fight-stage').screenshot({path:`${out}/icing-damaged-castles.png`});
+ await page.setViewportSize({width:390,height:844});
+ await page.goto('http://127.0.0.1:8099/phone?hill=low&state=aim');
+ await page.waitForTimeout(200);
+ await page.locator('.fight-game').screenshot({path:`${out}/icing-phone.png`});
+ assert.equal(await page.locator('.ginger-team-flag').count(),2);
+ assert.equal(await page.locator('.ginger-team-flag > image').count(),2);
+ assert.equal(await page.locator('.ginger-team-stripes').count(),2);
+ await page.getByRole('button',{name:'Crater',exact:true}).click();
+ assert.equal(await page.locator('.bf-terrain path[stroke]').count(),0);
+ assert.deepEqual(errors,[]);
+ console.log('PASS: 3 distinct ground images; permanent crater clipping without new icing; team gumdrop tint and flags; colored band removed; phone render; no browser errors.');
+} finally {await browser.close();}

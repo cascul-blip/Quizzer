@@ -403,6 +403,10 @@ function arcadeSnare(ctx: Ctx, dest: AudioNode, t: number, v: number) {
 
 function playArcade(ctx: Ctx, dest: AudioNode, inst: string, t: number, freq: number, len: number, v: number, detune: number, accent: boolean): boolean {
   switch (inst) {
+    // Seasonal arcade arrangements share the synthesized FM bells and brass.
+    case "bell":
+    case "brass":
+      return playRich(ctx, dest, inst, t, freq, len, v, detune, "acoustic");
     case "lead": {
       // A late-80s FM lead: a bright 2:1 voice that mellows after the attack, a detuned saw under it,
       // a quick slide up into each note and vibrato on held ones.

@@ -338,3 +338,41 @@ describe("end of game", () => {
     expect(lines[2]!.startsWith("Red,Lost,1,A,")).toBe(true);
   });
 });
+
+describe("fight themes", () => {
+  test("theme and hill changes preserve each other, and reach host and phones", () => {
+    const lobby = new Game(quiz());
+    lobby.setMode("fight");
+    lobby.setFight({ hill: "high" });
+    lobby.setFight({ theme: "christmas" });
+    expect(lobby.hostView().fight).toEqual({ hill: "high", theme: "christmas" });
+    lobby.setFight({ hill: "low" });
+    expect(lobby.fight.theme).toBe("christmas");
+    const player = lobby.join("Baker");
+    const game = FightGame.fromLobby(lobby);
+    expect(game.hill).toBe("low");
+    expect(game.hostView().theme).toBe("christmas");
+    expect(game.playerView(player.id)?.theme).toBe("christmas");
+    const late = game.join("Late baker");
+    expect(game.playerView(late.id)?.theme).toBe("christmas");
+    game.dispose();
+  });
+
+  test("Christmas is the fallback, invalid themes are rejected, and a running game's theme is fixed", () => {
+    const lobby = new Game(quiz());
+    expect(lobby.hostView().fight.theme).toBe("christmas");
+    const game = FightGame.fromLobby(lobby);
+    expect(game.theme).toBe("christmas");
+    expect(() => lobby.setFight({ theme: "other" as "classic" })).toThrow("Unknown fight theme");
+    lobby.setFight({ theme: "classic" });
+    const normal = FightGame.fromLobby(lobby);
+    expect(normal.theme).toBe("classic");
+    normal.dispose();
+    expect(game.theme).toBe("christmas");
+    lobby.join("Baker");
+    lobby.start();
+    expect(() => lobby.setFight({ theme: "classic" })).toThrow("before the game starts");
+    lobby.dispose();
+    game.dispose();
+  });
+});

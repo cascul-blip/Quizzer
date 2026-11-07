@@ -1,3 +1,5 @@
+import { gingerbreadTerrain } from "../../shared/fight-ground.ts";
+import { fightTheme, type FightTheme } from "../../shared/fight-theme.ts";
 import type { AnswerValue } from "../../shared/answer-match.ts";
 import {
   CORRECT_PER_DECISION,
@@ -86,6 +88,7 @@ export class FightGame {
   readonly questions: Question[];
   readonly teams: FightTeam[];
   readonly hill: HillHeight;
+  readonly theme: FightTheme;
   readonly roster = new Roster<FightPlayer>();
   phase: FightPhase = "countdown";
   phaseEndsAt = 0;
@@ -110,13 +113,14 @@ export class FightGame {
     if (quiz.questions.length === 0) throw new GameError("This quiz has no questions");
     this.quizId = quiz.id;
     this.title = quiz.title;
+    this.theme = fightTheme(settings.theme);
     this.questions = quiz.questions;
     this.teams = Array.from({ length: TEAM_COUNT }, (_, i) => ({ ...teamInfo(i), damage: 0 }));
     this.clock = opts.clock ?? realClock;
     this.rng = opts.rng ?? Math.random;
     const heights = Object.keys(HILL_HEIGHTS) as HillHeight[];
     this.hill = settings.hill === "random" ? heights[Math.min(heights.length - 1, Math.floor(this.rng() * heights.length))]! : settings.hill;
-    this.terrain = makeTerrain(this.hill, this.rng);
+    this.terrain = this.theme === "christmas" ? gingerbreadTerrain(this.hill) : makeTerrain(this.hill, this.rng);
     this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock, settings.protect);
     this.onChange = opts.onChange ?? (() => {});
     this.onActivity = opts.onActivity ?? (() => this.onChange());
@@ -456,6 +460,7 @@ export class FightGame {
     const playing = this.phase === "playing";
     return {
       kind: "fight",
+      theme: this.theme,
       phase: this.phase,
       quiz: { id: this.quizId, title: this.title, questionCount: this.questions.length },
       phaseRemainingMs: this.remainingMs(),
@@ -511,8 +516,10 @@ export class FightGame {
     }
     return {
       kind: "fight",
+      theme: this.theme,
       phase: this.phase,
       title: this.title,
+      hill: this.hill,
       phaseRemainingMs: this.remainingMs(),
       me: { id: p.id, nickname: p.nickname, avatar: p.avatar, correct: p.correct, hits: p.hits, rebuilds: p.rebuilds },
       team: teamInfo(p.team),

@@ -1,3 +1,4 @@
+import { fightTheme, type FightTheme } from "../../shared/fight-theme.ts";
 import { racerTheme, type RacerTheme } from "../../shared/racer-theme.ts";
 import { towerTheme, towerWords, type TowerTheme } from "../../shared/tower-theme.ts";
 import { cupTheme, type CupTheme } from "../../shared/cup-theme.ts";
@@ -381,8 +382,8 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
             <label class="opt">
               Theme
               <select aria-label="Racer theme" value={racerTheme(view.racer?.theme)} onChange={(e) => send({ type: "host.setRacer", theme: e.currentTarget.value as RacerTheme })}>
-                <option value="classic">🏎 Normal</option>
                 <option value="christmas">🎄 Neon Noel</option>
+                <option value="classic">🏎 Normal</option>
               </select>
             </label>
           )}
@@ -427,6 +428,13 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
             </>
           ) : view.mode === "fight" ? (
             <>
+              <label class="opt">
+                Theme
+                <select aria-label="Tower Fight theme" value={fightTheme(view.fight.theme)} onChange={(e) => send({ type: "host.setFight", theme: e.currentTarget.value as FightTheme })}>
+                  <option value="classic">🏰 Normal</option>
+                  <option value="christmas">🎄 Gingerbread Siege</option>
+                </select>
+              </label>
               <label class="opt">
                 Hill
                 <select value={view.fight.hill} onChange={(e) => send({ type: "host.setFight", hill: e.currentTarget.value as HillSetting })}>
