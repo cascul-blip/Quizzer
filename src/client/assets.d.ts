@@ -13,3 +13,9 @@ declare module "*.woff2" {
   const url: string;
   export default url;
 }
+
+// Painted sprites composed in SVG wrappers are bundled as image URLs.
+declare module "*.svg" {
+  const url: string;
+  export default url;
+}

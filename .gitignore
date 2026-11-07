@@ -3,3 +3,6 @@ dist/
 data/
 dev-data/
 *.tmp
+
+# Generated art review recordings and retired iteration assets stay local.
+scripts/winter-art/captures/

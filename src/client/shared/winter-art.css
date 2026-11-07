@@ -1,0 +1,45 @@
+/* Muted lithograph colors and articulated animation for the Christmas chase. */
+.winter-world { position: absolute; inset: 0; overflow: hidden; pointer-events: none; background: #c7d3c5; }
+.winter-panorama { position: absolute; inset: 0; background-size: auto 100%; background-repeat: repeat-x; background-position: calc(var(--travel, 0) * -12px) center; }
+/* The feathered painted snow and snowbank under the fence overlap the panorama. */
+.winter-track { position: absolute; inset: 70% 0 0; background-size: auto 100%; background-repeat: repeat-x; background-position-x: calc(var(--travel, 0) * -36px); mask-image: linear-gradient(transparent, #000 20%); }
+/* A broad, packed lane with soft snowbanks and two shallow sled-runner grooves. */
+.winter-path { position: absolute; top: 79%; left: 0; width: 100%; height: 18%; background-size: auto 167%; background-position: calc(var(--travel, 0) * -36px) 65%; background-repeat: repeat-x; filter: brightness(1.12) saturate(.7); mask-image: linear-gradient(transparent, #000 18% 76%, transparent); }
+.winter-path::before { content: ''; position: absolute; inset: 0; background: linear-gradient(transparent 20%, #fff9e12e 26% 37%, #71878a38 39%, #fff8e54d 42%, transparent 45% 61%, #71878a30 64%, #fff8e54d 67%, transparent 71%); filter: blur(1px); }
+.winter-fence { position: absolute; top: 64%; left: 0; width: 100%; height: 15%; background-repeat: repeat-x; background-size: auto 100%; background-position-x: calc(var(--travel, 0) * -36px); }
+.winter-snow { position: absolute; inset: 0; }
+.winter-snow i { position: absolute; top: -5%; width: 4px; height: 4px; background: #fff7e4; border-radius: 50%; animation: christmas-snow linear infinite; opacity: .8; }
+@keyframes christmas-snow { to { transform: translate(-8vw, 100vh); } }
+.winter-stage .fish-pos { top: auto; bottom: 13%; width: 22%; z-index: 3; }
+.christmas-goblin { position: relative; display: block; width: 100%; aspect-ratio: 348 / 516; transform-origin: 50% 98%; filter: drop-shadow(1px 3px 1px #334c4322); }
+.goblin-video-sprite { position: absolute; inset: 0; background-size: 800% 900%; background-repeat: no-repeat; }
+.winter-stage .sub-pos { top: auto; bottom: 12%; left: 45%; width: 53%; animation: sled-jostle .4s ease-in-out infinite alternate; z-index: 2; }
+.dog-sled { position: relative; width: 100%; overflow: visible; }
+.sled-art { width: 100%; display: block; overflow: visible; }
+.sled-art .avatar { width: 64px; height: 64px; }
+.painted-dog-pair { position: absolute; left: 55%; top: 51.7%; width: 44.9%; aspect-ratio: 525 / 173; background-size: 600% 600%; background-repeat: no-repeat; }
+.tree-ornament { animation: ornament-sway .6s ease-in-out infinite alternate; }
+.sled-carriage { animation: sled-jostle .4s ease-in-out infinite alternate; transform-origin: 170px 200px; }
+@keyframes ornament-sway { from { transform: rotate(-18deg); } to { transform: rotate(24deg); } }
+@keyframes sled-jostle { to { transform: translateY(-2px) rotate(.3deg); } }
+@keyframes rider-jostle { to { transform: translateY(-68%) rotate(-3deg); } }
+.fallen-ornament { position: absolute; left: var(--drop-start); top: var(--drop-top); width: 1.8%; height: auto; animation: ornament-fall 7.2s linear forwards; }
+@keyframes ornament-fall { 0% { transform: translate(0, 0); } 10% { transform: translate(-2vw, 9.5vw); } 14% { transform: translate(-3vw, 8.3vw); } 19% { transform: translate(-4vw, 9.5vw); } 100% { transform: translate(-85vw, 9.5vw) rotate(-720deg); } }
+.resting .sled-carriage { animation-play-state: paused; }
+.winter-stage .sub-pos.boosting .dog-sled { animation: dash .7s ease-out; }
+.winter-stage .sub-pos.escaping { animation: escape 3s ease-in forwards; }
+.winter-stage .sub-pos.in-mouth { z-index: 2; }
+.winter-stage .sub-pos.eaten { animation: sled-caught .5s ease-out forwards; }
+@keyframes sled-caught { to { transform: translateX(-2vw) rotate(-2deg); } }
+.winter-stage .dive-sub { top: auto; bottom: 12%; left: 33%; width: 64%; animation: none; }
+.winter-stage .boost-progress { background: #284d47e8; border: 1px solid #e4c183; }
+.winter-stage .countdown-label { background: #274b46ed; border: 1px solid #e4c183; }
+.winter-stage .dive-help { background: #284d47e8; color: #fff2d7; }
+.winter-podium { background: linear-gradient(#274e52, #416b69) !important; }
+@media (prefers-reduced-motion: reduce) {
+  .winter-snow i, .goblin-bounce, .goblin-leg, .goblin-arm, .goblin-sack, .sled-dog, .dog-leg, .tree-ornament, .sled-carriage, .sled-rider, .winter-stage .sub-pos { animation: none; }
+}
+.winter-game > .topbar { background: #264b47; border-bottom: 2px solid #ddbf80; color: #fff0d0; }
+.winter-game .depth-badge { background: #38625b; }
+.winter-stage .dive-sub { transform: none; }
+

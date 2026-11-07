@@ -26,3 +26,9 @@ Only the CC0 VSCO 2 CE and VCSL instruments listed above are used in these four
 arrangements: flute, harp (`pluck`), strings, brass, piano, bells, timpani, and
 percussion. Piano supplies the bass parts; neither FluidR3 bass nor guitar is used.
 The existing synthesized fallback also works without external recordings.
+
+## Sled Squad: Jingle Bells
+
+All four `submarine-*` cues now use original game arrangements of **Jingle Bells / The One Horse Open Sleigh**, by James Lord Pierpont (1857, revised 1859), a public-domain composition in the United States. Historical source: [Project Gutenberg's public-domain score](https://www.gutenberg.org/ebooks/10535) and [Library of Congress's 1857 edition](https://www.loc.gov/item/2023812429/). The familiar refrain is arranged in C major with newly written accompaniment; no commercial song recording or modern published arrangement is included.
+
+The intro/lobby uses flute, glockenspiel, strings, plucked accompaniment, piano bass, and light jingling percussion. The chase adds brass and drums and builds from 120 to 150 BPM as the goblin approaches. The trail challenge uses quiet piano and bells; the score screen uses a warm festive brass arrangement. All instruments in these four tracks use the existing CC0 VSCO 2 CE / VCSL samples listed above, with the standard synthesized fallback. No FluidR3 bass or guitar recordings are used.

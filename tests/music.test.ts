@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { musicFor } from "../src/client/host/music-cues.ts";
+import type { HostView, SubPhase } from "../src/shared/protocol.ts";
 import { DRUMS, STEPS_PER_BAR, layerActive, noteFreq, stepSeconds, tokens } from "../src/client/shared/music/engine.ts";
 import { TRACKS, robotTracksForSkin } from "../src/client/shared/music/tracks.ts";
 import { ROBOT_SKIN } from "../src/client/shared/robot-skin.ts";
@@ -105,4 +107,25 @@ describe("seasonal Robot Attack music", () => {
     expect(60 / (stepSeconds(quiz, 1) * 4)).toBeCloseTo(135);
     expect(quiz.layers.filter((l) => layerActive(l, 1)).length).toBeGreaterThan(quiz.layers.filter((l) => layerActive(l, 0)).length);
   });
+});
+
+describe("Sled Squad Christmas music", () => {
+  test("the Jingle Bells melody is present in every screen, including a calm chase", () => {
+    for (const id of ["submarine-lobby", "submarine-chase", "submarine-dive", "submarine-results"] as const) {
+      const track = TRACKS[id];
+      const tune = track.layers.find(l => l.bars.length === 16 && tokens(l.bars[0]!).filter(n => n === "E5" || n === "E4").length === 3);
+      expect(tune, `${id} must start with the familiar three-note refrain`).toBeDefined();
+      for (const intensity of [0, .5, 1]) expect(layerActive(tune!, intensity)).toBe(true);
+      for (const l of track.layers) expect(["sonar", "bubble", "heart", "bass", "tribass", "twang"]).not.toContain(l.inst);
+    }
+  });
+});
+
+
+test("Sled Squad routes the intro, chase, trail challenge, and score screen to their arrangements", () => {
+  const view = (phase: SubPhase) => ({ kind: "sub", phase, gap: 10, maxGap: 20 } as Extract<HostView, { kind: "sub" }>);
+  expect(musicFor(view("countdown")).track).toBe("submarine-lobby");
+  expect(musicFor(view("chase"))).toEqual({ track: "submarine-chase", intensity: .5 });
+  expect(musicFor(view("dive")).track).toBe("submarine-dive");
+  expect(musicFor(view("podium")).track).toBe("submarine-results");
 });

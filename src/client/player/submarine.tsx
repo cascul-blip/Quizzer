@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { CORRECT_PER_BOOST, type ClientMsg, type PlayerSubView } from "../../shared/protocol.ts";
-import { GlyphSymbol, oceanGradient } from "../shared/sea-art.tsx";
+import { GlyphSymbol } from "../shared/sea-art.tsx";
+import { winterGradient } from "../shared/winter-art.tsx";
 import { play, startRev, type Rev } from "../shared/sounds.ts";
 import { useCountdown } from "../shared/ui.tsx";
 import { Feedback, StreamQuestion } from "./tower.tsx";
@@ -30,9 +31,9 @@ export function SubPlayer({ view, send }: { view: PlayerSubView; send: Send }) {
   if (view.phase === "countdown") {
     body = (
       <main class="center">
-        <div class="sub-emoji">🐟💨🟡</div>
+        <div class="sub-emoji">🐕🛷🎄</div>
         <h1>Get ready!</h1>
-        <p class="muted">Answer questions to earn boosts. Every {CORRECT_PER_BOOST} correct answers, hold the boost button to push the submarine away from the anglerfish!</p>
+        <p class="muted">Answer questions to earn boosts. Every {CORRECT_PER_BOOST} correct answers, hold the boost button to send the sled racing away from the Christmas goblin!</p>
         <div class="tower-count">{Math.max(1, secs)}</div>
       </main>
     );
@@ -41,15 +42,15 @@ export function SubPlayer({ view, send }: { view: PlayerSubView; send: Send }) {
       <main class="center">
         <div class="sub-emoji">🎉</div>
         <h1>Level {view.level} cleared!</h1>
-        <p class="muted">Get ready to dive. Listen for the instructors!</p>
+        <p class="muted">Get ready for the trail challenge. Listen for the instructors!</p>
       </main>
     );
   } else if (view.phase === "caught") {
     body = (
       <main class="center">
         <div class="sub-emoji">😱</div>
-        <h1>CHOMP!</h1>
-        <p class="muted">The anglerfish caught the submarine at {view.depth} m.</p>
+        <h1>SNATCH!</h1>
+        <p class="muted">The Christmas goblin caught the sled at {view.depth} m.</p>
       </main>
     );
   } else if (view.phase === "podium") {
@@ -69,7 +70,7 @@ export function SubPlayer({ view, send }: { view: PlayerSubView; send: Send }) {
   }
 
   return (
-    <div class="game sub-game" style={{ background: oceanGradient(view.level) }}>
+    <div class="game sub-game" style={{ background: winterGradient() }}>
       <header class="bar sub-bar">
         <span class="name">{view.me.nickname}</span>
         {view.phase === "chase" && (
@@ -157,7 +158,7 @@ function BoostButton({ onBoost }: { onBoost: () => void }) {
   return (
     <main class="boost-screen">
       <h1>{fired ? "⚡ BOOST!" : "Boost ready!"}</h1>
-      <p class="muted">{fired ? "The submarine surges ahead!" : "Hold the button until it's fully charged"}</p>
+      <p class="muted">{fired ? "The sled races ahead!" : "Hold the button until it's fully charged"}</p>
       <button
         class={`boost-button ${charge > 0 ? "charging" : ""} ${fired ? "fired" : ""}`}
         onPointerDown={press}
@@ -205,8 +206,8 @@ function DiveScreen({ view, send }: { view: PlayerSubView; send: Send }) {
   if (!dive || dive.role === "waiting") {
     return (
       <main class="center">
-        <div class="sub-emoji">🤿</div>
-        <h1>The squad is diving</h1>
+        <div class="sub-emoji">❄️</div>
+        <h1>The squad is on the trail</h1>
         <p class="muted">You'll join in at the next level.</p>
       </main>
     );
@@ -216,7 +217,7 @@ function DiveScreen({ view, send }: { view: PlayerSubView; send: Send }) {
       <main class="center instructor">
         {dive.index < dive.total && <SymbolTimer index={dive.index} remainingMs={dive.symbolRemainingMs} totalMs={dive.symbolMs} />}
         <div class="role-tag">📣 You're an INSTRUCTOR</div>
-        <p class="muted">Describe this symbol out loud so your divers can find it!</p>
+        <p class="muted">Describe this symbol out loud so your teammates can find it!</p>
         <div class="big-symbol" key={dive.symbol}>
           <GlyphSymbol id={dive.symbol} />
         </div>
@@ -229,7 +230,7 @@ function DiveScreen({ view, send }: { view: PlayerSubView; send: Send }) {
   return (
     <main class="dive-diver">
       <div class="dive-head">
-        <b>🤿 Listen to the instructors!</b>
+        <b>❄️ Listen to the instructors!</b>
         <span>Tap the symbol being described · {Math.min(dive.index + 1, dive.total)} / {dive.total}</span>
       </div>
       {dive.index < dive.total && <SymbolTimer index={dive.index} remainingMs={dive.symbolRemainingMs} totalMs={dive.symbolMs} />}
@@ -258,7 +259,7 @@ function SubResult({ view }: { view: PlayerSubView }) {
   if (!r) return null;
   return (
     <main class="center">
-      <div class="sub-emoji">🐟</div>
+      <div class="sub-emoji">🛷</div>
       <p class="muted">The squad was caught at</p>
       <div class="final-rank top">
         {r.depth} <span class="unit">m</span>

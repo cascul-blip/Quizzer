@@ -58,8 +58,9 @@ export function musicFor(view: HostView | null): MusicCue {
     case "sub": {
       if (view.phase === "podium") return { track: "submarine-results" };
       if (view.phase === "dive") return { track: "submarine-dive" };
+      if (view.phase === "countdown") return { track: "submarine-lobby" };
       if (view.phase === "caught") return { track: "submarine-chase", intensity: 1 };
-      // The closer the anglerfish, the faster and more layered the music.
+      // The closer the Christmas goblin, the faster and more layered the music.
       return { track: "submarine-chase", intensity: Math.max(0, Math.min(1, 1 - view.gap / view.maxGap)) };
     }
     case "fight": {
