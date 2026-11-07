@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { musicFor } from "../src/client/host/music-cues.ts";
 import type { HostView, SubPhase } from "../src/shared/protocol.ts";
-import { DRUMS, STEPS_PER_BAR, layerActive, noteFreq, stepSeconds, tokens } from "../src/client/shared/music/engine.ts";
+import { DRUMS, STEPS_PER_BAR, layerActive, noteFreq, stepSeconds, tokens, usesSamples } from "../src/client/shared/music/engine.ts";
 import { TRACKS, robotTracksForSkin } from "../src/client/shared/music/tracks.ts";
 import { ROBOT_SKIN } from "../src/client/shared/robot-skin.ts";
 import { MUSIC_TRACKS, musicTrackForFile } from "../src/shared/music-tracks.ts";
@@ -65,6 +65,20 @@ test("custom music files map to track ids", () => {
   expect(musicTrackForFile("classic-lobby.exe")).toBeNull();
   expect(musicTrackForFile("../classic-lobby.mp3")).toBeNull();
   expect(musicTrackForFile("classic-lobby")).toBeNull();
+});
+
+test("Tower Fight keeps the full fortress hymn audible while damage adds intensity", () => {
+  const track = TRACKS["fight-play"];
+  const melody = track.layers.find((l) => l.inst === "brass")!;
+  expect(track.bars).toBe(18);
+  expect(melody.bars).toHaveLength(track.bars);
+  expect(melody.bars.slice(0, 4)).toEqual(melody.bars.slice(4, 8)); // repeated opening stanza
+  expect(tokens(melody.bars[0]!).filter((n) => n !== "-")).toEqual(["C5", "C5", "C5", "G4", "A4"]);
+  expect(tokens(melody.bars.at(-1)!).filter((n) => n !== "-")).toEqual(["A4", "F4", "E4", "D4", "C4"]);
+  for (const intensity of [0, 0.15, 0.3, 0.6, 0.8, 1]) expect(layerActive(melody, intensity)).toBe(true);
+  expect(stepSeconds(track, 1)).toBeLessThan(stepSeconds(track, 0));
+  expect(track.layers.filter((l) => layerActive(l, 1)).length).toBeGreaterThan(track.layers.filter((l) => layerActive(l, 0)).length);
+  for (const layer of track.layers) expect(["bass", "tribass", "twang"]).not.toContain(layer.inst);
 });
 
 describe("seasonal Robot Attack music", () => {
@@ -164,5 +178,44 @@ describe("North Pole Tower Christmas music", () => {
     const play = TRACKS["tower-christmas-play"];
     expect(60 / (stepSeconds(play, 1) * 4)).toBeCloseTo(130);
     expect(play.layers.filter(l => layerActive(l, 1)).length).toBeGreaterThan(play.layers.filter(l => layerActive(l, 0)).length);
+  });
+});
+
+describe("Neon Noel Racer Christmas music", () => {
+  test("theme selects the lobby, continuous drive, and results, including the default theme", () => {
+    for (const theme of ["christmas", "classic", undefined] as const) {
+      const prefix = theme === "classic" ? "racer" : "racer-christmas";
+      const lobby = { kind: "classic", phase: "lobby", mode: "racer", racer: { theme } } as HostView;
+      expect(musicFor(lobby)).toEqual({ track: `${prefix}-lobby` });
+      for (const phase of ["intro", "confidence", "open", "reveal"] as const) {
+        for (const [speed, crashed, intensity] of [[0, true, 0.03], [0, false, 0.1], [75, false, 0.5], [150, false, 1], [200, false, 1]] as const) {
+          const view = { kind: "racer", theme, phase, car: { speed, crashed } } as HostView;
+          // No per-question key: phase changes must not restart the melody.
+          expect(musicFor(view)).toEqual({ track: `${prefix}-drive`, intensity });
+        }
+      }
+      expect(musicFor({ kind: "racer", theme, phase: "podium" } as HostView).track).toBe(`${prefix}-results`);
+    }
+  });
+
+  test("complete carol melodies remain audible at every intensity in the synthesized arcade style", () => {
+    for (const [id, inst, opening, bars] of [
+      ["racer-christmas-lobby", "bell", ["B5", "B5", "B5", "D6"], 21],
+      ["racer-christmas-drive", "lead", ["E4", "B4", "B4", "A4"], 19],
+      ["racer-christmas-results", "brass", ["D4", "G4", "G4", "F#4"], 20],
+    ] as const) {
+      const track = TRACKS[id];
+      expect(track.rich).toBe("arcade");
+      expect(usesSamples(track)).toBe(false);
+      const melody = track.layers.find(l => l.inst === inst)!;
+      expect(melody.bars).toHaveLength(bars);
+      expect(tokens(melody.bars[0]!).filter(n => n !== "-" && n !== ".")).toEqual([...opening]);
+      for (const intensity of [0, 0.03, 0.1, 0.3, 0.6, 1]) expect(layerActive(melody, intensity)).toBe(true);
+    }
+    const drive = TRACKS["racer-christmas-drive"];
+    expect(60 / (stepSeconds(drive, 0) * 4)).toBeCloseTo(112);
+    expect(60 / (stepSeconds(drive, 1) * 4)).toBeCloseTo(162.4);
+    expect(drive.layers.filter(l => layerActive(l, 1)).length).toBeGreaterThan(drive.layers.filter(l => layerActive(l, 0)).length);
+    expect(musicTrackForFile("racer-christmas-drive.mp3")).toBe("racer-christmas-drive");
   });
 });

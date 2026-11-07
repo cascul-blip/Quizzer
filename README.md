@@ -174,6 +174,8 @@ A two-team battle: **Red** and **Blue** each defend a castle tower, with a hill 
 
 If the host ends the game early, **the least damaged tower wins**. With equal damage, the team with more correct answers wins; otherwise it's a draw. The podium shows the winning team and awards for **Top gunner** (most hits on the enemy tower), **Master builder** (most rebuilds) and **Most correct answers**. The results CSV lists each player's answers, shots, enemy hits, friendly hits and rebuilds.
 
+In the Tower Fight lobby, **Theme → 🎄 Gingerbread Siege** switches to gingerbread towers, a snowy Christmas village, peppermint catapults, and three painted cookie-ground images for Low, Medium and High hills with rounded, dripping icing. The selected image also defines the collision surface. Shots cut away the original icing permanently; craters expose cookie without growing a new icing edge. Castle gumdrops and candy-cane doorway stripes use their team color. Painted snowflake flags with gold finials match the draft, and the tower bases sit on the icing surface. **Gingerbread Siege** is the default; **Normal** selects the medieval look. Theme and hill settings are independent and carry into the next game. Both host and phones use the selected theme. Gingerbread towers crack and crumble with damage; repairs build an icing-edged cookie wall. The separate catapult arm snaps forward when an avatar launches, then returns to rest, with a little chassis bounce and sugar dust. Falling snow adds ambient animation. Reduced-motion preferences disable these decorative movements and keep the arm still.
+
 ## Robot Attack mode
 
 Every player for themselves on a 12×12 checkerboard, with a giant robot looming behind it. Choose **Game mode → 🤖 Robot Attack** in the lobby. Everyone starts with **3 lives** on their own tile, spread out across the board. The game alternates between two phases:
@@ -355,10 +357,10 @@ Every game mode has **built-in background music** on the projector (phones stay 
 | Classic | Upbeat game show | Questions get faster and more intense as the timer runs out |
 | Tallest Tower | Christmas theme: *O Come, All Ye Faithful* in the lobby, *Joy to the World* while building, *Hark! The Herald Angels Sing* on the podium. Classic theme: retro chiptune | The Christmas tune plays from the start, growing from flute and bells to brass and drums at 104–130 BPM as the clock runs down. Uses public-domain melodies and CC0 samples |
 | Sled Squad | Jingle Bells: flute and glockenspiel for the intro, a festive brass band for the chase and score screen | The chase builds from 120 to 150 BPM as the goblin approaches; quiet piano and bells during the trail challenge |
-| Tower Fight | Medieval battle | Gets more intense as the towers take damage |
+| Tower Fight | *A Mighty Fortress Is Our God* (Luther) during battle, with brass, organ and strings; medieval lobby and results | The complete public-domain melody plays throughout, with more percussion and a faster tempo as towers take damage |
 | Robot Attack | Snowman skin: Christian Christmas carols—*O Come, All Ye Faithful* in the lobby, *God Rest Ye Merry, Gentlemen* in the quiz, *O Come, O Come, Emmanuel* during movement and attack, and *Joy to the World* for results | Quiz music builds from pizzicato and bells to strings, brass, and percussion at 90–135 BPM. Switching `ROBOT_SKIN` back to `"robot"` restores Beethoven and Grieg. Seasonal arrangements use only CC0 instrument recordings |
 | Land Grab | Calm ambient piano | Speeds up and adds an orchestra as a team gets close to closing a ring; calms down again if the ring is broken |
-| Racer | Sunny late-80s arcade-racing chiptune | Tempo and layers rise with the car's speed; slow and sparse when crashed |
+| Racer | Christmas theme: *Angels We Have Heard on High* in the lobby, *God Rest Ye Merry, Gentlemen* while driving, *Hark! The Herald Angels Sing* for results, with arcade synths, bells and brass. Classic theme: sunny late-80s arcade-racing chiptune | Tempo and layers rise with the car's speed; sparse accompaniment when crashed, with the Christmas melody always audible |
 | Cup of Death | Original spaghetti-western themes: whistle, twangy guitar, galloping hooves; a honky-tonk saloon piano in the lobby | The gallop speeds up and strings, brass and a church bell join as the quiz timer runs out; a heartbeat and a tolling bell while the cups are picked and drunk |
 | Dragon's Hoard | A quiet cave with deep strings and the dragon breathing; a heroic battle theme with brass, drums and choir; a playful plucked scramble with coin sounds | The battle gets more intense as the dragon weakens and the battle clock runs out; a rising rumble, then war drums, during fire breath; the scramble speeds up as its clock runs out |
 | Bomb Squad | Spy-jazz: bass, brushes and a vibraphone | The defuse theme adds a tick and more layers, and speeds up, as the bomb runs down (extra urgency under 30 seconds). A fanfare if the bomb is defused; a low boom if it explodes |
@@ -381,7 +383,8 @@ Put audio files (MP3, OGG, M4A, WAV, WebM or FLAC) in the **`data/music`** folde
 | `fight-lobby` · `fight-play` · `fight-results` | Tower Fight |
 | `robot-lobby` · `robot-quiz` · `robot-move` · `robot-results` | Robot Attack: lobby, quiz phase, movement and laser attack, final results |
 | `land-lobby` · `land-play` · `land-results` | Land Grab |
-| `racer-lobby` · `racer-drive` · `racer-results` | Racer |
+| `racer-lobby` · `racer-drive` · `racer-results` | Racer, classic theme |
+| `racer-christmas-lobby` · `racer-christmas-drive` · `racer-christmas-results` | Neon Noel Racer, Christmas theme |
 | `cup-lobby` · `cup-quiz` · `cup-drink` · `cup-results` | Cup of Death: lobby, dice and quiz, picking and drinking, final results |
 | `dragon-lobby` · `dragon-battle` · `dragon-fire` · `dragon-scramble` · `dragon-results` | Dragon's Hoard: lobby, battle, fire breath (warning and Shield of Faith question), hoard scramble, final podium |
 | `bomb-lobby` · `bomb-defuse` · `bomb-results` | Bomb Squad: lobby, defusing, the defused or exploded ending and the podium |
@@ -470,7 +473,7 @@ The robot's voice lines are pre-recorded MP3s in `src/client/shared/voice/`, the
 
 The Tallest Tower building blocks are images in `src/client/shared/tower/`, made from the generated facade tiles in `scripts/tower-blocks/`. They're committed too. To change them, replace a source PNG (the prompts are in the script) and run `python3 scripts/tower-blocks.py` (needs Pillow and numpy).
 
-The Tower Fight art in `src/client/shared/fight/` (the painterly castle stages and their cloth masks, the catapult, sky, ground and effects) is made by its own art build outside this repo; `python3 scripts/phone-art.py` makes the half-size phone copies. If the castle's proportions change, update `CASTLE_ASPECT` and `CASTLE_FLAG_PART` above `CastleTower` in `src/client/shared/fight-art.tsx`.
+The Tower Fight art in `src/client/shared/fight/` (the painterly castle stages and their cloth masks, the catapult, sky, ground and effects) is made by its own art build outside this repo; `python3 scripts/phone-art.py` makes the half-size phone copies. Gingerbread Siege source art and generation notes are in `scripts/fight-christmas-art/`; `python3 scripts/fight-christmas-art.py` makes its host/phone assets. `bun scripts/fight-preview/serve.ts` opens the standalone artwork review on port 8099. If the castle's proportions change, update `CASTLE_ASPECT` and `CASTLE_FLAG_PART` above `CastleTower` in `src/client/shared/fight-art.tsx`.
 
 The Land Grab art in `src/client/shared/land/` (the storybook parchment maps, tiles, shields, cards and plinths) is made by its own art build outside this repo; `src/client/shared/land/manifest.md` says where each piece goes and how it is tinted.
 

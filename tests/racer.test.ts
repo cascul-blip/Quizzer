@@ -686,10 +686,10 @@ describe("Racer", () => {
 describe("Racer themes", () => {
   test("lobby switches looks and both game views retain the chosen theme", () => {
     const lobby = new Game(quiz(), { clock: new FakeClock() });
-    expect(lobby.hostView().racer.theme).toBe("classic");
+    expect(lobby.hostView().racer.theme).toBe("christmas");
     lobby.setMode("racer");
     const p = lobby.join("Ann");
-    for (const theme of ["christmas", "classic"] as const) {
+    for (const theme of ["classic", "christmas"] as const) {
       lobby.setRacer({ theme });
       expect(lobby.hostView().racer.theme).toBe(theme);
       const game = RacerGame.fromLobby(lobby, { clock: new FakeClock() });

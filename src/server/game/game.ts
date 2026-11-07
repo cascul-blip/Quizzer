@@ -1,6 +1,7 @@
 import { DEFAULT_RACER_THEME } from "../../shared/racer-theme.ts";
 import { DEFAULT_CUP_THEME } from "../../shared/cup-theme.ts";
 import { DEFAULT_TOWER_THEME } from "../../shared/tower-theme.ts";
+import { DEFAULT_FIGHT_THEME } from "../../shared/fight-theme.ts";
 import {
   BOMB_MAX_SQUADS,
   BOMB_MINUTES,
@@ -63,7 +64,7 @@ export const GRACE_MS = 500;
 const LEADERBOARD_SIZE = 10;
 export const DEFAULT_RACER: RacerSettings = { theme: DEFAULT_RACER_THEME };
 export const DEFAULT_TOWER: TowerSettings = { teams: 2, minutes: 5, monster: true, theme: DEFAULT_TOWER_THEME };
-export const DEFAULT_FIGHT: FightSettings = { hill: "random" };
+export const DEFAULT_FIGHT: FightSettings = { hill: "random", theme: DEFAULT_FIGHT_THEME };
 export const DEFAULT_LAND: LandSettings = { teams: 2, minutes: 5 };
 export const DEFAULT_CUP: CupSettings = { cups: CUP_DEFAULT_CUPS, theme: DEFAULT_CUP_THEME };
 export const DEFAULT_DRAGON: DragonSettings = { teams: 2, toughness: "normal", battleMinutes: 5, fireSec: 45, scrambleMinutes: 3 };
@@ -310,10 +311,11 @@ export class Game {
     this.onChange();
   }
 
-  setFight(settings: { hill: HillSetting }): void {
+  setFight(settings: Partial<FightSettings>): void {
     if (this.phase !== "lobby") throw new GameError("Tower Fight settings can only be changed before the game starts");
-    if (!HILL_SETTINGS.includes(settings.hill)) throw new GameError("Unknown hill height");
-    this.fight = { hill: settings.hill };
+    if (settings.hill !== undefined && !HILL_SETTINGS.includes(settings.hill)) throw new GameError("Unknown hill height");
+    if (settings.theme !== undefined && settings.theme !== "classic" && settings.theme !== "christmas") throw new GameError("Unknown fight theme");
+    this.fight = { ...this.fight, ...settings, hill: settings.hill ?? this.fight.hill, theme: settings.theme ?? this.fight.theme };
     this.onChange();
   }
 

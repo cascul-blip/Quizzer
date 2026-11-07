@@ -1,4 +1,5 @@
 import { towerTheme } from "../../shared/tower-theme.ts";
+import { racerTheme } from "../../shared/racer-theme.ts";
 import { cupTheme } from "../../shared/cup-theme.ts";
 import { captureThreat } from "../../shared/land-board.ts";
 import { LAND_GUARD_COST, LAND_STEAL_COST, TOWER_MAX_DAMAGE, type GameMode, type HostView, type LandBoard } from "../../shared/protocol.ts";
@@ -39,6 +40,7 @@ export function musicFor(view: HostView | null): MusicCue {
   if (!view || view.kind === "idle") return { track: null };
   switch (view.kind) {
     case "classic": {
+      if (view.phase === "lobby" && view.mode === "racer") return { track: racerTheme(view.racer.theme) === "christmas" ? "racer-christmas-lobby" : "racer-lobby" };
       if (view.phase === "lobby") return { track: (view.mode === "tower" && towerTheme(view.tower.theme) === "christmas") || (view.mode === "cup" && cupTheme(view.cup.theme) === "christmas") ? "tower-christmas-lobby" : LOBBY[view.mode] ?? "classic-lobby" };
       if (view.phase === "podium") return { track: "classic-results" };
       if (view.phase === "reveal" || view.phase === "leaderboard") return { track: "classic-leaderboard" };
@@ -102,11 +104,12 @@ export function musicFor(view: HostView | null): MusicCue {
       return { track: "land-play", intensity: view.phase === "playing" ? landThreat(view.board) : 0 };
     }
     case "racer": {
-      if (view.phase === "podium") return { track: "racer-results" };
+      const christmas = racerTheme(view.theme) === "christmas";
+      if (view.phase === "podium") return { track: christmas ? "racer-christmas-results" : "racer-results" };
       // One continuous drive: tempo and layers follow the car's speed. No key, so the
       // music never restarts between questions; useMusic glides to each new intensity.
       const { speed, crashed } = view.car;
-      return { track: "racer-drive", intensity: crashed ? 0.03 : Math.max(0.1, Math.min(1, speed / 150)) };
+      return { track: christmas ? "racer-christmas-drive" : "racer-drive", intensity: crashed ? 0.03 : Math.max(0.1, Math.min(1, speed / 150)) };
     }
     case "dragon": {
       if (view.phase === "podium") return { track: "dragon-results" };

@@ -11,6 +11,7 @@ import christmasCar from "./racer/christmas/car.webp";
 import christmasCrash from "./racer/christmas/car-crashed.webp";
 import christmasSkyline from "./racer/christmas/skyline.webp";
 import christmasTree from "./racer/christmas/tree.webp";
+import santaFlyby from "./racer/christmas/santa-flyby.webp";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { Avatar } from "./avatar-art.tsx";
@@ -50,6 +51,16 @@ const TRAIL_BANDS = 6;
 const TRAIL_MIN_S = 0.15;
 const TRAIL_MAX_S = 0.8;
 const TRAIL_FULL_MPH = 400;
+const SANTA_FIRST_S = 3;
+const SANTA_INTERVAL_S = 30;
+const SANTA_PASS_S = 8;
+
+/** A pass shortly after takeoff, then every 30 seconds of visible time in space. */
+export function santaFlybyProgress(spaceSeconds: number): number | null {
+  if (spaceSeconds < SANTA_FIRST_S) return null;
+  const elapsed = (spaceSeconds - SANTA_FIRST_S) % SANTA_INTERVAL_S;
+  return elapsed < SANTA_PASS_S ? elapsed / SANTA_PASS_S : null;
+}
 /** How long one thrown-out avatar takes to leave, on the road and in space (keep in step with theme.css). */
 const EJECT_ROAD_MS = 2200;
 const EJECT_SPACE_MS = 2600;
@@ -108,9 +119,11 @@ export function RacerScene({ speed, crashed, onLand, ejected, theme, class: cls 
   const dashes = useRef<HTMLDivElement>(null);
   const car = useRef<HTMLDivElement>(null);
   const stars = useRef<HTMLCanvasElement>(null);
+  const santa = useRef<HTMLDivElement>(null);
   // The shown speed starts at the real one: a scene that appears mid-race is already moving.
-  const motion = useRef({ target, shown: target, kick: () => {}, onLand });
+  const motion = useRef({ target, shown: target, kick: () => {}, onLand, christmas });
   motion.current.onLand = onLand;
+  motion.current.christmas = christmas;
   const [ejection, setEjection] = useState<Ejection | null>(null);
 
   useEffect(() => {
@@ -132,6 +145,7 @@ export function RacerScene({ speed, crashed, onLand, ejected, theme, class: cls 
     let space = m.shown > SPACE_MPH;
     let landing = 0;
     let starsShown = false;
+    let spaceSeconds = 0;
     el.dataset.space = space ? "on" : "off";
     el.style.setProperty("--racer-slide", `${SLIDE_MS}ms`);
     // Slide only from the second frame on, so the first one doesn't animate.
@@ -145,6 +159,7 @@ export function RacerScene({ speed, crashed, onLand, ejected, theme, class: cls 
       const up = m.shown > SPACE_MPH;
       if (up === space) return;
       space = up;
+      spaceSeconds = 0;
       el.dataset.space = up ? "on" : "off";
       clearTimeout(landing);
       landing = 0;
@@ -210,6 +225,11 @@ export function RacerScene({ speed, crashed, onLand, ejected, theme, class: cls 
       if (dashes.current) dashes.current.style.backgroundPositionX = `${Math.round(dashX)}px`;
       car.current?.classList.toggle("moving", m.shown > BOB_MPH);
       car.current?.classList.toggle("fast", m.shown > BOB_FAST_MPH);
+      if (santa.current) {
+        const progress = space && m.christmas && !still.matches ? santaFlybyProgress(spaceSeconds) : null;
+        santa.current.hidden = progress === null;
+        if (progress !== null) santa.current.style.setProperty("--racer-flyby-progress", String(progress));
+      }
       drawStars();
     };
 
@@ -247,6 +267,7 @@ export function RacerScene({ speed, crashed, onLand, ejected, theme, class: cls 
       dashX = (dashX + road) % dashW;
       moveStars(dt);
       updateSpace();
+      spaceSeconds = space && m.christmas ? spaceSeconds + dt : 0;
       place();
       // At rest there is nothing to draw until the speed changes.
       if (m.shown === 0 && m.target === 0) last = 0;
@@ -328,6 +349,11 @@ export function RacerScene({ speed, crashed, onLand, ejected, theme, class: cls 
           <div ref={dashes} class="racer-scene-dashes" />
         </div>
       </div>
+      {christmas && (
+        <div ref={santa} class="racer-scene-santa" hidden>
+          <img src={santaFlyby} alt="" />
+        </div>
+      )}
       <div ref={car} class="racer-scene-car">
         <img src={christmas ? (crashed ? christmasCrash : christmasCar) : (crashed ? carCrashedImg : carImg)} alt="" />
         {crashed && (

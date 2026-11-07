@@ -571,7 +571,7 @@ export class GameHub {
         this.lastSetup.tower = { ...classic().tower };
         return;
       case "host.setFight":
-        classic().setFight({ hill: msg.hill });
+        classic().setFight({ hill: msg.hill, theme: msg.theme });
         this.lastSetup.fight = { ...classic().fight };
         return;
       case "host.setLand":

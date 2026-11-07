@@ -1195,6 +1195,32 @@ a.btn {
   background-size: var(--racer-dash-w) 100%;
 }
 
+/* Santa overtakes the left-facing car, above it, and exits fully off screen. */
+.racer-scene-santa {
+  left: 100%;
+  top: 8%;
+  width: calc(var(--racer-u) * 155);
+  max-width: 80%;
+  pointer-events: none;
+  transform: translate3d(calc(var(--racer-flyby-progress, 0) * (0px - var(--racer-w) - 100%)), 0, 0);
+  will-change: transform;
+}
+
+.racer-scene-santa img {
+  display: block;
+  width: 100%;
+}
+
+.racer-scene:not([data-space="on"]) .racer-scene-santa {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .racer-scene-santa {
+    display: none;
+  }
+}
+
 /* Centred at 60% of the width, wheels on the road below the centre line. */
 .racer-scene-car {
   left: 60%;
@@ -2619,3 +2645,55 @@ a.btn {
   transform: translate(calc(var(--racer-w, 1000px) * 0.04), calc(var(--racer-u) * 24));
   opacity: 0.55;
 }
+
+/* Gingerbread Siege: seasonal artwork shares Tower Fight's terrain and hit boxes. */
+.ginger-snow circle {
+  animation: ginger-snowfall 9s linear infinite;
+}
+@keyframes ginger-snowfall {
+  from { transform: translate(0, -70px); opacity: 0; }
+  15%, 85% { opacity: .65; }
+  to { transform: translate(25px, 140px); opacity: 0; }
+}
+.fight-stage[data-theme="christmas"], .fight-game[data-theme="christmas"] {
+  background-color: #39273e;
+  color: #fff4e5;
+}
+.fight-stage[data-theme="christmas"] .topbar {
+  background: #352238;
+  border-bottom-color: #b78657;
+}
+.fight-stage[data-theme="christmas"] .fight-team {
+  background: rgba(49, 29, 47, .85);
+  border-color: #ddbd8b;
+}
+.fight-game[data-theme="christmas"] .fight-strip {
+  background: #4b2e3e;
+}
+.fight-game[data-theme="christmas"] .fight-choice {
+  background: rgba(56, 32, 40, .94);
+  border-color: #efd5ad;
+}
+.fight-game[data-theme="christmas"] .repair-wall {
+  background-color: #6d3b23;
+}
+.fight-game[data-theme="christmas"] .health i,
+.fight-stage[data-theme="christmas"] .health i { border-radius: 50%; }
+@media (prefers-reduced-motion: reduce) {
+  .ginger-snow circle { animation: none; }
+}
+.ginger-sugar-puff {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: smoke-rise 1.8s ease-out infinite both;
+}
+@media (prefers-reduced-motion: reduce) { .ginger-sugar-puff { animation: none; } }
+.fight-game[data-theme="christmas"] .repair-wall .wall { background: #4a2d26; }
+.fight-game[data-theme="christmas"] .repair-wall .brick {
+  background-color: #d99b53;
+  background-blend-mode: normal;
+  border: 2px solid #fff0d9;
+  border-radius: 7px;
+  box-shadow: inset 0 0 0 2px #e7ad72;
+}
+@media (prefers-reduced-motion: reduce) { .ginger-crumbs circle { animation: none; } }

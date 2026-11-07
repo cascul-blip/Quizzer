@@ -1,3 +1,5 @@
+import { fightName } from "../../shared/fight-theme.ts";
+import { FightThemeProvider } from "../shared/fight-skin.tsx";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { CORRECT_PER_DECISION, TOWER_MAX_DAMAGE, type FightEvent, type FightShot, type HostView } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
@@ -13,7 +15,11 @@ const STATE_ICON = { question: "", decide: "🤔", aim: "🎯", watch: "🚀", r
 const HILL_NAME = { low: "Low hill", medium: "Medium hill", high: "High hill" } as const;
 
 /** Projector screen for Tower Fight: countdown → live battlefield → collapse → podium. */
-export function FightStage({ view, send }: { view: FightView; send: Send }) {
+export function FightStage(props: { view: FightView; send: Send }) {
+  return <FightThemeProvider theme={props.view.theme}><FightStageContent {...props} /></FightThemeProvider>;
+}
+
+function FightStageContent({ view, send }: { view: FightView; send: Send }) {
   const secs = useCountdown(view.phaseRemainingMs, view.phase);
   const prev = useRef<FightView | null>(null);
 
@@ -46,10 +52,10 @@ export function FightStage({ view, send }: { view: FightView; send: Send }) {
   const loaded = view.teams.map((t) => t.members.find((m) => m.state === "aim")?.avatar ?? null);
 
   return (
-    <div class="stage">
+    <div class="stage fight-stage" data-theme={view.theme ?? "classic"}>
       <header class="topbar">
         <div class="title">{view.quiz.title}</div>
-        <div class="pill">🏰 Tower Fight</div>
+        <div class="pill">{fightName(view.theme)}</div>
         <div class="pill">⛰ {HILL_NAME[view.hill]}</div>
         <div class="spacer" />
         <div class="pill">👥 {view.playerCount}</div>
@@ -64,7 +70,7 @@ export function FightStage({ view, send }: { view: FightView; send: Send }) {
         <FightPodium view={view} send={send} />
       ) : (
         <main class={`fight-wrap ${view.phase === "collapse" ? "shake-long" : ""}`}>
-          <Battlefield terrain={view.terrain} damage={view.teams.map((t) => t.damage)} colors={view.teams.map((t) => t.color)} loaded={loaded} repairing={view.teams.map((t) => t.repairing)} collapsing={view.phase === "collapse" ? destroyed : null}>
+          <Battlefield hill={view.hill} shots={view.shots} terrain={view.terrain} damage={view.teams.map((t) => t.damage)} colors={view.teams.map((t) => t.color)} loaded={loaded} repairing={view.teams.map((t) => t.repairing)} collapsing={view.phase === "collapse" ? destroyed : null}>
             <ShotLayer shots={view.shots} onLand={onLand} />
           </Battlefield>
           {view.teams.map((t) => (
@@ -148,7 +154,7 @@ function FightPodium({ view, send }: { view: FightView; send: Send }) {
   return (
     <main class="podium tower-podium fight-podium">
       <div class="podium-bg" aria-hidden="true">
-        <Battlefield terrain={view.terrain} damage={view.teams.map((t) => t.damage)} colors={view.teams.map((t) => t.color)} />
+        <Battlefield hill={view.hill} shots={view.shots} terrain={view.terrain} damage={view.teams.map((t) => t.damage)} colors={view.teams.map((t) => t.color)} />
       </div>
       <h1 style={winner ? { background: winner.color, color: teamInk(winner.color) } : undefined}>{winner ? `🏆 Team ${winner.name} wins!` : "🤝 It's a draw!"}</h1>
       {showErrors ? (

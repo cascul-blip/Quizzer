@@ -1,3 +1,4 @@
+import type { FightTheme } from "./fight-theme.ts";
 import type { RacerTheme } from "./racer-theme.ts";
 import type { TowerTheme } from "./tower-theme.ts";
 import type { CupTheme } from "./cup-theme.ts";
@@ -160,7 +161,7 @@ export type HostMsg =
   | { type: "host.setMode"; mode: GameMode }
   | { type: "host.setRacer"; theme: RacerTheme }
   | { type: "host.setTower"; teams: number; minutes: number; monster?: boolean; theme?: TowerTheme }
-  | { type: "host.setFight"; hill: HillSetting }
+  | { type: "host.setFight"; hill?: HillSetting; theme?: FightTheme }
   | { type: "host.setLand"; teams: number; minutes: number }
   | { type: "host.setCup"; cups: number; theme?: CupTheme }
   | ({ type: "host.setDragon" } & DragonSettings)
@@ -467,6 +468,7 @@ export const DECISION_MS = 10_000;
 export const REPAIR_MS = 4000;
 
 export interface FightSettings {
+  theme?: FightTheme;
   hill: HillSetting;
 }
 
@@ -515,6 +517,7 @@ export interface HostFightTeam extends TeamInfo {
 
 export interface HostFightState {
   kind: "fight";
+  theme?: FightTheme;
   phase: FightPhase;
   quiz: { id: string; title: string; questionCount: number };
   phaseRemainingMs: number;
@@ -535,6 +538,8 @@ export interface HostFightState {
 
 export interface PlayerFightView {
   kind: "fight";
+  hill?: HillHeight;
+  theme?: FightTheme;
   phase: FightPhase;
   title: string;
   phaseRemainingMs: number;
