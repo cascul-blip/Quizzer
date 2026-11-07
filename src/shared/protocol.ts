@@ -1,3 +1,4 @@
+import type { DuelTheme } from "./duel-theme.ts";
 import type { LandTheme } from "./land-theme.ts";
 import type { SiegeTheme } from "./siege-theme.ts";
 import type { FightTheme } from "./fight-theme.ts";
@@ -1092,6 +1093,7 @@ export const DUEL_ROUNDS = [10, 15, 20] as const;
 export const DUEL_DEFAULT_ROUNDS = 15;
 
 export interface DuelSettings {
+  theme?: DuelTheme;
   /** Rounds to play; questions repeat in a fresh order once they run out. */
   rounds: number;
 }
@@ -1164,6 +1166,9 @@ export interface HostDuelPlayer extends DuelPlayerRef {
 }
 
 export interface HostDuelState {
+  /** Time since reveal started, for reconnect-safe animation. */
+  revealElapsedMs?: number;
+  theme?: DuelTheme;
   kind: "duel";
   phase: DuelPhase;
   quiz: { id: string; title: string; questionCount: number };
@@ -1192,6 +1197,8 @@ export interface HostDuelState {
 }
 
 export interface PlayerDuelView {
+  revealElapsedMs?: number;
+  theme?: DuelTheme;
   kind: "duel";
   phase: DuelPhase;
   title: string;

@@ -1,3 +1,5 @@
+import { duelArenaName, duelName, duelTheme } from "../../shared/duel-theme.ts";
+import { SnowballScene, preloadSnowballArt, snowballBackground } from "../shared/duel-christmas.tsx";
 import type { JSX } from "preact";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import type { AvatarChoice } from "../../shared/avatars.ts";
@@ -72,10 +74,11 @@ export function DuelStage({ view, send }: { view: DuelView; send: Send }) {
   const prev = useRef<DuelView | null>(null);
   const connected = view.players.filter((p) => p.connected).length;
   const round = view.phase === "reveal" ? view.lastRound : null;
-  const step = useRevealStep(round?.round ?? null);
+  const step = useRevealStep(round?.round ?? null, view.revealElapsedMs ?? 0);
 
   // Every pose and clip decoded before the first reveal, so swapping one in never blinks.
-  useEffect(() => preloadDuelArt(), []);
+  const christmas = duelTheme(view.theme) === "christmas";
+  useEffect(() => christmas ? preloadSnowballArt(false) : preloadDuelArt(), [christmas]);
 
   // Sound cues on transitions.
   useEffect(() => {
@@ -94,9 +97,9 @@ export function DuelStage({ view, send }: { view: DuelView; send: Send }) {
     if (!round) return;
     if (step >= STEP_DRAW && stung.current !== round.round) {
       stung.current = round.round;
-      music.sting("showdown-draw");
+      if (!christmas) music.sting("showdown-draw");
     }
-    if (step === STEP_FIRE && round.arenas.some((a) => a.draw || a.duelists.some((d) => d.outcome === "win"))) play("gunshot");
+    if (!christmas && step === STEP_FIRE && round.arenas.some((a) => a.draw || a.duelists.some((d) => d.outcome === "win"))) play("gunshot");
     if (step === STEP_MOVE && round.arenas.some((a) => a.duelists.some((d) => d.nextArena !== a.arena))) play("whoosh");
   }, [step, round?.round]);
 
@@ -128,10 +131,10 @@ export function DuelStage({ view, send }: { view: DuelView; send: Send }) {
   const podium = view.phase === "podium";
 
   return (
-    <div class="stage duel-stage">
+    <div class={`stage duel-stage ${christmas ? "christmas" : ""}`}>
       <header class="topbar">
         <div class="title">{view.quiz.title}</div>
-        <div class="pill">🤠 Showdown</div>
+        <div class="pill">{christmas ? "❄️" : "🤠"} {duelName(view.theme)}</div>
         {!podium && (
           <div class="pill">
             Round {view.round} / {view.rounds}
@@ -180,7 +183,7 @@ export function DuelStage({ view, send }: { view: DuelView; send: Send }) {
  * The reveal step for this round (see STEP_AT_MS), 0 while `round` is null.
  * Keyed on the round number, so later snapshots of the same reveal don't restart it.
  */
-function useRevealStep(round: number | null): number {
+function useRevealStep(round: number | null, elapsed = 0): number {
   const [at, setAt] = useState<{ round: number | null; step: number }>({ round, step: 0 });
   useEffect(() => {
     if (round === null) return;
@@ -189,8 +192,8 @@ function useRevealStep(round: number | null): number {
       setAt({ round, step: STEP_SETTLE });
       return;
     }
-    setAt({ round, step: 0 });
-    const timers = STEP_AT_MS.map((ms, i) => setTimeout(() => setAt({ round, step: i + 1 }), ms));
+    setAt({ round, step: STEP_AT_MS.filter(ms => ms <= elapsed).length });
+    const timers = STEP_AT_MS.flatMap((ms, i) => ms > elapsed ? [setTimeout(() => setAt({ round, step: i + 1 }), ms - elapsed)] : []);
     return () => timers.forEach(clearTimeout);
   }, [round]);
   return at.round === round && round !== null ? at.step : 0;
@@ -211,7 +214,7 @@ function Question({ view, send, secs }: { view: DuelView; send: Send; secs: numb
         {pin ? <PinBoard image={pin.image} spots={pin.spots} labels={q.options} correct={reveal ? [...correct] : undefined} /> : q.image && <img src={`/${q.image}`} alt="" />}
       </div>
       <TimerBar view={view} secs={secs} />
-      {view.phase === "intro" && <p class="duel-intro">Hands off your holsters…</p>}
+      {view.phase === "intro" && <p class="duel-intro">{duelTheme(view.theme) === "christmas" ? "Snowballs ready…" : "Hands off your holsters…"}</p>}
       {open && q.type === "text" && <p class="typing-note">Type your answer on your phone</p>}
       {(open || reveal) && pin && <PinNote open={!reveal} labels={[...correct].map((i) => q.options[i]!)} />}
       {(open || reveal) && !pin && (q.type !== "text" || reveal) && (
@@ -303,11 +306,13 @@ function Arenas({ view, step }: { view: DuelView; step: number }) {
   const layout = gridFor(view.arenas.length);
   const wrap = useRef<HTMLDivElement>(null);
   const panels = useRef(new Map<number, HTMLElement>());
-  const [tokens, setTokens] = useState<{ round: number; list: Token[] } | null>(null);
+  const [tokens, setTokens] = useState<{ round: number; list: Token[]; delay: number } | null>(null);
 
   // When the movers set off, measure where each one stands and where its new arena is.
   useLayoutEffect(() => {
     if (!reveal || step !== STEP_MOVE || !wrap.current) return;
+    const delay = duelTheme(view.theme) === "christmas" ? Math.max(0, (view.revealElapsedMs ?? 0) - STEP_AT_MS[3]!) : 0;
+    if (delay >= TOKEN_MS) return;
     const base = wrap.current.getBoundingClientRect();
     const list: Token[] = [];
     for (const a of reveal.arenas) {
@@ -323,7 +328,7 @@ function Arenas({ view, step }: { view: DuelView; step: number }) {
         list.push({ key: d.id, avatar: d.avatar, up: d.nextArena < a.arena, x, y, dx: tx - x, dy: ty - y });
       });
     }
-    setTokens({ round: reveal.round, list });
+    setTokens({ round: reveal.round, list, delay });
   }, [step, reveal?.round]);
 
   const style: JSX.CSSProperties = layout.row
@@ -351,7 +356,7 @@ function Arenas({ view, step }: { view: DuelView; step: number }) {
           step === STEP_MOVE &&
           tokens?.round === reveal.round &&
           tokens.list.map((t) => (
-            <div key={t.key} class={`duel-token ${t.up ? "up" : "down"}`} style={{ left: `${t.x}px`, top: `${t.y}px`, "--dx": `${t.dx}px`, "--dy": `${t.dy}px`, animationDuration: `${TOKEN_MS}ms` }}>
+            <div key={t.key} class={`duel-token ${t.up ? "up" : "down"}`} style={{ left: `${t.x}px`, top: `${t.y}px`, "--dx": `${t.dx}px`, "--dy": `${t.dy}px`, animationDuration: `${TOKEN_MS}ms`, animationDelay: `-${tokens.delay}ms` }}>
               <Avatar choice={t.avatar} />
               <span class="duel-token-badge">{t.up ? "⬆" : "⬇"}</span>
             </div>
@@ -396,6 +401,7 @@ interface Act {
 
 /** One arena: the street, its duelists, their names, and on the reveal the shoot-out. */
 function ArenaPanel({ arena, result, view, step, panelRef }: { arena: DuelArena; result: DuelArenaResult | null; view: DuelView; step: number; panelRef: (el: HTMLElement | null) => void }) {
+  if (duelTheme(view.theme) === "christmas") return <ChristmasArenaPanel arena={arena} result={result} view={view} step={step} panelRef={panelRef} />;
   const throne = arena.arena === 1;
   // On the reveal the panel shows the round as it was played; otherwise the live arena.
   const people = result ? result.duelists : arena.duelists;
@@ -518,8 +524,21 @@ function ArenaPanel({ arena, result, view, step, panelRef }: { arena: DuelArena;
   );
 }
 
+
+/** Christmas art shares the same ladder, score tags and movement timing. */
+function ChristmasArenaPanel({ arena, result, view, step, panelRef }: { arena: DuelArena; result: DuelArenaResult | null; view: DuelView; step: number; panelRef: (el: HTMLElement | null) => void }) {
+  const people = result?.duelists ?? arena.duelists;
+  const live = new Map(arena.duelists.map(p => [p.id, p]));
+  return <div class={`duel-panel christmas ${arena.arena === 1 ? "throne" : ""}`} ref={panelRef}>
+    <SnowballScene arena={arena.arena} people={arena.duelists} result={result} round={view.round} elapsedMs={view.revealElapsedMs} phone={false} labels={false} sound={arena.arena === 1} leaving={step >= STEP_MOVE} />
+    <div class="duel-sign"><span>{duelArenaName(arena.arena, "christmas")}</span></div>
+    {people.map((d, slot) => <NameTag key={d.id} slot={slot} name={d.nickname} result={result ? d as DuelistResult : null} arena={arena.arena} step={step} answered={!result && view.phase === "open" && !!live.get(d.id)?.answered} away={live.get(d.id)?.connected === false} christmas />)}
+    {result?.draw && step >= STEP_FIRE && <div class="duel-draw">Draw</div>}
+  </div>;
+}
+
 /** Name under a duelist; on the reveal ✓/✗ and the answer time, then where they go next. */
-function NameTag({ slot, name, result, arena, step, answered, away }: { slot: number; name: string; result: DuelistResult | null; arena: number; step: number; answered: boolean; away: boolean }) {
+function NameTag({ slot, name, result, arena, step, answered, away, christmas = false }: { slot: number; name: string; result: DuelistResult | null; arena: number; step: number; answered: boolean; away: boolean; christmas?: boolean }) {
   const moved = result && step >= STEP_SETTLE && result.nextArena !== arena ? (result.nextArena < arena ? "up" : "down") : null;
   return (
     <div class={`duel-name slot${slot} ${away ? "away" : ""} ${answered ? "answered" : ""}`} style={{ left: `${slotCentreX(slot)}%` }}>
@@ -533,7 +552,7 @@ function NameTag({ slot, name, result, arena, step, answered, away }: { slot: nu
       {result && result.points > 0 && step >= STEP_SETTLE && <span class="duel-name-points">+{result.points}</span>}
       {moved && (
         <span class={`duel-move ${moved}`}>
-          {moved === "up" ? "⬆" : "⬇"} {result!.nextArena === 1 ? "High Noon" : `Arena ${result!.nextArena}`}
+          {moved === "up" ? "⬆" : "⬇"} {duelArenaName(result!.nextArena, christmas ? "christmas" : "classic")}
         </span>
       )}
     </div>
@@ -552,13 +571,14 @@ function hash(s: string): number {
 function DuelPodium({ view, send }: { view: DuelView; send: Send }) {
   const [showErrors, setShowErrors] = useState(false);
   const a = view.awards;
+  const christmas = duelTheme(view.theme) === "christmas";
   const ranked = [...view.players].sort((x, y) => x.rank - y.rank);
   // Second, first, third, like the classic podium.
   const top = [ranked[1], ranked[0], ranked[2]];
   return (
-    <main class="podium duel-podium">
-      <TownWide class="duel-town" />
-      <h1>🤠 The fastest guns in the West</h1>
+    <main class={`podium duel-podium ${christmas ? "christmas" : ""}`}>
+      {christmas ? <img class="sd-town duel-town" src={snowballBackground(1, false)} alt="" /> : <TownWide class="duel-town" />}
+      <h1>{christmas ? "❄️ The snowball champions of the North Pole" : "🤠 The fastest guns in the West"}</h1>
       {showErrors ? (
         <ErrorsTable errors={view.errors ?? []} />
       ) : (
@@ -567,8 +587,8 @@ function DuelPodium({ view, send }: { view: DuelView; send: Send }) {
             {top.map((p, i) =>
               p ? (
                 <div key={p.id} class={`duel-wanted-slot ${p.rank === 1 ? "first" : ""}`}>
-                  {p.rank === 1 && <SheriffStar class="duel-wanted-star" />}
-                  <WantedPoster avatar={p.avatar}>
+                  {p.rank === 1 && !christmas && <SheriffStar class="duel-wanted-star" />}
+                  <WantedPoster avatar={p.avatar} winter={christmas} heading={christmas ? "CHAMPION" : "WANTED"}>
                     <div class="duel-wanted-name">{p.nickname}</div>
                     <div class="duel-wanted-line">
                       {ordinal(p.rank)} · {p.points} pt{p.points === 1 ? "" : "s"}
@@ -581,8 +601,8 @@ function DuelPodium({ view, send }: { view: DuelView; send: Send }) {
             )}
           </div>
           <div class="awards">
-            <Award icon="⭐" title="Longest reign" award={a?.longestReign ?? null} unit="" valueText={(v) => `${v} round${v === 1 ? "" : "s"} at High Noon`} />
-            <Award icon="🔫" title="Most wins" award={a?.mostWins ?? null} unit="" valueText={(v) => `${v} win${v === 1 ? "" : "s"}`} />
+            <Award icon="⭐" title="Longest reign" award={a?.longestReign ?? null} unit="" valueText={(v) => `${v} round${v === 1 ? "" : "s"} at ${duelArenaName(1, view.theme)}`} />
+            <Award icon={christmas ? "❄️" : "🔫"} title="Most wins" award={a?.mostWins ?? null} unit="" valueText={(v) => `${v} win${v === 1 ? "" : "s"}`} />
             <Award icon="⬆" title="Biggest climb" award={a?.biggestClimb ?? null} unit="" valueText={(v) => `${v} arena${v === 1 ? "" : "s"}`} />
           </div>
           {ranked.length > 3 && (

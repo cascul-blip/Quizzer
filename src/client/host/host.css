@@ -7095,3 +7095,8 @@ select {
   .land-christmas .land-side { --card-w: clamp(180px, 23vw, 250px); }
   .land-christmas .land-team header { flex-wrap: wrap; gap: 0; }
 }
+
+/* Snowball Showdown keeps the question layout and changes the Western surround. */
+.duel-stage.christmas { --duel-dusk:#0b1b30; --duel-wood:#24445e; --duel-sand:#dcefff; --duel-gold:#c9eff9; --duel-red:#66c1df; background:linear-gradient(#0b1b30,#142e49); }
+.duel-stage.christmas .topbar { background:#0d2035; }
+.duel-stage.christmas .duel-timer-fill { background:linear-gradient(90deg,#4398bd,#c5f4ff); }

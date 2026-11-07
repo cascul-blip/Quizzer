@@ -1248,11 +1248,11 @@ describe("Showdown over WebSockets", () => {
     host.send({ type: "host.open", quizId: quiz.id });
     await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
     host.send({ type: "host.setMode", mode: "duel" });
-    await host.hostState((v) => v.kind === "classic" && v.mode === "duel" && v.duel.rounds === 15 && v.teams === null);
+    await host.hostState((v) => v.kind === "classic" && v.mode === "duel" && v.duel.rounds === 15 && v.duel.theme === "christmas" && v.teams === null);
     host.send({ type: "host.setDuel", rounds: 7 });
     expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: "Unsupported number of rounds" });
-    host.send({ type: "host.setDuel", rounds: 10 });
-    await host.hostState((v) => v.kind === "classic" && v.duel.rounds === 10);
+    host.send({ type: "host.setDuel", rounds: 10, theme: "classic" });
+    await host.hostState((v) => v.kind === "classic" && v.duel.rounds === 10 && v.duel.theme === "classic");
 
     const names = ["Ann", "Bob"];
     const players = await Promise.all(names.map(() => TestSocket.open(wsUrl)));
@@ -1265,10 +1265,11 @@ describe("Showdown over WebSockets", () => {
 
     host.send({ type: "host.start", pacing: "manual" });
     const started = await host.hostState((v) => v.kind === "duel" && v.phase === "intro");
-    expect(started.view.kind === "duel" && started.view).toMatchObject({ round: 1, rounds: 10, playerCount: 2, question: { index: 0, total: 10, text: "Q1", options: [] } });
+    expect(started.view.kind === "duel" && started.view).toMatchObject({ theme: "classic", round: 1, rounds: 10, playerCount: 2, question: { index: 0, total: 10, text: "Q1", options: [] } });
     host.send({ type: "host.setShuffle", questions: true, answers: true });
     expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: "Not available in Showdown" });
     const ann = await players[0]!.playerState((v) => v.kind === "duel" && v.phase === "intro");
+    expect(ann.view.kind === "duel" && ann.view.theme).toBe("classic");
     expect(ann.view.kind === "duel" && ann.view.opponents.map((o) => o.nickname)).toEqual(["Bob"]);
 
     // Ann right, Bob wrong: Ann wins Arena 1 and tops the ladder.
@@ -1296,7 +1297,7 @@ describe("Showdown over WebSockets", () => {
 
     // Play again keeps Showdown and its rounds.
     host.send({ type: "host.open", quizId: quiz.id });
-    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "duel" && v.duel.rounds === 10);
+    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "duel" && v.duel.rounds === 10 && v.duel.theme === "classic");
     host.send({ type: "host.close" });
     await host.hostState((v) => v.kind === "idle");
     [host, ...players].forEach((s) => s.close());

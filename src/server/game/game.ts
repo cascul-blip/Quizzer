@@ -1,3 +1,4 @@
+import { DEFAULT_DUEL_THEME, duelTheme } from "../../shared/duel-theme.ts";
 import { DEFAULT_LAND_THEME, landTheme } from "../../shared/land-theme.ts";
 import { DEFAULT_SIEGE_THEME, siegeTheme } from "../../shared/siege-theme.ts";
 import { DEFAULT_RACER_THEME } from "../../shared/racer-theme.ts";
@@ -72,7 +73,7 @@ export const DEFAULT_CUP: CupSettings = { cups: CUP_DEFAULT_CUPS, theme: DEFAULT
 export const DEFAULT_DRAGON: DragonSettings = { teams: 2, toughness: "normal", battleMinutes: 5, fireSec: 45, scrambleMinutes: 3 };
 export const DEFAULT_BOMB: BombSettings = { game: "together", squads: 1, modules: 3, wires: 3, minutes: 5, penaltySec: 15 };
 export const DEFAULT_SIEGE: SiegeSettings = { waves: 5, theme: DEFAULT_SIEGE_THEME };
-export const DEFAULT_DUEL: DuelSettings = { rounds: DUEL_DEFAULT_ROUNDS };
+export const DEFAULT_DUEL: DuelSettings = { rounds: DUEL_DEFAULT_ROUNDS, theme: DEFAULT_DUEL_THEME };
 export const DEFAULT_SLEIGH: SleighSettings = { minutes: SLEIGH_DEFAULT_MINUTES };
 
 interface Answer {
@@ -188,7 +189,7 @@ export class Game {
     this.dragon = { ...(opts.dragon ?? DEFAULT_DRAGON) };
     this.bomb = { ...(opts.bomb ?? DEFAULT_BOMB) };
     this.siege = { ...(opts.siege ?? DEFAULT_SIEGE) };
-    this.duel = { ...(opts.duel ?? DEFAULT_DUEL) };
+    this.duel = { ...(opts.duel ?? DEFAULT_DUEL), theme: duelTheme(opts.duel?.theme) };
     this.sleigh = { ...(opts.sleigh ?? DEFAULT_SLEIGH) };
     this.protect = opts.protect ?? true;
   }
@@ -393,7 +394,9 @@ export class Game {
     if (this.phase !== "lobby") throw new GameError("Showdown settings can only be changed before the game starts");
     const rounds = Number(settings.rounds);
     if (!(DUEL_ROUNDS as readonly number[]).includes(rounds)) throw new GameError("Unsupported number of rounds");
-    this.duel = { rounds };
+    const theme = settings.theme ?? duelTheme(this.duel.theme);
+    if (theme !== "classic" && theme !== "christmas") throw new GameError("Unsupported Showdown theme");
+    this.duel = { rounds, theme };
     this.onChange();
   }
 

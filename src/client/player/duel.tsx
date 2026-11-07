@@ -1,3 +1,5 @@
+import { duelArenaName, duelTheme, type DuelTheme } from "../../shared/duel-theme.ts";
+import { SnowballScene, preloadSnowballArt } from "../shared/duel-christmas.tsx";
 import { useEffect, useState } from "preact/hooks";
 import type { ClientMsg, DuelArenaResult, DuelistResult, DuelPlayerRef, PlayerDuelView } from "../../shared/protocol.ts";
 import { DuelStreet, Duelist, DustPuff, GunSmoke, MuzzleFlash, WantedPoster } from "../shared/duel-art.tsx";
@@ -13,13 +15,14 @@ type Hat = "brown" | "black" | "white" | "sheriff" | null;
 const LONG_QUESTION = 140;
 
 const qClass = (text: string) => (visibleLength(text) > LONG_QUESTION ? "long" : "");
-const arenaName = (n: number) => (n === 1 ? "High Noon" : `Arena ${n}`);
+const arenaName = (n: number, theme?: DuelTheme) => duelArenaName(n, theme);
 const secs = (ms: number) => `${(ms / 1000).toFixed(1)} s`;
 
 /** Phone screen for Showdown: a small face-off strip on top, the shared question underneath. */
 export function DuelPlayer({ view, send }: { view: PlayerDuelView; send: Send }) {
   const q = view.question;
   const watching = view.opponents.length === 0;
+  useEffect(() => { if (duelTheme(view.theme) === "christmas") preloadSnowballArt(true); }, [view.theme]);
 
   let body;
   if (view.phase === "podium") {
@@ -39,7 +42,7 @@ export function DuelPlayer({ view, send }: { view: PlayerDuelView; send: Send })
   }
 
   return (
-    <div class="game duel-game fit-screen">
+    <div class={`game duel-game fit-screen ${duelTheme(view.theme) === "christmas" ? "christmas" : ""}`}>
       <header class="bar">
         <span class="name">{view.me.nickname}</span>
         {view.phase !== "podium" && (
@@ -70,6 +73,7 @@ function poses(view: PlayerDuelView, me: DuelistResult | undefined): { mine: Pos
 
 /** The mini face-off: you on the left facing right, your opponent(s) on the right facing left. */
 function FaceOff({ view }: { view: PlayerDuelView }) {
+  if (duelTheme(view.theme) === "christmas") return <SnowballFaceOff view={view} />;
   const duel = view.phase === "reveal" ? view.myDuel : null;
   const me = duel?.duelists.find((d) => d.id === view.me.id);
   const opponents: DuelPlayerRef[] = duel ? duel.duelists.filter((d) => d.id !== view.me.id) : view.opponents;
@@ -123,6 +127,15 @@ function FaceOff({ view }: { view: PlayerDuelView }) {
   );
 }
 
+function SnowballFaceOff({ view }: { view: PlayerDuelView }) {
+  const result = view.phase === "reveal" ? view.myDuel : null;
+  const people = [{ ...view.me, answered: view.myChoice !== null || view.myText !== null }, ...view.opponents];
+  return <div class="duel-snow-strip">
+    <SnowballScene arena={view.arena} people={people} result={result} round={view.round} elapsedMs={view.revealElapsedMs} phone />
+    <div class="duel-caption"><b>{duelArenaName(view.arena, "christmas")}</b></div>
+  </div>;
+}
+
 function DuelIntro({ view }: { view: PlayerDuelView }) {
   const q = view.question!;
   const left = useCountdown(view.phaseRemainingMs, `intro:${view.round}`);
@@ -169,7 +182,7 @@ function DuelAnswering({ view, send }: { view: PlayerDuelView; send: Send }) {
           <LockedChoice type={q.type} index={chosen!} label={q.options[chosen!] ?? ""} />
         )}
         <h1>Locked in</h1>
-        <p class="duel-ask">Hand on your holster…</p>
+        <p class="duel-ask">{duelTheme(view.theme) === "christmas" ? "Snowball ready…" : "Hand on your holster…"}</p>
       </main>
     );
   }
@@ -216,19 +229,19 @@ function DuelAnswering({ view, send }: { view: PlayerDuelView; send: Send }) {
 }
 
 /** The line that says how the duel went and where this player goes next. */
-function duelLine(duel: DuelArenaResult, me: DuelistResult): { text: string; tone: "up" | "down" | "" } {
+function duelLine(duel: DuelArenaResult, me: DuelistResult, theme?: DuelTheme): { text: string; tone: "up" | "down" | "" } {
   const here = duel.arena;
   const next = me.nextArena;
   if (me.outcome === "win") {
-    const won = `You drew first! +${me.points} ${me.points === 1 ? "pt" : "pts"}`;
-    if (next < here) return { text: `${won} ⬆ ${arenaName(next)}`, tone: "up" };
-    return { text: here === 1 ? `${won} ⭐ You hold High Noon` : `${won} · You stay in ${arenaName(here)}`, tone: "up" };
+    const won = `${duelTheme(theme) === "christmas" ? "Your snowball landed!" : "You drew first!"} +${me.points} ${me.points === 1 ? "pt" : "pts"}`;
+    if (next < here) return { text: `${won} ⬆ ${arenaName(next, theme)}`, tone: "up" };
+    return { text: here === 1 ? `${won} ⭐ You hold ${duelArenaName(1, theme)}` : `${won} · You stay in ${arenaName(here, theme)}`, tone: "up" };
   }
   if (me.outcome === "lose") {
-    if (next > here) return { text: `Too slow, partner. ⬇ ${arenaName(next)}`, tone: "down" };
-    return { text: `Too slow, partner. You stay in ${arenaName(here)}`, tone: "down" };
+    if (next > here) return { text: `${duelTheme(theme) === "christmas" ? "Snowball hit!" : "Too slow, partner."} ⬇ ${arenaName(next, theme)}`, tone: "down" };
+    return { text: `${duelTheme(theme) === "christmas" ? "Snowball hit!" : "Too slow, partner."} You stay in ${arenaName(here, theme)}`, tone: "down" };
   }
-  return { text: duel.draw ? "Draw — you hold your ground" : `You hold your ground in ${arenaName(here)}`, tone: "" };
+  return { text: duel.draw ? "Draw — you hold your ground" : `You hold your ground in ${arenaName(here, theme)}`, tone: "" };
 }
 
 function DuelReveal({ view }: { view: PlayerDuelView }) {
@@ -239,7 +252,7 @@ function DuelReveal({ view }: { view: PlayerDuelView }) {
   const good = !!r?.wasCorrect;
   const answered = !!r && (r.choice !== null || view.myText !== null);
   const heading = !answered ? "No answer" : good ? "Correct!" : "Wrong";
-  const line = duel && me ? duelLine(duel, me) : null;
+  const line = duel && me ? duelLine(duel, me, view.theme) : null;
 
   // A light buzz once per round: a double tap for a win, one for a loss.
   useEffect(() => {
@@ -305,7 +318,7 @@ function DuelPodium({ view }: { view: PlayerDuelView }) {
   return (
     <main class="center duel-podium">
       <div class="duel-poster">
-        <WantedPoster avatar={m.avatar}>
+        <WantedPoster avatar={m.avatar} winter={duelTheme(view.theme) === "christmas"} heading={duelTheme(view.theme) === "christmas" ? "CHAMPION" : "WANTED"}>
           <b>{m.nickname}</b>
         </WantedPoster>
       </div>
@@ -314,7 +327,7 @@ function DuelPodium({ view }: { view: PlayerDuelView }) {
         Rank {r.rank} of {r.playerCount} · {m.points} {m.points === 1 ? "pt" : "pts"}
       </p>
       <p class="muted duel-num">
-        {m.wins}W · {m.losses}L · {m.draws}D{m.reign > 0 ? ` · ⭐ ${m.reign} at High Noon` : ""}
+        {m.wins}W · {m.losses}L · {m.draws}D{m.reign > 0 ? ` · ⭐ ${m.reign} at ${duelArenaName(1, view.theme)}` : ""}
       </p>
       {r.awards.map((a) => (
         <div key={a} class="award-chip">

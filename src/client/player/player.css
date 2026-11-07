@@ -4051,3 +4051,6 @@ h1 {
 .land-christmas .muted { color: #65594b; }
 
 .land-christmas .build-head span { color: #65594b; }
+
+.duel-game.christmas { background:linear-gradient(#11273e,#203d58); color:#f0f8ff; }
+.duel-game.christmas .bar { background:#0d2035; }
