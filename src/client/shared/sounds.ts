@@ -2,7 +2,7 @@ import shotUrl from "./sfx/shot.mp3";
 
 /** Tiny synthesized sound effects (WebAudio); a few use a bundled recording instead (RECORDINGS). */
 
-type Sfx = "tick" | "tickHigh" | "timeUp" | "reveal" | "join" | "start" | "fanfare" | "thud" | "floor" | "rumble" | "roar" | "whoosh" | "chomp" | "bubble" | "heartbeat" | "laser" | "alarm" | "plant" | "capture" | "conquer" | "gearUp" | "skid" | "crash" | "repair" | "leverClick" | "land" | "diceRoll" | "diceLand" | "clink" | "gulp" | "poison" | "survive" | "gunshot" | "starterPistol" | "dragonRoar" | "sword" | "fireWhoosh" | "shieldClang" | "coins" | "chestOpen" | "trapHiss" | "jackpot" | "snip" | "spark" | "wrongWire" | "moduleChime" | "keypad" | "defuse" | "explosion" | "bowTwang" | "arrowHit" | "swordClang" | "stoneThud" | "placeClack" | "upgradeChime" | "heartLost" | "giantHorn" | "drumRoll" | "wolfHowl" | "trollRoar" | "giantStomp" | "castleCrumble" | "victoryBells" | "deliver" | "jingle";
+type Sfx = "cheerBlast" | "tick" | "tickHigh" | "timeUp" | "reveal" | "join" | "start" | "fanfare" | "thud" | "floor" | "rumble" | "roar" | "whoosh" | "chomp" | "bubble" | "heartbeat" | "laser" | "alarm" | "plant" | "capture" | "conquer" | "gearUp" | "skid" | "crash" | "repair" | "leverClick" | "land" | "diceRoll" | "diceLand" | "clink" | "gulp" | "poison" | "survive" | "gunshot" | "starterPistol" | "dragonRoar" | "sword" | "fireWhoosh" | "shieldClang" | "coins" | "chestOpen" | "trapHiss" | "jackpot" | "snip" | "spark" | "wrongWire" | "moduleChime" | "keypad" | "defuse" | "explosion" | "bowTwang" | "arrowHit" | "swordClang" | "stoneThud" | "placeClack" | "upgradeChime" | "heartLost" | "giantHorn" | "drumRoll" | "wolfHowl" | "trollRoar" | "giantStomp" | "castleCrumble" | "victoryBells" | "deliver" | "jingle";
 
 const MUTE_KEY = "quizzer.muted";
 let ctx: AudioContext | null = null;
@@ -268,6 +268,14 @@ export function play(sfx: Sfx): void {
         tone(140 - i * 15, t + 0.04, 0.12, "sine", 0.3);
       });
       return;
+    case "cheerBlast":
+      // Power up during the shake, then a rising rocket whoosh and glitter.
+      tone(330, 0, 0.15, "triangle", 0.12);
+      tone(440, 0.16, 0.15, "triangle", 0.14);
+      tone(660, 0.32, 0.22, "triangle", 0.16);
+      noise(0.6, 0.7, "bandpass", 350, 0.25, 0.7, 5000);
+      [880, 1175, 1568, 2093].forEach((f, i) => tone(f, 0.65 + i * 0.12, 0.35, "sine", 0.1));
+      break;
     case "poison":
       // A low thud, then a wail falling away.
       tone(70, 0, 0.5, "sine", 0.45);

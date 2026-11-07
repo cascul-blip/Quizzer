@@ -1,4 +1,5 @@
 import { towerTheme } from "../../shared/tower-theme.ts";
+import { cupTheme } from "../../shared/cup-theme.ts";
 import { captureThreat } from "../../shared/land-board.ts";
 import { LAND_GUARD_COST, LAND_STEAL_COST, TOWER_MAX_DAMAGE, type GameMode, type HostView, type LandBoard } from "../../shared/protocol.ts";
 import type { MusicTrackId } from "../../shared/music-tracks.ts";
@@ -38,7 +39,7 @@ export function musicFor(view: HostView | null): MusicCue {
   if (!view || view.kind === "idle") return { track: null };
   switch (view.kind) {
     case "classic": {
-      if (view.phase === "lobby") return { track: view.mode === "tower" && towerTheme(view.tower.theme) === "christmas" ? "tower-christmas-lobby" : LOBBY[view.mode] ?? "classic-lobby" };
+      if (view.phase === "lobby") return { track: (view.mode === "tower" && towerTheme(view.tower.theme) === "christmas") || (view.mode === "cup" && cupTheme(view.cup.theme) === "christmas") ? "tower-christmas-lobby" : LOBBY[view.mode] ?? "classic-lobby" };
       if (view.phase === "podium") return { track: "classic-results" };
       if (view.phase === "reveal" || view.phase === "leaderboard") return { track: "classic-leaderboard" };
       // Questions: tension builds over the time limit.
@@ -82,6 +83,7 @@ export function musicFor(view: HostView | null): MusicCue {
       return { track: "robot-quiz", intensity: 0, key: "robot-countdown" };
     }
     case "cup": {
+      if (cupTheme(view.theme) === "christmas") return { track: view.phase === "podium" ? "tower-christmas-results" : "tower-christmas-play", intensity: view.phase === "reveal" ? 0.8 : 0.35 };
       if (view.phase === "podium") return { track: "cup-results" };
       // Holding your breath: tenser while the cups are drunk than while they're picked.
       if (view.phase === "drink" || (view.phase === "reveal" && (view.reveal?.drinks.length ?? 0) > 0)) return { track: "cup-drink", intensity: view.phase === "reveal" ? 0.7 : 0.3 };

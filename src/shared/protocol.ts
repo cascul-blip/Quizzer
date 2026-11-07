@@ -1,5 +1,6 @@
 import type { RacerTheme } from "./racer-theme.ts";
 import type { TowerTheme } from "./tower-theme.ts";
+import type { CupTheme } from "./cup-theme.ts";
 import type { AvatarChoice } from "./avatars.ts";
 import type { HillHeight, ShotImpact } from "./fight-physics.ts";
 import type { LandStart } from "./land-board.ts";
@@ -161,7 +162,7 @@ export type HostMsg =
   | { type: "host.setTower"; teams: number; minutes: number; monster?: boolean; theme?: TowerTheme }
   | { type: "host.setFight"; hill: HillSetting }
   | { type: "host.setLand"; teams: number; minutes: number }
-  | { type: "host.setCup"; cups: number }
+  | { type: "host.setCup"; cups: number; theme?: CupTheme }
   | ({ type: "host.setDragon" } & DragonSettings)
   | ({ type: "host.setBomb" } & BombSettings)
   | ({ type: "host.setSiege" } & SiegeSettings)
@@ -686,6 +687,7 @@ export const CUP_DEFAULT_CUPS = 3;
 
 export interface CupSettings {
   cups: number;
+  theme?: CupTheme;
 }
 export const CUP_DIE_SIDES = 6;
 /** The dice tumble this long before the quiz timer starts. */
@@ -769,6 +771,7 @@ export interface CupStanding {
 
 export interface HostCupState {
   kind: "cup";
+  theme?: CupTheme;
   phase: CupPhase;
   quiz: { id: string; title: string; questionCount: number };
   round: number;
@@ -789,6 +792,7 @@ export interface HostCupState {
 
 export interface PlayerCupView {
   kind: "cup";
+  theme?: CupTheme;
   phase: CupPhase;
   title: string;
   round: number;

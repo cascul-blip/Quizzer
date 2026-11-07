@@ -1,5 +1,6 @@
 import { racerTheme, type RacerTheme } from "../../shared/racer-theme.ts";
 import { towerTheme, towerWords, type TowerTheme } from "../../shared/tower-theme.ts";
+import { cupTheme, type CupTheme } from "../../shared/cup-theme.ts";
 import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { BOMB_MAX_SQUADS, BOMB_MINUTES, BOMB_MODULES, BOMB_PENALTIES, BOMB_WIRES, CUP_MAX_CUPS, CUP_MIN_CUPS, DRAGON_BATTLE_MINUTES, DRAGON_FIRE_SECONDS, DRAGON_MIN_TEAMS, DRAGON_SCRAMBLE_MINUTES, DRAGON_TOUGHNESS, DUEL_ROUNDS, HILL_SETTINGS, type BombSettings, type BombStyle, type DragonSettings, type DragonToughness, LAND_MINUTES, LAND_MIN_TEAMS, MAX_TEAMS, TOWER_MINUTES, type GameMode, type HillSetting, type HostPlayer, type HostView, type Pacing, type ServerMsg } from "../../shared/protocol.ts";
@@ -369,7 +370,7 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
               <option value="land">🚩 Land Grab</option>
               <option value="racer">🏎 Racer</option>
               <option value="sleigh">🎅 Santa's Sleigh Run</option>
-              <option value="cup">☠️ Cup of Death</option>
+              <option value="cup">☕ Cup of Cheer</option>
               <option value="dragon">🐉 Dragon's Hoard</option>
               <option value="bomb">💣 Bomb Squad</option>
               <option value="siege">🛡️ Kingdom Siege</option>
@@ -481,6 +482,13 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
           ) : view.mode === "cup" ? (
             <>
               <label class="opt">
+                Theme
+                <select aria-label="Cup theme" value={cupTheme(view.cup.theme)} onChange={(e) => send({ type: "host.setCup", cups: view.cup.cups, theme: e.currentTarget.value as CupTheme })}>
+                  <option value="christmas">🎄 Santa's Workshop</option>
+                  <option value="classic">☠️ Normal</option>
+                </select>
+              </label>
+              <label class="opt">
                 Cups
                 <select value={view.cup.cups} onChange={(e) => send({ type: "host.setCup", cups: Number(e.currentTarget.value) })}>
                   {Array.from({ length: CUP_MAX_CUPS - CUP_MIN_CUPS + 1 }, (_, i) => (
@@ -490,7 +498,7 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
                   ))}
                 </select>
               </label>
-              <span class="opt mode-hint">Roll the die, then answer that many questions before time runs out, or drink from a cup. One is poisoned. Last one standing wins.</span>
+              <span class="opt mode-hint">{cupTheme(view.cup.theme) === "christmas" ? "Roll the die, then answer that many questions before time runs out, or sip some cocoa. One cup is supercharged: shake, sparkle and blast off! Last one in the workshop wins." : "Roll the die, then answer that many questions before time runs out, or drink from a cup. One is poisoned. Last one standing wins."}</span>
             </>
           ) : view.mode === "dragon" ? (
             <DragonOptions view={view} send={send} />

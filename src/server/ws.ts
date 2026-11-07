@@ -579,7 +579,7 @@ export class GameHub {
         this.lastSetup.land = { ...classic().land };
         return;
       case "host.setCup":
-        classic().setCup({ cups: Number(msg.cups) });
+        classic().setCup({ cups: Number(msg.cups), theme: msg.theme });
         this.lastSetup.cup = { ...classic().cup };
         return;
       case "host.setDragon":

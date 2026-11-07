@@ -6,11 +6,18 @@ import { play } from "../shared/sounds.ts";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
 import { Award } from "./tower.tsx";
+import { cupName, cupTheme } from "../../shared/cup-theme.ts";
+import { CupThemeProvider, useChristmasCup } from "../shared/cup-skin.tsx";
 
 type CupView = Extract<HostView, { kind: "cup" }>;
 
 /** Projector screen for Cup of Death: countdown → (roll → quiz → drink → reveal)… → podium. */
 export function CupStage({ view, send }: { view: CupView; send: Send }) {
+  return <CupThemeProvider value={cupTheme(view.theme)}><CupStageContent view={view} send={send} /></CupThemeProvider>;
+}
+
+function CupStageContent({ view, send }: { view: CupView; send: Send }) {
+  const christmas = useChristmasCup();
   const secs = useCountdown(view.phaseRemainingMs, `${view.phase}-${view.round}`);
   const prev = useRef<CupView | null>(null);
 
@@ -19,7 +26,7 @@ export function CupStage({ view, send }: { view: CupView; send: Send }) {
     prev.current = view;
     if (!p) return;
     if (view.phase !== p.phase) {
-      if (view.phase === "roll") play(view.round === 1 ? "starterPistol" : "diceRoll");
+      if (view.phase === "roll") play(view.round === 1 ? christmas ? "jingle" : "starterPistol" : "diceRoll");
       if (view.phase === "quiz") play("diceLand");
       if (view.phase === "drink") play("timeUp");
       if (view.phase === "reveal" && view.reveal?.drinks.length === 0) play("survive");
@@ -37,7 +44,7 @@ export function CupStage({ view, send }: { view: CupView; send: Send }) {
       if (r.current >= 0 && (pr?.seq !== r.seq || pr.current !== r.current)) play("gulp");
       const d = r.drinks[r.current];
       const before = pr?.seq === r.seq ? pr.drinks[r.current]?.verdict : null;
-      if (d?.verdict && !before) play(d.verdict === "poison" ? "poison" : "survive");
+      if (d?.verdict && !before) play(d.verdict === "poison" ? christmas ? "cheerBlast" : "poison" : "survive");
     }
   }, [view]);
 
@@ -62,14 +69,14 @@ export function CupStage({ view, send }: { view: CupView; send: Send }) {
   const mode: SaloonMode = view.phase === "countdown" || view.phase === "podium" ? "idle" : view.phase;
 
   return (
-    <div class="stage cup-stage">
+    <div class={`stage cup-stage ${christmas ? "cup-christmas" : ""}`}>
       <header class="topbar">
         <div class="title">{view.quiz.title}</div>
-        <div class="pill">☠️ Cup of Death</div>
+        <div class="pill">{cupName(view.theme)}</div>
         {view.round > 0 && <div class="pill">Round {view.round}</div>}
         <div class="spacer" />
         <div class="pill">
-          🤠 {alive.length} / {view.playerCount}
+          {christmas ? "🎄" : "🤠"} {alive.length} / {view.playerCount}
         </div>
         <ScreenControls join={view.join} />
         {view.phase !== "podium" && (
@@ -92,9 +99,9 @@ export function CupStage({ view, send }: { view: CupView; send: Send }) {
                 <div class="countdown-label">
                   Each round, roll the die and answer that many questions right before time runs out.
                   <br />
-                  {view.startCups === 1 ? "Fall short, and you drink your one cup. It is poisoned." : `Fall short, and you drink one of your ${view.startCups} cups. One of them is poisoned.`}
+                  {christmas ? `Fall short, and sip one of your ${view.startCups} ${view.startCups === 1 ? "cup" : "cups"} of cocoa. One is supercharged!` : view.startCups === 1 ? "Fall short, and you drink your one cup. It is poisoned." : `Fall short, and you drink one of your ${view.startCups} cups. One of them is poisoned.`}
                   <br />
-                  Every cup you survive is one fewer to choose from. Last one standing wins!
+                  {christmas ? "Supercharged cocoa makes you shake, sparkle and blast off! Last one in the workshop wins." : "Every cup you survive is one fewer to choose from. Last one standing wins!"}
                 </div>
                 <div class="countdown-num" key={secs}>
                   {Math.max(1, secs)}
@@ -110,6 +117,7 @@ export function CupStage({ view, send }: { view: CupView; send: Send }) {
 
 /** What's written on the table: the phase, or the drinker in the spotlight and their fate. */
 function TableText({ view, secs }: { view: CupView; secs: number }) {
+  const christmas = useChristmasCup();
   const { x, y } = TABLE_CENTER;
   let big = "";
   let small = "";
@@ -124,7 +132,7 @@ function TableText({ view, secs }: { view: CupView; secs: number }) {
     cls = secs <= 5 ? "urgent" : "";
   } else if (view.phase === "drink") {
     const drinkers = view.players.filter((p) => p.drinker);
-    big = "Pick your poison";
+    big = christmas ? "Pick your cocoa" : "Pick your poison";
     small = `${drinkers.filter((p) => p.picked).length} of ${drinkers.length} picked · ${secs}s`;
   } else if (view.phase === "reveal" && view.reveal) {
     const r = view.reveal;
@@ -135,7 +143,7 @@ function TableText({ view, secs }: { view: CupView; secs: number }) {
       cls = "good";
     } else if (d) {
       const name = view.players.find((p) => p.id === d.id)?.nickname ?? "?";
-      big = d.verdict === "poison" ? "☠ POISONED!" : d.verdict === "safe" ? "Survived!" : `${name} drinks…`;
+      big = d.verdict === "poison" ? christmas ? "Blast off!" : "☠ POISONED!" : d.verdict === "safe" ? christmas ? "Cozy cocoa!" : "Survived!" : `${name} ${christmas ? "sips" : "drinks"}…`;
       small = d.verdict === null ? `${d.cupsBefore === 1 ? "The last cup…" : `1 in ${d.cupsBefore} chance`}` : name;
       cls = d.verdict === "poison" ? "bad" : d.verdict === "safe" ? "good" : "suspense";
     }
@@ -155,6 +163,7 @@ function TableText({ view, secs }: { view: CupView; secs: number }) {
 
 /** The red bar across the top drains over each phase, with what to do right now. */
 function TimerBar({ view, secs }: { view: CupView; secs: number }) {
+  const christmas = useChristmasCup();
   // Catch up once, when the phase starts (see Robot Attack's PhaseBar).
   const key = `${view.phase}-${view.round}`;
   const start = useRef<{ key: string; elapsed: number } | null>(null);
@@ -168,7 +177,7 @@ function TimerBar({ view, secs }: { view: CupView; secs: number }) {
         : view.phase === "quiz"
           ? `Answer your dice number of questions! · ${secs}s`
           : view.phase === "drink"
-            ? `☠ Choose a cup! · ${secs}s`
+            ? `${christmas ? "☕" : "☠"} Choose a cup! · ${secs}s`
             : "Bottoms up…";
   return (
     <div class={`robot-bar cup-bar ${view.phase} ${timed && secs <= 5 ? "warn" : ""}`}>
@@ -179,11 +188,12 @@ function TimerBar({ view, secs }: { view: CupView; secs: number }) {
 }
 
 function Cups({ count, of }: { count: number; of: number }) {
+  const christmas = useChristmasCup();
   return (
     <span class="cup-count" aria-label={`${count} cups left`}>
       {Array.from({ length: of }, (_, i) => (
         <i key={i} class={i < count ? "full" : ""}>
-          🥃
+          {christmas ? "☕" : "🥃"}
         </i>
       ))}
     </span>
@@ -191,6 +201,8 @@ function Cups({ count, of }: { count: number; of: number }) {
 }
 
 function CupPodium({ view, send }: { view: CupView; send: Send }) {
+  const christmas = useChristmasCup();
+  const icon = christmas ? "🎄" : "🤠";
   const [showErrors, setShowErrors] = useState(false);
   const standings = view.standings ?? [];
   const winners = standings.filter((s) => s.rank === 1);
@@ -199,10 +211,10 @@ function CupPodium({ view, send }: { view: CupView; send: Send }) {
     winners.length === 0
       ? "Game over"
       : winners.length === 1
-        ? `🤠 ${winners[0]!.nickname} wins!`
+        ? `${icon} ${winners[0]!.nickname} wins!`
         : winners.length <= 3
-          ? `🤠 ${winners.map((w) => w.nickname).join(" & ")} win!`
-          : `🤠 ${winners.length} gunslingers share the win!`;
+          ? `${icon} ${winners.map((w) => w.nickname).join(" & ")} win!`
+          : `${icon} ${winners.length} ${christmas ? "players" : "gunslingers"} share the win!`;
   return (
     <main class="podium tower-podium cup-podium">
       <div class="podium-bg" aria-hidden="true">
@@ -219,7 +231,7 @@ function CupPodium({ view, send }: { view: CupView; send: Send }) {
                 <span class="lb-rank">{ordinal(s.rank)}</span>
                 <Avatar choice={s.avatar} />
                 <span class="lb-name">{s.nickname}</span>
-                <span class="robot-status">{s.outRound === null ? <Cups count={s.cups} of={view.startCups} /> : `☠ Poisoned in round ${s.outRound}`}</span>
+                <span class="robot-status">{s.outRound === null ? <Cups count={s.cups} of={view.startCups} /> : `${christmas ? "🚀 Blasted off" : "☠ Poisoned"} in round ${s.outRound}`}</span>
               </li>
             ))}
           </ol>
@@ -227,7 +239,7 @@ function CupPodium({ view, send }: { view: CupView; send: Send }) {
             <Award icon="✅" title="Most correct answers" award={a?.mostCorrect ?? null} unit="correct" />
             <Award icon="🍀" title="Luckiest drinker" award={a?.luckiest ?? null} unit="" valueText={(n) => `${n} drink${n === 1 ? "" : "s"} survived`} />
             <Award icon="🛡" title="Never thirsty" award={a?.neverThirsty ?? null} unit="" valueText={(n) => `${n} round${n === 1 ? "" : "s"} safe`} />
-            <Award icon="⚰️" title="Unluckiest" award={a?.unluckiest ?? null} unit="" valueText={(round) => `poisoned by their first cup in round ${round}`} />
+            <Award icon={christmas ? "🚀" : "⚰️"} title={christmas ? "First flight" : "Unluckiest"} award={a?.unluckiest ?? null} unit="" valueText={(round) => `${christmas ? "launched" : "poisoned"} by their first cup in round ${round}`} />
           </div>
         </>
       )}

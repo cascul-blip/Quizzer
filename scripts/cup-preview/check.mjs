@@ -1,0 +1,82 @@
+// Start serve.ts first. Set QUIZZER_PLAYWRIGHT_MODULE and QUIZZER_CHROMIUM as needed.
+const { chromium } = await import(process.env.QUIZZER_PLAYWRIGHT_MODULE || 'playwright');
+import assert from 'node:assert/strict';
+import { mkdir } from 'node:fs/promises';
+const out = new URL('../../output/cup-of-cheer-review', import.meta.url).pathname;
+await mkdir(out, { recursive: true });
+const browser = await chromium.launch({ executablePath: process.env.QUIZZER_CHROMIUM || undefined, headless: true, args: ['--no-sandbox'] });
+const errors = [];
+const freeze = async (page, time) => page.locator('.cheer-launches *, .cheer-phone-launch *').evaluateAll((els, t) => {
+  for (const el of els) for (const a of el.getAnimations()) { a.pause(); a.currentTime = t; }
+}, time);
+try {
+  const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
+  page.on('pageerror', e => errors.push(e.message));
+  page.on('response', r => { if (r.status() >= 400) errors.push(`${r.status()} ${r.url()}`); });
+  await page.goto('http://127.0.0.1:8096/');
+  await page.waitForLoadState('networkidle');
+  assert.equal(await page.locator('.cheer-workshop').count(), 1);
+  assert.equal(await page.locator('.seat-body image').count(), 6);
+  await page.screenshot({ path: `${out}/host-workshop.png` });
+  await page.getByRole('button', { name: 'Blast off', exact: true }).click();
+  assert.equal(await page.locator('.cheer-launches .seat.launching').count(), 1);
+  assert.equal(await page.locator('.seat-skull, .cup-skull, .seat.dying').count(), 0);
+  assert.ok((await page.locator('.table-big').textContent()).includes('Blast off'));
+  await freeze(page, 350);
+  await page.screenshot({ path: `${out}/energy-shake.png` });
+  await freeze(page, 850);
+  assert.ok(await page.locator('.cheer-sparkle').evaluateAll(els => els.some(el => Number(getComputedStyle(el).opacity) > 0)));
+  await page.screenshot({ path: `${out}/sparkle-launch.png` });
+  await freeze(page, 1700);
+  assert.equal(await page.locator('.cheer-rocket-motion').evaluate(el => getComputedStyle(el).opacity), '0');
+  await page.locator('.cheer-rocket-motion').evaluate(el => { window.firstRocket = el; });
+  await page.getByRole('button', { name: 'Next launch', exact: true }).click();
+  assert.equal(await page.locator('.cheer-launches .seat.launching').count(), 2);
+  assert.equal(await page.locator('.cheer-rocket-motion').first().evaluate(el => el === window.firstRocket && getComputedStyle(el).opacity === '0'), true);
+  await page.getByLabel('Scene', { exact: true }).selectOption('podium');
+  assert.ok((await page.locator('.robot-status').last().textContent()).includes('Blasted off'));
+  await page.screenshot({ path: `${out}/podium.png` });
+  await page.getByLabel('Scene', { exact: true }).selectOption('quiz');
+  await page.getByLabel('Players', { exact: true }).selectOption('24');
+  await page.getByLabel('Cups', { exact: true }).selectOption('6');
+  assert.equal(await page.locator('.seat').count(), 24);
+  assert.equal(await page.locator('.table-cup').count(), 144);
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.screenshot({ path: `${out}/host-24-players.png` });
+  await page.getByLabel('Theme', { exact: true }).selectOption('classic');
+  assert.equal(await page.locator('.cheer-workshop').count(), 0);
+  await page.getByRole('button', { name: 'Blast off', exact: true }).click();
+  assert.equal(await page.locator('.seat.dying').count(), 1);
+  assert.equal(await page.locator('.cheer-rocket-motion').count(), 0);
+  await page.screenshot({ path: `${out}/normal-fallback.png` });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('http://127.0.0.1:8096/phone');
+  await page.waitForLoadState('networkidle');
+  await page.getByLabel('Scene', { exact: true }).selectOption('drink');
+  for (const cups of ['1', '3', '6']) {
+    await page.getByLabel('Cups', { exact: true }).selectOption(cups);
+    assert.equal(await page.locator('.cup-btn').count(), Number(cups));
+    const boxes = await page.locator('.cup-btn').evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return { x: r.x, right: r.right }; }));
+    assert.ok(boxes.every(b => b.x >= 0 && b.right <= 391), 'Cup picker fits phone width');
+  }
+  await page.screenshot({ path: `${out}/phone-cocoa-picker.png` });
+  await page.getByRole('button', { name: 'Blast off', exact: true }).click();
+  assert.equal(await page.locator('.cheer-phone-launch').count(), 1);
+  assert.ok((await page.locator('h1').textContent()).includes('Blast off'));
+  await freeze(page, 350);
+  await page.screenshot({ path: `${out}/phone-energy.png` });
+  await freeze(page, 1700);
+  assert.equal(await page.locator('.cheer-rocket-motion').evaluate(el => getComputedStyle(el).opacity), '0');
+  await page.getByLabel('Scene', { exact: true }).selectOption('practice');
+  assert.ok((await page.locator('.ghost-note').textContent()).includes('orbit'));
+  assert.equal(await page.locator('.cheer-phone-launch').count(), 0);
+  await page.screenshot({ path: `${out}/phone-practice.png` });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.getByRole('button', { name: 'Blast off', exact: true }).click();
+  assert.equal(await page.locator('.cheer-rocket-motion').evaluate(el => getComputedStyle(el).animationName), 'cheer-reduced-launch');
+  await page.getByLabel('Theme', { exact: true }).selectOption('classic');
+  assert.equal(await page.locator('.cheer-phone-launch').count(), 0);
+  assert.ok((await page.locator('h1').textContent()).includes('Poisoned'));
+  assert.deepEqual(errors, []);
+  console.log('PASS: workshop, head-only avatars, powerup, sparkle trail, completed launches stay hidden, podium, 24 players, phone 1–6 cups, phone blastoff then practice, reduced motion and normal fallback; no browser errors.');
+} finally { await browser.close(); }

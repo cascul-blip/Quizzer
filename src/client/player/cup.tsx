@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { type ClientMsg, type PlayerCupView } from "../../shared/protocol.ts";
-import { CupArt, Die, RollingDie } from "../shared/cup-art.tsx";
+import { CupArt, Die, RollingDie, RocketHead } from "../shared/cup-art.tsx";
+import { cupTheme } from "../../shared/cup-theme.ts";
+import { CupThemeProvider, useChristmasCup } from "../shared/cup-skin.tsx";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
 import { Feedback, StreamQuestion } from "./tower.tsx";
 
@@ -22,6 +24,11 @@ function RollScreen({ round, target, rollMs }: { round: number; target: number; 
 
 /** Phone screen for Cup of Death: roll, answer, and (if you fall short) pick a cup. */
 export function CupPlayer({ view, send }: { view: PlayerCupView; send: Send }) {
+  return <CupThemeProvider value={cupTheme(view.theme)}><CupPlayerContent view={view} send={send} /></CupThemeProvider>;
+}
+
+function CupPlayerContent({ view, send }: { view: PlayerCupView; send: Send }) {
+  const christmas = useChristmasCup();
   const secs = useCountdown(view.phaseRemainingMs, `${view.phase}-${view.round}`);
   const me = view.me;
   const onAnswer = (seq: number, option: number, text?: string) => send({ type: "cup.answer", seq, option, text });
@@ -30,14 +37,15 @@ export function CupPlayer({ view, send }: { view: PlayerCupView; send: Send }) {
   if (view.phase === "countdown") {
     body = (
       <main class="center">
-        <div class="cup-emoji">🤠</div>
-        <p class="muted">Roll the die, then answer that many questions right before time runs out. Fall short and you'll have to drink. One cup is poisoned!</p>
+        <div class="cup-emoji">{christmas ? "☕" : "🤠"}</div>
+        <h1>{christmas ? "Cup of Cheer" : "Cup of Death"}</h1>
+        <p class="muted">{christmas ? "Roll the die and answer that many questions before time runs out. Fall short and sip some cocoa. One cup is supercharged: shake, sparkle and blast off!" : "Roll the die, then answer that many questions right before time runs out. Fall short and you'll have to drink. One cup is poisoned!"}</p>
         <div class="tower-count">{Math.max(1, secs)}</div>
       </main>
     );
   } else if (view.phase === "podium") {
     body = <CupResult view={view} />;
-  } else if (me.out) {
+  } else if (me.out && !(view.phase === "reveal" && view.myDrink?.turn)) {
     body = <GhostScreen view={view} onAnswer={onAnswer} />;
   } else if (view.phase === "roll") {
     body = <RollScreen key={view.round} round={view.round} target={me.target} rollMs={Math.max(0, view.phaseRemainingMs - 850)} />;
@@ -62,7 +70,7 @@ export function CupPlayer({ view, send }: { view: PlayerCupView; send: Send }) {
       <main class="center cup-safe">
         <div class="cup-emoji">😎</div>
         <h1>You're safe</h1>
-        <p class="muted">Watch the others pick their poison…</p>
+        <p class="muted">{christmas ? "Watch the others pick their cocoa…" : "Watch the others pick their poison…"}</p>
       </main>
     );
   } else {
@@ -71,11 +79,11 @@ export function CupPlayer({ view, send }: { view: PlayerCupView; send: Send }) {
 
   const timed = (view.phase === "quiz" && !me.safe && !me.out) || (view.phase === "drink" && !!view.drink);
   return (
-    <div class={`game cup-game ${me.out ? "ghost" : ""}`}>
+    <div class={`game cup-game ${christmas ? "cup-christmas" : ""} ${me.out ? "ghost" : ""}`}>
       <header class="bar">
         <span class="name">{me.nickname}</span>
         {me.out ? (
-          <span class="robot-out-tag">☠ Ghost</span>
+          <span class="robot-out-tag">{christmas ? "🚀 In orbit" : "☠ Ghost"}</span>
         ) : (
           <span class="cup-stats">
             {view.phase === "quiz" && me.target > 0 && (
@@ -95,11 +103,12 @@ export function CupPlayer({ view, send }: { view: PlayerCupView; send: Send }) {
 }
 
 function CupIcons({ count, of }: { count: number; of: number }) {
+  const christmas = useChristmasCup();
   return (
     <span class="cup-icons" aria-label={`${count} cups left`}>
       {Array.from({ length: of }, (_, i) => (
         <i key={i} class={i < count ? "full" : ""}>
-          🥃
+          {christmas ? "☕" : "🥃"}
         </i>
       ))}
     </span>
@@ -119,6 +128,7 @@ function PhoneBar({ view }: { view: PlayerCupView }) {
 }
 
 function CupPicker({ view, secs, send }: { view: PlayerCupView; secs: number; send: Send }) {
+  const christmas = useChristmasCup();
   const picked = view.drink?.picked ?? null;
   const count = view.me.cups;
   const forced = count <= 1;
@@ -126,7 +136,7 @@ function CupPicker({ view, secs, send }: { view: PlayerCupView; secs: number; se
     <main class="cup-pick">
       <h1>{forced ? "Your last cup…" : picked === null ? "Pick a cup!" : "Bottoms up soon…"}</h1>
       <p class="muted">
-        {forced ? "No choice left. Drink up, partner." : picked === null ? `One of these is poisoned. ${secs}s left, or one gets picked for you.` : "Waiting for the others to choose…"}
+        {forced ? christmas ? "Supercharged cocoa. Get ready for liftoff!" : "No choice left. Drink up, partner." : picked === null ? `One of these is ${christmas ? "supercharged" : "poisoned"}. ${secs}s left, or one gets picked for you.` : "Waiting for the others to choose…"}
       </p>
       <div class={`cup-row n${count}`}>
         {Array.from({ length: count }, (_, i) => (
@@ -149,6 +159,7 @@ function CupPicker({ view, secs, send }: { view: PlayerCupView; secs: number; se
 }
 
 function RevealScreen({ view }: { view: PlayerCupView }) {
+  const christmas = useChristmasCup();
   const d = view.myDrink;
   const seen = useRef("");
   useEffect(() => {
@@ -163,15 +174,15 @@ function RevealScreen({ view }: { view: PlayerCupView }) {
       <main class="center cup-safe">
         <div class="cup-emoji">🍻</div>
         <h1>{view.phase === "reveal" ? "Watch the table!" : "…"}</h1>
-        <p class="muted">{view.alive} still alive</p>
+        <p class="muted">{view.alive} {christmas ? "still in the workshop" : "still alive"}</p>
       </main>
     );
   }
   if (d.verdict === "poison") {
     return (
-      <main class="center cup-verdict poison">
-        <div class="cup-emoji">☠️</div>
-        <h1>Poisoned!</h1>
+      <main class={`center cup-verdict ${christmas ? "cheer-blastoff" : "poison"}`}>
+        {christmas ? <svg key={d.seq} class="cheer-phone-launch" viewBox="-80 -100 160 220" aria-label="Your avatar shakes with energy and blasts off with sparkles"><RocketHead choice={view.me.avatar} /></svg> : <div class="cup-emoji">☠️</div>}
+        <h1>{christmas ? "Blast off!" : "Poisoned!"}</h1>
         <p class="muted">You're out, but you can keep answering questions to learn.</p>
       </main>
     );
@@ -180,7 +191,7 @@ function RevealScreen({ view }: { view: PlayerCupView }) {
     return (
       <main class="center cup-verdict safe">
         <div class="cup-emoji">😮‍💨</div>
-        <h1>You survived!</h1>
+        <h1>{christmas ? "Cozy cocoa!" : "You survived!"}</h1>
         <p class="muted">{view.me.cups === 1 ? "Only 1 cup left. Don't miss again!" : `${view.me.cups} cups left.`}</p>
       </main>
     );
@@ -189,16 +200,17 @@ function RevealScreen({ view }: { view: PlayerCupView }) {
     <main class={`center cup-drinking ${d.turn ? "turn" : ""}`}>
       <CupArt class={d.turn ? "sipping" : ""} />
       <h1>{d.turn ? "Gulp…" : "Waiting your turn…"}</h1>
-      <p class="muted">{d.cupsBefore === 1 ? "Your last cup." : `1 in ${d.cupsBefore} chance it's poisoned.`}</p>
+      <p class="muted">{d.cupsBefore === 1 ? "Your last cup." : `1 in ${d.cupsBefore} chance it's ${christmas ? "supercharged" : "poisoned"}.`}</p>
     </main>
   );
 }
 
 /** Poisoned players keep answering to practise. */
 function GhostScreen({ view, onAnswer }: { view: PlayerCupView; onAnswer: (seq: number, option: number, text?: string) => void }) {
+  const christmas = useChristmasCup();
   return (
     <>
-      <div class="ghost-note">👻 You're a ghost. Keep answering to learn!</div>
+      <div class="ghost-note">{christmas ? "🚀 You're in orbit! Keep answering to learn." : "👻 You're a ghost. Keep answering to learn!"}</div>
       {view.question ? (
         <StreamQuestion question={view.question} onAnswer={onAnswer} />
       ) : (
@@ -211,13 +223,14 @@ function GhostScreen({ view, onAnswer }: { view: PlayerCupView; onAnswer: (seq: 
 }
 
 function CupResult({ view }: { view: PlayerCupView }) {
+  const christmas = useChristmasCup();
   const r = view.result;
   if (!r) return null;
   return (
     <main class="center">
-      <div class="cup-emoji">{r.won ? "🤠" : "☠️"}</div>
+      <div class="cup-emoji">{r.won ? christmas ? "🎄" : "🤠" : christmas ? "🚀" : "☠️"}</div>
       <div class={`final-rank ${r.won ? "top" : ""}`}>{r.won ? "You win!" : `${ordinal(r.rank)} of ${r.playerCount}`}</div>
-      <p class="muted">{r.outRound === null ? (r.won ? "Last one standing in the saloon!" : "You survived to the end.") : r.won ? `Poisoned in round ${r.outRound}, but so was everyone else left. Shared win!` : `Poisoned in round ${r.outRound}.`}</p>
+      <p class="muted">{r.outRound === null ? (r.won ? christmas ? "Last one in Santa's workshop!" : "Last one standing in the saloon!" : "You survived to the end.") : r.won ? `${christmas ? "Blasted off" : "Poisoned"} in round ${r.outRound}, along with everyone else left. Shared win!` : `${christmas ? "Blasted off" : "Poisoned"} in round ${r.outRound}.`}</p>
       <p class="big-score">{view.me.correct} correct</p>
       {r.awards.map((a) => (
         <div key={a} class="award-chip">
