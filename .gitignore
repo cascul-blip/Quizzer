@@ -6,3 +6,6 @@ dev-data/
 
 # Generated art review recordings and retired iteration assets stay local.
 scripts/winter-art/captures/
+
+# Local preview screenshots and concept art from graphics work.
+output/
