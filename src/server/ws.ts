@@ -254,7 +254,9 @@ export class GameHub {
         else this.sendState(ws, false);
       }
     };
-    if (this.game instanceof Game) this.game.viewBatch(send);
+    // Games that can share work between the views of one broadcast (Classic, Showdown).
+    const game = this.game;
+    if (game && "viewBatch" in game) game.viewBatch(send);
     else send();
   }
 

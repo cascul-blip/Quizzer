@@ -104,6 +104,8 @@ export class DuelGame {
   phaseEndsAt = 0;
   phaseDurationMs = 0;
   private phaseStartedAt = 0;
+  /** Set while views are built in a batch: what every phone's view shares, computed once. */
+  private batch: { ranked?: DuelPlayer[]; rankById?: Map<string, number>; ladderArenas?: Map<string, number>; arenaById?: Map<string, number>; awards?: DuelAwards } | null = null;
 
   private readonly source: Question[];
   /** Index into the quiz's questions for each slot. */
@@ -169,6 +171,13 @@ export class DuelGame {
   /** The arena (index) a player duels in this round, or -1. */
   private arenaIndex(playerId: string): number {
     return this.arenas.findIndex((a) => a.includes(playerId));
+  }
+
+  /** arenaIndex() for everyone at once. */
+  private arenaIndexes(): Map<string, number> {
+    const out = new Map<string, number>();
+    this.arenas.forEach((a, i) => a.forEach((id) => out.has(id) || out.set(id, i)));
+    return out;
   }
 
   // ---------- players ----------
@@ -414,9 +423,14 @@ export class DuelGame {
     return p.startArena ? p.startArena - (arenas.get(p.id) ?? p.startArena) : 0;
   }
 
+  /** ranked(), shared by every view in a batch. */
+  private rankedNow(): DuelPlayer[] {
+    return this.shared("ranked", () => this.ranked());
+  }
+
   awards(): DuelAwards {
-    const players = this.ranked();
-    const arenas = this.ladderArenas();
+    const players = this.rankedNow();
+    const arenas = this.shared("ladderArenas", () => this.ladderArenas());
     const best = (value: (p: DuelPlayer) => number): SubAward | null => {
       const top = Math.max(0, ...players.map(value));
       return top > 0 ? { value: top, nicknames: players.filter((p) => value(p) === top).map((p) => p.nickname) } : null;
@@ -514,23 +528,42 @@ export class DuelGame {
     };
   }
 
+  /**
+   * Build many views in one go (a broadcast). Nothing changes in between, so the ladder ranking,
+   * arenas and awards are worked out once instead of once per phone.
+   */
+  viewBatch<T>(build: () => T): T {
+    if (this.batch) return build();
+    this.batch = {};
+    try {
+      return build();
+    } finally {
+      this.batch = null;
+    }
+  }
+
+  private shared<K extends keyof NonNullable<DuelGame["batch"]>>(key: K, make: () => NonNullable<NonNullable<DuelGame["batch"]>[K]>): NonNullable<NonNullable<DuelGame["batch"]>[K]> {
+    if (!this.batch) return make();
+    return (this.batch[key] ??= make()) as NonNullable<NonNullable<DuelGame["batch"]>[K]>;
+  }
+
   playerView(playerId: string): PlayerDuelView | null {
     const p = this.players.get(playerId);
     if (!p) return null;
     const q = this.currentQuestion;
-    const ladderArenas = this.ladderArenas();
-    const rank = this.ranked().indexOf(p) + 1;
+    const ladderArenas = this.shared("ladderArenas", () => this.ladderArenas());
+    const rank = this.batch ? (this.shared("rankById", () => new Map(this.rankedNow().map((x, i) => [x.id, i + 1]))).get(p.id) ?? 0) : this.ranked().indexOf(p) + 1;
     const arenaNow = this.arenaNow(p.id, ladderArenas);
     // This round's arena and opponents (still this round's on the reveal); a late joiner waiting for the next round
     // gets the arena the ladder puts them in and no opponents.
-    const k = this.phase === "podium" ? -1 : this.arenaIndex(p.id);
+    const k = this.phase === "podium" ? -1 : this.batch ? (this.shared("arenaById", () => this.arenaIndexes()).get(p.id) ?? -1) : this.arenaIndex(p.id);
     const arena = k >= 0 ? k + 1 : arenaNow;
     const opponents = k >= 0 ? this.arenas[k]!.filter((id) => id !== p.id).map((id) => ref(this.players.get(id)!)) : [];
     const ans = this.phase === "open" || this.phase === "reveal" ? p.answers[this.qIndex] : undefined;
     const revealed = this.phase === "reveal" && !!q;
     let result: PlayerDuelView["result"] = null;
     if (this.phase === "podium") {
-      const aw = this.awards();
+      const aw = this.shared("awards", () => this.awards());
       result = {
         rank,
         playerCount: this.players.size,

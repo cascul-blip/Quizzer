@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
 import { Game } from "../src/server/game/game.ts";
 import { AUTO_REVEAL_MS, AWARD_BIGGEST_CLIMB, AWARD_LONGEST_REIGN, AWARD_MOST_WINS, DuelGame, GRACE_MS, INTRO_MS, type DuelPlayer } from "../src/server/game/duel.ts";
 import { buildDuelResultsCsv } from "../src/server/game/results.ts";
@@ -68,6 +68,27 @@ function round(game: DuelGame, clock: FakeClock, plan: [string, boolean][]) {
 }
 
 describe("Showdown", () => {
+  test("a batch of views (one broadcast) ranks the ladder once and matches views built one by one", () => {
+    const { game, clock } = setup(["A", "B", "C", "D", "E"], { rounds: 10 });
+    const ids = [...game.players.keys()];
+    const batched = () => {
+      const ranked = spyOn(game, "ranked");
+      const awards = spyOn(game, "awards");
+      const views = game.viewBatch(() => ids.map((id) => game.playerView(id)));
+      expect(ranked.mock.calls.length).toBeLessThanOrEqual(1);
+      expect(awards.mock.calls.length).toBeLessThanOrEqual(1);
+      ranked.mockRestore();
+      awards.mockRestore();
+      return views;
+    };
+    expect(batched()).toEqual(ids.map((id) => game.playerView(id)));
+    round(game, clock, [["A", true], ["B", false], ["C", true]]);
+    expect(batched()).toEqual(ids.map((id) => game.playerView(id)));
+    game.end();
+    expect(game.phase).toBe("podium");
+    expect(batched()).toEqual(ids.map((id) => game.playerView(id)));
+  });
+
   test("lobby setting: rounds 10/15/20, default 15", () => {
     const lobby = new Game(quiz());
     expect(lobby.duel).toEqual({ rounds: DUEL_DEFAULT_ROUNDS, theme: "christmas" });
