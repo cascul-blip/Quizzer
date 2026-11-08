@@ -334,7 +334,7 @@ describe("results", () => {
     expect(game.phase).toBe("podium");
     expect(finished()).toBe(1);
     const host = game.hostView();
-    expect(host.hasResults).toBe(true);
+    expect(host.phase).toBe("podium");
     expect(host.awards).toEqual({
       mostCorrect: { value: 3, nicknames: ["C"] },
       topSettler: { value: 3, nicknames: ["C"] },

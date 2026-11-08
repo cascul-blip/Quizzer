@@ -37,7 +37,7 @@ function Preview() {
     boosts: 3, required: 8, lastBoost: seq ? { seq, nickname: "Holly", avatar: { avatar: "fox", accessory: "scarf" } } : null,
     dive: { instructors: [{ nickname: "Holly", index: 2, total: 5, found: 2, groupSize: 3, done: false }] },
     players: avatars.map((avatar, i) => ({ id: `${i}`, nickname: `Rider ${i}`, avatar: { avatar, accessory: "scarf" }, connected: true, state: "question" })),
-    playerCount: 3, awards: null, errors: null, hasResults: false,
+    playerCount: 3, awards: null, errors: null,
     join: { url: "http://localhost:8080", qrSvg: "", address: "localhost", addresses: [], port: 8080 },
   };
   return <><SubStage view={view} send={() => {}} /><nav style={{ position: "fixed", bottom: 8, left: 12, zIndex: 50, display: "flex", gap: 8 }}>

@@ -270,7 +270,7 @@ describe("full game over WebSockets", () => {
     await host.hostState((v) => v.phase === "reveal");
     host.send({ type: "host.next" }); // last question → podium
     const podium = await host.hostState((v) => v.phase === "podium");
-    expect(podium.view.kind === "classic" && podium.view.hasResults).toBe(true);
+    expect(podium.view.kind).toBe("classic");
     // Bob got the first question wrong: the "Show errors" table has it.
     const errors = podium.view.kind === "classic" ? podium.view.errors! : [];
     expect(errors.length).toBeGreaterThan(0);
@@ -1220,7 +1220,6 @@ describe("Racer over WebSockets", () => {
       result: { distance: 12.5, topSpeed: 50, crashes: 0, turns: 2 },
       awards: { mostCorrect: { value: 1, nicknames: ["Ann", "Bob"] }, bestDriver: { value: 20, nicknames: [driverName] } },
       errors: [{ wrong: 1, text: "Q2", answers: ["right"] }],
-      hasResults: true,
     });
     const end = await driver.playerState((v) => v.kind === "racer" && v.phase === "podium" && !!v.result);
     expect(end.view.kind === "racer" && end.view.result).toEqual({ distance: 12.5, topSpeed: 50, crashes: 0, turns: 2, awards: ["Most correct answers", "Best driver"] });
@@ -1293,7 +1292,7 @@ describe("Showdown over WebSockets", () => {
     await host.hostState((v) => v.kind === "duel" && v.phase === "intro" && v.round === 2);
     host.send({ type: "host.end" });
     const podium = await host.hostState((v) => v.kind === "duel" && v.phase === "podium");
-    expect(podium.view.kind === "duel" && podium.view).toMatchObject({ hasResults: true, awards: { longestReign: { value: 1, nicknames: ["Ann"] } }, errors: [{ wrong: 1, text: "Q1" }] });
+    expect(podium.view.kind === "duel" && podium.view).toMatchObject({ awards: { longestReign: { value: 1, nicknames: ["Ann"] } }, errors: [{ wrong: 1, text: "Q1" }] });
     const end = await players[0]!.playerState((v) => v.kind === "duel" && v.phase === "podium" && !!v.result);
     expect(end.view.kind === "duel" && end.view.result).toEqual({ rank: 1, playerCount: 2, awards: ["Longest reign", "Most wins"] });
     const csv = await (await fetch(`${base}/api/results/latest.csv`)).text();
@@ -1374,7 +1373,6 @@ describe("Santa's Sleigh Run over WebSockets", () => {
 
     host.send({ type: "host.end" });
     const podium = await host.hostState((v) => v.kind === "sleigh" && v.phase === "podium");
-    expect(podium.view.kind === "sleigh" && podium.view).toMatchObject({ hasResults: true });
     expect(podium.view.kind === "sleigh" && podium.view.standings!.map((s) => s.nickname)).toEqual(["Ann", "Bob"]);
     const end = await ann.playerState((v) => v.kind === "sleigh" && v.phase === "podium" && !!v.result);
     expect(end.view.kind === "sleigh" && end.view.result).toMatchObject({ rank: 1, playerCount: 2 });

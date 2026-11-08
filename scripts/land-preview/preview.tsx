@@ -25,7 +25,7 @@ function Preview({ phone }: { phone: boolean }) {
   const teams = TEAMS.slice(0, count).map((t, index) => ({ ...t, index, tiles: owners.filter(o => o === index).length, correct: 12, rank: index + 1, out: false, conqueredBy: null, members: [{ id: `p${index}`, nickname: ["Holly", "Cocoa", "Jingle", "Noel", "Snow", "Cookie"][index]!, avatar: { avatar: "cat" as const, accessory: "none" as const }, connected: true, claiming: true }] }));
   const host: Extract<HostView, { kind: "land" }> = {
     kind: "land", theme, phase, quiz: { id: "preview", title: "North Pole · Land Grab", questionCount: 10 }, remainingMs: 222000,
-    board, teams, lastPlace: null, lastCapture: null, playerCount: count, awards: null, errors: null, hasResults: false,
+    board, teams, lastPlace: null, lastCapture: null, playerCount: count, awards: null, errors: null,
     join: { url: "http://127.0.0.1:8095/phone", qrSvg: "", address: "localhost", addresses: [], port: 8095 },
   };
   const player: PlayerLandView = {

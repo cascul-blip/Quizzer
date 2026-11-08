@@ -872,7 +872,6 @@ export class DragonGame {
       result: this.act1 ? null : this.result(),
       awards: podium ? this.awards() : null,
       errors: podium ? this.stream.errors() : null,
-      hasResults: podium,
     };
   }
 

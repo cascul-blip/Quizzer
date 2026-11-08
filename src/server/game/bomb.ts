@@ -1116,7 +1116,6 @@ export class BombGame {
       connectedCount: [...this.players.values()].filter((p) => p.connected).length,
       awards: podium ? this.awards() : null,
       errors: podium ? this.errors() : null,
-      hasResults: podium,
     };
   }
 

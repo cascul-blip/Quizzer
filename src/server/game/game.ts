@@ -661,7 +661,6 @@ export class Game {
       answerAvatars: this.revealed && q ? this.answerAvatars(q.options.length) : null,
       leaderboard: this.phase === "lobby" ? [] : this.leaderboard(),
       errors: this.phase === "podium" ? this.errors() : null,
-      hasResults: this.phase === "podium",
     };
   }
 

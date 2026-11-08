@@ -31,7 +31,7 @@ function Preview({ phone }: { phone: boolean }) {
     round: 2, phaseRemainingMs: phase === "countdown" ? 3000 : 20000, phaseDurationMs: 30000,
     players, startCups: cups, reveal: phase === "reveal" ? { seq, round: 2, current, drinks } : null,
     playerCount: count, standings: phase === "podium" ? players.map((p, i) => ({ ...p, rank: i + 1, outRound: i ? 2 : null, correct: 12 - i })) : null,
-    awards: null, errors: null, hasResults: phase === "podium",
+    awards: null, errors: null,
     join: { url: "http://localhost:8096/phone", qrSvg: "", address: "localhost", addresses: [], port: 8096 },
   };
   const me = players[0]!;

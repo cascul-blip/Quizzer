@@ -623,11 +623,6 @@ function DuelPodium({ view, send }: { view: DuelView; send: Send }) {
       )}
       <footer class="controls">
         <ErrorsButton shown={showErrors} onToggle={() => setShowErrors(!showErrors)} />
-        {view.hasResults && (
-          <a class="btn ghost" href="/api/results/latest.csv" download>
-            ⬇ Results
-          </a>
-        )}
         <button class="btn ghost" onClick={() => send({ type: "host.open", quizId: view.quiz.id })}>
           ↻ Play again
         </button>

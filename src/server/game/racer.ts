@@ -478,7 +478,6 @@ export class RacerGame {
       result: podium ? this.result() : null,
       awards: podium ? this.awards() : null,
       errors: podium ? this.errors() : null,
-      hasResults: podium,
     };
   }
 

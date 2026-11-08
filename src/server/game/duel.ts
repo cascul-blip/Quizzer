@@ -511,7 +511,6 @@ export class DuelGame {
       phaseDurationMs: this.phaseDurationMs,
       awards: podium ? this.awards() : null,
       errors: podium ? this.errors() : null,
-      hasResults: podium,
     };
   }
 

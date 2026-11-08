@@ -357,7 +357,6 @@ export interface HostGameState {
   leaderboard: RankedEntry[];
   /** The questions answered wrongly most often (podium only). */
   errors: QuestionError[] | null;
-  hasResults: boolean;
 }
 
 export interface HostTowerTeam extends TeamInfo {
@@ -386,7 +385,6 @@ export interface HostTowerState {
   awards: TowerAwards | null;
   /** The questions answered wrongly most often (podium only). */
   errors: QuestionError[] | null;
-  hasResults: boolean;
 }
 
 // ---------- Submarine Squad ----------
@@ -431,7 +429,6 @@ export interface HostSubState {
   awards: SubAwards | null;
   /** The questions answered wrongly most often (podium only). */
   errors: QuestionError[] | null;
-  hasResults: boolean;
 }
 
 export interface PlayerSubView {
@@ -536,7 +533,6 @@ export interface HostFightState {
   awards: FightAwards | null;
   /** The questions answered wrongly most often (podium only). */
   errors: QuestionError[] | null;
-  hasResults: boolean;
 }
 
 export interface PlayerFightView {
@@ -666,7 +662,6 @@ export interface HostRobotState {
   awards: RobotAwards | null;
   /** The questions answered wrongly most often (podium only). */
   errors: QuestionError[] | null;
-  hasResults: boolean;
 }
 
 export interface PlayerRobotView {
@@ -795,7 +790,6 @@ export interface HostCupState {
   standings: CupStanding[] | null;
   awards: CupAwards | null;
   errors: QuestionError[] | null;
-  hasResults: boolean;
 }
 
 export interface PlayerCupView {
@@ -898,7 +892,6 @@ export interface HostLandState {
   awards: LandAwards | null;
   /** The questions answered wrongly most often (podium only). */
   errors: QuestionError[] | null;
-  hasResults: boolean;
 }
 
 export interface PlayerLandView {
@@ -1036,7 +1029,6 @@ export interface HostRacerState {
   awards: RacerAwards | null;
   /** The questions answered wrongly most often (podium only). */
   errors: QuestionError[] | null;
-  hasResults: boolean;
 }
 
 /** A phone's complete snapshot: enough to redraw from scratch after a reconnect in any phase. */
@@ -1193,7 +1185,6 @@ export interface HostDuelState {
   phaseDurationMs: number;
   awards: DuelAwards | null;
   errors: QuestionError[] | null;
-  hasResults: boolean;
 }
 
 export interface PlayerDuelView {
@@ -1441,7 +1432,6 @@ export interface HostDragonState {
   result: DragonResult | null;
   awards: DragonAwards | null;
   errors: QuestionError[] | null;
-  hasResults: boolean;
 }
 
 /** question = answering; chest = picking a chest; grab = picking a team to steal from; loot = what came out; waiting = joined during a fire breath. */
@@ -1610,7 +1600,6 @@ export interface HostBombState {
   connectedCount: number;
   awards: BombAwards | null;
   errors: QuestionError[] | null;
-  hasResults: boolean;
 }
 
 export interface PlayerBombWire {
@@ -1793,7 +1782,6 @@ export interface HostSiegeState {
   result: SiegeResult | null;
   awards: SiegeAwards | null;
   errors: QuestionError[] | null;
-  hasResults: boolean;
 }
 
 export interface SiegeMapView {
@@ -1985,7 +1973,6 @@ export interface HostSleighState {
   standings: SleighStanding[] | null;
   awards: SleighAwards | null;
   errors: QuestionError[] | null;
-  hasResults: boolean;
 }
 
 export interface PlayerSleighView {
