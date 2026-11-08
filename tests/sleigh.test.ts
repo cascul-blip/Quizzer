@@ -570,7 +570,7 @@ describe("Santa's Sleigh Run", () => {
     expect(finished()).toBe(1);
   });
 
-  test("onTick fires every flight tick but onChange only on discrete events", () => {
+  test("every flight tick updates the projector once: a tick push, or a full broadcast on discrete events", () => {
     const { game, clock, changes, ticks } = setup(["A", "B"], 5, 3);
     earn(game, clock, "A", 4);
     earn(game, clock, "B", 2);
@@ -580,7 +580,7 @@ describe("Santa's Sleigh Run", () => {
     const c0 = changes();
     const t0 = ticks();
     clock.advance(1000);
-    expect(ticks() - t0).toBe(1000 / SLEIGH_TICK_MS);
+    expect(ticks() - t0 + (changes() - c0)).toBe(1000 / SLEIGH_TICK_MS);
     // Nobody has stopped yet: the only discrete events are deliveries (at most one per house).
     expect(changes() - c0).toBeLessThanOrEqual(game.delivered);
     expect(changes() - c0).toBeLessThan(ticks() - t0);
