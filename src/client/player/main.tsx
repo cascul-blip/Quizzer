@@ -2,6 +2,7 @@ import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { cleanAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import { STREAK_MIN, type ClientMsg, type PlayerView, type ServerMsg } from "../../shared/protocol.ts";
+import { shownView } from "./resume.ts";
 import { applyPatch } from "../../shared/view-patch.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { setPhoneArt } from "../shared/phone-art.ts";
@@ -76,7 +77,10 @@ type Joined = Extract<PlayerView, { kind: "player" }>;
 
 function App() {
   const [status, setStatus] = useState<ConnStatus>("connecting");
-  const [view, setView] = useState<PlayerView | null>(null);
+  const [serverView, setView] = useState<PlayerView | null>(null);
+  /** A resume is on its way: the server's first snapshot on a new socket is "not joined" until it's answered. */
+  const [resuming, setResuming] = useState(false);
+  const lastJoined = useRef<PlayerView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [kicked, setKicked] = useState(false);
   const [joining, setJoining] = useState(false);
@@ -87,7 +91,9 @@ function App() {
       onStatus: setStatus,
       onOpen: (send) => {
         const token = storage.get(TOKEN_KEY);
-        if (token) send({ type: "resume", token });
+        if (!token) return;
+        setResuming(true);
+        send({ type: "resume", token });
       },
       onMessage: (msg: ServerMsg) => {
         switch (msg.type) {
@@ -106,6 +112,7 @@ function App() {
             break;
           case "resumeFailed":
             storage.set(TOKEN_KEY, null);
+            setResuming(false);
             break;
           case "kicked":
             storage.set(TOKEN_KEY, null);
@@ -122,7 +129,13 @@ function App() {
     return () => c.close();
   }, []);
 
+  useEffect(() => {
+    if (serverView && serverView.kind !== "none") setResuming(false);
+  }, [serverView]);
+
   const send = (m: ClientMsg) => conn.current?.send(m);
+  if (serverView && serverView.kind !== "none") lastJoined.current = serverView;
+  const view = shownView(serverView, resuming, lastJoined.current);
 
   let body;
   if (kicked) {
