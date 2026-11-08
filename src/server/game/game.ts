@@ -167,6 +167,8 @@ export class Game {
   private bombSquadsManual = false;
   private readonly onChange: () => void;
   private readonly onFinish: (game: Game) => void;
+  /** Set while views are built in a batch: what every phone's view shares, computed once. */
+  private batch: { ranked?: (Player & { rank: number })[]; rankById?: Map<string, number>; podium?: RankedEntry[]; teams?: Map<string, number> } | null = null;
 
   constructor(quiz: Quiz, opts: GameOptions = {}) {
     this.quiz = quiz;
@@ -589,7 +591,7 @@ export class Game {
   }
 
   leaderboard(limit = LEADERBOARD_SIZE): RankedEntry[] {
-    return this.ranked()
+    return this.rankedNow()
       .slice(0, limit)
       .map((p) => ({ id: p.id, nickname: p.nickname, avatar: p.avatar, score: p.score, rank: p.rank, delta: p.lastDelta, streak: p.streak }));
   }
@@ -664,17 +666,41 @@ export class Game {
     };
   }
 
+  /**
+   * Build many views in one go (a broadcast). Nothing changes in between, so the ranking,
+   * the podium and the team map are worked out once instead of once per phone.
+   */
+  viewBatch<T>(build: () => T): T {
+    if (this.batch) return build();
+    this.batch = {};
+    try {
+      return build();
+    } finally {
+      this.batch = null;
+    }
+  }
+
+  /** ranked(), shared by every view in a batch. */
+  private rankedNow(): (Player & { rank: number })[] {
+    return this.batch ? (this.batch.ranked ??= this.ranked()) : this.ranked();
+  }
+
+  private rankOf(playerId: string): number {
+    if (!this.batch) return this.ranked().find((r) => r.id === playerId)!.rank;
+    this.batch.rankById ??= new Map(this.rankedNow().map((r) => [r.id, r.rank]));
+    return this.batch.rankById.get(playerId)!;
+  }
+
   playerView(playerId: string): PlayerView {
     const p = this.players.get(playerId);
     if (!p) return { kind: "none", game: { title: this.title, phase: this.phase } };
     const q = this.currentQuestion;
-    const me = this.ranked().find((r) => r.id === p.id)!;
     const ans = this.qIndex >= 0 ? p.answers[this.qIndex] : undefined;
     return {
       kind: "player",
       phase: this.phase,
       title: this.title,
-      me: { id: p.id, nickname: p.nickname, avatar: p.avatar, score: p.score, rank: me.rank, streak: p.streak },
+      me: { id: p.id, nickname: p.nickname, avatar: p.avatar, score: p.score, rank: this.rankOf(p.id), streak: p.streak },
       playerCount: this.players.size,
       question: this.questionView(),
       myChoice: this.phase === "open" || this.revealed ? (ans && ans.option >= 0 ? ans.option : null) : null,
@@ -683,8 +709,8 @@ export class Game {
         this.revealed && q
           ? { choice: ans && ans.option >= 0 ? ans.option : null, correct: q.correct, wasCorrect: !!ans?.correct, points: ans?.points ?? 0 }
           : null,
-      podium: this.phase === "podium" ? this.leaderboard(5) : null,
-      team: this.phase === "lobby" && this.teamCount() !== null ? teamInfo(this.teamAssignment().get(p.id) ?? 0) : null,
+      podium: this.phase === "podium" ? (this.batch ? (this.batch.podium ??= this.leaderboard(5)) : this.leaderboard(5)) : null,
+      team: this.phase === "lobby" && this.teamCount() !== null ? teamInfo((this.batch ? (this.batch.teams ??= this.teamAssignment()) : this.teamAssignment()).get(p.id) ?? 0) : null,
       ...(this.phase === "lobby" && this.mode === "siege" ? { siege: true as const } : {}),
     };
   }
