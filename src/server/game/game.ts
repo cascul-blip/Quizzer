@@ -108,6 +108,8 @@ interface GameOptions {
   rng?: () => number;
   pacing?: Pacing;
   onChange?: () => void;
+  /** A player answered: the hub updates that phone at once and everyone else a moment later. Defaults to onChange. */
+  onActivity?: (playerId: string) => void;
   onFinish?: (game: Game) => void;
   /** Initial lobby choices (e.g. carried over from the previous game). */
   mode?: GameMode;
@@ -166,6 +168,7 @@ export class Game {
   /** The host picked a squad count. Until then it follows the class size. */
   private bombSquadsManual = false;
   private readonly onChange: () => void;
+  private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: Game) => void;
 
   constructor(quiz: Quiz, opts: GameOptions = {}) {
@@ -179,6 +182,7 @@ export class Game {
     this.clock = opts.clock ?? realClock;
     this.pacing = opts.pacing ?? "manual";
     this.onChange = opts.onChange ?? (() => {});
+    this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
     this.mode = opts.mode ?? "classic";
     this.racer = { ...(opts.racer ?? DEFAULT_RACER) };
@@ -257,7 +261,7 @@ export class Game {
     const ms = Math.max(0, now - this.openedAt);
     const choice = typeof answer === "string" ? { option: -1, text: answer.slice(0, MAX_TYPED_ANSWER) } : { option: answer };
     p.answers[qIndex] = { ...choice, correct, points: scoreAnswer(correct, ms, q.timeLimitSec), ms };
-    this.onChange();
+    this.onActivity(playerId);
     this.maybeCloseEarly();
     return true;
   }
