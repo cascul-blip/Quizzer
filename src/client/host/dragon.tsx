@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
+import { useDelayedCues } from "./delayed-cues.ts";
 import type { HostDragonTeam, HostView } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { CaveBackdrop, Dragon, FireBreath, Hoard, JackpotPile, LootIcon, RuneShield, TeamBanner, TeamPile } from "../shared/dragon-art.tsx";
@@ -77,6 +78,7 @@ export function DragonStage({ view, send }: { view: DragonView; send: Send }) {
 
 function useDragonSounds(view: DragonView) {
   const prev = useRef<DragonView | null>(null);
+  const later = useDelayedCues(view.phase);
   useEffect(() => {
     const p = prev.current;
     prev.current = view;
@@ -88,14 +90,14 @@ function useDragonSounds(view: DragonView) {
       if (f.step === "warning") play("rumble");
       if (f.step === "reveal") {
         play("fireWhoosh");
-        if (f.held) setTimeout(() => play("shieldClang"), 250);
+        if (f.held) later(() => play("shieldClang"), 250);
       }
     }
     if (view.phase !== p.phase) {
       if (view.phase === "battle" && p.phase === "countdown") play("start");
       if (view.phase === "transition") {
         play(view.slain ? "dragonRoar" : "fireWhoosh");
-        setTimeout(() => play("coins"), 900);
+        later(() => play("coins"), 900);
       }
       if (view.phase === "scramble") play("start");
       if (view.phase === "podium") play("fanfare");

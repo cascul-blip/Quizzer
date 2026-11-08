@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
+import { useDelayedCues } from "./delayed-cues.ts";
 import { siegeName, type SiegeTheme } from "../../shared/siege-theme.ts";
 import { SiegeThemeProvider, useChristmasSiege } from "../shared/siege-skin.tsx";
 import type { HostView, SiegeSettings } from "../../shared/protocol.ts";
@@ -91,6 +92,7 @@ function Treasury({ gold, hearts }: { gold: number; hearts: number }) {
 
 function useSiegeSounds(view: SiegeView) {
   const prev = useRef<SiegeView | null>(null);
+  const later = useDelayedCues(view.phase);
   useEffect(() => {
     const p = prev.current;
     prev.current = view;
@@ -109,7 +111,7 @@ function useSiegeSounds(view: SiegeView) {
     const newShots = view.shots.filter((s) => s.seq > (p.shots.at(-1)?.seq ?? 0));
     if (newShots.length) {
       play("bowTwang");
-      setTimeout(() => play("arrowHit"), 220);
+      later(() => play("arrowHit"), 220);
     }
     const before = new Map(p.defenders.map((d) => [d.id, d]));
     let clang = false;
