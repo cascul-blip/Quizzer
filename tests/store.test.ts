@@ -104,6 +104,23 @@ describe("QuizStore", () => {
     expect(store.mediaFile("media/../../x.png")).toBeNull();
   });
 
+  test("new spots on a pin with the default labels relabel it A, B, C… to match", async () => {
+    const image = await store.saveMedia(PNG);
+    const spot = (x: number) => ({ x, y: 0.5 });
+    const q = store.create({ title: "Pins", questions: [{ type: "pin", text: "Where?", image, spots: [spot(0.1), spot(0.2), spot(0.3)], correct: [2] }] });
+    const id = q.questions[0]!.id;
+    expect(q.questions[0]!.options).toEqual(["A", "B", "C"]);
+    const four = store.updateQuestion(q.id, id, { spots: [spot(0.1), spot(0.2), spot(0.3), spot(0.4)] });
+    expect(four.options).toEqual(["A", "B", "C", "D"]);
+    expect(four.correct).toEqual([2]);
+    const two = store.updateQuestion(q.id, id, { spots: [spot(0.1), spot(0.2)] });
+    expect(two.options).toEqual(["A", "B"]);
+    expect(two.correct).toEqual([0]); // the old answer's spot is gone
+    // Labels the author chose are kept, so their count still has to match.
+    store.updateQuestion(q.id, id, { options: ["Paris", "Rome"] });
+    expect(() => store.updateQuestion(q.id, id, { spots: [spot(0.1), spot(0.2), spot(0.3)] })).toThrow(ValidationError);
+  });
+
   test("image can be set and removed on a question", async () => {
     const q = store.create({ title: "Q", questions: [{ type: "true_false", text: "x", correct: [0] }] });
     const qid = q.questions[0]!.id;

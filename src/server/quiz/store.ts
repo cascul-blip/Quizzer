@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { musicTrackForFile } from "../../shared/music-tracks.ts";
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
-import { MAX_IMAGE_SIDE, MAX_MEDIA_BYTES, SHRINK_ABOVE_BYTES } from "../../shared/quiz-constants.ts";
+import { MAX_IMAGE_SIDE, MAX_MEDIA_BYTES, SHRINK_ABOVE_BYTES, pinLabel } from "../../shared/quiz-constants.ts";
 import {
   DEFAULT_SETTINGS,
   MEDIA_REF_RE,
@@ -231,6 +231,11 @@ export class QuizStore {
     else if (current.type !== "pin" && patch.options === undefined) {
       delete merged.options;
       if (patch.correct === undefined) merged.correct = [0];
+    } else if (Array.isArray(patch.spots) && patch.options === undefined && current.options.every((o, i) => o === pinLabel(i))) {
+      // New spots on a pin that still has the default labels (A, B, C…): the labels follow the new count.
+      delete merged.options;
+      const count = (patch.spots as unknown[]).length;
+      if (patch.correct === undefined && current.correct.some((c) => c >= count)) merged.correct = [0];
     }
     if (merged.image === null) delete merged.image;
     const others = new Set(quiz.questions.filter((_, i) => i !== idx).map((x) => x.id));
