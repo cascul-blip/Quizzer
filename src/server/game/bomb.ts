@@ -343,6 +343,12 @@ export class BombGame {
     this.settings.squads = count;
     this.squads = Array.from({ length: count }, (_, i) => this.newSquad(i));
     for (const p of this.players.values()) if (p.squad >= count) p.squad = this.smallestOpenSquad();
+    // Teams set by hand can leave a squad empty, and an empty squad can never clear its modules:
+    // move the last player of the biggest squad in. There are never more squads than players.
+    for (const empty of this.squads.filter((s) => this.squadPlayers(s).length === 0)) {
+      const biggest = this.squads.map((s) => this.squadPlayers(s)).reduce((a, b) => (b.length > a.length ? b : a));
+      biggest.at(-1)!.squad = empty.index;
+    }
     this.phaseEndsAt = this.clock.now() + BOMB_COUNTDOWN_MS;
     this.arm(BOMB_COUNTDOWN_MS, () => this.beginDefuse());
     this.onChange();
@@ -471,7 +477,7 @@ export class BombGame {
       for (const s of this.squads) {
         if (!s.finished && !s.exploded && now >= s.endsAt) this.markExploded(s);
       }
-      if (this.squads.every((s) => s.finished || s.exploded)) {
+      if (this.squads.every((s) => s.finished || s.exploded || this.deserted(s))) {
         this.enterEnding();
         return;
       }
@@ -498,6 +504,18 @@ export class BombGame {
 
   private squadPlayers(squad: Squad): BombPlayer[] {
     return [...this.players.values()].filter((p) => p.squad === squad.index);
+  }
+
+  /** Everyone in the squad was kicked: nobody can clear its bomb, so it doesn't hold up the end. */
+  private deserted(squad: Squad): boolean {
+    return !this.squadPlayers(squad).length;
+  }
+
+  /** After a kick: end the game if the only squads still playing are deserted ones. */
+  private endIfOnlyDesertedLeft(): void {
+    if (this.phase !== "defuse" || this.squads.some((s) => !s.finished && !s.exploded && !this.deserted(s))) return;
+    if (this.settings.game === "race") this.enterEnding();
+    else if (this.squads.some((s) => s.finished)) this.enterDefused();
   }
 
   private dealNext(squad: Squad): void {
@@ -829,7 +847,7 @@ export class BombGame {
       this.timerRev++;
       if (squad.endsAt <= this.clock.now()) {
         this.markExploded(squad);
-        if (this.squads.every((s) => s.finished || s.exploded)) this.enterEnding();
+        if (this.squads.every((s) => s.finished || s.exploded || this.deserted(s))) this.enterEnding();
         else {
           this.armDefuse();
           this.onChange();
@@ -850,8 +868,8 @@ export class BombGame {
     squad.reveal = null;
     squad.status = this.settings.game === "together" ? "Your modules are done! Cheer on the others." : "You defused your bomb!";
     if (this.settings.game === "together") {
-      if (this.squads.every((s) => s.finished)) this.enterDefused();
-    } else if (this.squads.every((s) => s.finished || s.exploded)) {
+      if (this.squads.every((s) => s.finished || this.deserted(s))) this.enterDefused();
+    } else if (this.squads.every((s) => s.finished || s.exploded || this.deserted(s))) {
       this.enterEnding();
     }
   }
@@ -924,6 +942,8 @@ export class BombGame {
     if (squad >= 0 && this.phase === "defuse") {
       const s = this.squads[squad]!;
       if (s.question && !s.pauseUntil) player.satOut = true;
+      // Nobody left in the squad to hold the wires (they were kicked or dropped): deal the newcomer in now.
+      if (this.holders(s).length === 0) this.redealSquad(s);
     }
     this.onChange();
     return player;
@@ -986,6 +1006,7 @@ export class BombGame {
     const squad = this.squads[p.squad];
     if (squad?.hold?.playerId === playerId) squad.hold = null;
     if (squad) this.redealSquad(squad);
+    this.endIfOnlyDesertedLeft();
     this.onChange();
     return p;
   }

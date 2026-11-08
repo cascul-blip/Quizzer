@@ -471,6 +471,65 @@ describe("squads, reconnecting, and the ending", () => {
     expect(rows.some((r) => r.includes("exploded"))).toBe(true);
   });
 
+  /** Cut the right wire of `squad` (by whoever holds it) until the squad is done. */
+  function clearSquad(game: BombGame, clock: FakeClock, squad: number) {
+    for (let n = 0; !game.squads[squad]!.finished && n < 20; n++) {
+      const wire = question(game, squad).wires.find((w) => w.correct)!;
+      expect(cut(game, clock, wire.playerId, wire.id)).toBe(true);
+      if (game.squads[squad]!.pauseUntil) clock.advance(BOMB_NEXT_MS);
+    }
+    expect(game.squads[squad]!.finished).toBe(true);
+  }
+
+  test("a squad left empty by hand-made teams gets a player, so together can still be defused", () => {
+    const clock = new FakeClock();
+    const lobby = new Game(sampleQuiz({ questions: [mc(0)] }), { clock, rng });
+    lobby.setMode("bomb");
+    lobby.setBomb({ ...DEFAULT_BOMB, squads: 2, modules: 2, wires: 2 });
+    const [ada, ben] = [lobby.join("Ada"), lobby.join("Ben")];
+    lobby.setTeam(ada.id, 0);
+    lobby.setTeam(ben.id, 0);
+    const game = BombGame.fromLobby(lobby, { clock, rng });
+    game.start();
+    clock.advance(BOMB_COUNTDOWN_MS);
+    expect(game.squads).toHaveLength(2);
+    expect(game.players.get(ada.id)!.squad).toBe(0);
+    expect(game.players.get(ben.id)!.squad).toBe(1);
+    expect(question(game, 1).wires.length).toBeGreaterThan(0);
+    clearSquad(game, clock, 0);
+    clearSquad(game, clock, 1);
+    expect(game.phase).toBe("defused");
+  });
+
+  test("together: a squad whose players were all kicked doesn't stop the class defusing", () => {
+    const { game, clock, joined } = boot([mc(0)], ["Ada", "Ben", "Cara"], { squads: 2, modules: 2, wires: 2 });
+    const inSquad = (i: number) => joined.filter((p) => game.players.get(p.id)!.squad === i);
+    clearSquad(game, clock, 0);
+    expect(game.phase).toBe("defuse");
+    for (const p of inSquad(1)) game.kick(p.id);
+    expect(game.phase).toBe("defused");
+    expect(game.outcome).toBe("defused");
+  });
+
+  test("race: a squad whose players were all kicked doesn't hold up the finish", () => {
+    const { game, clock, joined } = boot([mc(0)], ["Ada", "Ben"], { game: "race", squads: 2, modules: 2, wires: 2 });
+    game.kick(joined.find((p) => game.players.get(p.id)!.squad === 1)!.id);
+    expect(game.phase).toBe("defuse");
+    clearSquad(game, clock, 0);
+    expect(game.phase).toBe("defused");
+  });
+
+  test("a late joiner landing in a squad with nobody left is dealt the wires at once", () => {
+    const { game, joined } = boot([mc(0, 3), mc(1, 3)], ["Ada", "Ben"], { squads: 2 });
+    const gone = joined.find((p) => game.players.get(p.id)!.squad === 1)!;
+    game.kick(gone.id);
+    const late = game.join("Cara");
+    expect(late.squad).toBe(1);
+    expect(late.satOut).toBe(false);
+    expect(question(game, 1).wires.filter((w) => !w.cut).every((w) => w.playerId === late.id)).toBe(true);
+    expect(game.playerView(late.id).wires.length).toBeGreaterThan(0);
+  });
+
   test("squad count follows the class until the host picks a number", () => {
     const clock = new FakeClock();
     const lobby = new Game(sampleQuiz({ questions: [mc(0)] }), { clock, rng });
