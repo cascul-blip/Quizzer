@@ -5,12 +5,23 @@ export type AnswerValue = number | string;
 
 export const MAX_TYPED_ANSWER = 100;
 
+/**
+ * Punctuation that changes a number's value, so it survives normalize(): a leading minus sign,
+ * a decimal point and a fraction slash. In words ("x-ray", "covid-19", "v.2") they still drop out.
+ */
+const NUMBER_MARK = /(?<![\p{L}\p{N}])-(?=\.?\d)|(?<!\p{L})\.(?=\d)|(?<=\d)\/(?=\d)/u;
+const STRIPPED = new RegExp(`(?!${NUMBER_MARK.source})[^\\p{L}\\p{N}\\s]`, "gu");
+
 function normalize(s: string): string {
   return s
     .normalize("NFKD")
     .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
-    .replace(/[^\p{L}\p{N}\s]/gu, "")
+    .replace(/−/g, "-") // − minus sign
+    .replace(/⁄/g, "/") // ⁄ fraction slash, from ½ etc.
+    .replace(/(?<=\d),(?=\d{3}(?!\d))/g, "") // 1,000 → 1000
+    .replace(/(?<=\d),(?=\d)/g, ".") // decimal comma: 1,5 → 1.5
+    .replace(STRIPPED, "")
     .replace(/\s+/g, " ")
     .trim();
 }
