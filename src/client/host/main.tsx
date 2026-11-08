@@ -1,4 +1,4 @@
-import { duelName, duelTheme, type DuelTheme } from "../../shared/duel-theme.ts";
+import { duelArenaName, duelName, duelTheme, type DuelTheme } from "../../shared/duel-theme.ts";
 import { SnowballLobbyPreview } from "../shared/duel-christmas.tsx";
 import { landTheme, type LandTheme } from "../../shared/land-theme.ts";
 import { fightTheme, type FightTheme } from "../../shared/fight-theme.ts";
@@ -582,7 +582,7 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
                       <option value="classic">Classic Showdown</option>
                     </select>
                   </label>
-                  <span class="opt mode-hint">{duelName(view.duel.theme)}: everyone duels at once. Win to climb toward {duelTheme(view.duel.theme) === "christmas" ? "North Pole Plaza" : "High Noon"}, lose and you drop an arena.</span>
+                  <span class="opt mode-hint">{duelName(view.duel.theme)}: everyone duels at once. Win to climb toward {duelArenaName(1, view.duel.theme)}, lose and you drop an arena.</span>
                 </>
               )}
             </>

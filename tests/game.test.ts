@@ -278,6 +278,29 @@ describe("preparePlayOrder", () => {
   });
 });
 
+describe("lobby themes", () => {
+  test("every themed mode's setter keeps the theme when none is given and refuses unknown ones the same way", () => {
+    const { game } = setup();
+    const setters: [string, (theme?: unknown) => void, () => unknown][] = [
+      ["racer", (theme) => game.setRacer({ theme } as never), () => game.racer.theme],
+      ["tower", (theme) => game.setTower({ teams: 2, minutes: 5, theme } as never), () => game.tower.theme],
+      ["fight", (theme) => game.setFight({ theme } as never), () => game.fight.theme],
+      ["Land Grab", (theme) => game.setLand({ teams: 2, minutes: 5, theme } as never), () => game.land.theme],
+      ["cup", (theme) => game.setCup({ cups: game.cup.cups, theme } as never), () => game.cup.theme],
+      ["Kingdom Siege", (theme) => game.setSiege({ waves: 5, theme } as never), () => game.siege.theme],
+      ["Showdown", (theme) => game.setDuel({ rounds: 15, theme } as never), () => game.duel.theme],
+    ];
+    for (const [name, set, theme] of setters) {
+      set("classic");
+      expect(theme()).toBe("classic");
+      set(undefined);
+      expect(theme()).toBe("classic");
+      expect(() => set("halloween")).toThrow(`Unknown ${name} theme`);
+      expect(theme()).toBe("classic");
+    }
+  });
+});
+
 describe("lobby shuffle options", () => {
   test("default to the quiz settings and apply when the game starts", () => {
     const clock = new FakeClock();

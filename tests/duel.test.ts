@@ -91,7 +91,7 @@ describe("Showdown", () => {
     expect(lobby.duel).toEqual({ rounds: 20, theme: "classic" });
     const classic = DuelGame.fromLobby(lobby, { clock });
     expect(classic.theme).toBe("classic");
-    expect(() => lobby.setDuel({ rounds: 10, theme: "bogus" as never })).toThrow("Unsupported Showdown theme");
+    expect(() => lobby.setDuel({ rounds: 10, theme: "bogus" as never })).toThrow("Unknown Showdown theme");
     round(game, clock, [["A", true], ["B", false]]);
     clock.advance(1800);
     expect(game.hostView().revealElapsedMs).toBe(1800);
