@@ -728,7 +728,9 @@ export class DragonGame {
     const p = this.roster.remove(playerId);
     if (!p) return null;
     this.clearPlayerTimer(p);
+    // A kicked player is out of the rune question altogether: their answer no longer counts either.
     this.fire?.participants.delete(p.id);
+    this.fire?.answers.delete(p.id);
     this.onChange();
     this.maybeCloseRune();
     return p;

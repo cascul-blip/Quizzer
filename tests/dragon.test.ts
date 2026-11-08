@@ -320,6 +320,20 @@ describe("fire breath", () => {
     expect(game.hostView().fire).toMatchObject({ step: "reveal", right: 1, needed: 2, held: false });
   });
 
+  test("a kicked player's rune answer no longer counts toward the shield", () => {
+    const { game, clock } = setup({ names: ["A", "B", "C"] });
+    clock.advance(45_000 + DRAGON_FIRE_WARN_MS);
+    expect(game.fire!.step).toBe("question");
+    const [a, b, c] = ["A", "B", "C"].map((n) => byName(game, n)) as [DragonPlayer, DragonPlayer, DragonPlayer];
+    rune(game, a, true);
+    rune(game, b, true);
+    game.kick(a.id);
+    game.kick(b.id);
+    expect(game.hostView().fire).toMatchObject({ answered: 0, total: 1 });
+    rune(game, c, false);
+    expect(game.hostView().fire).toMatchObject({ step: "reveal", right: 0, needed: 1, held: false });
+  });
+
   test("the same question is never the rune question twice in a row; a random one when nothing was missed", () => {
     const { game, clock } = setup({ names: ["A"], questions: 3 });
     const seen: number[] = [];
