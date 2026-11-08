@@ -22,7 +22,7 @@ const secs = (ms: number) => `${(ms / 1000).toFixed(1)} s`;
 export function DuelPlayer({ view, send }: { view: PlayerDuelView; send: Send }) {
   const q = view.question;
   const watching = view.opponents.length === 0;
-  useEffect(() => { if (duelTheme(view.theme) === "christmas") preloadSnowballArt(true); }, [view.theme]);
+  useEffect(() => { if (duelTheme(view.theme) === "christmas") preloadSnowballArt(true, view.arena); }, [view.theme, view.arena]);
 
   let body;
   if (view.phase === "podium") {
