@@ -151,7 +151,7 @@ A cooperative mode based on Kahoot's Submarine Squad. The whole class is one squ
 
 **Trail challenge** (after each level)
 - One or more players (1 per 6 players, up to 4) become **instructors**. Each sees a symbol, such as "the red octopus", and describes it out loud.
-- Everyone else is secretly assigned to an instructor and must tap that instructor's symbol in a grid of look-alikes. Players have to work out which instructor is describing *their* symbols.
+- Everyone else is secretly assigned to an instructor and must tap that instructor's Christmas picture in a grid of look-alikes: trees, presents, stockings, and wreaths with different shapes and decorations. Players have to work out which instructor is describing *their* symbols.
 - An instructor moves on when 70% of their group finds the symbol (or after 8 seconds, shown as a shrinking red bar on the phones). Each instructor has 5 symbols.
 - Every correct tap takes the sled 2 m farther. Wrong taps lock the player out for a second.
 - Players who join mid-challenge wait for the next level.

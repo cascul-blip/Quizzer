@@ -4,6 +4,8 @@ The submarine game is presented as a Christmas dog-sled chase. The existing serv
 
 ## Preview and verification
 
+The generated Christmas trail-challenge pictures, source sheets, prompts, and phone preview instructions are documented in [symbol-sources/README.md](symbol-sources/README.md). Run `bun scripts/winter-art/serve.ts --symbols` to review the actual instructor and player screens.
+
 Run `bun scripts/winter-art/serve.ts`, then open http://127.0.0.1:8097. Review controls cover every host phase, boosts, and goblin distance. `?live=1` continuously closes the gap, `?subject=goblin` isolates the supplied goblin animation, and `?subject=dogs` isolates the sled team.
 
 With Playwright and Chromium installed:
