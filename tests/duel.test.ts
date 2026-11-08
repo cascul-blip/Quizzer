@@ -4,6 +4,7 @@ import { AUTO_REVEAL_MS, AWARD_BIGGEST_CLIMB, AWARD_LONGEST_REIGN, AWARD_MOST_WI
 import { buildDuelResultsCsv } from "../src/server/game/results.ts";
 import { DUEL_DEFAULT_ROUNDS, type Pacing, type ShuffleOptions } from "../src/shared/protocol.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
+import { viewKey } from "../src/server/ws.ts";
 import { FakeClock, sampleQuiz } from "./helpers.ts";
 
 function quiz(count = 20): Quiz {
@@ -99,6 +100,19 @@ describe("Showdown", () => {
     expect(game.playerView(byName(game, "B").id)?.revealElapsedMs).toBe(1800);
     classic.dispose();
     game.dispose();
+  });
+
+  test("a phone's view key ignores the reveal clock running up, so it isn't re-sent", () => {
+    const { game, clock } = setup(["A", "B"]);
+    round(game, clock, [["A", true], ["B", false]]);
+    clock.advance(200);
+    const b = byName(game, "B").id;
+    const before = game.playerView(b)!;
+    const key = viewKey(before, clock.now());
+    clock.t += 1000;
+    const after = game.playerView(b)!;
+    expect(after.revealElapsedMs).toBe(before.revealElapsedMs! + 1000);
+    expect(viewKey(after, clock.now())).toBe(key);
   });
 
   test("starts straight into round 1: the ladder in arenas, options hidden", () => {

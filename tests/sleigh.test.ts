@@ -21,6 +21,7 @@ import {
 } from "../src/shared/sleigh-rules.ts";
 import type { SleighHouse } from "../src/shared/protocol.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
+import { viewKey } from "../src/server/ws.ts";
 import { FakeClock, sampleQuiz } from "./helpers.ts";
 
 function quiz(): Quiz {
@@ -142,6 +143,17 @@ describe("Santa's Sleigh Run", () => {
     expect(game.hostView().gameRemainingMs).toBe(160_000);
     expect(game.playerView(a.id)!.gameRemainingMs).toBe(160_000);
     expect(game.timeUp).toBe(false);
+  });
+
+  test("a phone's view key ignores the game clock running down, so it isn't re-sent", () => {
+    const { game, clock } = setup(["A", "B"], 3);
+    const a = byName(game, "A");
+    const before = game.playerView(a.id)!;
+    const key = viewKey(before, clock.now());
+    clock.t += 1000;
+    const after = game.playerView(a.id)!;
+    expect(after.gameRemainingMs).toBe(before.gameRemainingMs - 1000);
+    expect(viewKey(after, clock.now())).toBe(key);
   });
 
   test("phase sequence: countdown → quiz → intro → flight → quiz …, rounds keep going while the clock runs", () => {
