@@ -1,10 +1,7 @@
-import { createContext, type ComponentChildren } from "preact";
-import { useContext } from "preact/hooks";
-import { siegeTheme, type SiegeTheme } from "../../shared/siege-theme.ts";
+import { siegeTheme } from "../../shared/siege-theme.ts";
+import { createSkin } from "./season-skin.tsx";
 
-const Theme = createContext<SiegeTheme>("classic");
-export function SiegeThemeProvider({ theme, children }: { theme?: SiegeTheme; children: ComponentChildren }) {
-  return <Theme.Provider value={siegeTheme(theme)}>{children}</Theme.Provider>;
-}
-export const useSiegeTheme = () => useContext(Theme);
-export const useChristmasSiege = () => useSiegeTheme() === "christmas";
+const skin = createSkin(siegeTheme);
+export const SiegeThemeProvider = skin.Provider;
+export const useSiegeTheme = skin.useTheme;
+export const useChristmasSiege = skin.useChristmas;

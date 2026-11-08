@@ -1,7 +1,6 @@
-import { createContext } from "preact";
-import { useContext } from "preact/hooks";
-import { cupTheme, type CupTheme } from "../../shared/cup-theme.ts";
+import { cupTheme } from "../../shared/cup-theme.ts";
+import { createSkin } from "./season-skin.tsx";
 
-const CupThemeContext = createContext<CupTheme>(cupTheme());
-export const CupThemeProvider = CupThemeContext.Provider;
-export const useChristmasCup = () => useContext(CupThemeContext) === "christmas";
+const skin = createSkin(cupTheme);
+export const CupThemeProvider = skin.Provider;
+export const useChristmasCup = skin.useChristmas;
