@@ -132,7 +132,12 @@ describe("REST API", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ ...q, title: "Renamed" }),
     });
-    expect((await r.json()).title).toBe("Renamed");
+    const renamed = await r.json();
+    expect(renamed.title).toBe("Renamed");
+    r = await fetch(`${base}/api/quizzes/${q.id}`, { method: "PUT", headers: { "x-quiz-updated-at": q.updatedAt }, body: JSON.stringify({ ...q, title: "Stale" }) });
+    expect(r.status).toBe(409);
+    r = await fetch(`${base}/api/quizzes/${q.id}`, { method: "PUT", headers: { "x-quiz-updated-at": renamed.updatedAt }, body: JSON.stringify({ ...q, title: "Fresh" }) });
+    expect((await r.json()).title).toBe("Fresh");
     r = await fetch(`${base}/api/quizzes/${q.id}`, { method: "PUT", body: JSON.stringify({ title: "x", questions: [{ type: "bogus" }] }) });
     expect(r.status).toBe(400);
     expect((await r.json()).error).toContain("questions.0");

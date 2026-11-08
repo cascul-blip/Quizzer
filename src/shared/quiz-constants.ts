@@ -37,3 +37,6 @@ export function newId(len = 6): string {
   for (const b of bytes) out += alphabet[b % alphabet.length];
   return out;
 }
+
+/** Sent with an editor save (PUT /api/quizzes/:id): the updatedAt it loaded. The save is refused (409) if the quiz changed since. */
+export const BASE_VERSION_HEADER = "x-quiz-updated-at";

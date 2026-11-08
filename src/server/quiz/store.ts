@@ -22,6 +22,8 @@ import {
 } from "../../shared/quiz-schema.ts";
 
 export class NotFoundError extends Error {}
+/** The quiz changed since the caller loaded it (an MCP agent edited it while the editor was open). */
+export class ConflictError extends Error {}
 
 export { MAX_MEDIA_BYTES };
 /** Images with more pixels than this are refused rather than decoded. */
@@ -157,9 +159,15 @@ export class QuizStore {
     return this.write(quiz);
   }
 
-  /** Replace a quiz's content (title, description, settings, questions) keeping id and createdAt. */
-  replace(id: string, input: unknown): Quiz {
+  /**
+   * Replace a quiz's content (title, description, settings, questions) keeping id and createdAt.
+   * With `baseUpdatedAt` (the version the caller loaded), refuse if the quiz has changed since.
+   */
+  replace(id: string, input: unknown, baseUpdatedAt?: string): Quiz {
     const existing = this.get(id);
+    if (baseUpdatedAt !== undefined && baseUpdatedAt !== existing.updatedAt) {
+      throw new ConflictError("This quiz was changed somewhere else (maybe by an AI agent) since you opened it");
+    }
     const parsed = QuizDraft.safeParse(input);
     if (!parsed.success) throw new ValidationError(formatZodError(parsed.error));
     const d = parsed.data;
