@@ -97,6 +97,11 @@ import wolfLeapImg from "./siege/wolf-leap.webp";
 import wolfRunImg from "./siege/wolf-run.webp";
 import { pickArt } from "./phone-art.ts";
 
+/**
+ * Classic file → Toybox file, keyed by bundled URL. Two classic files with the same name and bytes
+ * get one URL, so they can't both be keys: the coin and heart (projector and phone copies are
+ * identical) are picked as themed pairs in SiegeIcon instead.
+ */
 const TOYBOX_ART: Record<string, string> = {
   [archerDrawImg]: christmasArcherDrawImg,
   [archerReadyImg]: christmasArcherReadyImg,
@@ -106,7 +111,6 @@ const TOYBOX_ART: Record<string, string> = {
   [castleCrackedImg]: christmasCastleCrackedImg,
   [castleFallenImg]: christmasCastleFallenImg,
   [castleImg]: christmasCastleImg,
-  [coinImg]: christmasCoinImg,
   [dustImg]: christmasDustImg,
   [giantHeadImg]: christmasGiantHeadImg,
   [giantLeftArmImg]: christmasGiantLeftArmImg,
@@ -115,7 +119,6 @@ const TOYBOX_ART: Record<string, string> = {
   [giantTorsoImg]: christmasGiantTorsoImg,
   [goblinAttackImg]: christmasGoblinAttackImg,
   [goblinWalkImg]: christmasGoblinWalkImg,
-  [heartImg]: christmasHeartImg,
   [knightBodyImg]: christmasKnightBodyImg,
   [knightHeadImg]: christmasKnightHeadImg,
   [knightLegsImg]: christmasKnightLegsImg,
@@ -129,8 +132,6 @@ const TOYBOX_ART: Record<string, string> = {
   [lv3TrimWallImg]: christmasLv3TrimWallImg,
   [lv3WallSpikesImg]: christmasLv3WallSpikesImg,
   [phoneArcherIconImg]: christmasPhoneArcherIconImg,
-  [phoneCoinImg]: christmasPhoneCoinImg,
-  [phoneHeartImg]: christmasPhoneHeartImg,
   [phoneKnightIconImg]: christmasPhoneKnightIconImg,
   [phoneWallIconImg]: christmasPhoneWallIconImg,
   [stoneWallCrackedImg]: christmasStoneWallCrackedImg,
@@ -510,8 +511,14 @@ const DEFENDER_ICON: Record<SiegeDefenderType, string> = {
   wall: phoneWallIconImg,
 };
 
+const ICON_PAIRS = {
+  classic: { coin: [coinImg, phoneCoinImg], heart: [heartImg, phoneHeartImg] },
+  christmas: { coin: [christmasCoinImg, christmasPhoneCoinImg], heart: [christmasHeartImg, christmasPhoneHeartImg] },
+} as const;
+
 export function SiegeIcon({ kind, class: cls = "" }: { kind: "coin" | "heart" | SiegeDefenderType; class?: string }) {
-  const src = kind === "coin" ? pickArt(coinImg, phoneCoinImg) : kind === "heart" ? pickArt(heartImg, phoneHeartImg) : DEFENDER_ICON[kind];
+  const christmas = useChristmasSiege();
+  const src = kind === "coin" || kind === "heart" ? pickArt(...ICON_PAIRS[christmas ? "christmas" : "classic"][kind]) : DEFENDER_ICON[kind];
   return <ArtImage class={`siege-icon ${cls}`} src={src} alt="" draggable={false} />;
 }
 
