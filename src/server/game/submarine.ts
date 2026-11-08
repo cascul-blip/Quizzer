@@ -9,7 +9,7 @@ import {
 } from "../../shared/protocol.ts";
 import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import type { Quiz } from "../../shared/quiz-schema.ts";
-import { glyphId, parseGlyph, randomGlyph, variantOf } from "../../shared/glyphs.ts";
+import { CHRISTMAS_GLYPHS, glyphId, parseGlyph, variantsOf } from "../../shared/glyphs.ts";
 import { GameError, realClock, shuffle, type Clock } from "./common.ts";
 import type { Game } from "./game.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
@@ -39,7 +39,7 @@ export const DIVE_WRONG_LOCK_MS = 1000;
 export const DIVE_METERS_PER_HIT = 2;
 export const LEVEL_METERS = 100;
 const GRID_SIZE = 6;
-/** Grid entries that differ from the target by just one part. */
+/** Grid entries from the same Christmas picture family as the target. */
 export const LOOKALIKES = 3;
 const PLAYERS_PER_INSTRUCTOR = 6;
 const MAX_INSTRUCTORS = 4;
@@ -290,18 +290,8 @@ export class SubGame {
     const count = divers.length === 1 ? 1 : Math.min(MAX_INSTRUCTORS, Math.max(1, Math.ceil(divers.length / PLAYERS_PER_INSTRUCTOR)), divers.length - 1);
     const leads = divers.slice(0, count);
     // Every symbol in this dive is different, across all instructors.
-    const used = new Set<string>();
-    const freshSymbols = () => {
-      const out: string[] = [];
-      while (out.length < DIVE_SYMBOLS) {
-        const id = glyphId(randomGlyph(this.rng));
-        if (!used.has(id)) {
-          used.add(id);
-          out.push(id);
-        }
-      }
-      return out;
-    };
+    const symbols = shuffle(CHRISTMAS_GLYPHS.map(glyphId), this.rng);
+    const freshSymbols = () => symbols.splice(0, DIVE_SYMBOLS);
     const rest = divers.slice(count);
     this.instructors = leads.map((lead, i) => {
       lead.instructorRounds++;
@@ -353,15 +343,17 @@ export class SubGame {
   }
 
   /**
-   * The target, 3 near look-alikes (each with one part changed) and random
+   * The target, 3 Christmas look-alikes (same family, different design) and random
    * fillers, so divers have to listen for the details.
    */
   makeGrid(target: string): string[] {
     const t = parseGlyph(target)!;
-    const grid = new Set<string>([target]);
-    for (let guard = 0; grid.size < 1 + LOOKALIKES && guard < 100; guard++) grid.add(glyphId(variantOf(t, this.rng)));
-    while (grid.size < GRID_SIZE) grid.add(glyphId(randomGlyph(this.rng)));
-    return shuffle([...grid], this.rng);
+    const near = shuffle(variantsOf(t).map(glyphId), this.rng).slice(0, LOOKALIKES);
+    const grid = [target, ...near];
+    // Other families fill the remaining slots, keeping exactly three close matches.
+    const fillers = shuffle(CHRISTMAS_GLYPHS.filter((g) => g.family !== t.family).map(glyphId), this.rng);
+    grid.push(...fillers.slice(0, GRID_SIZE - grid.length));
+    return shuffle(grid, this.rng);
   }
 
   private instructorOf(playerId: string): Instructor | null {

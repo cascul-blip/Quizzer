@@ -1,6 +1,6 @@
 /**
  * Submarine Squad art. The submarine, the anglerfish and the seabed are painted
- * pictures (scripts/sea-art.py). Dive symbols stay SVG: players have to match them.
+ * pictures (scripts/sea-art.py). Sled Squad uses its own generated Christmas dive pictures.
  */
 import { useEffect, useRef } from "preact/hooks";
 import type { AvatarChoice } from "../../shared/avatars.ts";

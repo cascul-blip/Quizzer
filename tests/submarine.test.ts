@@ -21,7 +21,7 @@ import {
   type SubPlayer,
 } from "../src/server/game/submarine.ts";
 import { FEEDBACK_MS } from "../src/server/game/stream.ts";
-import { parseGlyph, partsDiffering } from "../src/shared/glyphs.ts";
+import { CHRISTMAS_GLYPHS, glyphId, parseGlyph } from "../src/shared/glyphs.ts";
 import { FakeClock, sampleQuiz } from "./helpers.ts";
 
 function setup(names: string[], rng?: () => number) {
@@ -165,10 +165,30 @@ describe("dive", () => {
       expect(v.grid).toContain(target);
       expect(new Set(v.grid).size).toBe(6);
       for (const s of v.grid) expect(parseGlyph(s)).not.toBeNull();
-      // Near-misses: the target with exactly one part changed.
-      const lookAlikes = v.grid.filter((s) => partsDiffering(parseGlyph(s)!, t) === 1);
-      expect(lookAlikes.length).toBeGreaterThanOrEqual(LOOKALIKES);
+      // Near-misses share the Christmas family but have a different design.
+      const lookAlikes = v.grid.filter((s) => s !== target && parseGlyph(s)!.family === t.family);
+      expect(lookAlikes.length).toBe(LOOKALIKES);
     }
+  });
+
+  test("all Christmas targets build unique grids, even with a constant RNG", () => {
+    const { game } = toDive(["A", "B"], () => 0);
+    for (const g of CHRISTMAS_GLYPHS) {
+      const target = glyphId(g);
+      const grid = game.makeGrid(target);
+      expect(grid).toHaveLength(6);
+      expect(new Set(grid).size).toBe(6);
+      expect(grid).toContain(target);
+      expect(grid.filter((id) => id !== target && parseGlyph(id)!.family === g.family)).toHaveLength(LOOKALIKES);
+    }
+  });
+
+  test("a full class gets 20 different Christmas targets", () => {
+    const { game } = toDive(Array.from({ length: 30 }, (_, i) => `P${i}`), () => 0);
+    const targets = game.instructors.flatMap((i) => i.symbols);
+    expect(targets).toHaveLength(4 * DIVE_SYMBOLS);
+    expect(new Set(targets).size).toBe(targets.length);
+    for (const id of targets) expect(parseGlyph(id)).not.toBeNull();
   });
 
   test("correct taps add depth and advance at 70%; wrong taps lock out", () => {
