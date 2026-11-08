@@ -19,18 +19,22 @@ export function acceptsGzip(req: Request): boolean {
   });
 }
 
-/** A built file held in memory, plus a gzipped copy for text, compressed once at startup. */
+/**
+ * A built file. HTML, JS and CSS are held in memory with a gzipped copy, compressed once at startup.
+ * Images, audio and fonts are already compressed, so they're served straight from the executable
+ * instead of being copied into memory (they're most of the size, and most modes never show them).
+ */
 function fileHandler(file: NonNullable<HTMLBundle["files"]>[number], cacheControl: string): Handler {
-  const raw = new Uint8Array(readFileSync(file.path));
-  const gzipped = TEXT_LOADERS.has(file.loader) ? Bun.gzipSync(raw, { level: 9 }) : null;
+  const text = TEXT_LOADERS.has(file.loader);
+  const raw = text ? new Uint8Array(readFileSync(file.path)) : null;
+  const gzipped = raw ? Bun.gzipSync(raw, { level: 9 }) : null;
   const headers = { "content-type": file.headers["content-type"], "cache-control": cacheControl, ...(gzipped ? { vary: "accept-encoding" } : {}) };
   return (req) => {
     const gzip = gzipped !== null && acceptsGzip(req);
     const etag = `"${file.headers.etag}${gzip ? "-gz" : ""}"`;
     if (req.headers.get("if-none-match") === etag) return new Response(null, { status: 304, headers: { ...headers, etag } });
-    return gzip
-      ? new Response(gzipped, { headers: { ...headers, etag, "content-encoding": "gzip" } })
-      : new Response(raw, { headers: { ...headers, etag } });
+    if (gzip) return new Response(gzipped, { headers: { ...headers, etag, "content-encoding": "gzip" } });
+    return new Response(raw ?? Bun.file(file.path), { headers: { ...headers, etag } });
   };
 }
 

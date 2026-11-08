@@ -607,11 +607,18 @@ interface Playing {
   echo?: Echo;
 }
 
+/** How far duck() dips the music (0.15 of the usual 0.55). */
+const DUCK_LEVEL = 0.15 / 0.55;
+
 export class MusicPlayer {
   private master: GainNode | null = null;
+  /** After the master: duck() dips this one, so a dip never fights setLevel() (mute, music off) over the same gain. */
+  private ducker: GainNode | null = null;
   private reverb: ConvolverNode | null = null;
   /** Saturation, compression and reverb for rich tracks: made when one first plays, taken down when none is playing. */
   private rich: RichBus | null = null;
+  /** Rich tracks feeding the bus: the one playing plus any still fading out. It goes when the last one has. */
+  private richUsers = 0;
   private current: Playing | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
   private intensity = 0;
@@ -630,9 +637,13 @@ export class MusicPlayer {
 
   /** Overall music volume 0…1 (0 when muted or music is off). */
   setLevel(level: number): void {
+    const was = this.level;
     this.level = Math.max(0, Math.min(1, level));
     const ctx = this.getCtx();
     if (this.master && ctx) this.master.gain.setTargetAtTime(this.level * 0.55, ctx.currentTime, 0.15);
+    // Recordings aren't decoded while music is off or muted: fetch the playing track's once it's audible.
+    const track = this.current?.track;
+    if (was === 0 && this.level > 0 && ctx && track && usesSamples(track)) void loadSamples(ctx, instrumentsOf(track));
   }
 
   /** Move intensity to `value`, gradually over rampMs (or quickly if 0). */
@@ -653,12 +664,12 @@ export class MusicPlayer {
   /** Briefly dip the music (e.g. under a fanfare). */
   duck(ms = 1500): void {
     const ctx = this.getCtx();
-    if (!ctx || !this.master) return;
-    const g = this.master.gain;
+    if (!ctx || !this.ducker) return;
+    const g = this.ducker.gain;
     const t = ctx.currentTime;
     g.cancelScheduledValues(t);
-    g.setTargetAtTime(this.level * 0.15, t, 0.08);
-    g.setTargetAtTime(this.level * 0.55, t + ms / 1000, 0.3);
+    g.setTargetAtTime(DUCK_LEVEL, t, 0.08);
+    g.setTargetAtTime(1, t + ms / 1000, 0.3);
   }
 
   /**
@@ -717,7 +728,8 @@ export class MusicPlayer {
       comp.ratio.value = 4;
       this.master = ctx.createGain();
       this.master.gain.value = this.level * 0.55;
-      this.master.connect(comp).connect(ctx.destination);
+      this.ducker = ctx.createGain();
+      this.master.connect(this.ducker).connect(comp).connect(ctx.destination);
     }
     return this.master;
   }
@@ -760,7 +772,8 @@ export class MusicPlayer {
     if (cur.nextTime < ctx.currentTime) cur.nextTime = ctx.currentTime + 0.02; // fell behind (tab was hidden)
     cur.echo?.setStep(stepSeconds(cur.track, this.intensity), ctx.currentTime);
     while (cur.nextTime < ctx.currentTime + LOOKAHEAD_S) {
-      scheduleStep(ctx, cur.gain, cur.track, cur.step, cur.nextTime, this.intensity, { echo: cur.echo?.input });
+      // Off or muted: keep the beat moving (so turning it back on comes in on time) but build no notes.
+      if (this.level > 0) scheduleStep(ctx, cur.gain, cur.track, cur.step, cur.nextTime, this.intensity, { echo: cur.echo?.input });
       const swing = cur.track.swing ?? 0;
       cur.nextTime += stepSeconds(cur.track, this.intensity) * (cur.step % 2 === 0 ? 1 + swing : 1 - swing);
       cur.step = (cur.step + 1) % (cur.track.bars * stepsPerBar(cur.track));
@@ -779,7 +792,7 @@ export class MusicPlayer {
         old.gain.disconnect();
         old.echo?.dispose();
         audio?.pause();
-        if (!this.current?.track?.rich && this.rich) {
+        if (old.track?.rich && --this.richUsers === 0 && this.rich) {
           this.rich.dispose();
           this.rich = null;
         }
@@ -803,11 +816,12 @@ export class MusicPlayer {
     // An unknown id plays silence (but still counts as "current", so we don't retry every tick).
     const track = this.tracks[id];
     // Its recordings decode in the background; until they're ready its notes use the synth voices.
-    if (track && usesSamples(track)) void loadSamples(ctx, instrumentsOf(track));
+    if (track && usesSamples(track) && this.level > 0) void loadSamples(ctx, instrumentsOf(track));
     if (track?.rich) {
       // The rich bus replaces the master connection and the shared hall for this track.
       gain.disconnect();
       this.rich ??= createRichBus(ctx, master);
+      this.richUsers++;
       gain.connect(this.rich.input);
       const send = ctx.createGain();
       // Tracks without their own reverb amount get a hall (acoustic) or a tighter room's worth (arcade).

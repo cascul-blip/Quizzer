@@ -16,7 +16,7 @@ import ornamentBlue from "./winter/sleigh/ornament-blue-1.webp";
 import goblinSheet from "./winter/goblin-sheet.webp";
 import "./winter-art.css";
 
-export const winterGradient = () => "linear-gradient(#274e52, #416b69 65%, #748d81)";
+export { winterGradient } from "./winter-gradient.ts";
 export interface SledRider { key: string; choice: AvatarChoice }
 
 /** Scroll distance follows the live chase pace, including boosts and stops. */

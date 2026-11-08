@@ -24,10 +24,32 @@ export function snowballBackground(arena: number, phone = isPhoneArt()): string 
   const index = arena <= 1 ? 0 : 1 + (Math.max(0, Math.floor(arena) - 2) % 3);
   return (phone ? PHONE : HOST)[index]!;
 }
-export function preloadSnowballArt(phone = isPhoneArt()) {
-  for (const src of [...(phone ? PHONE : HOST), phone ? phoneSheet : sheet, phone ? phonePuff : puff]) {
-    const image = new Image(); image.src = src; image.decode().catch(() => {});
-  }
+/** Files already asked for; the Image objects are kept so the browser keeps them decoded. */
+const warmed = new Set<string>();
+const held: HTMLImageElement[] = [];
+
+/** Fetch and decode files one after another, so a whole class doesn't hit the Wi-Fi at once. */
+function warmInOrder(srcs: string[], i = 0): void {
+  const src = srcs[i];
+  if (src === undefined) return;
+  if (warmed.has(src)) return warmInOrder(srcs, i + 1);
+  warmed.add(src);
+  const image = new Image();
+  image.src = src;
+  held.push(image);
+  image
+    .decode()
+    .catch(() => {})
+    .then(() => warmInOrder(srcs, i + 1));
+}
+
+/**
+ * Get the snowball art ready. The projector loads every arena. A phone only ever shows its own
+ * arena, so it loads that backdrop (call again when the arena changes) plus the elf sheet and puff.
+ */
+export function preloadSnowballArt(phone = isPhoneArt(), arena?: number) {
+  if (!phone) return warmInOrder([...HOST, sheet, puff]);
+  warmInOrder([...(arena === undefined ? [] : [snowballBackground(arena, true)]), phoneSheet, phonePuff]);
 }
 
 // Head centers in % of each square animation cell, measured against its collar.

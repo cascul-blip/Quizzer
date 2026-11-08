@@ -335,8 +335,21 @@ export class SubGame {
     ins.endsAt = this.clock.now() + DIVE_SYMBOL_TIMEOUT_MS;
     ins.timer = this.clock.setTimeout(() => {
       ins.timer = null;
+      // Nobody left to describe the symbols, or nobody left to find them: skip to the last symbol,
+      // so this advance ends the group's dive instead of sitting out every remaining symbol.
+      if (!this.players.get(ins.playerId)?.connected || this.liveDivers(ins) === 0) ins.index = DIVE_SYMBOLS - 1;
       this.advance(ins);
     }, DIVE_SYMBOL_TIMEOUT_MS);
+  }
+
+  /** Divers in the group whose phones are connected: only they can find the symbol. */
+  private liveDivers(ins: Instructor): number {
+    return ins.group.filter((id) => this.players.get(id)?.connected).length;
+  }
+
+  /** Enough of the group's connected divers have found the symbol to move on. */
+  private enoughFound(ins: Instructor): boolean {
+    return ins.found.size > 0 && ins.found.size >= Math.ceil(this.liveDivers(ins) * DIVE_ADVANCE_FRACTION);
   }
 
   /**
@@ -370,7 +383,7 @@ export class SubGame {
     ins.found.add(playerId);
     p.diveHits++;
     this.diveMeters += DIVE_METERS_PER_HIT;
-    if (ins.found.size >= Math.ceil(ins.group.length * DIVE_ADVANCE_FRACTION)) this.advance(ins);
+    if (this.enoughFound(ins)) this.advance(ins);
     else this.onActivity(p.id);
     return true;
   }
@@ -411,6 +424,9 @@ export class SubGame {
     const p = this.players.get(playerId);
     if (!p || p.connected === connected) return;
     p.connected = connected;
+    // A diver whose phone dropped no longer holds the group back.
+    const ins = !connected && this.phase === "dive" ? this.instructorOf(playerId) : null;
+    if (ins && ins.index < DIVE_SYMBOLS && this.enoughFound(ins)) return this.advance(ins);
     this.onChange();
   }
 

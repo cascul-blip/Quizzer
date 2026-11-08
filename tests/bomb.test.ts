@@ -165,6 +165,24 @@ describe("dealing wires", () => {
 });
 
 describe("cutting", () => {
+  test("starting to hold a wire is one broadcast, not an activity update as well", () => {
+    const clock = new FakeClock();
+    const lobby = new Game(sampleQuiz({ questions: [mc(0)] }), { clock, rng });
+    lobby.setMode("bomb");
+    lobby.setBomb({ ...DEFAULT_BOMB, squads: 1, modules: 2, wires: 2, minutes: 3 });
+    lobby.join("Ada");
+    lobby.join("Ben");
+    let changes = 0;
+    let activity = 0;
+    const game = BombGame.fromLobby(lobby, { clock, rng, onChange: () => changes++, onActivity: () => activity++ });
+    game.start();
+    clock.advance(BOMB_COUNTDOWN_MS);
+    const wire = question(game).wires[0]!;
+    [changes, activity] = [0, 0];
+    expect(game.hold(wire.playerId, wire.id, true)).toBe(true);
+    expect([changes, activity]).toEqual([1, 0]);
+  });
+
   test("a squad of one holds every wire, phones never see which wire is right, and a wrong cut stays on the same question", () => {
     const { game, clock, joined } = boot([mc(0)], ["Ada"]);
     const id = joined[0]!.id;

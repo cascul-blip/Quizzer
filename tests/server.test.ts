@@ -172,6 +172,9 @@ describe("REST API", () => {
     expect((await fetch(`${base}/music/notes.txt`)).status).toBe(404);
     expect((await fetch(`${base}/music/unknown-song.mp3`)).status).toBe(404);
     expect((await fetch(`${base}/music/..%2Fquizzes%2Fx.json`)).status).toBe(404);
+    // A malformed escape is a plain 404, not a 500 with a URIError on the teacher's console.
+    expect((await fetch(`${base}/music/%E0%A4%A`)).status).toBe(404);
+    expect((await fetch(`${base}/api/quizzes/%E0%A4%A`)).status).toBe(404);
   });
 
   test("admin guard rejects cross-site requests", async () => {

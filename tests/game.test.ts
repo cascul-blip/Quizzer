@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
 import { AUTO_LEADERBOARD_MS, AUTO_REVEAL_MS, GRACE_MS, Game, GameError, INTRO_MS, preparePlayOrder } from "../src/server/game/game.ts";
 import { FightGame } from "../src/server/game/fight.ts";
 import { LandGame } from "../src/server/game/land.ts";
@@ -236,6 +236,28 @@ describe("views", () => {
     game.skip();
     v = game.playerView(a.id);
     expect(v.kind === "player" && v.result).toEqual({ choice: 2, correct: [1], wasCorrect: false, points: 0 });
+  });
+
+  test("a batch of views (one broadcast) ranks the class once and matches views built one by one", () => {
+    const { game, clock } = setup();
+    const ids = ["A", "B", "C", "D"].map((n) => game.join(n).id);
+    const batched = () => {
+      const ranked = spyOn(game, "ranked");
+      const views = game.viewBatch(() => ids.map((id) => game.playerView(id)));
+      expect(ranked.mock.calls.length).toBeLessThanOrEqual(1);
+      ranked.mockRestore();
+      return views;
+    };
+    expect(batched()).toEqual(ids.map((id) => game.playerView(id)));
+    game.start();
+    toOpen(game, clock);
+    game.answer(ids[2]!, 0, 1);
+    clock.advance(500);
+    game.answer(ids[0]!, 0, 1);
+    game.skip();
+    expect(batched()).toEqual(ids.map((id) => game.playerView(id)));
+    while (game.phase !== "podium") game.next();
+    expect(batched()).toEqual(ids.map((id) => game.playerView(id)));
   });
 
   test("remainingMs counts down", () => {

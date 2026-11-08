@@ -513,6 +513,7 @@ function Editor({ id, notify }: { id: string; notify: (m: string) => void }) {
             index={i}
             count={draft.questions.length}
             onChange={(nq) => setQ(i, nq)}
+            onLater={(fn) => setDraft((d) => d && { ...d, questions: d.questions.map((x) => (x.id === q.id ? fn(x) : x)) })}
             onMove={(d) => move(i, d)}
             onDuplicate={() => {
               const copy = { ...structuredClone(q), id: blankQuestion(q.type, taken).id };
@@ -575,12 +576,17 @@ function QuestionEditor(props: {
   index: number;
   count: number;
   onChange: (q: Question) => void;
+  /**
+   * For a change that lands after an await (an image upload): applied to the question as it is
+   * then, by id, so edits made in the meantime are kept. Dropped if the question was deleted.
+   */
+  onLater: (update: (q: Question) => Question) => void;
   onMove: (delta: number) => void;
   onDuplicate: () => void;
   onDelete: () => void;
   notify: (m: string) => void;
 }) {
-  const { q, index, count, onChange, notify } = props;
+  const { q, index, count, onChange, onLater, notify } = props;
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const issues = questionIssues(q);
@@ -614,7 +620,7 @@ function QuestionEditor(props: {
     try {
       const body = await shrinkImage(file);
       const { ref } = await api<{ ref: string }>("/api/media", { method: "POST", headers: { "content-type": body.type }, body });
-      onChange({ ...q, image: ref });
+      onLater((current) => ({ ...current, image: ref }));
     } catch (e) {
       notify(`Image upload failed: ${(e as Error).message}`);
     } finally {

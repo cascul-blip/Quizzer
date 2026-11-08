@@ -266,6 +266,35 @@ describe("gold and building", () => {
 });
 
 describe("the battle", () => {
+  test("battle ticks only push the projector, unless something the phones show changed", () => {
+    const clock = new FakeClock();
+    let changes = 0;
+    let ticks = 0;
+    const lobby = new Game(quiz(), { clock });
+    lobby.setMode("siege");
+    lobby.setSiege({ waves: 5, theme: "classic" });
+    for (const n of NAMES.slice(0, 3)) lobby.join(n);
+    const game = SiegeGame.fromLobby(lobby, { clock, rng: seeded(), onChange: () => changes++, onTick: () => ticks++ });
+    game.start();
+    clock.advance(SIEGE_COUNTDOWN_MS + SIEGE_OPENING_MS);
+    expect(game.phase).toBe("wave");
+    game.pending = [];
+    fund(game);
+    game.place(byName(game, "Ana").id, "archer", 1, 1);
+    sturdy(game.spawn("goblin", 1, 9));
+    const [c0, t0] = [changes, ticks];
+    // The archer shoots and the goblin walks: projector news only.
+    clock.advance(3000);
+    expect(ticks - t0).toBeGreaterThanOrEqual(2); // an arrow every 1.5 s
+    expect(changes - c0).toBe(0);
+    // A goblin reaching the wall costs a heart, which every phone shows.
+    const hearts = game.hearts;
+    game.spawn("goblin", 3, 0.6);
+    for (let i = 0; i < 100 && game.hearts === hearts; i++) clock.advance(SIEGE_TICK_MS);
+    expect(game.hearts).toBeLessThan(hearts);
+    expect(changes - c0).toBeGreaterThan(0);
+  });
+
   test("a monster stops at the first defender in its way, attacks it, and walks on once it is destroyed", () => {
     const { game, clock } = quietWave();
     game.place(byName(game, "Ana").id, "wall", 0, 5);
