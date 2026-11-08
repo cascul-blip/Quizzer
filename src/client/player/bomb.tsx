@@ -5,7 +5,7 @@ import { BOMB_HOLD_MS, type PlayerBombView, type PlayerBombWire } from "../../sh
 import { bombArt, Confetti, CuttersIcon, WireGraphic } from "../shared/bomb-art.tsx";
 import { play } from "../shared/sounds.ts";
 import { formatClock, ordinal, useCountdown } from "../shared/ui.tsx";
-import { Tex } from "../shared/tex.tsx";
+import { Tex, TexList } from "../shared/tex.tsx";
 
 type Send = (m: ClientMsg) => void;
 
@@ -123,7 +123,7 @@ function Defusing({ view, send }: { view: PlayerBombView; send: Send }) {
       {/* Always there, so "… is cutting" appearing never pushes the Cut button out from under a finger. */}
       <p class={`bw-status ${view.reveal && !view.status?.startsWith("Wrong") ? "good" : ""}`}>{line || "\u00a0"}</p>
       {view.reveal ? (
-        <p class="bw-reveal">Answer: {view.reveal.join(", ")}</p>
+        <p class="bw-reveal">Answer: <TexList items={view.reveal} sep=", " /></p>
       ) : view.wires.length === 0 && !view.keypad ? (
         <p class="bw-sitout">You'll get the next wire. Help your squad talk it out!</p>
       ) : view.keypad ? (

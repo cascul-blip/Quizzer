@@ -5,7 +5,7 @@ import { BLOCKS_PER_BUILD, DROP_ZONES, MONSTER_DAMAGE, type ClientMsg, type Mons
 import { BuildingBlock, COLUMN_NAMES, EggCell, useEventFlash, viewBaseRow, DustPuff, FloorSparkle, SKY_STAGES, SkylineSvg, skyStage, useFreshKeys, useNewFloor } from "../shared/tower-art.tsx";
 import { PinDragger } from "../shared/pin.tsx";
 import { Shape, TextAnswer, formatClock, optionColor, ordinal, teamInk, teamVars, useCountdown } from "../shared/ui.tsx";
-import { Tex } from "../shared/tex.tsx";
+import { Tex, TexList } from "../shared/tex.tsx";
 
 type Send = (m: ClientMsg) => void;
 type Build = NonNullable<PlayerTowerView["build"]>;
@@ -214,7 +214,9 @@ export function Feedback({ feedback, rightText }: { feedback: PlayerTowerView["f
       {!shown.correct && shown.answers.length > 0 && (
         <div class="flash-answer">
           <span>Correct answer{shown.answers.length > 1 ? "s" : ""}:</span>
-          <b>{shown.answers.join(" / ")}</b>
+          <b>
+            <TexList items={shown.answers} sep=" / " />
+          </b>
         </div>
       )}
       {shown.penaltyMs > 0 && <PenaltyNote remainingMs={shown.remainingMs} seq={shown.seq} />}

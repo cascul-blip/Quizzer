@@ -7,7 +7,7 @@ import { play } from "../shared/sounds.ts";
 import { Shape, formatClock, optionColor, ordinal, teamVars, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
 import { Award } from "./tower.tsx";
-import { Tex } from "../shared/tex.tsx";
+import { Tex, TexList } from "../shared/tex.tsx";
 
 type DragonView = Extract<HostView, { kind: "dragon" }>;
 
@@ -214,7 +214,7 @@ function FireOverlay({ view }: { view: DragonView }) {
           <PinBoard image={pin.image} spots={pin.spots} labels={q.options} correct={reveal ? [...correct] : undefined} counts={reveal ? (f.answerCounts ?? undefined) : undefined} />
         </div>
       ) : q.type === "text" ? (
-        <p class="typing-note">{reveal ? `Answer: ${q.options.join(" / ")}` : "Type your answer on your phone"}</p>
+        <p class="typing-note">{reveal ? <>Answer: <TexList items={q.options} sep=" / " /></> : "Type your answer on your phone"}</p>
       ) : (
         <div class={`tiles n${q.options.length}`}>
           {q.options.map((text, i) => {
