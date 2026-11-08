@@ -759,6 +759,7 @@ export class GameHub {
       record: lobby.siege.waves === "endless" ? loadSiegeRecord(this.store.dataDir, lobby.quizId) : null,
       onChange: () => this.scheduleBroadcast(),
       onActivity: (pid) => this.onActivity(pid),
+      onTick: () => this.pushHost(),
       onFinish: (g) => this.onFinish(g),
     });
     lobby.dispose();
