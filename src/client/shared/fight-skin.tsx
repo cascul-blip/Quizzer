@@ -1,6 +1,5 @@
-import { createContext, type ComponentChildren } from "preact";
-import { useContext } from "preact/hooks";
-import { fightTheme, type FightTheme } from "../../shared/fight-theme.ts";
+import { fightTheme } from "../../shared/fight-theme.ts";
+import { createSkin } from "./season-skin.tsx";
 import castle0 from "./fight/christmas/castle-0.webp";
 import castle1 from "./fight/christmas/castle-1.webp";
 import castle2 from "./fight/christmas/castle-2.webp";
@@ -30,11 +29,9 @@ import flagRed from "./fight/christmas/flag-red.webp";
 import flagBlue from "./fight/christmas/flag-blue.webp";
 import phoneFlagRed from "./fight/christmas/phone/flag-red.webp";
 import phoneFlagBlue from "./fight/christmas/phone/flag-blue.webp";
-const Theme = createContext<FightTheme>("classic");
-export function FightThemeProvider({ theme, children }: { theme?: FightTheme; children: ComponentChildren }) {
-  return <Theme.Provider value={fightTheme(theme)}>{children}</Theme.Provider>;
-}
-export const useGingerbread = () => useContext(Theme) === "christmas";
+const skin = createSkin(fightTheme);
+export const FightThemeProvider = skin.Provider;
+export const useGingerbread = skin.useChristmas;
 export const gingerbreadArt = { castles: [castle0, castle1, castle2, castle3, castle4], base, arm, sky, earth, flags: [flagRed, flagBlue], grounds: { low: groundLow, medium: groundMedium, high: groundHigh } };
 const phoneArt = { castles: [phoneCastle0, phoneCastle1, phoneCastle2, phoneCastle3, phoneCastle4], base: phoneBase, arm: phoneArm, sky: phoneSky, earth: phoneEarth, flags: [phoneFlagRed, phoneFlagBlue], grounds: { low: phoneGroundLow, medium: phoneGroundMedium, high: phoneGroundHigh } };
 export const fightChristmasArt = () => isPhoneArt() ? phoneArt : gingerbreadArt;

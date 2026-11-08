@@ -7,14 +7,14 @@ import { play } from "../shared/sounds.ts";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
 import { Award } from "./tower.tsx";
-import { cupName, cupTheme } from "../../shared/cup-theme.ts";
+import { cupName } from "../../shared/cup-theme.ts";
 import { CupThemeProvider, useChristmasCup } from "../shared/cup-skin.tsx";
 
 type CupView = Extract<HostView, { kind: "cup" }>;
 
 /** Projector screen for Cup of Death: countdown → (roll → quiz → drink → reveal)… → podium. */
 export function CupStage({ view, send }: { view: CupView; send: Send }) {
-  return <CupThemeProvider value={cupTheme(view.theme)}><CupStageContent view={view} send={send} /></CupThemeProvider>;
+  return <CupThemeProvider theme={view.theme}><CupStageContent view={view} send={send} /></CupThemeProvider>;
 }
 
 function CupStageContent({ view, send }: { view: CupView; send: Send }) {

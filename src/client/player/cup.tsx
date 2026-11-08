@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { type ClientMsg, type PlayerCupView } from "../../shared/protocol.ts";
 import { CupArt, Die, RollingDie, RocketHead } from "../shared/cup-art.tsx";
-import { cupTheme } from "../../shared/cup-theme.ts";
 import { CupThemeProvider, useChristmasCup } from "../shared/cup-skin.tsx";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
 import { Feedback, StreamQuestion } from "./tower.tsx";
@@ -24,7 +23,7 @@ function RollScreen({ round, target, rollMs }: { round: number; target: number; 
 
 /** Phone screen for Cup of Death: roll, answer, and (if you fall short) pick a cup. */
 export function CupPlayer({ view, send }: { view: PlayerCupView; send: Send }) {
-  return <CupThemeProvider value={cupTheme(view.theme)}><CupPlayerContent view={view} send={send} /></CupThemeProvider>;
+  return <CupThemeProvider theme={view.theme}><CupPlayerContent view={view} send={send} /></CupThemeProvider>;
 }
 
 function CupPlayerContent({ view, send }: { view: PlayerCupView; send: Send }) {

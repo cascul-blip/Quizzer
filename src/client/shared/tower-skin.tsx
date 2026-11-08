@@ -1,6 +1,5 @@
-import { createContext, type ComponentChildren } from "preact";
-import { useContext } from "preact/hooks";
-import { towerTheme, type TowerTheme } from "../../shared/tower-theme.ts";
+import { towerTheme } from "../../shared/tower-theme.ts";
+import { createSkin } from "./season-skin.tsx";
 import { isPhoneArt, pickArt } from "./phone-art.ts";
 import art0 from "./tower/christmas/office-1.webp";
 import phone0 from "./tower/christmas/phone/office-1.webp";
@@ -25,12 +24,10 @@ import phone9 from "./tower/christmas/phone/yeti.webp";
 import art10 from "./tower/christmas/background.webp";
 import phone10 from "./tower/christmas/phone/background.webp";
 
-const Theme = createContext<TowerTheme>("classic");
-export function TowerThemeProvider({ theme, children }: { theme?: TowerTheme; children: ComponentChildren }) {
-  return <Theme.Provider value={towerTheme(theme)}>{children}</Theme.Provider>;
-}
-export const useTowerTheme = () => useContext(Theme);
-export const useChristmasTower = () => useTowerTheme() === "christmas";
+const skin = createSkin(towerTheme);
+export const TowerThemeProvider = skin.Provider;
+export const useTowerTheme = skin.useTheme;
+export const useChristmasTower = skin.useChristmas;
 
 const hostTiles = { offices: [art0, art1, art2, art3], lobby: art4, shop: art5 };
 const phoneTiles = { offices: [phone0, phone1, phone2, phone3], lobby: phone4, shop: phone5 };
