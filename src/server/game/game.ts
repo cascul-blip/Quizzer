@@ -1,10 +1,11 @@
 import { DEFAULT_DUEL_THEME, duelTheme } from "../../shared/duel-theme.ts";
 import { DEFAULT_LAND_THEME, landTheme } from "../../shared/land-theme.ts";
 import { DEFAULT_SIEGE_THEME, siegeTheme } from "../../shared/siege-theme.ts";
-import { DEFAULT_RACER_THEME } from "../../shared/racer-theme.ts";
-import { DEFAULT_CUP_THEME } from "../../shared/cup-theme.ts";
-import { DEFAULT_TOWER_THEME } from "../../shared/tower-theme.ts";
-import { DEFAULT_FIGHT_THEME } from "../../shared/fight-theme.ts";
+import { DEFAULT_RACER_THEME, racerTheme } from "../../shared/racer-theme.ts";
+import { DEFAULT_CUP_THEME, cupTheme } from "../../shared/cup-theme.ts";
+import { DEFAULT_TOWER_THEME, towerTheme } from "../../shared/tower-theme.ts";
+import { DEFAULT_FIGHT_THEME, fightTheme } from "../../shared/fight-theme.ts";
+import { isSeasonTheme, type SeasonTheme } from "../../shared/season-theme.ts";
 import {
   BOMB_MAX_SQUADS,
   BOMB_MINUTES,
@@ -103,6 +104,13 @@ export function preparePlayOrder(source: Question[], opts: ShuffleOptions, rng: 
   return questions;
 }
 
+/** A lobby setter's theme: kept as it is when not given, refused when it isn't a known look. */
+function pickTheme(value: unknown, current: SeasonTheme, mode: string): SeasonTheme {
+  if (value === undefined) return current;
+  if (!isSeasonTheme(value)) throw new GameError(`Unknown ${mode} theme`);
+  return value;
+}
+
 interface GameOptions {
   clock?: Clock;
   rng?: () => number;
@@ -187,14 +195,15 @@ export class Game {
     this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
     this.mode = opts.mode ?? "classic";
-    this.racer = { ...(opts.racer ?? DEFAULT_RACER) };
-    this.tower = { ...(opts.tower ?? DEFAULT_TOWER) };
-    this.fight = { ...(opts.fight ?? DEFAULT_FIGHT) };
+    // Carried-over settings may predate a mode's themes: every theme starts as a real one.
+    this.racer = { ...(opts.racer ?? DEFAULT_RACER), theme: racerTheme(opts.racer?.theme) };
+    this.tower = { ...(opts.tower ?? DEFAULT_TOWER), theme: towerTheme(opts.tower?.theme) };
+    this.fight = { ...(opts.fight ?? DEFAULT_FIGHT), theme: fightTheme(opts.fight?.theme) };
     this.land = { ...(opts.land ?? DEFAULT_LAND), theme: landTheme(opts.land?.theme) };
-    this.cup = { ...(opts.cup ?? DEFAULT_CUP) };
+    this.cup = { ...(opts.cup ?? DEFAULT_CUP), theme: cupTheme(opts.cup?.theme) };
     this.dragon = { ...(opts.dragon ?? DEFAULT_DRAGON) };
     this.bomb = { ...(opts.bomb ?? DEFAULT_BOMB) };
-    this.siege = { ...(opts.siege ?? DEFAULT_SIEGE) };
+    this.siege = { ...(opts.siege ?? DEFAULT_SIEGE), theme: siegeTheme(opts.siege?.theme) };
     this.duel = { ...(opts.duel ?? DEFAULT_DUEL), theme: duelTheme(opts.duel?.theme) };
     this.sleigh = { ...(opts.sleigh ?? DEFAULT_SLEIGH) };
     this.protect = opts.protect ?? true;
@@ -304,8 +313,7 @@ export class Game {
 
   setRacer(settings: RacerSettings): void {
     if (this.phase !== "lobby") throw new GameError("Racer settings can only be changed before the game starts");
-    if (settings.theme !== "classic" && settings.theme !== "christmas") throw new GameError("Unknown racer theme");
-    this.racer = { theme: settings.theme };
+    this.racer = { theme: pickTheme(settings.theme, racerTheme(this.racer.theme), "racer") };
     this.onChange();
   }
 
@@ -315,16 +323,16 @@ export class Game {
     const minutes = Number(settings.minutes);
     if (!(teams >= 1 && teams <= MAX_TEAMS)) throw new GameError(`Teams must be between 1 and ${MAX_TEAMS}`);
     if (!(TOWER_MINUTES as readonly number[]).includes(minutes)) throw new GameError("Unsupported game length");
-    if (settings.theme !== undefined && settings.theme !== "classic" && settings.theme !== "christmas") throw new GameError("Unknown tower theme");
-    this.tower = { teams, minutes, monster: settings.monster === undefined ? this.tower.monster : !!settings.monster, theme: settings.theme ?? this.tower.theme };
+    const theme = pickTheme(settings.theme, towerTheme(this.tower.theme), "tower");
+    this.tower = { teams, minutes, monster: settings.monster === undefined ? this.tower.monster : !!settings.monster, theme };
     this.onChange();
   }
 
   setFight(settings: Partial<FightSettings>): void {
     if (this.phase !== "lobby") throw new GameError("Tower Fight settings can only be changed before the game starts");
     if (settings.hill !== undefined && !HILL_SETTINGS.includes(settings.hill)) throw new GameError("Unknown hill height");
-    if (settings.theme !== undefined && settings.theme !== "classic" && settings.theme !== "christmas") throw new GameError("Unknown fight theme");
-    this.fight = { ...this.fight, ...settings, hill: settings.hill ?? this.fight.hill, theme: settings.theme ?? this.fight.theme };
+    const theme = pickTheme(settings.theme, fightTheme(this.fight.theme), "fight");
+    this.fight = { ...this.fight, ...settings, hill: settings.hill ?? this.fight.hill, theme };
     this.onChange();
   }
 
@@ -334,8 +342,7 @@ export class Game {
     const minutes = Number(settings.minutes);
     if (!(teams >= LAND_MIN_TEAMS && teams <= MAX_TEAMS)) throw new GameError(`Teams must be between ${LAND_MIN_TEAMS} and ${MAX_TEAMS}`);
     if (!(LAND_MINUTES as readonly number[]).includes(minutes)) throw new GameError("Unsupported game length");
-    if (settings.theme !== undefined && settings.theme !== "classic" && settings.theme !== "christmas") throw new GameError("Unknown Land Grab theme");
-    this.land = { teams, minutes, theme: landTheme(settings.theme ?? this.land.theme) };
+    this.land = { teams, minutes, theme: pickTheme(settings.theme, landTheme(this.land.theme), "Land Grab") };
     this.onChange();
   }
 
@@ -343,8 +350,7 @@ export class Game {
     if (this.phase !== "lobby") throw new GameError("Cup of Death settings can only be changed before the game starts");
     const cups = Number(settings.cups);
     if (!(Number.isInteger(cups) && cups >= CUP_MIN_CUPS && cups <= CUP_MAX_CUPS)) throw new GameError(`Cups must be between ${CUP_MIN_CUPS} and ${CUP_MAX_CUPS}`);
-    if (settings.theme !== undefined && settings.theme !== "classic" && settings.theme !== "christmas") throw new GameError("Unknown cup theme");
-    this.cup = { cups, theme: settings.theme ?? this.cup.theme ?? DEFAULT_CUP_THEME };
+    this.cup = { cups, theme: pickTheme(settings.theme, cupTheme(this.cup.theme), "cup") };
     this.onChange();
   }
 
@@ -390,9 +396,7 @@ export class Game {
     if (this.phase !== "lobby") throw new GameError("Kingdom Siege settings can only be changed before the game starts");
     const waves = settings.waves === "endless" ? "endless" : Number(settings.waves);
     if (!(SIEGE_WAVE_CHOICES as readonly unknown[]).includes(waves)) throw new GameError("Unsupported number of waves");
-    const theme = settings.theme ?? siegeTheme(this.siege.theme);
-    if (theme !== "classic" && theme !== "christmas") throw new GameError("Unsupported Kingdom Siege theme");
-    this.siege = { waves: waves as SiegeWaves, theme };
+    this.siege = { waves: waves as SiegeWaves, theme: pickTheme(settings.theme, siegeTheme(this.siege.theme), "Kingdom Siege") };
     this.onChange();
   }
 
@@ -400,9 +404,7 @@ export class Game {
     if (this.phase !== "lobby") throw new GameError("Showdown settings can only be changed before the game starts");
     const rounds = Number(settings.rounds);
     if (!(DUEL_ROUNDS as readonly number[]).includes(rounds)) throw new GameError("Unsupported number of rounds");
-    const theme = settings.theme ?? duelTheme(this.duel.theme);
-    if (theme !== "classic" && theme !== "christmas") throw new GameError("Unsupported Showdown theme");
-    this.duel = { rounds, theme };
+    this.duel = { rounds, theme: pickTheme(settings.theme, duelTheme(this.duel.theme), "Showdown") };
     this.onChange();
   }
 
