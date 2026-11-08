@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
+import { useDelayedCues } from "./delayed-cues.ts";
 import { ROBOT_LIVES, ROBOT_SHRINK_EVERY, type HostView } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { RobotArena } from "../shared/robot-art.tsx";
@@ -21,6 +22,7 @@ export function RobotStage({ view, send }: { view: RobotView; send: Send }) {
   const secs = useCountdown(view.phaseRemainingMs, `${view.phase}-${view.round}`);
   const prev = useRef<RobotView | null>(null);
   useEffect(() => preloadVoice(attackerVoiceLines(ROBOT_SKIN)), []);
+  const later = useDelayedCues(view.phase);
 
   useEffect(() => {
     const p = prev.current;
@@ -30,18 +32,18 @@ export function RobotStage({ view, send }: { view: RobotView; send: Send }) {
       if (view.phase === "quiz" && view.round === 1) play("start");
       if (view.phase === "move") play("tickHigh");
       if (view.phase === "attack") {
-        if (ROBOT_SKIN === "snowman") setTimeout(() => play("whoosh"), 800); // as the claws hit the board
+        if (ROBOT_SKIN === "snowman") later(() => play("whoosh"), 800); // as the claws hit the board
         else play("laser");
         // One verdict per attack, once it has hit: someone out, then anyone hit, else everyone dodged.
         const line = attackVoiceLine(view.lastAttack, ROBOT_SKIN);
-        if (line) setTimeout(() => void say(line), 1000);
+        if (line) later(() => void say(line), 1000);
       }
       if (view.phase === "podium") play("fanfare");
     }
     if (view.marked.length > 0 && p.marked.length === 0 && view.phase === "quiz") {
       play("alarm");
       // The attacker speaks once the alarm has sounded.
-      setTimeout(() => void say(warningVoiceLine(ROBOT_SKIN)), 650);
+      later(() => void say(warningVoiceLine(ROBOT_SKIN)), 650);
     }
   }, [view]);
 
