@@ -120,7 +120,7 @@ describe("Showdown", () => {
     expect(game.phase).toBe("intro");
     expect(arenaNames(game)).toEqual([["A", "B"], ["C", "D"], ["E", "F"]]);
     const v = game.hostView();
-    expect(v).toMatchObject({ kind: "duel", phase: "intro", round: 1, rounds: 15, pacing: "manual", answeredCount: 0, playerCount: 6, correct: null, lastRound: null, awards: null, errors: null, hasResults: false });
+    expect(v).toMatchObject({ kind: "duel", phase: "intro", round: 1, rounds: 15, pacing: "manual", answeredCount: 0, playerCount: 6, correct: null, lastRound: null, awards: null, errors: null });
     expect(v.quiz).toEqual({ id: "sample-abcd", title: "Sample", questionCount: 20 });
     expect(v.question).toMatchObject({ index: 0, total: 15, text: "Question 0", options: [], remainingMs: INTRO_MS });
     expect(v.arenas.map((a) => [a.arena, a.duelists.map((d) => [d.nickname, d.connected, d.answered])])).toEqual([
@@ -398,7 +398,7 @@ describe("Showdown", () => {
     expect(game.join.bind(game, "Too late")).toThrow("finished");
 
     const v = game.hostView();
-    expect(v).toMatchObject({ phase: "podium", question: null, arenas: [], hasResults: true, correct: null });
+    expect(v).toMatchObject({ phase: "podium", question: null, arenas: [], correct: null });
     // Every round has 3 arenas: a win is worth 3 on High Noon, 2 in Arena 2, 1 in Arena 3.
     expect(v.players.map((p) => [p.nickname, p.rank, p.points, p.arena, p.startArena, p.wins, p.reign])).toEqual([
       ["D", 1, 5, 1, 2, 2, 1],

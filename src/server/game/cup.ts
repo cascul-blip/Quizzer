@@ -484,7 +484,6 @@ export class CupGame {
       standings: podium ? this.standings() : null,
       awards: podium ? this.awards() : null,
       errors: podium ? this.stream.errors() : null,
-      hasResults: podium,
     };
   }
 

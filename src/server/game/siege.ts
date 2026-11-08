@@ -997,7 +997,6 @@ export class SiegeGame {
       result: ending && this.outcome ? this.result() : null,
       awards: podium ? this.awards() : null,
       errors: podium ? this.stream.errors() : null,
-      hasResults: podium,
     };
   }
 

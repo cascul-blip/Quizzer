@@ -310,7 +310,7 @@ describe("Robot Attack", () => {
     ]);
     const view = game.hostView();
     expect(view.standings).toHaveLength(3);
-    expect(view.hasResults).toBe(true);
+    expect(view.phase).toBe("podium");
   });
 
   test("late joiners get full lives, a question, and an X on their tile if the targets are up", () => {

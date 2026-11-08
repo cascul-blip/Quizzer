@@ -81,7 +81,7 @@ describe("Racer", () => {
     expect([v.phaseRemainingMs, v.phaseDurationMs]).toEqual([CONFIDENCE_MS, CONFIDENCE_MS]);
     expect(v.car).toEqual({ speed: 30, crashed: false, distance: 0, topSpeed: 30, crashes: 0 });
     expect(v.driver).toEqual({ id: driverOf(game).id, nickname: driverOf(game).nickname, avatar: driverOf(game).avatar });
-    expect([v.correct, v.answerCounts, v.result, v.awards, v.errors, v.hasResults]).toEqual([null, null, null, null, null, false]);
+    expect([v.correct, v.answerCounts, v.result, v.awards, v.errors]).toEqual([null, null, null, null, null]);
 
     const mine = game.playerView(driverOf(game).id)!;
     expect(mine).toMatchObject({ kind: "racer", phase: "confidence", isDriver: true, lever: "low", confidence: null, myChoice: null, reveal: null, result: null });
@@ -513,7 +513,7 @@ describe("Racer", () => {
     expect(game.turns).toBe(1);
     expect(byName(game, "A").correct).toBe(1);
     const v = game.hostView();
-    expect(v).toMatchObject({ phase: "podium", question: null, driver: null, lever: null, confidence: null, correct: null, answerCounts: null, hasResults: true, phaseRemainingMs: 0 });
+    expect(v).toMatchObject({ phase: "podium", question: null, driver: null, lever: null, confidence: null, correct: null, answerCounts: null, phaseRemainingMs: 0 });
     expect(v.result).toEqual({ distance: 0, topSpeed: 30, crashes: 1, turns: 1 });
     // No timer is left behind.
     clock.advance(600_000);
@@ -655,7 +655,7 @@ describe("Racer", () => {
     expect(v.awards!.bestDriver!.value).toBe(20);
     expect([...v.awards!.bestDriver!.nicknames].sort()).toEqual([...drivers.slice(0, 2)].sort());
     expect(v.errors).toEqual([{ wrong: 1, text: "Question 0", answers: ["yes"] }]);
-    expect(v.hasResults).toBe(true);
+    expect(v.phase).toBe("podium");
 
     for (const p of game.players.values()) {
       const pv = game.playerView(p.id)!;

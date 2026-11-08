@@ -666,7 +666,7 @@ describe("Santa's Sleigh Run", () => {
     expect(game.playerView(b!.id)!.result).toMatchObject({ rank: 1, playerCount: 3, presents: 1, distance: 2000, awards: ["Most correct answers", "Furthest flown"] });
     expect(game.playerView(c!.id)!.result!.awards).toEqual([]);
     const host = game.hostView();
-    expect(host.hasResults).toBe(true);
+    expect(host.phase).toBe("podium");
     expect(host.awards).toEqual(aw);
     expect(host.standings).toEqual(st);
     const lines = buildSleighResultsCsv(game).replace(/^﻿/, "").split(/\r?\n/);

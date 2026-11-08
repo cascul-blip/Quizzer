@@ -26,7 +26,7 @@ function Preview({ phone }: { phone: boolean }) {
     kind: "tower", theme, phase, quiz: { id: "preview", title: "Tower artwork preview", questionCount: 10 }, remainingMs: phase === "countdown" ? 3000 : 120000,
     teams, playerCount: count, dropCount: seq, monster: true, egg: phase === "playing" ? egg : null,
     lastAttack: seq ? { seq, byTeam: 1, byNickname: "Builder 2", target: 0, before: teams[0]!.columns.map(h=>h+2), after: teams[0]!.columns } : null,
-    nextMonsterMs: null, awards: null, errors: null, hasResults: false,
+    nextMonsterMs: null, awards: null, errors: null,
     join: { url: "http://localhost:8098/phone", qrSvg: "", address: "localhost", addresses: [], port: 8098 },
   };
   const player: PlayerTowerView = {

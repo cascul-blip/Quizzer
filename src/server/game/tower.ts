@@ -383,7 +383,6 @@ export class TowerGame {
       nextMonsterMs: this.phase === "playing" && this.monsterAt.length ? Math.max(0, this.monsterAt[0]! - this.clock.now()) : null,
       awards: this.phase === "podium" ? this.awards() : null,
       errors: this.phase === "podium" ? this.stream.errors() : null,
-      hasResults: this.phase === "podium",
     };
   }
 
