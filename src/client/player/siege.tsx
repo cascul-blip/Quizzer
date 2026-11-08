@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import { siegeDefenderLabel } from "../../shared/siege-theme.ts";
+import { siegeDefenderLabel, siegeDefenderPhrase } from "../../shared/siege-theme.ts";
 import { SiegeThemeProvider, useChristmasSiege, useSiegeTheme } from "../shared/siege-skin.tsx";
 import type { ClientMsg, PlayerSiegeView } from "../../shared/protocol.ts";
 import {
@@ -237,7 +237,7 @@ function LaneMap({ view, send, onClose }: { view: PlayerSiegeView; send: Send; o
           )}
         </div>
       ) : (
-        <p class="siege-map-hint muted">Tap an empty square to place {pick === "archer" ? "an" : "a"} {siegeDefenderLabel(pick, theme).toLowerCase()}. Tap a defender to upgrade it.</p>
+        <p class="siege-map-hint muted">Tap an empty square to place {siegeDefenderPhrase(pick, theme)}. Tap a defender to upgrade it.</p>
       )}
     </div>
   );
