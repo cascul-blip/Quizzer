@@ -2,11 +2,11 @@ import { duelName, duelTheme, type DuelTheme } from "../../shared/duel-theme.ts"
 import { everyoneAnswered, revealCue } from "./reveal-cue.ts";
 import { SnowballLobbyPreview } from "../shared/duel-christmas.tsx";
 import { landTheme, type LandTheme } from "../../shared/land-theme.ts";
-import { fightTheme, type FightTheme } from "../../shared/fight-theme.ts";
-import { racerTheme, type RacerTheme } from "../../shared/racer-theme.ts";
+import { fightName, fightTheme, type FightTheme } from "../../shared/fight-theme.ts";
+import { racerName, racerTheme, type RacerTheme } from "../../shared/racer-theme.ts";
 import { towerTheme, towerWords, type TowerTheme } from "../../shared/tower-theme.ts";
-import { cupTheme, type CupTheme } from "../../shared/cup-theme.ts";
-import { siegeTheme, type SiegeTheme } from "../../shared/siege-theme.ts";
+import { cupName, cupTheme, type CupTheme } from "../../shared/cup-theme.ts";
+import { siegeName, siegeTheme, type SiegeTheme } from "../../shared/siege-theme.ts";
 import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { BOMB_MAX_SQUADS, BOMB_MINUTES, BOMB_MODULES, BOMB_PENALTIES, BOMB_WIRES, CUP_MAX_CUPS, CUP_MIN_CUPS, DRAGON_BATTLE_MINUTES, DRAGON_FIRE_SECONDS, DRAGON_MIN_TEAMS, DRAGON_SCRAMBLE_MINUTES, DRAGON_TOUGHNESS, DUEL_ROUNDS, HILL_SETTINGS, type BombSettings, type BombStyle, type DragonSettings, type DragonToughness, LAND_MINUTES, LAND_MIN_TEAMS, MAX_TEAMS, TOWER_MINUTES, type GameMode, type HillSetting, type HostPlayer, type HostView, type Pacing, type ServerMsg } from "../../shared/protocol.ts";
@@ -369,17 +369,17 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
             Game mode
             <select value={view.mode} onChange={(e) => send({ type: "host.setMode", mode: e.currentTarget.value as GameMode })}>
               <option value="classic">Classic</option>
-              <option value="tower">🏗 Tallest Tower</option>
+              <option value="tower">{towerWords(view.tower.theme).icon} {towerWords(view.tower.theme).name}</option>
               <option value="submarine">🛷 Sled Squad</option>
-              <option value="fight">🏰 Tower Fight</option>
+              <option value="fight">{fightName(view.fight.theme)}</option>
               <option value="robot">🤖 Robot Attack</option>
               <option value="land">🚩 Land Grab</option>
-              <option value="racer">🏎 Racer</option>
+              <option value="racer">{racerName(view.racer?.theme)}</option>
               <option value="sleigh">🎅 Santa's Sleigh Run</option>
-              <option value="cup">☕ Cup of Cheer</option>
+              <option value="cup">{cupName(view.cup.theme)}</option>
               <option value="dragon">🐉 Dragon's Hoard</option>
               <option value="bomb">💣 Bomb Squad</option>
-              <option value="siege">🛡️ Kingdom Siege</option>
+              <option value="siege">{siegeTheme(view.siege.theme) === "christmas" ? "🎄" : "🛡️"} {siegeName(view.siege.theme)}</option>
               <option value="duel">{duelTheme(view.duel.theme) === "christmas" ? "❄️ Snowball Showdown" : "🤠 Showdown"}</option>
             </select>
           </label>
