@@ -162,6 +162,8 @@ interface SiegeOptions {
   record?: SiegeRecord | null;
   onChange?: () => void;
   onActivity?: (playerId: string) => void;
+  /** A battle tick changed only what the projector shows (shots, monsters, defender hits). Defaults to onChange. */
+  onTick?: () => void;
   onFinish?: (game: SiegeGame) => void;
 }
 
@@ -232,6 +234,7 @@ export class SiegeGame {
   private tickTimer: unknown = null;
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
+  private readonly onTick: () => void;
   private readonly onFinish: (game: SiegeGame) => void;
 
   private defenderName(type: SiegeDefenderType): string {
@@ -252,6 +255,7 @@ export class SiegeGame {
     this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock, settings.protect);
     this.onChange = opts.onChange ?? (() => {});
     this.onActivity = opts.onActivity ?? (() => this.onChange());
+    this.onTick = opts.onTick ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
   }
 
@@ -418,26 +422,33 @@ export class SiegeGame {
   private tick(): void {
     if (!this.playing) return;
     const now = this.clock.now();
+    const before = { hearts: this.hearts, alert: this.alert?.seq, defenders: this.defenders.length };
+    const mapOpen = () => [...this.players.values()].some((p) => p.mapOpen);
     let changed = this.spawnStep(now);
     changed = this.monsterStep(now) || changed;
     changed = this.defenderStep() || changed;
     if (this.hearts <= 0) return this.fall();
     const danger = this.dangerLanes();
+    // What phones show: hearts, danger lanes, alerts, and the map (monster dots and defenders) while it's open.
+    let phones = this.hearts !== before.hearts || this.alert?.seq !== before.alert;
     if (danger.join() !== this.danger.join()) {
       this.danger = danger;
-      changed = true;
+      phones = true;
     }
     if (now - this.mapDotsAt >= SIEGE_MAP_DOTS_MS) {
       this.mapDotsAt = now;
       const dots = this.monsters.map((m) => ({ lane: m.lane, square: Math.max(1, Math.min(SIEGE_SQUARES, Math.round(m.x))) }));
       if (JSON.stringify(dots) !== JSON.stringify(this.mapDots)) {
         this.mapDots = dots;
-        if ([...this.players.values()].some((p) => p.mapOpen)) changed = true;
+        if (mapOpen()) phones = true;
       }
     }
+    if (this.defenders.length !== before.defenders && mapOpen()) phones = true;
     if (this.phase === "wave" && this.pending.length === 0 && this.monsters.length === 0) return this.endWave();
     this.scheduleTick();
-    if (changed) this.onChange();
+    // Shots, monster moves and defender hits are only on the projector: don't rebuild every phone's view for them.
+    if (phones) this.onChange();
+    else if (changed) this.onTick();
   }
 
   /** Show warning arrows (choosing the lane) and bring on the monsters whose time has come. */
