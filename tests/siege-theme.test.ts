@@ -3,10 +3,15 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { Game } from "../src/server/game/game.ts";
 import { SiegeGame } from "../src/server/game/siege.ts";
-import { DEFAULT_SIEGE_THEME, siegeTheme } from "../src/shared/siege-theme.ts";
+import { DEFAULT_SIEGE_THEME, siegeDefenderPhrase, siegeTheme } from "../src/shared/siege-theme.ts";
 import { FakeClock, sampleQuiz } from "./helpers.ts";
 
 describe("Kingdom Siege themes", () => {
+  test("defenders read the same in a sentence on the server and the phone, with the right article", () => {
+    expect(["archer", "knight", "wall"].map((t) => siegeDefenderPhrase(t as never, "classic"))).toEqual(["an archer", "a knight", "a stone wall"]);
+    expect(["archer", "knight", "wall"].map((t) => siegeDefenderPhrase(t as never, "christmas"))).toEqual(["an elf archer", "a nutcracker", "a present barricade"]);
+  });
+
   test("Christmas is the default and both clients receive the selected look", () => {
     const lobby = new Game(sampleQuiz(), { clock: new FakeClock() });
     lobby.setMode("siege");

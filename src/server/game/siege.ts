@@ -1,4 +1,4 @@
-import { siegeTheme, siegeDefenderLabel } from "../../shared/siege-theme.ts";
+import { siegeDefenderPhrase, siegeTheme } from "../../shared/siege-theme.ts";
 import type { AnswerValue } from "../../shared/answer-match.ts";
 import {
   type HostSiegeState,
@@ -173,7 +173,6 @@ interface SiegeGameSettings extends SiegeSettings {
   protect?: boolean;
 }
 
-const DEFENDER_NAMES: Record<SiegeDefenderType, string> = { archer: "an archer", knight: "a knight", wall: "a stone wall" };
 
 /**
  * Kingdom Siege: the whole class defends one castle wall against waves of monsters marching
@@ -238,9 +237,7 @@ export class SiegeGame {
   private readonly onFinish: (game: SiegeGame) => void;
 
   private defenderName(type: SiegeDefenderType): string {
-    if (siegeTheme(this.settings.theme) !== "christmas") return DEFENDER_NAMES[type];
-    const label = siegeDefenderLabel(type, this.settings.theme).toLowerCase();
-    return `${type === "archer" ? "an" : "a"} ${label}`;
+    return siegeDefenderPhrase(type, this.settings.theme);
   }
 
   constructor(quiz: Quiz, settings: SiegeGameSettings, opts: SiegeOptions = {}) {
