@@ -607,8 +607,13 @@ interface Playing {
   echo?: Echo;
 }
 
+/** How far duck() dips the music (0.15 of the usual 0.55). */
+const DUCK_LEVEL = 0.15 / 0.55;
+
 export class MusicPlayer {
   private master: GainNode | null = null;
+  /** After the master: duck() dips this one, so a dip never fights setLevel() (mute, music off) over the same gain. */
+  private ducker: GainNode | null = null;
   private reverb: ConvolverNode | null = null;
   /** Saturation, compression and reverb for rich tracks: made when one first plays, taken down when none is playing. */
   private rich: RichBus | null = null;
@@ -653,12 +658,12 @@ export class MusicPlayer {
   /** Briefly dip the music (e.g. under a fanfare). */
   duck(ms = 1500): void {
     const ctx = this.getCtx();
-    if (!ctx || !this.master) return;
-    const g = this.master.gain;
+    if (!ctx || !this.ducker) return;
+    const g = this.ducker.gain;
     const t = ctx.currentTime;
     g.cancelScheduledValues(t);
-    g.setTargetAtTime(this.level * 0.15, t, 0.08);
-    g.setTargetAtTime(this.level * 0.55, t + ms / 1000, 0.3);
+    g.setTargetAtTime(DUCK_LEVEL, t, 0.08);
+    g.setTargetAtTime(1, t + ms / 1000, 0.3);
   }
 
   /**
@@ -717,7 +722,8 @@ export class MusicPlayer {
       comp.ratio.value = 4;
       this.master = ctx.createGain();
       this.master.gain.value = this.level * 0.55;
-      this.master.connect(comp).connect(ctx.destination);
+      this.ducker = ctx.createGain();
+      this.master.connect(this.ducker).connect(comp).connect(ctx.destination);
     }
     return this.master;
   }
