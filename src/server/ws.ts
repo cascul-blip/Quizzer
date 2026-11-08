@@ -514,7 +514,7 @@ export class GameHub {
     };
     const classic = () => {
       const g = game();
-      if (!(g instanceof Game)) throw new GameError(`Not available in ${g instanceof TowerGame ? "Tallest Tower" : g instanceof SubGame ? "Submarine Squad" : g instanceof RobotGame ? "Robot Attack" : g instanceof LandGame ? "Land Grab" : g instanceof RacerGame ? "Racer" : g instanceof CupGame ? "Cup of Death" : g instanceof DragonGame ? "Dragon's Hoard" : g instanceof BombGame ? "Bomb Squad" : g instanceof SiegeGame ? "Kingdom Siege" : g instanceof DuelGame ? "Showdown" : g instanceof SleighGame ? "Santa's Sleigh Run" : "Tower Fight"}`);
+      if (!(g instanceof Game)) throw new GameError(`Not available in ${g instanceof TowerGame ? "Tallest Tower" : g instanceof SubGame ? "Sled Squad" : g instanceof RobotGame ? "Robot Attack" : g instanceof LandGame ? "Land Grab" : g instanceof RacerGame ? "Racer" : g instanceof CupGame ? "Cup of Death" : g instanceof DragonGame ? "Dragon's Hoard" : g instanceof BombGame ? "Bomb Squad" : g instanceof SiegeGame ? "Kingdom Siege" : g instanceof DuelGame ? "Showdown" : g instanceof SleighGame ? "Santa's Sleigh Run" : "Tower Fight"}`);
       return g;
     };
     /** Classic, Racer and Showdown are all paced question by question: next, skip and pacing work in each. */
@@ -662,7 +662,7 @@ export class GameHub {
     this.log(`Tallest Tower started: ${tower.teams.length} team(s), ${tower.settings.minutes} min`);
   }
 
-  /** Hand the lobby's players to a Submarine Squad game. */
+  /** Hand the lobby's players to a Sled Squad game. */
   private startSub(lobby: Game): void {
     if (lobby.players.size === 0) throw new GameError("Wait for at least one player to join");
     const sub = SubGame.fromLobby(lobby, {
@@ -674,7 +674,7 @@ export class GameHub {
     lobby.dispose();
     this.game = sub;
     sub.start();
-    this.log(`Submarine Squad started with ${sub.players.size} player(s)`);
+    this.log(`Sled Squad started with ${sub.players.size} player(s)`);
   }
 
   /** Hand the lobby's players to a Tower Fight game (Red vs Blue). */
