@@ -72,10 +72,27 @@ export function useCountdown(remainingMs: number, key: string): number {
   const [, force] = useState(0);
   useEffect(() => {
     if (remainingMs <= 0) return;
-    const id = setInterval(() => force((n) => n + 1), 200);
-    return () => clearInterval(id);
+    let id: ReturnType<typeof setTimeout>;
+    // Re-render only when the seconds shown change (just after each whole second), and stop at 0:
+    // the caller is usually a whole stage, so every render redraws its art.
+    const wake = () => {
+      const left = ref.current!.deadline - performance.now();
+      if (left > 0) id = setTimeout(tick, nextSecondIn(left));
+    };
+    const tick = () => {
+      force((n) => n + 1);
+      wake();
+    };
+    wake();
+    return () => clearTimeout(id);
   }, [key]);
   return Math.max(0, Math.ceil((ref.current.deadline - performance.now()) / 1000));
+}
+
+/** Milliseconds until a countdown with `leftMs` to go shows a new whole second (a hair after, so it has). */
+export function nextSecondIn(leftMs: number): number {
+  // ceil(left / 1000) drops by one once left reaches the whole second below it.
+  return leftMs - (Math.ceil(leftMs / 1000) - 1) * 1000 + 5;
 }
 
 /** 125 → "2:05" */
