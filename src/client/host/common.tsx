@@ -1,4 +1,5 @@
 import { useEffect, useState } from "preact/hooks";
+import { Tex, TexList } from "../shared/tex.tsx";
 import type { HostMsg, JoinInfo, QuestionError } from "../../shared/protocol.ts";
 import { musicEnabled, musicVolume, setMusicEnabled, setMusicVolume } from "../shared/music/index.ts";
 import { isMuted, setMuted } from "../shared/sounds.ts";
@@ -151,8 +152,12 @@ export function ErrorsTable({ errors }: { errors: QuestionError[] }) {
           {errors.map((e, i) => (
             <tr key={i}>
               <td class="errors-count">{e.wrong}</td>
-              <td>{e.text}</td>
-              <td class="errors-answer">{e.answers.join(" / ")}</td>
+              <td>
+                <Tex text={e.text} />
+              </td>
+              <td class="errors-answer">
+                <TexList items={e.answers} sep=" / " />
+              </td>
             </tr>
           ))}
         </tbody>
