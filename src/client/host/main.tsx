@@ -1,4 +1,5 @@
 import { duelName, duelTheme, type DuelTheme } from "../../shared/duel-theme.ts";
+import { everyoneAnswered, revealCue } from "./reveal-cue.ts";
 import { SnowballLobbyPreview } from "../shared/duel-christmas.tsx";
 import { landTheme, type LandTheme } from "../../shared/land-theme.ts";
 import { fightTheme, type FightTheme } from "../../shared/fight-theme.ts";
@@ -204,7 +205,7 @@ function Game({ view, send }: { view: GameView; send: Send }) {
     if (view.phase === "lobby" && view.players.length > p.players.length) play("join");
     if (view.phase !== p.phase) {
       if (view.phase === "intro") play("start");
-      if (view.phase === "reveal") play(p.phase === "open" && view.answeredCount < view.players.length ? "timeUp" : "reveal");
+      if (view.phase === "reveal") play(revealCue(p.phase === "open", view.answeredCount, view.players));
       if (view.phase === "podium") play("fanfare");
     }
   }, [view]);
@@ -845,7 +846,7 @@ function QuestionScreen({ view, send }: { view: GameView; send: Send }) {
               <span>{secs}</span>
             </div>
           ) : (
-            <div class="side-label">{view.answeredCount >= view.players.filter((p) => p.connected).length ? "Everyone answered!" : "Time's up"}</div>
+            <div class="side-label">{everyoneAnswered(view.answeredCount, view.players) ? "Everyone answered!" : "Time's up"}</div>
           )}
         </div>
         <div class="center-media">
