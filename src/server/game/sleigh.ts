@@ -301,11 +301,12 @@ export class SleighGame {
       else stopped = true;
     }
     const delivered = this.deliver(flew);
-    this.onTick();
+    // Each of these broadcasts (projector included), so the projector-only tick push is only for the rest.
     if (this.houses.every((h) => h.deliveredBy !== null)) return this.beginCleared();
     if (!anyMoving) return this.hold();
     this.scheduleTick();
     if (stopped || delivered) this.onChange();
+    else this.onTick();
   }
 
   /**
@@ -535,7 +536,8 @@ export class SleighGame {
       phaseRemainingMs: this.remainingMs(),
       phaseDurationMs: this.phaseDurationMs,
       tick: this.clock.now(),
-      houses: this.houses.map((h) => ({ ...h, poly: h.poly.map(([x, y]) => [x, y] as [number, number]), chimney: { ...h.chimney } })),
+      // Serialized straight away, so no copy is needed.
+      houses: this.houses,
       delivered: this.delivered,
       total: this.houses.length,
       lastDelivery: this.lastDelivery,

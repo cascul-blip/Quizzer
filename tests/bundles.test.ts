@@ -70,6 +70,17 @@ describe("pageRoutes", () => {
     expect(img.headers.get("content-type")).toBe("image/webp");
   });
 
+  test("images are served from the file when asked for, not copied into memory at startup", async () => {
+    const pages = builtPages();
+    const routes = pageRoutes(pages) as Record<string, (req: Request) => Response>;
+    // Changed after the routes were built: a startup copy would still serve the old bytes.
+    writeFileSync(join(dir, "cat-abc123.webp"), new Uint8Array([82, 73, 70, 70, 9, 9]));
+    const img = routes["/cat-abc123.webp"]!(get());
+    expect([...new Uint8Array(await img.arrayBuffer())]).toEqual([82, 73, 70, 70, 9, 9]);
+    const etag = img.headers.get("etag")!;
+    expect(routes["/cat-abc123.webp"]!(get(undefined, etag)).status).toBe(304);
+  });
+
   test("a matching If-None-Match gets 304, and the gzip and plain copies have different ETags", () => {
     const routes = pageRoutes(builtPages()) as Record<string, (req: Request) => Response>;
     const etag = routes["/chunk-shared.js"]!(get("gzip")).headers.get("etag")!;

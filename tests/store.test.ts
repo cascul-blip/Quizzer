@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
+import * as fs from "node:fs";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { ConflictError, NotFoundError, QuizStore, shrinkImage, sniffImageType } from "../src/server/quiz/store.ts";
@@ -119,6 +120,19 @@ describe("QuizStore", () => {
     // Labels the author chose are kept, so their count still has to match.
     store.updateQuestion(q.id, id, { options: ["Paris", "Rome"] });
     expect(() => store.updateQuestion(q.id, id, { spots: [spot(0.1), spot(0.2), spot(0.3)] })).toThrow(ValidationError);
+  });
+
+  test("a media write that fails part-way leaves nothing behind, so the same image can be uploaded again", async () => {
+    const real = fs.writeFileSync;
+    const spy = spyOn(fs, "writeFileSync").mockImplementation(((path: fs.PathOrFileDescriptor, data: Uint8Array) => {
+      real(path, data.slice(0, 4)); // the disk fills up part-way
+      throw Object.assign(new Error("ENOSPC: no space left on device"), { code: "ENOSPC" });
+    }) as typeof fs.writeFileSync);
+    await expect(store.saveMedia(PNG)).rejects.toThrow("ENOSPC");
+    spy.mockRestore();
+    expect(readdirSync(join(t.dir, "media"))).toEqual([]);
+    const ref = await store.saveMedia(PNG);
+    expect(readFileSync(store.mediaFile(ref)!)).toEqual(Buffer.from(PNG));
   });
 
   test("image can be set and removed on a question", async () => {

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { CORRECT_PER_BOOST, type ClientMsg, type PlayerSubView } from "../../shared/protocol.ts";
-import { GlyphSymbol } from "../shared/sea-art.tsx";
-import { winterGradient } from "../shared/winter-art.tsx";
+import { GlyphSymbol } from "../shared/glyph-symbol.tsx";
+import { winterGradient } from "../shared/winter-gradient.ts";
 import { play, startRev, type Rev } from "../shared/sounds.ts";
 import { useCountdown } from "../shared/ui.tsx";
 import { Feedback, StreamQuestion } from "./tower.tsx";

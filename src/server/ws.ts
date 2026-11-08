@@ -57,7 +57,7 @@ interface LastResults {
 }
 
 const PACINGS = new Set<Pacing>(["manual", "auto"]);
-/** In Tallest Tower, answers stream in constantly: the acting player is updated at once, everyone else at most this often. */
+/** Answers can arrive from every phone at once: the acting player is updated at once, everyone else at most this often. */
 const ACTIVITY_THROTTLE_MS = 100;
 /** View fields holding "time left" (relative to when the message arrives). */
 const COUNTDOWN_KEYS = new Set(["remainingMs", "phaseRemainingMs", "gameRemainingMs", "decisionMs", "repairMs", "emptyMs", "lockedMs", "symbolRemainingMs", "nextMonsterMs", "protectedMs", "fuelMs"]);
@@ -247,11 +247,15 @@ export class GameHub {
   }
 
   broadcast(): void {
-    let hostMsg: string | null = null;
-    for (const ws of this.sockets) {
-      if (ws.data.role === "host") ws.send((hostMsg ??= JSON.stringify({ type: "host.state", view: this.hostView() } satisfies ServerMsg)));
-      else this.sendState(ws, false);
-    }
+    const send = () => {
+      let hostMsg: string | null = null;
+      for (const ws of this.sockets) {
+        if (ws.data.role === "host") ws.send((hostMsg ??= JSON.stringify({ type: "host.state", view: this.hostView() } satisfies ServerMsg)));
+        else this.sendState(ws, false);
+      }
+    };
+    if (this.game instanceof Game) this.game.viewBatch(send);
+    else send();
   }
 
   // ---------- socket lifecycle ----------
@@ -528,6 +532,7 @@ export class GameHub {
         this.game = new Game(quiz, {
           clock: this.opts.clock,
           onChange: () => this.scheduleBroadcast(),
+          onActivity: (pid) => this.onActivity(pid),
           onFinish: (g) => this.onFinish(g),
           ...this.lastSetup,
         });
@@ -754,6 +759,7 @@ export class GameHub {
       record: lobby.siege.waves === "endless" ? loadSiegeRecord(this.store.dataDir, lobby.quizId) : null,
       onChange: () => this.scheduleBroadcast(),
       onActivity: (pid) => this.onActivity(pid),
+      onTick: () => this.pushHost(),
       onFinish: (g) => this.onFinish(g),
     });
     lobby.dispose();

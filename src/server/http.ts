@@ -35,6 +35,15 @@ export interface RunningServer {
 const json = (data: unknown, status = 200) => Response.json(data, { status });
 const errorJson = (message: string, status: number) => json({ error: message }, status);
 
+/** decodeURIComponent, or null for a malformed escape such as "%E0%A4%A". */
+function decodePath(s: string): string | null {
+  try {
+    return decodeURIComponent(s);
+  } catch {
+    return null;
+  }
+}
+
 async function readJson(req: Request): Promise<unknown> {
   try {
     return await req.json();
@@ -59,7 +68,8 @@ export function startServer(opts: ServerOptions): RunningServer {
 
     const m = path.match(/^\/api\/quizzes\/([^/]+)(\/duplicate)?$/);
     if (m) {
-      const id = decodeURIComponent(m[1]!);
+      const id = decodePath(m[1]!);
+      if (id === null) return errorJson("Quiz not found", 404);
       if (m[2]) {
         if (method === "POST") return json(store.duplicate(id), 201);
       } else {
@@ -127,10 +137,10 @@ export function startServer(opts: ServerOptions): RunningServer {
       }
 
       if (path.startsWith("/music/")) {
-        const name = decodeURIComponent(path.slice("/music/".length));
-        const file = store.musicFile(name);
+        const name = decodePath(path.slice("/music/".length));
+        const file = name === null ? null : store.musicFile(name);
         if (!file) return new Response("Not found", { status: 404 });
-        const ext = name.slice(name.lastIndexOf(".") + 1).toLowerCase();
+        const ext = name!.slice(name!.lastIndexOf(".") + 1).toLowerCase();
         return new Response(Bun.file(file), { headers: { "content-type": MUSIC_EXTENSIONS[ext] ?? "application/octet-stream", "cache-control": "no-cache" } });
       }
 

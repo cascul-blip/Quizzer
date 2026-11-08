@@ -22,6 +22,18 @@ import {
 } from "../../shared/quiz-schema.ts";
 
 export class NotFoundError extends Error {}
+
+/** Write via a temp file and rename, so the path only ever holds a complete file (or nothing). */
+function writeAtomic(path: string, data: string | Uint8Array): void {
+  const tmp = `${path}.${process.pid}.${newId(4)}.tmp`;
+  try {
+    writeFileSync(tmp, data);
+  } catch (e) {
+    rmSync(tmp, { force: true });
+    throw e;
+  }
+  renameSync(tmp, path);
+}
 /** The quiz changed since the caller loaded it (an MCP agent edited it while the editor was open). */
 export class ConflictError extends Error {}
 
@@ -273,10 +285,7 @@ export class QuizStore {
     const next = { ...quiz, updatedAt: new Date().toISOString() };
     const parsed = Quiz.safeParse(next);
     if (!parsed.success) throw new ValidationError(formatZodError(parsed.error));
-    const path = this.file(quiz.id);
-    const tmp = `${path}.${process.pid}.${newId(4)}.tmp`;
-    writeFileSync(tmp, JSON.stringify(parsed.data, null, 2) + "\n");
-    renameSync(tmp, path);
+    writeAtomic(this.file(quiz.id), JSON.stringify(parsed.data, null, 2) + "\n");
     return parsed.data;
   }
 
@@ -295,7 +304,8 @@ export class QuizStore {
     if (existing) return existing;
     const out = await shrinkImage(bytes, mime);
     const ref = `media/${hash}.${MEDIA_TYPES[out.mime]}`;
-    writeFileSync(join(this.dataDir, ref), out.bytes);
+    // Atomic: a half-written file under the hash name would be handed back by the dedupe above forever.
+    writeAtomic(join(this.dataDir, ref), out.bytes);
     return ref;
   }
 

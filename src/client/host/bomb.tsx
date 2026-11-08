@@ -5,7 +5,7 @@ import { play } from "../shared/sounds.ts";
 import { formatClock, ordinal, teamVars, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
 import { Award } from "./tower.tsx";
-import { Tex } from "../shared/tex.tsx";
+import { Tex, TexList } from "../shared/tex.tsx";
 
 type BombView = Extract<HostView, { kind: "bomb" }>;
 
@@ -113,7 +113,8 @@ export function BombLobbyPreview({ settings }: { settings: BombSettings }) {
 }
 
 function useBombFace(opts: { remainingMs: number; timerRev: number; ticking: boolean; frozenMs: number | null; exploded: boolean; minutes: number; phase: BombPhase }): { text: string; urgent: boolean } {
-  const secs = useCountdown(opts.ticking ? opts.remainingMs : opts.minutes * 60_000, opts.ticking ? `live-${opts.timerRev}` : `hold-${opts.phase}`);
+  // A frozen face (countdown, defused, exploded, a finished Race squad) shows fixed text: 0 runs no timer.
+  const secs = useCountdown(opts.ticking ? opts.remainingMs : 0, opts.ticking ? `live-${opts.timerRev}` : `hold-${opts.phase}`);
   if (opts.exploded) return { text: "0:00", urgent: false };
   if (!opts.ticking && opts.frozenMs !== null) return { text: formatClock(Math.max(0, Math.round(opts.frozenMs / 1000))), urgent: false };
   if (!opts.ticking) return { text: formatClock(opts.minutes * 60), urgent: false };
@@ -224,7 +225,7 @@ function TogetherBomb({ view }: { view: BombView }) {
         <div class="bw-question">
           {q.image && !picture && <img src={`/${q.image}`} alt="" />}
           <p><Tex text={q.text} /></p>
-          {q.reveal && <p class="bw-reveal">Answer: {q.reveal.join(", ")}</p>}
+          {q.reveal && <p class="bw-reveal">Answer: <TexList items={q.reveal} sep=", " /></p>}
         </div>
       )}
     </>

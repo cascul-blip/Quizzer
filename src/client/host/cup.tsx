@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
+import { useDelayedCues } from "./delayed-cues.ts";
 import { type HostView } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { SaloonScene, TABLE_CENTER, type SaloonMode } from "../shared/cup-art.tsx";
@@ -20,6 +21,7 @@ function CupStageContent({ view, send }: { view: CupView; send: Send }) {
   const christmas = useChristmasCup();
   const secs = useCountdown(view.phaseRemainingMs, `${view.phase}-${view.round}`);
   const prev = useRef<CupView | null>(null);
+  const later = useDelayedCues(view.phase);
 
   useEffect(() => {
     const p = prev.current;
@@ -32,7 +34,7 @@ function CupStageContent({ view, send }: { view: CupView; send: Send }) {
       if (view.phase === "reveal" && view.reveal?.drinks.length === 0) play("survive");
       if (view.phase === "podium") play("fanfare");
     }
-    if (view.phase === "roll" && p.phase !== "roll" && view.round === 1) setTimeout(() => play("diceRoll"), 400);
+    if (view.phase === "roll" && p.phase !== "roll" && view.round === 1) later(() => play("diceRoll"), 400);
     // Someone just made it to safety.
     const safeBefore = new Set(p.players.filter((x) => x.safe).map((x) => x.id));
     if (view.phase === "quiz" && view.players.some((x) => x.safe && !safeBefore.has(x.id))) play("floor");

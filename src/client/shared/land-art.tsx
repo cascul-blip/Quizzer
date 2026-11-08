@@ -1,4 +1,5 @@
 import { useNorthPole, northPoleArt } from "./land-skin.tsx";
+import { canvasUrl, loadImage } from "./tint.ts";
 import { useEffect, useState } from "preact/hooks";
 import { EMPTY, borderEdges, boardExtent, hexCenter, isProtected, placementCost } from "../../shared/land-board.ts";
 import { LAND_GUARD_COST, LAND_STEAL_COST, TEAMS, type LandBoard, type LandCapture, type LandPlace } from "../../shared/protocol.ts";
@@ -425,14 +426,6 @@ export function LandShape({ team, class: cls = "" }: { team: number; class?: str
   return <img class={`land-shape ${cls}`} src={landArt(`shape-${shape}`)} alt={shape} draggable={false} />;
 }
 
-const loadImage = (src: string) =>
-  new Promise<HTMLImageElement>((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = src;
-  });
-
 const tinted = new Map<string, Promise<string>>();
 
 /** `base` with `color` multiplied in where the greyscale `mask` is white, as an object URL. Made once per picture and colour. */
@@ -459,7 +452,7 @@ function tint(base: string, mask: string, color: string): Promise<string> {
           for (let j = 0; j < 3; j++) px[i + j] = px[i + j]! * (1 - m + m * c[j]!);
         }
         ctx.putImageData(pic, 0, 0);
-        return new Promise<string>((resolve) => canvas.toBlob((blob) => resolve(blob ? URL.createObjectURL(blob) : base), "image/webp"));
+        return canvasUrl(canvas, "image/webp", base);
       })
       .catch(() => base);
     tinted.set(key, url);

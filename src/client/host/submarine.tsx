@@ -1,5 +1,5 @@
 import type { RefObject } from "preact";
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { HostView, SubAward } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { ChristmasGoblin, DogSled, WinterBackdrop, winterGradient, type SledRider } from "../shared/winter-art.tsx";
@@ -85,18 +85,21 @@ function useSledRiders(players: SubView["players"], boost: SubView["lastBoost"])
     const timer = setInterval(() => setOffset(n => n + 1), 6000);
     return () => clearInterval(timer);
   }, []);
-  const connected = players.filter(p => p.connected);
-  const pool = connected.length ? connected : players;
-  const riders = Array.from({ length: Math.min(3, pool.length) }, (_, i) => {
-    const p = pool[(offset + i) % pool.length]!;
-    return { key: p.id, choice: p.avatar };
-  });
-  if (boost) {
-    const existing = riders.findIndex(r => r.choice.avatar === boost.avatar.avatar && r.choice.accessory === boost.avatar.accessory);
-    if (existing >= 0) riders.splice(existing, 1);
-    riders.splice(1, 0, { key: `boost-${boost.seq}`, choice: boost.avatar });
-  }
-  return riders.slice(0, 3);
+  // The stage re-renders every frame during the chase: keep the same array until the riders change.
+  return useMemo(() => {
+    const connected = players.filter(p => p.connected);
+    const pool = connected.length ? connected : players;
+    const riders = Array.from({ length: Math.min(3, pool.length) }, (_, i) => {
+      const p = pool[(offset + i) % pool.length]!;
+      return { key: p.id, choice: p.avatar };
+    });
+    if (boost) {
+      const existing = riders.findIndex(r => r.choice.avatar === boost.avatar.avatar && r.choice.accessory === boost.avatar.accessory);
+      if (existing >= 0) riders.splice(existing, 1);
+      riders.splice(1, 0, { key: `boost-${boost.seq}`, choice: boost.avatar });
+    }
+    return riders.slice(0, 3);
+  }, [players, offset, boost?.seq]);
 }
 
 export function SubStage({ view, send }: { view: SubView; send: Send }) {
@@ -134,6 +137,11 @@ export function SubStage({ view, send }: { view: SubView; send: Send }) {
   const faces = useSledRiders(view.players, boost);
   const paceRef = useRef(0);
   paceRef.current = paceFor(view.phase, view.level, !!boost);
+  // The stage re-renders every frame during the chase (the goblin's live gap). These elements are
+  // reused until their inputs change, so Preact skips diffing the backdrop and the sled each frame.
+  const sledMoving = view.phase === "chase" || view.phase === "escaped";
+  const backdrop = useMemo(() => <WinterBackdrop paceRef={paceRef} />, []);
+  const sled = useMemo(() => <DogSled riders={faces} moving={sledMoving} boosting={!!boost} />, [faces, sledMoving, !!boost]);
   const seaRef = useRef<HTMLElement>(null);
   const craftRef = useRef<HTMLDivElement>(null);
   // Sound cues.
@@ -189,7 +197,7 @@ export function SubStage({ view, send }: { view: SubView; send: Send }) {
           class={`sea winter-stage ${danger ? "danger" : ""}`}
           style={{ background: winterGradient() }}
         >
-          <WinterBackdrop paceRef={paceRef} />
+          {backdrop}
           {view.phase === "dive" ? (
             <Dive view={view} faces={faces} craftRef={craftRef} />
           ) : (
@@ -218,7 +226,7 @@ export function SubStage({ view, send }: { view: SubView; send: Send }) {
                     </div>
                   ))}
                 </div>
-                <DogSled riders={faces} moving={view.phase === "chase" || view.phase === "escaped"} boosting={!!boost} />
+                {sled}
               </div>
               {view.phase === "countdown" && (
                 <div class="countdown-overlay">
