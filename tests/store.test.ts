@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { ConflictError, NotFoundError, QuizStore, shrinkImage, sniffImageType } from "../src/server/quiz/store.ts";
@@ -32,6 +32,26 @@ describe("QuizStore", () => {
     const q = store.create({ title: "A" });
     for (let i = 0; i < 5; i++) store.update(q.id, { title: `A${i}` });
     expect(readdirSync(join(t.dir, "quizzes"))).toEqual([`${q.id}.json`]);
+  });
+
+  test("list() re-reads only quiz files that changed since the last call", () => {
+    const a = store.create({ title: "A" });
+    const b = store.create({ title: "B" });
+    expect(store.list().map((s) => s.title).sort()).toEqual(["A", "B"]);
+    const reads = spyOn(store, "get");
+    expect(store.list().map((s) => s.title).sort()).toEqual(["A", "B"]);
+    expect(reads).toHaveBeenCalledTimes(0);
+    store.update(a.id, { title: "A2" });
+    reads.mockClear(); // update() reads the quiz itself
+    expect(store.list().map((s) => s.title).sort()).toEqual(["A2", "B"]);
+    expect(reads).toHaveBeenCalledTimes(1);
+    // Edited in place by something else (another process, a text editor): still picked up.
+    const file = join(t.dir, "quizzes", `${b.id}.json`);
+    writeFileSync(file, readFileSync(file, "utf8").replace('"title": "B"', '"title": "Bee"'));
+    expect(store.list().map((s) => s.title).sort()).toEqual(["A2", "Bee"]);
+    store.delete(a.id);
+    expect(store.list().map((s) => s.title)).toEqual(["Bee"]);
+    reads.mockRestore();
   });
 
   test("replace keeps id and createdAt", () => {

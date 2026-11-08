@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { musicTrackForFile } from "../../shared/music-tracks.ts";
-import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { MAX_IMAGE_SIDE, MAX_MEDIA_BYTES, SHRINK_ABOVE_BYTES } from "../../shared/quiz-constants.ts";
 import {
@@ -102,19 +102,44 @@ export class QuizStore {
     return join(this.quizzesDir, `${id}.json`);
   }
 
+  /**
+   * list()'s summaries by quiz id, with the file stamp they were read at. Parsing and validating
+   * every quiz on each call stalls the live game (the admin library reloads the list on focus).
+   */
+  private readonly summaries = new Map<string, { stamp: string; summary: QuizSummary }>();
+
   list(): QuizSummary[] {
     const out: QuizSummary[] = [];
+    const seen = new Set<string>();
     for (const name of readdirSync(this.quizzesDir)) {
       if (!name.endsWith(".json")) continue;
       const id = name.slice(0, -5);
       if (!QUIZ_ID_RE.test(id)) continue;
+      let stamp: string;
+      try {
+        const st = statSync(this.file(id));
+        // Every write here renames a new file into place (new inode); an edit made elsewhere changes mtime or size.
+        stamp = `${st.ino}:${st.mtimeMs}:${st.size}`;
+      } catch {
+        continue; // deleted since readdir
+      }
+      seen.add(id);
+      const hit = this.summaries.get(id);
+      if (hit?.stamp === stamp) {
+        out.push(hit.summary);
+        continue;
+      }
+      let summary: QuizSummary;
       try {
         const q = this.get(id);
-        out.push({ id, title: q.title, description: q.description, questionCount: q.questions.length, updatedAt: q.updatedAt });
+        summary = { id, title: q.title, description: q.description, questionCount: q.questions.length, updatedAt: q.updatedAt };
       } catch (e) {
-        out.push({ id, title: id, description: "", questionCount: 0, updatedAt: "", error: (e as Error).message });
+        summary = { id, title: id, description: "", questionCount: 0, updatedAt: "", error: (e as Error).message };
       }
+      this.summaries.set(id, { stamp, summary });
+      out.push(summary);
     }
+    for (const id of this.summaries.keys()) if (!seen.has(id)) this.summaries.delete(id);
     return out.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }
 
