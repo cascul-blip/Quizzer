@@ -266,32 +266,36 @@ function HoldCut({
   cancel.current = onCancel;
   finish.current = onDone;
 
-  useEffect(() => {
-    let raf = 0;
+  // The charge only moves while a finger is down (letting go resets it), so the frame loop
+  // runs only then: an idle button, one per wire spot in PinWires, costs nothing.
+  const raf = useRef(0);
+  useEffect(() => () => cancelAnimationFrame(raf.current), []);
+  const startCharging = () => {
     let last = performance.now();
     const loop = (t: number) => {
-      const dt = Math.min(50, t - last);
+      const dt = Math.max(0, Math.min(50, t - last));
       last = t;
-      if (!done.current) {
-        level.current = Math.max(0, Math.min(1, level.current + ((holding.current ? dt : -dt) / BOMB_HOLD_MS)));
-        if (holding.current && t - lastBuzz.current > 220) {
-          lastBuzz.current = t;
-          navigator.vibrate?.(12);
-        }
-        setCharge(level.current);
-        if (level.current >= 1) {
-          done.current = true;
-          holding.current = false;
-          navigator.vibrate?.([40, 30, 80]);
-          setSent(true);
-          finish.current();
-        }
+      raf.current = 0;
+      if (done.current || !holding.current) return;
+      level.current = Math.min(1, level.current + dt / BOMB_HOLD_MS);
+      if (t - lastBuzz.current > 220) {
+        lastBuzz.current = t;
+        navigator.vibrate?.(12);
       }
-      raf = requestAnimationFrame(loop);
+      setCharge(level.current);
+      if (level.current >= 1) {
+        done.current = true;
+        holding.current = false;
+        navigator.vibrate?.([40, 30, 80]);
+        setSent(true);
+        finish.current();
+        return;
+      }
+      raf.current = requestAnimationFrame(loop);
     };
-    raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
-  }, []);
+    cancelAnimationFrame(raf.current);
+    raf.current = requestAnimationFrame(loop);
+  };
 
   const press = (e: PointerEvent) => {
     e.preventDefault();
@@ -299,6 +303,7 @@ function HoldCut({
     (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
     holding.current = true;
     start.current();
+    startCharging();
   };
   const release = () => {
     if (!holding.current || done.current) return;
