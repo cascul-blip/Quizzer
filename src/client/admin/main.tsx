@@ -1,6 +1,6 @@
 import { render } from "preact";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
-import { DEFAULT_TIME_LIMIT, MAX_IMAGE_SIDE, MAX_MEDIA_BYTES, MAX_OPTIONS, MAX_PIN_SPOTS, MIN_OPTIONS, TF_OPTIONS, TIME_LIMITS, newId, pinLabel } from "../../shared/quiz-constants.ts";
+import { BASE_VERSION_HEADER, DEFAULT_TIME_LIMIT, MAX_IMAGE_SIDE, MAX_MEDIA_BYTES, MAX_OPTIONS, MAX_PIN_SPOTS, MIN_OPTIONS, TF_OPTIONS, TIME_LIMITS, newId, pinLabel } from "../../shared/quiz-constants.ts";
 import { MUSIC_TRACKS } from "../../shared/music-tracks.ts";
 import type { Question, Quiz, QuizSettings, QuizSummary } from "../../shared/quiz-schema.ts";
 import { PinBoard } from "../shared/pin.tsx";
@@ -18,7 +18,7 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
     } catch {
       // not JSON
     }
-    throw new Error(message);
+    throw Object.assign(new Error(message), { status: res.status });
   }
   return res.status === 204 ? (undefined as T) : res.json();
 }
@@ -383,16 +383,29 @@ function Editor({ id, notify }: { id: string; notify: (m: string) => void }) {
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
 
-  async function save(): Promise<boolean> {
-    if (!draft) return false;
+  /** Save the draft. Unless `overwrite`, the server refuses if the quiz changed since it was loaded (an MCP agent edited it). */
+  async function save(overwrite = false): Promise<boolean> {
+    if (!draft || !saved) return false;
     setSaving(true);
     try {
-      const q = await api<Quiz>(`/api/quizzes/${encodeURIComponent(id)}`, jsonInit("PUT", draft));
+      const init = jsonInit("PUT", draft);
+      if (!overwrite) init.headers = { ...init.headers, [BASE_VERSION_HEADER]: saved.updatedAt };
+      const q = await api<Quiz>(`/api/quizzes/${encodeURIComponent(id)}`, init);
       setSaved(q);
       setDraft(toDraft(q));
       notify("Saved");
       return true;
     } catch (e) {
+      if ((e as { status?: number }).status === 409) {
+        setSaving(false);
+        const replace = confirm(
+          "This quiz was changed somewhere else (maybe by an AI agent) since you opened it.\n\n" +
+            "OK: save your version and replace those changes.\nCancel: don't save. Reload the page to see the other changes (your edits here will be lost).",
+        );
+        if (replace) return save(true);
+        notify("Not saved: the quiz was changed somewhere else");
+        return false;
+      }
       notify(`Not saved: ${(e as Error).message}`);
       return false;
     } finally {
@@ -458,7 +471,7 @@ function Editor({ id, notify }: { id: string; notify: (m: string) => void }) {
         >
           ▶ Host
         </button>
-        <button class="btn primary" disabled={!dirty || saving || issueCount > 0} onClick={save} title="Ctrl+S">
+        <button class="btn primary" disabled={!dirty || saving || issueCount > 0} onClick={() => void save()} title="Ctrl+S">
           {saving ? "Saving…" : "Save"}
         </button>
       </header>

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { NotFoundError, QuizStore, shrinkImage, sniffImageType } from "../src/server/quiz/store.ts";
+import { ConflictError, NotFoundError, QuizStore, shrinkImage, sniffImageType } from "../src/server/quiz/store.ts";
 import { MAX_IMAGE_SIDE } from "../src/shared/quiz-constants.ts";
 import { ValidationError } from "../src/shared/quiz-schema.ts";
 import { tempDir } from "./helpers.ts";
@@ -41,6 +41,17 @@ describe("QuizStore", () => {
     expect(r.createdAt).toBe(q.createdAt);
     expect(r.title).toBe("B");
     expect(r.settings).toEqual({ shuffleQuestions: false, shuffleAnswers: true });
+  });
+
+  test("replace with the version the editor loaded refuses if the quiz changed since", () => {
+    const q = store.create({ title: "A" });
+    const draft = { title: "Editor", questions: [] };
+    Bun.sleepSync(2);
+    const agent = store.update(q.id, { title: "Agent" });
+    expect(() => store.replace(q.id, draft, q.updatedAt)).toThrow(ConflictError);
+    expect(store.get(q.id).title).toBe("Agent");
+    expect(store.replace(q.id, draft, agent.updatedAt).title).toBe("Editor");
+    expect(store.replace(q.id, { title: "Forced" }).title).toBe("Forced");
   });
 
   test("invalid input is rejected and nothing is written", () => {

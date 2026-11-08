@@ -4,13 +4,14 @@ import adminPage from "../client/admin/index.html";
 import hostPage from "../client/host/index.html";
 import playerPage from "../client/player/index.html";
 import { MUSIC_EXTENSIONS } from "../shared/music-tracks.ts";
+import { BASE_VERSION_HEADER } from "../shared/quiz-constants.ts";
 import { ValidationError } from "../shared/quiz-schema.ts";
 import { pageRoutes } from "./bundles.ts";
 import type { Clock } from "./game/game.ts";
 import { handleMcpRequest } from "./mcp/http.ts";
 import { isAdminRequest } from "./network.ts";
 import { isCompiled } from "./paths.ts";
-import { MAX_MEDIA_BYTES, MEDIA_MIME, NotFoundError, type QuizStore } from "./quiz/store.ts";
+import { ConflictError, MAX_MEDIA_BYTES, MEDIA_MIME, NotFoundError, type QuizStore } from "./quiz/store.ts";
 import { GameHub, type SocketData } from "./ws.ts";
 
 interface ServerOptions {
@@ -63,7 +64,7 @@ export function startServer(opts: ServerOptions): RunningServer {
         if (method === "POST") return json(store.duplicate(id), 201);
       } else {
         if (method === "GET") return json(store.get(id));
-        if (method === "PUT") return json(store.replace(id, await readJson(req)));
+        if (method === "PUT") return json(store.replace(id, await readJson(req), req.headers.get(BASE_VERSION_HEADER) ?? undefined));
         if (method === "DELETE") {
           store.delete(id);
           return new Response(null, { status: 204 });
@@ -150,6 +151,7 @@ export function startServer(opts: ServerOptions): RunningServer {
         } catch (e) {
           if (e instanceof ValidationError) return errorJson(e.message, 400);
           if (e instanceof NotFoundError) return errorJson(e.message, 404);
+          if (e instanceof ConflictError) return errorJson(e.message, 409);
           log(`API error ${req.method} ${path}: ${(e as Error).stack ?? e}`);
           return errorJson("Internal error", 500);
         }
