@@ -24,6 +24,34 @@ describe("matchesAnswer", () => {
     expect(matchesAnswer("cactus", ["cactu"])).toBe(false);
   });
 
+  test("keeps the sign, decimal point and fraction slash of numbers", () => {
+    expect(matchesAnswer("3", ["-3"])).toBe(false);
+    expect(matchesAnswer("3", ["−3"])).toBe(false);
+    expect(matchesAnswer("-3", ["−3"])).toBe(true);
+    expect(matchesAnswer("15", ["1.5"])).toBe(false);
+    expect(matchesAnswer("314", ["3.14"])).toBe(false);
+    expect(matchesAnswer("10", ["1.0"])).toBe(false);
+    expect(matchesAnswer("5", [".5"])).toBe(false);
+    expect(matchesAnswer("5", ["-.5"])).toBe(false);
+    expect(matchesAnswer("12", ["1/2"])).toBe(false);
+    expect(matchesAnswer("3.14", ["3.14"])).toBe(true);
+    expect(matchesAnswer("1/2", ["½"])).toBe(true);
+    expect(matchesAnswer("x = -3", ["x = -3"])).toBe(true);
+  });
+
+  test("number punctuation that doesn't change the value is still ignored", () => {
+    expect(matchesAnswer("1,000", ["1000"])).toBe(true);
+    expect(matchesAnswer("1,000,000", ["1000000"])).toBe(true);
+    expect(matchesAnswer("1,5", ["1.5"])).toBe(true);
+    expect(matchesAnswer("3.", ["3"])).toBe(true);
+    expect(matchesAnswer("+3", ["3"])).toBe(true);
+    expect(matchesAnswer("(-3)", ["-3"])).toBe(true);
+    expect(matchesAnswer("covid-19", ["COVID19"])).toBe(true);
+    expect(matchesAnswer("x-ray", ["xray"])).toBe(true);
+    expect(matchesAnswer("v.2", ["v2"])).toBe(true);
+    expect(matchesAnswer("e.g.", ["eg"])).toBe(true);
+  });
+
   test("accepts any listed answer and rejects wrong or empty ones", () => {
     expect(matchesAnswer("aeroplane", ["Airplane", "Aeroplane"])).toBe(true);
     expect(matchesAnswer("helicopter", ["Airplane"])).toBe(false);
