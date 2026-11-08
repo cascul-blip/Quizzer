@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { useDelayedCues } from "./delayed-cues.ts";
-import { siegeName, type SiegeTheme } from "../../shared/siege-theme.ts";
+import { siegeName, siegeWords, type SiegeTheme } from "../../shared/siege-theme.ts";
 import { SiegeThemeProvider, useChristmasSiege } from "../shared/siege-skin.tsx";
 import type { HostView, SiegeSettings } from "../../shared/protocol.ts";
 import { SIEGE_HEARTS } from "../../shared/siege-rules.ts";
@@ -265,7 +265,7 @@ function Countdown({ view }: { view: SiegeView }) {
   return (
     <div class="countdown-overlay siege-countdown">
       <div class="countdown-label">
-        Defend the kingdom together!
+        Defend the {siegeWords(view.settings.theme).home} together!
         <br />
         Every right answer adds 25 gold to your own purse. Spend it on {view.settings.theme === "christmas" ? "elf archers, nutcrackers and present barricades" : "archers, knights and stone walls"}.
       </div>
@@ -295,7 +295,7 @@ function Stands({ view }: { view: SiegeView }) {
     <div class="siege-ending stands">
       <RisingBanners />
       <Confetti />
-      <h1>🏰 The kingdom stands!</h1>
+      <h1>🏰 The {siegeWords(view.settings.theme).home} stands!</h1>
       <p>{view.result?.headline}</p>
     </div>
   );
@@ -304,7 +304,7 @@ function Stands({ view }: { view: SiegeView }) {
 function Fallen({ view }: { view: SiegeView }) {
   return (
     <div class="siege-ending fallen">
-      <h1>The castle has fallen on wave {view.result?.wave ?? view.wave}.</h1>
+      <h1>The {siegeWords(view.settings.theme).fallen} has fallen on wave {view.result?.wave ?? view.wave}.</h1>
       {view.settings.waves === "endless" && <p>{view.result?.headline}</p>}
     </div>
   );
@@ -329,6 +329,7 @@ function SiegePodium({ view, send }: { view: SiegeView; send: Send }) {
   const [showErrors, setShowErrors] = useState(false);
   const r = view.result;
   const a = view.awards;
+  const words = siegeWords(view.settings.theme);
   const good = r?.outcome === "stands" || (r?.outcome === "ended" && r.hearts > 0);
   return (
     <main class="podium siege-podium">
@@ -353,8 +354,8 @@ function SiegePodium({ view, send }: { view: SiegeView; send: Send }) {
         <ErrorsTable errors={view.errors ?? []} />
       ) : (
         <div class="awards siege-awards">
-          <Award icon="🏹" title="Top Archer Captain" award={a?.topArcher ?? null} unit="" valueText={(n) => `${plural(n, "monster")} defeated by their archers`} />
-          <Award icon="🧱" title="Master Mason" award={a?.masterMason ?? null} unit="" valueText={(n) => `${plural(n, "wall")} and upgrades`} />
+          <Award icon="🏹" title={words.topArcher} award={a?.topArcher ?? null} unit="" valueText={(n) => `${plural(n, "monster")} defeated by their ${words.archers}`} />
+          <Award icon="🧱" title={words.masterMason} award={a?.masterMason ?? null} unit="" valueText={(n) => `${plural(n, words.wall)} and upgrades`} />
           <Award icon="🎯" title="Most correct answers" award={a?.mostCorrect ?? null} unit="correct" />
         </div>
       )}

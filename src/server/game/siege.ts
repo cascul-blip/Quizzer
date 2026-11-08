@@ -1,4 +1,4 @@
-import { siegeDefenderPhrase, siegeTheme } from "../../shared/siege-theme.ts";
+import { siegeDefenderPhrase, siegeTheme, siegeWords } from "../../shared/siege-theme.ts";
 import type { AnswerValue } from "../../shared/answer-match.ts";
 import {
   type HostSiegeState,
@@ -937,11 +937,12 @@ export class SiegeGame {
     const survived = this.wavesSurvived();
     const waves = this.settings.waves;
     const avg = this.avgScale();
+    const words = siegeWords(this.settings.theme);
     let headline: string;
     if (outcome === "ended") headline = `Ended on wave ${Math.max(1, this.wave)} with ${this.hearts} ${this.hearts === 1 ? "heart" : "hearts"} left.`;
-    else if (outcome === "stands") headline = `The kingdom stands with ${this.hearts} of ${SIEGE_HEARTS} hearts!`;
+    else if (outcome === "stands") headline = `The ${words.home} stands with ${this.hearts} of ${SIEGE_HEARTS} hearts!`;
     else if (waves === "endless") headline = `Survived ${survived} ${survived === 1 ? "wave" : "waves"}`;
-    else headline = `The castle fell on wave ${this.wave} of ${waves}.`;
+    else headline = `The ${words.fallen} fell on wave ${this.wave} of ${waves}.`;
     let record: SiegeRecord | null = null;
     let newRecord = false;
     if (waves === "endless") {
@@ -1024,6 +1025,7 @@ export class SiegeGame {
       const r = this.result();
       const a = this.awards();
       const won = (x: { nicknames: string[] } | null) => !!x?.nicknames.includes(p.nickname);
+      const words = siegeWords(this.settings.theme);
       result = {
         outcome: r.outcome,
         headline: r.headline,
@@ -1032,7 +1034,7 @@ export class SiegeGame {
         placed: { ...p.placed },
         upgrades: p.upgrades,
         defeated: p.defeated,
-        awards: podium ? [...(won(a.topArcher) ? ["Top Archer Captain"] : []), ...(won(a.masterMason) ? ["Master Mason"] : []), ...(won(a.mostCorrect) ? ["Most correct answers"] : [])] : [],
+        awards: podium ? [...(won(a.topArcher) ? [words.topArcher] : []), ...(won(a.masterMason) ? [words.masterMason] : []), ...(won(a.mostCorrect) ? ["Most correct answers"] : [])] : [],
       };
     }
     return {

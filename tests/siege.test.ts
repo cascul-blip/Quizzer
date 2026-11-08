@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { siegeWords, type SiegeTheme } from "../src/shared/siege-theme.ts";
 import { FEEDBACK_MS, SIEGE_NO_GOLD, SiegeGame, type SiegeMonster, type SiegePlayer } from "../src/server/game/siege.ts";
 import { Game } from "../src/server/game/game.ts";
 import { WRONG_PENALTY_2_MS } from "../src/server/game/stream.ts";
@@ -57,12 +58,12 @@ function seeded(seed = 42) {
 
 const NAMES = ["Ana", "Ben", "Cal", "Dee", "Eve", "Fay"];
 
-function setup({ players = 3, waves = 5 as SiegeWaves, protect = false, seed = 42 } = {}) {
+function setup({ players = 3, waves = 5 as SiegeWaves, protect = false, seed = 42, theme = "classic" as SiegeTheme } = {}) {
   const clock = new FakeClock();
   let finished = 0;
   const lobby = new Game(quiz(), { clock, protect });
   lobby.setMode("siege");
-  lobby.setSiege({ waves, theme: "classic" });
+  lobby.setSiege({ waves, theme });
   for (const n of NAMES.slice(0, players)) lobby.join(n);
   const game = SiegeGame.fromLobby(lobby, { clock, rng: seeded(seed), onFinish: () => finished++ });
   game.start();
@@ -917,6 +918,22 @@ describe("views", () => {
     expect(a.topArcher).toEqual({ value: 3, nicknames: ["Ben"] });
     expect(a.masterMason).toEqual({ value: 3, nicknames: ["Cal"] });
     expect(a.mostCorrect).toEqual({ value: 1, nicknames: ["Ana"] });
+  });
+  test("a Christmas Toybox game ends with toybox headlines and Christmas award names", () => {
+    const { game, clock } = quietWave({ theme: "christmas" });
+    game.hearts = 2;
+    game.spawn("troll", 0, 1);
+    clock.advance(4000);
+    expect(game.result().headline).toBe("The toybox fell on wave 1 of 5.");
+    clock.advance(SIEGE_ENDING_MS);
+    expect(game.phase).toBe("podium");
+    const [ana, cal] = ["Ana", "Cal"].map((n) => byName(game, n));
+    ana!.archerKills = 3;
+    cal!.placed.wall = 2;
+    expect(game.playerView(ana!.id)!.result!.awards).toContain("Top Elf Captain");
+    expect(game.playerView(cal!.id)!.result!.awards).toContain("Master Wrapper");
+    expect(siegeWords("christmas").home).toBe("toybox");
+    expect(siegeWords("classic")).toMatchObject({ home: "kingdom", fallen: "castle", topArcher: "Top Archer Captain", masterMason: "Master Mason" });
   });
 });
 
