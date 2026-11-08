@@ -1,4 +1,5 @@
 import { duelArenaName, duelName, duelTheme } from "../../shared/duel-theme.ts";
+import { revealCue } from "./reveal-cue.ts";
 import { SnowballScene, preloadSnowballArt, snowballBackground } from "../shared/duel-christmas.tsx";
 import type { JSX } from "preact";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
@@ -87,7 +88,7 @@ export function DuelStage({ view, send }: { view: DuelView; send: Send }) {
     if (!p || view.phase === p.phase) return;
     if (view.phase === "intro") play("start");
     if (view.phase === "podium") play("fanfare");
-    if (view.phase === "reveal") play(p.phase === "open" && view.answeredCount < connected ? "timeUp" : "reveal");
+    if (view.phase === "reveal") play(revealCue(p.phase === "open", view.answeredCount, view.players));
   }, [view]);
 
   // The draw sting starts with the draw so its stab lands on the shots, once per round (also when reduced motion skips the steps).

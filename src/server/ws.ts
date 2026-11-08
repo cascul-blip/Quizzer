@@ -57,7 +57,7 @@ interface LastResults {
 }
 
 const PACINGS = new Set<Pacing>(["manual", "auto"]);
-/** In Tallest Tower, answers stream in constantly: the acting player is updated at once, everyone else at most this often. */
+/** Answers can arrive from every phone at once: the acting player is updated at once, everyone else at most this often. */
 const ACTIVITY_THROTTLE_MS = 100;
 /** View fields holding "time left" (relative to when the message arrives). */
 const COUNTDOWN_KEYS = new Set(["remainingMs", "phaseRemainingMs", "gameRemainingMs", "decisionMs", "repairMs", "emptyMs", "lockedMs", "symbolRemainingMs", "nextMonsterMs", "protectedMs", "fuelMs"]);
@@ -254,7 +254,7 @@ export class GameHub {
         else this.sendState(ws, false);
       }
     };
-    // Games that can share work between the views of one broadcast.
+    // Games that can share work between the views of one broadcast (Classic, Showdown).
     const game = this.game;
     if (game && "viewBatch" in game) game.viewBatch(send);
     else send();
@@ -534,6 +534,7 @@ export class GameHub {
         this.game = new Game(quiz, {
           clock: this.opts.clock,
           onChange: () => this.scheduleBroadcast(),
+          onActivity: (pid) => this.onActivity(pid),
           onFinish: (g) => this.onFinish(g),
           ...this.lastSetup,
         });
@@ -760,6 +761,7 @@ export class GameHub {
       record: lobby.siege.waves === "endless" ? loadSiegeRecord(this.store.dataDir, lobby.quizId) : null,
       onChange: () => this.scheduleBroadcast(),
       onActivity: (pid) => this.onActivity(pid),
+      onTick: () => this.pushHost(),
       onFinish: (g) => this.onFinish(g),
     });
     lobby.dispose();

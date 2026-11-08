@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
+import * as fs from "node:fs";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { ConflictError, NotFoundError, QuizStore, shrinkImage, sniffImageType } from "../src/server/quiz/store.ts";
@@ -102,6 +103,36 @@ describe("QuizStore", () => {
     expect(readFileSync(store.mediaFile(ref)!)).toEqual(Buffer.from(PNG));
     await expect(store.saveMedia(new TextEncoder().encode("<svg onload=alert(1)>"))).rejects.toThrow(ValidationError);
     expect(store.mediaFile("media/../../x.png")).toBeNull();
+  });
+
+  test("new spots on a pin with the default labels relabel it A, B, C… to match", async () => {
+    const image = await store.saveMedia(PNG);
+    const spot = (x: number) => ({ x, y: 0.5 });
+    const q = store.create({ title: "Pins", questions: [{ type: "pin", text: "Where?", image, spots: [spot(0.1), spot(0.2), spot(0.3)], correct: [2] }] });
+    const id = q.questions[0]!.id;
+    expect(q.questions[0]!.options).toEqual(["A", "B", "C"]);
+    const four = store.updateQuestion(q.id, id, { spots: [spot(0.1), spot(0.2), spot(0.3), spot(0.4)] });
+    expect(four.options).toEqual(["A", "B", "C", "D"]);
+    expect(four.correct).toEqual([2]);
+    const two = store.updateQuestion(q.id, id, { spots: [spot(0.1), spot(0.2)] });
+    expect(two.options).toEqual(["A", "B"]);
+    expect(two.correct).toEqual([0]); // the old answer's spot is gone
+    // Labels the author chose are kept, so their count still has to match.
+    store.updateQuestion(q.id, id, { options: ["Paris", "Rome"] });
+    expect(() => store.updateQuestion(q.id, id, { spots: [spot(0.1), spot(0.2), spot(0.3)] })).toThrow(ValidationError);
+  });
+
+  test("a media write that fails part-way leaves nothing behind, so the same image can be uploaded again", async () => {
+    const real = fs.writeFileSync;
+    const spy = spyOn(fs, "writeFileSync").mockImplementation(((path: fs.PathOrFileDescriptor, data: Uint8Array) => {
+      real(path, data.slice(0, 4)); // the disk fills up part-way
+      throw Object.assign(new Error("ENOSPC: no space left on device"), { code: "ENOSPC" });
+    }) as typeof fs.writeFileSync);
+    await expect(store.saveMedia(PNG)).rejects.toThrow("ENOSPC");
+    spy.mockRestore();
+    expect(readdirSync(join(t.dir, "media"))).toEqual([]);
+    const ref = await store.saveMedia(PNG);
+    expect(readFileSync(store.mediaFile(ref)!)).toEqual(Buffer.from(PNG));
   });
 
   test("image can be set and removed on a question", async () => {

@@ -4,7 +4,7 @@ import { Chest, DragonHead, LOOT_LABEL, LootIcon, RuneShield } from "../shared/d
 import { PinDragger } from "../shared/pin.tsx";
 import { LockedChoice, Shape, TextAnswer, formatClock, optionColor, ordinal, teamInk, teamVars, useCountdown } from "../shared/ui.tsx";
 import { Feedback, StreamQuestion } from "./tower.tsx";
-import { Tex } from "../shared/tex.tsx";
+import { Tex, TexList } from "../shared/tex.tsx";
 
 type Send = (m: ClientMsg) => void;
 
@@ -119,7 +119,9 @@ function RuneScreen({ view, send }: { view: PlayerDragonView; send: Send }) {
         <p class="q-text small-q"><Tex text={q.text} /></p>
         <div class="flash-answer rune-answer">
           <span>Correct answer{r.answers.length > 1 ? "s" : ""}:</span>
-          <b>{r.answers.join(" / ")}</b>
+          <b>
+            <TexList items={r.answers} sep=" / " />
+          </b>
         </div>
         <div class={`rune-outcome ${r.held ? "held" : "broken"}`}>
           <RuneShield class={r.held ? "held" : "broken"} />

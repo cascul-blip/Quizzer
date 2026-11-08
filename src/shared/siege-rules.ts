@@ -57,7 +57,6 @@ export const SIEGE_DEFENDER_TYPES: readonly SiegeDefenderType[] = ["archer", "kn
 const SIEGE_MAX_LEVEL = 3;
 
 interface SiegeDefenderStats {
-  label: string;
   /** Place, Lv 2, Lv 3. */
   cost: readonly [number, number, number];
   /** Max health at Lv 1, 2, 3. */
@@ -73,9 +72,9 @@ interface SiegeDefenderStats {
 }
 
 export const SIEGE_DEFENDERS: Record<SiegeDefenderType, SiegeDefenderStats> = {
-  archer: { label: "Archer", cost: [50, 75, 125], health: [4, 4, 4], damage: [1, 1, 1], arrows: [1, 1, 2], attackMs: [1500, 1000, 1000], thorns: [0, 0, 0] },
-  knight: { label: "Knight", cost: [75, 100, 150], health: [10, 16, 16], damage: [2, 2, 3], arrows: [1, 1, 1], attackMs: [1000, 1000, 1000], thorns: [0, 0, 0] },
-  wall: { label: "Stone wall", cost: [50, 50, 100], health: [15, 25, 25], damage: [0, 0, 0], arrows: [1, 1, 1], attackMs: [0, 0, 0], thorns: [0, 0, 1] },
+  archer: { cost: [50, 75, 125], health: [4, 4, 4], damage: [1, 1, 1], arrows: [1, 1, 2], attackMs: [1500, 1000, 1000], thorns: [0, 0, 0] },
+  knight: { cost: [75, 100, 150], health: [10, 16, 16], damage: [2, 2, 3], arrows: [1, 1, 1], attackMs: [1000, 1000, 1000], thorns: [0, 0, 0] },
+  wall: { cost: [50, 50, 100], health: [15, 25, 25], damage: [0, 0, 0], arrows: [1, 1, 1], attackMs: [0, 0, 0], thorns: [0, 0, 1] },
 };
 
 /** The cheapest defender: the Build button lights up once the player's purse has this much. */
@@ -91,7 +90,6 @@ export function siegeUpgradeCost(type: SiegeDefenderType, level: number): number
 export type SiegeMonsterType = "goblin" | "wolf" | "troll" | "giant";
 
 interface SiegeMonsterStats {
-  label: string;
   health: number;
   /** Extra health per connected player (the giant). */
   healthPerPlayer: number;
@@ -113,10 +111,10 @@ interface SiegeMonsterStats {
 }
 
 export const SIEGE_MONSTERS: Record<SiegeMonsterType, SiegeMonsterStats> = {
-  goblin: { label: "Goblin", health: 3, healthPerPlayer: 0, squareMs: 2000, damage: 1, attackMs: 1000, wallFactor: 1, arrowFactor: 1, hearts: 1, cost: 1, fromWave: 1 },
-  wolf: { label: "Wolf", health: 3, healthPerPlayer: 0, squareMs: 1000, damage: 1, attackMs: 1000, wallFactor: 1, arrowFactor: 1, hearts: 1, cost: 2, fromWave: 2 },
-  troll: { label: "Troll", health: 12, healthPerPlayer: 0, squareMs: 3500, damage: 2, attackMs: 1000, wallFactor: 3, arrowFactor: 0.5, hearts: 2, cost: 4, fromWave: 3 },
-  giant: { label: "Giant", health: 40, healthPerPlayer: 5, squareMs: 4000, damage: 6, attackMs: 3000, wallFactor: 1, arrowFactor: 1, hearts: 5, cost: 12, fromWave: 5 },
+  goblin: { health: 3, healthPerPlayer: 0, squareMs: 2000, damage: 1, attackMs: 1000, wallFactor: 1, arrowFactor: 1, hearts: 1, cost: 1, fromWave: 1 },
+  wolf: { health: 3, healthPerPlayer: 0, squareMs: 1000, damage: 1, attackMs: 1000, wallFactor: 1, arrowFactor: 1, hearts: 1, cost: 2, fromWave: 2 },
+  troll: { health: 12, healthPerPlayer: 0, squareMs: 3500, damage: 2, attackMs: 1000, wallFactor: 3, arrowFactor: 0.5, hearts: 2, cost: 4, fromWave: 3 },
+  giant: { health: 40, healthPerPlayer: 5, squareMs: 4000, damage: 6, attackMs: 3000, wallFactor: 1, arrowFactor: 1, hearts: 5, cost: 12, fromWave: 5 },
 };
 
 /** Monsters get this much tougher every wave after the first (+10% health per wave). */

@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
 import { AUTO_LEADERBOARD_MS, AUTO_REVEAL_MS, GRACE_MS, Game, GameError, INTRO_MS, preparePlayOrder } from "../src/server/game/game.ts";
 import { FightGame } from "../src/server/game/fight.ts";
 import { LandGame } from "../src/server/game/land.ts";
@@ -238,6 +238,28 @@ describe("views", () => {
     expect(v.kind === "player" && v.result).toEqual({ choice: 2, correct: [1], wasCorrect: false, points: 0 });
   });
 
+  test("a batch of views (one broadcast) ranks the class once and matches views built one by one", () => {
+    const { game, clock } = setup();
+    const ids = ["A", "B", "C", "D"].map((n) => game.join(n).id);
+    const batched = () => {
+      const ranked = spyOn(game, "ranked");
+      const views = game.viewBatch(() => ids.map((id) => game.playerView(id)));
+      expect(ranked.mock.calls.length).toBeLessThanOrEqual(1);
+      ranked.mockRestore();
+      return views;
+    };
+    expect(batched()).toEqual(ids.map((id) => game.playerView(id)));
+    game.start();
+    toOpen(game, clock);
+    game.answer(ids[2]!, 0, 1);
+    clock.advance(500);
+    game.answer(ids[0]!, 0, 1);
+    game.skip();
+    expect(batched()).toEqual(ids.map((id) => game.playerView(id)));
+    while (game.phase !== "podium") game.next();
+    expect(batched()).toEqual(ids.map((id) => game.playerView(id)));
+  });
+
   test("remainingMs counts down", () => {
     const { game, clock } = setup();
     game.join("A");
@@ -275,6 +297,29 @@ describe("preparePlayOrder", () => {
 
   test("question shuffle is a permutation", () => {
     expect(preparePlayOrder(sampleQuiz().questions, { questions: true, answers: false }, () => 0).map((q) => q.id).sort()).toEqual(["q1", "q2", "q3"]);
+  });
+});
+
+describe("lobby themes", () => {
+  test("every themed mode's setter keeps the theme when none is given and refuses unknown ones the same way", () => {
+    const { game } = setup();
+    const setters: [string, (theme?: unknown) => void, () => unknown][] = [
+      ["racer", (theme) => game.setRacer({ theme } as never), () => game.racer.theme],
+      ["tower", (theme) => game.setTower({ teams: 2, minutes: 5, theme } as never), () => game.tower.theme],
+      ["fight", (theme) => game.setFight({ theme } as never), () => game.fight.theme],
+      ["Land Grab", (theme) => game.setLand({ teams: 2, minutes: 5, theme } as never), () => game.land.theme],
+      ["cup", (theme) => game.setCup({ cups: game.cup.cups, theme } as never), () => game.cup.theme],
+      ["Kingdom Siege", (theme) => game.setSiege({ waves: 5, theme } as never), () => game.siege.theme],
+      ["Showdown", (theme) => game.setDuel({ rounds: 15, theme } as never), () => game.duel.theme],
+    ];
+    for (const [name, set, theme] of setters) {
+      set("classic");
+      expect(theme()).toBe("classic");
+      set(undefined);
+      expect(theme()).toBe("classic");
+      expect(() => set("halloween")).toThrow(`Unknown ${name} theme`);
+      expect(theme()).toBe("classic");
+    }
   });
 });
 

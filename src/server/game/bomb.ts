@@ -521,11 +521,12 @@ export class BombGame {
   private dealNext(squad: Squad): void {
     if (squad.finished || squad.exploded || this.phase === "podium") return;
     for (const p of this.squadPlayers(squad)) p.satOut = false;
-    const q = this.takeQuestion(squad);
+    const qIndex = this.takeQuestion(squad);
+    const q = this.questions[qIndex]!;
     const shown = this.settings.shuffleAnswers && q.type === "multiple_choice" ? shuffleOptions(q, this.rng) : q;
     squad.question = {
       seq: ++this.wireSeq,
-      qIndex: this.questions.indexOf(q),
+      qIndex,
       type: q.type,
       text: q.text,
       ...(q.image ? { image: q.image } : {}),
@@ -533,8 +534,6 @@ export class BombGame {
       wires: [],
       wrongOnThis: 0,
     };
-    // indexOf fails if shuffle copied the question. Find by id.
-    squad.question.qIndex = this.questions.findIndex((item) => item.id === q.id);
     squad.reveal = null;
     squad.status = null;
     squad.statusUntil = 0;
@@ -542,14 +541,15 @@ export class BombGame {
     if (q.type !== "text") this.layWires(squad, shown);
   }
 
-  private takeQuestion(squad: Squad): Question {
+  /** The next question from the squad's shuffled deck, as an index into this.questions. */
+  private takeQuestion(squad: Squad): number {
     if (squad.deck.length === 0) {
       squad.deck = shuffle(this.questions.map((_, i) => i), this.rng);
       if (squad.deck.length > 1 && squad.deck[0] === squad.lastQ) squad.deck.push(squad.deck.shift()!);
     }
     const qIndex = squad.deck.shift()!;
     squad.lastQ = qIndex;
-    return this.questions[qIndex]!;
+    return qIndex;
   }
 
   private layWires(squad: Squad, q: Question): void {
@@ -569,11 +569,8 @@ export class BombGame {
       decoys: kind === "multiple_choice" ? this.decoyLabels(question.qIndex, q.options) : [],
       rng: this.rng,
     });
-    question.wires = dealt.map((w) => ({ ...w, id: `w${question.seq}-${this.wireSeq}-${w.playerId}-${w.optionIndex}-${w.label}`, cut: false }));
-    // wire ids must be unique even when two copies share a label.
-    question.wires.forEach((w, i) => {
-      w.id = `w${question.seq}-${i}`;
-    });
+    // By position, so ids stay unique even when two copies share a label.
+    question.wires = dealt.map((w, i) => ({ ...w, id: `w${question.seq}-${i}`, cut: false }));
     this.noteHeld(question.wires);
   }
 
@@ -718,7 +715,7 @@ export class BombGame {
     const wire = squad.question?.wires.find((w) => w.id === wireId && !w.cut && w.playerId === playerId);
     if (!wire) return false;
     squad.hold = { playerId, wireId, startedAt: this.clock.now() };
-    this.onActivity(playerId);
+    // Squad-mates must see "… is cutting" at once, so this is a full broadcast (no throttled activity update too).
     this.onChange();
     return true;
   }
