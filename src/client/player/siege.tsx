@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import { siegeDefenderLabel, siegeDefenderPhrase } from "../../shared/siege-theme.ts";
+import { siegeDefenderLabel, siegeDefenderPhrase, siegeWords } from "../../shared/siege-theme.ts";
 import { SiegeThemeProvider, useChristmasSiege, useSiegeTheme } from "../shared/siege-skin.tsx";
 import type { ClientMsg, PlayerSiegeView } from "../../shared/protocol.ts";
 import {
@@ -246,11 +246,12 @@ function LaneMap({ view, send, onClose }: { view: PlayerSiegeView; send: Send; o
 function SiegeResult({ view }: { view: PlayerSiegeView }) {
   const r = view.result!;
   const ending = view.phase !== "podium";
+  const words = siegeWords(useSiegeTheme());
   const icon = r.outcome === "stands" ? "🏰" : r.outcome === "fallen" ? "🪨" : "🛡️";
   return (
     <main class={`center siege-result ${r.outcome}`}>
       <div class="cup-emoji">{icon}</div>
-      <h1>{r.outcome === "stands" ? "The kingdom stands!" : r.outcome === "fallen" ? "The castle has fallen" : "Game over"}</h1>
+      <h1>{r.outcome === "stands" ? `The ${words.home} stands!` : r.outcome === "fallen" ? `The ${words.fallen} has fallen` : "Game over"}</h1>
       <p class="siege-headline">{r.headline}</p>
       {!ending && (
         <>

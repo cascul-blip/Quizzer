@@ -15,3 +15,10 @@ export function siegeDefenderPhrase(type: "archer" | "knight" | "wall", theme?: 
   const label = siegeDefenderLabel(type, theme).toLowerCase();
   return `${/^[aeiou]/.test(label) ? "an" : "a"} ${label}`;
 }
+
+/** What the class defends ("the kingdom stands", "the castle fell") and the award names, for the lobby, the endings and the podium. */
+export function siegeWords(theme?: SiegeTheme) {
+  return siegeTheme(theme) === "christmas"
+    ? { home: "toybox", fallen: "toybox", topArcher: "Top Elf Captain", archers: "elf archers", masterMason: "Master Wrapper", wall: "barricade" }
+    : { home: "kingdom", fallen: "castle", topArcher: "Top Archer Captain", archers: "archers", masterMason: "Master Mason", wall: "wall" };
+}
