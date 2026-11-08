@@ -718,7 +718,7 @@ export class BombGame {
     const wire = squad.question?.wires.find((w) => w.id === wireId && !w.cut && w.playerId === playerId);
     if (!wire) return false;
     squad.hold = { playerId, wireId, startedAt: this.clock.now() };
-    this.onActivity(playerId);
+    // Squad-mates must see "… is cutting" at once, so this is a full broadcast (no throttled activity update too).
     this.onChange();
     return true;
   }
