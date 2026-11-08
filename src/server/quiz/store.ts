@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { musicTrackForFile } from "../../shared/music-tracks.ts";
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
-import { MAX_IMAGE_SIDE, MAX_MEDIA_BYTES, SHRINK_ABOVE_BYTES } from "../../shared/quiz-constants.ts";
+import { MAX_IMAGE_SIDE, MAX_MEDIA_BYTES, SHRINK_ABOVE_BYTES, pinLabel } from "../../shared/quiz-constants.ts";
 import {
   DEFAULT_SETTINGS,
   MEDIA_REF_RE,
@@ -22,6 +22,18 @@ import {
 } from "../../shared/quiz-schema.ts";
 
 export class NotFoundError extends Error {}
+
+/** Write via a temp file and rename, so the path only ever holds a complete file (or nothing). */
+function writeAtomic(path: string, data: string | Uint8Array): void {
+  const tmp = `${path}.${process.pid}.${newId(4)}.tmp`;
+  try {
+    writeFileSync(tmp, data);
+  } catch (e) {
+    rmSync(tmp, { force: true });
+    throw e;
+  }
+  renameSync(tmp, path);
+}
 /** The quiz changed since the caller loaded it (an MCP agent edited it while the editor was open). */
 export class ConflictError extends Error {}
 
@@ -256,6 +268,11 @@ export class QuizStore {
     else if (current.type !== "pin" && patch.options === undefined) {
       delete merged.options;
       if (patch.correct === undefined) merged.correct = [0];
+    } else if (Array.isArray(patch.spots) && patch.options === undefined && current.options.every((o, i) => o === pinLabel(i))) {
+      // New spots on a pin that still has the default labels (A, B, C…): the labels follow the new count.
+      delete merged.options;
+      const count = (patch.spots as unknown[]).length;
+      if (patch.correct === undefined && current.correct.some((c) => c >= count)) merged.correct = [0];
     }
     if (merged.image === null) delete merged.image;
     const others = new Set(quiz.questions.filter((_, i) => i !== idx).map((x) => x.id));
@@ -293,10 +310,7 @@ export class QuizStore {
     const next = { ...quiz, updatedAt: new Date().toISOString() };
     const parsed = Quiz.safeParse(next);
     if (!parsed.success) throw new ValidationError(formatZodError(parsed.error));
-    const path = this.file(quiz.id);
-    const tmp = `${path}.${process.pid}.${newId(4)}.tmp`;
-    writeFileSync(tmp, JSON.stringify(parsed.data, null, 2) + "\n");
-    renameSync(tmp, path);
+    writeAtomic(this.file(quiz.id), JSON.stringify(parsed.data, null, 2) + "\n");
     return parsed.data;
   }
 
@@ -315,7 +329,8 @@ export class QuizStore {
     if (existing) return existing;
     const out = await shrinkImage(bytes, mime);
     const ref = `media/${hash}.${MEDIA_TYPES[out.mime]}`;
-    writeFileSync(join(this.dataDir, ref), out.bytes);
+    // Atomic: a half-written file under the hash name would be handed back by the dedupe above forever.
+    writeAtomic(join(this.dataDir, ref), out.bytes);
     return ref;
   }
 

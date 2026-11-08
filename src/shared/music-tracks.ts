@@ -9,9 +9,10 @@ export const MUSIC_TRACKS = [
   { id: "tower-lobby", mode: "Tallest Tower", screen: "Lobby" },
   { id: "tower-play", mode: "Tallest Tower", screen: "Building" },
   { id: "tower-results", mode: "Tallest Tower", screen: "Final podium" },
-  { id: "tower-christmas-lobby", mode: "North Pole Tower", screen: "Lobby" },
-  { id: "tower-christmas-play", mode: "North Pole Tower", screen: "Building" },
-  { id: "tower-christmas-results", mode: "North Pole Tower", screen: "Final podium" },
+  // Cup of Cheer and North Pole Snowball Showdown use the North Pole Tower carols too.
+  { id: "tower-christmas-lobby", mode: "North Pole Tower, Cup of Cheer, Snowball Showdown", screen: "Lobby" },
+  { id: "tower-christmas-play", mode: "North Pole Tower, Cup of Cheer, Snowball Showdown", screen: "Building / the game" },
+  { id: "tower-christmas-results", mode: "North Pole Tower, Cup of Cheer, Snowball Showdown", screen: "Final podium" },
   { id: "submarine-lobby", mode: "Sled Squad", screen: "Lobby" },
   { id: "submarine-chase", mode: "Sled Squad", screen: "Chase" },
   { id: "submarine-dive", mode: "Sled Squad", screen: "Trail challenge" },

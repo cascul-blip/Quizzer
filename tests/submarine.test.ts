@@ -192,6 +192,34 @@ describe("dive", () => {
     expect(ins.index).toBe(1);
   });
 
+  test("a diver whose phone drops no longer counts toward the 70%", () => {
+    const { game } = toDive(["A", "B", "C", "D"]);
+    const ins = game.instructors[0]!;
+    const [d1, d2, d3] = ins.group;
+    const target = ins.symbols[0]!;
+    game.setConnected(d3!, false);
+    expect(game.tap(d1!, target)).toBe(true);
+    expect(ins.index).toBe(0);
+    expect(game.tap(d2!, target)).toBe(true); // 2 of the 2 connected divers
+    expect(ins.index).toBe(1);
+    // Dropping after the others have found it moves the group on at once.
+    expect(game.tap(d1!, ins.symbols[1]!)).toBe(true);
+    game.setConnected(d3!, true);
+    expect(game.tap(d2!, ins.symbols[1]!)).toBe(true); // 2 of 3: not yet
+    expect(ins.index).toBe(1);
+    game.setConnected(d3!, false);
+    expect(ins.index).toBe(2);
+  });
+
+  test("a group whose instructor dropped ends its dive at the next symbol timeout", () => {
+    const { game, clock } = toDive(["A", "B", "C", "D"]);
+    const ins = game.instructors[0]!;
+    game.setConnected(ins.playerId, false);
+    clock.advance(DIVE_SYMBOL_TIMEOUT_MS);
+    expect(game.phase).toBe("chase");
+    expect(game.level).toBe(2);
+  });
+
   test("an instructor moves on after 8 s; the dive ends after 5 symbols, then the next level", () => {
     const { game, clock } = toDive(["A", "B"]);
     expect(DIVE_SYMBOL_TIMEOUT_MS).toBe(8000);
