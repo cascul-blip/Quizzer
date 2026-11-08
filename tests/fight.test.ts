@@ -5,6 +5,7 @@ import { buildFightResultsCsv } from "../src/server/game/results.ts";
 import { MAX_PULL, launchVector, simulate } from "../src/shared/fight-physics.ts";
 import { CORRECT_PER_DECISION, DECISION_MS, REPAIR_MS, TOWER_MAX_DAMAGE } from "../src/shared/protocol.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
+import { viewKey } from "../src/server/ws.ts";
 import { FakeClock, sampleQuiz } from "./helpers.ts";
 
 function quiz(): Quiz {
@@ -244,6 +245,22 @@ describe("shots", () => {
     clock.advance(RESULT_MS);
     expect(a.state).toBe("question");
     expect(game.hostView().events.at(-1)).toMatchObject({ kind: "hit", nickname: "A" });
+  });
+
+  test("a watcher's view key ignores the shot clock running up, so it isn't re-sent", () => {
+    const { game, clock } = setup(["A", "B"]);
+    const a = byName(game, "A");
+    earnDecision(game, clock, a);
+    const { dx, dy, durationMs } = pullFor(game, 0, 1);
+    game.fire(a.id, dx, dy);
+    clock.t += 100;
+    const before = game.playerView(a.id)!;
+    const key = viewKey(before, clock.now());
+    const step = Math.floor((durationMs - 100) / 2);
+    clock.t += step;
+    const after = game.playerView(a.id)!;
+    expect(after.shot!.elapsedMs).toBe(before.shot!.elapsedMs + step);
+    expect(viewKey(after, clock.now())).toBe(key);
   });
 
   test("friendly fire damages your own tower but doesn't count as a hit", () => {

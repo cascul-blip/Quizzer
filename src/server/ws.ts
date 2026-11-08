@@ -60,14 +60,21 @@ const PACINGS = new Set<Pacing>(["manual", "auto"]);
 /** In Tallest Tower, answers stream in constantly: the acting player is updated at once, everyone else at most this often. */
 const ACTIVITY_THROTTLE_MS = 100;
 /** View fields holding "time left" (relative to when the message arrives). */
-const COUNTDOWN_KEYS = new Set(["remainingMs", "phaseRemainingMs", "decisionMs", "repairMs", "emptyMs", "lockedMs", "symbolRemainingMs", "nextMonsterMs", "protectedMs", "fuelMs"]);
+const COUNTDOWN_KEYS = new Set(["remainingMs", "phaseRemainingMs", "gameRemainingMs", "decisionMs", "repairMs", "emptyMs", "lockedMs", "symbolRemainingMs", "nextMonsterMs", "protectedMs", "fuelMs"]);
+/** View fields holding "time since" something started; phones only read them to place the start. */
+const ELAPSED_KEYS = new Set(["revealElapsedMs", "elapsedMs"]);
 
 /**
- * A player view as JSON with each running countdown replaced by its deadline (to 100 ms),
- * so two snapshots that differ only by time passing compare equal.
+ * A player view as JSON with each running countdown replaced by its deadline, and each running
+ * count-up by its start (both to 100 ms), so two snapshots that differ only by time passing compare equal.
  */
-function viewKey(view: PlayerView, now: number): string {
-  return JSON.stringify(view, (k, v) => (COUNTDOWN_KEYS.has(k) && typeof v === "number" && v > 0 ? Math.round((now + v) / 100) : v));
+export function viewKey(view: PlayerView, now: number): string {
+  return JSON.stringify(view, (k, v) => {
+    if (typeof v !== "number" || v <= 0) return v;
+    if (COUNTDOWN_KEYS.has(k)) return Math.round((now + v) / 100);
+    if (ELAPSED_KEYS.has(k)) return Math.round((now - v) / 100);
+    return v;
+  });
 }
 
 /** Compress what goes to phones over Wi-Fi; the host screen is on this machine, so it isn't worth the CPU. */
