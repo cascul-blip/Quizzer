@@ -637,9 +637,13 @@ export class MusicPlayer {
 
   /** Overall music volume 0…1 (0 when muted or music is off). */
   setLevel(level: number): void {
+    const was = this.level;
     this.level = Math.max(0, Math.min(1, level));
     const ctx = this.getCtx();
     if (this.master && ctx) this.master.gain.setTargetAtTime(this.level * 0.55, ctx.currentTime, 0.15);
+    // Recordings aren't decoded while music is off or muted: fetch the playing track's once it's audible.
+    const track = this.current?.track;
+    if (was === 0 && this.level > 0 && ctx && track && usesSamples(track)) void loadSamples(ctx, instrumentsOf(track));
   }
 
   /** Move intensity to `value`, gradually over rampMs (or quickly if 0). */
@@ -768,7 +772,8 @@ export class MusicPlayer {
     if (cur.nextTime < ctx.currentTime) cur.nextTime = ctx.currentTime + 0.02; // fell behind (tab was hidden)
     cur.echo?.setStep(stepSeconds(cur.track, this.intensity), ctx.currentTime);
     while (cur.nextTime < ctx.currentTime + LOOKAHEAD_S) {
-      scheduleStep(ctx, cur.gain, cur.track, cur.step, cur.nextTime, this.intensity, { echo: cur.echo?.input });
+      // Off or muted: keep the beat moving (so turning it back on comes in on time) but build no notes.
+      if (this.level > 0) scheduleStep(ctx, cur.gain, cur.track, cur.step, cur.nextTime, this.intensity, { echo: cur.echo?.input });
       const swing = cur.track.swing ?? 0;
       cur.nextTime += stepSeconds(cur.track, this.intensity) * (cur.step % 2 === 0 ? 1 + swing : 1 - swing);
       cur.step = (cur.step + 1) % (cur.track.bars * stepsPerBar(cur.track));
@@ -811,7 +816,7 @@ export class MusicPlayer {
     // An unknown id plays silence (but still counts as "current", so we don't retry every tick).
     const track = this.tracks[id];
     // Its recordings decode in the background; until they're ready its notes use the synth voices.
-    if (track && usesSamples(track)) void loadSamples(ctx, instrumentsOf(track));
+    if (track && usesSamples(track) && this.level > 0) void loadSamples(ctx, instrumentsOf(track));
     if (track?.rich) {
       // The rich bus replaces the master connection and the shared hall for this track.
       gain.disconnect();
