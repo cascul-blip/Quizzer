@@ -247,11 +247,15 @@ export class GameHub {
   }
 
   broadcast(): void {
-    let hostMsg: string | null = null;
-    for (const ws of this.sockets) {
-      if (ws.data.role === "host") ws.send((hostMsg ??= JSON.stringify({ type: "host.state", view: this.hostView() } satisfies ServerMsg)));
-      else this.sendState(ws, false);
-    }
+    const send = () => {
+      let hostMsg: string | null = null;
+      for (const ws of this.sockets) {
+        if (ws.data.role === "host") ws.send((hostMsg ??= JSON.stringify({ type: "host.state", view: this.hostView() } satisfies ServerMsg)));
+        else this.sendState(ws, false);
+      }
+    };
+    if (this.game instanceof Game) this.game.viewBatch(send);
+    else send();
   }
 
   // ---------- socket lifecycle ----------
