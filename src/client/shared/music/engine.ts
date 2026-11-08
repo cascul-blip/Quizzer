@@ -612,6 +612,8 @@ export class MusicPlayer {
   private reverb: ConvolverNode | null = null;
   /** Saturation, compression and reverb for rich tracks: made when one first plays, taken down when none is playing. */
   private rich: RichBus | null = null;
+  /** Rich tracks feeding the bus: the one playing plus any still fading out. It goes when the last one has. */
+  private richUsers = 0;
   private current: Playing | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
   private intensity = 0;
@@ -779,7 +781,7 @@ export class MusicPlayer {
         old.gain.disconnect();
         old.echo?.dispose();
         audio?.pause();
-        if (!this.current?.track?.rich && this.rich) {
+        if (old.track?.rich && --this.richUsers === 0 && this.rich) {
           this.rich.dispose();
           this.rich = null;
         }
@@ -808,6 +810,7 @@ export class MusicPlayer {
       // The rich bus replaces the master connection and the shared hall for this track.
       gain.disconnect();
       this.rich ??= createRichBus(ctx, master);
+      this.richUsers++;
       gain.connect(this.rich.input);
       const send = ctx.createGain();
       // Tracks without their own reverb amount get a hall (acoustic) or a tighter room's worth (arcade).
