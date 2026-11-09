@@ -443,7 +443,7 @@ function RacerReveal({ view }: { view: PlayerRacerView }) {
         )}
       </div>
       <div class="racer-strip">
-        <RacerScene theme={view.theme} speed={view.car.speed} crashed={view.car.crashed} ejected={!good && t ? { key: t.index, avatars: [view.me.avatar] } : undefined} />
+        <RacerScene theme={view.theme} speed={view.car.speed} crashed={view.car.crashed} ejected={!good && t ? { key: t.index, riders: [{ avatar: view.me.avatar, name: view.me.nickname }] } : undefined} />
       </div>
     </main>
   );

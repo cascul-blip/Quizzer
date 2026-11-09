@@ -3297,10 +3297,20 @@ select {
 
 /* the readouts over the scene */
 
-.racer-hud {
+/* Driver stacked over speed in the bottom-left corner. */
+.racer-huds {
   position: absolute;
+  left: 1.4vw;
   bottom: 1.6vh;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1vh;
   max-width: 44vw;
+}
+
+.racer-hud {
+  max-width: 100%;
   padding: 1vh 1.4vw;
   background: rgba(10, 8, 20, 0.86);
   border: 2px solid rgba(255, 255, 255, 0.14);
@@ -3309,15 +3319,6 @@ select {
   font-weight: 700;
   line-height: 1.15;
   color: #f1edf9;
-}
-
-.racer-hud-car {
-  left: 1.4vw;
-}
-
-.racer-hud-driver {
-  right: 1.4vw;
-  text-align: right;
 }
 
 .racer-hud-speed {

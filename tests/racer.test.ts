@@ -276,6 +276,7 @@ describe("Racer", () => {
     expect(game.phase).toBe("reveal");
     expect(game.hostView().ejected!.map((e) => e.id).sort()).toEqual([b.id, c.id].sort());
     expect(game.hostView().ejected![0]!.avatar).toBeDefined();
+    expect(game.hostView().ejected!.map((e) => e.nickname).sort()).toEqual(["B", "C"]);
     game.next();
     expect(game.hostView().ejected).toBeNull();
   });
