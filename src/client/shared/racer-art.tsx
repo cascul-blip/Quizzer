@@ -97,8 +97,8 @@ interface RacerSceneProps {
   crashed: boolean;
   /** Called once the car is back on the road after a trip to space (the world has slid back up). */
   onLand?: () => void;
-  /** Avatars thrown out of the back of the car; each new `key` plays it once. */
-  ejected?: { key: string | number; avatars: AvatarChoice[] };
+  /** Players thrown out of the back of the car, each labelled with their name; each new `key` plays it once. */
+  ejected?: { key: string | number; riders: { avatar: AvatarChoice; name: string }[] };
   class?: string;
 }
 
@@ -106,7 +106,7 @@ interface Ejection {
   key: string | number;
   /** Frozen when it starts, so a car that drops back to the road mid-flight doesn't change the animation. */
   mode: "road" | "space";
-  riders: { avatar: AvatarChoice; delay: number; spin: number; lift: number }[];
+  riders: { avatar: AvatarChoice; name: string; delay: number; spin: number; lift: number }[];
 }
 
 /** Fills its container; everything is sized from the container's height. */
@@ -308,14 +308,15 @@ export function RacerScene({ speed, crashed, onLand, ejected, theme, class: cls 
 
   // Throw out a new batch of avatars; whoever is still in the air from the last one is cleared.
   useEffect(() => {
-    if (!ejected?.avatars.length) return;
-    const n = ejected.avatars.length;
+    if (!ejected?.riders.length) return;
+    const n = ejected.riders.length;
     const gap = Math.min(EJECT_GAP_MS, EJECT_SPREAD_MS / n);
     setEjection({
       key: ejected.key,
       mode: root.current?.dataset.space === "on" ? "space" : "road",
-      riders: ejected.avatars.map((avatar, i) => ({
+      riders: ejected.riders.map(({ avatar, name }, i) => ({
         avatar,
+        name,
         delay: Math.round(i * gap),
         spin: Math.random() < 0.5 ? -1 : 1,
         lift: 0.7 + 0.6 * Math.random(),
@@ -374,6 +375,8 @@ export function RacerScene({ speed, crashed, onLand, ejected, theme, class: cls 
                 <div style={{ animationDelay: `${r.delay}ms` }}>
                   <Avatar choice={r.avatar} />
                 </div>
+                {/* Outside the tumbling layer, so the name flies with the avatar but stays upright. */}
+                <span class="racer-scene-eject-name">{r.name}</span>
               </div>
             </div>
           ))}

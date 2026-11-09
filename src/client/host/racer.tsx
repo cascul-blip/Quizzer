@@ -127,21 +127,24 @@ export function RacerStage({ view, send }: { view: RacerView; send: Send }) {
               speed={view.car.speed}
               crashed={view.car.crashed}
               onLand={() => play("land")}
-              ejected={view.phase === "reveal" && view.lastTurn && view.ejected?.length ? { key: view.lastTurn.index, avatars: view.ejected.map((e) => e.avatar) } : undefined}
+              ejected={view.phase === "reveal" && view.lastTurn && view.ejected?.length ? { key: view.lastTurn.index, riders: view.ejected.map((e) => ({ avatar: e.avatar, name: e.nickname })) } : undefined}
             />
-            <div class="racer-hud racer-hud-car">
-              {view.car.crashed ? <div class="racer-hud-speed crashed">CRASHED</div> : <div class="racer-hud-speed">{Math.round(shownSpeed)} mph</div>}
-              <div class="racer-hud-line">{view.car.distance.toFixed(1)} miles driven</div>
-            </div>
-            <div class="racer-hud racer-hud-driver">
-              {view.driver ? (
-                <>
-                  <div class="racer-hud-line">Driver: {view.driver.nickname}</div>
-                  {lever && <div class="racer-hud-level">{RACER_CONFIDENCE[lever].label}</div>}
-                </>
-              ) : (
-                <div class="racer-hud-line">No driver</div>
-              )}
+            {/* Bottom left, driver over speed, leaving the right of the scene clear for whoever falls out. */}
+            <div class="racer-huds">
+              <div class="racer-hud">
+                {view.driver ? (
+                  <>
+                    <div class="racer-hud-line">Driver: {view.driver.nickname}</div>
+                    {lever && <div class="racer-hud-level">{RACER_CONFIDENCE[lever].label}</div>}
+                  </>
+                ) : (
+                  <div class="racer-hud-line">No driver</div>
+                )}
+              </div>
+              <div class="racer-hud">
+                {view.car.crashed ? <div class="racer-hud-speed crashed">CRASHED</div> : <div class="racer-hud-speed">{Math.round(shownSpeed)} mph</div>}
+                <div class="racer-hud-line">{view.car.distance.toFixed(1)} miles driven</div>
+              </div>
             </div>
           </section>
         </>

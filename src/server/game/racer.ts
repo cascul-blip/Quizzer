@@ -90,7 +90,7 @@ export class RacerGame {
   confidence: RacerConfidence | null = null;
   lastTurn: RacerTurn | null = null;
   /** Who got the latest closed question wrong (or didn't answer it): they fall out of the car on the reveal. */
-  ejected: { id: string; avatar: AvatarChoice }[] = [];
+  ejected: { id: string; nickname: string; avatar: AvatarChoice }[] = [];
   /** Turns played to the end. */
   turns = 0;
   /** When the current phase's countdown ends; 0 when it has none. */
@@ -342,7 +342,7 @@ export class RacerGame {
       const ans = p.answers[this.qIndex];
       // Everyone here counts, and so does anyone who answered before dropping out; no answer is a wrong answer.
       if (p.connected || ans) total++;
-      if ((p.connected || ans) && !ans?.correct) this.ejected.push({ id: p.id, avatar: p.avatar });
+      if ((p.connected || ans) && !ans?.correct) this.ejected.push({ id: p.id, nickname: p.nickname, avatar: p.avatar });
       if (!ans) continue;
       if (ans.correct) {
         correct++;
