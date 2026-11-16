@@ -171,7 +171,7 @@ describe("tracks", () => {
   });
 
   test("a track on recordings makes far fewer audio nodes than on synth voices", async () => {
-    for (const id of ["siege-battle", "dragon-battle", "land-play", "cup-quiz"] as const) {
+    for (const id of ["siege-battle", "fight-play", "land-play", "cup-quiz"] as const) {
       const track: Track = TRACKS[id];
       const seconds = 8 * STEPS_PER_BAR * stepSeconds(track, 1);
       const synth = fake();

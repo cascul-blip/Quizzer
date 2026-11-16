@@ -15,8 +15,6 @@ import { FightPlayer } from "./fight.tsx";
 import { LandPlayer } from "./land.tsx";
 import { RacerPlayer } from "./racer.tsx";
 import { CupPlayer } from "./cup.tsx";
-import { DragonPlayer } from "./dragon.tsx";
-import { BombPlayer } from "./bomb.tsx";
 import { SiegePlayer } from "./siege.tsx";
 import { DuelPlayer } from "./duel.tsx";
 import { SleighPlayer } from "./sleigh.tsx";
@@ -197,10 +195,6 @@ function App() {
     body = <RacerPlayer view={view} send={send} />;
   } else if (view.kind === "cup") {
     body = <CupPlayer view={view} send={send} />;
-  } else if (view.kind === "dragon") {
-    body = <DragonPlayer view={view} send={send} />;
-  } else if (view.kind === "bomb") {
-    body = <BombPlayer view={view} send={send} />;
   } else if (view.kind === "siege") {
     body = <SiegePlayer view={view} send={send} />;
   } else if (view.kind === "duel") {
