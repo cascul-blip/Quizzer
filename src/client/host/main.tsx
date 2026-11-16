@@ -11,13 +11,12 @@ import { cupName, cupTheme, type CupTheme } from "../../shared/cup-theme.ts";
 import { siegeName, siegeTheme, type SiegeTheme } from "../../shared/siege-theme.ts";
 import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
-import { BOMB_MAX_SQUADS, BOMB_MINUTES, BOMB_MODULES, BOMB_PENALTIES, BOMB_WIRES, CUP_MAX_CUPS, CUP_MIN_CUPS, DRAGON_BATTLE_MINUTES, DRAGON_FIRE_SECONDS, DRAGON_MIN_TEAMS, DRAGON_SCRAMBLE_MINUTES, DRAGON_TOUGHNESS, DUEL_ROUNDS, HILL_SETTINGS, type BombSettings, type BombStyle, type DragonSettings, type DragonToughness, LAND_MINUTES, LAND_MIN_TEAMS, MAX_TEAMS, TOWER_MINUTES, type GameMode, type HillSetting, type HostPlayer, type HostView, type Pacing, type ServerMsg } from "../../shared/protocol.ts";
+import { CUP_MAX_CUPS, CUP_MIN_CUPS, DUEL_ROUNDS, HILL_SETTINGS, LAND_MINUTES, LAND_MIN_TEAMS, MAX_TEAMS, TOWER_MINUTES, type GameMode, type HillSetting, type HostPlayer, type HostView, type Pacing, type ServerMsg } from "../../shared/protocol.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { SIEGE_WAVE_CHOICES } from "../../shared/siege-rules.ts";
 import { SLEIGH_MINUTES } from "../../shared/sleigh-rules.ts";
 import type { QuizSummary } from "../../shared/quiz-schema.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
-import { Dragon } from "../shared/dragon-art.tsx";
 import { play, unlockAudio } from "../shared/sounds.ts";
 import { connect, type ConnStatus } from "../shared/ws.ts";
 import { ConnBanner, ErrorBoundary, Shape, StreakBadge, Toast, optionColor, ordinal, teamVars, useCountdown } from "../shared/ui.tsx";
@@ -29,10 +28,8 @@ import { FightStage } from "./fight.tsx";
 import { LandStage } from "./land.tsx";
 import { RacerStage } from "./racer.tsx";
 import { CupStage } from "./cup.tsx";
-import { DragonStage } from "./dragon.tsx";
 import { DuelStage } from "./duel.tsx";
 import { SleighStage } from "./sleigh.tsx";
-import { BombLobbyPreview, BombStage } from "./bomb.tsx";
 import { SiegeLobbyPreview, SiegeStage } from "./siege.tsx";
 import { RobotStage } from "./robot.tsx";
 import { SubStage } from "./submarine.tsx";
@@ -116,10 +113,6 @@ function App() {
     body = <RacerStage view={view} send={send} />;
   } else if (view.kind === "cup") {
     body = <CupStage view={view} send={send} />;
-  } else if (view.kind === "dragon") {
-    body = <DragonStage view={view} send={send} />;
-  } else if (view.kind === "bomb") {
-    body = <BombStage view={view} send={send} />;
   } else if (view.kind === "siege") {
     body = <SiegeStage view={view} send={send} />;
   } else if (view.kind === "duel") {
@@ -221,8 +214,7 @@ function Game({ view, send }: { view: GameView; send: Send }) {
       if (e.key === " " || e.key === "ArrowRight") {
         e.preventDefault();
         if (view.phase === "lobby") {
-          const raceWait = view.mode === "bomb" && view.bomb.game === "race" && view.players.length < 2;
-          if (view.players.length > 0 && !raceWait) send({ type: "host.start", pacing: view.pacing });
+          if (view.players.length > 0) send({ type: "host.start", pacing: view.pacing });
         } else if (view.phase !== "podium") send({ type: "host.next" });
       } else if (e.key === "s" || e.key === "S") {
         if (view.phase === "open" || view.phase === "intro") send({ type: "host.skip" });
@@ -232,7 +224,7 @@ function Game({ view, send }: { view: GameView; send: Send }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [view.phase, view.players.length, view.pacing, view.mode, view.bomb.game, view.bomb.squads]);
+  }, [view.phase, view.players.length, view.pacing, view.mode]);
 
   const inGame = view.phase !== "lobby" && view.phase !== "podium";
 
@@ -361,8 +353,7 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
           </h2>
           <button
             class="btn primary start"
-            disabled={connected === 0 || (view.mode === "bomb" && view.bomb.game === "race" && connected < 2)}
-            title={view.mode === "bomb" && view.bomb.game === "race" && connected < 2 ? "Race needs at least 2 players" : undefined}
+            disabled={connected === 0}
             onClick={() => send({ type: "host.start", pacing: view.pacing })}
           >
             Start
@@ -382,8 +373,6 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
               <option value="gift">🎁 Gift Grab</option>
               <option value="sleigh">🎅 Santa's Sleigh Run</option>
               <option value="cup">{cupName(view.cup.theme)}</option>
-              <option value="dragon">🐉 Dragon's Hoard</option>
-              <option value="bomb">💣 Bomb Squad</option>
               <option value="siege">{siegeTheme(view.siege.theme) === "christmas" ? "🎄" : "🛡️"} {siegeName(view.siege.theme)}</option>
               <option value="duel">{duelTheme(view.duel.theme) === "christmas" ? "❄️ Snowball Showdown" : "🤠 Showdown"}</option>
             </select>
@@ -535,10 +524,6 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
               </label>
               <span class="opt mode-hint">{cupTheme(view.cup.theme) === "christmas" ? "Roll the die, then answer that many questions before time runs out, or sip some cocoa. One cup is supercharged: shake, sparkle and blast off! Last one in the workshop wins." : "Roll the die, then answer that many questions before time runs out, or drink from a cup. One is poisoned. Last one standing wins."}</span>
             </>
-          ) : view.mode === "dragon" ? (
-            <DragonOptions view={view} send={send} />
-          ) : view.mode === "bomb" ? (
-            <BombOptions view={view} send={send} />
           ) : view.mode === "siege" ? (
             <>
               <label class="opt">
@@ -611,19 +596,13 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
             />
             Shuffle answer positions
           </label>
-          {(view.mode === "tower" || view.mode === "submarine" || view.mode === "fight" || view.mode === "robot" || view.mode === "cup" || view.mode === "dragon" || view.mode === "siege" || view.mode === "sleigh" || view.mode === "gift") && (
+          {(view.mode === "tower" || view.mode === "submarine" || view.mode === "fight" || view.mode === "robot" || view.mode === "cup" || view.mode === "siege" || view.mode === "sleigh" || view.mode === "gift") && (
             <label class="opt check" title="Wrong answers in a row make a player wait longer before the next question">
               <input type="checkbox" checked={view.protect} onChange={(e) => send({ type: "host.setProtect", on: e.currentTarget.checked })} />
               Protect from abuse
             </label>
           )}
         </div>
-        {view.mode === "dragon" && (
-          <div class="dragon-lobby-lair" aria-hidden="true">
-            <Dragon stage={0} asleep class="asleep" />
-          </div>
-        )}
-        {view.mode === "bomb" && <BombLobbyPreview settings={view.bomb} />}
         {view.mode === "siege" && <SiegeLobbyPreview theme={view.siege.theme} />}
         {view.mode === "duel" && duelTheme(view.duel.theme) === "christmas" && <SnowballLobbyPreview />}
         {connected === 0 ? (
@@ -679,146 +658,6 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
         </p>
       </section>
     </main>
-  );
-}
-
-const TOUGHNESS_LABELS: Record<DragonToughness, string> = { easy: "Easy", normal: "Normal", hard: "Hard" };
-
-function DragonOptions({ view, send }: { view: GameView; send: Send }) {
-  const d = view.dragon;
-  const set = (change: Partial<DragonSettings>) => send({ type: "host.setDragon", ...d, ...change });
-  return (
-    <>
-      <label class="opt" title="Never more teams than players">
-        Teams
-        <select value={d.teams} onChange={(e) => set({ teams: Number(e.currentTarget.value) })}>
-          {Array.from({ length: MAX_TEAMS - DRAGON_MIN_TEAMS + 1 }, (_, i) => (
-            <option key={i} value={i + DRAGON_MIN_TEAMS}>
-              {i + DRAGON_MIN_TEAMS}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label class="opt">
-        Dragon toughness
-        <select value={d.toughness} onChange={(e) => set({ toughness: e.currentTarget.value as DragonToughness })}>
-          {DRAGON_TOUGHNESS.map((t) => (
-            <option key={t} value={t}>
-              {TOUGHNESS_LABELS[t]}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label class="opt">
-        Battle time
-        <select value={d.battleMinutes} onChange={(e) => set({ battleMinutes: Number(e.currentTarget.value) })}>
-          {DRAGON_BATTLE_MINUTES.map((m) => (
-            <option key={m} value={m}>
-              {m} min
-            </option>
-          ))}
-        </select>
-      </label>
-      <label class="opt">
-        Fire breath
-        <select value={d.fireSec} onChange={(e) => set({ fireSec: Number(e.currentTarget.value) })}>
-          {DRAGON_FIRE_SECONDS.map((s) => (
-            <option key={s} value={s}>
-              every {s} s
-            </option>
-          ))}
-        </select>
-      </label>
-      <label class="opt">
-        Scramble time
-        <select value={d.scrambleMinutes} onChange={(e) => set({ scrambleMinutes: Number(e.currentTarget.value) })}>
-          {DRAGON_SCRAMBLE_MINUTES.map((m) => (
-            <option key={m} value={m}>
-              {m} min
-            </option>
-          ))}
-        </select>
-      </label>
-      <span class="opt mode-hint">The whole class fights the dragon together, then the teams race to grab its hoard. Teams only matter after the dragon falls.</span>
-    </>
-  );
-}
-
-function BombOptions({ view, send }: { view: GameView; send: Send }) {
-  const b = view.bomb;
-  const set = (change: Partial<BombSettings>) => send({ type: "host.setBomb", ...b, ...change });
-  const race = b.game === "race";
-  const squadMin = race ? 2 : 1;
-  return (
-    <>
-      <label class="opt">
-        Game
-        <select
-          value={b.game}
-          // The server raises Race to 2 squads itself, without counting it as a hand-picked number.
-          onChange={(e) => set({ game: e.currentTarget.value as BombStyle })}
-        >
-          <option value="together">Together</option>
-          <option value="race">Race</option>
-        </select>
-      </label>
-      <label class="opt" title="The fewest squads that keep everyone at 6 or under, until you pick a number">
-        Squads
-        <select value={b.squads} onChange={(e) => set({ squads: Number(e.currentTarget.value) })}>
-          {Array.from({ length: BOMB_MAX_SQUADS - squadMin + 1 }, (_, i) => (
-            <option key={i} value={i + squadMin}>
-              {i + squadMin}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label class="opt">
-        Modules
-        <select value={b.modules} onChange={(e) => set({ modules: Number(e.currentTarget.value) })}>
-          {BOMB_MODULES.map((n) => (
-            <option key={n} value={n}>
-              {n}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label class="opt">
-        Wires
-        <select value={b.wires} onChange={(e) => set({ wires: Number(e.currentTarget.value) })}>
-          {BOMB_WIRES.map((n) => (
-            <option key={n} value={n}>
-              {n}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label class="opt">
-        Timer
-        <select value={b.minutes} onChange={(e) => set({ minutes: Number(e.currentTarget.value) })}>
-          {BOMB_MINUTES.map((m) => (
-            <option key={m} value={m}>
-              {m} min
-            </option>
-          ))}
-        </select>
-      </label>
-      <label class="opt">
-        Wrong cut
-        <select value={b.penaltySec} onChange={(e) => set({ penaltySec: Number(e.currentTarget.value) })}>
-          {BOMB_PENALTIES.map((s) => (
-            <option key={s} value={s}>
-              −{s} s
-            </option>
-          ))}
-        </select>
-      </label>
-      <span class="opt mode-hint">
-        {race
-          ? "Each squad has its own bomb and timer. First to clear their modules wins. Race needs at least 2 players."
-          : "The class shares one bomb and one timer. Each squad clears its own modules."}{" "}
-        Answers are split across the phones. Drag a name to move someone to another squad.
-      </span>
-    </>
   );
 }
 

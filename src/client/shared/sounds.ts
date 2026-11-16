@@ -2,7 +2,7 @@ import shotUrl from "./sfx/shot.mp3";
 
 /** Tiny synthesized sound effects (WebAudio); a few use a bundled recording instead (RECORDINGS). */
 
-type Sfx = "cheerBlast" | "tick" | "tickHigh" | "timeUp" | "reveal" | "join" | "start" | "fanfare" | "thud" | "floor" | "rumble" | "roar" | "whoosh" | "chomp" | "bubble" | "heartbeat" | "laser" | "alarm" | "plant" | "capture" | "conquer" | "gearUp" | "skid" | "crash" | "repair" | "leverClick" | "land" | "diceRoll" | "diceLand" | "clink" | "gulp" | "poison" | "survive" | "gunshot" | "starterPistol" | "dragonRoar" | "sword" | "fireWhoosh" | "shieldClang" | "coins" | "chestOpen" | "trapHiss" | "jackpot" | "snip" | "spark" | "wrongWire" | "moduleChime" | "keypad" | "defuse" | "explosion" | "bowTwang" | "arrowHit" | "swordClang" | "stoneThud" | "placeClack" | "upgradeChime" | "heartLost" | "giantHorn" | "drumRoll" | "wolfHowl" | "trollRoar" | "giantStomp" | "castleCrumble" | "victoryBells" | "deliver" | "jingle";
+type Sfx = "cheerBlast" | "tick" | "tickHigh" | "timeUp" | "reveal" | "join" | "start" | "fanfare" | "thud" | "floor" | "rumble" | "roar" | "whoosh" | "chomp" | "bubble" | "heartbeat" | "laser" | "alarm" | "plant" | "capture" | "conquer" | "gearUp" | "skid" | "crash" | "repair" | "leverClick" | "land" | "diceRoll" | "diceLand" | "clink" | "gulp" | "poison" | "survive" | "gunshot" | "starterPistol" | "coins" | "bowTwang" | "arrowHit" | "swordClang" | "stoneThud" | "placeClack" | "upgradeChime" | "heartLost" | "giantHorn" | "drumRoll" | "wolfHowl" | "trollRoar" | "giantStomp" | "castleCrumble" | "victoryBells" | "deliver" | "jingle";
 
 const MUTE_KEY = "quizzer.muted";
 let ctx: AudioContext | null = null;
@@ -305,69 +305,12 @@ export function play(sfx: Sfx): void {
       noise(0.48, 0.9, "lowpass", 650, 0.15, 0.7, 250);
       return;
     }
-    case "dragonRoar":
-      // A deep growl that swells and falls away, with a rasp on top.
-      [62, 78, 93, 55].forEach((f, i) => tone(f, i * 0.08, 1.4 - i * 0.15, "sawtooth", 0.15));
-      [180, 165, 150, 130, 110].forEach((f, i) => tone(f, 0.1 + i * 0.12, 0.25, "square", 0.05));
-      return tone(40, 0.3, 1.1, "sine", 0.3);
-    case "sword":
-      // A quick metal swish and a ring.
-      [2400, 1900, 1500].forEach((f, i) => tone(f, i * 0.02, 0.05, "sawtooth", 0.035));
-      tone(1318.5, 0.05, 0.25, "triangle", 0.07);
-      return tone(160, 0.05, 0.08, "square", 0.08);
-    case "fireWhoosh":
-      // A roaring rush of flame: rising, then falling saw clusters over a low rumble.
-      [140, 220, 330, 480, 620, 480, 330, 220].forEach((f, i) => tone(f, i * 0.06, 0.28, "sawtooth", 0.05));
-      return tone(55, 0, 0.9, "triangle", 0.25);
-    case "shieldClang":
-      // A big bell-like clang, two partials ringing out.
-      tone(523.25, 0, 0.9, "triangle", 0.2);
-      tone(1396.9, 0, 0.7, "sine", 0.1);
-      tone(2093, 0, 0.4, "sine", 0.06);
-      return tone(90, 0, 0.12, "square", 0.15);
     case "coins":
       // Coins tumbling: quick bright pings.
       [2637, 3136, 2349, 3520, 2794].forEach((f, i) => tone(f, i * 0.05 + Math.random() * 0.02, 0.09, "sine", 0.06));
       return;
-    case "chestOpen":
-      // A creaking lid, then a sparkle.
-      [180, 200, 170, 210].forEach((f, i) => tone(f, i * 0.05, 0.07, "square", 0.05));
-      [1046.5, 1318.5, 1568, 2093].forEach((f, i) => tone(f, 0.22 + i * 0.05, 0.18, "triangle", 0.08));
-      return;
-    case "trapHiss":
-      // A snake-like hiss (thin detuned saws), then a sad drop.
-      [5200, 5600, 6000, 5400].forEach((f, i) => tone(f, i * 0.04, 0.4, "sawtooth", 0.015));
-      tone(392, 0.35, 0.2, "triangle", 0.12);
-      return tone(277.2, 0.5, 0.35, "triangle", 0.12);
-    case "jackpot":
-      // A bright rising run and a long chord.
-      [523.25, 659.25, 783.99, 1046.5, 1318.5, 1568, 2093].forEach((f, i) => tone(f, i * 0.06, 0.18, "square", 0.06));
-      [1046.5, 1318.5, 1568].forEach((f) => tone(f, 0.45, 0.9, "triangle", 0.1));
-      return;
     case "fanfare":
       [523.25, 523.25, 523.25, 698.46, 880, 1046.5].forEach((f, i) => tone(f, i * 0.14, i === 5 ? 0.9 : 0.16, "triangle", 0.18));
-      return;
-    case "snip":
-      tone(1800, 0, 0.04, "square", 0.05);
-      return tone(900, 0.03, 0.06, "triangle", 0.08);
-    case "spark":
-      [2400, 1800, 3200, 1400].forEach((f, i) => tone(f, i * 0.02, 0.05, "sawtooth", 0.04));
-      return;
-    case "wrongWire":
-      tone(140, 0, 0.18, "square", 0.16);
-      return tone(90, 0.12, 0.28, "sawtooth", 0.12);
-    case "moduleChime":
-      [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(f, i * 0.07, 0.22, "triangle", 0.12));
-      return;
-    case "keypad":
-      return tone(880, 0, 0.06, "square", 0.05);
-    case "defuse":
-      [392, 523.25, 659.25, 784, 1046.5].forEach((f, i) => tone(f, i * 0.1, i === 4 ? 0.7 : 0.18, "triangle", 0.14));
-      return;
-    case "explosion":
-      tone(70, 0, 0.7, "sine", 0.45);
-      tone(45, 0.05, 0.9, "triangle", 0.35);
-      [180, 120, 80, 50].forEach((f, i) => tone(f, i * 0.04, 0.4, "sawtooth", 0.12));
       return;
     // ---------- Kingdom Siege ----------
     case "bowTwang":

@@ -7,29 +7,17 @@ import { DEFAULT_TOWER_THEME, towerTheme } from "../../shared/tower-theme.ts";
 import { DEFAULT_FIGHT_THEME, fightTheme } from "../../shared/fight-theme.ts";
 import { isSeasonTheme, type SeasonTheme } from "../../shared/season-theme.ts";
 import {
-  BOMB_MAX_SQUADS,
-  BOMB_MINUTES,
-  BOMB_MODULES,
-  BOMB_PENALTIES,
-  BOMB_WIRES,
   CUP_DEFAULT_CUPS,
   CUP_MAX_CUPS,
   CUP_MIN_CUPS,
-  DRAGON_BATTLE_MINUTES,
   DUEL_DEFAULT_ROUNDS,
   DUEL_ROUNDS,
-  DRAGON_FIRE_SECONDS,
-  DRAGON_MIN_TEAMS,
-  DRAGON_SCRAMBLE_MINUTES,
-  DRAGON_TOUGHNESS,
   HILL_SETTINGS,
   LAND_MINUTES,
   LAND_MIN_TEAMS,
   MAX_TEAMS,
   TOWER_MINUTES,
-  type BombSettings,
   type CupSettings,
-  type DragonSettings,
   type DuelSettings,
   type FightSettings,
   type GameMode,
@@ -55,7 +43,6 @@ import { SLEIGH_DEFAULT_MINUTES, SLEIGH_MINUTES } from "../../shared/sleigh-rule
 import { cleanAvatar, randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import { MAX_TYPED_ANSWER, checkAnswer, type AnswerValue } from "../../shared/answer-match.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
-import { BombGame } from "./bomb.ts";
 import { GameError, assignTeams, realClock, shuffle, shuffleOptions, teamInfo, topErrors, type Clock } from "./common.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
 import { rankScores, scoreAnswer } from "./scoring.ts";
@@ -73,8 +60,6 @@ export const DEFAULT_TOWER: TowerSettings = { teams: 2, minutes: 5, monster: tru
 export const DEFAULT_FIGHT: FightSettings = { hill: "random", theme: DEFAULT_FIGHT_THEME };
 export const DEFAULT_LAND: LandSettings = { teams: 2, minutes: 5, theme: DEFAULT_LAND_THEME };
 export const DEFAULT_CUP: CupSettings = { cups: CUP_DEFAULT_CUPS, theme: DEFAULT_CUP_THEME };
-export const DEFAULT_DRAGON: DragonSettings = { teams: 2, toughness: "normal", battleMinutes: 5, fireSec: 45, scrambleMinutes: 3 };
-export const DEFAULT_BOMB: BombSettings = { game: "together", squads: 1, modules: 3, wires: 3, minutes: 5, penaltySec: 15 };
 export const DEFAULT_SIEGE: SiegeSettings = { waves: 5, theme: DEFAULT_SIEGE_THEME };
 export const DEFAULT_DUEL: DuelSettings = { rounds: DUEL_DEFAULT_ROUNDS, theme: DEFAULT_DUEL_THEME };
 export const DEFAULT_GIFT: GiftSettings = { minutes: GIFT_DEFAULT_MINUTES };
@@ -129,8 +114,6 @@ interface GameOptions {
   fight?: FightSettings;
   land?: LandSettings;
   cup?: CupSettings;
-  dragon?: DragonSettings;
-  bomb?: BombSettings;
   siege?: SiegeSettings;
   duel?: DuelSettings;
   sleigh?: SleighSettings;
@@ -141,7 +124,7 @@ interface GameOptions {
 /**
  * A Classic game: lobby → (intro → open → reveal → leaderboard)* → podium.
  * It also serves as the lobby for every mode; in the other modes the hub
- * hands its players to that mode's game (TowerGame, SubGame, FightGame, RobotGame, LandGame, RacerGame, CupGame, DragonGame, BombGame, SiegeGame, DuelGame, SleighGame) on start.
+ * hands its players to that mode's game (TowerGame, SubGame, FightGame, RobotGame, LandGame, RacerGame, CupGame, SiegeGame, DuelGame, SleighGame) on start.
  */
 export class Game {
   readonly quiz: Quiz;
@@ -153,7 +136,7 @@ export class Game {
   qIndex = -1;
   pacing: Pacing;
   shuffle: ShuffleOptions;
-  /** "Protect from abuse": Tallest Tower, Submarine Squad, Tower Fight, Robot Attack, Cup of Death, Dragon's Hoard, Kingdom Siege and Santa's Sleigh Run slow down players who keep answering wrong. Bomb Squad does not use it. */
+  /** "Protect from abuse": Tallest Tower, Submarine Squad, Tower Fight, Robot Attack, Cup of Death, Kingdom Siege and Santa's Sleigh Run slow down players who keep answering wrong. */
   protect: boolean;
   mode: GameMode;
   racer: RacerSettings;
@@ -161,8 +144,6 @@ export class Game {
   fight: FightSettings;
   land: LandSettings;
   cup: CupSettings;
-  dragon: DragonSettings;
-  bomb: BombSettings;
   siege: SiegeSettings;
   duel: DuelSettings;
   sleigh: SleighSettings;
@@ -178,8 +159,6 @@ export class Game {
   private timer: unknown = null;
   /** Team per player id once the host has dragged someone in the lobby; null = round-robin by join order. */
   private manualTeams: Map<string, number> | null = null;
-  /** The host picked a squad count. Until then it follows the class size. */
-  private bombSquadsManual = false;
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: Game) => void;
@@ -206,8 +185,6 @@ export class Game {
     this.fight = { ...(opts.fight ?? DEFAULT_FIGHT), theme: fightTheme(opts.fight?.theme) };
     this.land = { ...(opts.land ?? DEFAULT_LAND), theme: landTheme(opts.land?.theme) };
     this.cup = { ...(opts.cup ?? DEFAULT_CUP), theme: cupTheme(opts.cup?.theme) };
-    this.dragon = { ...(opts.dragon ?? DEFAULT_DRAGON) };
-    this.bomb = { ...(opts.bomb ?? DEFAULT_BOMB) };
     this.siege = { ...(opts.siege ?? DEFAULT_SIEGE), theme: siegeTheme(opts.siege?.theme) };
     this.duel = { ...(opts.duel ?? DEFAULT_DUEL), theme: duelTheme(opts.duel?.theme) };
     this.sleigh = { ...(opts.sleigh ?? DEFAULT_SLEIGH) };
@@ -229,7 +206,6 @@ export class Game {
   join(rawNickname: unknown, avatar?: AvatarChoice | null): Player {
     if (this.phase === "podium") throw new GameError("This game has finished");
     const player = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), (base) => ({ ...base, score: 0, lastDelta: 0, streak: 0, answers: [] }));
-    this.refreshBombSquads();
     this.onChange();
     return player;
   }
@@ -260,7 +236,6 @@ export class Game {
   kick(playerId: string): Player | null {
     const p = this.roster.remove(playerId);
     if (!p) return null;
-    this.refreshBombSquads();
     this.onChange();
     this.maybeCloseEarly();
     return p;
@@ -308,12 +283,8 @@ export class Game {
 
   setMode(mode: GameMode): void {
     if (this.phase !== "lobby") throw new GameError("The game mode can only be changed before the game starts");
-    if (mode !== "classic" && mode !== "tower" && mode !== "submarine" && mode !== "fight" && mode !== "robot" && mode !== "land" && mode !== "racer" && mode !== "cup" && mode !== "dragon" && mode !== "bomb" && mode !== "siege" && mode !== "duel" && mode !== "sleigh" && mode !== "gift") throw new GameError("Unknown game mode");
+    if (mode !== "classic" && mode !== "tower" && mode !== "submarine" && mode !== "fight" && mode !== "robot" && mode !== "land" && mode !== "racer" && mode !== "cup" && mode !== "siege" && mode !== "duel" && mode !== "sleigh" && mode !== "gift") throw new GameError("Unknown game mode");
     this.mode = mode;
-    if (mode === "bomb") {
-      this.bombSquadsManual = false;
-      this.bomb = { ...this.bomb, squads: BombGame.recommendSquads(this.players.size, this.bomb.game) };
-    }
     this.onChange();
   }
 
@@ -360,44 +331,6 @@ export class Game {
     this.onChange();
   }
 
-  setDragon(settings: DragonSettings): void {
-    if (this.phase !== "lobby") throw new GameError("Dragon's Hoard settings can only be changed before the game starts");
-    const teams = Math.trunc(Number(settings.teams));
-    const battleMinutes = Number(settings.battleMinutes);
-    const fireSec = Number(settings.fireSec);
-    const scrambleMinutes = Number(settings.scrambleMinutes);
-    if (!(teams >= DRAGON_MIN_TEAMS && teams <= MAX_TEAMS)) throw new GameError(`Teams must be between ${DRAGON_MIN_TEAMS} and ${MAX_TEAMS}`);
-    if (!DRAGON_TOUGHNESS.includes(settings.toughness)) throw new GameError("Unknown dragon toughness");
-    if (!(DRAGON_BATTLE_MINUTES as readonly number[]).includes(battleMinutes)) throw new GameError("Unsupported battle time");
-    if (!(DRAGON_FIRE_SECONDS as readonly number[]).includes(fireSec)) throw new GameError("Unsupported fire breath interval");
-    if (!(DRAGON_SCRAMBLE_MINUTES as readonly number[]).includes(scrambleMinutes)) throw new GameError("Unsupported scramble time");
-    this.dragon = { teams, toughness: settings.toughness, battleMinutes, fireSec, scrambleMinutes };
-    this.onChange();
-  }
-
-  setBomb(settings: BombSettings): void {
-    if (this.phase !== "lobby") throw new GameError("Bomb Squad settings can only be changed before the game starts");
-    if (settings.game !== "together" && settings.game !== "race") throw new GameError("Unknown Bomb Squad game");
-    const requested = Math.trunc(Number(settings.squads));
-    const modules = Number(settings.modules);
-    const wires = Number(settings.wires);
-    const minutes = Number(settings.minutes);
-    const penaltySec = Number(settings.penaltySec);
-    if (!(requested >= 1 && requested <= BOMB_MAX_SQUADS)) throw new GameError(`Squads must be between 1 and ${BOMB_MAX_SQUADS}`);
-    if (!(BOMB_MODULES as readonly number[]).includes(modules)) throw new GameError("Unsupported modules per squad");
-    if (!(BOMB_WIRES as readonly number[]).includes(wires)) throw new GameError("Unsupported wires per module");
-    if (!(BOMB_MINUTES as readonly number[]).includes(minutes)) throw new GameError("Unsupported bomb timer");
-    if (!(BOMB_PENALTIES as readonly number[]).includes(penaltySec)) throw new GameError("Unsupported wrong-cut penalty");
-    // Only a change to the Squads control itself counts as picking a number: switching to Race
-    // raises a single squad to 2 without turning off auto-sizing.
-    const touched = requested !== this.bomb.squads;
-    const squads = settings.game === "race" && requested < 2 ? 2 : requested;
-    this.bomb = { game: settings.game, squads, modules, wires, minutes, penaltySec };
-    if (touched) this.bombSquadsManual = true;
-    this.refreshBombSquads();
-    this.onChange();
-  }
-
   setSiege(settings: SiegeSettings): void {
     if (this.phase !== "lobby") throw new GameError("Kingdom Siege settings can only be changed before the game starts");
     const waves = settings.waves === "endless" ? "endless" : Number(settings.waves);
@@ -430,20 +363,11 @@ export class Game {
     this.onChange();
   }
 
-  /** Until the host picks a number, use the fewest squads that keep everyone at 6 or under. */
-  private refreshBombSquads(): void {
-    if (this.bombSquadsManual || this.mode !== "bomb" || this.phase !== "lobby") return;
-    const squads = BombGame.recommendSquads(this.players.size, this.bomb.game);
-    if (squads !== this.bomb.squads) this.bomb = { ...this.bomb, squads };
-  }
-
   /**
-   * Teams in the lobby preview: the Tallest Tower or Land Grab setting, Red vs Blue for Tower Fight,
-   * the Dragon's Hoard setting, or Bomb Squad's squads (never more than players); null in solo modes.
+   * Teams in the lobby preview: the Tallest Tower or Land Grab setting, or Red vs Blue for Tower Fight;
+   * null in solo modes.
    */
   teamCount(): number | null {
-    if (this.mode === "bomb") return Math.max(1, Math.min(this.bomb.squads, Math.max(this.players.size, 1)));
-    if (this.mode === "dragon") return Math.max(1, Math.min(this.dragon.teams, this.players.size));
     return this.mode === "tower" ? this.tower.teams : this.mode === "land" ? this.land.teams : this.mode === "fight" ? 2 : null;
   }
 
@@ -665,8 +589,6 @@ export class Game {
       fight: this.fight,
       land: this.land,
       cup: this.cup,
-      dragon: this.dragon,
-      bomb: this.bomb,
       siege: this.siege,
       duel: this.duel,
       sleigh: this.sleigh,

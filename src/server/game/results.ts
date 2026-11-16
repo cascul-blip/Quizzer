@@ -9,8 +9,6 @@ import type { LandGame } from "./land.ts";
 import type { RacerGame } from "./racer.ts";
 import type { RobotGame } from "./robot.ts";
 import type { CupGame } from "./cup.ts";
-import type { BombGame } from "./bomb.ts";
-import type { DragonGame } from "./dragon.ts";
 import type { DuelGame } from "./duel.ts";
 import type { SiegeGame } from "./siege.ts";
 import type { SubGame } from "./submarine.ts";
@@ -177,127 +175,6 @@ export function buildDuelResultsCsv(game: DuelGame): string {
     });
     return row;
   });
-  return toCsv([header, ...rows]);
-}
-
-/** 222000 → "3:42" */
-function minutesSeconds(ms: number): string {
-  const secs = Math.round(ms / 1000);
-  return `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}`;
-}
-
-/**
- * Dragon's Hoard: one row per player, grouped by team in final team order. The class's
- * Act 1 result is in every row. A grab hits a team, not a player, so "Team gold lost to grabs" is the team's.
- */
-export function buildDragonResultsCsv(game: DragonGame): string {
-  const header = [
-    "Team",
-    "Team rank",
-    "Team gold",
-    "Nickname",
-    "Correct",
-    "Wrong",
-    "Accuracy %",
-    "Dragon hits",
-    "Shield of Faith right",
-    "Shield of Faith wrong",
-    "Chests opened",
-    "Gold found",
-    "Gold grabbed",
-    "Team gold lost to grabs",
-    "Gold lost to traps",
-    "Jackpots won",
-    "Dragon",
-    "Time to slay",
-    "Shield of Faith held",
-    "Shield of Faith failed",
-  ];
-  const r = game.result();
-  const dragon = r.slain ? "Slain" : "Escaped";
-  const slay = r.slain && r.slainMs !== null ? minutesSeconds(r.slainMs) : "";
-  const rows: (string | number)[][] = [];
-  for (const t of game.rankedTeams()) {
-    const members = [...game.players.values()].filter((p) => p.team === t.index).sort((a, b) => b.goldFound + b.goldGrabbed - (a.goldFound + a.goldGrabbed) || b.correct - a.correct);
-    for (const p of members) {
-      const answered = p.correct + p.wrong;
-      rows.push([
-        t.name,
-        t.rank,
-        t.gold,
-        p.nickname,
-        p.correct,
-        p.wrong,
-        answered ? Math.round((p.correct / answered) * 100) : "",
-        p.hits,
-        p.runeRight,
-        p.runeWrong,
-        p.chestsOpened,
-        p.goldFound,
-        p.goldGrabbed,
-        t.lostToGrabs,
-        p.lostToTraps,
-        p.jackpots,
-        dragon,
-        slay,
-        r.runeHeld,
-        r.runeFailed,
-      ]);
-    }
-  }
-  return toCsv([header, ...rows]);
-}
-
-/**
- * Bomb Squad: one row per player. Together rows share the class result. Race rank is blank
- * in Together. "Time lost" is seconds the player's own wrong cuts and wrong keypad entries took off.
- */
-export function buildBombResultsCsv(game: BombGame): string {
-  const header = [
-    "Squad",
-    "Squad result",
-    "Squad time left",
-    "Squad rank",
-    "Nickname",
-    "Wires held",
-    "Right wires held",
-    "Right cuts",
-    "Wrong cuts",
-    "Keypad right",
-    "Keypad wrong",
-    "Time lost to wrong cuts",
-    "Modules cleared",
-    "Total time lost",
-  ];
-  const race = game.settings.game === "race";
-  const ranks = new Map(game.rankedSquads().map((s) => [s.index, s.rank]));
-  const classResult = game.outcome === "defused" ? "defused" : "exploded";
-  const rows: (string | number)[][] = [];
-  const order = race ? game.rankedSquads() : game.squads.map((s) => ({ ...s, rank: 0 }));
-  for (const s of order) {
-    const members = [...game.players.values()].filter((p) => p.squad === s.index).sort((a, b) => b.rightCuts - a.rightCuts || a.nickname.localeCompare(b.nickname));
-    const result = race ? (s.finished ? "defused" : "exploded") : classResult;
-    const left = minutesSeconds(s.timeLeftMs);
-    const lost = Math.round(s.timeLostMs / 1000);
-    for (const p of members) {
-      rows.push([
-        s.name,
-        result,
-        left,
-        race ? (ranks.get(s.index) ?? "") : "",
-        p.nickname,
-        p.wiresHeld,
-        p.rightHeld,
-        p.rightCuts,
-        p.wrongCuts,
-        p.keypadRight,
-        p.keypadWrong,
-        Math.round(p.timeLostMs / 1000),
-        s.modulesCleared,
-        lost,
-      ]);
-    }
-  }
   return toCsv([header, ...rows]);
 }
 
