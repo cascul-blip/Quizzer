@@ -35,6 +35,7 @@ import {
   type GameMode,
   type HillSetting,
   type SleighSettings,
+  type GiftSettings,
   type HostGameState,
   type LandSettings,
   type Pacing,
@@ -49,6 +50,7 @@ import {
   type TowerSettings,
 } from "../../shared/protocol.ts";
 import { SIEGE_WAVE_CHOICES, type SiegeWaves } from "../../shared/siege-rules.ts";
+import { GIFT_DEFAULT_MINUTES, GIFT_MINUTES } from "../../shared/gift-rules.ts";
 import { SLEIGH_DEFAULT_MINUTES, SLEIGH_MINUTES } from "../../shared/sleigh-rules.ts";
 import { cleanAvatar, randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import { MAX_TYPED_ANSWER, checkAnswer, type AnswerValue } from "../../shared/answer-match.ts";
@@ -75,6 +77,7 @@ export const DEFAULT_DRAGON: DragonSettings = { teams: 2, toughness: "normal", b
 export const DEFAULT_BOMB: BombSettings = { game: "together", squads: 1, modules: 3, wires: 3, minutes: 5, penaltySec: 15 };
 export const DEFAULT_SIEGE: SiegeSettings = { waves: 5, theme: DEFAULT_SIEGE_THEME };
 export const DEFAULT_DUEL: DuelSettings = { rounds: DUEL_DEFAULT_ROUNDS, theme: DEFAULT_DUEL_THEME };
+export const DEFAULT_GIFT: GiftSettings = { minutes: GIFT_DEFAULT_MINUTES };
 export const DEFAULT_SLEIGH: SleighSettings = { minutes: SLEIGH_DEFAULT_MINUTES };
 
 interface Answer {
@@ -131,6 +134,7 @@ interface GameOptions {
   siege?: SiegeSettings;
   duel?: DuelSettings;
   sleigh?: SleighSettings;
+  gift?: GiftSettings;
   protect?: boolean;
 }
 
@@ -162,6 +166,7 @@ export class Game {
   siege: SiegeSettings;
   duel: DuelSettings;
   sleigh: SleighSettings;
+  gift: GiftSettings;
   /** When the current phase's countdown ends (intro/open), for views. */
   phaseEndsAt = 0;
   openedAt = 0;
@@ -206,6 +211,7 @@ export class Game {
     this.siege = { ...(opts.siege ?? DEFAULT_SIEGE), theme: siegeTheme(opts.siege?.theme) };
     this.duel = { ...(opts.duel ?? DEFAULT_DUEL), theme: duelTheme(opts.duel?.theme) };
     this.sleigh = { ...(opts.sleigh ?? DEFAULT_SLEIGH) };
+    this.gift = { ...(opts.gift ?? DEFAULT_GIFT) };
     this.protect = opts.protect ?? true;
   }
 
@@ -302,7 +308,7 @@ export class Game {
 
   setMode(mode: GameMode): void {
     if (this.phase !== "lobby") throw new GameError("The game mode can only be changed before the game starts");
-    if (mode !== "classic" && mode !== "tower" && mode !== "submarine" && mode !== "fight" && mode !== "robot" && mode !== "land" && mode !== "racer" && mode !== "cup" && mode !== "dragon" && mode !== "bomb" && mode !== "siege" && mode !== "duel" && mode !== "sleigh") throw new GameError("Unknown game mode");
+    if (mode !== "classic" && mode !== "tower" && mode !== "submarine" && mode !== "fight" && mode !== "robot" && mode !== "land" && mode !== "racer" && mode !== "cup" && mode !== "dragon" && mode !== "bomb" && mode !== "siege" && mode !== "duel" && mode !== "sleigh" && mode !== "gift") throw new GameError("Unknown game mode");
     this.mode = mode;
     if (mode === "bomb") {
       this.bombSquadsManual = false;
@@ -405,6 +411,14 @@ export class Game {
     const rounds = Number(settings.rounds);
     if (!(DUEL_ROUNDS as readonly number[]).includes(rounds)) throw new GameError("Unsupported number of rounds");
     this.duel = { rounds, theme: pickTheme(settings.theme, duelTheme(this.duel.theme), "Showdown") };
+    this.onChange();
+  }
+
+  setGift(settings: GiftSettings): void {
+    if (this.phase !== "lobby") throw new GameError("Gift Grab settings can only be changed before the game starts");
+    const minutes = Number(settings.minutes);
+    if (!(GIFT_MINUTES as readonly number[]).includes(minutes)) throw new GameError("Unsupported game length");
+    this.gift = { minutes };
     this.onChange();
   }
 
@@ -656,6 +670,7 @@ export class Game {
       siege: this.siege,
       duel: this.duel,
       sleigh: this.sleigh,
+      gift: this.gift,
       teams,
       quiz: { id: this.quizId, title: this.title, questionCount: this.questions.length },
       pacing: this.pacing,

@@ -1,3 +1,4 @@
+import type { GiftItem, GiftPower } from "./gift-rules.ts";
 import type { DuelTheme } from "./duel-theme.ts";
 import type { LandTheme } from "./land-theme.ts";
 import type { SiegeTheme } from "./siege-theme.ts";
@@ -26,7 +27,7 @@ export interface ShuffleOptions {
 
 // ---------- Tallest Tower ----------
 
-export type GameMode = "classic" | "tower" | "submarine" | "fight" | "robot" | "land" | "racer" | "cup" | "dragon" | "bomb" | "siege" | "duel" | "sleigh";
+export type GameMode = "classic" | "tower" | "submarine" | "fight" | "robot" | "land" | "racer" | "cup" | "dragon" | "bomb" | "siege" | "duel" | "sleigh" | "gift";
 export type TowerPhase = "countdown" | "playing" | "podium";
 
 /** Each team also has a shape, so teams can be told apart without relying on colour. */
@@ -116,6 +117,8 @@ export type PlayerMsg =
   | { type: "fight.fire"; dx: number; dy: number }
   | { type: "robot.answer"; seq: number; option: number; text?: string }
   | { type: "robot.move"; dir: RobotDir }
+  | { type: "gift.answer"; seq: number; option: number; text?: string }
+  | { type: "gift.tap"; round: number; item: number }
   | { type: "sleigh.answer"; seq: number; option: number; text?: string }
   /** Santa's Sleigh Run, flight phase only: the phone's stick, where the thumb is from its centre in field directions (+x right, +y down), length 0…1; 0, 0 when let go. Sent at most every SLEIGH_TICK_MS while it changes. */
   | { type: "sleigh.steer"; x: number; y: number }
@@ -171,6 +174,7 @@ export type HostMsg =
   | ({ type: "host.setBomb" } & BombSettings)
   | ({ type: "host.setSiege" } & SiegeSettings)
   | ({ type: "host.setDuel" } & DuelSettings)
+  | ({ type: "host.setGift" } & GiftSettings)
   | ({ type: "host.setSleigh" } & SleighSettings)
   | { type: "host.next" }
   | { type: "host.skip" }
@@ -241,7 +245,7 @@ export interface PlayerResult {
 
 export type PlayerView =
   | { kind: "none"; game: null }
-  | { kind: "none"; game: { title: string; phase: Phase | TowerPhase | SubPhase | FightPhase | RobotPhase | LandPhase | RacerPhase | CupPhase | DragonPhase | BombPhase | SiegePhase | DuelPhase | SleighPhase } }
+  | { kind: "none"; game: { title: string; phase: Phase | TowerPhase | SubPhase | FightPhase | RobotPhase | LandPhase | RacerPhase | CupPhase | DragonPhase | BombPhase | SiegePhase | DuelPhase | SleighPhase | GiftPhase } }
   | {
       kind: "player";
       phase: Phase;
@@ -271,7 +275,8 @@ export type PlayerView =
   | PlayerBombView
   | PlayerSiegeView
   | PlayerDuelView
-  | PlayerSleighView;
+  | PlayerSleighView
+  | PlayerGiftView;
 
 export interface TowerAwards {
   mostCorrect: { value: number; nicknames: string[] } | null;
@@ -338,6 +343,7 @@ export interface HostGameState {
   siege: SiegeSettings;
   duel: DuelSettings;
   sleigh: SleighSettings;
+  gift: GiftSettings;
   /** Team preview while the lobby is in a team mode (Tallest Tower, Tower Fight, Land Grab, Dragon's Hoard, Bomb Squad). */
   teams: (TeamInfo & { members: HostPlayer[] })[] | null;
   quiz: { id: string; title: string; questionCount: number };
@@ -1838,7 +1844,8 @@ export type HostView =
   | (HostBombState & { join: JoinInfo })
   | (HostSiegeState & { join: JoinInfo })
   | (HostDuelState & { join: JoinInfo })
-  | (HostSleighState & { join: JoinInfo });
+  | (HostSleighState & { join: JoinInfo })
+  | (HostGiftState & { join: JoinInfo });
 
 export type ServerMsg =
   /** First message on every connection. A new serverId means the server restarted (maybe with new code). */
@@ -1998,4 +2005,59 @@ export interface PlayerSleighView {
   fuelMs: number;
   fuelStartMs: number;
   result: { rank: number; playerCount: number; presents: number; distance: number; awards: string[] } | null;
+}
+
+// ---------- Gift Grab ----------
+
+export type GiftPhase = "countdown" | "playing" | "finishing" | "podium";
+
+export interface GiftSettings {
+  minutes: number;
+}
+
+export interface GiftStanding {
+  id: string;
+  nickname: string;
+  avatar: AvatarChoice;
+  rank: number;
+  score: number;
+  correct: number;
+  connected: boolean;
+  inBonus: boolean;
+}
+
+export interface HostGiftState {
+  kind: "gift";
+  phase: GiftPhase;
+  quiz: { id: string; title: string; questionCount: number };
+  remainingMs: number;
+  standings: GiftStanding[];
+  mostCorrect: { value: number; nicknames: string[] } | null;
+  errors: QuestionError[];
+}
+
+export interface GiftHit {
+  item: number;
+  delta: number;
+  effect: GiftPower | "blocked" | null;
+}
+
+export interface PlayerGiftView {
+  kind: "gift";
+  phase: GiftPhase;
+  remainingMs: number;
+  progress: number;
+  score: number;
+  correct: number;
+  rank: number | null;
+  question: StreamQuestionView | null;
+  feedback: PlayerTowerView["feedback"];
+  bonus: {
+    round: number;
+    remainingMs: number;
+    multiplier: number;
+    items: GiftItem[];
+    hits: GiftHit[];
+    power: GiftPower | null;
+  } | null;
 }

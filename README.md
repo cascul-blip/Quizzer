@@ -104,7 +104,7 @@ quizzer mcp [options]       Run the MCP server over stdio (for AI agents)
 - **Shuffling** is chosen in the lobby for each game; the quiz's shuffle settings in the editor are the defaults. Shuffling answer positions moves each answer to a random tile (and color), so the correct answer isn't always in the same place. The order is fixed when you press Start and is the same on the projector and every phone. True/False keeps True before False.
 - **Streaks**: after 4 correct answers in a row, a player gets 🔥x4 (x5, x6, …) next to their name on the leaderboard, the podium and their phone. A wrong or missed answer resets it.
 - **Show errors**: on the final screen of every game mode, this button swaps the results for a table of the **10 questions with the most wrong answers**, each with its correct answer, so you can go over them with the class. Press **Show results** to switch back. Classic and Racer count wrong answers only, not questions a player let time out; in the other modes a question can come up more than once, and every wrong answer counts.
-- **Protect from abuse**: a lobby checkbox, on by default, for **Tallest Tower**, **Submarine Squad**, **Tower Fight**, **Robot Attack**, **Cup of Death**, **Dragon's Hoard**, **Kingdom Siege** and **Santa's Sleigh Run**. It slows down players who tap random answers instead of reading. The ✗ screen normally shows for 1 second; after **2 wrong answers in a row** it stays **3 seconds longer**, and after **3 or more in a row**, **4 seconds longer**, with a countdown on the phone. A correct answer resets it. Reloading the page doesn't skip the wait.
+- **Protect from abuse**: a lobby checkbox, on by default, for **Tallest Tower**, **Submarine Squad**, **Tower Fight**, **Robot Attack**, **Cup of Death**, **Dragon's Hoard**, **Kingdom Siege**, **Santa's Sleigh Run** and **Gift Grab**. It slows down players who tap random answers instead of reading. The ✗ screen normally shows for 1 second; after **2 wrong answers in a row** it stays **3 seconds longer**, and after **3 or more in a row**, **4 seconds longer**, with a countdown on the phone. A correct answer resets it. Reloading the page doesn't skip the wait.
 - **Results file**: a CSV of every finished game is saved in `data/results/`. The latest one is also at `http://localhost:8080/api/results/latest.csv` on the host computer.
 - **Reconnecting**: if a phone locks, refreshes or drops Wi-Fi, it rejoins as the same player with the same score. Players can also join after the game has started.
 - Only one game runs at a time. The admin, host controls and API only work from the host computer itself (`localhost`). Phones can only reach the player page.
@@ -339,6 +339,15 @@ The Christmas theme replaces the duelists with headless elf bodies carrying the 
 Late joiners start at the bottom of the ladder from the next round. A disconnected player keeps their place and counts as no answer; a kicked player is removed and the ladder closes up. After the last round, **the most points wins**; equal points are ranked by ladder position. The podium awards **Longest reign** (most rounds won on High Noon), **Most wins** and **Biggest climb** (most arenas climbed from the starting arena). The results CSV has one row per player: rank, points, final arena, wins, losses, draws, rounds won on High Noon, and each answer with its time.
 
 The painted art comes from `scripts/showdown-art.py` (sources in `scripts/showdown-art/`, prompts in `Showdown Art Brief.md`); the draw, hat flip, muzzle flash, dust, tumbleweed and walking are animated in code (`src/client/shared/duel-art.tsx`).
+
+## Gift Grab mode
+
+Choose **Game mode → 🎁 Gift Grab** for a self-paced Christmas review in Santa’s Workshop. Pick **3, 5, 7, or 10 minutes** (default 5).
+
+- Every **5 correct answers** unlocks a **15-second** tapping round on that player’s phone. A wrong answer keeps your progress toward the next round.
+- Tap wrapped gifts, headphones, controllers, sneakers, and gift cards to earn points. Socks, coal, ugly sweaters, and toothbrushes subtract points. Every hit is worth **10 points** before the multiplier, and the score cannot drop below zero.
+- The session’s early, middle, and final thirds pay **×1, ×2, and ×3**. Each bonus keeps the multiplier it was earned with. Every third bonus also launches a **Candy Cane Shield** or **Golden Star**, alternating. The shield blocks the next dud penalty and the star doubles the next gift.
+- Each player has a workshop chest on the projector. Their gift pile grows with their score, and a badge shows when they are in a bonus round. The timer lets earned rounds finish, while **End game** stops immediately. Rank is based on points, then correct answers. The results include **Most correct answers**, **Show errors**, and a CSV with quiz and tapping totals.
 
 ## Santa's Sleigh Run mode
 

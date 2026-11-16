@@ -1,3 +1,4 @@
+import { GiftPlayer } from "./gift.tsx";
 import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { cleanAvatar, type AvatarChoice } from "../../shared/avatars.ts";
@@ -204,6 +205,8 @@ function App() {
     body = <SiegePlayer view={view} send={send} />;
   } else if (view.kind === "duel") {
     body = <DuelPlayer view={view} send={send} />;
+  } else if (view.kind === "gift") {
+    body = <GiftPlayer view={view} send={send} />;
   } else if (view.kind === "sleigh") {
     body = <SleighPlayer view={view} send={send} />;
   } else {

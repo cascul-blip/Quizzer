@@ -1,3 +1,4 @@
+import { GIFT_GOODS, GIFT_READY_MS } from "../src/shared/gift-rules.ts";
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { AUTO_REVEAL_MS, INTRO_MS } from "../src/server/game/game.ts";
 import { RacerGame } from "../src/server/game/racer.ts";
@@ -1389,6 +1390,70 @@ describe("Santa's Sleigh Run over WebSockets", () => {
     host.send({ type: "host.close" });
     await host.hostState((v) => v.kind === "idle");
     [host, ...players].forEach((s) => s.close());
+  });
+});
+
+describe("Gift Grab over WebSockets", () => {
+  test("lobby settings, earned bonus, reconnect, standings and CSV", async () => {
+    const quiz = store.create({
+      title: "Gift Grab E2E",
+      questions: [{ type: "true_false", text: "True?", correct: [0] }],
+    });
+    const url = `ws://localhost:${srv.port}/ws`;
+    const host = await TestSocket.open(url);
+    const player = await TestSocket.open(url);
+    let resumed: TestSocket | undefined;
+    try {
+      host.send({ type: "host.hello" });
+      host.send({ type: "host.open", quizId: quiz.id });
+      await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
+      host.send({ type: "host.setMode", mode: "gift" });
+      await host.hostState((v) => v.kind === "classic" && v.mode === "gift" && v.gift.minutes === 5);
+      host.send({ type: "host.setGift", minutes: 4 });
+      expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: "Unsupported game length" });
+      host.send({ type: "host.setGift", minutes: 3 });
+      player.send({ type: "join", nickname: "Noel" });
+      const joined = await player.waitFor((m) => m.type === "joined");
+      await host.hostState((v) => v.kind === "classic" && v.gift.minutes === 3 && v.players.length === 1);
+      host.send({ type: "host.start", pacing: "manual" });
+      await host.hostState((v) => v.kind === "gift" && v.phase === "countdown");
+      clock.advance(3_000);
+      for (let i = 1; i <= 5; i++) {
+        const state = await player.playerState((v) => v.kind === "gift" && v.question?.seq === i);
+        if (state.view.kind !== "gift") throw new Error("Expected Gift Grab view");
+        player.send({ type: "gift.answer", seq: state.view.question!.seq, option: 0 });
+        await player.playerState((v) => v.kind === "gift" && v.feedback?.seq === i);
+        clock.advance(FEEDBACK_MS);
+        srv.hub.broadcast();
+      }
+      const earned = await player.playerState((v) => v.kind === "gift" && v.bonus !== null);
+      if (earned.view.kind !== "gift" || joined.type !== "joined") throw new Error("Expected joined Gift Grab player");
+      const bonus = earned.view.bonus!;
+      const item = bonus.items.find((candidate) => GIFT_GOODS.some((kind) => kind === candidate.kind))!;
+      clock.advance(GIFT_READY_MS + item.from);
+      player.send({ type: "gift.tap", round: bonus.round, item: item.id });
+      await player.playerState((v) => v.kind === "gift" && v.score === 10);
+      await host.hostState((v) => v.kind === "gift" && v.standings[0]?.score === 10 && v.standings[0]?.inBonus);
+
+      player.close();
+      resumed = await TestSocket.open(url);
+      resumed.send({ type: "resume", token: joined.token });
+      const restored = await resumed.playerState((v) => v.kind === "gift");
+      expect(restored.view).toMatchObject({ score: 10, bonus: { round: 1, hits: [{ item: item.id, delta: 10 }] } });
+      host.send({ type: "host.end" });
+      await host.hostState((v) => v.kind === "gift" && v.phase === "podium");
+      await resumed.playerState((v) => v.kind === "gift" && v.phase === "podium" && v.rank === 1);
+      expect(await (await fetch(`${base}/api/results/latest.csv`)).text()).toContain("1,Noel,10,5,0,1,1,0,0");
+
+      host.send({ type: "host.open", quizId: quiz.id });
+      await host.hostState((v) => v.kind === "classic" && v.mode === "gift" && v.gift.minutes === 3);
+    } finally {
+      host.send({ type: "host.close" });
+      await host.hostState((v) => v.kind === "idle");
+      host.close();
+      player.close();
+      resumed?.close();
+    }
   });
 });
 
