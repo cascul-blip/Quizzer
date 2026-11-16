@@ -1,0 +1,26 @@
+# Projector gift chest artwork
+
+Four levels by standings position: maximum (first), overflowing (second), medium (third), full (everyone else). Ties use existing standings order to feature exactly three players.
+
+## Medium chest (third place)
+
+Use case: precise-object-edit. Edit target: first reference (full red Christmas chest). Second reference is the more overflowing version, for style and abundance comparison. Create an INTERMEDIATE level between these two, with about 22 wrapped presents: more presents packed above the chest rim and spilling down its sides than the first image, but visibly less abundant than the second. Keep the same red wood chest, brass corners, peppermint medallion, holly, front perspective, warm polished storybook rendering, and red green cream gold teal wrapped parcels. Ground all gifts in connected overlapping heaps, physically resting on other gifts or on the same ground plane as the chest. Add several presents in front of the chest. Preserve the recognizable chest front. Canvas 1536x1024 landscape, whole silhouette visible, transparent padding. No text, no floor rectangle, no background, no floating objects. Genuine transparent background.
+
+## Maximum chest (first place)
+
+Use case: precise-object-edit. Edit target: supplied overflowing Christmas chest illustration. Make a fourth MAXIMUM overflowing level for first place in the game: dramatically more abundant than the reference, about 55 wrapped presents in a tall spectacular mound towering above the open lid and cascading into dense heaps on both sides and across the foreground. The SAME red wooden chest with brass corners, peppermint medallion and holly remains recognizable centrally, but the gifts now visually dominate. Keep the chest body around the central half of the canvas width and lower half of canvas height; extend the mound vertically well above the lid. Varied red green cream gold teal wrapping with ribbon bows. Match the warm polished storybook style and front perspective. Every present is supported by other presents, chest, or ground; cohesive overlapping contact shadows, no airborne or floating presents. Entire wide-based mound silhouette in frame with transparent padding, landscape 1536x1024. No text, no floor rectangle or environment. Genuine transparent background.
+
+Generated with the built-in image_gen tool using src/client/shared/gift/chest.webp as the reference. Converted to 960×640 WebP with alpha preserved.
+
+## Full chest
+
+Use case: precise-object-edit. Asset type: transparent game illustration for a Christmas quiz projector leaderboard.
+Input image: edit target and visual style reference, the red wooden open chest with brass corners, peppermint medallion and holly.
+Create one cohesive illustration of this same chest overflowing with a moderate heap of about 12 colorful wrapped Christmas presents. Presents nest INSIDE the open chest, crest above the front rim, lean against each other, and spill down both sides into small piles resting on the same ground plane as the chest base. All objects have physical support, overlapping contact, coherent perspective and warm contact shadows. Keep the central peppermint medallion recognizable. Match the polished warm storybook game rendering of the reference, red green gold cream wrapping and varied box shapes and ribbon bows. Front view with slightly visible top surfaces as in reference. Complete silhouette with 5% transparent padding, landscape 3:2 canvas. Chest occupies central 55% of width, its base near 90% canvas height. No floor rectangle, no background, no text, no watermark, no floating or airborne presents. Real transparent alpha background, including outside soft contact shadows.
+
+## Overflowing chest
+
+Use case: precise-object-edit. Asset type: transparent game illustration for a Christmas quiz projector leaderboard.
+Input image: edit target and visual style reference, red wooden open chest with brass corners, peppermint medallion and holly.
+Create one cohesive illustration of this same chest absolutely OVERFLOWING with a huge abundant heap of about 35 colorful wrapped Christmas presents. Presents are crammed inside the chest, mound high above its rim, spill down both sides in densely overlapping supported heaps and spread across the ground in front and beside the chest. Every box rests on another box or on the ground, with contact shadows and coherent perspective. A generous wide grounded base, no isolated floating objects. Keep the front peppermint medallion partly visible and the red chest recognizable amid the abundance. Match reference polished warm storybook game rendering. Red green gold cream and teal wrapping, varied rectangular and tall parcels with ribbon bows. Front view with slightly visible top surfaces as in reference. Complete silhouette, 5% transparent padding, landscape 3:2 canvas. Chest occupies central 55% of width, its base near 90% canvas height; mound rises near the top and spreads to both canvas edges within padding. No floor rectangle, background, text or watermark. Genuine transparent alpha background outside the objects and soft contact shadows.
+
