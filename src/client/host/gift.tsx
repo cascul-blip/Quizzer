@@ -5,24 +5,19 @@ import { formatClock, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
 import { Award } from "./tower.tsx";
 import workshop from "../shared/gift/workshop-projector.webp";
-import chest from "../shared/gift/chest.webp";
 import present from "../shared/gift/present.webp";
+import chestFull from "../shared/gift/chest-projector-full.webp";
+import chestOverflowing from "../shared/gift/chest-projector-overflowing.webp";
+import chestMedium from "../shared/gift/chest-projector-medium.webp";
+import chestMaximum from "../shared/gift/chest-projector-maximum.webp";
 import "./gift.css";
 
 type GiftView = Extract<HostView, { kind: "gift" }>;
 
-// Wider lower tiers keep a tall pile visually balanced above its chest.
-const PILE_ROWS = [
-  [-26, -8, 10, 27],
-  [-23, -5, 13, 23],
-  [-17, 0, 17],
-  [-11, 7],
-  [0],
-];
-const PARCEL_COLORS = [0, 75, 155, 210, 300];
-const HALF_PILE_SCORE = 120;
+// Standings order selects exactly three featured heaps, including when ranks tie.
+const PODIUM_HEAPS = [chestMaximum, chestOverflowing, chestMedium];
 
-function GiftStation({ player, final }: { player: GiftStanding; final: boolean }) {
+function GiftStation({ player, position, final }: { player: GiftStanding; position: number; final: boolean }) {
   const previousScore = useRef(player.score);
   const [burst, setBurst] = useState(0);
   useEffect(() => {
@@ -30,35 +25,17 @@ function GiftStation({ player, final }: { player: GiftStanding; final: boolean }
     previousScore.current = player.score;
   }, [player.score, final]);
 
-  // Use the same curve for every station so a rival gaining points never shrinks this pile.
-  const height = PILE_ROWS.length * player.score / (player.score + HALF_PILE_SCORE);
+  const heap = PODIUM_HEAPS[position] ?? chestFull;
   const leading = player.rank === 1 && (player.score > 0 || final);
   return (
     <li class={`gift-station ${leading ? "gift-leading" : ""} ${!player.connected && !final ? "gift-offline" : ""}`}>
       <div class="gift-station-art" aria-hidden="true">
         <div class="gift-chest-glow" />
-        {PILE_ROWS.map((row, tier) => {
-          const fill = Math.min(1, height - tier);
-          if (fill <= 0) return null;
-          return (
-            <div class="gift-pile-row" key={tier} style={{ bottom: `${24 + tier * 12}%` }}>
-              {row.map((offset, i) => (
-                <img
-                  key={offset}
-                  src={present}
-                  alt=""
-                  style={{
-                    left: `${50 + offset * (tier === 0 ? 1.16 : 1)}%`,
-                    "--parcel-turn": `${(i % 2 ? 1 : -1) * (8 + (tier + i) % 3 * 4)}deg`,
-                    "--parcel-color": `${PARCEL_COLORS[(i + tier * 2) % PARCEL_COLORS.length]}deg`,
-                    "--parcel-fill": 0.44 + fill * 0.56,
-                  }}
-                />
-              ))}
-            </div>
-          );
-        })}
-        <img class="gift-station-chest" src={chest} alt="" />
+        <img
+          class="gift-station-chest gift-station-heap"
+          src={heap}
+          alt=""
+        />
         {burst > 0 && !final && <img key={burst} class="gift-scored-parcel" src={present} alt="" />}
       </div>
       <div class="gift-station-plaque">
@@ -82,6 +59,7 @@ export function GiftStage({ view, send }: { view: GiftView; send: Send }) {
   for (const player of view.standings) {
     if (!seats.current.has(player.id)) seats.current.set(player.id, seats.current.size);
   }
+  const scoringPositions = new Map(view.standings.map((player, index) => [player.id, index]));
   const stations = final ? view.standings : [...view.standings].sort((a, b) => seats.current.get(a.id)! - seats.current.get(b.id)!);
   const columns = Math.max(1, Math.min(6, stations.length > 6 ? Math.ceil(stations.length / 2) : stations.length));
 
@@ -116,7 +94,7 @@ export function GiftStage({ view, send }: { view: GiftView; send: Send }) {
         {final && showErrors ? <ErrorsTable errors={view.errors} /> : (
           <>
             <ul class={`gift-standings ${stations.length > 6 ? "gift-standings-dense" : ""}`} style={{ "--gift-columns": columns }} aria-label={final ? "Final standings" : "Live standings"}>
-              {stations.map((player) => <GiftStation key={player.id} player={player} final={final} />)}
+              {stations.map((player) => <GiftStation key={player.id} player={player} position={scoringPositions.get(player.id)!} final={final} />)}
             </ul>
             {final && view.mostCorrect && <Award icon="✓" title="Most correct answers" award={view.mostCorrect} unit="correct" />}
           </>
