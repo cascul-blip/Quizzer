@@ -1,3 +1,4 @@
+import type { GiftGame } from "./gift.ts";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { FightGame } from "./fight.ts";
@@ -96,6 +97,14 @@ export function buildRobotResultsCsv(game: RobotGame): string {
     return [s.rank, p.nickname, status, p.lives, p.outRound === null ? game.attacks : p.outRound - 1, p.correct, p.wrong, answered ? Math.round((p.correct / answered) * 100) : "", p.moves, p.hits];
   });
   return toCsv([header, ...rows]);
+}
+
+export function buildGiftResultsCsv(game: GiftGame): string {
+  const header = ["Rank", "Nickname", "Score", "Correct", "Wrong", "Bonus rounds earned", "Gift taps", "Dud taps", "Power-ups collected"];
+  return toCsv([header, ...game.standings().map(({ id, rank }) => {
+    const player = game.players.get(id)!;
+    return [rank, player.nickname, player.score, player.correct, player.wrong, player.rounds, player.goodTaps, player.dudTaps, player.powerups];
+  })]);
 }
 
 /** Santa's Sleigh Run: one row per player in final standing order. */

@@ -1,3 +1,5 @@
+import { GIFT_MINUTES } from "../../shared/gift-rules.ts";
+import { GiftStage } from "./gift.tsx";
 import { duelArenaName, duelName, duelTheme, type DuelTheme } from "../../shared/duel-theme.ts";
 import { everyoneAnswered, revealCue } from "./reveal-cue.ts";
 import { SnowballLobbyPreview } from "../shared/duel-christmas.tsx";
@@ -122,6 +124,8 @@ function App() {
     body = <SiegeStage view={view} send={send} />;
   } else if (view.kind === "duel") {
     body = <DuelStage view={view} send={send} />;
+  } else if (view.kind === "gift") {
+    body = <GiftStage view={view} send={send} />;
   } else if (view.kind === "sleigh") {
     body = <SleighStage view={view} send={send} />;
   } else {
@@ -375,6 +379,7 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
               <option value="robot">🤖 Robot Attack</option>
               <option value="land">🚩 Land Grab</option>
               <option value="racer">{racerName(view.racer?.theme)}</option>
+              <option value="gift">🎁 Gift Grab</option>
               <option value="sleigh">🎅 Santa's Sleigh Run</option>
               <option value="cup">{cupName(view.cup.theme)}</option>
               <option value="dragon">🐉 Dragon's Hoard</option>
@@ -485,6 +490,16 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
             </>
           ) : view.mode === "robot" ? (
             <span class="opt mode-hint">Answer questions to earn moves, then dodge the robot's lasers. Last one standing wins.</span>
+          ) : view.mode === "gift" ? (
+            <>
+              <label class="opt">
+                Time
+                <select value={view.gift.minutes} onChange={(e) => send({ type: "host.setGift", minutes: Number(e.currentTarget.value) })}>
+                  {GIFT_MINUTES.map((minutes) => <option key={minutes} value={minutes}>{minutes} min</option>)}
+                </select>
+              </label>
+              <span class="opt mode-hint">Every five correct answers earns 15 seconds to tap gifts and dodge duds. Later rounds are worth more.</span>
+            </>
           ) : view.mode === "sleigh" ? (
             <>
               <label class="opt">
@@ -596,7 +611,7 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
             />
             Shuffle answer positions
           </label>
-          {(view.mode === "tower" || view.mode === "submarine" || view.mode === "fight" || view.mode === "robot" || view.mode === "cup" || view.mode === "dragon" || view.mode === "siege" || view.mode === "sleigh") && (
+          {(view.mode === "tower" || view.mode === "submarine" || view.mode === "fight" || view.mode === "robot" || view.mode === "cup" || view.mode === "dragon" || view.mode === "siege" || view.mode === "sleigh" || view.mode === "gift") && (
             <label class="opt check" title="Wrong answers in a row make a player wait longer before the next question">
               <input type="checkbox" checked={view.protect} onChange={(e) => send({ type: "host.setProtect", on: e.currentTarget.checked })} />
               Protect from abuse

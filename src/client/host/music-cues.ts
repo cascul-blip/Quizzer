@@ -23,6 +23,7 @@ const LOBBY: Record<GameMode, MusicTrackId> = {
   siege: "siege-lobby",
   duel: "showdown-lobby",
   sleigh: "sleigh-lobby",
+  gift: "tower-christmas-lobby",
 };
 
 let landKey = "";
@@ -189,6 +190,10 @@ export function musicFor(view: HostView | null): MusicCue {
       const intensity = Math.max(0.2, Math.min(giant ? 1 : 0.84, 0.2 + busy * 0.35 + lost * 0.45), giant ? 0.85 : 0);
       return { track: battle, intensity, key: `siege-wave-${view.wave}` };
     }
+    case "gift":
+      return view.phase === "podium"
+        ? { track: "tower-christmas-results" }
+        : { track: "tower-christmas-play", intensity: view.phase === "finishing" ? 1 : 0.4 };
     case "sleigh": {
       if (view.phase === "podium") return { track: "sleigh-results" };
       // Time up and the last flight over: the celebration before the podium, with the extra bells and timpani.
