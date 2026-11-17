@@ -17,7 +17,6 @@ import { RacerPlayer } from "./racer.tsx";
 import { CupPlayer } from "./cup.tsx";
 import { SiegePlayer } from "./siege.tsx";
 import { DuelPlayer } from "./duel.tsx";
-import { SleighPlayer } from "./sleigh.tsx";
 import { RobotPlayer } from "./robot.tsx";
 import { SubPlayer } from "./submarine.tsx";
 import { TowerPlayer } from "./tower.tsx";
@@ -201,8 +200,6 @@ function App() {
     body = <DuelPlayer view={view} send={send} />;
   } else if (view.kind === "gift") {
     body = <GiftPlayer view={view} send={send} />;
-  } else if (view.kind === "sleigh") {
-    body = <SleighPlayer view={view} send={send} />;
   } else {
     body = <Game view={view} send={send} />;
   }

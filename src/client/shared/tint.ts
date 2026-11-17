@@ -1,6 +1,6 @@
 /**
  * Player-colour art: the art build splits each piece painted in key cyan into a shading layer
- * and a paint mask (see scripts/sleigh-art.py). This fills the mask with a colour and draws the
+ * and a paint mask. This fills the mask with a colour and draws the
  * shading over it, once per piece and colour, on a canvas, so a moving sprite is a plain image
  * (no SVG mask or blend mode to redo every frame).
  */
