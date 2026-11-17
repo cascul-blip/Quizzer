@@ -20,7 +20,6 @@ const LOBBY: Record<GameMode, MusicTrackId> = {
   cup: "cup-lobby",
   siege: "siege-lobby",
   duel: "showdown-lobby",
-  sleigh: "sleigh-lobby",
   gift: "tower-christmas-lobby",
 };
 
@@ -155,20 +154,5 @@ export function musicFor(view: HostView | null): MusicCue {
       return view.phase === "podium"
         ? { track: "tower-christmas-results" }
         : { track: "tower-christmas-play", intensity: view.phase === "finishing" ? 1 : 0.4 };
-    case "sleigh": {
-      if (view.phase === "podium") return { track: "sleigh-results" };
-      // Time up and the last flight over: the celebration before the podium, with the extra bells and timpani.
-      if (view.finished) return { track: "sleigh-results", intensity: 0.9, key: "sleigh-finale" };
-      // One track for the whole round: a few sleigh bells and pizzicato at the start of the quiz,
-      // the carol builds as its time runs out and through "get ready to fly", and plays in full
-      // (faster) while the sleighs are in the air.
-      if (view.phase === "quiz") {
-        const elapsed = Math.max(0, Math.min(1, 1 - view.phaseRemainingMs / Math.max(1, view.phaseDurationMs)));
-        return { track: "sleigh-flight", intensity: 0.15 + elapsed * 0.4, rampTo: 0.55, rampMs: view.phaseRemainingMs, key: `sleigh-q${view.round}` };
-      }
-      if (view.phase === "intro") return { track: "sleigh-flight", intensity: 0.6, rampTo: 0.8, rampMs: view.phaseRemainingMs, key: `sleigh-intro${view.round}` };
-      if (view.phase === "flight") return { track: "sleigh-flight", intensity: 1, key: `sleigh-flight${view.round}` };
-      return { track: "sleigh-flight", intensity: 0.05, key: "sleigh-countdown" };
-    }
   }
 }

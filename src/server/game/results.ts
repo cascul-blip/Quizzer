@@ -3,8 +3,6 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { FightGame } from "./fight.ts";
 import type { Game } from "./game.ts";
-import { METRES_PER_UNIT } from "../../shared/sleigh-rules.ts";
-import type { SleighGame } from "./sleigh.ts";
 import type { LandGame } from "./land.ts";
 import type { RacerGame } from "./racer.ts";
 import type { RobotGame } from "./robot.ts";
@@ -103,17 +101,6 @@ export function buildGiftResultsCsv(game: GiftGame): string {
     const player = game.players.get(id)!;
     return [rank, player.nickname, player.score, player.correct, player.wrong, player.rounds, player.goodTaps, player.dudTaps, player.powerups];
   })]);
-}
-
-/** Santa's Sleigh Run: one row per player in final standing order. */
-export function buildSleighResultsCsv(game: SleighGame): string {
-  const header = ["Rank", "Nickname", "Presents", "Distance (m)", "Correct", "Wrong", "Accuracy %", "Bumps", "Seconds flown"];
-  const rows: (string | number)[][] = game.standings().map((s) => {
-    const p = game.players.get(s.id)!;
-    const answered = p.correct + p.wrong;
-    return [s.rank, p.nickname, s.presents, Math.round(Math.max(0, s.distance) * METRES_PER_UNIT), p.correct, p.wrong, answered ? Math.round((p.correct / answered) * 100) : "", s.bumps, Math.round(p.flownMs / 100) / 10];
-  });
-  return toCsv([header, ...rows]);
 }
 
 /** Cup of Death: one row per player in final standing order. */

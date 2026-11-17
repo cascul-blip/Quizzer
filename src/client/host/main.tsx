@@ -14,7 +14,6 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { CUP_MAX_CUPS, CUP_MIN_CUPS, DUEL_ROUNDS, HILL_SETTINGS, LAND_MINUTES, LAND_MIN_TEAMS, MAX_TEAMS, TOWER_MINUTES, type GameMode, type HillSetting, type HostPlayer, type HostView, type Pacing, type ServerMsg } from "../../shared/protocol.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { SIEGE_WAVE_CHOICES } from "../../shared/siege-rules.ts";
-import { SLEIGH_MINUTES } from "../../shared/sleigh-rules.ts";
 import type { QuizSummary } from "../../shared/quiz-schema.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { play, unlockAudio } from "../shared/sounds.ts";
@@ -29,7 +28,6 @@ import { LandStage } from "./land.tsx";
 import { RacerStage } from "./racer.tsx";
 import { CupStage } from "./cup.tsx";
 import { DuelStage } from "./duel.tsx";
-import { SleighStage } from "./sleigh.tsx";
 import { SiegeLobbyPreview, SiegeStage } from "./siege.tsx";
 import { RobotStage } from "./robot.tsx";
 import { SubStage } from "./submarine.tsx";
@@ -119,8 +117,6 @@ function App() {
     body = <DuelStage view={view} send={send} />;
   } else if (view.kind === "gift") {
     body = <GiftStage view={view} send={send} />;
-  } else if (view.kind === "sleigh") {
-    body = <SleighStage view={view} send={send} />;
   } else {
     body = <Game view={view} send={send} />;
   }
@@ -371,7 +367,6 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
               <option value="land">🚩 Land Grab</option>
               <option value="racer">{racerName(view.racer?.theme)}</option>
               <option value="gift">🎁 Gift Grab</option>
-              <option value="sleigh">🎅 Santa's Sleigh Run</option>
               <option value="cup">{cupName(view.cup.theme)}</option>
               <option value="siege">{siegeTheme(view.siege.theme) === "christmas" ? "🎄" : "🛡️"} {siegeName(view.siege.theme)}</option>
               <option value="duel">{duelTheme(view.duel.theme) === "christmas" ? "❄️ Snowball Showdown" : "🤠 Showdown"}</option>
@@ -489,20 +484,6 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
               </label>
               <span class="opt mode-hint">Every five correct answers earns 15 seconds to tap gifts and dodge duds. Later rounds are worth more.</span>
             </>
-          ) : view.mode === "sleigh" ? (
-            <>
-              <label class="opt">
-                Time
-                <select value={view.sleigh.minutes} onChange={(e) => send({ type: "host.setSleigh", minutes: Number(e.currentTarget.value) })}>
-                  {SLEIGH_MINUTES.map((m) => (
-                    <option key={m} value={m}>
-                      {m} min
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <span class="opt mode-hint">Answer questions to power your reindeer, then steer your sleigh over the snowy city from your phone. Fly over a house to deliver its present. Every round brings 20 new houses; most presents when time runs out wins.</span>
-            </>
           ) : view.mode === "cup" ? (
             <>
               <label class="opt">
@@ -596,7 +577,7 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
             />
             Shuffle answer positions
           </label>
-          {(view.mode === "tower" || view.mode === "submarine" || view.mode === "fight" || view.mode === "robot" || view.mode === "cup" || view.mode === "siege" || view.mode === "sleigh" || view.mode === "gift") && (
+          {(view.mode === "tower" || view.mode === "submarine" || view.mode === "fight" || view.mode === "robot" || view.mode === "cup" || view.mode === "siege" || view.mode === "gift") && (
             <label class="opt check" title="Wrong answers in a row make a player wait longer before the next question">
               <input type="checkbox" checked={view.protect} onChange={(e) => send({ type: "host.setProtect", on: e.currentTarget.checked })} />
               Protect from abuse
