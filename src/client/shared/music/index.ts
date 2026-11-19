@@ -33,7 +33,10 @@ let enabled = read(ON_KEY, "1") === "1";
 let volume = Math.max(0, Math.min(1, Number(read(VOLUME_KEY, "0.7")) || 0));
 let custom: Record<string, string> = {};
 
-export const music = new MusicPlayer(getAudioContext, TRACKS, (id) => custom[id] ?? null);
+export const music = new MusicPlayer(getAudioContext, TRACKS, (id) =>
+  // Existing uploads for the shared Christmas track still override the building music.
+  custom[id] ?? (id === "tower-christmas-medley" ? custom["tower-christmas-play"] : undefined) ?? null,
+);
 
 function applyLevel(): void {
   music.setLevel(enabled && !isMuted() ? volume : 0);

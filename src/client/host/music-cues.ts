@@ -57,7 +57,7 @@ export function musicFor(view: HostView | null): MusicCue {
     }
     case "tower": {
       const christmas = towerTheme(view.theme) === "christmas";
-      const play = christmas ? "tower-christmas-play" : "tower-play";
+      const play = christmas ? "tower-christmas-medley" : "tower-play";
       if (view.phase === "podium") return { track: christmas ? "tower-christmas-results" : "tower-results" };
       // Builds over the last few minutes of the timer.
       const start = Math.max(0, Math.min(1, 1 - view.remainingMs / 300_000));

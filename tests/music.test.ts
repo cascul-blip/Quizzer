@@ -183,7 +183,8 @@ describe("North Pole Tower Christmas music", () => {
       for (const phase of ["countdown", "playing", "podium"] as const) {
         const view = { kind: "tower", theme, phase, remainingMs: 150_000 } as HostView;
         const cue = musicFor(view);
-        expect(cue.track).toBe(`${prefix}-${phase === "podium" ? "results" : "play"}`);
+        const play = theme === "classic" ? "tower-play" : "tower-christmas-medley";
+        expect(cue.track).toBe(phase === "podium" ? `${prefix}-results` : play);
         if (phase === "playing") {
           expect(cue.intensity).toBe(0.5);
           expect(cue.rampTo).toBe(1);
@@ -196,7 +197,7 @@ describe("North Pole Tower Christmas music", () => {
   test("recognizable melodies play at every intensity using only CC0 instruments", () => {
     for (const [id, inst, opening] of [
       ["tower-christmas-lobby", "flute", "G4"],
-      ["tower-christmas-play", "flute", "D5"],
+      ["tower-christmas-medley", "flute", "D5"],
       ["tower-christmas-results", "brass", "D4"],
     ] as const) {
       const track = TRACKS[id];
@@ -205,9 +206,24 @@ describe("North Pole Tower Christmas music", () => {
       for (const intensity of [0, 0.25, 0.5, 0.75, 1]) expect(layerActive(melody, intensity)).toBe(true);
       for (const layer of track.layers) expect(["bass", "tribass", "twang"]).not.toContain(layer.inst);
     }
-    const play = TRACKS["tower-christmas-play"];
+    const play = TRACKS["tower-christmas-medley"];
     expect(60 / (stepSeconds(play, 1) * 4)).toBeCloseTo(130);
     expect(play.layers.filter(l => layerActive(l, 1)).length).toBeGreaterThan(play.layers.filter(l => layerActive(l, 0)).length);
+  });
+
+  test("the building music plays Joy to the World before the complete O Holy Night melody", () => {
+    const joy = TRACKS["tower-christmas-play"];
+    const medley = TRACKS["tower-christmas-medley"];
+    expect(medley.bars).toBe(joy.bars + 26);
+    for (const [i, layer] of joy.layers.entries()) {
+      const opening = Array.from({ length: joy.bars }, (_, bar) => layer.bars[bar % layer.bars.length]!);
+      expect(medley.layers[i]!.bars.slice(0, joy.bars)).toEqual(opening);
+    }
+
+    const melody = medley.layers.find((layer) => layer.inst === "flute")!;
+    expect(melody.bars).toHaveLength(medley.bars);
+    expect(tokens(melody.bars[joy.bars]!).slice(7)).toEqual(["F#4", "-", "-", "-", "-", "-", "-", "-", "A4"]);
+    expect(tokens(melody.bars.at(-1)!)).toEqual(["D5", "-", "-", "-", "-", "-", "-", "-", ".", ".", ".", ".", ".", ".", ".", "."]);
   });
 });
 
