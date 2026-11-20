@@ -1172,6 +1172,36 @@ describe("Showdown over WebSockets", () => {
   });
 });
 
+describe("Lobby handoff over WebSockets", () => {
+  test("an empty lobby can retry Start after a player joins", async () => {
+    const quiz = await store.create({ title: "Retry Start", questions: [{ type: "true_false", text: "True?", correct: [0] }] });
+    const url = `ws://localhost:${srv.port}/ws`;
+    const host = await TestSocket.open(url);
+    const phone = await TestSocket.open(url);
+    try {
+      host.send({ type: "host.hello" });
+      host.send({ type: "host.open", quizId: quiz.id });
+      host.send({ type: "host.setMode", mode: "gift" });
+      await host.hostState((v) => v.kind === "classic" && v.mode === "gift" && v.players.length === 0);
+      host.send({ type: "host.start", pacing: "manual" });
+      expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: "Wait for at least one player to join" });
+
+      phone.send({ type: "join", nickname: "Noel" });
+      const joined = await phone.waitFor((m) => m.type === "joined");
+      await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.players.some((p) => p.id === joined.playerId));
+      host.send({ type: "host.start", pacing: "manual" });
+      const countdown = await host.hostState((v) => v.kind === "gift" && v.phase === "countdown");
+      expect(countdown.view).toMatchObject({ standings: [{ id: joined.playerId, nickname: "Noel", connected: true }] });
+      await phone.playerState((v) => v.kind === "gift" && v.phase === "countdown");
+    } finally {
+      host.send({ type: "host.close" });
+      await host.hostState((v) => v.kind === "idle");
+      host.close();
+      phone.close();
+    }
+  });
+});
+
 describe("Gift Grab over WebSockets", () => {
   test("lobby settings, earned bonus, reconnect, standings and CSV", async () => {
     const quiz = await store.create({
