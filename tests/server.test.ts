@@ -1172,7 +1172,7 @@ describe("Showdown over WebSockets", () => {
   });
 });
 
-describe("Gift Grab over WebSockets", () => {
+describe("Lobby handoff over WebSockets", () => {
   test("an empty lobby can retry Start after a player joins", async () => {
     const quiz = await store.create({ title: "Retry Start", questions: [{ type: "true_false", text: "True?", correct: [0] }] });
     const url = `ws://localhost:${srv.port}/ws`;
@@ -1200,7 +1200,9 @@ describe("Gift Grab over WebSockets", () => {
       phone.close();
     }
   });
+});
 
+describe("Gift Grab over WebSockets", () => {
   test("lobby settings, earned bonus, reconnect, standings and CSV", async () => {
     const quiz = await store.create({
       title: "Gift Grab E2E",
