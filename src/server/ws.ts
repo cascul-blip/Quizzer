@@ -1,38 +1,17 @@
 import type { ServerWebSocket } from "bun";
 import QRCode from "qrcode";
 import type { ClientMsg, GameMode, HostView, JoinInfo, ModeSettingsMap, Pacing, PlayerView, ServerMsg } from "../shared/protocol.ts";
-import { answerOf } from "../shared/answer-match.ts";
 import { cleanAvatar } from "../shared/avatars.ts";
 import { ValidationError } from "../shared/quiz-schema.ts";
 import { diffView } from "../shared/view-patch.ts";
-import { CupGame } from "./game/cup.ts";
-import { DuelGame } from "./game/duel.ts";
-import { FightGame } from "./game/fight.ts";
-import { GiftGame } from "./game/gift.ts";
 import { Game, GameError, type Clock } from "./game/game.ts";
 import { startLobbyGame, type LiveGame } from "./game/lobby-handoff.ts";
-import { LandGame } from "./game/land.ts";
-import { RacerGame } from "./game/racer.ts";
-import { buildCupResultsCsv } from "./game/cup.ts";
-import { buildResultsCsv } from "./game/classic.ts";
-import { buildDuelResultsCsv } from "./game/duel.ts";
-import { buildFightResultsCsv } from "./game/fight.ts";
-import { buildGiftResultsCsv } from "./game/gift.ts";
-import { buildLandResultsCsv } from "./game/land.ts";
-import { buildRacerResultsCsv } from "./game/racer.ts";
-import { buildRobotResultsCsv } from "./game/robot.ts";
-import { buildSiegeResultsCsv } from "./game/siege.ts";
-import { buildSubResultsCsv } from "./game/submarine.ts";
-import { buildTowerResultsCsv } from "./game/tower.ts";
+import { MSG_MODE, isModeMsg } from "./game/mode-entry.ts";
+import { entryOf, modeOf } from "./game/modes.ts";
 import { writeResultsFile } from "./game/results.ts";
-import { RobotGame } from "./game/robot.ts";
-import { SiegeGame } from "./game/siege.ts";
-import { SubGame } from "./game/submarine.ts";
-import { TowerGame } from "./game/tower.ts";
 import { MAX_JOINS_PER_ADDRESS, MAX_SOCKETS_PER_ADDRESS } from "./game/common.ts";
 import { isLoopbackAddress, lanAddresses, type LanAddress } from "./network.ts";
 import { NotFoundError, type QuizStore } from "./quiz/store.ts";
-import { saveSiegeRecord } from "./siege-records.ts";
 
 export interface SocketData {
   /** Request came from this machine to a loopback hostname; may use host controls. */
@@ -322,11 +301,6 @@ export class GameHub {
         this.log(`Player joined: ${p.nickname}`);
         return;
       }
-      case "setAvatar": {
-        if (!(this.game instanceof Game) || !ws.data.playerId) return;
-        this.game.setAvatar(ws.data.playerId, msg.avatar, msg.accessory);
-        return;
-      }
       case "resume": {
         const p = this.game?.byToken(msg.token);
         if (!p) {
@@ -338,138 +312,15 @@ export class GameHub {
         this.game!.setConnected(p.id, true);
         return this.sendState(ws);
       }
-      case "answer": {
-        if (!(this.game instanceof Game) || !ws.data.playerId) return;
-        this.game.answer(ws.data.playerId, Number(msg.qIndex), answerOf(msg));
+      default: {
+        if (!isModeMsg(msg)) throw new GameError(`Unknown message ${(msg as { type: string }).type}`);
+        const game = this.game;
+        const playerId = ws.data.playerId;
+        // A message for a mode that isn't running (say, a late tap from the last game) is ignored.
+        if (!game || !playerId || modeOf(game) !== MSG_MODE[msg.type]) return;
+        if (entryOf(game).handle(game, playerId, msg) === "resend") this.sendState(ws);
         return;
       }
-      case "tower.answer": {
-        if (!(this.game instanceof TowerGame) || !ws.data.playerId) return;
-        if (!this.game.answer(ws.data.playerId, Number(msg.seq), answerOf(msg))) this.sendState(ws);
-        return;
-      }
-      case "sub.answer": {
-        if (!(this.game instanceof SubGame) || !ws.data.playerId) return;
-        if (!this.game.answer(ws.data.playerId, Number(msg.seq), answerOf(msg))) this.sendState(ws);
-        return;
-      }
-      case "sub.boost": {
-        if (!(this.game instanceof SubGame) || !ws.data.playerId) return;
-        if (!this.game.boost(ws.data.playerId)) this.sendState(ws);
-        return;
-      }
-      case "sub.tap": {
-        if (!(this.game instanceof SubGame) || !ws.data.playerId) return;
-        if (this.game.tap(ws.data.playerId, String(msg.symbol)) === null) this.sendState(ws);
-        return;
-      }
-      case "fight.answer": {
-        if (!(this.game instanceof FightGame) || !ws.data.playerId) return;
-        if (!this.game.answer(ws.data.playerId, Number(msg.seq), answerOf(msg))) this.sendState(ws);
-        return;
-      }
-      case "fight.choose": {
-        if (!(this.game instanceof FightGame) || !ws.data.playerId) return;
-        if (this.game.choose(ws.data.playerId, msg.action) === null) this.sendState(ws);
-        return;
-      }
-      case "fight.fire": {
-        if (!(this.game instanceof FightGame) || !ws.data.playerId) return;
-        if (this.game.fire(ws.data.playerId, Number(msg.dx), Number(msg.dy)) === null) this.sendState(ws);
-        return;
-      }
-      case "robot.answer": {
-        if (!(this.game instanceof RobotGame) || !ws.data.playerId) return;
-        if (!this.game.answer(ws.data.playerId, Number(msg.seq), answerOf(msg))) this.sendState(ws);
-        return;
-      }
-      case "robot.move": {
-        if (!(this.game instanceof RobotGame) || !ws.data.playerId) return;
-        if (!this.game.move(ws.data.playerId, msg.dir)) this.sendState(ws);
-        return;
-      }
-      case "cup.answer": {
-        if (!(this.game instanceof CupGame) || !ws.data.playerId) return;
-        if (!this.game.answer(ws.data.playerId, Number(msg.seq), answerOf(msg))) this.sendState(ws);
-        return;
-      }
-      case "cup.pick": {
-        if (!(this.game instanceof CupGame) || !ws.data.playerId) return;
-        if (!this.game.pick(ws.data.playerId, Number(msg.cup))) this.sendState(ws);
-        return;
-      }
-      case "siege.answer": {
-        if (!(this.game instanceof SiegeGame) || !ws.data.playerId) return;
-        if (!this.game.answer(ws.data.playerId, Number(msg.seq), answerOf(msg))) this.sendState(ws);
-        return;
-      }
-      case "siege.place": {
-        if (!(this.game instanceof SiegeGame) || !ws.data.playerId) return;
-        const err = this.game.place(ws.data.playerId, msg.defender, msg.lane, msg.square);
-        if (err) throw new GameError(err);
-        return;
-      }
-      case "siege.upgrade": {
-        if (!(this.game instanceof SiegeGame) || !ws.data.playerId) return;
-        const err = this.game.upgrade(ws.data.playerId, msg.lane, msg.square);
-        if (err) throw new GameError(err);
-        return;
-      }
-      case "siege.map": {
-        if (!(this.game instanceof SiegeGame) || !ws.data.playerId) return;
-        this.game.setMap(ws.data.playerId, msg.open === true);
-        return;
-      }
-      case "land.answer": {
-        if (!(this.game instanceof LandGame) || !ws.data.playerId) return;
-        if (!this.game.answer(ws.data.playerId, Number(msg.seq), answerOf(msg))) this.sendState(ws);
-        return;
-      }
-      case "land.place": {
-        if (!(this.game instanceof LandGame) || !ws.data.playerId) return;
-        if (!this.game.place(ws.data.playerId, Number(msg.tile))) this.sendState(ws);
-        return;
-      }
-      case "land.done": {
-        if (!(this.game instanceof LandGame) || !ws.data.playerId) return;
-        if (!this.game.done(ws.data.playerId)) this.sendState(ws);
-        return;
-      }
-      case "racer.lever": {
-        if (!(this.game instanceof RacerGame) || !ws.data.playerId) return;
-        if (!this.game.setLever(ws.data.playerId, msg.level)) this.sendState(ws);
-        return;
-      }
-      case "racer.go": {
-        if (!(this.game instanceof RacerGame) || !ws.data.playerId) return;
-        if (!this.game.go(ws.data.playerId)) this.sendState(ws);
-        return;
-      }
-      case "racer.answer": {
-        if (!(this.game instanceof RacerGame) || !ws.data.playerId) return;
-        if (!this.game.answer(ws.data.playerId, Number(msg.index), answerOf(msg))) this.sendState(ws);
-        return;
-      }
-      case "duel.answer": {
-        if (!(this.game instanceof DuelGame) || !ws.data.playerId) return;
-        if (!this.game.answer(ws.data.playerId, Number(msg.index), answerOf(msg))) this.sendState(ws);
-        return;
-      }
-      case "gift.answer": {
-        if (!(this.game instanceof GiftGame) || !ws.data.playerId) return;
-        if (!this.game.answer(ws.data.playerId, Number(msg.seq), answerOf(msg))) this.sendState(ws);
-        return;
-      }
-      case "gift.tap":
-        if (this.game instanceof GiftGame && ws.data.playerId) this.game.tap(ws.data.playerId, msg.round, msg.item);
-        return;
-      case "tower.drop": {
-        if (!(this.game instanceof TowerGame) || !ws.data.playerId) return;
-        if (this.game.drop(ws.data.playerId, Number(msg.zone)) === null) this.sendState(ws);
-        return;
-      }
-      default:
-        throw new GameError(`Unknown message ${(msg as { type: string }).type}`);
     }
   }
 
@@ -480,13 +331,13 @@ export class GameHub {
     };
     const classic = () => {
       const g = game();
-      if (!(g instanceof Game)) throw new GameError(`Not available in ${g instanceof TowerGame ? "Tallest Tower" : g instanceof SubGame ? "Sled Squad" : g instanceof RobotGame ? "Robot Attack" : g instanceof LandGame ? "Land Grab" : g instanceof RacerGame ? "Racer" : g instanceof CupGame ? "Cup of Death" : g instanceof SiegeGame ? "Kingdom Siege" : g instanceof DuelGame ? "Showdown" : g instanceof GiftGame ? "Gift Grab" : "Tower Fight"}`);
+      if (!(g instanceof Game)) throw new GameError(`Not available in ${entryOf(g).name}`);
       return g;
     };
-    /** Classic, Racer and Showdown are all paced question by question: next, skip and pacing work in each. */
+    /** Paced modes (Classic, Racer, Showdown) go question by question: next, skip and pacing work in each. */
     const paced = () => {
       const g = game();
-      return g instanceof RacerGame || g instanceof DuelGame ? g : classic();
+      return entryOf(g).paced && "setPacing" in g ? g : classic();
     };
     switch (msg.type) {
       case "host.hello":
@@ -588,28 +439,8 @@ export class GameHub {
   }
 
   private onFinish(game: LiveGame): void {
-    const csv =
-      game instanceof TowerGame
-        ? buildTowerResultsCsv(game)
-        : game instanceof SubGame
-          ? buildSubResultsCsv(game)
-          : game instanceof FightGame
-            ? buildFightResultsCsv(game)
-            : game instanceof RobotGame
-              ? buildRobotResultsCsv(game)
-              : game instanceof LandGame
-                ? buildLandResultsCsv(game)
-                : game instanceof RacerGame
-                  ? buildRacerResultsCsv(game)
-                  : game instanceof CupGame
-                    ? buildCupResultsCsv(game)
-                    : game instanceof SiegeGame
-                      ? buildSiegeResultsCsv(game)
-                      : game instanceof DuelGame
-                        ? buildDuelResultsCsv(game)
-                        : game instanceof GiftGame
-                          ? buildGiftResultsCsv(game)
-                          : buildResultsCsv(game);
+    const entry = entryOf(game);
+    const csv = entry.resultsCsv(game);
     let file: string | null = null;
     try {
       file = writeResultsFile(game, csv, this.store.resultsDir);
@@ -618,15 +449,6 @@ export class GameHub {
       this.log(`Could not save results: ${(e as Error).message}`);
     }
     this.lastResults = { quizId: game.quizId, title: game.title, csv, file };
-    if (game instanceof SiegeGame) {
-      const r = game.result();
-      if (r.newRecord && r.record) {
-        try {
-          saveSiegeRecord(this.store.dataDir, game.quizId, r.record);
-        } catch (e) {
-          this.log(`Could not save the Kingdom Siege record: ${(e as Error).message}`);
-        }
-      }
-    }
+    entry.finished?.(game, { dataDir: this.store.dataDir, log: this.log });
   }
 }
