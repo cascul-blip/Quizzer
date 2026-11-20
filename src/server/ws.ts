@@ -10,6 +10,7 @@ import { DuelGame } from "./game/duel.ts";
 import { FightGame } from "./game/fight.ts";
 import { GiftGame } from "./game/gift.ts";
 import { DEFAULT_RACER, DEFAULT_CUP, DEFAULT_DUEL, DEFAULT_FIGHT, DEFAULT_GIFT, DEFAULT_LAND, DEFAULT_SIEGE, DEFAULT_TOWER, Game, GameError, type Clock } from "./game/game.ts";
+import { startLobbyGame, type LiveGame } from "./game/lobby-handoff.ts";
 import { LandGame } from "./game/land.ts";
 import { RacerGame } from "./game/racer.ts";
 import { buildCupResultsCsv, buildDuelResultsCsv, buildFightResultsCsv, buildGiftResultsCsv, buildLandResultsCsv, buildRacerResultsCsv, buildResultsCsv, buildRobotResultsCsv, buildSiegeResultsCsv, buildSubResultsCsv, buildTowerResultsCsv, writeResultsFile } from "./game/results.ts";
@@ -20,7 +21,7 @@ import { TowerGame } from "./game/tower.ts";
 import { MAX_JOINS_PER_ADDRESS, MAX_SOCKETS_PER_ADDRESS } from "./game/common.ts";
 import { isLoopbackAddress, lanAddresses, type LanAddress } from "./network.ts";
 import { NotFoundError, type QuizStore } from "./quiz/store.ts";
-import { loadSiegeRecord, saveSiegeRecord } from "./siege-records.ts";
+import { saveSiegeRecord } from "./siege-records.ts";
 
 export interface SocketData {
   /** Request came from this machine to a loopback hostname; may use host controls. */
@@ -77,8 +78,6 @@ export function viewKey(view: PlayerView, now: number): string {
 
 /** Compress what goes to phones over Wi-Fi; the host screen is on this machine, so it isn't worth the CPU. */
 const compressFor = (ws: WS) => ws.data.role !== "host";
-
-type LiveGame = Game | TowerGame | SubGame | FightGame | RobotGame | LandGame | RacerGame | CupGame | SiegeGame | DuelGame | GiftGame;
 
 /** Owns the single live game and every connected socket; pushes each phone its view (or a patch of it) on every change. */
 export class GameHub {
@@ -506,20 +505,18 @@ export class GameHub {
         return;
       }
       case "host.start": {
-        const lobby = classic();
-        if (lobby.phase === "lobby" && lobby.mode === "tower") return this.startTower(lobby);
-        if (lobby.phase === "lobby" && lobby.mode === "submarine") return this.startSub(lobby);
-        if (lobby.phase === "lobby" && lobby.mode === "fight") return this.startFight(lobby);
-        if (lobby.phase === "lobby" && lobby.mode === "robot") return this.startRobot(lobby);
-        if (lobby.phase === "lobby" && lobby.mode === "land") return this.startLand(lobby);
-        if (lobby.phase === "lobby" && lobby.mode === "cup") return this.startCup(lobby);
-        if (lobby.phase === "lobby" && lobby.mode === "siege") return this.startSiege(lobby);
-        if (lobby.phase === "lobby" && lobby.mode === "gift") return this.startGift(lobby);
         const pacing = PACINGS.has(msg.pacing) ? msg.pacing : undefined;
-        if (lobby.phase === "lobby" && lobby.mode === "racer") return this.startRacer(lobby, pacing);
-        if (lobby.phase === "lobby" && lobby.mode === "duel") return this.startDuel(lobby, pacing);
-        lobby.start(pacing);
-        this.lastSetup.pacing = lobby.pacing;
+        const startedPacing = startLobbyGame(classic(), pacing, {
+          clock: this.opts.clock,
+          dataDir: this.store.dataDir,
+          onChange: () => this.scheduleBroadcast(),
+          onActivity: (id) => this.onActivity(id),
+          onTick: () => this.pushHost(),
+          onFinish: (game) => this.onFinish(game),
+          install: (game) => { this.game = game; },
+          log: this.log,
+        });
+        if (startedPacing !== undefined) this.lastSetup.pacing = startedPacing;
         return;
       }
       case "host.setPacing":
@@ -598,159 +595,6 @@ export class GameHub {
       default:
         throw new GameError(`Unknown message ${(msg as { type: string }).type}`);
     }
-  }
-
-  /** Hand the lobby's players (same ids/tokens, so sockets stay attached) to a Tallest Tower game. */
-  private startTower(lobby: Game): void {
-    if (lobby.players.size === 0) throw new GameError("Wait for at least one player to join");
-    const tower = TowerGame.fromLobby(lobby, {
-      clock: this.opts.clock,
-      onChange: () => this.scheduleBroadcast(),
-      onActivity: (pid) => this.onActivity(pid),
-      onFinish: (g) => this.onFinish(g),
-    });
-    lobby.dispose();
-    this.game = tower;
-    tower.start();
-    this.log(`Tallest Tower started: ${tower.teams.length} team(s), ${tower.settings.minutes} min`);
-  }
-
-  /** Hand the lobby's players to a Sled Squad game. */
-  private startSub(lobby: Game): void {
-    if (lobby.players.size === 0) throw new GameError("Wait for at least one player to join");
-    const sub = SubGame.fromLobby(lobby, {
-      clock: this.opts.clock,
-      onChange: () => this.scheduleBroadcast(),
-      onActivity: (pid) => this.onActivity(pid),
-      onFinish: (g) => this.onFinish(g),
-    });
-    lobby.dispose();
-    this.game = sub;
-    sub.start();
-    this.log(`Sled Squad started with ${sub.players.size} player(s)`);
-  }
-
-  /** Hand the lobby's players to a Tower Fight game (Red vs Blue). */
-  private startFight(lobby: Game): void {
-    if (lobby.players.size === 0) throw new GameError("Wait for at least one player to join");
-    const fight = FightGame.fromLobby(lobby, {
-      clock: this.opts.clock,
-      onChange: () => this.scheduleBroadcast(),
-      onActivity: (pid) => this.onActivity(pid),
-      onFinish: (g) => this.onFinish(g),
-    });
-    lobby.dispose();
-    this.game = fight;
-    fight.start();
-    this.log(`Tower Fight started with ${fight.players.size} player(s), ${fight.hill} hill`);
-  }
-
-  /** Hand the lobby's players to a Robot Attack game. */
-  private startRobot(lobby: Game): void {
-    if (lobby.players.size === 0) throw new GameError("Wait for at least one player to join");
-    const robot = RobotGame.fromLobby(lobby, {
-      clock: this.opts.clock,
-      onChange: () => this.scheduleBroadcast(),
-      onActivity: (pid) => this.onActivity(pid),
-      onFinish: (g) => this.onFinish(g),
-    });
-    lobby.dispose();
-    this.game = robot;
-    robot.start();
-    this.log(`Robot Attack started with ${robot.players.size} player(s)`);
-  }
-
-  private startGift(lobby: Game): void {
-    if (lobby.players.size === 0) throw new GameError("Wait for at least one player to join");
-    const gift = GiftGame.fromLobby(lobby, {
-      clock: this.opts.clock,
-      onChange: () => this.scheduleBroadcast(),
-      onActivity: (pid) => this.onActivity(pid),
-      onFinish: (g) => this.onFinish(g),
-    });
-    lobby.dispose();
-    this.game = gift;
-    gift.start();
-    this.log(`Gift Grab started with ${gift.players.size} player(s), ${gift.minutes} min`);
-  }
-
-  /** Hand the lobby's players to a Cup of Death game. */
-  private startCup(lobby: Game): void {
-    if (lobby.players.size === 0) throw new GameError("Wait for at least one player to join");
-    const cup = CupGame.fromLobby(lobby, {
-      clock: this.opts.clock,
-      onChange: () => this.scheduleBroadcast(),
-      onActivity: (pid) => this.onActivity(pid),
-      onFinish: (g) => this.onFinish(g),
-    });
-    lobby.dispose();
-    this.game = cup;
-    cup.start();
-    this.log(`Cup of Death started with ${cup.players.size} player(s)`);
-  }
-
-  /** Hand the lobby's players to a Kingdom Siege game, with the class's best Endless run on this quiz. */
-  private startSiege(lobby: Game): void {
-    if (lobby.players.size === 0) throw new GameError("Wait for at least one player to join");
-    const siege = SiegeGame.fromLobby(lobby, {
-      clock: this.opts.clock,
-      record: lobby.siege.waves === "endless" ? loadSiegeRecord(this.store.dataDir, lobby.quizId) : null,
-      onChange: () => this.scheduleBroadcast(),
-      onActivity: (pid) => this.onActivity(pid),
-      onTick: () => this.pushHost(),
-      onFinish: (g) => this.onFinish(g),
-    });
-    lobby.dispose();
-    this.game = siege;
-    siege.start();
-    this.log(`Kingdom Siege started with ${siege.players.size} player(s), ${siege.settings.waves === "endless" ? "Endless" : `${siege.settings.waves} waves`}`);
-  }
-
-  /** Hand the lobby's players to a Land Grab game. */
-  private startLand(lobby: Game): void {
-    if (lobby.players.size === 0) throw new GameError("Wait for at least one player to join");
-    const land = LandGame.fromLobby(lobby, {
-      clock: this.opts.clock,
-      onChange: () => this.scheduleBroadcast(),
-      onActivity: (pid) => this.onActivity(pid),
-      onFinish: (g) => this.onFinish(g),
-    });
-    lobby.dispose();
-    this.game = land;
-    land.start();
-    this.log(`Land Grab started: ${land.teams.length} teams, ${land.settings.minutes} min`);
-  }
-
-  /** Hand the lobby's players to a Racer game, with the lobby's shuffle choices and pacing. */
-  private startRacer(lobby: Game, pacing?: Pacing): void {
-    if (lobby.players.size === 0) throw new GameError("Wait for at least one player to join");
-    const racer = RacerGame.fromLobby(lobby, {
-      clock: this.opts.clock,
-      onChange: () => this.scheduleBroadcast(),
-      onActivity: (pid) => this.onActivity(pid),
-      onFinish: (g) => this.onFinish(g),
-    });
-    lobby.dispose();
-    this.game = racer;
-    racer.start(pacing);
-    this.lastSetup.pacing = racer.pacing;
-    this.log(`Racer started with ${racer.players.size} player(s), ${racer.questions.length} question(s)`);
-  }
-
-  /** Hand the lobby's players to a Showdown game, with the lobby's rounds, shuffle choices and pacing. */
-  private startDuel(lobby: Game, pacing?: Pacing): void {
-    if (lobby.players.size === 0) throw new GameError("Wait for at least one player to join");
-    const duel = DuelGame.fromLobby(lobby, {
-      clock: this.opts.clock,
-      onChange: () => this.scheduleBroadcast(),
-      onActivity: (pid) => this.onActivity(pid),
-      onFinish: (g) => this.onFinish(g),
-    });
-    lobby.dispose();
-    this.game = duel;
-    duel.start(pacing);
-    this.lastSetup.pacing = duel.pacing;
-    this.log(`Showdown started with ${duel.players.size} player(s), ${duel.rounds} round(s)`);
   }
 
   private closeGame(): void {
