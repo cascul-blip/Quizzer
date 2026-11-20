@@ -129,7 +129,7 @@ export class FightGame {
 
   /** Take over a lobby's players (same ids and tokens), split Red/Blue as shown in the lobby. */
   static fromLobby(lobby: Game, opts: FightOptions = {}): FightGame {
-    const game = new FightGame(lobby.quiz, { ...lobby.fight, shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
+    const game = new FightGame(lobby.quiz, { ...lobby.settings.fight, shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
     const players = [...lobby.players.values()];
     const teams = lobby.teamAssignment();
     players.forEach((p) => {

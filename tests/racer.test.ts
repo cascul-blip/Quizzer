@@ -687,12 +687,12 @@ describe("Racer", () => {
 describe("Racer themes", () => {
   test("lobby switches looks and both game views retain the chosen theme", () => {
     const lobby = new Game(quiz(), { clock: new FakeClock() });
-    expect(lobby.hostView().racer.theme).toBe("christmas");
+    expect(lobby.hostView().settings.racer.theme).toBe("christmas");
     lobby.setMode("racer");
     const p = lobby.join("Ann");
     for (const theme of ["classic", "christmas"] as const) {
-      lobby.setRacer({ theme });
-      expect(lobby.hostView().racer.theme).toBe(theme);
+      lobby.setModeSettings("racer", { theme });
+      expect(lobby.hostView().settings.racer.theme).toBe(theme);
       const game = RacerGame.fromLobby(lobby, { clock: new FakeClock() });
       game.start();
       expect(game.hostView().theme).toBe(theme);
@@ -706,10 +706,10 @@ describe("Racer themes", () => {
 
   test("invalid or mid-game theme changes are rejected", () => {
     const lobby = new Game(quiz(), { clock: new FakeClock() });
-    expect(() => lobby.setRacer({ theme: "bad" as never })).toThrow("Unknown racer theme");
+    expect(() => lobby.setModeSettings("racer", { theme: "bad" as never })).toThrow("Unknown racer theme");
     lobby.join("Ann");
     lobby.start();
-    expect(() => lobby.setRacer({ theme: "christmas" })).toThrow("before the game starts");
+    expect(() => lobby.setModeSettings("racer", { theme: "christmas" })).toThrow("before the game starts");
     lobby.dispose();
   });
 });

@@ -100,7 +100,7 @@ export class GiftGame {
 
   static fromLobby(lobby: Game, opts: GiftOptions = {}): GiftGame {
     if (!lobby.quiz.questions.length) throw new GameError("This quiz has no questions");
-    const game = new GiftGame(lobby.quiz, lobby.gift.minutes, lobby.shuffle.answers, lobby.protect, opts);
+    const game = new GiftGame(lobby.quiz, lobby.settings.gift.minutes, lobby.shuffle.answers, lobby.protect, opts);
     for (const player of lobby.players.values()) {
       const { id, nickname, token, connected, avatar } = player;
       game.roster.adopt(newPlayer({ id, nickname, token, connected, avatar }));

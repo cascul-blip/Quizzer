@@ -63,7 +63,7 @@ function setup({ players = 3, waves = 5 as SiegeWaves, protect = false, seed = 4
   let finished = 0;
   const lobby = new Game(quiz(), { clock, protect });
   lobby.setMode("siege");
-  lobby.setSiege({ waves, theme });
+  lobby.setModeSettings("siege", { waves, theme });
   for (const n of NAMES.slice(0, players)) lobby.join(n);
   const game = SiegeGame.fromLobby(lobby, { clock, rng: seeded(seed), onFinish: () => finished++ });
   game.start();
@@ -273,7 +273,7 @@ describe("the battle", () => {
     let ticks = 0;
     const lobby = new Game(quiz(), { clock });
     lobby.setMode("siege");
-    lobby.setSiege({ waves: 5, theme: "classic" });
+    lobby.setModeSettings("siege", { waves: 5, theme: "classic" });
     for (const n of NAMES.slice(0, 3)) lobby.join(n);
     const game = SiegeGame.fromLobby(lobby, { clock, rng: seeded(), onChange: () => changes++, onTick: () => ticks++ });
     game.start();
@@ -732,7 +732,7 @@ describe("endings", () => {
     const clock = new FakeClock();
     const lobby = new Game(quiz(), { clock });
     lobby.setMode("siege");
-    lobby.setSiege({ waves: "endless" });
+    lobby.setModeSettings("siege", { waves: "endless" });
     lobby.join("Ana");
     const game = SiegeGame.fromLobby(lobby, { clock, rng: seeded(), record: { waves: 2, avgScale: 90, date: "2026-01-01" } });
     game.start();
@@ -761,7 +761,7 @@ describe("endings", () => {
     const clock = new FakeClock();
     const lobby = new Game(quiz(), { clock });
     lobby.setMode("siege");
-    lobby.setSiege({ waves: "endless" });
+    lobby.setModeSettings("siege", { waves: "endless" });
     lobby.join("Ana");
     const record = { waves: 12, avgScale: 108, date: "2026-01-01" };
     const game = SiegeGame.fromLobby(lobby, { clock, rng: seeded(), record });

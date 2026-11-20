@@ -71,7 +71,7 @@ export function startLobbyGame(lobby: Game, pacing: Pacing | undefined, { instal
       const siege = SiegeGame.fromLobby(lobby, {
         ...gameOptions,
         onTick,
-        record: lobby.siege.waves === "endless" ? loadSiegeRecord(dataDir, lobby.quizId) : null,
+        record: lobby.settings.siege.waves === "endless" ? loadSiegeRecord(dataDir, lobby.quizId) : null,
       });
       const waves = siege.settings.waves;
       return handoff(siege, `Kingdom Siege started with ${siege.players.size} player(s), ${waves === "endless" ? "Endless" : `${waves} waves`}`);

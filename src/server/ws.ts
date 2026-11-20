@@ -1,6 +1,6 @@
 import type { ServerWebSocket } from "bun";
 import QRCode from "qrcode";
-import type { ClientMsg, CupSettings, DuelSettings, FightSettings, GameMode, GiftSettings, HostView, JoinInfo, LandSettings, Pacing, PlayerView, ServerMsg, SiegeSettings, TowerSettings, RacerSettings } from "../shared/protocol.ts";
+import type { ClientMsg, GameMode, HostView, JoinInfo, ModeSettingsMap, Pacing, PlayerView, ServerMsg } from "../shared/protocol.ts";
 import { answerOf } from "../shared/answer-match.ts";
 import { cleanAvatar } from "../shared/avatars.ts";
 import { ValidationError } from "../shared/quiz-schema.ts";
@@ -9,7 +9,7 @@ import { CupGame } from "./game/cup.ts";
 import { DuelGame } from "./game/duel.ts";
 import { FightGame } from "./game/fight.ts";
 import { GiftGame } from "./game/gift.ts";
-import { DEFAULT_RACER, DEFAULT_CUP, DEFAULT_DUEL, DEFAULT_FIGHT, DEFAULT_GIFT, DEFAULT_LAND, DEFAULT_SIEGE, DEFAULT_TOWER, Game, GameError, type Clock } from "./game/game.ts";
+import { Game, GameError, type Clock } from "./game/game.ts";
 import { startLobbyGame, type LiveGame } from "./game/lobby-handoff.ts";
 import { LandGame } from "./game/land.ts";
 import { RacerGame } from "./game/racer.ts";
@@ -96,16 +96,9 @@ export class GameHub {
   private broadcastQueued = false;
   private activityTimer: ReturnType<typeof setTimeout> | null = null;
   /** Mode, mode settings and pacing carry over to the next lobby ("Play again"). */
-  private lastSetup: { mode: GameMode; racer: RacerSettings; tower: TowerSettings; fight: FightSettings; land: LandSettings; cup: CupSettings; siege: SiegeSettings; duel: DuelSettings; gift: GiftSettings; protect: boolean; pacing: Pacing } = {
+  private lastSetup: { mode: GameMode; settings: Partial<ModeSettingsMap>; protect: boolean; pacing: Pacing } = {
     mode: "classic",
-    racer: DEFAULT_RACER,
-    tower: DEFAULT_TOWER,
-    fight: DEFAULT_FIGHT,
-    land: DEFAULT_LAND,
-    cup: DEFAULT_CUP,
-    siege: DEFAULT_SIEGE,
-    duel: DEFAULT_DUEL,
-    gift: DEFAULT_GIFT,
+    settings: {},
     protect: true,
     pacing: "manual",
   };
@@ -534,38 +527,12 @@ export class GameHub {
         classic().setMode(msg.mode);
         this.lastSetup.mode = classic().mode;
         return;
-      case "host.setRacer":
-        classic().setRacer({ theme: msg.theme });
-        this.lastSetup.racer = { ...classic().racer };
+      case "host.setModeSettings": {
+        const lobby = classic();
+        lobby.setModeSettings(msg.mode, msg.settings);
+        this.lastSetup.settings = { ...lobby.settings };
         return;
-      case "host.setTower":
-        classic().setTower({ teams: Number(msg.teams), minutes: Number(msg.minutes), monster: msg.monster, theme: msg.theme });
-        this.lastSetup.tower = { ...classic().tower };
-        return;
-      case "host.setFight":
-        classic().setFight({ hill: msg.hill, theme: msg.theme });
-        this.lastSetup.fight = { ...classic().fight };
-        return;
-      case "host.setLand":
-        classic().setLand({ teams: Number(msg.teams), minutes: Number(msg.minutes), theme: msg.theme });
-        this.lastSetup.land = { ...classic().land };
-        return;
-      case "host.setCup":
-        classic().setCup({ cups: Number(msg.cups), theme: msg.theme });
-        this.lastSetup.cup = { ...classic().cup };
-        return;
-      case "host.setSiege":
-        classic().setSiege({ waves: msg.waves, theme: msg.theme });
-        this.lastSetup.siege = { ...classic().siege };
-        return;
-      case "host.setDuel":
-        classic().setDuel({ rounds: Number(msg.rounds), theme: msg.theme });
-        this.lastSetup.duel = { ...classic().duel };
-        return;
-      case "host.setGift":
-        classic().setGift({ minutes: Number(msg.minutes) });
-        this.lastSetup.gift = { ...classic().gift };
-        return;
+      }
       case "host.next":
         return paced().next();
       case "host.skip":

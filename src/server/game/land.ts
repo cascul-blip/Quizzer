@@ -116,7 +116,7 @@ export class LandGame {
 
   /** Take over a lobby's players (same ids and tokens), on the teams shown in the lobby. */
   static fromLobby(lobby: Game, opts: LandOptions = {}): LandGame {
-    const game = new LandGame(lobby.quiz, { ...lobby.land, shuffleAnswers: lobby.shuffle.answers }, opts);
+    const game = new LandGame(lobby.quiz, { ...lobby.settings.land, shuffleAnswers: lobby.shuffle.answers }, opts);
     const players = [...lobby.players.values()];
     const teams = lobby.teamAssignment();
     players.forEach((p) => {

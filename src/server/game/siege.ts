@@ -258,7 +258,7 @@ export class SiegeGame {
 
   /** Take over a lobby's players (same ids and tokens). */
   static fromLobby(lobby: Game, opts: SiegeOptions = {}): SiegeGame {
-    const game = new SiegeGame(lobby.quiz, { ...lobby.siege, shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
+    const game = new SiegeGame(lobby.quiz, { ...lobby.settings.siege, shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
     for (const p of lobby.players.values()) {
       game.roster.adopt(game.newPlayer({ id: p.id, nickname: p.nickname, token: p.token, connected: p.connected, avatar: p.avatar }));
     }

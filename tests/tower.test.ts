@@ -36,7 +36,7 @@ function setup(names: string[], opts: { teams?: number; minutes?: number; shuffl
   let finished = 0;
   const lobby = new Game(quiz(), { clock });
   lobby.setMode("tower");
-  lobby.setTower({ teams: opts.teams ?? 2, minutes: opts.minutes ?? 5, monster: opts.monster ?? false });
+  lobby.setModeSettings("tower", { teams: opts.teams ?? 2, minutes: opts.minutes ?? 5, monster: opts.monster ?? false });
   if (opts.shuffleAnswers) lobby.setShuffle({ questions: false, answers: true });
   if (opts.protect !== undefined) lobby.setProtect(opts.protect);
   for (const n of names) lobby.join(n);
@@ -68,11 +68,11 @@ describe("lobby → tower", () => {
     const lobby = new Game(quiz(), { clock });
     lobby.setMode("tower");
     const player = lobby.join("Builder");
-    expect(lobby.tower.theme).toBe("christmas");
+    expect(lobby.settings.tower.theme).toBe("christmas");
     for (const theme of ["classic", "christmas"] as const) {
-      lobby.setTower({ teams: 2, minutes: 5, theme });
-      lobby.setTower({ teams: 3, minutes: 3 });
-      expect(lobby.tower.theme).toBe(theme);
+      lobby.setModeSettings("tower", { teams: 2, minutes: 5, theme });
+      lobby.setModeSettings("tower", { teams: 3, minutes: 3 });
+      expect(lobby.settings.tower.theme).toBe(theme);
       const game = TowerGame.fromLobby(lobby, { clock });
       expect(game.hostView().theme).toBe(theme);
       expect(game.playerView(player.id)?.theme).toBe(theme);
@@ -82,9 +82,9 @@ describe("lobby → tower", () => {
       game.end();
       expect(game.hostView().theme).toBe(theme);
     }
-    const previous = { ...lobby.tower };
-    expect(() => lobby.setTower({ teams: 2, minutes: 5, theme: "invalid" as never })).toThrow("Unknown tower theme");
-    expect(lobby.tower).toEqual(previous);
+    const previous = { ...lobby.settings.tower };
+    expect(() => lobby.setModeSettings("tower", { teams: 2, minutes: 5, theme: "invalid" as never })).toThrow("Unknown tower theme");
+    expect(lobby.settings.tower).toEqual(previous);
   });
 
   test("lobby previews teams round-robin by join order and players keep their identity", () => {
@@ -111,11 +111,11 @@ describe("lobby → tower", () => {
 
   test("changing the team count re-previews; settings are validated", () => {
     const { lobby } = setup(["A", "B", "C"], { teams: 2 });
-    lobby.setTower({ teams: 1, minutes: 3 });
+    lobby.setModeSettings("tower", { teams: 1, minutes: 3 });
     expect(lobby.hostView().teams!.map((t) => t.members.length)).toEqual([3]);
-    expect(() => lobby.setTower({ teams: 7, minutes: 3 })).toThrow();
-    expect(() => lobby.setTower({ teams: 0, minutes: 3 })).toThrow();
-    expect(() => lobby.setTower({ teams: 2, minutes: 4 })).toThrow();
+    expect(() => lobby.setModeSettings("tower", { teams: 7, minutes: 3 })).toThrow();
+    expect(() => lobby.setModeSettings("tower", { teams: 0, minutes: 3 })).toThrow();
+    expect(() => lobby.setModeSettings("tower", { teams: 2, minutes: 4 })).toThrow();
     expect(lobby.hostView().teams).toHaveLength(1);
     lobby.setMode("classic");
     expect(lobby.hostView().teams).toBeNull();

@@ -145,7 +145,7 @@ export class DuelGame {
 
   /** Take over a lobby's players (same ids and tokens), its rounds, shuffle choices and pacing. */
   static fromLobby(lobby: Game, opts: DuelOptions = {}): DuelGame {
-    const game = new DuelGame(lobby.quiz, { shuffle: lobby.shuffle, rounds: lobby.duel.rounds, theme: lobby.duel.theme, pacing: lobby.pacing }, opts);
+    const game = new DuelGame(lobby.quiz, { shuffle: lobby.shuffle, rounds: lobby.settings.duel.rounds, theme: lobby.settings.duel.theme, pacing: lobby.pacing }, opts);
     for (const p of lobby.players.values()) {
       game.roster.adopt(game.newPlayer({ id: p.id, nickname: p.nickname, token: p.token, connected: p.connected, avatar: p.avatar }));
     }

@@ -116,7 +116,7 @@ export class TowerGame {
 
   /** Take over a lobby's players (same ids and tokens), on the teams shown in the lobby. */
   static fromLobby(lobby: Game, opts: TowerOptions = {}): TowerGame {
-    const game = new TowerGame(lobby.quiz, { ...lobby.tower, shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
+    const game = new TowerGame(lobby.quiz, { ...lobby.settings.tower, shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
     const players = [...lobby.players.values()];
     const teams = lobby.teamAssignment();
     players.forEach((p) => {

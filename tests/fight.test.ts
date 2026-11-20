@@ -26,7 +26,7 @@ function setup(names: string[], hill: "low" | "medium" | "high" | "random" = "me
   let finished = 0;
   const lobby = new Game(quiz(), { clock });
   lobby.setMode("fight");
-  lobby.setFight({ hill });
+  lobby.setModeSettings("fight", { hill });
   for (const n of names) lobby.join(n);
   const game = FightGame.fromLobby(lobby, { clock, onFinish: () => finished++ });
   game.start();
@@ -97,7 +97,7 @@ describe("lobby → fight", () => {
     expect(setup(["A"], "high").game.hill).toBe("high");
     expect(["low", "medium", "high"]).toContain(setup(["A"], "random").game.hill);
     const lobby = new Game(quiz());
-    expect(() => lobby.setFight({ hill: "huge" as never })).toThrow();
+    expect(() => lobby.setModeSettings("fight", { hill: "huge" as never })).toThrow();
   });
 });
 
@@ -360,11 +360,11 @@ describe("fight themes", () => {
   test("theme and hill changes preserve each other, and reach host and phones", () => {
     const lobby = new Game(quiz());
     lobby.setMode("fight");
-    lobby.setFight({ hill: "high" });
-    lobby.setFight({ theme: "christmas" });
-    expect(lobby.hostView().fight).toEqual({ hill: "high", theme: "christmas" });
-    lobby.setFight({ hill: "low" });
-    expect(lobby.fight.theme).toBe("christmas");
+    lobby.setModeSettings("fight", { hill: "high" });
+    lobby.setModeSettings("fight", { theme: "christmas" });
+    expect(lobby.hostView().settings.fight).toEqual({ hill: "high", theme: "christmas" });
+    lobby.setModeSettings("fight", { hill: "low" });
+    expect(lobby.settings.fight.theme).toBe("christmas");
     const player = lobby.join("Baker");
     const game = FightGame.fromLobby(lobby);
     expect(game.hill).toBe("low");
@@ -377,18 +377,18 @@ describe("fight themes", () => {
 
   test("Christmas is the fallback, invalid themes are rejected, and a running game's theme is fixed", () => {
     const lobby = new Game(quiz());
-    expect(lobby.hostView().fight.theme).toBe("christmas");
+    expect(lobby.hostView().settings.fight.theme).toBe("christmas");
     const game = FightGame.fromLobby(lobby);
     expect(game.theme).toBe("christmas");
-    expect(() => lobby.setFight({ theme: "other" as "classic" })).toThrow("Unknown fight theme");
-    lobby.setFight({ theme: "classic" });
+    expect(() => lobby.setModeSettings("fight", { theme: "other" as "classic" })).toThrow("Unknown fight theme");
+    lobby.setModeSettings("fight", { theme: "classic" });
     const normal = FightGame.fromLobby(lobby);
     expect(normal.theme).toBe("classic");
     normal.dispose();
     expect(game.theme).toBe("christmas");
     lobby.join("Baker");
     lobby.start();
-    expect(() => lobby.setFight({ theme: "classic" })).toThrow("before the game starts");
+    expect(() => lobby.setModeSettings("fight", { theme: "classic" })).toThrow("before the game starts");
     lobby.dispose();
     game.dispose();
   });

@@ -367,8 +367,8 @@ describe("Tallest Tower over WebSockets", () => {
     host.send({ type: "host.open", quizId: quiz.id });
     await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
     host.send({ type: "host.setMode", mode: "tower" });
-    host.send({ type: "host.setTower", teams: 2, minutes: 2, theme: "classic" });
-    await host.hostState((v) => v.kind === "classic" && v.mode === "tower" && v.tower.minutes === 2);
+    host.send({ type: "host.setModeSettings", mode: "tower", settings: { teams: 2, minutes: 2, theme: "classic" } });
+    await host.hostState((v) => v.kind === "classic" && v.mode === "tower" && v.settings.tower.minutes === 2);
 
     const names = ["Ann", "Bob", "Cy"];
     const players = await Promise.all(names.map(() => TestSocket.open(wsUrl)));
@@ -440,7 +440,7 @@ describe("Tallest Tower over WebSockets", () => {
 
     // Play again keeps Tallest Tower selected.
     host.send({ type: "host.open", quizId: quiz.id });
-    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "tower" && v.tower.teams === 2 && v.tower.theme === "classic");
+    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "tower" && v.settings.tower.teams === 2 && v.settings.tower.theme === "classic");
     host.send({ type: "host.close" });
     [host, ...players].forEach((s) => s.close());
   });
@@ -459,8 +459,8 @@ describe("Lobby teams over WebSockets", () => {
     host.send({ type: "host.open", quizId: quiz.id });
     await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
     host.send({ type: "host.setMode", mode: "tower" });
-    host.send({ type: "host.setTower", teams: 2, minutes: 2 });
-    await host.hostState((v) => v.kind === "classic" && v.mode === "tower" && v.tower.minutes === 2);
+    host.send({ type: "host.setModeSettings", mode: "tower", settings: { teams: 2, minutes: 2 } });
+    await host.hostState((v) => v.kind === "classic" && v.mode === "tower" && v.settings.tower.minutes === 2);
 
     const names = ["Ann", "Bob", "Cy"];
     const players = await Promise.all(names.map(() => TestSocket.open(wsUrl)));
@@ -566,8 +566,8 @@ describe("Tower Fight over WebSockets", () => {
     host.send({ type: "host.open", quizId: quiz.id });
     await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
     host.send({ type: "host.setMode", mode: "fight" });
-    host.send({ type: "host.setFight", hill: "low" });
-    await host.hostState((v) => v.kind === "classic" && v.mode === "fight" && v.fight.hill === "low");
+    host.send({ type: "host.setModeSettings", mode: "fight", settings: { hill: "low" } });
+    await host.hostState((v) => v.kind === "classic" && v.mode === "fight" && v.settings.fight.hill === "low");
 
     const names = ["Red1", "Blue1"];
     const players = await Promise.all(names.map(() => TestSocket.open(wsUrl)));
@@ -622,7 +622,7 @@ describe("Tower Fight over WebSockets", () => {
 
     // Play again keeps Tower Fight and the hill.
     host.send({ type: "host.open", quizId: quiz.id });
-    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "fight" && v.fight.hill === "low");
+    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "fight" && v.settings.fight.hill === "low");
     host.send({ type: "host.close" });
     [host, ...players].forEach((s) => s.close());
   });
@@ -719,13 +719,13 @@ describe("Cup of Death over WebSockets", () => {
     host.send({ type: "host.open", quizId: quiz.id });
     await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
     host.send({ type: "host.setMode", mode: "cup" });
-    await host.hostState((v) => v.kind === "classic" && v.mode === "cup" && v.teams === null && v.cup.cups === 3);
-    host.send({ type: "host.setCup", cups: 7 });
+    await host.hostState((v) => v.kind === "classic" && v.mode === "cup" && v.teams === null && v.settings.cup.cups === 3);
+    host.send({ type: "host.setModeSettings", mode: "cup", settings: { cups: 7 } });
     expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: expect.stringContaining("between 1 and 6") });
-    host.send({ type: "host.setCup", cups: 5, theme: "classic" });
-    await host.hostState((v) => v.kind === "classic" && v.cup.cups === 5 && v.cup.theme === "classic");
-    host.send({ type: "host.setCup", cups: 5, theme: "christmas" });
-    await host.hostState((v) => v.kind === "classic" && v.cup.theme === "christmas");
+    host.send({ type: "host.setModeSettings", mode: "cup", settings: { cups: 5, theme: "classic" } });
+    await host.hostState((v) => v.kind === "classic" && v.settings.cup.cups === 5 && v.settings.cup.theme === "classic");
+    host.send({ type: "host.setModeSettings", mode: "cup", settings: { cups: 5, theme: "christmas" } });
+    await host.hostState((v) => v.kind === "classic" && v.settings.cup.theme === "christmas");
 
     const names = ["Ann", "Bob"];
     const players = await Promise.all(names.map(() => TestSocket.open(wsUrl)));
@@ -782,7 +782,7 @@ describe("Cup of Death over WebSockets", () => {
 
     // Play again keeps the Cup of Cheer theme and cup count.
     host.send({ type: "host.open", quizId: quiz.id });
-    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "cup" && v.cup.theme === "christmas" && v.cup.cups === 5);
+    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "cup" && v.settings.cup.theme === "christmas" && v.settings.cup.cups === 5);
     host.send({ type: "host.close" });
     [host, ...players].forEach((s) => s.close());
   });
@@ -801,12 +801,12 @@ describe("Kingdom Siege over WebSockets", () => {
     host.send({ type: "host.open", quizId: quiz.id });
     await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
     host.send({ type: "host.setMode", mode: "siege" });
-    const siegeLobby = await host.hostState((v) => v.kind === "classic" && v.mode === "siege" && v.siege.waves === 5 && v.teams === null);
-    expect(siegeLobby.view.kind === "classic" && siegeLobby.view.siege.theme).toBe("christmas");
-    host.send({ type: "host.setSiege", waves: 7 as never });
+    const siegeLobby = await host.hostState((v) => v.kind === "classic" && v.mode === "siege" && v.settings.siege.waves === 5 && v.teams === null);
+    expect(siegeLobby.view.kind === "classic" && siegeLobby.view.settings.siege.theme).toBe("christmas");
+    host.send({ type: "host.setModeSettings", mode: "siege", settings: { waves: 7 as never } });
     expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: expect.stringContaining("waves") });
-    host.send({ type: "host.setSiege", waves: "endless", theme: "classic" });
-    await host.hostState((v) => v.kind === "classic" && v.siege.waves === "endless");
+    host.send({ type: "host.setModeSettings", mode: "siege", settings: { waves: "endless", theme: "classic" } });
+    await host.hostState((v) => v.kind === "classic" && v.settings.siege.waves === "endless");
 
     const names = ["Ann", "Bob"];
     const players = await Promise.all(names.map(() => TestSocket.open(wsUrl)));
@@ -875,8 +875,8 @@ describe("Kingdom Siege over WebSockets", () => {
 
     // Play again keeps Kingdom Siege and Endless, and the next run knows the record.
     host.send({ type: "host.open", quizId: quiz.id });
-    const siegeAgain = await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "siege" && v.siege.waves === "endless");
-    expect(siegeAgain.view.kind === "classic" && siegeAgain.view.siege.theme).toBe("classic");
+    const siegeAgain = await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "siege" && v.settings.siege.waves === "endless");
+    expect(siegeAgain.view.kind === "classic" && siegeAgain.view.settings.siege.theme).toBe("classic");
     for (const [i, p] of players.entries()) {
       p.send({ type: "join", nickname: names[i]! });
       await p.waitFor((m) => m.type === "joined");
@@ -904,12 +904,12 @@ describe("Land Grab over WebSockets", () => {
     await host.hostState((v) => v.kind === "idle");
     host.send({ type: "host.open", quizId: quiz.id });
     host.send({ type: "host.setMode", mode: "land" });
-    host.send({ type: "host.setLand", teams: 1, minutes: 3 });
+    host.send({ type: "host.setModeSettings", mode: "land", settings: { teams: 1, minutes: 3 } });
     expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: expect.stringContaining("between 2 and 6") });
-    host.send({ type: "host.setLand", teams: 2, minutes: 3, theme: "classic" });
-    await host.hostState((v) => v.kind === "classic" && v.mode === "land" && v.land.minutes === 3 && v.land.theme === "classic");
-    host.send({ type: "host.setLand", teams: 2, minutes: 3, theme: "christmas" });
-    await host.hostState((v) => v.kind === "classic" && v.land.theme === "christmas");
+    host.send({ type: "host.setModeSettings", mode: "land", settings: { teams: 2, minutes: 3, theme: "classic" } });
+    await host.hostState((v) => v.kind === "classic" && v.mode === "land" && v.settings.land.minutes === 3 && v.settings.land.theme === "classic");
+    host.send({ type: "host.setModeSettings", mode: "land", settings: { teams: 2, minutes: 3, theme: "christmas" } });
+    await host.hostState((v) => v.kind === "classic" && v.settings.land.theme === "christmas");
 
     const names = ["Ann", "Bob"];
     const players = await Promise.all(names.map(() => TestSocket.open(wsUrl)));
@@ -971,7 +971,7 @@ describe("Land Grab over WebSockets", () => {
 
     // Play again keeps Land Grab and its settings.
     host.send({ type: "host.open", quizId: quiz.id });
-    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "land" && v.land.minutes === 3);
+    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "land" && v.settings.land.minutes === 3);
     host.send({ type: "host.close" });
     [host, ...players].forEach((s) => s.close());
   });
@@ -992,8 +992,8 @@ describe("Racer over WebSockets", () => {
     host.send({ type: "host.setMode", mode: "racer" });
     await host.hostState((v) => v.kind === "classic" && v.mode === "racer" && v.teams === null);
 
-    host.send({ type: "host.setRacer", theme: "christmas" });
-    await host.hostState((v) => v.kind === "classic" && v.racer.theme === "christmas");
+    host.send({ type: "host.setModeSettings", mode: "racer", settings: { theme: "christmas" } });
+    await host.hostState((v) => v.kind === "classic" && v.settings.racer.theme === "christmas");
 
     const names = ["Ann", "Bob"];
     const players = await Promise.all(names.map(() => TestSocket.open(wsUrl)));
@@ -1094,7 +1094,7 @@ describe("Racer over WebSockets", () => {
 
     // Play again keeps Racer and the pacing.
     host.send({ type: "host.open", quizId: quiz.id });
-    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "racer" && v.pacing === "auto" && v.racer.theme === "christmas");
+    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "racer" && v.pacing === "auto" && v.settings.racer.theme === "christmas");
     host.send({ type: "host.setPacing", pacing: "manual" });
     await host.hostState((v) => v.kind === "classic" && v.pacing === "manual");
     host.send({ type: "host.close" });
@@ -1116,11 +1116,11 @@ describe("Showdown over WebSockets", () => {
     host.send({ type: "host.open", quizId: quiz.id });
     await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
     host.send({ type: "host.setMode", mode: "duel" });
-    await host.hostState((v) => v.kind === "classic" && v.mode === "duel" && v.duel.rounds === 15 && v.duel.theme === "christmas" && v.teams === null);
-    host.send({ type: "host.setDuel", rounds: 7 });
+    await host.hostState((v) => v.kind === "classic" && v.mode === "duel" && v.settings.duel.rounds === 15 && v.settings.duel.theme === "christmas" && v.teams === null);
+    host.send({ type: "host.setModeSettings", mode: "duel", settings: { rounds: 7 } });
     expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: "Unsupported number of rounds" });
-    host.send({ type: "host.setDuel", rounds: 10, theme: "classic" });
-    await host.hostState((v) => v.kind === "classic" && v.duel.rounds === 10 && v.duel.theme === "classic");
+    host.send({ type: "host.setModeSettings", mode: "duel", settings: { rounds: 10, theme: "classic" } });
+    await host.hostState((v) => v.kind === "classic" && v.settings.duel.rounds === 10 && v.settings.duel.theme === "classic");
 
     const names = ["Ann", "Bob"];
     const players = await Promise.all(names.map(() => TestSocket.open(wsUrl)));
@@ -1165,7 +1165,7 @@ describe("Showdown over WebSockets", () => {
 
     // Play again keeps Showdown and its rounds.
     host.send({ type: "host.open", quizId: quiz.id });
-    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "duel" && v.duel.rounds === 10 && v.duel.theme === "classic");
+    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "duel" && v.settings.duel.rounds === 10 && v.settings.duel.theme === "classic");
     host.send({ type: "host.close" });
     await host.hostState((v) => v.kind === "idle");
     [host, ...players].forEach((s) => s.close());
@@ -1217,13 +1217,13 @@ describe("Gift Grab over WebSockets", () => {
       host.send({ type: "host.open", quizId: quiz.id });
       await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
       host.send({ type: "host.setMode", mode: "gift" });
-      await host.hostState((v) => v.kind === "classic" && v.mode === "gift" && v.gift.minutes === 5);
-      host.send({ type: "host.setGift", minutes: 4 });
+      await host.hostState((v) => v.kind === "classic" && v.mode === "gift" && v.settings.gift.minutes === 5);
+      host.send({ type: "host.setModeSettings", mode: "gift", settings: { minutes: 4 } });
       expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: "Unsupported game length" });
-      host.send({ type: "host.setGift", minutes: 3 });
+      host.send({ type: "host.setModeSettings", mode: "gift", settings: { minutes: 3 } });
       player.send({ type: "join", nickname: "Noel" });
       const joined = await player.waitFor((m) => m.type === "joined");
-      await host.hostState((v) => v.kind === "classic" && v.gift.minutes === 3 && v.players.length === 1);
+      await host.hostState((v) => v.kind === "classic" && v.settings.gift.minutes === 3 && v.players.length === 1);
       host.send({ type: "host.start", pacing: "manual" });
       await host.hostState((v) => v.kind === "gift" && v.phase === "countdown");
       clock.advance(3_000);
@@ -1255,7 +1255,7 @@ describe("Gift Grab over WebSockets", () => {
       expect(await (await fetch(`${base}/api/results/latest.csv`)).text()).toContain("1,Noel,10,5,0,1,1,0,0");
 
       host.send({ type: "host.open", quizId: quiz.id });
-      await host.hostState((v) => v.kind === "classic" && v.mode === "gift" && v.gift.minutes === 3);
+      await host.hostState((v) => v.kind === "classic" && v.mode === "gift" && v.settings.gift.minutes === 3);
     } finally {
       host.send({ type: "host.close" });
       await host.hostState((v) => v.kind === "idle");
@@ -1281,8 +1281,8 @@ describe("Only changed player views are pushed", () => {
     host.send({ type: "host.hello" });
     host.send({ type: "host.open", quizId: quiz.id });
     host.send({ type: "host.setMode", mode: "tower" });
-    host.send({ type: "host.setTower", teams: 2, minutes: 2 });
-    await host.hostState((v) => v.kind === "classic" && v.mode === "tower" && v.tower.teams === 2);
+    host.send({ type: "host.setModeSettings", mode: "tower", settings: { teams: 2, minutes: 2 } });
+    await host.hostState((v) => v.kind === "classic" && v.mode === "tower" && v.settings.tower.teams === 2);
 
     const [ann, bob] = await Promise.all([TestSocket.open(wsUrl), TestSocket.open(wsUrl)]);
     for (const [p, nickname] of [[ann!, "Ann"], [bob!, "Bob"]] as const) {
