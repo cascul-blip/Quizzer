@@ -79,7 +79,7 @@ interface LandGameSettings extends LandSettings {
 
 /** Land Grab: teams answer at their own pace; every 3 answers, the correct ones become tiles on a shared hex board. */
 export class LandGame {
-  readonly mode = "land" as const;
+  readonly runningMode = "land" as const;
   readonly quizId: string;
   readonly title: string;
   readonly questions: Question[];

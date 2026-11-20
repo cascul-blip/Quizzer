@@ -3,7 +3,6 @@ import { classicMode } from "./classic.ts";
 import { cupMode } from "./cup.ts";
 import { duelMode } from "./duel.ts";
 import { fightMode } from "./fight.ts";
-import { Game } from "./game.ts";
 import { giftMode } from "./gift.ts";
 import { landMode } from "./land.ts";
 import type { LiveGame, ModeEntry } from "./mode-entry.ts";
@@ -28,13 +27,8 @@ export const MODES: { [M in GameMode]: ModeEntry<M> } = {
   gift: giftMode,
 };
 
-/** The mode a live game is running. A Game is Classic (or the lobby, which plays as Classic); every other game says its mode. */
-export function modeOf(game: LiveGame): GameMode {
-  return game instanceof Game ? "classic" : game.mode;
-}
-
 /** The entry of the mode a live game is running, for calls that pass that same game back in. */
 export function entryOf(game: LiveGame): ModeEntry<GameMode> {
   // The one place the per-mode types meet: callers pass back the game they looked the entry up with.
-  return MODES[modeOf(game)] as ModeEntry<GameMode>;
+  return MODES[game.runningMode] as ModeEntry<GameMode>;
 }

@@ -115,7 +115,10 @@ export class Game {
   shuffle: ShuffleOptions;
   /** "Protect from abuse": Tallest Tower, Submarine Squad, Tower Fight, Robot Attack, Cup of Death, Kingdom Siege and Gift Grab slow down players who keep answering wrong. */
   protect: boolean;
+  /** The mode the host has chosen in the lobby, which starting the game hands the players to. */
   mode: GameMode;
+  /** The mode this game runs: a Game plays Classic, also while it is the lobby for another mode. */
+  readonly runningMode = "classic" as const;
   /** The lobby's mode settings for every game mode, so switching modes keeps each one's choices. */
   settings: ModeSettingsMap;
   /** When the current phase's countdown ends (intro/open), for views. */

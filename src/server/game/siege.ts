@@ -187,7 +187,7 @@ interface SiegeGameSettings extends SiegeSettings {
  * The battle runs in fixed SIEGE_TICK_MS steps on the game clock.
  */
 export class SiegeGame {
-  readonly mode = "siege" as const;
+  readonly runningMode = "siege" as const;
   readonly quizId: string;
   readonly title: string;
   readonly questions: Question[];

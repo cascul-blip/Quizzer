@@ -84,7 +84,7 @@ interface DuelGameSettings {
  * (intro → open → reveal), then the podium after the last round. The ladder order is the ranking.
  */
 export class DuelGame {
-  readonly mode = "duel" as const;
+  readonly runningMode = "duel" as const;
   readonly quizId: string;
   readonly title: string;
   readonly rounds: number;

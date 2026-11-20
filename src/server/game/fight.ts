@@ -88,7 +88,7 @@ interface FightGameSettings extends FightSettings {
 
 /** Tower Fight: Red vs Blue answer at their own pace; every 4 correct answers they attack the enemy tower or repair their own. */
 export class FightGame {
-  readonly mode = "fight" as const;
+  readonly runningMode = "fight" as const;
   readonly quizId: string;
   readonly title: string;
   readonly questions: Question[];

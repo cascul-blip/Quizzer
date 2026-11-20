@@ -79,7 +79,7 @@ interface TowerGameSettings extends TowerSettings {
 
 /** Tallest Tower: teams answer at their own pace; every 4 correct answers are dropped onto the team tower. */
 export class TowerGame {
-  readonly mode = "tower" as const;
+  readonly runningMode = "tower" as const;
   readonly quizId: string;
   readonly title: string;
   readonly questions: Question[];

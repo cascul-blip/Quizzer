@@ -7,7 +7,7 @@ import { diffView } from "../shared/view-patch.ts";
 import { Game, GameError, type Clock } from "./game/game.ts";
 import { startLobbyGame, type LiveGame } from "./game/lobby-handoff.ts";
 import { MSG_MODE, isModeMsg } from "./game/mode-entry.ts";
-import { entryOf, modeOf } from "./game/modes.ts";
+import { entryOf } from "./game/modes.ts";
 import { writeResultsFile } from "./game/results.ts";
 import { MAX_JOINS_PER_ADDRESS, MAX_SOCKETS_PER_ADDRESS } from "./game/common.ts";
 import { isLoopbackAddress, lanAddresses, type LanAddress } from "./network.ts";
@@ -317,7 +317,7 @@ export class GameHub {
         const game = this.game;
         const playerId = ws.data.playerId;
         // A message for a mode that isn't running (say, a late tap from the last game) is ignored.
-        if (!game || !playerId || modeOf(game) !== MSG_MODE[msg.type]) return;
+        if (!game || !playerId || game.runningMode !== MSG_MODE[msg.type]) return;
         if (entryOf(game).handle(game, playerId, msg) === "resend") this.sendState(ws);
         return;
       }

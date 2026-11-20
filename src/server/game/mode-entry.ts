@@ -28,6 +28,7 @@ export interface ModeGame {
   gift: GiftGame;
 }
 
+/** The game the hub holds; its runningMode names its mode's entry in MODES. */
 export type LiveGame = ModeGame[GameMode];
 
 /** The game mode each phone message belongs to; join and resume belong to every mode and stay with the hub. */

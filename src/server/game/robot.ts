@@ -96,7 +96,7 @@ export function spreadTile(taken: { x: number; y: number }[], order: number[], a
 
 /** Robot Attack: answer questions for movement points, then dodge the robot's lasers. Last one standing wins. */
 export class RobotGame {
-  readonly mode = "robot" as const;
+  readonly runningMode = "robot" as const;
   readonly quizId: string;
   readonly title: string;
   readonly questions: Question[];

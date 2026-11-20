@@ -86,7 +86,7 @@ interface CupGameSettings {
 
 /** Cup of Death: roll a die, answer that many questions in time, or drink one of your cups. One is poisoned. Last one standing wins. */
 export class CupGame {
-  readonly mode = "cup" as const;
+  readonly runningMode = "cup" as const;
   readonly theme: CupTheme;
   readonly quizId: string;
   readonly title: string;

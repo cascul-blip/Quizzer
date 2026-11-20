@@ -75,7 +75,7 @@ interface RacerGameSettings {
  * Every question is asked once, then the podium.
  */
 export class RacerGame {
-  readonly mode = "racer" as const;
+  readonly runningMode = "racer" as const;
   readonly theme: RacerTheme;
   readonly quizId: string;
   readonly title: string;

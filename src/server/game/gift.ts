@@ -86,7 +86,7 @@ function compare(a: GiftPlayer, b: GiftPlayer): number {
 }
 
 export class GiftGame {
-  readonly mode = "gift" as const;
+  readonly runningMode = "gift" as const;
   readonly quizId: string;
   readonly title: string;
   readonly roster = new Roster<GiftPlayer>();
