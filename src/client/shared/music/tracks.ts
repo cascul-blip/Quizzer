@@ -1418,8 +1418,10 @@ const XMAS_CHORDS: Record<string, string> = {
   Am: "A3 C4 E4",
   B7: "F#3 A3 D#4",
   Bm: "F#3 B3 D4",
+  "F#m": "F#3 A3 C#4",
+  "C#m7": "G#3 B3 C#4 E4",
 };
-const XMAS_ROOTS: Record<string, string> = { G: "G2", D: "D2", D7: "D2", A: "A2", A7: "A2", Em: "E2", C: "C3", Am: "A2", B7: "B2", Bm: "B2" };
+const XMAS_ROOTS: Record<string, string> = { G: "G2", D: "D2", D7: "D2", A: "A2", A7: "A2", Em: "E2", C: "C3", Am: "A2", B7: "B2", Bm: "B2", "F#m": "F#2", "C#m7": "C#3" };
 
 /** One bar from four beats of chords: each beat's 4 steps follow `beat` ("x" = play, "-" = hold, "." = rest). */
 const beats = (q: string[], beat: string, pick: (chordName: string, step: number) => string) =>
@@ -1684,23 +1686,76 @@ const snowmanResults: Track = {
 // Reuse the traditional melodies and our arrangements; provenance: samples/CREDITS.md.
 const christmasTowerLobby: Track = { ...snowmanLobby, id: "tower-christmas-lobby" };
 
+// Adolphe Adam's O Holy Night in D, from the verse through the final refrain.
+// The vocal line is transposed from the public-domain Léon Grus score (see CREDITS.md).
+const HOLY_NIGHT = [
+  seq([".", 7], ["F#4", 8], ["A4", 1]),
+  seq(["A4", 7], ["A4", 1], ["B4", 3], ["B4", 1], ["G4", 3], ["B4", 1]),
+  seq(["D5", 8], ["A4", 2], [".", 1], ["A4", 1], ["F#4", 3], ["E4", 1]),
+  seq(["D4", 4], ["F#4", 3], ["G4", 1], ["A4", 4], ["G4", 3], ["E4", 1]),
+  seq(["D4", 8], [".", 8]),
+  seq([".", 8], ["F#4", 4], ["F#4", 3], ["F#4", 1]),
+  seq(["A4", 7], ["A4", 1], ["B4", 3], ["B4", 1], ["G4", 3], ["B4", 1]),
+  seq(["D5", 8], ["A4", 2], [".", 1], ["A4", 1], ["G#4", 3], ["F#4", 1]),
+  seq(["C#5", 4], ["A4", 3], ["B4", 1], ["C#5", 4], ["D5", 3], ["C#5", 1]),
+  seq(["F#4", 8], [".", 7], ["A4", 1]),
+  // The melody rises into the refrain.
+  seq(["A4", 4], ["B4", 4], ["E4", 4], ["A4", 4]),
+  seq(["B4", 3], ["A4", 1], ["D5", 3], ["F#4", 1], ["B4", 4], ["A4", 2], [".", 1], ["A4", 1]),
+  seq(["A4", 4], ["B4", 4], ["E4", 4], ["A4", 4]),
+  seq(["B4", 3], ["A4", 1], ["D5", 3], ["F#4", 1], ["A4", 6], [".", 2]),
+  seq(["D5", 12], ["C#5", 3], ["B4", 1]),
+  seq(["C#5", 15], ["C#5", 1]),
+  seq(["E5", 11], ["B4", 1], ["B4", 3], ["B4", 1]),
+  seq(["D5", 8], ["D5", 4], [".", 3], ["D5", 1]),
+  seq(["F#5", 8], ["E5", 7], ["A4", 1]),
+  seq(["D5", 12], ["C#5", 3], ["B4", 1]),
+  seq(["A4", 11], ["A4", 1], ["B4", 3], ["A4", 1]),
+  seq(["A4", 12], [".", 3], ["D5", 1]),
+  seq(["E5", 15], ["A4", 1]),
+  seq(["F#5", 12], ["E5", 4]),
+  seq(["D5", 8], ["C#5", 4], ["D5", 3], ["E5", 1]),
+  seq(["D5", 8], [".", 8]),
+];
+const HOLY_NIGHT_HARMONY = [
+  ["D", "D", "D", "D"], ["D", "D", "G", "G"], ["D", "D", "D", "D"], ["D", "D", "A7", "A7"],
+  ["D", "D", "D", "D"], ["D", "D", "D", "D"], ["D", "D", "G", "G"], ["D", "D", "D7", "D7"],
+  ["F#m", "F#m", "C#m7", "C#m7"], ["F#m", "F#m", "F#m", "F#m"],
+  ["A7", "A7", "A7", "A7"], ["D", "D", "D", "D"], ["A7", "A7", "A7", "A7"], ["D", "D", "D", "D"],
+  ["Bm", "Bm", "Bm", "Bm"], ["F#m", "F#m", "F#m", "F#m"], ["Em", "Em", "Em", "Em"], ["Bm", "Bm", "Bm", "Bm"],
+  ["D", "D", "A7", "A7"], ["D", "D", "Em", "Em"], ["D", "D", "A7", "A7"], ["D", "D", "D", "D"],
+  ["A7", "A7", "A7", "A7"], ["D", "D", "Em", "Em"], ["D", "D", "A7", "A7"], ["D", "D", "D", "D"],
+];
+
+function christmasTowerLayers(includeHolyNight: boolean): Track["layers"] {
+  const holyNightRest = HOLY_NIGHT.map(() => rest);
+  const followWith = (joyBars: string[], holyNightBars = holyNightRest) => includeHolyNight
+    ? [...ANTIOCH.map((_, bar) => joyBars[bar % joyBars.length]!), ...holyNightBars]
+    : joyBars;
+
+  return [
+    { inst: "flute", bars: followWith(ANTIOCH, HOLY_NIGHT), vol: 0.55 },
+    { inst: "bell", bars: followWith(shift(ANTIOCH, 1)), vol: 0.22 },
+    { inst: "strings", bars: followWith(ANTIOCH_HARMONY.map(padBar), HOLY_NIGHT_HARMONY.map(padBar)), vol: 0.3 },
+    { inst: "piano", bars: followWith(ANTIOCH_HARMONY.map(rootBounce), HOLY_NIGHT_HARMONY.map(rootBeats)), vol: 0.45 },
+    { inst: "pluck", bars: followWith(ANTIOCH_HARMONY.map(brokenChords), HOLY_NIGHT_HARMONY.map(brokenChords)), vol: 0.25 },
+    { inst: "hat", bars: followWith([BELLS_8THS]), vol: 0.25 },
+    { inst: "piano", bars: followWith(ANTIOCH_HARMONY.map(offbeatChords)), vol: 0.22, from: 0.3 },
+    { inst: "brass", bars: followWith(ANTIOCH, HOLY_NIGHT.map((bar, i) => i >= 14 ? bar : rest)), vol: 0.45, from: 0.5 },
+    { inst: "kick", bars: followWith([drum("x.......x.......")]), vol: 0.4, from: 0.5 },
+    { inst: "snare", bars: followWith([drum("....x.......x...")]), vol: 0.3, from: 0.75 },
+    { inst: "hat", bars: followWith([BELLS_16THS]), vol: 0.2, from: 0.85 },
+    { inst: "timpani", bars: followWith(ANTIOCH_HARMONY.map((q) => once(XMAS_ROOTS[q[0]!]!))), vol: 0.3, from: 0.85 },
+  ];
+}
+
 const christmasTowerPlay: Track = {
   id: "tower-christmas-play", bpm: 104, tempoBoost: 0.25, bars: ANTIOCH.length, reverb: 0.25,
-  layers: [
-    // Keep the complete tune audible even at the start of a long building game.
-    { inst: "flute", bars: ANTIOCH, vol: 0.55 },
-    { inst: "bell", bars: shift(ANTIOCH, 1), vol: 0.22 },
-    { inst: "strings", bars: ANTIOCH_HARMONY.map(padBar), vol: 0.3 },
-    { inst: "piano", bars: ANTIOCH_HARMONY.map(rootBounce), vol: 0.45 },
-    { inst: "pluck", bars: ANTIOCH_HARMONY.map(brokenChords), vol: 0.25 },
-    { inst: "hat", bars: [BELLS_8THS], vol: 0.25 },
-    { inst: "piano", bars: ANTIOCH_HARMONY.map(offbeatChords), vol: 0.22, from: 0.3 },
-    { inst: "brass", bars: ANTIOCH, vol: 0.45, from: 0.5 },
-    { inst: "kick", bars: [drum("x.......x.......")], vol: 0.4, from: 0.5 },
-    { inst: "snare", bars: [drum("....x.......x...")], vol: 0.3, from: 0.75 },
-    { inst: "hat", bars: [BELLS_16THS], vol: 0.2, from: 0.85 },
-    { inst: "timpani", bars: ANTIOCH_HARMONY.map((q) => once(XMAS_ROOTS[q[0]!]!)), vol: 0.3, from: 0.85 },
-  ],
+  layers: christmasTowerLayers(false),
+};
+const christmasTowerMedley: Track = {
+  ...christmasTowerPlay, id: "tower-christmas-medley", bars: ANTIOCH.length + HOLY_NIGHT.length,
+  layers: christmasTowerLayers(true),
 };
 
 // ---------- Neon Noel Racer: carols over the arcade rhythm section ----------
@@ -1809,6 +1864,7 @@ export const TRACKS: Record<MusicTrackId, Track> = {
   "tower-results": towerResults,
   "tower-christmas-lobby": christmasTowerLobby,
   "tower-christmas-play": christmasTowerPlay,
+  "tower-christmas-medley": christmasTowerMedley,
   "tower-christmas-results": christmasTowerResults,
   "submarine-lobby": submarineLobby,
   "submarine-chase": submarineChase,

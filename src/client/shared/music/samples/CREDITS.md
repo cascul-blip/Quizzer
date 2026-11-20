@@ -43,12 +43,13 @@ with no third-party song recordings or modern published arrangements:
 |---|---|---|
 | `tower-christmas-lobby` | O Come, All Ye Faithful (ADESTE FIDELES, attributed to John Francis Wade, 18th century) | [Hymnary: tune and public-domain status](https://hymnary.org/tune/adeste_fideles_wade) |
 | `tower-christmas-play` | Joy to the World (ANTIOCH, Lowell Mason, 19th century) | [Hymnary: tune and public-domain status](https://hymnary.org/tune/antioch_handel) |
+| `tower-christmas-medley` | Joy to the World, followed by O Holy Night (CANTIQUE DE NOËL, Adolphe Adam, 19th century) | [Hymnary: ANTIOCH](https://hymnary.org/tune/antioch_handel), [Mutopia Project: public-domain Léon Grus score](https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=640) |
 | `tower-christmas-results` | Hark! The Herald Angels Sing (MENDELSSOHN, Felix Mendelssohn, 1840; adapted by William H. Cummings, 1855) | [Hymnary: tune and public-domain status](https://hymnary.org/tune/mendelssohn_mendelssohn) |
 
 The underlying compositions are public domain in the United States. All instrument
 recordings in these cues come from the CC0 VSCO 2 CE and VCSL libraries above;
-piano replaces the FluidR3 bass in the podium arrangement. The building cue keeps
-Joy to the World's melody audible at every intensity and builds from 104 to 130 BPM.
+piano replaces the FluidR3 bass in the podium arrangement. The building cue plays
+both melodies at every intensity and builds from 104 to 130 BPM.
 
 ## Neon Noel Racer Christmas arrangements
 
