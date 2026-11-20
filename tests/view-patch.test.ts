@@ -71,7 +71,7 @@ describe("Phones that fall behind", () => {
 
   test("get no snapshots while their socket is backed up, then only the latest", async () => {
     const store = new QuizStore(t.dir);
-    const quiz = store.create({ title: "Behind", questions: [{ type: "true_false", text: "Q", correct: [0] }] });
+    const quiz = await store.create({ title: "Behind", questions: [{ type: "true_false", text: "Q", correct: [0] }] });
     const hub = new GameHub(store, { clock: new FakeClock() });
     const host = fakeSocket({ admin: true, role: "host" });
     const phone = fakeSocket({});

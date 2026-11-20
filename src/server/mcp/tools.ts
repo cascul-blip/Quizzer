@@ -123,8 +123,8 @@ export function createMcpServer(store: QuizStore, version: string): McpServer {
       annotations: { destructiveHint: true },
     },
     ({ id }) =>
-      run(() => {
-        store.delete(id);
+      run(async () => {
+        await store.delete(id);
         return `Deleted quiz ${id}`;
       }),
   );
@@ -174,8 +174,8 @@ export function createMcpServer(store: QuizStore, version: string): McpServer {
       annotations: { destructiveHint: true },
     },
     ({ quizId, questionId }) =>
-      run(() => {
-        store.deleteQuestion(quizId, questionId);
+      run(async () => {
+        await store.deleteQuestion(quizId, questionId);
         return `Deleted question ${questionId}`;
       }),
   );
@@ -186,7 +186,7 @@ export function createMcpServer(store: QuizStore, version: string): McpServer {
       description: "Set the question order. questionIds must contain every question id of the quiz exactly once.",
       inputSchema: { quizId, questionIds: z.array(questionId) },
     },
-    ({ quizId, questionIds }) => run(() => store.reorderQuestions(quizId, questionIds).questions.map((q) => q.id)),
+    ({ quizId, questionIds }) => run(async () => (await store.reorderQuestions(quizId, questionIds)).questions.map((q) => q.id)),
   );
 
   server.registerTool(

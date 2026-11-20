@@ -28,7 +28,7 @@ describe("Classic answers", () => {
 
   test("update the answering phone at once and everyone else on the throttled broadcast", async () => {
     const store = new QuizStore(t.dir);
-    const quiz = store.create({ title: "Classic", questions: [{ type: "true_false", text: "Q", correct: [0] }] });
+    const quiz = await store.create({ title: "Classic", questions: [{ type: "true_false", text: "Q", correct: [0] }] });
     const clock = new FakeClock();
     const hub = new GameHub(store, { clock });
     const host = fakeSocket({ admin: true, role: "host" });

@@ -38,5 +38,8 @@ export function newId(len = 6): string {
   return out;
 }
 
-/** Sent with an editor save (PUT /api/quizzes/:id): the updatedAt it loaded. The save is refused (409) if the quiz changed since. */
+/** Legacy timestamp guard for clients that loaded a quiz before content revisions were available. */
 export const BASE_VERSION_HEADER = "x-quiz-updated-at";
+
+/** Digest of the quiz file the editor loaded. */
+export const QUIZ_REVISION_HEADER = "x-quiz-revision";

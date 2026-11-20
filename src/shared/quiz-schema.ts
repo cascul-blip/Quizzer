@@ -128,6 +128,8 @@ export const Quiz = z.object({
   questions: z.array(Question),
 });
 export type Quiz = z.infer<typeof Quiz>;
+/** A quiz snapshot and the digest of its JSON file. */
+export type SavedQuiz = Quiz & { revision: string };
 
 /** Input for creating/replacing a quiz; everything but the title is optional. */
 export const QuizDraft = z.object({

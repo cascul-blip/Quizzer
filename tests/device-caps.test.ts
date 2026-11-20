@@ -22,9 +22,9 @@ describe("Per-device caps", () => {
     return sock;
   }
 
-  function openHub() {
+  async function openHub() {
     const store = new QuizStore(t.dir);
-    const quiz = store.create({ title: "Caps", questions: [{ type: "true_false", text: "Q", correct: [0] }] });
+    const quiz = await store.create({ title: "Caps", questions: [{ type: "true_false", text: "Q", correct: [0] }] });
     const hub = new GameHub(store, { clock: new FakeClock() });
     const host = fakeSocket({ admin: true, role: "host", ip: "127.0.0.1" });
     hub.onOpen(host as never);
@@ -39,8 +39,8 @@ describe("Per-device caps", () => {
     return phone;
   }
 
-  test("one address can't join more than its share of players", () => {
-    const hub = openHub();
+  test("one address can't join more than its share of players", async () => {
+    const hub = await openHub();
     for (let i = 0; i < MAX_JOINS_PER_ADDRESS; i++) expect(join(hub, "192.168.1.50", `P${i}`).sent.some((m) => m.type === "joined")).toBe(true);
     const extra = join(hub, "192.168.1.50", "Extra");
     expect(extra.sent).toContainEqual({ type: "error", message: "Too many players from this device" });
@@ -49,8 +49,8 @@ describe("Per-device caps", () => {
     for (let i = 0; i < MAX_JOINS_PER_ADDRESS + 1; i++) expect(join(hub, "127.0.0.1", `L${i}`).sent.some((m) => m.type === "joined")).toBe(true);
   });
 
-  test("a closed socket frees its seat in the socket count", () => {
-    const hub = openHub();
+  test("a closed socket frees its seat in the socket count", async () => {
+    const hub = await openHub();
     const socks = Array.from({ length: MAX_SOCKETS_PER_ADDRESS }, () => fakeSocket({}));
     for (const s of socks) hub.onOpen(s as never);
     expect(hub.socketLimitReached("192.168.1.50")).toBe(true);

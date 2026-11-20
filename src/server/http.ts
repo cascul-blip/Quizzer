@@ -4,7 +4,7 @@ import adminPage from "../client/admin/index.html";
 import hostPage from "../client/host/index.html";
 import playerPage from "../client/player/index.html";
 import { MUSIC_EXTENSIONS } from "../shared/music-tracks.ts";
-import { BASE_VERSION_HEADER } from "../shared/quiz-constants.ts";
+import { BASE_VERSION_HEADER, QUIZ_REVISION_HEADER } from "../shared/quiz-constants.ts";
 import { ValidationError } from "../shared/quiz-schema.ts";
 import { pageRoutes } from "./bundles.ts";
 import type { Clock } from "./game/game.ts";
@@ -63,7 +63,7 @@ export function startServer(opts: ServerOptions): RunningServer {
 
     if (path === "/api/quizzes") {
       if (method === "GET") return json(store.list());
-      if (method === "POST") return json(store.create(await readJson(req)), 201);
+      if (method === "POST") return json(await store.create(await readJson(req)), 201);
     }
 
     const m = path.match(/^\/api\/quizzes\/([^/]+)(\/duplicate)?$/);
@@ -71,12 +71,16 @@ export function startServer(opts: ServerOptions): RunningServer {
       const id = decodePath(m[1]!);
       if (id === null) return errorJson("Quiz not found", 404);
       if (m[2]) {
-        if (method === "POST") return json(store.duplicate(id), 201);
+        if (method === "POST") return json(await store.duplicate(id), 201);
       } else {
         if (method === "GET") return json(store.get(id));
-        if (method === "PUT") return json(store.replace(id, await readJson(req), req.headers.get(BASE_VERSION_HEADER) ?? undefined));
+        if (method === "PUT") {
+          const revision = req.headers.get(QUIZ_REVISION_HEADER);
+          const base = revision === null ? req.headers.get(BASE_VERSION_HEADER) ?? undefined : { revision };
+          return json(await store.replace(id, await readJson(req), base));
+        }
         if (method === "DELETE") {
-          store.delete(id);
+          await store.delete(id);
           return new Response(null, { status: 204 });
         }
       }

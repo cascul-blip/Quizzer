@@ -1,7 +1,8 @@
+import { Database } from "bun:sqlite";
 import { createHash } from "node:crypto";
 import { musicTrackForFile } from "../../shared/music-tracks.ts";
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { basename, join } from "node:path";
+import { join } from "node:path";
 import { MAX_IMAGE_SIDE, MAX_MEDIA_BYTES, SHRINK_ABOVE_BYTES, pinLabel } from "../../shared/quiz-constants.ts";
 import {
   DEFAULT_SETTINGS,
@@ -17,6 +18,7 @@ import {
   normalizeQuestions,
   slugify,
   type Question,
+  type SavedQuiz,
   type QuizSettings,
   type QuizSummary,
 } from "../../shared/quiz-schema.ts";
@@ -93,6 +95,36 @@ interface QuizPatch {
   settings?: Partial<QuizSettings>;
 }
 
+function normalizeDraft(input: unknown) {
+  const parsed = QuizDraft.safeParse(input);
+  if (!parsed.success) throw new ValidationError(formatZodError(parsed.error));
+  const draft = parsed.data;
+  return {
+    title: draft.title,
+    description: draft.description ?? "",
+    settings: { ...DEFAULT_SETTINGS, ...draft.settings },
+    questions: normalizeQuestions(draft.questions ?? []),
+  };
+}
+
+function quizDate(source: unknown, field: "createdAt" | "updatedAt"): string | undefined {
+  if (!source || typeof source !== "object") return undefined;
+  const value = (source as Record<string, unknown>)[field];
+  return typeof value === "string" && Number.isFinite(Date.parse(value)) ? value : undefined;
+}
+
+/** Keep legacy timestamp guards working across rapid saves and backwards clock adjustments. */
+function nextTimestamp(previous: string): string {
+  const now = Date.now();
+  const next = new Date(Date.parse(previous) + 1);
+  return next.getTime() > now ? next.toISOString() : new Date(now).toISOString();
+}
+
+/** The digest describes exactly the file read or written, including edits made outside Quizzer. */
+function revision(contents: string): string {
+  return createHash("sha256").update(contents).digest("hex");
+}
+
 /** One JSON file per quiz. Every read goes to disk so edits from other processes (stdio MCP) show up immediately. */
 export class QuizStore {
   readonly quizzesDir: string;
@@ -107,6 +139,29 @@ export class QuizStore {
     this.resultsDir = join(dataDir, "results");
     this.musicDir = join(dataDir, "music");
     for (const d of [this.quizzesDir, this.mediaDir, this.resultsDir, this.musicDir]) mkdirSync(d, { recursive: true });
+  }
+
+  /** HTTP and standalone MCP share this SQLite writer lock. Quiz contents stay in JSON.
+   * BEGIN IMMEDIATE holds the OS lock across the entire read/check/rename; exit releases it even on a crash. */
+  private async withWriteLock<T>(operation: () => T): Promise<T> {
+    const lock = new Database(join(this.dataDir, ".quiz-writes.sqlite"));
+    try {
+      const deadline = performance.now() + 5000;
+      lock.run("PRAGMA busy_timeout = 0");
+      while (true) {
+        try {
+          lock.run("BEGIN IMMEDIATE");
+          break;
+        } catch (error) {
+          if ((error as { code?: string }).code !== "SQLITE_BUSY" || performance.now() >= deadline) throw error;
+          await Bun.sleep(10);
+        }
+      }
+      // Only the lock lives in SQLite. Closing the connection releases it after the JSON write.
+      return operation();
+    } finally {
+      lock.close();
+    }
   }
 
   private file(id: string): string {
@@ -155,148 +210,177 @@ export class QuizStore {
     return out.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }
 
-  get(id: string): Quiz {
+  private contents(id: string): string {
     const path = this.file(id);
-    if (!existsSync(path)) throw new NotFoundError(`No quiz with id "${id}"`);
+    try {
+      return readFileSync(path, "utf8");
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") throw new NotFoundError(`No quiz with id "${id}"`);
+      throw error;
+    }
+  }
+
+  get(id: string): SavedQuiz {
+    const contents = this.contents(id);
     let raw: unknown;
     try {
-      raw = JSON.parse(readFileSync(path, "utf8"));
+      raw = JSON.parse(contents);
     } catch (e) {
-      throw new ValidationError(`${basename(path)} is not valid JSON: ${(e as Error).message}`);
+      throw new ValidationError(`${id}.json is not valid JSON: ${(e as Error).message}`);
     }
     const parsed = Quiz.safeParse(raw);
-    if (!parsed.success) throw new ValidationError(`${basename(path)}: ${formatZodError(parsed.error)}`);
-    if (parsed.data.id !== id) throw new ValidationError(`${basename(path)}: id "${parsed.data.id}" does not match the file name`);
-    return parsed.data;
+    if (!parsed.success) throw new ValidationError(`${id}.json: ${formatZodError(parsed.error)}`);
+    if (parsed.data.id !== id) throw new ValidationError(`${id}.json: id "${parsed.data.id}" does not match the file name`);
+    return { ...parsed.data, revision: revision(contents) };
   }
 
   exists(id: string): boolean {
     return QUIZ_ID_RE.test(id) && existsSync(this.file(id));
   }
 
-  create(input: unknown): Quiz {
-    const parsed = QuizDraft.safeParse(input);
-    if (!parsed.success) throw new ValidationError(formatZodError(parsed.error));
-    const d = parsed.data;
-    const questions = normalizeQuestions(d.questions ?? []);
-    const base = slugify(d.title);
-    let id: string;
-    do id = `${base}-${newId(4)}`;
-    while (this.exists(id));
-    const now = new Date().toISOString();
-    const quiz: Quiz = {
-      id,
-      title: d.title,
-      description: d.description ?? "",
-      createdAt: now,
-      updatedAt: now,
-      settings: { ...DEFAULT_SETTINGS, ...d.settings },
-      questions,
-    };
-    return this.write(quiz);
+  async create(input: unknown): Promise<SavedQuiz> {
+    const draft = normalizeDraft(input);
+    const base = slugify(draft.title);
+    return this.withWriteLock(() => {
+      let id: string;
+      do id = `${base}-${newId(4)}`;
+      while (this.exists(id));
+      const now = new Date().toISOString();
+      const quiz: Quiz = {
+        id,
+        ...draft,
+        createdAt: now,
+        updatedAt: now,
+      };
+      return this.write(quiz, now);
+    });
   }
 
   /**
    * Replace a quiz's content (title, description, settings, questions) keeping id and createdAt.
-   * With `baseUpdatedAt` (the version the caller loaded), refuse if the quiz has changed since.
+   * The editor guards by content revision. Older clients can still guard by updatedAt.
    */
-  replace(id: string, input: unknown, baseUpdatedAt?: string): Quiz {
-    const existing = this.get(id);
-    if (baseUpdatedAt !== undefined && baseUpdatedAt !== existing.updatedAt) {
-      throw new ConflictError("This quiz was changed somewhere else (maybe by an AI agent) since you opened it");
-    }
-    const parsed = QuizDraft.safeParse(input);
-    if (!parsed.success) throw new ValidationError(formatZodError(parsed.error));
-    const d = parsed.data;
-    const quiz: Quiz = {
-      ...existing,
-      title: d.title,
-      description: d.description ?? "",
-      settings: { ...DEFAULT_SETTINGS, ...d.settings },
-      questions: normalizeQuestions(d.questions ?? []),
-    };
-    return this.write(quiz);
-  }
-
-  update(id: string, patch: QuizPatch): Quiz {
-    const quiz = this.get(id);
-    return this.write({
-      ...quiz,
-      ...(patch.title !== undefined ? { title: patch.title } : {}),
-      ...(patch.description !== undefined ? { description: patch.description } : {}),
-      settings: { ...quiz.settings, ...patch.settings },
+  async replace(id: string, input: unknown, base?: string | { revision: string }): Promise<SavedQuiz> {
+    return this.withWriteLock(() => {
+      const contents = this.contents(id); // Missing quizzes stay deleted, including on explicit overwrite.
+      if (typeof base === "object" && base.revision !== revision(contents)) {
+        throw new ConflictError("This quiz changed since you opened it");
+      }
+      let raw: unknown;
+      try {
+        raw = JSON.parse(contents);
+      } catch {
+        // The open editor can restore a malformed file from its last successful load.
+      }
+      const updatedAt = quizDate(raw, "updatedAt");
+      if (typeof base === "string" && base !== updatedAt) {
+        throw new ConflictError("This quiz changed since you opened it");
+      }
+      const now = new Date().toISOString();
+      const quiz: Quiz = {
+        id,
+        createdAt: quizDate(raw, "createdAt") ?? quizDate(input, "createdAt") ?? now,
+        updatedAt: updatedAt ?? quizDate(input, "updatedAt") ?? now,
+        ...normalizeDraft(input),
+      };
+      return this.write(quiz);
     });
   }
 
-  duplicate(id: string): Quiz {
+  async update(id: string, patch: QuizPatch): Promise<SavedQuiz> {
+    return this.withWriteLock(() => {
+      const quiz = this.get(id);
+      return this.write({
+        ...quiz,
+        ...(patch.title !== undefined ? { title: patch.title } : {}),
+        ...(patch.description !== undefined ? { description: patch.description } : {}),
+        settings: { ...quiz.settings, ...patch.settings },
+      });
+    });
+  }
+
+  async duplicate(id: string): Promise<SavedQuiz> {
     const q = this.get(id);
     return this.create({ title: `${q.title} (copy)`.slice(0, 120), description: q.description, settings: q.settings, questions: q.questions });
   }
 
-  delete(id: string): void {
-    const path = this.file(id);
-    if (!existsSync(path)) throw new NotFoundError(`No quiz with id "${id}"`);
-    rmSync(path);
+  async delete(id: string): Promise<void> {
+    return this.withWriteLock(() => {
+      const path = this.file(id);
+      if (!existsSync(path)) throw new NotFoundError(`No quiz with id "${id}"`);
+      rmSync(path);
+    });
   }
 
   // ----- question-level helpers (used by MCP) -----
 
-  addQuestion(quizId: string, draft: unknown, position?: number): Question {
-    const quiz = this.get(quizId);
-    const q = normalizeQuestion(draft, new Set(quiz.questions.map((x) => x.id)));
-    const pos = position === undefined ? quiz.questions.length : Math.max(0, Math.min(position, quiz.questions.length));
-    quiz.questions.splice(pos, 0, q);
-    this.write(quiz);
-    return q;
+  private editQuestions<T>(quizId: string, edit: (quiz: Quiz) => T) {
+    return this.withWriteLock(() => {
+      const quiz = this.get(quizId);
+      const result = edit(quiz);
+      return { result, saved: this.write(quiz) };
+    });
   }
 
-  updateQuestion(quizId: string, questionId: string, patch: Record<string, unknown>): Question {
-    const quiz = this.get(quizId);
-    const idx = this.questionIndex(quiz, questionId);
-    const current = quiz.questions[idx]!;
-    const merged: Record<string, unknown> = { ...current, ...patch, id: current.id };
-    // Switching to true/false: fixed options, keep a valid answer.
-    if (merged.type === "true_false" && current.type !== "true_false") {
-      delete merged.options;
-      if (patch.correct === undefined) merged.correct = [0];
-    }
-    // Switching to typed answers: the old options are not answers; the editor sends fresh ones.
-    if (merged.type === "text" && current.type !== "text" && patch.options === undefined) delete merged.options;
-    if (merged.type === "text") delete merged.correct;
-    // Spots belong to pin questions only; switching to pin starts from the spots' default labels.
-    if (merged.type !== "pin") delete merged.spots;
-    else if (current.type !== "pin" && patch.options === undefined) {
-      delete merged.options;
-      if (patch.correct === undefined) merged.correct = [0];
-    } else if (Array.isArray(patch.spots) && patch.options === undefined && current.options.every((o, i) => o === pinLabel(i))) {
-      // New spots on a pin that still has the default labels (A, B, C…): the labels follow the new count.
-      delete merged.options;
-      const count = (patch.spots as unknown[]).length;
-      if (patch.correct === undefined && current.correct.some((c) => c >= count)) merged.correct = [0];
-    }
-    if (merged.image === null) delete merged.image;
-    const others = new Set(quiz.questions.filter((_, i) => i !== idx).map((x) => x.id));
-    const q = normalizeQuestion(merged, others);
-    quiz.questions[idx] = q;
-    this.write(quiz);
-    return q;
+  async addQuestion(quizId: string, draft: unknown, position?: number): Promise<Question> {
+    const { result } = await this.editQuestions(quizId, (quiz) => {
+      const q = normalizeQuestion(draft, new Set(quiz.questions.map((x) => x.id)));
+      const pos = position === undefined ? quiz.questions.length : Math.max(0, Math.min(position, quiz.questions.length));
+      quiz.questions.splice(pos, 0, q);
+      return q;
+    });
+    return result;
   }
 
-  deleteQuestion(quizId: string, questionId: string): void {
-    const quiz = this.get(quizId);
-    quiz.questions.splice(this.questionIndex(quiz, questionId), 1);
-    this.write(quiz);
+  async updateQuestion(quizId: string, questionId: string, patch: Record<string, unknown>): Promise<Question> {
+    const { result } = await this.editQuestions(quizId, (quiz) => {
+      const idx = this.questionIndex(quiz, questionId);
+      const current = quiz.questions[idx]!;
+      const merged: Record<string, unknown> = { ...current, ...patch, id: current.id };
+      // Switching to true/false: fixed options, keep a valid answer.
+      if (merged.type === "true_false" && current.type !== "true_false") {
+        delete merged.options;
+        if (patch.correct === undefined) merged.correct = [0];
+      }
+      // Switching to typed answers: the old options are not answers; the editor sends fresh ones.
+      if (merged.type === "text" && current.type !== "text" && patch.options === undefined) delete merged.options;
+      if (merged.type === "text") delete merged.correct;
+      // Spots belong to pin questions only; switching to pin starts from the spots' default labels.
+      if (merged.type !== "pin") delete merged.spots;
+      else if (current.type !== "pin" && patch.options === undefined) {
+        delete merged.options;
+        if (patch.correct === undefined) merged.correct = [0];
+      } else if (Array.isArray(patch.spots) && patch.options === undefined && current.options.every((o, i) => o === pinLabel(i))) {
+        // New spots on a pin that still has the default labels (A, B, C…): the labels follow the new count.
+        delete merged.options;
+        const count = (patch.spots as unknown[]).length;
+        if (patch.correct === undefined && current.correct.some((c) => c >= count)) merged.correct = [0];
+      }
+      if (merged.image === null) delete merged.image;
+      const others = new Set(quiz.questions.filter((_, i) => i !== idx).map((x) => x.id));
+      const q = normalizeQuestion(merged, others);
+      quiz.questions[idx] = q;
+      return q;
+    });
+    return result;
   }
 
-  reorderQuestions(quizId: string, questionIds: string[]): Quiz {
-    const quiz = this.get(quizId);
-    const current = new Set(quiz.questions.map((q) => q.id));
-    if (questionIds.length !== current.size || new Set(questionIds).size !== current.size || !questionIds.every((id) => current.has(id))) {
-      throw new ValidationError("questionIds must list every question id of the quiz exactly once");
-    }
-    const byId = new Map(quiz.questions.map((q) => [q.id, q]));
-    quiz.questions = questionIds.map((id) => byId.get(id)!);
-    return this.write(quiz);
+  async deleteQuestion(quizId: string, questionId: string): Promise<void> {
+    await this.editQuestions(quizId, (quiz) => {
+      quiz.questions.splice(this.questionIndex(quiz, questionId), 1);
+    });
+  }
+
+  async reorderQuestions(quizId: string, questionIds: string[]): Promise<SavedQuiz> {
+    const { saved } = await this.editQuestions(quizId, (quiz) => {
+      const current = new Set(quiz.questions.map((q) => q.id));
+      if (questionIds.length !== current.size || new Set(questionIds).size !== current.size || !questionIds.every((id) => current.has(id))) {
+        throw new ValidationError("questionIds must list every question id of the quiz exactly once");
+      }
+      const byId = new Map(quiz.questions.map((q) => [q.id, q]));
+      quiz.questions = questionIds.map((id) => byId.get(id)!);
+    });
+    return saved;
   }
 
   private questionIndex(quiz: Quiz, questionId: string): number {
@@ -306,12 +390,13 @@ export class QuizStore {
     return idx;
   }
 
-  private write(quiz: Quiz): Quiz {
-    const next = { ...quiz, updatedAt: new Date().toISOString() };
+  private write(quiz: Quiz, updatedAt = nextTimestamp(quiz.updatedAt)): SavedQuiz {
+    const next = { ...quiz, updatedAt };
     const parsed = Quiz.safeParse(next);
     if (!parsed.success) throw new ValidationError(formatZodError(parsed.error));
-    writeAtomic(this.file(quiz.id), JSON.stringify(parsed.data, null, 2) + "\n");
-    return parsed.data;
+    const contents = JSON.stringify(parsed.data, null, 2) + "\n";
+    writeAtomic(this.file(quiz.id), contents);
+    return { ...parsed.data, revision: revision(contents) };
   }
 
   // ----- media -----
