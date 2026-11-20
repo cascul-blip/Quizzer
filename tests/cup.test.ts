@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { COUNTDOWN_MS, CupGame, FEEDBACK_MS, type CupPlayer } from "../src/server/game/cup.ts";
 import { Game } from "../src/server/game/game.ts";
-import { buildCupResultsCsv } from "../src/server/game/results.ts";
+import { buildCupResultsCsv } from "../src/server/game/cup.ts";
 import { CUP_ALL_SAFE_MS, CUP_DEFAULT_CUPS, CUP_DRINK_MS, CUP_MAX_CUPS, CUP_MIN_CUPS, CUP_QUIZ_MIN_MS, CUP_ROLL_MS, CUP_SIP_MS, CUP_VERDICT_MS, cupQuizMs } from "../src/shared/protocol.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
 import { FakeClock, sampleQuiz } from "./helpers.ts";

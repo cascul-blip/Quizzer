@@ -1,8 +1,19 @@
 import type { AnswerValue } from "../../shared/answer-match.ts";
 import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import {
-  GIFT_CORRECT_TO_PLAY, GIFT_DUDS, GIFT_GOODS, GIFT_POINTS, GIFT_READY_MS, GIFT_ROUND_MS,
-  GIFT_TAP_GRACE_MS, giftMultiplier, type GiftItem, type GiftItemKind, type GiftPower,
+  GIFT_CORRECT_TO_PLAY,
+  GIFT_DUDS,
+  GIFT_GOODS,
+  GIFT_POINTS,
+  GIFT_READY_MS,
+  GIFT_ROUND_MS,
+  GIFT_TAP_GRACE_MS,
+  giftMultiplier,
+  type GiftItem,
+  type GiftItemKind,
+  type GiftPower,
+  GIFT_DEFAULT_MINUTES,
+  GIFT_MINUTES,
 } from "../../shared/gift-rules.ts";
 import type { GiftHit, GiftPhase, GiftStanding, HostGiftState, PlayerGiftView } from "../../shared/protocol.ts";
 import type { Quiz } from "../../shared/quiz-schema.ts";
@@ -10,6 +21,10 @@ import { GameError, realClock, shuffle, type Clock } from "./common.ts";
 import type { Game } from "./game.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
 import { newStreamPlayer, QuestionStream, type StreamPlayer } from "./stream.ts";
+import { answerOf } from "../../shared/answer-match.ts";
+import { MODE_NAMES } from "../../shared/mode-names.ts";
+import { handoffOptions, type ModeEntry } from "./mode-entry.ts";
+import { toCsv } from "./results.ts";
 
 const COUNTDOWN_MS = 3_000;
 
@@ -71,6 +86,7 @@ function compare(a: GiftPlayer, b: GiftPlayer): number {
 }
 
 export class GiftGame {
+  readonly mode = "gift" as const;
   readonly quizId: string;
   readonly title: string;
   readonly roster = new Roster<GiftPlayer>();
@@ -303,3 +319,38 @@ export class GiftGame {
     };
   }
 }
+
+export function buildGiftResultsCsv(game: GiftGame): string {
+  const header = ["Rank", "Nickname", "Score", "Correct", "Wrong", "Bonus rounds earned", "Gift taps", "Dud taps", "Power-ups collected"];
+  return toCsv([header, ...game.standings().map(({ id, rank }) => {
+    const player = game.players.get(id)!;
+    return [rank, player.nickname, player.score, player.correct, player.wrong, player.rounds, player.goodTaps, player.dudTaps, player.powerups];
+  })]);
+}
+
+export const giftMode: ModeEntry<"gift"> = {
+  name: MODE_NAMES.gift,
+  defaultSettings: { minutes: GIFT_DEFAULT_MINUTES },
+  readSettings(raw) {
+    const minutes = Number(raw.minutes);
+    if (!(GIFT_MINUTES as readonly number[]).includes(minutes)) throw new GameError("Unsupported game length");
+    return { minutes };
+  },
+  start(lobby, ctx) {
+    const game = GiftGame.fromLobby(lobby, handoffOptions(ctx));
+    return { game, log: `${this.name} started with ${game.players.size} player(s), ${game.minutes} min` };
+  },
+  paced: false,
+  resultsCsv: buildGiftResultsCsv,
+  handle(game, playerId, msg) {
+    switch (msg.type) {
+      case "gift.answer":
+        return game.answer(playerId, Number(msg.seq), answerOf(msg)) ? undefined : "resend";
+      case "gift.tap":
+        game.tap(playerId, msg.round, msg.item);
+        return;
+      default:
+        msg satisfies never;
+    }
+  },
+};

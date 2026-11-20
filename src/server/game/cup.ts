@@ -1,5 +1,5 @@
 import type { AnswerValue } from "../../shared/answer-match.ts";
-import { cupTheme, type CupTheme } from "../../shared/cup-theme.ts";
+import { cupTheme, type CupTheme, DEFAULT_CUP_THEME } from "../../shared/cup-theme.ts";
 import {
   CUP_ALL_SAFE_MS,
   CUP_DEFAULT_CUPS,
@@ -15,6 +15,8 @@ import {
   type CupStanding,
   type HostCupState,
   type PlayerCupView,
+  CUP_MAX_CUPS,
+  CUP_MIN_CUPS,
 } from "../../shared/protocol.ts";
 import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
@@ -22,6 +24,10 @@ import { GameError, realClock, shuffle, type Clock } from "./common.ts";
 import type { Game } from "./game.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
 import { QuestionStream, newStreamPlayer, type StreamPlayer } from "./stream.ts";
+import { answerOf } from "../../shared/answer-match.ts";
+import { MODE_NAMES } from "../../shared/mode-names.ts";
+import { handoffOptions, pickTheme, type ModeEntry } from "./mode-entry.ts";
+import { toCsv } from "./results.ts";
 
 export { FEEDBACK_MS } from "./stream.ts";
 
@@ -80,6 +86,7 @@ interface CupGameSettings {
 
 /** Cup of Death: roll a die, answer that many questions in time, or drink one of your cups. One is poisoned. Last one standing wins. */
 export class CupGame {
+  readonly mode = "cup" as const;
   readonly theme: CupTheme;
   readonly quizId: string;
   readonly title: string;
@@ -530,3 +537,41 @@ export class CupGame {
     };
   }
 }
+
+/** Cup of Death: one row per player in final standing order. */
+export function buildCupResultsCsv(game: CupGame): string {
+  const header = ["Rank", "Nickname", "Status", "Cups left", "Rounds survived", "Correct", "Wrong", "Accuracy %", "Drinks survived", "Rounds safe"];
+  const rows: (string | number)[][] = game.standings().map((s) => {
+    const p = game.players.get(s.id)!;
+    const answered = p.correct + p.wrong;
+    const status = s.rank === 1 ? "Winner" : p.outRound === null ? "Survived" : `${game.theme === "christmas" ? "Blasted off" : "Poisoned"} in round ${p.outRound}`;
+    return [s.rank, p.nickname, status, p.cups, p.outRound === null ? game.round : p.outRound - 1, p.correct, p.wrong, answered ? Math.round((p.correct / answered) * 100) : "", p.drinksSurvived, p.safeRounds];
+  });
+  return toCsv([header, ...rows]);
+}
+
+export const cupMode: ModeEntry<"cup"> = {
+  name: MODE_NAMES.cup,
+  defaultSettings: { cups: CUP_DEFAULT_CUPS, theme: DEFAULT_CUP_THEME },
+  readSettings(raw, current) {
+    const cups = Number(raw.cups);
+    if (!(Number.isInteger(cups) && cups >= CUP_MIN_CUPS && cups <= CUP_MAX_CUPS)) throw new GameError(`Cups must be between ${CUP_MIN_CUPS} and ${CUP_MAX_CUPS}`);
+    return { cups, theme: pickTheme(raw.theme, cupTheme(current.theme), "cup") };
+  },
+  start(lobby, ctx) {
+    const game = CupGame.fromLobby(lobby, handoffOptions(ctx));
+    return { game, log: `${this.name} started with ${game.players.size} player(s)` };
+  },
+  paced: false,
+  resultsCsv: buildCupResultsCsv,
+  handle(game, playerId, msg) {
+    switch (msg.type) {
+      case "cup.answer":
+        return game.answer(playerId, Number(msg.seq), answerOf(msg)) ? undefined : "resend";
+      case "cup.pick":
+        return game.pick(playerId, Number(msg.cup)) ? undefined : "resend";
+      default:
+        msg satisfies never;
+    }
+  },
+};

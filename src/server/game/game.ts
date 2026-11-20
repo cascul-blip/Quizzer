@@ -1,31 +1,6 @@
-import { DEFAULT_DUEL_THEME, duelTheme } from "../../shared/duel-theme.ts";
-import { DEFAULT_LAND_THEME, landTheme } from "../../shared/land-theme.ts";
-import { DEFAULT_SIEGE_THEME, siegeTheme } from "../../shared/siege-theme.ts";
-import { DEFAULT_RACER_THEME, racerTheme } from "../../shared/racer-theme.ts";
-import { DEFAULT_CUP_THEME, cupTheme } from "../../shared/cup-theme.ts";
-import { DEFAULT_TOWER_THEME, towerTheme } from "../../shared/tower-theme.ts";
-import { DEFAULT_FIGHT_THEME, fightTheme } from "../../shared/fight-theme.ts";
-import { isSeasonTheme, type SeasonTheme } from "../../shared/season-theme.ts";
+import { MODE_NAMES } from "../../shared/mode-names.ts";
 import {
-  CUP_DEFAULT_CUPS,
-  CUP_MAX_CUPS,
-  CUP_MIN_CUPS,
-  DUEL_DEFAULT_ROUNDS,
-  DUEL_ROUNDS,
-  HILL_SETTINGS,
-  LAND_MINUTES,
-  LAND_MIN_TEAMS,
-  MAX_TEAMS,
-  TOWER_MINUTES,
   type GameMode,
-  type CupSettings,
-  type DuelSettings,
-  type FightSettings,
-  type GiftSettings,
-  type LandSettings,
-  type RacerSettings,
-  type SiegeSettings,
-  type TowerSettings,
   type HostGameState,
   type ModeSettingsMap,
   type Pacing,
@@ -36,22 +11,19 @@ import {
   type RankedEntry,
   type ShuffleOptions,
 } from "../../shared/protocol.ts";
-import { SIEGE_WAVE_CHOICES, type SiegeWaves } from "../../shared/siege-rules.ts";
-import { GIFT_DEFAULT_MINUTES, GIFT_MINUTES } from "../../shared/gift-rules.ts";
 import { cleanAvatar, randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import { MAX_TYPED_ANSWER, checkAnswer, type AnswerValue } from "../../shared/answer-match.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
-import { GameError, assignTeams, realClock, shuffle, shuffleOptions, teamInfo, topErrors, type Clock } from "./common.ts";
+import { AUTO_REVEAL_MS, GRACE_MS, GameError, assignTeams, preparePlayOrder, realClock, teamInfo, topErrors, type Clock } from "./common.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
+import type { ModeEntry, RawSettings } from "./mode-entry.ts";
+import { MODES } from "./modes.ts";
 import { rankScores, scoreAnswer } from "./scoring.ts";
 
-export { GameError, type Clock } from "./common.ts";
+export { AUTO_REVEAL_MS, GRACE_MS, GameError, preparePlayOrder, type Clock } from "./common.ts";
 
 export const INTRO_MS = 3000;
-export const AUTO_REVEAL_MS = 5000;
 export const AUTO_LEADERBOARD_MS = 5000;
-/** Answers sent just before the deadline may arrive slightly after it. */
-export const GRACE_MS = 500;
 const LEADERBOARD_SIZE = 10;
 
 interface Answer {
@@ -73,119 +45,11 @@ interface Player extends BasePlayer {
   answers: (Answer | undefined)[];
 }
 
-/** Shuffle once per game (same order for everyone); correct indices are remapped. */
-export function preparePlayOrder(source: Question[], opts: ShuffleOptions, rng: () => number = Math.random): Question[] {
-  let questions = source.map((q) => ({ ...q, options: [...q.options], correct: [...q.correct] }));
-  if (opts.questions) questions = shuffle(questions, rng);
-  if (opts.answers) questions = questions.map((q) => shuffleOptions(q, rng));
-  return questions;
-}
-
-/** A lobby setter's theme: kept as it is when not given, refused when it isn't a known look. */
-function pickTheme(value: unknown, current: SeasonTheme, mode: string): SeasonTheme {
-  if (value === undefined) return current;
-  if (!isSeasonTheme(value)) throw new GameError(`Unknown ${mode} theme`);
-  return value;
-}
-
-/** Raw mode settings from the host, read by the mode's readSettings. */
-type RawSettings = Readonly<Record<string, unknown>>;
-
-interface ModeSettingsRules<M extends GameMode> {
-  /** Names the mode in "… settings can only be changed before the game starts". */
-  label: string;
-  defaultSettings: ModeSettingsMap[M];
-  /** The host's change applied to the current settings; throws GameError when it isn't valid. */
-  readSettings(raw: RawSettings, current: ModeSettingsMap[M]): ModeSettingsMap[M];
-}
-
-const noSettings = <M extends GameMode>(label: string): ModeSettingsRules<M> => ({ label, defaultSettings: {} as ModeSettingsMap[M], readSettings: () => ({}) as ModeSettingsMap[M] });
-
-const MODE_SETTINGS: { [M in GameMode]: ModeSettingsRules<M> } = {
-  classic: noSettings("Classic"),
-  submarine: noSettings("Sled Squad"),
-  robot: noSettings("Robot Attack"),
-  racer: {
-    label: "Racer",
-    defaultSettings: { theme: DEFAULT_RACER_THEME },
-    readSettings: (raw, current) => ({ theme: pickTheme(raw.theme, racerTheme(current.theme), "racer") }),
-  },
-  tower: {
-    label: "Tower",
-    defaultSettings: { teams: 2, minutes: 5, monster: true, theme: DEFAULT_TOWER_THEME },
-    readSettings(raw, current) {
-      const teams = Math.trunc(Number(raw.teams));
-      const minutes = Number(raw.minutes);
-      if (!(teams >= 1 && teams <= MAX_TEAMS)) throw new GameError(`Teams must be between 1 and ${MAX_TEAMS}`);
-      if (!(TOWER_MINUTES as readonly number[]).includes(minutes)) throw new GameError("Unsupported game length");
-      const theme = pickTheme(raw.theme, towerTheme(current.theme), "tower");
-      return { teams, minutes, monster: raw.monster === undefined ? current.monster : !!raw.monster, theme };
-    },
-  },
-  fight: {
-    label: "Tower Fight",
-    defaultSettings: { hill: "random", theme: DEFAULT_FIGHT_THEME },
-    readSettings(raw, current) {
-      const hill = raw.hill as FightSettings["hill"] | undefined;
-      if (hill !== undefined && !HILL_SETTINGS.includes(hill)) throw new GameError("Unknown hill height");
-      const theme = pickTheme(raw.theme, fightTheme(current.theme), "fight");
-      return { ...current, hill: hill ?? current.hill, theme };
-    },
-  },
-  land: {
-    label: "Land Grab",
-    defaultSettings: { teams: 2, minutes: 5, theme: DEFAULT_LAND_THEME },
-    readSettings(raw, current) {
-      const teams = Math.trunc(Number(raw.teams));
-      const minutes = Number(raw.minutes);
-      if (!(teams >= LAND_MIN_TEAMS && teams <= MAX_TEAMS)) throw new GameError(`Teams must be between ${LAND_MIN_TEAMS} and ${MAX_TEAMS}`);
-      if (!(LAND_MINUTES as readonly number[]).includes(minutes)) throw new GameError("Unsupported game length");
-      return { teams, minutes, theme: pickTheme(raw.theme, landTheme(current.theme), "Land Grab") };
-    },
-  },
-  cup: {
-    label: "Cup of Death",
-    defaultSettings: { cups: CUP_DEFAULT_CUPS, theme: DEFAULT_CUP_THEME },
-    readSettings(raw, current) {
-      const cups = Number(raw.cups);
-      if (!(Number.isInteger(cups) && cups >= CUP_MIN_CUPS && cups <= CUP_MAX_CUPS)) throw new GameError(`Cups must be between ${CUP_MIN_CUPS} and ${CUP_MAX_CUPS}`);
-      return { cups, theme: pickTheme(raw.theme, cupTheme(current.theme), "cup") };
-    },
-  },
-  siege: {
-    label: "Kingdom Siege",
-    defaultSettings: { waves: 5, theme: DEFAULT_SIEGE_THEME },
-    readSettings(raw, current) {
-      const waves = raw.waves === "endless" ? "endless" : Number(raw.waves);
-      if (!(SIEGE_WAVE_CHOICES as readonly unknown[]).includes(waves)) throw new GameError("Unsupported number of waves");
-      return { waves: waves as SiegeWaves, theme: pickTheme(raw.theme, siegeTheme(current.theme), "Kingdom Siege") };
-    },
-  },
-  duel: {
-    label: "Showdown",
-    defaultSettings: { rounds: DUEL_DEFAULT_ROUNDS, theme: DEFAULT_DUEL_THEME },
-    readSettings(raw, current) {
-      const rounds = Number(raw.rounds);
-      if (!(DUEL_ROUNDS as readonly number[]).includes(rounds)) throw new GameError("Unsupported number of rounds");
-      return { rounds, theme: pickTheme(raw.theme, duelTheme(current.theme), "Showdown") };
-    },
-  },
-  gift: {
-    label: "Gift Grab",
-    defaultSettings: { minutes: GIFT_DEFAULT_MINUTES },
-    readSettings(raw) {
-      const minutes = Number(raw.minutes);
-      if (!(GIFT_MINUTES as readonly number[]).includes(minutes)) throw new GameError("Unsupported game length");
-      return { minutes };
-    },
-  },
-};
-
 /** Every mode's settings: the given ones where there are any (carried over, so already valid), else the defaults. */
 function initialSettings(given: InitialSettings = {}): ModeSettingsMap {
   const read = <M extends GameMode>(mode: M): ModeSettingsMap[M] => {
-    const rules: ModeSettingsRules<M> = MODE_SETTINGS[mode];
-    return rules.readSettings({ ...rules.defaultSettings, ...given[mode] }, rules.defaultSettings);
+    const entry: ModeEntry<M> = MODES[mode];
+    return entry.readSettings({ ...entry.defaultSettings, ...given[mode] }, entry.defaultSettings);
   };
   return {
     classic: read("classic"),
@@ -365,21 +229,21 @@ export class Game {
 
   setMode(mode: GameMode): void {
     if (this.phase !== "lobby") throw new GameError("The game mode can only be changed before the game starts");
-    if (!Object.hasOwn(MODE_SETTINGS, mode)) throw new GameError("Unknown game mode");
+    if (!Object.hasOwn(MODE_NAMES, mode)) throw new GameError("Unknown game mode");
     this.mode = mode;
     this.onChange();
   }
 
   /** Change one mode's settings in the lobby; a partial change keeps the rest (and the theme) as they are. */
   setModeSettings(mode: GameMode, raw: unknown): void {
-    if (!Object.hasOwn(MODE_SETTINGS, mode)) throw new GameError("Unknown game mode");
+    if (!Object.hasOwn(MODES, mode)) throw new GameError("Unknown game mode");
     this.applySettings(mode, raw && typeof raw === "object" ? (raw as RawSettings) : {});
   }
 
   private applySettings<M extends GameMode>(mode: M, raw: RawSettings): void {
-    const rules: ModeSettingsRules<M> = MODE_SETTINGS[mode];
-    if (this.phase !== "lobby") throw new GameError(`${rules.label} settings can only be changed before the game starts`);
-    this.settings[mode] = rules.readSettings(raw, this.settings[mode]);
+    const entry: ModeEntry<M> = MODES[mode];
+    if (this.phase !== "lobby") throw new GameError(`${entry.name} settings can only be changed before the game starts`);
+    this.settings[mode] = entry.readSettings(raw, this.settings[mode]);
     this.onChange();
   }
 

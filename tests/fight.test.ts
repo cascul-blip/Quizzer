@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { COLLAPSE_MS, COUNTDOWN_MS, DECISION_GRACE_MS, FEEDBACK_MS, FightGame, RESULT_MS, type FightPlayer } from "../src/server/game/fight.ts";
 import { Game } from "../src/server/game/game.ts";
-import { buildFightResultsCsv } from "../src/server/game/results.ts";
+import { buildFightResultsCsv } from "../src/server/game/fight.ts";
 import { MAX_PULL, launchVector, simulate } from "../src/shared/fight-physics.ts";
 import { CORRECT_PER_DECISION, DECISION_MS, REPAIR_MS, TOWER_MAX_DAMAGE } from "../src/shared/protocol.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";

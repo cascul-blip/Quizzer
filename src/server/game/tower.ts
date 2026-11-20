@@ -1,4 +1,4 @@
-import { towerTheme } from "../../shared/tower-theme.ts";
+import { towerTheme, DEFAULT_TOWER_THEME } from "../../shared/tower-theme.ts";
 import type { AnswerValue } from "../../shared/answer-match.ts";
 import {
   BLOCKS_PER_BUILD,
@@ -12,6 +12,8 @@ import {
   type TowerAwards,
   type TowerPhase,
   type TowerSettings,
+  MAX_TEAMS,
+  TOWER_MINUTES,
 } from "../../shared/protocol.ts";
 import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
@@ -19,6 +21,10 @@ import { GameError, realClock, teamInfo, type Clock } from "./common.ts";
 import type { Game } from "./game.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
 import { QuestionStream, newStreamPlayer, type StreamPlayer } from "./stream.ts";
+import { answerOf } from "../../shared/answer-match.ts";
+import { MODE_NAMES } from "../../shared/mode-names.ts";
+import { handoffOptions, pickTheme, type ModeEntry } from "./mode-entry.ts";
+import { toCsv } from "./results.ts";
 
 export { FEEDBACK_MS } from "./stream.ts";
 
@@ -73,6 +79,7 @@ interface TowerGameSettings extends TowerSettings {
 
 /** Tallest Tower: teams answer at their own pace; every 4 correct answers are dropped onto the team tower. */
 export class TowerGame {
+  readonly mode = "tower" as const;
   readonly quizId: string;
   readonly title: string;
   readonly questions: Question[];
@@ -437,3 +444,46 @@ export class TowerGame {
     };
   }
 }
+
+/** Tallest Tower: one row per player, grouped by team in final team order. */
+export function buildTowerResultsCsv(game: TowerGame): string {
+  const header = ["Team", "Team rank", "Team floors", "Team blocks", "Nickname", "Correct", "Wrong", "Accuracy %", "Blocks placed", "Blocks missed", "Monster hatched"];
+  const rows: (string | number)[][] = [];
+  for (const t of game.rankedTeams()) {
+    const members = [...game.players.values()].filter((p) => p.team === t.index).sort((a, b) => b.placed - a.placed || b.correct - a.correct);
+    for (const p of members) {
+      const answered = p.correct + p.wrong;
+      rows.push([t.name, t.rank, t.floors, t.placed, p.nickname, p.correct, p.wrong, answered ? Math.round((p.correct / answered) * 100) : "", p.placed, p.missed, p.hatched]);
+    }
+  }
+  return toCsv([header, ...rows]);
+}
+
+export const towerMode: ModeEntry<"tower"> = {
+  name: MODE_NAMES.tower,
+  defaultSettings: { teams: 2, minutes: 5, monster: true, theme: DEFAULT_TOWER_THEME },
+  readSettings(raw, current) {
+    const teams = Math.trunc(Number(raw.teams));
+    const minutes = Number(raw.minutes);
+    if (!(teams >= 1 && teams <= MAX_TEAMS)) throw new GameError(`Teams must be between 1 and ${MAX_TEAMS}`);
+    if (!(TOWER_MINUTES as readonly number[]).includes(minutes)) throw new GameError("Unsupported game length");
+    const theme = pickTheme(raw.theme, towerTheme(current.theme), "tower");
+    return { teams, minutes, monster: raw.monster === undefined ? current.monster : !!raw.monster, theme };
+  },
+  start(lobby, ctx) {
+    const game = TowerGame.fromLobby(lobby, handoffOptions(ctx));
+    return { game, log: `${this.name} started: ${game.teams.length} team(s), ${game.settings.minutes} min` };
+  },
+  paced: false,
+  resultsCsv: buildTowerResultsCsv,
+  handle(game, playerId, msg) {
+    switch (msg.type) {
+      case "tower.answer":
+        return game.answer(playerId, Number(msg.seq), answerOf(msg)) ? undefined : "resend";
+      case "tower.drop":
+        return game.drop(playerId, Number(msg.zone)) === null ? "resend" : undefined;
+      default:
+        msg satisfies never;
+    }
+  },
+};

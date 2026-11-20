@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { Game } from "../src/server/game/game.ts";
-import { buildSubResultsCsv } from "../src/server/game/results.ts";
+import { buildSubResultsCsv } from "../src/server/game/submarine.ts";
 import {
   BOOST_MIN_HOLD_MS,
   BOOST_POWER,

@@ -1,5 +1,5 @@
 import { gingerbreadTerrain } from "../../shared/fight-ground.ts";
-import { fightTheme, type FightTheme } from "../../shared/fight-theme.ts";
+import { fightTheme, type FightTheme, DEFAULT_FIGHT_THEME } from "../../shared/fight-theme.ts";
 import type { AnswerValue } from "../../shared/answer-match.ts";
 import {
   CORRECT_PER_DECISION,
@@ -15,6 +15,7 @@ import {
   type FightState,
   type HostFightState,
   type PlayerFightView,
+  HILL_SETTINGS,
 } from "../../shared/protocol.ts";
 import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import { HILL_HEIGHTS, carve, launchVector, makeTerrain, simulate, type HillHeight, type ShotImpact } from "../../shared/fight-physics.ts";
@@ -23,6 +24,10 @@ import { GameError, realClock, teamInfo, type Clock } from "./common.ts";
 import type { Game } from "./game.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
 import { QuestionStream, newStreamPlayer, type StreamPlayer } from "./stream.ts";
+import { answerOf } from "../../shared/answer-match.ts";
+import { MODE_NAMES } from "../../shared/mode-names.ts";
+import { handoffOptions, pickTheme, type ModeEntry } from "./mode-entry.ts";
+import { toCsv } from "./results.ts";
 
 export { FEEDBACK_MS } from "./stream.ts";
 
@@ -83,6 +88,7 @@ interface FightGameSettings extends FightSettings {
 
 /** Tower Fight: Red vs Blue answer at their own pace; every 4 correct answers they attack the enemy tower or repair their own. */
 export class FightGame {
+  readonly mode = "fight" as const;
   readonly quizId: string;
   readonly title: string;
   readonly questions: Question[];
@@ -537,3 +543,49 @@ export class FightGame {
     };
   }
 }
+
+/** Tower Fight: one row per player, winning team first. */
+export function buildFightResultsCsv(game: FightGame): string {
+  const outcome = game.outcome ?? game.judge();
+  const header = ["Team", "Result", "Tower damage", "Nickname", "Correct", "Wrong", "Accuracy %", "Shots", "Enemy hits", "Friendly hits", "Rebuilds"];
+  const order = [...game.teams].sort((a, b) => Number(b.index === outcome.winner) - Number(a.index === outcome.winner) || a.index - b.index);
+  const rows: (string | number)[][] = [];
+  for (const t of order) {
+    const result = outcome.winner === null ? "Draw" : t.index === outcome.winner ? "Won" : "Lost";
+    const members = [...game.players.values()].filter((p) => p.team === t.index).sort((a, b) => b.hits - a.hits || b.correct - a.correct);
+    for (const p of members) {
+      const answered = p.correct + p.wrong;
+      rows.push([t.name, result, t.damage, p.nickname, p.correct, p.wrong, answered ? Math.round((p.correct / answered) * 100) : "", p.shots, p.hits, p.friendlyHits, p.rebuilds]);
+    }
+  }
+  return toCsv([header, ...rows]);
+}
+
+export const fightMode: ModeEntry<"fight"> = {
+  name: MODE_NAMES.fight,
+  defaultSettings: { hill: "random", theme: DEFAULT_FIGHT_THEME },
+  readSettings(raw, current) {
+    const hill = raw.hill as FightSettings["hill"] | undefined;
+    if (hill !== undefined && !HILL_SETTINGS.includes(hill)) throw new GameError("Unknown hill height");
+    const theme = pickTheme(raw.theme, fightTheme(current.theme), "fight");
+    return { ...current, hill: hill ?? current.hill, theme };
+  },
+  start(lobby, ctx) {
+    const game = FightGame.fromLobby(lobby, handoffOptions(ctx));
+    return { game, log: `${this.name} started with ${game.players.size} player(s), ${game.hill} hill` };
+  },
+  paced: false,
+  resultsCsv: buildFightResultsCsv,
+  handle(game, playerId, msg) {
+    switch (msg.type) {
+      case "fight.answer":
+        return game.answer(playerId, Number(msg.seq), answerOf(msg)) ? undefined : "resend";
+      case "fight.choose":
+        return game.choose(playerId, msg.action) === null ? "resend" : undefined;
+      case "fight.fire":
+        return game.fire(playerId, Number(msg.dx), Number(msg.dy)) === null ? "resend" : undefined;
+      default:
+        msg satisfies never;
+    }
+  },
+};

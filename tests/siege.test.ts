@@ -3,7 +3,7 @@ import { siegeWords, type SiegeTheme } from "../src/shared/siege-theme.ts";
 import { FEEDBACK_MS, SIEGE_NO_GOLD, SiegeGame, type SiegeMonster, type SiegePlayer } from "../src/server/game/siege.ts";
 import { Game } from "../src/server/game/game.ts";
 import { WRONG_PENALTY_2_MS } from "../src/server/game/stream.ts";
-import { buildSiegeResultsCsv } from "../src/server/game/results.ts";
+import { buildSiegeResultsCsv } from "../src/server/game/siege.ts";
 import { loadSiegeRecord, saveSiegeRecord } from "../src/server/siege-records.ts";
 import { siegeRecordsPath } from "../src/server/paths.ts";
 import { writeFileSync } from "node:fs";

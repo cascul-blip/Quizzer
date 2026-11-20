@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { Game } from "../src/server/game/game.ts";
 import { GiftGame } from "../src/server/game/gift.ts";
-import { buildGiftResultsCsv } from "../src/server/game/results.ts";
+import { buildGiftResultsCsv } from "../src/server/game/gift.ts";
 import { FEEDBACK_MS } from "../src/server/game/stream.ts";
 import {
   GIFT_DUDS, GIFT_GOODS, GIFT_READY_MS, GIFT_ROUND_MS, GIFT_TAP_GRACE_MS, type GiftItem,

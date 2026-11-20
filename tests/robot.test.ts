@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { Game } from "../src/server/game/game.ts";
-import { buildRobotResultsCsv } from "../src/server/game/results.ts";
+import { buildRobotResultsCsv } from "../src/server/game/robot.ts";
 import { COUNTDOWN_MS, FEEDBACK_MS, RobotGame, spreadTile, type RobotPlayer } from "../src/server/game/robot.ts";
 import { ROBOT_ATTACK_MS, ROBOT_BOARD, ROBOT_LIVES, ROBOT_MOVE_MS, ROBOT_QUIZ_MIN_MS, ROBOT_WARN_MS, robotInBounds, robotQuizMs, robotRing } from "../src/shared/protocol.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";

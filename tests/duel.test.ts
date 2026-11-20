@@ -1,7 +1,7 @@
 import { describe, expect, spyOn, test } from "bun:test";
 import { Game } from "../src/server/game/game.ts";
 import { AUTO_REVEAL_MS, AWARD_BIGGEST_CLIMB, AWARD_LONGEST_REIGN, AWARD_MOST_WINS, DuelGame, GRACE_MS, INTRO_MS, type DuelPlayer } from "../src/server/game/duel.ts";
-import { buildDuelResultsCsv } from "../src/server/game/results.ts";
+import { buildDuelResultsCsv } from "../src/server/game/duel.ts";
 import { DUEL_DEFAULT_ROUNDS, type Pacing, type ShuffleOptions } from "../src/shared/protocol.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
 import { viewKey } from "../src/server/ws.ts";

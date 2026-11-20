@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { Game } from "../src/server/game/game.ts";
 import { CONQUEST_MS, COUNTDOWN_MS, FEEDBACK_MS, LandGame, type LandPlayer } from "../src/server/game/land.ts";
-import { buildLandResultsCsv } from "../src/server/game/results.ts";
+import { buildLandResultsCsv } from "../src/server/game/land.ts";
 import { EMPTY, hexDistance, neighbors } from "../src/shared/land-board.ts";
 import { LAND_EMPTY_MS } from "../src/shared/protocol.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";

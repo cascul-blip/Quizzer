@@ -14,6 +14,10 @@ import { GameError, realClock, shuffle, type Clock } from "./common.ts";
 import type { Game } from "./game.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
 import { FEEDBACK_MS, QuestionStream, newStreamPlayer, type StreamPlayer } from "./stream.ts";
+import { answerOf } from "../../shared/answer-match.ts";
+import { MODE_NAMES } from "../../shared/mode-names.ts";
+import { handoffOptions, type ModeEntry } from "./mode-entry.ts";
+import { toCsv } from "./results.ts";
 
 // ---------- tuning (all in one place) ----------
 export const COUNTDOWN_MS = 3000;
@@ -81,6 +85,7 @@ interface SubOptions {
 
 /** Submarine Squad: the whole class boosts a submarine away from an anglerfish, then dives deeper. */
 export class SubGame {
+  readonly mode = "submarine" as const;
   readonly quizId: string;
   readonly title: string;
   readonly questionCount: number;
@@ -544,3 +549,36 @@ export class SubGame {
     };
   }
 }
+
+/** Submarine Squad: one row per player; the squad's final depth is in every row. */
+export function buildSubResultsCsv(game: SubGame): string {
+  const header = ["Nickname", "Correct", "Wrong", "Boosts", "Dive taps (correct)", "Instructor rounds", "Squad depth (m)", "Level reached"];
+  const rows: (string | number)[][] = [...game.players.values()]
+    .sort((a, b) => b.boosts - a.boosts || b.correct - a.correct)
+    .map((p) => [p.nickname, p.correct, p.wrong, p.boosts, p.diveHits, p.instructorRounds, game.depth, game.level]);
+  return toCsv([header, ...rows]);
+}
+
+export const subMode: ModeEntry<"submarine"> = {
+  name: MODE_NAMES.submarine,
+  defaultSettings: {},
+  readSettings: () => ({}),
+  start(lobby, ctx) {
+    const game = SubGame.fromLobby(lobby, handoffOptions(ctx));
+    return { game, log: `${this.name} started with ${game.players.size} player(s)` };
+  },
+  paced: false,
+  resultsCsv: buildSubResultsCsv,
+  handle(game, playerId, msg) {
+    switch (msg.type) {
+      case "sub.answer":
+        return game.answer(playerId, Number(msg.seq), answerOf(msg)) ? undefined : "resend";
+      case "sub.boost":
+        return game.boost(playerId) ? undefined : "resend";
+      case "sub.tap":
+        return game.tap(playerId, String(msg.symbol)) === null ? "resend" : undefined;
+      default:
+        msg satisfies never;
+    }
+  },
+};

@@ -1,4 +1,4 @@
-import { duelTheme, type DuelTheme } from "../../shared/duel-theme.ts";
+import { duelTheme, type DuelTheme, DEFAULT_DUEL_THEME } from "../../shared/duel-theme.ts";
 import type {
   DuelArena,
   DuelArenaResult,
@@ -17,14 +17,17 @@ import type {
 } from "../../shared/protocol.ts";
 import { DUEL_DEFAULT_ROUNDS, DUEL_ROUNDS } from "../../shared/protocol.ts";
 import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
-import { MAX_TYPED_ANSWER, checkAnswer, type AnswerValue } from "../../shared/answer-match.ts";
+import { MAX_TYPED_ANSWER, checkAnswer, type AnswerValue, answerOf } from "../../shared/answer-match.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import { arenaOf, arenaPoints, climbLadder, duelOutcome, pairArenas, standings } from "../../shared/duel-rules.ts";
-import { GameError, realClock, shuffle, topErrors, type Clock } from "./common.ts";
-import { AUTO_REVEAL_MS, GRACE_MS, preparePlayOrder, type Game } from "./game.ts";
+import { GameError, realClock, shuffle, topErrors, type Clock, AUTO_REVEAL_MS, GRACE_MS, preparePlayOrder } from "./common.ts";
+import type { Game } from "./game.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
+import { MODE_NAMES } from "../../shared/mode-names.ts";
+import { handoffOptions, pickTheme, type ModeEntry } from "./mode-entry.ts";
+import { toCsv } from "./results.ts";
 
-export { AUTO_REVEAL_MS, GRACE_MS } from "./game.ts";
+export { AUTO_REVEAL_MS, GRACE_MS } from "./common.ts";
 
 /** Each round shows the question this long before the options. */
 export const INTRO_MS = 3000;
@@ -81,6 +84,7 @@ interface DuelGameSettings {
  * (intro → open → reveal), then the podium after the last round. The ladder order is the ranking.
  */
 export class DuelGame {
+  readonly mode = "duel" as const;
   readonly quizId: string;
   readonly title: string;
   readonly rounds: number;
@@ -602,3 +606,49 @@ export class DuelGame {
 function ref(p: DuelPlayer): DuelPlayerRef {
   return { id: p.id, nickname: p.nickname, avatar: p.avatar };
 }
+
+/** Showdown: one row per player in final ranking order (points, then ladder), then each round's answer, correctness and time. */
+export function buildDuelResultsCsv(game: DuelGame): string {
+  const header: string[] = ["Rank", "Nickname", "Points", "Final arena", "Start arena", "Wins", "Losses", "Draws", "Rounds won in Arena 1", "Correct", "Wrong"];
+  const played = game.questions.slice(0, game.played);
+  played.forEach((q, i) => {
+    const n = i + 1;
+    header.push(`R${n} answer (${q.text})`, `R${n} correct`, `R${n} time (s)`);
+  });
+  const arenas = game.ladderArenas();
+  const rows: (string | number)[][] = game.ranked().map((p, i) => {
+    const final = arenas.get(p.id) ?? "";
+    const row: (string | number)[] = [i + 1, p.nickname, p.points, final, p.startArena || final, p.wins, p.losses, p.draws, p.reign, p.correct, p.wrong];
+    played.forEach((q, slot) => {
+      const a = p.answers[slot];
+      if (a) row.push((q.type === "text" ? a.text : q.options[a.option]) ?? "", a.correct ? "yes" : "no", (a.ms / 1000).toFixed(2));
+      else row.push("", "no answer", "");
+    });
+    return row;
+  });
+  return toCsv([header, ...rows]);
+}
+
+export const duelMode: ModeEntry<"duel"> = {
+  name: MODE_NAMES.duel,
+  defaultSettings: { rounds: DUEL_DEFAULT_ROUNDS, theme: DEFAULT_DUEL_THEME },
+  readSettings(raw, current) {
+    const rounds = Number(raw.rounds);
+    if (!(DUEL_ROUNDS as readonly number[]).includes(rounds)) throw new GameError("Unsupported number of rounds");
+    return { rounds, theme: pickTheme(raw.theme, duelTheme(current.theme), "Showdown") };
+  },
+  start(lobby, ctx) {
+    const game = DuelGame.fromLobby(lobby, handoffOptions(ctx));
+    return { game, log: `${this.name} started with ${game.players.size} player(s), ${game.rounds} round(s)` };
+  },
+  paced: true,
+  resultsCsv: buildDuelResultsCsv,
+  handle(game, playerId, msg) {
+    switch (msg.type) {
+      case "duel.answer":
+        return game.answer(playerId, Number(msg.index), answerOf(msg)) ? undefined : "resend";
+      default:
+        msg.type satisfies never;
+    }
+  },
+};

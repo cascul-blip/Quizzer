@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { Game } from "../src/server/game/game.ts";
-import { buildTowerResultsCsv } from "../src/server/game/results.ts";
+import { buildTowerResultsCsv } from "../src/server/game/tower.ts";
 import { WRONG_PENALTY_2_MS, WRONG_PENALTY_3_MS } from "../src/server/game/stream.ts";
 import {
   COUNTDOWN_MS,

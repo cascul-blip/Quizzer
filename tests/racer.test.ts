@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { Game } from "../src/server/game/game.ts";
 import { AUTO_REVEAL_MS, AWARD_BEST_DRIVER, AWARD_MOST_CORRECT, CONFIDENCE_MS, GRACE_MS, INTRO_MS, RacerGame, type RacerPlayer } from "../src/server/game/racer.ts";
-import { buildRacerResultsCsv } from "../src/server/game/results.ts";
+import { buildRacerResultsCsv } from "../src/server/game/racer.ts";
 import type { Pacing, ShuffleOptions } from "../src/shared/protocol.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
 import type { RacerConfidence } from "../src/shared/racer-rules.ts";
