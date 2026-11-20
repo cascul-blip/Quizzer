@@ -10,3 +10,4 @@ Judgement calls the reviewer applies to a diff. `bun run typecheck` and `bun tes
 ## Game modes
 
 - **One table per fact**: anything that varies by game mode (its display name, whether it carries pacing, how it starts, its results CSV) lives in one exhaustive `switch` ending in `satisfies never`, or in a `Record<GameMode, …>`, so adding or removing a mode is a compile error at every site. Flag new `instanceof` chains or hand-written lists of mode strings.
+- **Mode entries**: a game mode's server knowledge (its settings, how it starts, pacing, results CSV, phone messages) lives in its mode entry, exported from the mode's own file and collected in `MODES` (`src/server/game/modes.ts`). The hub, lobby and lobby handoff look the entry up and don't branch on the mode.
