@@ -72,6 +72,8 @@ const compressFor = (ws: WS) => ws.data.role !== "host";
 /** Owns the single live game and every connected socket; pushes each phone its view (or a patch of it) on every change. */
 export class GameHub {
   game: LiveGame | null = null;
+  /** The Game the host opened, while it is still the live game: Classic and the lobby's controls work on it until another mode takes its players. */
+  private lobby: Game | null = null;
   lastResults: LastResults | null = null;
   port = 0;
   /** Changes on every server start; pages that reconnect to a different one reload to pick up new code. */
@@ -331,8 +333,8 @@ export class GameHub {
     };
     const classic = () => {
       const g = game();
-      if (!(g instanceof Game)) throw new GameError(`Not available in ${entryOf(g).name}`);
-      return g;
+      if (g !== this.lobby) throw new GameError(`Not available in ${entryOf(g).name}`);
+      return this.lobby;
     };
     /** Paced modes (Classic, Racer, Showdown) go question by question: next, skip and pacing work in each. */
     const paced = () => {
@@ -350,7 +352,7 @@ export class GameHub {
         if (quiz.questions.length === 0) throw new GameError("This quiz has no questions yet");
         this.closeGame();
         this.images = [...new Set(quiz.questions.flatMap((q) => (q.image ? [q.image] : [])))];
-        this.game = new Game(quiz, {
+        this.game = this.lobby = new Game(quiz, {
           clock: this.opts.clock,
           onChange: () => this.scheduleBroadcast(),
           onActivity: (pid) => this.onActivity(pid),
@@ -433,7 +435,7 @@ export class GameHub {
     this.activityTimer = null;
     if (!this.game) return;
     this.game.dispose();
-    this.game = null;
+    this.game = this.lobby = null;
     for (const s of this.sockets) {
       s.data.playerId = null;
       s.data.lastSent = null;
