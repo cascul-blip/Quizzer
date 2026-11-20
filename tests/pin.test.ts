@@ -71,12 +71,12 @@ describe("pin in the store", () => {
   });
   afterEach(() => t.cleanup());
 
-  test("switching a question to pin and back", () => {
-    const quiz = store.create({ title: "Muscles", questions: [{ type: "multiple_choice", text: "Where?", options: ["a", "b", "c"], correct: [2], image: IMAGE }] });
+  test("switching a question to pin and back", async () => {
+    const quiz = await store.create({ title: "Muscles", questions: [{ type: "multiple_choice", text: "Where?", options: ["a", "b", "c"], correct: [2], image: IMAGE }] });
     const id = quiz.questions[0]!.id;
-    const pin = store.updateQuestion(quiz.id, id, { type: "pin", spots: SPOTS.slice(0, 3) });
+    const pin = await store.updateQuestion(quiz.id, id, { type: "pin", spots: SPOTS.slice(0, 3) });
     expect(pin).toMatchObject({ type: "pin", options: ["A", "B", "C"], correct: [0], spots: SPOTS.slice(0, 3) });
-    const mc = store.updateQuestion(quiz.id, id, { type: "multiple_choice" });
+    const mc = await store.updateQuestion(quiz.id, id, { type: "multiple_choice" });
     expect(mc.type).toBe("multiple_choice");
     expect(mc.spots).toBeUndefined();
   });

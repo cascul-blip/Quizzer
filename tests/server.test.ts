@@ -145,6 +145,34 @@ describe("REST API", () => {
     expect(r.status).toBe(204);
   });
 
+  test("a hand-edit conflicts with an open draft and deletion also stops an explicit overwrite", async () => {
+    const { writeFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const q = await store.create({ title: "Draft" });
+    const url = `${base}/api/quizzes/${q.id}`;
+    const opened = await (await fetch(url)).json();
+    const path = join(store.quizzesDir, `${q.id}.json`);
+    const onDisk = await Bun.file(path).json();
+    writeFileSync(path, JSON.stringify({ ...onDisk, title: "Corrected by hand" }));
+    const save = (revision?: string) => fetch(url, {
+      method: "PUT",
+      headers: revision === undefined ? {} : { "x-quiz-revision": revision },
+      body: JSON.stringify({ title: "Editor draft" }),
+    });
+    expect((await save(opened.revision)).status).toBe(409);
+    const corrected = await (await fetch(url)).json();
+    expect(corrected.title).toBe("Corrected by hand");
+    expect(corrected.updatedAt).toBe(opened.updatedAt);
+    expect(corrected.revision).not.toBe(opened.revision);
+    const forced = await (await save()).json();
+    expect(forced.title).toBe("Editor draft");
+    expect((await save(forced.revision)).status).toBe(200);
+    await store.delete(q.id);
+    expect((await save(forced.revision)).status).toBe(404);
+    expect((await save()).status).toBe(404);
+    expect(store.exists(q.id)).toBe(false);
+  });
+
   test("media upload + public serving", async () => {
     const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
     const r = await fetch(`${base}/api/media`, { method: "POST", body: png });
@@ -193,7 +221,7 @@ describe("isAdminRequest", () => {
 
 describe("full game over WebSockets", () => {
   test("host + 3 players play a quiz to the podium", async () => {
-    const quiz = store.create({
+    const quiz = await store.create({
       title: "E2E",
       questions: [
         { type: "multiple_choice", text: "2+2", options: ["3", "4"], correct: [1], timeLimitSec: 10 },
@@ -292,7 +320,7 @@ describe("full game over WebSockets", () => {
   });
 
   test("Protect from abuse is on by default, toggles in the lobby and carries over to the next lobby", async () => {
-    const quiz = store.create({ title: "Protect", questions: [{ type: "true_false", text: "Fire is cold", correct: [1] }] });
+    const quiz = await store.create({ title: "Protect", questions: [{ type: "true_false", text: "Fire is cold", correct: [1] }] });
     const host = await TestSocket.open(`ws://localhost:${srv.port}/ws`);
     host.send({ type: "host.hello" });
     await host.hostState((v) => v.kind === "idle");
@@ -328,7 +356,7 @@ describe("full game over WebSockets", () => {
 
 describe("Tallest Tower over WebSockets", () => {
   test("lobby → teams → answer to earn blocks → build → timer → podium", async () => {
-    const quiz = store.create({
+    const quiz = await store.create({
       title: "Tower E2E",
       questions: [1, 2, 3].map((n) => ({ type: "multiple_choice", text: `Q${n}`, options: ["right", "wrong"], correct: [0] })),
     });
@@ -420,7 +448,7 @@ describe("Tallest Tower over WebSockets", () => {
 
 describe("Lobby teams over WebSockets", () => {
   test("the host moves a player to another team; the phone follows and the game starts with it", async () => {
-    const quiz = store.create({
+    const quiz = await store.create({
       title: "Teams E2E",
       questions: [{ type: "multiple_choice", text: "Q1", options: ["right", "wrong"], correct: [0] }],
     });
@@ -469,7 +497,7 @@ describe("Lobby teams over WebSockets", () => {
 
 describe("Submarine Squad over WebSockets", () => {
   test("lobby → chase → answer → boost → host sees it → end → results", async () => {
-    const quiz = store.create({
+    const quiz = await store.create({
       title: "Sub E2E",
       questions: [1, 2].map((n) => ({ type: "multiple_choice", text: `Q${n}`, options: ["right", "wrong"], correct: [0] })),
     });
@@ -527,7 +555,7 @@ describe("Submarine Squad over WebSockets", () => {
 
 describe("Tower Fight over WebSockets", () => {
   test("lobby → Red vs Blue → earn a move → fire → host sees the shot land → end → results", async () => {
-    const quiz = store.create({
+    const quiz = await store.create({
       title: "Fight E2E",
       questions: [1, 2].map((n) => ({ type: "multiple_choice", text: `Q${n}`, options: ["right", "wrong"], correct: [0] })),
     });
@@ -602,7 +630,7 @@ describe("Tower Fight over WebSockets", () => {
 
 describe("Robot Attack over WebSockets", () => {
   test("lobby → quiz for points → move on the board → lasers → end → results", async () => {
-    const quiz = store.create({
+    const quiz = await store.create({
       title: "Robot E2E",
       questions: [1, 2].map((n) => ({ type: "multiple_choice", text: `Q${n}`, options: ["right", "wrong"], correct: [0] })),
     });
@@ -680,7 +708,7 @@ describe("Robot Attack over WebSockets", () => {
 
 describe("Cup of Death over WebSockets", () => {
   test("lobby → roll → answer to safety → the other picks a cup → reveal → end → results", async () => {
-    const quiz = store.create({
+    const quiz = await store.create({
       title: "Cup E2E",
       questions: [1, 2].map((n) => ({ type: "multiple_choice", text: `Q${n}`, options: ["right", "wrong"], correct: [0] })),
     });
@@ -762,7 +790,7 @@ describe("Cup of Death over WebSockets", () => {
 
 describe("Kingdom Siege over WebSockets", () => {
   test("Endless lobby → build → lane map → wave 1 → end → results and record → play again", async () => {
-    const quiz = store.create({
+    const quiz = await store.create({
       title: "Siege E2E",
       questions: [1, 2, 3].map((n) => ({ type: "multiple_choice", text: `Q${n}`, options: ["right", "wrong"], correct: [0] })),
     });
@@ -866,7 +894,7 @@ describe("Kingdom Siege over WebSockets", () => {
 
 describe("Land Grab over WebSockets", () => {
   test("lobby → answer 3 → place tiles → done → timer → podium", async () => {
-    const quiz = store.create({
+    const quiz = await store.create({
       title: "Land E2E",
       questions: [1, 2, 3].map((n) => ({ type: "multiple_choice", text: `Q${n}`, options: ["right", "wrong"], correct: [0] })),
     });
@@ -951,7 +979,7 @@ describe("Land Grab over WebSockets", () => {
 
 describe("Racer over WebSockets", () => {
   test("lobby → lever → go → answers → reveal → auto pacing → skip → end → results", async () => {
-    const quiz = store.create({
+    const quiz = await store.create({
       title: "Racer E2E",
       questions: [1, 2, 3].map((n) => ({ type: "multiple_choice", text: `Q${n}`, options: ["right", "wrong"], correct: [0], timeLimitSec: 10 })),
     });
@@ -1077,7 +1105,7 @@ describe("Racer over WebSockets", () => {
 
 describe("Showdown over WebSockets", () => {
   test("lobby rounds → start → duel.answer → reveal → next → end → results", async () => {
-    const quiz = store.create({
+    const quiz = await store.create({
       title: "Showdown E2E",
       questions: [1, 2].map((n) => ({ type: "multiple_choice", text: `Q${n}`, options: ["right", "wrong"], correct: [0], timeLimitSec: 10 })),
     });
@@ -1146,7 +1174,7 @@ describe("Showdown over WebSockets", () => {
 
 describe("Gift Grab over WebSockets", () => {
   test("lobby settings, earned bonus, reconnect, standings and CSV", async () => {
-    const quiz = store.create({
+    const quiz = await store.create({
       title: "Gift Grab E2E",
       questions: [{ type: "true_false", text: "True?", correct: [0] }],
     });
@@ -1214,7 +1242,7 @@ describe("Only changed player views are pushed", () => {
 
   test("time passing or another player's answer doesn't resend; a rejected action still resyncs", async () => {
     const image = await store.saveMedia(new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]));
-    const quiz = store.create({
+    const quiz = await store.create({
       title: "Dedupe E2E",
       questions: [1, 2].map((n) => ({ type: "multiple_choice", text: `Q${n}`, image, options: ["right", "wrong"], correct: [0] })),
     });

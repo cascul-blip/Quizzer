@@ -1,8 +1,9 @@
+import { saveQuizDraft, toDraft, type Draft } from "./save-quiz-draft.ts";
 import { render } from "preact";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
-import { BASE_VERSION_HEADER, DEFAULT_TIME_LIMIT, MAX_IMAGE_SIDE, MAX_MEDIA_BYTES, MAX_OPTIONS, MAX_PIN_SPOTS, MIN_OPTIONS, TF_OPTIONS, TIME_LIMITS, newId, pinLabel } from "../../shared/quiz-constants.ts";
+import { QUIZ_REVISION_HEADER, DEFAULT_TIME_LIMIT, MAX_IMAGE_SIDE, MAX_MEDIA_BYTES, MAX_OPTIONS, MAX_PIN_SPOTS, MIN_OPTIONS, TF_OPTIONS, TIME_LIMITS, newId, pinLabel } from "../../shared/quiz-constants.ts";
 import { MUSIC_TRACKS } from "../../shared/music-tracks.ts";
-import type { Question, Quiz, QuizSettings, QuizSummary } from "../../shared/quiz-schema.ts";
+import type { Question, Quiz, QuizSummary, SavedQuiz } from "../../shared/quiz-schema.ts";
 import { PinBoard } from "../shared/pin.tsx";
 import { Tex } from "../shared/tex.tsx";
 import { Shape, Toast, optionColor } from "../shared/ui.tsx";
@@ -324,10 +325,6 @@ function Snippet({ label, text, onCopy }: { label: string; text: string; onCopy:
 
 // ---------- editor ----------
 
-type Draft = { title: string; description: string; settings: QuizSettings; questions: Question[] };
-
-const toDraft = (q: Quiz): Draft => ({ title: q.title, description: q.description, settings: q.settings, questions: q.questions });
-
 function blankQuestion(type: Question["type"], taken: Set<string>): Question {
   let id: string;
   do id = "q" + newId(5);
@@ -358,13 +355,18 @@ function questionIssues(q: Question): string[] {
 }
 
 function Editor({ id, notify }: { id: string; notify: (m: string) => void }) {
-  const [saved, setSaved] = useState<Quiz | null>(null);
-  const [draft, setDraft] = useState<Draft | null>(null);
+  const [saved, setSaved] = useState<SavedQuiz | null>(null);
+  const [draft, renderDraft] = useState<Draft | null>(null);
+  const latest = useRef<Draft | null>(null);
+  function setDraft(next: Draft) {
+    latest.current = next;
+    renderDraft(next);
+  }
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    api<Quiz>(`/api/quizzes/${encodeURIComponent(id)}`)
+    api<SavedQuiz>(`/api/quizzes/${encodeURIComponent(id)}`)
       .then((q) => {
         setSaved(q);
         setDraft(toDraft(q));
@@ -383,27 +385,26 @@ function Editor({ id, notify }: { id: string; notify: (m: string) => void }) {
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
 
-  /** Save the draft. Unless `overwrite`, the server refuses if the quiz changed since it was loaded (an MCP agent edited it). */
-  async function save(overwrite = false): Promise<boolean> {
-    if (!draft || !saved) return false;
+  async function save(): Promise<boolean> {
+    if (!latest.current || !saved || saving) return false;
     setSaving(true);
     try {
-      const init = jsonInit("PUT", draft);
-      if (!overwrite) init.headers = { ...init.headers, [BASE_VERSION_HEADER]: saved.updatedAt };
-      const q = await api<Quiz>(`/api/quizzes/${encodeURIComponent(id)}`, init);
-      setSaved(q);
-      setDraft(toDraft(q));
-      notify("Saved");
-      return true;
-    } catch (e) {
-      if ((e as { status?: number }).status === 409) {
-        setSaving(false);
-        const replace = confirm(
-          "This quiz was changed somewhere else (maybe by an AI agent) since you opened it.\n\n" +
-            "OK: save your version and replace those changes.\nCancel: don't save. Reload the page to see the other changes (your edits here will be lost).",
-        );
-        if (replace) return save(true);
+      const result = await saveQuizDraft(() => latest.current!, saved.revision, (submitted, revision) => {
+        const init = jsonInit("PUT", { ...submitted, createdAt: saved.createdAt, updatedAt: saved.updatedAt });
+        if (revision !== undefined) init.headers = { ...init.headers, [QUIZ_REVISION_HEADER]: revision };
+        return api<SavedQuiz>(`/api/quizzes/${encodeURIComponent(id)}`, init);
+      }, () => confirm("This quiz changed since you opened it. Save your current draft over those changes?"));
+      if (!result) {
         notify("Not saved: the quiz was changed somewhere else");
+        return false;
+      }
+      setSaved(result.saved);
+      setDraft(result.draft);
+      notify(result.allSaved ? "Saved" : "Earlier edits saved. Your latest edits are still open.");
+      return result.allSaved;
+    } catch (e) {
+      if ((e as { status?: number }).status === 404) {
+        notify("This quiz was deleted. Your draft is still open.");
         return false;
       }
       notify(`Not saved: ${(e as Error).message}`);
@@ -417,7 +418,7 @@ function Editor({ id, notify }: { id: string; notify: (m: string) => void }) {
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "s") {
         e.preventDefault();
-        if (dirty && issueCount === 0) void save();
+        if (dirty && !saving && issueCount === 0) void save();
       }
     };
     window.addEventListener("keydown", onKey);
@@ -463,9 +464,10 @@ function Editor({ id, notify }: { id: string; notify: (m: string) => void }) {
         </span>
         <button
           class="btn"
-          disabled={draft.questions.length === 0}
+          disabled={saving || draft.questions.length === 0}
           onClick={async () => {
-            if (dirty && !(issueCount === 0 && (await save()))) return notify("Save your changes before hosting");
+            if (dirty && issueCount > 0) return notify("Fix the quiz before hosting");
+            if (dirty && !(await save())) return;
             openHost(id);
           }}
         >
@@ -513,7 +515,10 @@ function Editor({ id, notify }: { id: string; notify: (m: string) => void }) {
             index={i}
             count={draft.questions.length}
             onChange={(nq) => setQ(i, nq)}
-            onLater={(fn) => setDraft((d) => d && { ...d, questions: d.questions.map((x) => (x.id === q.id ? fn(x) : x)) })}
+            onLater={(fn) => {
+              const d = latest.current;
+              if (d) setDraft({ ...d, questions: d.questions.map((x) => (x.id === q.id ? fn(x) : x)) });
+            }}
             onMove={(d) => move(i, d)}
             onDuplicate={() => {
               const copy = { ...structuredClone(q), id: blankQuestion(q.type, taken).id };

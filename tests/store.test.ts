@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { Database } from "bun:sqlite";
+import { afterEach, beforeEach, describe, expect, setSystemTime, spyOn, test } from "bun:test";
 import * as fs from "node:fs";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -15,34 +16,37 @@ beforeEach(() => {
   t = tempDir();
   store = new QuizStore(t.dir);
 });
-afterEach(() => t.cleanup());
+afterEach(() => {
+  setSystemTime();
+  t.cleanup();
+});
 
 describe("QuizStore", () => {
-  test("create → list → get → delete", () => {
-    const q = store.create({ title: "World Capitals", questions: [{ type: "true_false", text: "Paris is in France", correct: [0] }] });
+  test("create → list → get → delete", async () => {
+    const q = await store.create({ title: "World Capitals", questions: [{ type: "true_false", text: "Paris is in France", correct: [0] }] });
     expect(q.id).toMatch(/^world-capitals-[a-z0-9]{4}$/);
     expect(existsSync(join(t.dir, "quizzes", `${q.id}.json`))).toBe(true);
     expect(store.list()).toEqual([{ id: q.id, title: "World Capitals", description: "", questionCount: 1, updatedAt: q.updatedAt }]);
     expect(store.get(q.id).questions[0]!.options).toEqual(["True", "False"]);
-    store.delete(q.id);
+    await store.delete(q.id);
     expect(store.list()).toEqual([]);
     expect(() => store.get(q.id)).toThrow(NotFoundError);
   });
 
-  test("writes are atomic (no tmp files left behind)", () => {
-    const q = store.create({ title: "A" });
-    for (let i = 0; i < 5; i++) store.update(q.id, { title: `A${i}` });
+  test("writes are atomic (no tmp files left behind)", async () => {
+    const q = await store.create({ title: "A" });
+    for (let i = 0; i < 5; i++) await store.update(q.id, { title: `A${i}` });
     expect(readdirSync(join(t.dir, "quizzes"))).toEqual([`${q.id}.json`]);
   });
 
-  test("list() re-reads only quiz files that changed since the last call", () => {
-    const a = store.create({ title: "A" });
-    const b = store.create({ title: "B" });
+  test("list() re-reads only quiz files that changed since the last call", async () => {
+    const a = await store.create({ title: "A" });
+    const b = await store.create({ title: "B" });
     expect(store.list().map((s) => s.title).sort()).toEqual(["A", "B"]);
     const reads = spyOn(store, "get");
     expect(store.list().map((s) => s.title).sort()).toEqual(["A", "B"]);
     expect(reads).toHaveBeenCalledTimes(0);
-    store.update(a.id, { title: "A2" });
+    await store.update(a.id, { title: "A2" });
     reads.mockClear(); // update() reads the quiz itself
     expect(store.list().map((s) => s.title).sort()).toEqual(["A2", "B"]);
     expect(reads).toHaveBeenCalledTimes(1);
@@ -50,40 +54,98 @@ describe("QuizStore", () => {
     const file = join(t.dir, "quizzes", `${b.id}.json`);
     writeFileSync(file, readFileSync(file, "utf8").replace('"title": "B"', '"title": "Bee"'));
     expect(store.list().map((s) => s.title).sort()).toEqual(["A2", "Bee"]);
-    store.delete(a.id);
+    await store.delete(a.id);
     expect(store.list().map((s) => s.title)).toEqual(["Bee"]);
     reads.mockRestore();
   });
 
-  test("replace keeps id and createdAt", () => {
-    const q = store.create({ title: "A" });
-    const r = store.replace(q.id, { title: "B", settings: { shuffleAnswers: true }, questions: [{ type: "true_false", text: "x", correct: [1] }] });
+  test("replace keeps id and createdAt", async () => {
+    const q = await store.create({ title: "A" });
+    const r = await store.replace(q.id, { title: "B", settings: { shuffleAnswers: true }, questions: [{ type: "true_false", text: "x", correct: [1] }] });
     expect(r.id).toBe(q.id);
     expect(r.createdAt).toBe(q.createdAt);
     expect(r.title).toBe("B");
     expect(r.settings).toEqual({ shuffleQuestions: false, shuffleAnswers: true });
   });
 
-  test("replace with the version the editor loaded refuses if the quiz changed since", () => {
-    const q = store.create({ title: "A" });
+  test("replace with the version the editor loaded refuses if the quiz changed since", async () => {
+    setSystemTime(new Date("2026-01-01T00:00:00Z"));
+    const q = await store.create({ title: "A" });
     const draft = { title: "Editor", questions: [] };
-    Bun.sleepSync(2);
-    const agent = store.update(q.id, { title: "Agent" });
-    expect(() => store.replace(q.id, draft, q.updatedAt)).toThrow(ConflictError);
+    const agent = await store.update(q.id, { title: "Agent" });
+    await expect(store.replace(q.id, draft, { revision: q.revision })).rejects.toThrow(ConflictError);
+    await expect(store.replace(q.id, draft, q.updatedAt)).rejects.toThrow(ConflictError);
     expect(store.get(q.id).title).toBe("Agent");
-    expect(store.replace(q.id, draft, agent.updatedAt).title).toBe("Editor");
-    expect(store.replace(q.id, { title: "Forced" }).title).toBe("Forced");
+    expect((await store.replace(q.id, draft, agent.updatedAt)).title).toBe("Editor");
+    expect((await store.replace(q.id, { title: "Forced" })).title).toBe("Forced");
   });
 
-  test("invalid input is rejected and nothing is written", () => {
-    expect(() => store.create({ title: "" })).toThrow(ValidationError);
-    expect(() => store.create({ title: "x", questions: [{ type: "multiple_choice", text: "q", options: ["a"], correct: [0] }] })).toThrow(ValidationError);
+  test.each(["{broken", '{"title":""}', '{"createdAt":"broken","updatedAt":"2026-01-01T00:00:00.000Z"}'])("a stale draft can recover an invalid hand-edit: %s", async (contents) => {
+    const q = await store.create({ title: "Original" });
+    const file = join(store.quizzesDir, q.id + ".json");
+    writeFileSync(file, contents);
+    const draft = { ...q, title: "Recovered" };
+    await expect(store.replace(q.id, draft, { revision: q.revision })).rejects.toThrow(ConflictError);
+    expect(readFileSync(file, "utf8")).toBe(contents);
+    const recovered = await store.replace(q.id, draft);
+    expect(recovered.createdAt).toBe(q.createdAt);
+    expect(store.get(q.id).title).toBe("Recovered");
+  });
+
+  test("waiting for another quiz writer lets game timers run", async () => {
+    const q = await store.create({ title: "Shared" });
+    const other = new Database(join(t.dir, ".quiz-writes.sqlite"));
+    other.run("BEGIN IMMEDIATE");
+    const release = setTimeout(() => other.run("ROLLBACK"), 30);
+    try {
+      await store.update(q.id, { title: "Saved after timer" });
+      expect(store.get(q.id).title).toBe("Saved after timer");
+    } finally {
+      clearTimeout(release);
+      other.close();
+    }
+  }, 8000);
+
+  test("independent processes preserve appends, reject stale replacements and respect deletion", async () => {
+    const q = await store.create({ title: "Shared quiz" });
+    async function runWriters(action: string, ...values: string[]) {
+      const workers = values.map((value) => Bun.spawn(
+        [process.execPath, join(import.meta.dir, "fixtures/quiz-writer.ts"), t.dir, q.id, action, value],
+        { stdin: "pipe", stdout: "pipe", stderr: "inherit" },
+      ));
+      try {
+        await Promise.all(workers.map(async (worker) => {
+          const ready = await worker.stdout.getReader().read();
+          expect(new TextDecoder().decode(ready.value).trim()).toBe("ready");
+        }));
+        for (const worker of workers) worker.stdin.end();
+        return await Promise.all(workers.map((worker) => worker.exited));
+      } finally {
+        for (const worker of workers) if (worker.exitCode === null) worker.kill();
+      }
+    }
+    expect(await runWriters("append", "first", "second")).toEqual([0, 0]);
+    const edited = store.get(q.id);
+    const expected = ["first", "second"].flatMap((name) => Array.from({ length: 12 }, (_, n) => `${name} ${n}`));
+    expect(edited.questions.map((question) => question.text).sort()).toEqual(expected.sort());
+    expect((await runWriters("replace", edited.revision, edited.revision)).sort()).toEqual([0, 3]);
+
+    const open = store.get(q.id);
+    expect(await runWriters("delete", "")).toEqual([0]);
+    await expect(store.replace(q.id, open, { revision: open.revision })).rejects.toThrow(NotFoundError);
+    await expect(store.replace(q.id, open)).rejects.toThrow(NotFoundError);
+    expect(store.exists(q.id)).toBe(false);
+  });
+
+  test("invalid input is rejected and nothing is written", async () => {
+    await expect(store.create({ title: "" })).rejects.toThrow(ValidationError);
+    await expect(store.create({ title: "x", questions: [{ type: "multiple_choice", text: "q", options: ["a"], correct: [0] }] })).rejects.toThrow(ValidationError);
     expect(store.list()).toEqual([]);
   });
 
-  test("path traversal ids are not found", () => {
+  test("path traversal ids are not found", async () => {
     expect(() => store.get("../secret")).toThrow(NotFoundError);
-    expect(() => store.delete("..")).toThrow(NotFoundError);
+    await expect(store.delete("..")).rejects.toThrow(NotFoundError);
   });
 
   test("a corrupt file is listed with an error instead of crashing", () => {
@@ -93,27 +155,27 @@ describe("QuizStore", () => {
     expect(entry!.error).toContain("not valid JSON");
   });
 
-  test("question-level edits", () => {
-    const q = store.create({ title: "Q" });
-    const a = store.addQuestion(q.id, { type: "multiple_choice", text: "A?", options: ["x", "y"], correct: [0] });
-    const b = store.addQuestion(q.id, { type: "true_false", text: "B?", correct: [0] }, 0);
+  test("question-level edits", async () => {
+    const q = await store.create({ title: "Q" });
+    const a = await store.addQuestion(q.id, { type: "multiple_choice", text: "A?", options: ["x", "y"], correct: [0] });
+    const b = await store.addQuestion(q.id, { type: "true_false", text: "B?", correct: [0] }, 0);
     expect(store.get(q.id).questions.map((x) => x.id)).toEqual([b.id, a.id]);
 
-    const a2 = store.updateQuestion(q.id, a.id, { text: "A2?", correct: [1] });
+    const a2 = await store.updateQuestion(q.id, a.id, { text: "A2?", correct: [1] });
     expect(a2).toMatchObject({ id: a.id, text: "A2?", correct: [1], options: ["x", "y"] });
 
     // switching to true/false resets options and picks a valid answer
-    expect(store.updateQuestion(q.id, a.id, { type: "true_false" })).toMatchObject({ options: ["True", "False"], correct: [0] });
+    expect(await store.updateQuestion(q.id, a.id, { type: "true_false" })).toMatchObject({ options: ["True", "False"], correct: [0] });
     // …and back to multiple choice keeps True/False as editable options.
-    expect(store.updateQuestion(q.id, b.id, { type: "multiple_choice" })).toMatchObject({ options: ["True", "False"], correct: [0] });
+    expect(await store.updateQuestion(q.id, b.id, { type: "multiple_choice" })).toMatchObject({ options: ["True", "False"], correct: [0] });
 
-    store.reorderQuestions(q.id, [a.id, b.id]);
+    await store.reorderQuestions(q.id, [a.id, b.id]);
     expect(store.get(q.id).questions.map((x) => x.id)).toEqual([a.id, b.id]);
-    expect(() => store.reorderQuestions(q.id, [a.id])).toThrow(ValidationError);
+    await expect(store.reorderQuestions(q.id, [a.id])).rejects.toThrow(ValidationError);
 
-    store.deleteQuestion(q.id, a.id);
+    await store.deleteQuestion(q.id, a.id);
     expect(store.get(q.id).questions.map((x) => x.id)).toEqual([b.id]);
-    expect(() => store.deleteQuestion(q.id, "nope")).toThrow(NotFoundError);
+    await expect(store.deleteQuestion(q.id, "nope")).rejects.toThrow(NotFoundError);
   });
 
   test("media is content-addressed and type-sniffed", async () => {
@@ -128,18 +190,18 @@ describe("QuizStore", () => {
   test("new spots on a pin with the default labels relabel it A, B, C… to match", async () => {
     const image = await store.saveMedia(PNG);
     const spot = (x: number) => ({ x, y: 0.5 });
-    const q = store.create({ title: "Pins", questions: [{ type: "pin", text: "Where?", image, spots: [spot(0.1), spot(0.2), spot(0.3)], correct: [2] }] });
+    const q = await store.create({ title: "Pins", questions: [{ type: "pin", text: "Where?", image, spots: [spot(0.1), spot(0.2), spot(0.3)], correct: [2] }] });
     const id = q.questions[0]!.id;
     expect(q.questions[0]!.options).toEqual(["A", "B", "C"]);
-    const four = store.updateQuestion(q.id, id, { spots: [spot(0.1), spot(0.2), spot(0.3), spot(0.4)] });
+    const four = await store.updateQuestion(q.id, id, { spots: [spot(0.1), spot(0.2), spot(0.3), spot(0.4)] });
     expect(four.options).toEqual(["A", "B", "C", "D"]);
     expect(four.correct).toEqual([2]);
-    const two = store.updateQuestion(q.id, id, { spots: [spot(0.1), spot(0.2)] });
+    const two = await store.updateQuestion(q.id, id, { spots: [spot(0.1), spot(0.2)] });
     expect(two.options).toEqual(["A", "B"]);
     expect(two.correct).toEqual([0]); // the old answer's spot is gone
     // Labels the author chose are kept, so their count still has to match.
-    store.updateQuestion(q.id, id, { options: ["Paris", "Rome"] });
-    expect(() => store.updateQuestion(q.id, id, { spots: [spot(0.1), spot(0.2), spot(0.3)] })).toThrow(ValidationError);
+    await store.updateQuestion(q.id, id, { options: ["Paris", "Rome"] });
+    await expect(store.updateQuestion(q.id, id, { spots: [spot(0.1), spot(0.2), spot(0.3)] })).rejects.toThrow(ValidationError);
   });
 
   test("a media write that fails part-way leaves nothing behind, so the same image can be uploaded again", async () => {
@@ -156,16 +218,16 @@ describe("QuizStore", () => {
   });
 
   test("image can be set and removed on a question", async () => {
-    const q = store.create({ title: "Q", questions: [{ type: "true_false", text: "x", correct: [0] }] });
+    const q = await store.create({ title: "Q", questions: [{ type: "true_false", text: "x", correct: [0] }] });
     const qid = q.questions[0]!.id;
     const ref = await store.saveMedia(PNG);
-    expect(store.updateQuestion(q.id, qid, { image: ref }).image).toBe(ref);
-    expect(store.updateQuestion(q.id, qid, { image: null }).image).toBeUndefined();
+    expect((await store.updateQuestion(q.id, qid, { image: ref })).image).toBe(ref);
+    expect((await store.updateQuestion(q.id, qid, { image: null })).image).toBeUndefined();
   });
 
-  test("duplicate", () => {
-    const q = store.create({ title: "Orig", questions: [{ type: "true_false", text: "x", correct: [0] }] });
-    const d = store.duplicate(q.id);
+  test("duplicate", async () => {
+    const q = await store.create({ title: "Orig", questions: [{ type: "true_false", text: "x", correct: [0] }] });
+    const d = await store.duplicate(q.id);
     expect(d.id).not.toBe(q.id);
     expect(d.title).toBe("Orig (copy)");
     expect(d.questions).toEqual(q.questions);
