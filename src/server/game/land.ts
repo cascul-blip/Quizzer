@@ -537,7 +537,9 @@ export const landMode: ModeEntry<"land"> = {
     const game = LandGame.fromLobby(lobby, handoffOptions(ctx));
     return { game, log: `${this.name} started: ${game.teams.length} teams, ${game.settings.minutes} min` };
   },
-  paced: false,
+  pacing: null,
+  teams: (settings) => settings.teams,
+  lobbyBanner: false,
   resultsCsv: buildLandResultsCsv,
   handle(game, playerId, msg) {
     switch (msg.type) {

@@ -29,7 +29,9 @@ export const classicMode: ModeEntry<"classic"> = {
   defaultSettings: {},
   readSettings: () => ({}),
   start: (lobby) => ({ game: lobby, log: null }),
-  paced: true,
+  pacing: (game) => game,
+  teams: () => null,
+  lobbyBanner: false,
   resultsCsv: buildResultsCsv,
   handle(game, playerId, msg) {
     switch (msg.type) {

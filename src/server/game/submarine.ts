@@ -567,7 +567,9 @@ export const subMode: ModeEntry<"submarine"> = {
     const game = SubGame.fromLobby(lobby, handoffOptions(ctx));
     return { game, log: `${this.name} started with ${game.players.size} player(s)` };
   },
-  paced: false,
+  pacing: null,
+  teams: () => null,
+  lobbyBanner: false,
   resultsCsv: buildSubResultsCsv,
   handle(game, playerId, msg) {
     switch (msg.type) {

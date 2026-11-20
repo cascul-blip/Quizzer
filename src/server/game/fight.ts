@@ -574,7 +574,9 @@ export const fightMode: ModeEntry<"fight"> = {
     const game = FightGame.fromLobby(lobby, handoffOptions(ctx));
     return { game, log: `${this.name} started with ${game.players.size} player(s), ${game.hill} hill` };
   },
-  paced: false,
+  pacing: null,
+  teams: () => 2,
+  lobbyBanner: false,
   resultsCsv: buildFightResultsCsv,
   handle(game, playerId, msg) {
     switch (msg.type) {

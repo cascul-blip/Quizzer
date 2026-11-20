@@ -337,7 +337,9 @@ export class GameHub {
     /** Paced modes (Classic, Racer, Showdown) go question by question: next, skip and pacing work in each. */
     const paced = () => {
       const g = game();
-      return entryOf(g).paced && "setPacing" in g ? g : classic();
+      const entry = entryOf(g);
+      if (!entry.pacing) throw new GameError(`Not available in ${entry.name}`);
+      return entry.pacing(g);
     };
     switch (msg.type) {
       case "host.hello":

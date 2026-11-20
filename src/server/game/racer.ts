@@ -546,7 +546,9 @@ export const racerMode: ModeEntry<"racer"> = {
     const game = RacerGame.fromLobby(lobby, handoffOptions(ctx));
     return { game, log: `${this.name} started with ${game.players.size} player(s), ${game.questions.length} question(s)` };
   },
-  paced: true,
+  pacing: (game) => game,
+  teams: () => null,
+  lobbyBanner: false,
   resultsCsv: buildRacerResultsCsv,
   handle(game, playerId, msg) {
     switch (msg.type) {

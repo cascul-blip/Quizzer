@@ -262,8 +262,8 @@ export type PlayerView =
       podium: RankedEntry[] | null;
       /** In the lobby with a team mode selected: the team this player will be on. */
       team: TeamInfo | null;
-      /** In the lobby with Kingdom Siege selected (the phone shows the castle banner). */
-      siege?: true;
+      /** In the lobby of a mode whose phones show its banner: that mode (Kingdom Siege shows the castle banner). */
+      banner?: GameMode;
     }
   | PlayerTowerView
   | PlayerSubView

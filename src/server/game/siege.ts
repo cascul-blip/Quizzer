@@ -1140,7 +1140,9 @@ export const siegeMode: ModeEntry<"siege"> = {
     const waves = game.settings.waves;
     return { game, log: `${this.name} started with ${game.players.size} player(s), ${waves === "endless" ? "Endless" : `${waves} waves`}` };
   },
-  paced: false,
+  pacing: null,
+  teams: () => null,
+  lobbyBanner: true,
   resultsCsv: buildSiegeResultsCsv,
   finished(game, ctx) {
     const r = game.result();

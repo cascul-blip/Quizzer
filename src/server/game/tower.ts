@@ -474,7 +474,9 @@ export const towerMode: ModeEntry<"tower"> = {
     const game = TowerGame.fromLobby(lobby, handoffOptions(ctx));
     return { game, log: `${this.name} started: ${game.teams.length} team(s), ${game.settings.minutes} min` };
   },
-  paced: false,
+  pacing: null,
+  teams: (settings) => settings.teams,
+  lobbyBanner: false,
   resultsCsv: buildTowerResultsCsv,
   handle(game, playerId, msg) {
     switch (msg.type) {

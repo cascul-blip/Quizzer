@@ -316,11 +316,11 @@ function Lobby({ view, send }: { view: Joined; send: (m: ClientMsg) => void }) {
   const look = picked ?? server;
   return (
     <main class="center lobby-wait">
-      <div class={`me-avatar ${view.siege ? "siege-banner-avatar" : ""}`}>
+      <div class={`me-avatar ${view.banner === "siege" ? "siege-banner-avatar" : ""}`}>
         <Avatar choice={look} />
       </div>
       <h1>You're in!</h1>
-      {view.siege && <p class="siege-lobby-line">🛡️ Defend the kingdom! Watch the projector.</p>}
+      {view.banner === "siege" && <p class="siege-lobby-line">🛡️ Defend the kingdom! Watch the projector.</p>}
       {view.team && (
         <div class="team-badge" style={{ background: view.team.color, color: teamInk(view.team.color) }}>
           Team {view.team.name}

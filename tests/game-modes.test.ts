@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import type { ModeMsg } from "../src/server/game/mode-entry.ts";
+import { Game } from "../src/server/game/game.ts";
 import { MODES } from "../src/server/game/modes.ts";
 import { QuizStore } from "../src/server/quiz/store.ts";
 import { GameHub, type SocketData } from "../src/server/ws.ts";
@@ -30,6 +31,27 @@ const CHANGED: { [M in GameMode]: ModeSettingsInput[M] } = {
   duel: { rounds: 20, theme: otherTheme("duel") },
   gift: { minutes: 3 },
 };
+
+/** How many teams the lobby shows with CHANGED settings; null in solo modes. */
+const TEAMS: { [M in GameMode]: number | null } = {
+  classic: null,
+  tower: 3,
+  submarine: null,
+  fight: 2,
+  robot: null,
+  land: 3,
+  racer: null,
+  cup: null,
+  siege: null,
+  duel: null,
+  gift: null,
+};
+
+/** Modes played question by question, whose pacing the host sets and the next lobby keeps. */
+const PACED = new Set<GameMode>(["classic", "racer", "duel"]);
+
+/** Modes whose phones show a banner in the lobby. */
+const BANNER = new Set<GameMode>(["siege"]);
 
 /** One phone message of each game mode. */
 const PHONE_MSG: { [M in GameMode]: ModeMsg<M> } = {
@@ -67,9 +89,17 @@ let data: ReturnType<typeof tempDir>;
 let hub: GameHub;
 let host: Socket;
 let quizId: string;
+let store: QuizStore;
 
 const send = (ws: Socket, msg: ClientMsg) => hub.onMessage(ws as never, JSON.stringify(msg));
 const errors = (ws: Socket) => ws.sent.filter((m) => m.type === "error");
+
+/** A phone's view in the lobby. */
+function phoneLobbyView(playerId: string) {
+  const view = hub.game?.playerView(playerId);
+  if (view?.kind !== "player") throw new Error(`expected the lobby, got ${view?.kind}`);
+  return view;
+}
 
 function lobbyView() {
   const view = hub.hostView();
@@ -93,7 +123,7 @@ function openLobby(mode: GameMode, nicknames: string[]) {
 
 beforeEach(async () => {
   data = tempDir();
-  const store = new QuizStore(data.dir);
+  store = new QuizStore(data.dir);
   const quiz = await store.create({
     title: "Modes",
     questions: [
@@ -130,6 +160,38 @@ describe("Game modes", () => {
         expect(errors(host)).toEqual([]);
         expect(lobbyView().mode).toBe(mode);
         expect(lobbyView().settings[mode]).toEqual(chosen);
+      });
+
+      test("the lobby shows the mode's teams", () => {
+        const [noel] = openLobby(mode, ["Noel"]);
+        send(host, { type: "host.setModeSettings", mode, settings: CHANGED[mode] } as ClientMsg);
+        expect(lobbyView().teams?.length ?? null).toBe(TEAMS[mode]);
+        expect(phoneLobbyView(noel!.playerId).team !== null).toBe(TEAMS[mode] !== null);
+      });
+
+      test(`phones in the lobby ${BANNER.has(mode) ? "show" : "don't show"} a mode banner`, () => {
+        const [noel] = openLobby(mode, ["Noel"]);
+        expect(phoneLobbyView(noel!.playerId).banner).toBe(BANNER.has(mode) ? mode : undefined);
+      });
+
+      test(`pacing ${PACED.has(mode) ? "is set during the game and carries over" : "is not available and doesn't carry over"}`, async () => {
+        openLobby(mode, ["Noel"]);
+        send(host, { type: "host.start", pacing: "auto" });
+        send(host, { type: "host.setPacing", pacing: "auto" });
+        expect(errors(host).map((e) => e.type === "error" && e.message)).toEqual(PACED.has(mode) ? [] : [`Not available in ${MODES[mode].name}`]);
+        send(host, { type: "host.end" });
+        await flush();
+        send(host, { type: "host.open", quizId });
+        expect(lobbyView().pacing).toBe(PACED.has(mode) ? "auto" : "manual");
+      });
+
+      test.if("theme" in MODES[mode].defaultSettings)("an unknown carried-over theme becomes the default, but the host can't choose it", () => {
+        const defaults = MODES[mode].defaultSettings;
+        const stale = { ...CHANGED[mode], theme: "halloween" };
+        const lobby = new Game(store.get(quizId), { mode, settings: { [mode]: stale } as never });
+        const expected: unknown = { ...defaults, ...CHANGED[mode], theme: "theme" in defaults ? defaults.theme : undefined };
+        expect<unknown>(lobby.settings[mode]).toEqual(expected);
+        expect(() => lobby.setModeSettings(mode, stale)).toThrow(/^Unknown .* theme$/);
       });
 
       test("the lobby handoff keeps each player's id and token", () => {

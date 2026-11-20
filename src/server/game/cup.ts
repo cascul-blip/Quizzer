@@ -562,7 +562,9 @@ export const cupMode: ModeEntry<"cup"> = {
     const game = CupGame.fromLobby(lobby, handoffOptions(ctx));
     return { game, log: `${this.name} started with ${game.players.size} player(s)` };
   },
-  paced: false,
+  pacing: null,
+  teams: () => null,
+  lobbyBanner: false,
   resultsCsv: buildCupResultsCsv,
   handle(game, playerId, msg) {
     switch (msg.type) {

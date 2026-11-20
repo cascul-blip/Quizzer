@@ -1,4 +1,4 @@
-import type { GameMode, ModeSettingsMap, PlayerMsg } from "../../shared/protocol.ts";
+import type { GameMode, ModeSettingsMap, Pacing, PlayerMsg } from "../../shared/protocol.ts";
 import { isSeasonTheme, type SeasonTheme } from "../../shared/season-theme.ts";
 import { GameError, type Clock } from "./common.ts";
 import type { CupGame } from "./cup.ts";
@@ -84,6 +84,14 @@ export interface StartContext {
   onFinish: (game: LiveGame) => void;
 }
 
+/** A game played question by question: the host sets its pacing and moves it on. */
+export interface PacedGame {
+  pacing: Pacing;
+  setPacing(pacing: Pacing): void;
+  next(): void;
+  skip(): void;
+}
+
 export interface FinishContext {
   dataDir: string;
   log: (message: string) => void;
@@ -97,8 +105,12 @@ export interface ModeEntry<M extends GameMode> {
   readSettings(raw: RawSettings, current: ModeSettingsMap[M]): ModeSettingsMap[M];
   /** Build the mode's game from the lobby, not started yet, and the line to log once it starts. */
   start(lobby: Game, ctx: StartContext): { game: ModeGame[M]; log: string | null };
-  /** Played question by question: next, skip and pacing work, and the pacing carries over to the next lobby. */
-  paced: boolean;
+  /** For a mode played question by question, its game as a PacedGame: next, skip and pacing work, and the pacing carries over to the next lobby. Null otherwise. */
+  pacing: ((game: ModeGame[M]) => PacedGame) | null;
+  /** How many teams the lobby previews and assigns players to with these settings; null in a solo mode. */
+  teams(settings: ModeSettingsMap[M]): number | null;
+  /** Phones in the lobby show the mode's banner instead of the plain waiting screen (Kingdom Siege's castle). */
+  lobbyBanner: boolean;
   resultsCsv(game: ModeGame[M]): string;
   /** After the results are saved. */
   finished?(game: ModeGame[M], ctx: FinishContext): void;

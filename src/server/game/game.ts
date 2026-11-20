@@ -11,6 +11,7 @@ import {
   type RankedEntry,
   type ShuffleOptions,
 } from "../../shared/protocol.ts";
+import { isSeasonTheme } from "../../shared/season-theme.ts";
 import { cleanAvatar, randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import { MAX_TYPED_ANSWER, checkAnswer, type AnswerValue } from "../../shared/answer-match.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
@@ -45,11 +46,14 @@ interface Player extends BasePlayer {
   answers: (Answer | undefined)[];
 }
 
-/** Every mode's settings: the given ones where there are any (carried over, so already valid), else the defaults. */
+/**
+ * Every mode's settings: the given ones where there are any (carried over from the last lobby), else the defaults.
+ * They are taken as they are, except that a theme the server no longer knows becomes the mode's default theme.
+ */
 function initialSettings(given: InitialSettings = {}): ModeSettingsMap {
   const read = <M extends GameMode>(mode: M): ModeSettingsMap[M] => {
-    const entry: ModeEntry<M> = MODES[mode];
-    return entry.readSettings({ ...entry.defaultSettings, ...given[mode] }, entry.defaultSettings);
+    const defaults = MODES[mode].defaultSettings;
+    return knownTheme({ ...defaults, ...given[mode] }, defaults);
   };
   return {
     classic: read("classic"),
@@ -64,6 +68,18 @@ function initialSettings(given: InitialSettings = {}): ModeSettingsMap {
     duel: read("duel"),
     gift: read("gift"),
   };
+}
+
+/** The settings with an unknown theme replaced by the default one; settings without a theme stay as they are. */
+function knownTheme<S extends object>(settings: S, defaults: S): S {
+  if (!("theme" in settings) || isSeasonTheme(settings.theme) || !("theme" in defaults)) return settings;
+  return { ...settings, theme: defaults.theme };
+}
+
+/** The number of teams a mode plays in with the lobby's settings; null in a solo mode. */
+function teamsIn<M extends GameMode>(mode: M, settings: ModeSettingsMap): number | null {
+  const entry: ModeEntry<M> = MODES[mode];
+  return entry.teams(settings[mode]);
 }
 
 type InitialSettings = { [M in GameMode]?: Partial<ModeSettingsMap[M]> };
@@ -133,7 +149,7 @@ export class Game {
     this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
     this.mode = opts.mode ?? "classic";
-    // Carried-over settings may predate a mode's themes: every theme starts as a real one.
+    // Carried-over settings may name a theme this server doesn't know: it quietly becomes the mode's default, unlike in setModeSettings.
     this.settings = initialSettings(opts.settings);
     this.protect = opts.protect ?? true;
   }
@@ -247,12 +263,9 @@ export class Game {
     this.onChange();
   }
 
-  /**
-   * Teams in the lobby preview: the Tallest Tower or Land Grab setting, or Red vs Blue for Tower Fight;
-   * null in solo modes.
-   */
+  /** Teams in the lobby preview, as the selected mode's entry gives them for its settings; null in solo modes. */
   teamCount(): number | null {
-    return this.mode === "tower" ? this.settings.tower.teams : this.mode === "land" ? this.settings.land.teams : this.mode === "fight" ? 2 : null;
+    return teamsIn(this.mode, this.settings);
   }
 
   /** Team index per player: round-robin by join order until the host moves someone, then the host's arrangement (newcomers join the smallest team). */
@@ -530,7 +543,7 @@ export class Game {
           : null,
       podium: this.phase === "podium" ? (this.batch ? (this.batch.podium ??= this.leaderboard(5)) : this.leaderboard(5)) : null,
       team: this.phase === "lobby" && this.teamCount() !== null ? teamInfo((this.batch ? (this.batch.teams ??= this.teamAssignment()) : this.teamAssignment()).get(p.id) ?? 0) : null,
-      ...(this.phase === "lobby" && this.mode === "siege" ? { siege: true as const } : {}),
+      ...(this.phase === "lobby" && MODES[this.mode].lobbyBanner ? { banner: this.mode } : {}),
     };
   }
 }

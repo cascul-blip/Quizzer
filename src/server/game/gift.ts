@@ -340,7 +340,9 @@ export const giftMode: ModeEntry<"gift"> = {
     const game = GiftGame.fromLobby(lobby, handoffOptions(ctx));
     return { game, log: `${this.name} started with ${game.players.size} player(s), ${game.minutes} min` };
   },
-  paced: false,
+  pacing: null,
+  teams: () => null,
+  lobbyBanner: false,
   resultsCsv: buildGiftResultsCsv,
   handle(game, playerId, msg) {
     switch (msg.type) {

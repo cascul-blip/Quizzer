@@ -495,7 +495,9 @@ export const robotMode: ModeEntry<"robot"> = {
     const game = RobotGame.fromLobby(lobby, handoffOptions(ctx));
     return { game, log: `${this.name} started with ${game.players.size} player(s)` };
   },
-  paced: false,
+  pacing: null,
+  teams: () => null,
+  lobbyBanner: false,
   resultsCsv: buildRobotResultsCsv,
   handle(game, playerId, msg) {
     switch (msg.type) {
