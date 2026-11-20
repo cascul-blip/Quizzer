@@ -115,8 +115,13 @@ export interface ModeEntry<M extends GameMode> {
   resultsCsv(game: ModeGame[M]): string;
   /** After the results are saved. */
   finished?(game: ModeGame[M], ctx: FinishContext): void;
-  /** One of the mode's phone messages; "resend" when the phone should get its view again. Throws GameError to report an error. */
+  /** One of the mode's phone messages; "resend" when the phone should get its view again. Throws GameError to report an error; the default case calls unhandled. */
   handle(game: ModeGame[M], playerId: string, msg: ModeMsg<M>): "resend" | void;
+}
+
+/** The default case of a mode's handle: the compiler checks every message is handled, and one that still gets here is a server bug. */
+export function unhandled(msg: never): never {
+  throw new Error(`No handler for phone message ${(msg as { type: string }).type}`);
 }
 
 /** The options every mode's fromLobby takes from the hub. */

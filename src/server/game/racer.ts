@@ -20,7 +20,7 @@ import { GameError, realClock, shuffle, topErrors, type Clock, AUTO_REVEAL_MS, G
 import type { Game } from "./game.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
 import { MODE_NAMES } from "../../shared/mode-names.ts";
-import { handoffOptions, pickTheme, type ModeEntry } from "./mode-entry.ts";
+import { handoffOptions, pickTheme, unhandled, type ModeEntry } from "./mode-entry.ts";
 import { toCsv } from "./results.ts";
 
 export { AUTO_REVEAL_MS, GRACE_MS } from "./common.ts";
@@ -559,7 +559,7 @@ export const racerMode: ModeEntry<"racer"> = {
       case "racer.answer":
         return game.answer(playerId, Number(msg.index), answerOf(msg)) ? undefined : "resend";
       default:
-        msg satisfies never;
+        return unhandled(msg);
     }
   },
 };

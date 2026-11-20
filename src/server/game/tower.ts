@@ -23,7 +23,7 @@ import { Roster, type BasePlayer } from "./roster.ts";
 import { QuestionStream, newStreamPlayer, type StreamPlayer } from "./stream.ts";
 import { answerOf } from "../../shared/answer-match.ts";
 import { MODE_NAMES } from "../../shared/mode-names.ts";
-import { handoffOptions, pickTheme, type ModeEntry } from "./mode-entry.ts";
+import { handoffOptions, pickTheme, unhandled, type ModeEntry } from "./mode-entry.ts";
 import { toCsv } from "./results.ts";
 
 export { FEEDBACK_MS } from "./stream.ts";
@@ -485,7 +485,7 @@ export const towerMode: ModeEntry<"tower"> = {
       case "tower.drop":
         return game.drop(playerId, Number(msg.zone)) === null ? "resend" : undefined;
       default:
-        msg satisfies never;
+        return unhandled(msg);
     }
   },
 };

@@ -28,7 +28,7 @@ import { Roster, type BasePlayer } from "./roster.ts";
 import { QuestionStream, newStreamPlayer, type StreamPlayer } from "./stream.ts";
 import { answerOf } from "../../shared/answer-match.ts";
 import { MODE_NAMES } from "../../shared/mode-names.ts";
-import { handoffOptions, type ModeEntry } from "./mode-entry.ts";
+import { handoffOptions, unhandled, type ModeEntry } from "./mode-entry.ts";
 import { toCsv } from "./results.ts";
 
 export { FEEDBACK_MS } from "./stream.ts";
@@ -506,7 +506,7 @@ export const robotMode: ModeEntry<"robot"> = {
       case "robot.move":
         return game.move(playerId, msg.dir) ? undefined : "resend";
       default:
-        msg satisfies never;
+        return unhandled(msg);
     }
   },
 };

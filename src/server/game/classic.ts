@@ -1,7 +1,7 @@
 import { answerOf } from "../../shared/answer-match.ts";
 import { MODE_NAMES } from "../../shared/mode-names.ts";
 import type { Game } from "./game.ts";
-import type { ModeEntry } from "./mode-entry.ts";
+import { unhandled, type ModeEntry } from "./mode-entry.ts";
 import { toCsv } from "./results.ts";
 
 /** One row per player (by rank) with per-question answer, correctness, points and time. */
@@ -42,7 +42,7 @@ export const classicMode: ModeEntry<"classic"> = {
         game.setAvatar(playerId, msg.avatar, msg.accessory);
         return;
       default:
-        msg satisfies never;
+        return unhandled(msg);
     }
   },
 };

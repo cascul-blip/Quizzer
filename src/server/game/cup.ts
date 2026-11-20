@@ -26,7 +26,7 @@ import { Roster, type BasePlayer } from "./roster.ts";
 import { QuestionStream, newStreamPlayer, type StreamPlayer } from "./stream.ts";
 import { answerOf } from "../../shared/answer-match.ts";
 import { MODE_NAMES } from "../../shared/mode-names.ts";
-import { handoffOptions, pickTheme, type ModeEntry } from "./mode-entry.ts";
+import { handoffOptions, pickTheme, unhandled, type ModeEntry } from "./mode-entry.ts";
 import { toCsv } from "./results.ts";
 
 export { FEEDBACK_MS } from "./stream.ts";
@@ -573,7 +573,7 @@ export const cupMode: ModeEntry<"cup"> = {
       case "cup.pick":
         return game.pick(playerId, Number(msg.cup)) ? undefined : "resend";
       default:
-        msg satisfies never;
+        return unhandled(msg);
     }
   },
 };

@@ -16,7 +16,7 @@ import { Roster, type BasePlayer } from "./roster.ts";
 import { FEEDBACK_MS, QuestionStream, newStreamPlayer, type StreamPlayer } from "./stream.ts";
 import { answerOf } from "../../shared/answer-match.ts";
 import { MODE_NAMES } from "../../shared/mode-names.ts";
-import { handoffOptions, type ModeEntry } from "./mode-entry.ts";
+import { handoffOptions, unhandled, type ModeEntry } from "./mode-entry.ts";
 import { toCsv } from "./results.ts";
 
 // ---------- tuning (all in one place) ----------
@@ -580,7 +580,7 @@ export const subMode: ModeEntry<"submarine"> = {
       case "sub.tap":
         return game.tap(playerId, String(msg.symbol)) === null ? "resend" : undefined;
       default:
-        msg satisfies never;
+        return unhandled(msg);
     }
   },
 };

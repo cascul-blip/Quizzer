@@ -23,7 +23,7 @@ import { Roster, type BasePlayer } from "./roster.ts";
 import { newStreamPlayer, QuestionStream, type StreamPlayer } from "./stream.ts";
 import { answerOf } from "../../shared/answer-match.ts";
 import { MODE_NAMES } from "../../shared/mode-names.ts";
-import { handoffOptions, type ModeEntry } from "./mode-entry.ts";
+import { handoffOptions, unhandled, type ModeEntry } from "./mode-entry.ts";
 import { toCsv } from "./results.ts";
 
 const COUNTDOWN_MS = 3_000;
@@ -352,7 +352,7 @@ export const giftMode: ModeEntry<"gift"> = {
         game.tap(playerId, msg.round, msg.item);
         return;
       default:
-        msg satisfies never;
+        return unhandled(msg);
     }
   },
 };
