@@ -5,7 +5,7 @@ import { INTRO_MS } from "../src/server/game/game.ts";
 import { Lobby } from "../src/server/game/lobby.ts";
 import { COUNTDOWN_MS as LAND_COUNTDOWN_MS, LandGame } from "../src/server/game/land.ts";
 import { COUNTDOWN_MS as ROBOT_COUNTDOWN_MS, RobotGame } from "../src/server/game/robot.ts";
-import { FEEDBACK_MS, type StreamPlayer } from "../src/server/game/stream.ts";
+import { FEEDBACK_MS } from "../src/server/game/stream.ts";
 import { COUNTDOWN_MS as SUB_COUNTDOWN_MS, SubGame } from "../src/server/game/submarine.ts";
 import { COUNTDOWN_MS as TOWER_COUNTDOWN_MS, TowerGame } from "../src/server/game/tower.ts";
 import { ERRORS_SHOWN, type GameMode, type QuestionError } from "../src/shared/protocol.ts";
@@ -105,7 +105,8 @@ describe("own-pace modes", () => {
   for (const [mode, countdown, make] of modes) {
     test(`${mode}: every wrong answer counts, repeats included, and shows at the podium only`, () => {
       const clock = new FakeClock();
-      const lobby = new Lobby(quiz(2));
+      const fixture = quiz(2);
+      const lobby = new Lobby(fixture);
       lobby.setMode(mode);
       lobby.join("A");
       lobby.join("B");
@@ -114,13 +115,14 @@ describe("own-pace modes", () => {
       clock.advance(countdown);
 
       const expected = [0, 0];
-      for (const p of game.players.values() as Iterable<StreamPlayer & { id: string }>) {
+      for (const p of game.players.values()) {
         // Two answers each: wrong, then right. With 2 questions that is one of each question.
         for (const right of [false, true]) {
-          const cur = p.current!;
-          const option = right ? cur.correct[0]! : cur.options.findIndex((_, i) => !cur.correct.includes(i));
+          const cur = game.playerView(p.id)!.question!;
+          const qIndex = fixture.questions.findIndex((q) => q.text === cur.text);
+          const option = right ? fixture.questions[qIndex]!.correct[0]! : 1;
           expect(game.answer(p.id, cur.seq, option)).toBe(true);
-          if (!right) expected[cur.qIndex]!++;
+          if (!right) expected[qIndex]!++;
           clock.advance(FEEDBACK_MS);
         }
       }

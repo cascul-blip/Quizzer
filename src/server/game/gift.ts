@@ -20,7 +20,7 @@ import type { Quiz } from "../../shared/quiz-schema.ts";
 import { GameError, realClock, shuffle, type Clock } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
-import { newStreamPlayer, QuestionStream, type StreamPlayer } from "./stream.ts";
+import { QuestionStream, type AnswerTotals } from "./stream.ts";
 import { answerOf } from "../../shared/answer-match.ts";
 import { MODE_NAMES } from "../../shared/mode-names.ts";
 import { handoffOptions, unhandled, type ModeEntry } from "./mode-entry.ts";
@@ -38,7 +38,7 @@ interface Bonus {
   timer: unknown;
 }
 
-interface GiftPlayer extends BasePlayer, StreamPlayer {
+interface GiftPlayer extends BasePlayer, AnswerTotals {
   score: number;
   rounds: number;
   goodTaps: number;
@@ -77,10 +77,6 @@ function launchSchedule(round: number, rng: () => number): GiftItem[] {
   })).flat();
 }
 
-function newPlayer(base: BasePlayer): GiftPlayer {
-  return { ...base, ...newStreamPlayer(), score: 0, rounds: 0, goodTaps: 0, dudTaps: 0, powerups: 0, bonus: null };
-}
-
 function compare(a: GiftPlayer, b: GiftPlayer): number {
   return b.score - a.score || b.correct - a.correct;
 }
@@ -114,10 +110,14 @@ export class GiftGame {
     this.onFinish = opts.onFinish ?? (() => {});
   }
 
+  private newPlayer(base: BasePlayer): GiftPlayer {
+    return this.stream.registerPlayer({ ...base, score: 0, rounds: 0, goodTaps: 0, dudTaps: 0, powerups: 0, bonus: null });
+  }
+
   static fromLobby(lobby: LobbyFacts<"gift">, opts: GiftOptions = {}): GiftGame {
     if (!lobby.quiz.questions.length) throw new GameError("This quiz has no questions");
     const game = new GiftGame(lobby.quiz, lobby.settings.minutes, lobby.shuffle.answers, lobby.protect, opts);
-    game.roster.adoptFrom(lobby.players, newPlayer);
+    game.roster.adoptFrom(lobby.players, (base) => game.newPlayer(base));
     return game;
   }
 
@@ -131,7 +131,7 @@ export class GiftGame {
     this.timer = this.clock.setTimeout(() => {
       this.phase = "playing";
       this.phaseEndsAt = this.clock.now() + this.durationMs;
-      for (const player of this.players.values()) this.stream.deal(player);
+      for (const player of this.players.values()) this.stream.open(player);
       this.timer = this.clock.setTimeout(() => this.expire(), this.durationMs);
       this.onChange();
     }, COUNTDOWN_MS);
@@ -169,8 +169,8 @@ export class GiftGame {
 
   join(rawNickname: unknown, avatar?: AvatarChoice | null): GiftPlayer {
     if (this.phase === "podium" || this.phase === "finishing") throw new GameError("This game has finished accepting players");
-    const player = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), newPlayer);
-    if (this.phase === "playing") this.stream.deal(player);
+    const player = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), (base) => this.newPlayer(base));
+    if (this.phase === "playing") this.stream.open(player);
     this.onChange();
     return player;
   }
@@ -204,7 +204,7 @@ export class GiftGame {
   }
 
   private earnBonus(player: GiftPlayer): void {
-    const start = player.readyAt + GIFT_READY_MS;
+    const start = this.stream.feedbackEndsAt(player) + GIFT_READY_MS;
     const endsAt = start + GIFT_ROUND_MS;
     const round = ++player.rounds;
     player.bonus = {

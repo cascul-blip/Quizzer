@@ -57,7 +57,9 @@ describe("Gift Grab", () => {
       expect(game.hostView().standings.filter((row) => row.rank === 1 && row.inBonus && row.score === 0)).toHaveLength(count);
       const item = bonus.items.find((item) => good(item.kind))!;
       expect(game.tap(first.id, bonus.round, item.id)).toBe(false);
-      clock.advance(FEEDBACK_MS + GIFT_READY_MS + item.from);
+      clock.advance(1000 + 1000 + item.from - 1); // feedback, then the bonus countdown
+      expect(game.tap(first.id, bonus.round, item.id)).toBe(false);
+      clock.advance(1);
       expect(game.tap(first.id, bonus.round + 1, item.id)).toBe(false);
       expect(game.tap(first.id, bonus.round, item.id)).toBe(true);
       expect(game.tap(first.id, bonus.round, item.id)).toBe(false);
@@ -169,9 +171,10 @@ describe("Gift Grab", () => {
     clock.advance(115_999);
     const bonus = earn(one!.id);
     expect(bonus.multiplier).toBe(3);
+    const nextQuestion = game.playerView(two!.id)?.question;
     clock.advance(1);
     expect(game.phase).toBe("finishing");
-    expect(game.answer(two!.id, two!.seq, 1)).toBe(false);
+    expect(game.answer(two!.id, nextQuestion!.seq, 1)).toBe(false);
     const item = bonus.items.find((item) => good(item.kind))!;
     clock.advance(FEEDBACK_MS + GIFT_READY_MS + item.from - 1);
     expect(game.tap(one!.id, bonus.round, item.id)).toBe(true);

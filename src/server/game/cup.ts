@@ -23,7 +23,7 @@ import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import { GameError, realClock, shuffle, type Clock } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
-import { QuestionStream, newStreamPlayer, type StreamPlayer } from "./stream.ts";
+import { QuestionStream, type AnswerTotals } from "./stream.ts";
 import { answerOf } from "../../shared/answer-match.ts";
 import { MODE_NAMES } from "../../shared/mode-names.ts";
 import { handoffOptions, pickTheme, unhandled, type ModeEntry } from "./mode-entry.ts";
@@ -33,7 +33,7 @@ export { FEEDBACK_MS } from "./stream.ts";
 
 export const COUNTDOWN_MS = 3000;
 
-export interface CupPlayer extends BasePlayer, StreamPlayer {
+export interface CupPlayer extends BasePlayer, AnswerTotals {
   /** Cups still in front of the player. */
   cups: number;
   /** Round this player was poisoned in, or null while still alive. */
@@ -149,9 +149,8 @@ export class CupGame {
   private newPlayer(base: BasePlayer): CupPlayer {
     // Joining mid-round: roll straight away if the round's questions haven't finished yet.
     const rolling = this.phase === "roll" || this.phase === "quiz";
-    return {
+    return this.stream.registerPlayer({
       ...base,
-      ...newStreamPlayer(),
       cups: this.startCups,
       outRound: null,
       target: rolling ? this.rollDie() : 0,
@@ -162,7 +161,7 @@ export class CupGame {
       drinksSurvived: 0,
       safeRounds: 0,
       poisonedFrom: null,
-    };
+    });
   }
 
   // ---------- lifecycle ----------
@@ -201,7 +200,7 @@ export class CupGame {
 
   private beginQuiz(): void {
     this.setPhase("quiz", cupQuizMs(this.round), () => this.endQuiz());
-    for (const p of this.players.values()) if (!p.current) this.stream.deal(p);
+    for (const p of this.players.values()) this.stream.open(p);
     this.onChange();
   }
 
@@ -337,7 +336,7 @@ export class CupGame {
   join(rawNickname: unknown, avatar?: AvatarChoice | null): CupPlayer {
     if (this.phase === "podium") throw new GameError("This game has finished");
     const player = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), (base) => this.newPlayer(base));
-    if (this.phase !== "countdown") this.stream.deal(player);
+    if (this.phase !== "countdown") this.stream.open(player);
     this.onChange();
     return player;
   }
@@ -378,7 +377,7 @@ export class CupGame {
   /** Answer a question. Living players need `target` right this round; poisoned players answer for practice. */
   answer(playerId: string, seq: number, option: AnswerValue): boolean {
     const p = this.players.get(playerId);
-    if (!p || !p.current || !this.answering(p)) return false;
+    if (!p || !this.answering(p)) return false;
     const correct = this.stream.answer(p, seq, option);
     if (correct === null) return false;
     if (correct && p.outRound === null) {

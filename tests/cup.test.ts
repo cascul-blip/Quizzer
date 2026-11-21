@@ -48,8 +48,8 @@ function setup(names: string[], rng: () => number = seeded(), cups = CUP_DEFAULT
 const byName = (game: CupGame, name: string) => [...game.players.values()].find((p) => p.nickname === name)!;
 
 function answer(game: CupGame, clock: FakeClock, p: CupPlayer, right: boolean) {
-  const cur = p.current!;
-  const option = right ? cur.correct[0]! : cur.options.findIndex((_, i) => !cur.correct.includes(i));
+  const cur = game.playerView(p.id)!.question!;
+  const option = right ? cur.options.indexOf("yes") : cur.options.findIndex((option) => option !== "yes");
   expect(game.answer(p.id, cur.seq, option)).toBe(true);
   clock.advance(FEEDBACK_MS);
 }
@@ -101,11 +101,12 @@ describe("Cup of Death", () => {
     answer(game, clock, a, true);
     expect(a.progress).toBe(1);
     expect(a.safe).toBe(false);
+    const lastQuestion = game.playerView(a.id)!.question!;
     answer(game, clock, a, true);
     expect(a.safe).toBe(true);
     // Safe players stop getting questions and can't answer.
     expect(game.playerView(a.id)!.question).toBeNull();
-    expect(game.answer(a.id, a.current!.seq, 0)).toBe(false);
+    expect(game.answer(a.id, lastQuestion.seq + 1, 0)).toBe(false);
     expect(game.hostView().players.find((p) => p.id === a.id)).toMatchObject({ safe: true, progress: 2, target: 2 });
   });
 

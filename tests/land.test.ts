@@ -42,8 +42,8 @@ function play(names: string[], opts?: Parameters<typeof setup>[1]) {
 const byName = (game: LandGame, name: string) => [...game.players.values()].find((p) => p.nickname === name)!;
 
 function answer(game: LandGame, clock: FakeClock, p: LandPlayer, right: boolean) {
-  const cur = p.current!;
-  const option = right ? cur.correct[0]! : cur.options.findIndex((_, i) => !cur.correct.includes(i));
+  const cur = game.playerView(p.id)!.question!;
+  const option = right ? cur.options.indexOf("yes") : cur.options.findIndex((option) => option !== "yes");
   expect(game.answer(p.id, cur.seq, option)).toBe(true);
   clock.advance(FEEDBACK_MS);
 }
@@ -108,12 +108,13 @@ describe("rounds of questions", () => {
     answer(game, clock, a, false);
     expect(a.state).toBe("question");
     expect(game.playerView(a.id)!).toMatchObject({ state: "question", claims: 1, answered: 2, board: null });
+    const lastQuestion = game.playerView(a.id)!.question!;
     answer(game, clock, a, true);
     const v = game.playerView(a.id)!;
     expect(v).toMatchObject({ state: "claim", claims: 2, answered: 0, question: null });
     expect(v.board!.size).toBe(10);
     // No questions while on the land.
-    expect(game.answer(a.id, a.current!.seq, 0)).toBe(false);
+    expect(game.answer(a.id, lastQuestion.seq + 1, 0)).toBe(false);
   });
 
   test("no correct answers: the message shows for 4 s, then questions come back", () => {
@@ -121,7 +122,7 @@ describe("rounds of questions", () => {
     const a = byName(game, "A");
     answer(game, clock, a, false);
     answer(game, clock, a, false);
-    const cur = a.current!;
+    const cur = game.playerView(a.id)!.question!;
     game.answer(a.id, cur.seq, 1);
     expect(game.playerView(a.id)!).toMatchObject({ state: "empty", emptyMs: FEEDBACK_MS + LAND_EMPTY_MS, question: null, board: null });
     clock.advance(FEEDBACK_MS + LAND_EMPTY_MS - 1);
@@ -147,7 +148,13 @@ describe("placing tiles", () => {
   test("a tile costs one claim; the player returns to questions when they run out", () => {
     const { game, clock } = play(["A", "B"]);
     const a = byName(game, "A");
-    round(game, clock, a, 2);
+    answer(game, clock, a, true);
+    answer(game, clock, a, false);
+    const question = game.playerView(a.id)!.question!;
+    expect(game.answer(a.id, question.seq, 0)).toBe(true);
+    clock.advance(999);
+    expect(game.place(a.id, 0)).toBe(false);
+    clock.advance(1);
     expect(game.place(a.id, 0)).toBe(true);
     expect(game.owners[0]).toBe(0);
     expect(game.playerView(a.id)!).toMatchObject({ state: "claim", claims: 1, teamTiles: 2 });
@@ -330,6 +337,7 @@ describe("results", () => {
       ["Blue", 2, 2],
       ["Red", 3, 2],
     ]);
+    const nextQuestion = game.playerView(a.id)!.question!;
     clock.advance(3 * 60_000);
     expect(game.phase).toBe("podium");
     expect(finished()).toBe(1);
@@ -342,7 +350,7 @@ describe("results", () => {
     });
     expect(game.playerView(c.id)!.result).toEqual({ teamRank: 1, teamCount: 3, tiles: 4, won: true, awards: ["Most correct answers", "Top settler"] });
     expect(game.playerView(a.id)!.result).toMatchObject({ teamRank: 3, won: false });
-    expect(game.answer(a.id, a.current!.seq, 0)).toBe(false);
+    expect(game.answer(a.id, nextQuestion.seq, 0)).toBe(false);
   });
 
   test("equal teams share a rank; knocked-out teams come last", () => {
@@ -376,7 +384,7 @@ describe("results", () => {
     const { game, clock } = play(["A", "B"]);
     const a = byName(game, "A");
     for (let i = 0; i < 2; i++) answer(game, clock, a, false);
-    game.answer(a.id, a.current!.seq, 1);
+    expect(game.answer(a.id, game.playerView(a.id)!.question!.seq, 1)).toBe(true);
     expect(game.kick(a.id)?.nickname).toBe("A");
     clock.advance(LAND_EMPTY_MS + FEEDBACK_MS);
     expect(game.players.has(a.id)).toBe(false);

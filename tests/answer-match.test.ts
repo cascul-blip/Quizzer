@@ -103,17 +103,17 @@ describe("text questions", () => {
 
 describe("text questions in the streamed modes", () => {
   test("a typed answer is checked, and the question view never carries the accepted answers", async () => {
-    const { QuestionStream, newStreamPlayer } = await import("../src/server/game/stream.ts");
+    const { QuestionStream } = await import("../src/server/game/stream.ts");
     const clock = new FakeClock();
     const q = normalizeQuestion({ type: "text", text: "Flies?", options: ["Airplane"] });
     const stream = new QuestionStream([q], false, () => 0.5, clock);
-    const p = newStreamPlayer();
-    stream.deal(p);
+    const p = stream.registerPlayer({});
+    stream.open(p);
     expect(stream.questionView(p)?.options).toEqual([]);
-    expect(stream.answer(p, p.seq, 0)).toBeNull();
-    expect(stream.answer(p, p.seq, "AIRPLANES")).toBe(true);
+    expect(stream.answer(p, stream.questionView(p)!.seq, 0)).toBeNull();
+    expect(stream.answer(p, stream.questionView(p)!.seq, "AIRPLANES")).toBe(true);
     clock.advance(5000);
-    expect(stream.answer(p, p.seq, "boat")).toBe(false);
+    expect(stream.answer(p, stream.questionView(p)!.seq, "boat")).toBe(false);
     expect(stream.feedbackView(p)?.answers).toEqual(["Airplane"]);
   });
 });

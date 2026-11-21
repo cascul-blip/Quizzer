@@ -42,8 +42,8 @@ const byName = (game: RobotGame, name: string) => [...game.players.values()].fin
 const tile = (p: { x: number; y: number }) => p.y * ROBOT_BOARD + p.x;
 
 function answer(game: RobotGame, clock: FakeClock, p: RobotPlayer, right: boolean) {
-  const cur = p.current!;
-  const option = right ? cur.correct[0]! : cur.options.findIndex((_, i) => !cur.correct.includes(i));
+  const cur = game.playerView(p.id)!.question!;
+  const option = right ? cur.options.indexOf("yes") : cur.options.findIndex((option) => option !== "yes");
   expect(game.answer(p.id, cur.seq, option)).toBe(true);
   clock.advance(FEEDBACK_MS);
 }
@@ -106,8 +106,9 @@ describe("Robot Attack", () => {
   test("answers are only taken in the quiz phase", () => {
     const { game, clock } = setup(["A"]);
     const a = byName(game, "A");
+    const nextQuestion = game.playerView(a.id)!.question!;
     toMove(game, clock);
-    expect(game.answer(a.id, a.current!.seq, 0)).toBe(false);
+    expect(game.answer(a.id, nextQuestion.seq, 0)).toBe(false);
     expect(game.playerView(a.id)!.question).toBeNull();
   });
 
@@ -172,7 +173,10 @@ describe("Robot Attack", () => {
     const a = byName(game, "A");
     answer(game, clock, a, true);
     answer(game, clock, a, false);
-    a.readyAt = clock.now() + 60_000; // a long streak's wait that runs past the quiz
+    clock.advance(game.phaseEndsAt - clock.now() - 1);
+    const question = game.playerView(a.id)!.question!;
+    expect(game.answer(a.id, question.seq, 1)).toBe(true);
+    expect(game.playerView(a.id)!.feedback).toMatchObject({ remainingMs: 4000, penaltyMs: 3000 });
     toMove(game, clock);
     expect(game.playerView(a.id)!.feedback).toBeNull();
     a.x = 5;
@@ -318,7 +322,7 @@ describe("Robot Attack", () => {
     clock.advance(robotQuizMs(1) - ROBOT_WARN_MS);
     const late = game.join("Late");
     expect(late.lives).toBe(ROBOT_LIVES);
-    expect(late.current).not.toBeNull();
+    expect(game.playerView(late.id)!.question).not.toBeNull();
     expect(game.marked.has(tile(late))).toBe(true);
     toMove(game, clock);
     // Joining with no points left to earn: dropped on a safe tile.

@@ -20,7 +20,7 @@ import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import { GameError, realClock, teamInfo, type Clock } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
-import { QuestionStream, newStreamPlayer, type StreamPlayer } from "./stream.ts";
+import { QuestionStream, type AnswerTotals } from "./stream.ts";
 import { answerOf } from "../../shared/answer-match.ts";
 import { MODE_NAMES } from "../../shared/mode-names.ts";
 import { handoffOptions, pickTheme, unhandled, type ModeEntry } from "./mode-entry.ts";
@@ -49,7 +49,7 @@ const floorsOf = (t: TowerTeam) => Math.min(...t.columns);
 const placedOf = (t: TowerTeam) => t.columns[0] + t.columns[1] + t.columns[2];
 export const sweepMsFor = (floors: number) => Math.max(SWEEP_MIN_MS, SWEEP_START_MS - floors * SWEEP_STEP_MS);
 
-export interface TowerPlayer extends BasePlayer, StreamPlayer {
+export interface TowerPlayer extends BasePlayer, AnswerTotals {
   team: number;
   blocksHeld: number;
   placed: number;
@@ -135,17 +135,16 @@ export class TowerGame {
   }
 
   private newPlayer(base: BasePlayer, team: number): TowerPlayer {
-    return {
+    return this.stream.registerPlayer({
       ...base,
       team,
-      ...newStreamPlayer(),
       blocksHeld: 0,
       placed: 0,
       missed: 0,
       hatched: 0,
       state: "question",
       lastDropAt: -Infinity,
-    };
+    });
   }
 
   // ---------- lifecycle ----------
@@ -163,7 +162,7 @@ export class TowerGame {
     const ms = this.settings.minutes * 60_000;
     this.phase = "playing";
     this.phaseEndsAt = this.clock.now() + ms;
-    for (const p of this.players.values()) if (!p.current) this.deal(p);
+    for (const p of this.players.values()) this.stream.open(p);
     this.timer = this.clock.setTimeout(() => this.finish(), ms);
     if (this.monsterEnabled) {
       for (const frac of MONSTER_AT) {
@@ -255,7 +254,7 @@ export class TowerGame {
   join(rawNickname: unknown, avatar?: AvatarChoice | null): TowerPlayer {
     if (this.phase === "podium") throw new GameError("This game has finished");
     const player = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), (base) => this.newPlayer(base, this.smallestTeam()));
-    if (this.phase === "playing") this.deal(player);
+    if (this.phase === "playing") this.stream.open(player);
     this.onChange();
     return player;
   }
@@ -282,14 +281,9 @@ export class TowerGame {
 
   // ---------- questions ----------
 
-  private deal(p: TowerPlayer): void {
-    this.stream.deal(p);
-  }
-
   answer(playerId: string, seq: number, option: AnswerValue): boolean {
     const p = this.players.get(playerId);
-    const cur = p?.current;
-    if (!p || !cur || this.phase !== "playing" || p.state !== "question") return false;
+    if (!p || this.phase !== "playing" || p.state !== "question") return false;
     const correct = this.stream.answer(p, seq, option);
     if (correct === null) return false;
     if (correct) p.blocksHeld++;
@@ -306,7 +300,7 @@ export class TowerGame {
     if (!p || this.phase !== "playing" || p.state !== "build" || p.blocksHeld <= 0) return null;
     if (!Number.isInteger(zone) || zone < 0 || zone >= DROP_ZONES) return null;
     const now = this.clock.now();
-    if (now < p.readyAt || now - p.lastDropAt < DROP_COOLDOWN_MS) return null;
+    if (now < this.stream.feedbackEndsAt(p) || now - p.lastDropAt < DROP_COOLDOWN_MS) return null;
     p.lastDropAt = now;
     const team = this.teams[p.team]!;
     const landed = zone >= 1 && zone <= 3;
@@ -321,7 +315,7 @@ export class TowerGame {
     p.blocksHeld--;
     if (p.blocksHeld === 0) {
       p.state = "question";
-      p.readyAt = Math.max(p.readyAt, now);
+      this.stream.resume(p, now);
     }
     this.dropCount++;
     this.onActivity(p.id);

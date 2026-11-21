@@ -25,7 +25,7 @@ import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import { GameError, realClock, shuffle, type Clock } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
-import { QuestionStream, newStreamPlayer, type StreamPlayer } from "./stream.ts";
+import { QuestionStream, type AnswerTotals } from "./stream.ts";
 import { answerOf } from "../../shared/answer-match.ts";
 import { MODE_NAMES } from "../../shared/mode-names.ts";
 import { handoffOptions, unhandled, type ModeEntry } from "./mode-entry.ts";
@@ -37,7 +37,7 @@ export const COUNTDOWN_MS = 3000;
 const TILES = ROBOT_BOARD * ROBOT_BOARD;
 const STEP: Record<RobotDir, [number, number]> = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 
-export interface RobotPlayer extends BasePlayer, StreamPlayer {
+export interface RobotPlayer extends BasePlayer, AnswerTotals {
   x: number;
   y: number;
   lives: number;
@@ -157,7 +157,7 @@ export class RobotGame {
     const tile = spreadTile(this.alive(), this.shuffledTiles(), (i) => !this.collapsing.has(i) && !(lateInDanger && this.marked.has(i)));
     const { x, y } = tileXY(tile);
     if (this.phase === "quiz" && this.marked.size > 0) this.marked.add(tile);
-    return { ...base, ...newStreamPlayer(), x, y, lives: ROBOT_LIVES, outRound: null, points: 0, moves: 0, hits: 0 };
+    return this.stream.registerPlayer({ ...base, x, y, lives: ROBOT_LIVES, outRound: null, points: 0, moves: 0, hits: 0 });
   }
 
   /** The tiles still on the board. */
@@ -193,7 +193,7 @@ export class RobotGame {
     this.collapsing = new Set();
     const ms = robotQuizMs(this.round);
     this.setPhase("quiz", ms, () => this.beginMove());
-    for (const p of this.players.values()) if (!p.current) this.stream.deal(p);
+    for (const p of this.players.values()) this.stream.open(p);
     if (ms <= ROBOT_WARN_MS) this.markTargets();
     else this.warnTimer = this.clock.setTimeout(() => this.markTargets(), ms - ROBOT_WARN_MS);
     this.onChange();
@@ -310,7 +310,7 @@ export class RobotGame {
   join(rawNickname: unknown, avatar?: AvatarChoice | null): RobotPlayer {
     if (this.phase === "podium") throw new GameError("This game has finished");
     const player = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), (base) => this.newPlayer(base));
-    if (this.phase !== "countdown") this.stream.deal(player);
+    if (this.phase !== "countdown") this.stream.open(player);
     this.onChange();
     return player;
   }
@@ -334,7 +334,7 @@ export class RobotGame {
   /** Answer during the quiz phase; a correct answer earns a movement point (players still in the game only). */
   answer(playerId: string, seq: number, option: AnswerValue): boolean {
     const p = this.players.get(playerId);
-    if (!p || !p.current || this.phase !== "quiz") return false;
+    if (!p || this.phase !== "quiz") return false;
     const correct = this.stream.answer(p, seq, option);
     if (correct === null) return false;
     if (correct && p.outRound === null) p.points++;

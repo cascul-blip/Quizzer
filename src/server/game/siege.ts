@@ -59,7 +59,7 @@ import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import { GameError, realClock, type Clock } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
-import { QuestionStream, newStreamPlayer, type StreamPlayer } from "./stream.ts";
+import { QuestionStream, type AnswerTotals } from "./stream.ts";
 import { loadSiegeRecord, saveSiegeRecord } from "../siege-records.ts";
 import { answerOf } from "../../shared/answer-match.ts";
 import { MODE_NAMES } from "../../shared/mode-names.ts";
@@ -77,7 +77,7 @@ const WALL_X = 0.5;
 const ENTERING_X = SIEGE_SQUARES - 1.5;
 const EPS = 1e-6;
 
-export interface SiegePlayer extends BasePlayer, StreamPlayer {
+export interface SiegePlayer extends BasePlayer, AnswerTotals {
   /** This player's own purse: only they earn it and only they can spend it. */
   gold: number;
   goldEarned: number;
@@ -285,9 +285,8 @@ export class SiegeGame {
   }
 
   private newPlayer(base: BasePlayer): SiegePlayer {
-    return {
+    return this.stream.registerPlayer({
       ...base,
-      ...newStreamPlayer(),
       gold: SIEGE_START_GOLD,
       goldEarned: 0,
       goldSpent: 0,
@@ -299,7 +298,7 @@ export class SiegeGame {
       archerKills: 0,
       lastPlaced: null,
       mapOpen: false,
-    };
+    });
   }
 
   private get playing(): boolean {
@@ -332,7 +331,7 @@ export class SiegeGame {
   /** The opening build break: questions start and the class places its first defenders. */
   private beginOpening(): void {
     this.wave = 1;
-    for (const p of this.players.values()) if (!p.current) this.stream.deal(p);
+    for (const p of this.players.values()) this.stream.open(p);
     this.setPhase("build", SIEGE_OPENING_MS, () => this.beginWave(1));
     this.scheduleTick();
     this.onChange();
@@ -854,7 +853,7 @@ export class SiegeGame {
   join(rawNickname: unknown, avatar?: AvatarChoice | null): SiegePlayer {
     if (this.phase === "podium") throw new GameError("This game has finished");
     const player = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), (base) => this.newPlayer(base));
-    if (this.playing) this.stream.deal(player);
+    if (this.playing) this.stream.open(player);
     this.onChange();
     return player;
   }
@@ -886,7 +885,7 @@ export class SiegeGame {
 
   answer(playerId: string, seq: number, answer: AnswerValue): boolean {
     const p = this.players.get(playerId);
-    if (!p || !p.current || !this.playing) return false;
+    if (!p || !this.playing) return false;
     const correct = this.stream.answer(p, seq, answer);
     if (correct === null) return false;
     this.periodAnswered++;

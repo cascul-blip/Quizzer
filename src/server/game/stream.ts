@@ -6,8 +6,8 @@ import { shuffle, shuffleOptions, topErrors, type Clock } from "./common.ts";
 /** How long the ✓/✗ flash shows before the next question can be answered. */
 export const FEEDBACK_MS = 1000;
 /** Extra time the ✗ stays up after a 2nd wrong answer in a row, and after a 3rd or later one. */
-export const WRONG_PENALTY_2_MS = 3000;
-export const WRONG_PENALTY_3_MS = 4000;
+const WRONG_PENALTY_2_MS = 3000;
+const WRONG_PENALTY_3_MS = 4000;
 
 /** How much longer the ✗ shows for a wrong answer that is the streak-th in a row. */
 function wrongPenaltyMs(streak: number): number {
@@ -21,31 +21,27 @@ interface CurrentQuestion {
   correct: number[];
 }
 
-/** Per-player state for answering questions at your own pace (Tallest Tower, Submarine Squad). */
-export interface StreamPlayer {
+/** Read-only answer totals used by game modes for scoring and results. */
+export interface AnswerTotals {
+  readonly correct: number;
+  readonly wrong: number;
+}
+
+interface QuestionState {
   correct: number;
   wrong: number;
-  /** Current run of consecutive wrong answers. */
   wrongStreak: number;
-  /** Remaining question indices of this player's shuffled deck. */
   deck: number[];
   current: CurrentQuestion | null;
-  seq: number;
-  /** answers = text of the correct option(s), shown when the player got it wrong; penaltyMs = extra wait for guessing. */
   feedback: { seq: number; correct: boolean; answers: string[]; penaltyMs: number } | null;
-  /** Answers are ignored until the feedback flash is over. */
   readyAt: number;
 }
-
-export function newStreamPlayer(): StreamPlayer {
-  return { correct: 0, wrong: 0, wrongStreak: 0, deck: [], current: null, seq: 0, feedback: null, readyAt: 0 };
-}
-
 
 /** Deals each player their own shuffled, repeating deck of questions and scores their answers. */
 export class QuestionStream {
   /** Wrong answers given to each question, by everyone, over the whole game. */
-  readonly wrongCounts: number[];
+  private readonly wrongCounts: number[];
+  private readonly states = new WeakMap<AnswerTotals, QuestionState>();
 
   constructor(
     private readonly questions: Question[],
@@ -58,19 +54,52 @@ export class QuestionStream {
     this.wrongCounts = questions.map(() => 0);
   }
 
-  /** Give the player their next question: a personal shuffled deck, reshuffled when used up. */
-  deal(p: StreamPlayer): void {
-    const last = p.current?.qIndex;
-    if (p.deck.length === 0) {
-      p.deck = shuffle(this.questions.map((_, i) => i), this.rng);
+  /** Register a new player and add live, read-only answer totals to the same object. */
+  registerPlayer<P extends object>(player: P): P & AnswerTotals {
+    const state: QuestionState = { correct: 0, wrong: 0, wrongStreak: 0, deck: [], current: null, feedback: null, readyAt: 0 };
+    const registered = Object.defineProperties(player, {
+      correct: { enumerable: true, get: () => state.correct },
+      wrong: { enumerable: true, get: () => state.wrong },
+    }) as P & AnswerTotals;
+    this.states.set(registered, state);
+    return registered;
+  }
+
+  private state(player: AnswerTotals): QuestionState {
+    const state = this.states.get(player);
+    if (!state) throw new Error("Player belongs to a different question stream");
+    return state;
+  }
+
+  /** Give a player their first question, preserving a question already dealt. */
+  open(player: AnswerTotals): void {
+    const state = this.state(player);
+    if (!state.current) this.deal(state);
+  }
+
+  /** When the feedback flash ends, including any Protect from abuse wait. */
+  feedbackEndsAt(player: AnswerTotals): number {
+    return this.state(player).readyAt;
+  }
+
+  /** Resume questions after a mode activity, keeping any feedback wait still in progress. */
+  resume(player: AnswerTotals, now = this.clock.now()): void {
+    const state = this.state(player);
+    state.readyAt = Math.max(state.readyAt, now);
+  }
+
+  /** Deal from a personal shuffled deck, reshuffling when used up. */
+  private deal(state: QuestionState): void {
+    const last = state.current?.qIndex;
+    if (state.deck.length === 0) {
+      state.deck = shuffle(this.questions.map((_, i) => i), this.rng);
       // Don't repeat the question just answered across a reshuffle.
-      if (p.deck.length > 1 && p.deck[0] === last) p.deck.push(p.deck.shift()!);
+      if (state.deck.length > 1 && state.deck[0] === last) state.deck.push(state.deck.shift()!);
     }
-    const qIndex = p.deck.shift()!;
+    const qIndex = state.deck.shift()!;
     const q = this.questions[qIndex]!;
     const shown = this.shuffleAnswers ? shuffleOptions(q, this.rng) : q;
-    p.seq++;
-    p.current = { seq: p.seq, qIndex, options: [...shown.options], correct: [...shown.correct] };
+    state.current = { seq: (state.current?.seq ?? 0) + 1, qIndex, options: [...shown.options], correct: [...shown.correct] };
   }
 
   /**
@@ -78,23 +107,24 @@ export class QuestionStream {
    * Returns whether it was correct, or null if the answer was rejected
    * (stale seq, still in the feedback flash, or an invalid option).
    */
-  answer(p: StreamPlayer, seq: number, answer: AnswerValue): boolean | null {
-    const cur = p.current;
-    if (!cur || seq !== cur.seq || this.clock.now() < p.readyAt) return null;
+  answer(player: AnswerTotals, seq: number, answer: AnswerValue): boolean | null {
+    const state = this.state(player);
+    const cur = state.current;
+    if (!cur || seq !== cur.seq || this.clock.now() < state.readyAt) return null;
     const correct = checkAnswer({ type: this.questions[cur.qIndex]!.type, options: cur.options, correct: cur.correct }, answer);
     if (correct === null) return null;
     if (correct) {
-      p.correct++;
-      p.wrongStreak = 0;
+      state.correct++;
+      state.wrongStreak = 0;
     } else {
-      p.wrong++;
-      p.wrongStreak++;
+      state.wrong++;
+      state.wrongStreak++;
       this.wrongCounts[cur.qIndex]!++;
     }
-    const penaltyMs = this.penalizeGuessing ? wrongPenaltyMs(p.wrongStreak) : 0;
-    p.feedback = { seq, correct, answers: correct ? [] : cur.correct.map((i) => cur.options[i]!), penaltyMs };
-    p.readyAt = this.clock.now() + FEEDBACK_MS + penaltyMs;
-    this.deal(p);
+    const penaltyMs = this.penalizeGuessing ? wrongPenaltyMs(state.wrongStreak) : 0;
+    state.feedback = { seq, correct, answers: correct ? [] : cur.correct.map((i) => cur.options[i]!), penaltyMs };
+    state.readyAt = this.clock.now() + FEEDBACK_MS + penaltyMs;
+    this.deal(state);
     return correct;
   }
 
@@ -103,21 +133,23 @@ export class QuestionStream {
     return topErrors(this.questions, this.wrongCounts);
   }
 
-  questionView(p: StreamPlayer): StreamQuestionView | null {
-    if (!p.current) return null;
-    const q = this.questions[p.current.qIndex]!;
+  questionView(player: AnswerTotals): StreamQuestionView | null {
+    const state = this.state(player);
+    if (!state.current) return null;
+    const q = this.questions[state.current.qIndex]!;
     return {
-      seq: p.current.seq,
+      seq: state.current.seq,
       type: q.type,
       text: q.text,
       ...(q.image ? { image: q.image } : {}),
-      options: q.type === "text" ? [] : p.current.options,
+      options: q.type === "text" ? [] : [...state.current.options],
       ...(q.spots ? { spots: q.spots } : {}),
     };
   }
 
-  feedbackView(p: StreamPlayer): { seq: number; correct: boolean; answers: string[]; penaltyMs: number; remainingMs: number } | null {
+  feedbackView(player: AnswerTotals): { seq: number; correct: boolean; answers: string[]; penaltyMs: number; remainingMs: number } | null {
+    const state = this.state(player);
     const now = this.clock.now();
-    return p.feedback && now < p.readyAt ? { ...p.feedback, remainingMs: p.readyAt - now } : null;
+    return state.feedback && now < state.readyAt ? { ...state.feedback, answers: [...state.feedback.answers], remainingMs: state.readyAt - now } : null;
   }
 }
