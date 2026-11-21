@@ -19,7 +19,7 @@ Judgement calls the reviewer applies to a diff. `bun run typecheck` and `bun tes
 ## Types
 
 - **Type names**: a type is named for the value it holds, in `GLOSSARY.md` terms where one exists: `ClassicView` for Classic's phone view, not `Joined`, which names a player's state.
-- **Checked casts**: a cast is checked against its source's type. A helper that hides a cast constrains its type parameter by its input, as `entryOf` (`src/client/shared/entry-of.ts`) requires each table entry to have the asked-for entry's fields, rather than casting from `unknown` to whatever the caller names. A table's keys come from `keysOf` (`src/shared/keys-of.ts`); `tests/standards.test.ts` rejects `Object.keys(…) as`. `scripts/check-new-casts.sh` (in `bun run check`) rejects a new cast in `src/` unless the line above is a `// checked:` comment saying why it holds.
+- **Checked casts**: a cast is checked against its source's type. A helper that hides a cast constrains its type parameter by its input, as `entryOf` (`src/client/shared/entry-of.ts`) requires each table entry to have the asked-for entry's fields, rather than casting from `unknown` to whatever the caller names. A table's keys come from `keysOf` (`src/shared/keys-of.ts`); `tests/standards.test.ts` rejects `Object.keys(…) as`. `scripts/check-new-casts.sh` (in `bun run check`, untracked files included) rejects a new cast in `src/`, and a new `as unknown as` in `tests/`, unless the line above is a `// checked:` comment saying why it holds.
 
 ## Game modes
 

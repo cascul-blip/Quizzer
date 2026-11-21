@@ -87,6 +87,7 @@ describe("themed modes", () => {
 
   test.each(cells)("$mode in $theme plays $track on $screen", ({ mode, theme, screen, track }) => {
     expect<string>(themedTrack<ThemedMode>(mode, theme, screen as ScreenOf<ThemedMode>)).toBe(track);
+    // checked: viewFor builds each mode's view with the fields its cue reads; HOST_MODES is indexed by a union, so no one cue type fits every mode
     const host = HOST_MODES[mode] as unknown as { lobbyTrack(s: object): string; cue(v: object): { track: string } };
     if (screen === "lobby") expect(host.lobbyTrack({ theme })).toBe(track);
     else expect(host.cue(viewFor(mode, theme, screen)).track).toBe(track);
