@@ -1,4 +1,4 @@
-import type { RobotAttack } from "../../shared/protocol.ts";
+import type { RobotAttack } from "../../shared/modes/robot.ts";
 import type { VoiceLineId } from "../../shared/voice-lines.ts";
 import type { RobotSkin } from "./robot-skin.ts";
 

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { attackVoiceLine, attackerVoiceLines, warningVoiceLine } from "../src/client/shared/robot-voice.ts";
-import type { RobotAttack } from "../src/shared/protocol.ts";
+import type { RobotAttack } from "../src/shared/modes/robot.ts";
 
 const attack = (hit: string[], eliminated: string[]): RobotAttack => ({ seq: 1, round: 1, hit, eliminated });
 

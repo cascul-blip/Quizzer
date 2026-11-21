@@ -12,7 +12,8 @@ import { SIEGE_COUNTDOWN_MS, SIEGE_OPENING_MS, SIEGE_TICK_MS, SIEGE_GIANT_WAIT_M
 import { BOOST_MIN_HOLD_MS, COUNTDOWN_MS as SUB_COUNTDOWN_MS } from "../src/server/game/submarine.ts";
 import { QuizStore } from "../src/server/quiz/store.ts";
 import type { GameHub } from "../src/server/ws.ts";
-import { CUP_ROLL_MS, CUP_SIP_MS, ROBOT_MOVE_MS, cupQuizMs, robotQuizMs } from "../src/shared/protocol.ts";
+import { CUP_ROLL_MS, CUP_SIP_MS, cupQuizMs } from "../src/shared/protocol.ts";
+import { ROBOT_MOVE_MS, robotQuizMs } from "../src/shared/modes/robot.ts";
 import { FakeClock, tempDir } from "./helpers.ts";
 import { OFFERED_ACCESSORIES, OFFERED_AVATARS } from "../src/shared/avatars.ts";
 import { HubSocket, fakeHub, pastThrottle, withoutTimers } from "./hub-harness.ts";

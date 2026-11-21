@@ -19,7 +19,7 @@ import {
   type RobotDir,
   type RobotPhase,
   type RobotStanding,
-} from "../../shared/protocol.ts";
+} from "../../shared/modes/robot.ts";
 import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import { GameError, realClock, shuffle, type Clock } from "./common.ts";

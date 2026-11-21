@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { useDelayedCues } from "./delayed-cues.ts";
-import { ROBOT_LIVES, ROBOT_SHRINK_EVERY, type HostView } from "../../shared/protocol.ts";
+import { ROBOT_LIVES, ROBOT_SHRINK_EVERY } from "../../shared/modes/robot.ts";
+import type { HostView } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { RobotArena } from "../shared/robot-art.tsx";
 import { ROBOT_SKIN, SKIN_TEXT } from "../shared/robot-skin.ts";

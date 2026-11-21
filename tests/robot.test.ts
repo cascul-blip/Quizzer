@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { Lobby } from "../src/server/game/lobby.ts";
 import { buildRobotResultsCsv } from "../src/server/game/robot.ts";
 import { COUNTDOWN_MS, FEEDBACK_MS, RobotGame, spreadTile, type RobotPlayer } from "../src/server/game/robot.ts";
-import { ROBOT_ATTACK_MS, ROBOT_BOARD, ROBOT_LIVES, ROBOT_MOVE_MS, ROBOT_QUIZ_MIN_MS, ROBOT_WARN_MS, robotInBounds, robotQuizMs, robotRing } from "../src/shared/protocol.ts";
+import { ROBOT_ATTACK_MS, ROBOT_BOARD, ROBOT_LIVES, ROBOT_MOVE_MS, ROBOT_QUIZ_MIN_MS, ROBOT_WARN_MS, robotInBounds, robotQuizMs, robotRing } from "../src/shared/modes/robot.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
 import { FakeClock, sampleQuiz } from "./helpers.ts";
 
