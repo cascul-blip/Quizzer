@@ -1,12 +1,21 @@
 import { expect, test } from "bun:test";
 import { initialPhoneScreen, PhoneSession } from "../src/client/player/session.ts";
-import { Game } from "../src/server/game/game.ts";
 import type { ClientMsg, PlayerView } from "../src/shared/protocol.ts";
-import { diffView } from "../src/shared/view-patch.ts";
-import { sampleQuiz } from "./helpers.ts";
 
-const quiz = sampleQuiz();
-const notJoined: PlayerView = { kind: "none", game: { title: quiz.title, phase: "lobby" } };
+const notJoined: PlayerView = { kind: "none", game: { title: "Sample", phase: "lobby" } };
+const previous: Extract<PlayerView, { kind: "classic" }> = {
+  kind: "classic",
+  phase: "lobby",
+  title: "Sample",
+  me: { id: "player-1", nickname: "Sam", avatar: { avatar: "snowman", accessory: "none" }, score: 0, rank: 1, streak: 0 },
+  playerCount: 1,
+  question: null,
+  myChoice: null,
+  myText: null,
+  result: null,
+  podium: null,
+  team: null,
+};
 
 function phone() {
   const sent: ClientMsg[] = [];
@@ -23,29 +32,28 @@ function phone() {
 }
 
 test("a reconnecting phone retains its game while using the new socket's snapshot for patches", () => {
-  const game = new Game(quiz);
-  const player = game.join("Sam");
-  const previous = game.playerView(player.id);
   const { session, sent, tokens, images, screen } = phone();
   session.receive({ type: "player.state", view: previous });
 
-  session.open(player.token);
-  expect(sent).toEqual([{ type: "resume", token: player.token }]);
+  session.open("resume-token");
+  expect(sent).toEqual([{ type: "resume", token: "resume-token" }]);
   session.receive({ type: "player.patch", ops: [[["title"], "No baseline yet"]] });
   expect(screen().view).toBe(previous);
   session.receive({ type: "player.state", view: notJoined });
   expect(screen().view).toBe(previous);
-  session.receive({ type: "joined", token: player.token, playerId: player.id, images: ["media/map.png"] });
-  expect(tokens).toEqual([player.token]);
+  session.receive({ type: "joined", token: "resume-token", playerId: "player-1", images: ["media/map.png"] });
+  expect(tokens).toEqual(["resume-token"]);
   expect(images).toEqual([["media/map.png"]]);
   expect(screen().view).toBe(previous);
 
-  game.join("Lee");
-  const resumed = game.playerView(player.id);
-  session.receive({ type: "player.patch", ops: diffView(notJoined, resumed) });
-  expect(screen().view).toEqual(resumed);
+  const resumed = { ...previous, playerCount: 2 };
+  session.receive({ type: "player.state", view: resumed });
+  expect(screen().view).toBe(resumed);
 
-  session.receive({ type: "player.patch", ops: diffView(resumed, notJoined) });
+  session.receive({ type: "player.patch", ops: [[["playerCount"], 3]] });
+  expect(screen().view).toEqual({ ...resumed, playerCount: 3 });
+
+  session.receive({ type: "player.state", view: notJoined });
   expect(screen().view).toEqual(notJoined);
 });
 
