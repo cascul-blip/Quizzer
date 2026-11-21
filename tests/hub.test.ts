@@ -1,22 +1,22 @@
-import { GIFT_GOODS, GIFT_READY_MS } from "../src/shared/gift-rules.ts";
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
-import { AUTO_REVEAL_MS, INTRO_MS } from "../src/server/game/game.ts";
-import { RacerGame } from "../src/server/game/racer.ts";
-import type { SiegeGame } from "../src/server/game/siege.ts";
-import { COUNTDOWN_MS, DROP_COOLDOWN_MS, FEEDBACK_MS } from "../src/server/game/tower.ts";
-import { COUNTDOWN_MS as FIGHT_COUNTDOWN_MS, RESULT_MS } from "../src/server/game/fight.ts";
-import { COUNTDOWN_MS as LAND_COUNTDOWN_MS } from "../src/server/game/land.ts";
-import { COUNTDOWN_MS as ROBOT_COUNTDOWN_MS } from "../src/server/game/robot.ts";
 import { COUNTDOWN_MS as CUP_COUNTDOWN_MS } from "../src/server/game/cup.ts";
-import { SIEGE_COUNTDOWN_MS, SIEGE_OPENING_MS, SIEGE_TICK_MS, SIEGE_GIANT_WAIT_MS } from "../src/shared/siege-rules.ts";
+import { COUNTDOWN_MS as FIGHT_COUNTDOWN_MS, RESULT_MS } from "../src/server/game/fight.ts";
+import { AUTO_REVEAL_MS, INTRO_MS } from "../src/server/game/game.ts";
+import { COUNTDOWN_MS as LAND_COUNTDOWN_MS } from "../src/server/game/land.ts";
+import { RacerGame } from "../src/server/game/racer.ts";
+import { COUNTDOWN_MS as ROBOT_COUNTDOWN_MS } from "../src/server/game/robot.ts";
+import type { SiegeGame } from "../src/server/game/siege.ts";
 import { BOOST_MIN_HOLD_MS, COUNTDOWN_MS as SUB_COUNTDOWN_MS } from "../src/server/game/submarine.ts";
+import { COUNTDOWN_MS, DROP_COOLDOWN_MS, FEEDBACK_MS } from "../src/server/game/tower.ts";
 import { QuizStore } from "../src/server/quiz/store.ts";
 import type { GameHub } from "../src/server/ws.ts";
+import { OFFERED_ACCESSORIES, OFFERED_AVATARS } from "../src/shared/avatars.ts";
+import { GIFT_GOODS, GIFT_READY_MS } from "../src/shared/gift-rules.ts";
 import { CUP_ROLL_MS, CUP_SIP_MS, cupQuizMs } from "../src/shared/modes/cup.ts";
 import { ROBOT_MOVE_MS, robotQuizMs } from "../src/shared/modes/robot.ts";
+import { SIEGE_COUNTDOWN_MS, SIEGE_GIANT_WAIT_MS, SIEGE_OPENING_MS, SIEGE_TICK_MS } from "../src/shared/siege-rules.ts";
 import { FakeClock, tempDir } from "./helpers.ts";
-import { OFFERED_ACCESSORIES, OFFERED_AVATARS } from "../src/shared/avatars.ts";
-import { HubSocket, fakeHub, pastThrottle, withoutTimers } from "./hub-harness.ts";
+import { fakeHub, HubSocket, pastThrottle, withoutTimers } from "./hub-harness.ts";
 
 // The hub's game logic, end to end, on fake sockets; tests/server.test.ts keeps what only a real socket can show.
 
@@ -89,7 +89,9 @@ describe("Game mode: Classic", () => {
     // Avatars: picked in the lobby, shown on the host.
     const look = { avatar: OFFERED_AVATARS[0]!.id, accessory: OFFERED_ACCESSORIES[1]!.id };
     players[0]!.sendMsg({ type: "setAvatar", ...look });
-    await host.hostState((v) => v.phase === "lobby" && v.players.some((p) => p.nickname === "Ann" && p.avatar.avatar === look.avatar && p.avatar.accessory === look.accessory));
+    await host.hostState(
+      (v) => v.phase === "lobby" && v.players.some((p) => p.nickname === "Ann" && p.avatar.avatar === look.avatar && p.avatar.accessory === look.accessory),
+    );
     players[1]!.sendMsg({ type: "setAvatar", avatar: look.avatar, accessory: "jetpack" });
     expect(await players[1]!.waitFor((m) => m.type === "error")).toMatchObject({ message: "Unknown avatar" });
     host.sendMsg({ type: "host.start", pacing: "manual" });
@@ -150,7 +152,6 @@ describe("Game mode: Classic", () => {
     await players[0]!.playerState((v) => v.kind === "none" && v.game === null);
     [host, ...players].forEach((s) => s.close());
   });
-
 });
 
 describe("Game mode: Tallest Tower", () => {
@@ -238,7 +239,9 @@ describe("Game mode: Tallest Tower", () => {
 
     // Play again keeps Tallest Tower selected.
     host.sendMsg({ type: "host.open", quizId: quiz.id });
-    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "tower" && v.settings.tower.teams === 2 && v.settings.tower.theme === "classic");
+    await host.hostState(
+      (v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "tower" && v.settings.tower.teams === 2 && v.settings.tower.theme === "classic",
+    );
     host.sendMsg({ type: "host.close" });
     [host, ...players].forEach((s) => s.close());
   });
@@ -527,7 +530,9 @@ describe("Game mode: Cup of Death", () => {
 
     // Play again keeps the Cup of Cheer theme and cup count.
     host.sendMsg({ type: "host.open", quizId: quiz.id });
-    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "cup" && v.settings.cup.theme === "christmas" && v.settings.cup.cups === 5);
+    await host.hostState(
+      (v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "cup" && v.settings.cup.theme === "christmas" && v.settings.cup.cups === 5,
+    );
     host.sendMsg({ type: "host.close" });
     [host, ...players].forEach((s) => s.close());
   });
@@ -816,7 +821,11 @@ describe("Game mode: Racer", () => {
       lastTurn: { index: 0, driver: { nickname: driverName }, confidence: "mid", correct: 2, total: 2, gain: 20, fails: 0, speedBefore: 30, speedAfter: 50 },
     });
     const mine = await other.playerState((v) => v.kind === "racer" && v.phase === "reveal");
-    expect(mine.view.kind === "racer" && mine.view).toMatchObject({ reveal: { choice: 0, correct: [0], wasCorrect: true }, me: { correct: 1 }, car: { speed: 50 } });
+    expect(mine.view.kind === "racer" && mine.view).toMatchObject({
+      reveal: { choice: 0, correct: [0], wasCorrect: true },
+      me: { correct: 1 },
+      car: { speed: 50 },
+    });
 
     // Pacing can change mid-game: on auto the reveal moves on by itself.
     host.sendMsg({ type: "host.setPacing", pacing: "auto" });
@@ -834,7 +843,10 @@ describe("Game mode: Racer", () => {
     await host.hostState((v) => v.kind === "racer" && v.phase === "open" && v.answeredCount === 1);
     host.sendMsg({ type: "host.skip" });
     const failed = await host.hostState((v) => v.kind === "racer" && v.phase === "reveal" && v.lastTurn?.index === 1);
-    expect(failed.view.kind === "racer" && failed.view).toMatchObject({ car: { speed: 25, crashed: false }, lastTurn: { correct: 0, total: 2, fails: 1, speedBefore: 50, speedAfter: 25 } });
+    expect(failed.view.kind === "racer" && failed.view).toMatchObject({
+      car: { speed: 25, crashed: false },
+      lastTurn: { correct: 0, total: 2, fails: 1, speedBefore: 50, speedAfter: 25 },
+    });
     // Too late: the answer is rejected and the phone gets its state again.
     await players[1]!.playerState((v) => v.kind === "racer" && v.phase === "reveal");
     players[1]!.msgs.length = 0;
@@ -853,7 +865,13 @@ describe("Game mode: Racer", () => {
       errors: [{ wrong: 1, text: "Q2", answers: ["right"] }],
     });
     const end = await driver.playerState((v) => v.kind === "racer" && v.phase === "podium" && !!v.result);
-    expect(end.view.kind === "racer" && end.view.result).toEqual({ distance: 12.5, topSpeed: 50, crashes: 0, turns: 2, awards: ["Most correct answers", "Best driver"] });
+    expect(end.view.kind === "racer" && end.view.result).toEqual({
+      distance: 12.5,
+      topSpeed: 50,
+      crashes: 0,
+      turns: 2,
+      awards: ["Most correct answers", "Best driver"],
+    });
     const csv = await resultsCsv();
     expect(csv).toContain("Nickname,Correct,Wrong,Accuracy %,Turns driven,Mph gained,Fail points as driver");
     expect(csv).toContain("Ann,1,1,50,1,");
@@ -861,7 +879,9 @@ describe("Game mode: Racer", () => {
 
     // Play again keeps Racer and the pacing.
     host.sendMsg({ type: "host.open", quizId: quiz.id });
-    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "racer" && v.pacing === "auto" && v.settings.racer.theme === "christmas");
+    await host.hostState(
+      (v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "racer" && v.pacing === "auto" && v.settings.racer.theme === "christmas",
+    );
     host.sendMsg({ type: "host.setPacing", pacing: "manual" });
     await host.hostState((v) => v.kind === "classic" && v.pacing === "manual");
     host.sendMsg({ type: "host.close" });
@@ -882,7 +902,9 @@ describe("Game mode: Showdown", () => {
     host.sendMsg({ type: "host.open", quizId: quiz.id });
     await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
     host.sendMsg({ type: "host.setMode", mode: "duel" });
-    await host.hostState((v) => v.kind === "classic" && v.mode === "duel" && v.settings.duel.rounds === 15 && v.settings.duel.theme === "christmas" && v.teams === null);
+    await host.hostState(
+      (v) => v.kind === "classic" && v.mode === "duel" && v.settings.duel.rounds === 15 && v.settings.duel.theme === "christmas" && v.teams === null,
+    );
     host.sendMsg({ type: "host.setModeSettings", mode: "duel", settings: { rounds: 7 } });
     expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: "Unsupported number of rounds" });
     host.sendMsg({ type: "host.setModeSettings", mode: "duel", settings: { rounds: 10, theme: "classic" } });
@@ -899,7 +921,13 @@ describe("Game mode: Showdown", () => {
 
     host.sendMsg({ type: "host.start", pacing: "manual" });
     const started = await host.hostState((v) => v.kind === "duel" && v.phase === "intro");
-    expect(started.view.kind === "duel" && started.view).toMatchObject({ theme: "classic", round: 1, rounds: 10, playerCount: 2, question: { index: 0, total: 10, text: "Q1", options: [] } });
+    expect(started.view.kind === "duel" && started.view).toMatchObject({
+      theme: "classic",
+      round: 1,
+      rounds: 10,
+      playerCount: 2,
+      question: { index: 0, total: 10, text: "Q1", options: [] },
+    });
     host.sendMsg({ type: "host.setShuffle", questions: true, answers: true });
     expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: "Not available in Showdown" });
     const ann = await players[0]!.playerState((v) => v.kind === "duel" && v.phase === "intro");
@@ -914,7 +942,14 @@ describe("Game mode: Showdown", () => {
     await players[1]!.playerState((v) => v.kind === "duel" && v.phase === "open");
     players[1]!.sendMsg({ type: "duel.answer", index: 0, option: 1 });
     const reveal = await host.hostState((v) => v.kind === "duel" && v.phase === "reveal");
-    expect(reveal.view.kind === "duel" && reveal.view).toMatchObject({ correct: [0], lastRound: { round: 1 }, players: [{ nickname: "Ann", rank: 1, wins: 1, reign: 1 }, { nickname: "Bob", rank: 2, losses: 1 }] });
+    expect(reveal.view.kind === "duel" && reveal.view).toMatchObject({
+      correct: [0],
+      lastRound: { round: 1 },
+      players: [
+        { nickname: "Ann", rank: 1, wins: 1, reign: 1 },
+        { nickname: "Bob", rank: 2, losses: 1 },
+      ],
+    });
     const mine = await players[1]!.playerState((v) => v.kind === "duel" && v.phase === "reveal");
     expect(mine.view.kind === "duel" && mine.view).toMatchObject({ reveal: { choice: 1, correct: [0], wasCorrect: false }, myDuel: { arena: 1, draw: false } });
 
@@ -922,7 +957,10 @@ describe("Game mode: Showdown", () => {
     await host.hostState((v) => v.kind === "duel" && v.phase === "intro" && v.round === 2);
     host.sendMsg({ type: "host.end" });
     const podium = await host.hostState((v) => v.kind === "duel" && v.phase === "podium");
-    expect(podium.view.kind === "duel" && podium.view).toMatchObject({ awards: { longestReign: { value: 1, nicknames: ["Ann"] } }, errors: [{ wrong: 1, text: "Q1" }] });
+    expect(podium.view.kind === "duel" && podium.view).toMatchObject({
+      awards: { longestReign: { value: 1, nicknames: ["Ann"] } },
+      errors: [{ wrong: 1, text: "Q1" }],
+    });
     const end = await players[0]!.playerState((v) => v.kind === "duel" && v.phase === "podium" && !!v.result);
     expect(end.view.kind === "duel" && end.view.result).toEqual({ rank: 1, playerCount: 2, awards: ["Longest reign", "Most wins"] });
     const csv = await resultsCsv();
@@ -931,7 +969,9 @@ describe("Game mode: Showdown", () => {
 
     // Play again keeps Showdown and its rounds.
     host.sendMsg({ type: "host.open", quizId: quiz.id });
-    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "duel" && v.settings.duel.rounds === 10 && v.settings.duel.theme === "classic");
+    await host.hostState(
+      (v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "duel" && v.settings.duel.rounds === 10 && v.settings.duel.theme === "classic",
+    );
     host.sendMsg({ type: "host.close" });
     await host.hostState((v) => v.kind === "idle");
     [host, ...players].forEach((s) => s.close());
@@ -965,7 +1005,10 @@ describe("Phone attachment", () => {
       expect(await first.waitFor((m) => m.type === "joined")).toMatchObject({ playerId: bob.playerId });
       const switched = await host.hostState((v) => v.kind === "classic" && v.players.some((p) => p.id === bob.playerId && p.connected));
       expect(switched.view).toMatchObject({
-        players: [{ id: ann.playerId, connected: keepSecondPhone }, { id: bob.playerId, connected: true }],
+        players: [
+          { id: ann.playerId, connected: keepSecondPhone },
+          { id: bob.playerId, connected: true },
+        ],
       });
 
       if (keepSecondPhone) {
@@ -1031,7 +1074,6 @@ describe("Lobby handoff", () => {
     await s.waitFor((m) => m.type === "resumeFailed");
     s.close();
   });
-
 
   test("an empty lobby can retry Start after a player joins", async () => {
     const quiz = await store.create({ title: "Retry Start", questions: [{ type: "true_false", text: "True?", correct: [0] }] });

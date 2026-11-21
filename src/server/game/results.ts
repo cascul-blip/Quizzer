@@ -25,4 +25,3 @@ export function writeResultsFile(game: { quizId: string }, csv: string, resultsD
   writeFileSync(file, csv);
   return file;
 }
-

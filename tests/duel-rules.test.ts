@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { arenaOf, arenaPoints, climbLadder, compareDuelists, duelOutcome, pairArenas, standings, type DuelAnswerInfo } from "../src/shared/duel-rules.ts";
+import type { DuelAnswerInfo } from "../src/shared/duel-rules.ts";
+import { arenaOf, arenaPoints, climbLadder, compareDuelists, duelOutcome, pairArenas, standings } from "../src/shared/duel-rules.ts";
 
 const right = (ms: number): DuelAnswerInfo => ({ correct: true, ms });
 const wrong = (ms: number): DuelAnswerInfo => ({ correct: false, ms });
@@ -11,15 +12,35 @@ describe("pairArenas", () => {
     expect(pairArenas(["a"])).toEqual([["a"]]);
     expect(pairArenas(["a", "b"])).toEqual([["a", "b"]]);
     expect(pairArenas(["a", "b", "c"])).toEqual([["a", "b", "c"]]);
-    expect(pairArenas(["a", "b", "c", "d"])).toEqual([["a", "b"], ["c", "d"]]);
-    expect(pairArenas(["a", "b", "c", "d", "e"])).toEqual([["a", "b"], ["c", "d", "e"]]);
-    expect(pairArenas([1, 2, 3, 4, 5, 6])).toEqual([[1, 2], [3, 4], [5, 6]]);
-    expect(pairArenas([1, 2, 3, 4, 5, 6, 7])).toEqual([[1, 2], [3, 4], [5, 6, 7]]);
+    expect(pairArenas(["a", "b", "c", "d"])).toEqual([
+      ["a", "b"],
+      ["c", "d"],
+    ]);
+    expect(pairArenas(["a", "b", "c", "d", "e"])).toEqual([
+      ["a", "b"],
+      ["c", "d", "e"],
+    ]);
+    expect(pairArenas([1, 2, 3, 4, 5, 6])).toEqual([
+      [1, 2],
+      [3, 4],
+      [5, 6],
+    ]);
+    expect(pairArenas([1, 2, 3, 4, 5, 6, 7])).toEqual([
+      [1, 2],
+      [3, 4],
+      [5, 6, 7],
+    ]);
     expect(pairArenas(Array.from({ length: 30 }, (_, i) => i))).toHaveLength(15);
   });
 
   test("arenaOf numbers each player's arena from 1", () => {
-    expect([...arenaOf(["a", "b", "c", "d", "e"])]).toEqual([["a", 1], ["b", 1], ["c", 2], ["d", 2], ["e", 2]]);
+    expect([...arenaOf(["a", "b", "c", "d", "e"])]).toEqual([
+      ["a", 1],
+      ["b", 1],
+      ["c", 2],
+      ["d", 2],
+      ["e", 2],
+    ]);
   });
 });
 
@@ -73,9 +94,17 @@ describe("climbLadder", () => {
     const order = ids(6); // [a b] [c d] [e f]
     const arenas = pairArenas(order);
     // a beats b, d beats c, f beats e
-    const next = climbLadder(order, arenas, [["win", "lose"], ["lose", "win"], ["lose", "win"]]);
+    const next = climbLadder(order, arenas, [
+      ["win", "lose"],
+      ["lose", "win"],
+      ["lose", "win"],
+    ]);
     // b ↔ d at boundary 1-2, c ↔ f at boundary 2-3
-    expect(pairArenas(next)).toEqual([["a", "d"], ["b", "f"], ["c", "e"]]);
+    expect(pairArenas(next)).toEqual([
+      ["a", "d"],
+      ["b", "f"],
+      ["c", "e"],
+    ]);
   });
 
   test("within an arena the winner moves to the top, so the ladder is the ranking", () => {
@@ -86,18 +115,36 @@ describe("climbLadder", () => {
 
   test("a draw blocks both of its boundaries", () => {
     const order = ids(6);
-    const next = climbLadder(order, pairArenas(order), [["win", "lose"], ["stay", "stay"], ["win", "lose"]]);
+    const next = climbLadder(order, pairArenas(order), [
+      ["win", "lose"],
+      ["stay", "stay"],
+      ["win", "lose"],
+    ]);
     expect(next).toEqual(order);
-    const next2 = climbLadder(order, pairArenas(order), [["stay", "stay"], ["win", "lose"], ["lose", "win"]]);
+    const next2 = climbLadder(order, pairArenas(order), [
+      ["stay", "stay"],
+      ["win", "lose"],
+      ["lose", "win"],
+    ]);
     // Boundary 1-2 is blocked (draw above); boundary 2-3: d (lost) ↔ f (won).
-    expect(pairArenas(next2)).toEqual([["a", "b"], ["c", "f"], ["d", "e"]]);
+    expect(pairArenas(next2)).toEqual([
+      ["a", "b"],
+      ["c", "f"],
+      ["d", "e"],
+    ]);
   });
 
   test("a 3-way bottom arena: its winner goes up, its loser stays at the bottom, the middle stays", () => {
     const order = ids(5); // [a b] [c d e]
-    const next = climbLadder(order, pairArenas(order), [["lose", "win"], ["stay", "lose", "win"]]);
+    const next = climbLadder(order, pairArenas(order), [
+      ["lose", "win"],
+      ["stay", "lose", "win"],
+    ]);
     expect(next).toEqual(["b", "e", "a", "c", "d"]);
-    expect(pairArenas(next)).toEqual([["b", "e"], ["a", "c", "d"]]);
+    expect(pairArenas(next)).toEqual([
+      ["b", "e"],
+      ["a", "c", "d"],
+    ]);
   });
 
   test("a lone duelist (after a kick) stays and blocks its boundaries", () => {
@@ -106,7 +153,17 @@ describe("climbLadder", () => {
   });
 
   test("players without an arena this round (late joiners) stay at the bottom in order", () => {
-    const next = climbLadder(["a", "b", "c", "d", "x", "y"], [["a", "b"], ["c", "d"]], [["lose", "win"], ["win", "lose"]]);
+    const next = climbLadder(
+      ["a", "b", "c", "d", "x", "y"],
+      [
+        ["a", "b"],
+        ["c", "d"],
+      ],
+      [
+        ["lose", "win"],
+        ["win", "lose"],
+      ],
+    );
     expect(next).toEqual(["b", "c", "a", "d", "x", "y"]);
   });
 

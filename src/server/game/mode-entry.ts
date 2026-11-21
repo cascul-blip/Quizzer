@@ -1,8 +1,10 @@
-import type { GameMode, ModeSettingsMap, PlayerMsg } from "../../shared/protocol.ts";
+import type { MODE_FLAGS } from "../../shared/mode-flags.ts";
 import type { Pacing } from "../../shared/mode-views.ts";
-import { MODE_FLAGS } from "../../shared/mode-flags.ts";
-import { isSeasonTheme, type SeasonTheme } from "../../shared/season-theme.ts";
-import { GameError, type Clock } from "./common.ts";
+import type { GameMode, ModeSettingsMap, PlayerMsg } from "../../shared/protocol.ts";
+import type { SeasonTheme } from "../../shared/season-theme.ts";
+import { isSeasonTheme } from "../../shared/season-theme.ts";
+import type { Clock } from "./common.ts";
+import { GameError } from "./common.ts";
 import type { CupGame } from "./cup.ts";
 import type { DuelGame } from "./duel.ts";
 import type { FightGame } from "./fight.ts";

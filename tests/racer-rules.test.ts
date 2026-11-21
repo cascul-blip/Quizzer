@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
+import type { RacerCar } from "../src/shared/racer-rules.ts";
 import {
+  applyRacerTurn,
+  newRacerCar,
   RACER_CONFIDENCE,
   RACER_CONFIDENCE_LEVELS,
   RACER_CRASH_BELOW_MPH,
@@ -7,11 +10,8 @@ import {
   RACER_REPAIR_MPH,
   RACER_START_MPH,
   RACER_TURN_MINUTES,
-  applyRacerTurn,
-  newRacerCar,
   racerOutcome,
   racerRepairs,
-  type RacerCar,
 } from "../src/shared/racer-rules.ts";
 
 const car = (over: Partial<RacerCar> = {}): RacerCar => ({ ...newRacerCar(), ...over });
@@ -92,7 +92,18 @@ describe("applyRacerTurn", () => {
     const before = car();
     const { car: after, summary } = applyRacerTurn(before, { confidence: "mid", correct: 2, total: 3 });
     expect(after).toEqual({ speed: 50, crashed: false, distance: 50 / 6, topSpeed: 50, crashes: 0 });
-    expect(summary).toEqual({ confidence: "mid", correct: 2, total: 3, gain: 20, fails: 0, speedBefore: 30, speedAfter: 50, crashed: false, repaired: false, distanceAdded: 50 / 6 });
+    expect(summary).toEqual({
+      confidence: "mid",
+      correct: 2,
+      total: 3,
+      gain: 20,
+      fails: 0,
+      speedBefore: 30,
+      speedAfter: 50,
+      crashed: false,
+      repaired: false,
+      distanceAdded: 50 / 6,
+    });
     // The car passed in is left alone.
     expect(before).toEqual(newRacerCar());
     expect(applyRacerTurn(after, { confidence: "high", correct: 3, total: 3 }).car).toMatchObject({ speed: 90, topSpeed: 90 });
@@ -105,9 +116,22 @@ describe("applyRacerTurn", () => {
   });
 
   test("each fail halves the speed", () => {
-    expect(applyRacerTurn(car({ speed: 50 }), { confidence: "low", correct: 0, total: 4 }).summary).toMatchObject({ fails: 1, speedAfter: 25, crashed: false, distanceAdded: 25 / 6 });
-    expect(applyRacerTurn(car({ speed: 90 }), { confidence: "mid", correct: 0, total: 4 }).summary).toMatchObject({ fails: 2, speedAfter: 22.5, crashed: false });
-    expect(applyRacerTurn(car({ speed: 170 }), { confidence: "high", correct: 0, total: 4 }).summary).toMatchObject({ fails: 3, speedAfter: 21.25, crashed: false });
+    expect(applyRacerTurn(car({ speed: 50 }), { confidence: "low", correct: 0, total: 4 }).summary).toMatchObject({
+      fails: 1,
+      speedAfter: 25,
+      crashed: false,
+      distanceAdded: 25 / 6,
+    });
+    expect(applyRacerTurn(car({ speed: 90 }), { confidence: "mid", correct: 0, total: 4 }).summary).toMatchObject({
+      fails: 2,
+      speedAfter: 22.5,
+      crashed: false,
+    });
+    expect(applyRacerTurn(car({ speed: 170 }), { confidence: "high", correct: 0, total: 4 }).summary).toMatchObject({
+      fails: 3,
+      speedAfter: 21.25,
+      crashed: false,
+    });
     // Top speed remembers the best turn, not the speed before a fail.
     expect(applyRacerTurn(car({ speed: 50, topSpeed: 50 }), { confidence: "low", correct: 0, total: 4 }).car.topSpeed).toBe(50);
   });
@@ -121,18 +145,42 @@ describe("applyRacerTurn", () => {
     expect(applyRacerTurn(car({ speed: 39 }), { confidence: "low", correct: 0, total: 4 }).car).toMatchObject({ speed: 0, crashed: true, crashes: 1 });
     expect(applyRacerTurn(car({ speed: 80 }), { confidence: "mid", correct: 0, total: 4 }).car).toMatchObject({ speed: 20, crashed: false });
     expect(applyRacerTurn(car({ speed: 70 }), { confidence: "mid", correct: 0, total: 4 }).car).toMatchObject({ speed: 0, crashed: true });
-    expect(applyRacerTurn(car({ speed: 70, crashes: 2 }), { confidence: "high", correct: 0, total: 4 }).car).toMatchObject({ speed: 0, crashed: true, crashes: 3 });
+    expect(applyRacerTurn(car({ speed: 70, crashes: 2 }), { confidence: "high", correct: 0, total: 4 }).car).toMatchObject({
+      speed: 0,
+      crashed: true,
+      crashes: 3,
+    });
   });
 
   test("a crashed car ignores the lever: half the class right repairs it, less leaves it where it is", () => {
     const wreck = car({ speed: 0, crashed: true, distance: 20, topSpeed: 70, crashes: 1 });
     const stuck = applyRacerTurn(wreck, { confidence: "high", correct: 1, total: 4 });
     expect(stuck.car).toEqual(wreck);
-    expect(stuck.summary).toEqual({ confidence: null, correct: 1, total: 4, gain: 0, fails: 0, speedBefore: 0, speedAfter: 0, crashed: false, repaired: false, distanceAdded: 0 });
+    expect(stuck.summary).toEqual({
+      confidence: null,
+      correct: 1,
+      total: 4,
+      gain: 0,
+      fails: 0,
+      speedBefore: 0,
+      speedAfter: 0,
+      crashed: false,
+      repaired: false,
+      distanceAdded: 0,
+    });
 
     const fixed = applyRacerTurn(wreck, { confidence: null, correct: 2, total: 4 });
     expect(fixed.car).toEqual({ speed: 30, crashed: false, distance: 25, topSpeed: 70, crashes: 1 });
-    expect(fixed.summary).toMatchObject({ confidence: null, gain: 0, fails: 0, speedBefore: 0, speedAfter: 30, crashed: false, repaired: true, distanceAdded: 5 });
+    expect(fixed.summary).toMatchObject({
+      confidence: null,
+      gain: 0,
+      fails: 0,
+      speedBefore: 0,
+      speedAfter: 30,
+      crashed: false,
+      repaired: true,
+      distanceAdded: 5,
+    });
   });
 
   test("nobody to count: no gain, no fails, no repair", () => {

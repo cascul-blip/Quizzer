@@ -1,9 +1,23 @@
-import { towerWords } from "../../shared/tower-theme.ts";
-import { TowerThemeProvider, useChristmasTower, useTowerTheme, ChristmasBackdrop } from "../shared/tower-skin.tsx";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
-import { BLOCKS_PER_BUILD, DROP_ZONES, MONSTER_DAMAGE, type MonsterEgg, type PlayerTowerView } from "../../shared/modes/tower.ts";
+import type { MonsterEgg, PlayerTowerView } from "../../shared/modes/tower.ts";
+import { BLOCKS_PER_BUILD, DROP_ZONES, MONSTER_DAMAGE } from "../../shared/modes/tower.ts";
 import type { ClientMsg } from "../../shared/protocol.ts";
-import { BuildingBlock, COLUMN_NAMES, EggCell, useEventFlash, viewBaseRow, DustPuff, FloorSparkle, SKY_STAGES, SkylineSvg, skyStage, useFreshKeys, useNewFloor } from "../shared/tower-art.tsx";
+import { towerWords } from "../../shared/tower-theme.ts";
+import {
+  BuildingBlock,
+  COLUMN_NAMES,
+  DustPuff,
+  EggCell,
+  FloorSparkle,
+  SKY_STAGES,
+  SkylineSvg,
+  skyStage,
+  useEventFlash,
+  useFreshKeys,
+  useNewFloor,
+  viewBaseRow,
+} from "../shared/tower-art.tsx";
+import { ChristmasBackdrop, TowerThemeProvider, useChristmasTower, useTowerTheme } from "../shared/tower-skin.tsx";
 import { formatClock, ordinal, teamInk, teamVars, useCountdown } from "../shared/ui.tsx";
 import { Feedback, StreamQuestion } from "./stream-question.tsx";
 
@@ -17,7 +31,11 @@ const LAST_BLOCK_PAUSE_MS = 500;
 
 /** Phone screen for Tallest Tower: own questions at own pace, then build mode every 4 correct answers. */
 export function TowerPlayer(props: { view: PlayerTowerView; send: Send }) {
-  return <TowerThemeProvider theme={props.view.theme}><TowerPlayerContent {...props} /></TowerThemeProvider>;
+  return (
+    <TowerThemeProvider theme={props.view.theme}>
+      <TowerPlayerContent {...props} />
+    </TowerThemeProvider>
+  );
 }
 
 function TowerPlayerContent({ view, send }: { view: PlayerTowerView; send: Send }) {
@@ -52,7 +70,9 @@ function TowerPlayerContent({ view, send }: { view: PlayerTowerView; send: Send 
   } else if (view.phase === "podium") {
     body = <TowerResult view={view} />;
   } else if (build) {
-    body = <BuildMode build={build} blocksHeld={view.blocksHeld} color={view.team.color} team={view.team.index} egg={view.egg} send={send} onLastDrop={onLastDrop} />;
+    body = (
+      <BuildMode build={build} blocksHeld={view.blocksHeld} color={view.team.color} team={view.team.index} egg={view.egg} send={send} onLastDrop={onLastDrop} />
+    );
   } else if (view.question) {
     body = (
       <>
@@ -103,10 +123,22 @@ function MonsterNotice({ event, egg }: { event: PlayerTowerView["monsterEvent"];
   if (!shown) return null;
   const [icon, title, detail] =
     shown.kind === "egg"
-      ? [words.itemIcon, christmas ? "A yeti bell appeared!" : "A monster egg appeared!", egg ? `Land a block on level ${egg.row + 1}, ${COLUMN_NAMES[egg.col]} column, before the other teams.` : "Build to it first!"]
+      ? [
+          words.itemIcon,
+          christmas ? "A yeti bell appeared!" : "A monster egg appeared!",
+          egg ? `Land a block on level ${egg.row + 1}, ${COLUMN_NAMES[egg.col]} column, before the other teams.` : "Build to it first!",
+        ]
       : shown.kind === "hatched"
-        ? [words.creatureIcon, christmas ? "Your team summoned the yeti!" : "Your team hatched the monster!", `You're safe. It smashed Team ${shown.target} (−${MONSTER_DAMAGE} floors).`]
-        : [words.creatureIcon, `The ${words.creature} smashed your tower!`, `−${MONSTER_DAMAGE} floors. Team ${shown.byTeam} ${christmas ? "rang the bell" : "hatched it"}.`];
+        ? [
+            words.creatureIcon,
+            christmas ? "Your team summoned the yeti!" : "Your team hatched the monster!",
+            `You're safe. It smashed Team ${shown.target} (−${MONSTER_DAMAGE} floors).`,
+          ]
+        : [
+            words.creatureIcon,
+            `The ${words.creature} smashed your tower!`,
+            `−${MONSTER_DAMAGE} floors. Team ${shown.byTeam} ${christmas ? "rang the bell" : "hatched it"}.`,
+          ];
   return (
     <div class={`flash monster-flash ${shown.kind}`} role="alert">
       <div class="flash-icon">{icon}</div>
@@ -127,7 +159,15 @@ function Piece({ color, team }: { color: string; team: number }) {
   );
 }
 
-function BuildMode(props: { build: Build; blocksHeld: number; color: string; team: number; egg: MonsterEgg | null; send: Send; onLastDrop: (b: Build) => void }) {
+function BuildMode(props: {
+  build: Build;
+  blocksHeld: number;
+  color: string;
+  team: number;
+  egg: MonsterEgg | null;
+  send: Send;
+  onLastDrop: (b: Build) => void;
+}) {
   const christmas = useChristmasTower();
   const { build, blocksHeld, color, team, egg, send } = props;
   const isFresh = useFreshKeys();
@@ -210,7 +250,18 @@ function BuildMode(props: { build: Build; blocksHeld: number; color: string; tea
     for (let r = baseRow; r < columns[c]!; r++) {
       const key = `${c}-${r}`;
       blocks.push(
-        <BuildingBlock key={key} x={(c + 1) * cell} y={rowTop(r)} size={cell} color={color} team={team} col={c} row={r} fullFloor={r < floors} fresh={isFresh(key)} />,
+        <BuildingBlock
+          key={key}
+          x={(c + 1) * cell}
+          y={rowTop(r)}
+          size={cell}
+          color={color}
+          team={team}
+          col={c}
+          row={r}
+          fullFloor={r < floors}
+          fresh={isFresh(key)}
+        />,
       );
     }
   }
@@ -225,9 +276,13 @@ function BuildMode(props: { build: Build; blocksHeld: number; color: string; tea
         </span>
       </div>
       <div class="build-area" ref={areaRef} style={{ "--team": color, background: christmas ? "#102759" : `linear-gradient(${sky.top}, ${sky.bottom})` }}>
-        {christmas ? <ChristmasBackdrop /> : <div class="phone-skyline" style={{ bottom: `${ground}px` }}>
-          <SkylineSvg />
-        </div>}
+        {christmas ? (
+          <ChristmasBackdrop />
+        ) : (
+          <div class="phone-skyline" style={{ bottom: `${ground}px` }}>
+            <SkylineSvg />
+          </div>
+        )}
         <div class="zone miss left" style={{ width: `${cell}px` }}>
           ✕
         </div>
@@ -252,7 +307,12 @@ function BuildMode(props: { build: Build; blocksHeld: number; color: string; tea
           </div>
         )}
         {falling && (
-          <div ref={fallRef} key={falling.id} class="piece" style={{ top: `${sliderTop}px`, left: `${falling.zone * cell}px`, width: `${cell}px`, height: `${cell}px` }}>
+          <div
+            ref={fallRef}
+            key={falling.id}
+            class="piece"
+            style={{ top: `${sliderTop}px`, left: `${falling.zone * cell}px`, width: `${cell}px`, height: `${cell}px` }}
+          >
             <Piece color={color} team={team} />
           </div>
         )}
@@ -269,9 +329,7 @@ function TowerResult({ view }: { view: PlayerTowerView }) {
       <div class="team-badge big" style={{ background: view.team.color, color: teamInk(view.team.color) }}>
         Team {view.team.name}
       </div>
-      <p class="muted">
-        finished {r.teamCount > 1 ? `${ordinal(r.teamRank)} of ${r.teamCount}` : "the game"}
-      </p>
+      <p class="muted">finished {r.teamCount > 1 ? `${ordinal(r.teamRank)} of ${r.teamCount}` : "the game"}</p>
       <div class={`final-rank ${r.teamRank === 1 && r.teamCount > 1 ? "top" : ""}`}>
         {r.floors} <span class="unit">floor{r.floors === 1 ? "" : "s"}</span>
       </div>

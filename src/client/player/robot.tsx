@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "preact/hooks";
-import { ROBOT_BOARD, ROBOT_LIVES, robotInBounds, type PlayerRobotView, type RobotDir } from "../../shared/modes/robot.ts";
+import type { PlayerRobotView, RobotDir } from "../../shared/modes/robot.ts";
+import { ROBOT_BOARD, ROBOT_LIVES, robotInBounds } from "../../shared/modes/robot.ts";
 import type { ClientMsg } from "../../shared/protocol.ts";
 import { MiniBoard } from "../shared/robot-art.tsx";
 import { SKIN_TEXT } from "../shared/robot-skin.ts";
@@ -20,7 +21,9 @@ export function RobotPlayer({ view, send }: { view: PlayerRobotView; send: Send 
     body = (
       <main class="center">
         <div class="robot-emoji">{SKIN_TEXT.emoji}</div>
-        <p class="muted">Answer questions to earn moves. When it's time to move, get off the red Xs before {SKIN_TEXT.attacker} {SKIN_TEXT.attack}!</p>
+        <p class="muted">
+          Answer questions to earn moves. When it's time to move, get off the red Xs before {SKIN_TEXT.attacker} {SKIN_TEXT.attack}!
+        </p>
         <div class="tower-count">{Math.max(1, secs)}</div>
       </main>
     );
@@ -122,7 +125,9 @@ function MoveScreen({ view, secs, send }: { view: PlayerRobotView; secs: number;
         <b class={onTarget && !view.me.out ? "danger" : ""}>{status}</b>
         <span class={`robot-clock ${secs <= 3 ? "urgent" : ""}`}>{secs}</span>
       </div>
-      {board && <MiniBoard me={view.me} others={board.others} marked={board.marked} inset={board.inset} collapsing={board.collapsing} avatar={view.me.avatar} />}
+      {board && (
+        <MiniBoard me={view.me} others={board.others} marked={board.marked} inset={board.inset} collapsing={board.collapsing} avatar={view.me.avatar} />
+      )}
       {!view.me.out && (
         <>
           <div class="robot-moves-left">
@@ -162,13 +167,30 @@ function AttackScreen({ view }: { view: PlayerRobotView }) {
     seen.current = a.seq;
     if (a.hit) navigator.vibrate?.(a.eliminated ? [300, 100, 300] : [200, 80, 120]);
   }, [a?.seq]);
-  const [icon, text] = !a || (view.me.out && !a.eliminated) ? [SKIN_TEXT.emoji, `${SKIN_TEXT.Attacker} ${SKIN_TEXT.attack}!`] : a.eliminated ? ["💀", `${SKIN_TEXT.knockedOut} You're out of lives`] : a.hit ? ["💥", "Hit! −1 ♥"] : ["😅", "Safe!"];
+  const [icon, text] =
+    !a || (view.me.out && !a.eliminated)
+      ? [SKIN_TEXT.emoji, `${SKIN_TEXT.Attacker} ${SKIN_TEXT.attack}!`]
+      : a.eliminated
+        ? ["💀", `${SKIN_TEXT.knockedOut} You're out of lives`]
+        : a.hit
+          ? ["💥", "Hit! −1 ♥"]
+          : ["😅", "Safe!"];
   return (
     <main class={`robot-attack ${a?.hit ? "hit" : "safe"}`}>
       <div class="robot-attack-icon">{icon}</div>
       <h1>{text}</h1>
       {a?.eliminated && <p class="muted">You can keep answering questions for fun.</p>}
-      {view.board && <MiniBoard me={view.me} others={view.board.others} marked={view.board.marked} inset={view.board.inset} collapsing={view.board.collapsing} avatar={view.me.avatar} zapped={a?.hit} />}
+      {view.board && (
+        <MiniBoard
+          me={view.me}
+          others={view.board.others}
+          marked={view.board.marked}
+          inset={view.board.inset}
+          collapsing={view.board.collapsing}
+          avatar={view.me.avatar}
+          zapped={a?.hit}
+        />
+      )}
     </main>
   );
 }
@@ -180,7 +202,9 @@ function RobotResult({ view }: { view: PlayerRobotView }) {
     <main class="center">
       <div class="robot-emoji">{r.won ? "🏆" : SKIN_TEXT.emoji}</div>
       <div class={`final-rank ${r.won ? "top" : ""}`}>{r.won ? "You win!" : `${ordinal(r.rank)} of ${r.playerCount}`}</div>
-      <p class="muted">{r.outRound === null ? (r.won ? `You outlasted ${SKIN_TEXT.attacker}!` : "You survived to the end.") : `Knocked out in round ${r.outRound}.`}</p>
+      <p class="muted">
+        {r.outRound === null ? (r.won ? `You outlasted ${SKIN_TEXT.attacker}!` : "You survived to the end.") : `Knocked out in round ${r.outRound}.`}
+      </p>
       <p class="big-score">{view.me.correct} correct</p>
       {r.awards.map((a) => (
         <div key={a} class="award-chip">

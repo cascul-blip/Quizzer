@@ -1,6 +1,6 @@
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { newId } from "../../shared/quiz-schema.ts";
-import { GameError, MAX_PLAYERS, cleanNickname } from "./common.ts";
+import { cleanNickname, GameError, MAX_PLAYERS } from "./common.ts";
 
 /** What every mode knows about a player; mode-specific state is added on top. */
 export interface BasePlayer {

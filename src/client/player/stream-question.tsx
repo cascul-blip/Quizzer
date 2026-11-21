@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { StreamFeedbackView, StreamQuestionView } from "../../shared/mode-views.ts";
 import { PinDragger } from "../shared/pin.tsx";
-import { Shape, TextAnswer, optionColor, useCountdown } from "../shared/ui.tsx";
 import { Tex, TexList } from "../shared/tex.tsx";
+import { optionColor, Shape, TextAnswer, useCountdown } from "../shared/ui.tsx";
 
 /** A self-paced question shared by the streamed game modes. */
 export function StreamQuestion({ question, onAnswer }: { question: StreamQuestionView; onAnswer: (seq: number, option: number, text?: string) => void }) {
@@ -18,45 +18,35 @@ export function StreamQuestion({ question, onAnswer }: { question: StreamQuestio
   if (question.type === "pin" && question.image && question.spots) {
     return (
       <main class="answering">
-        <h2 class="q-text tower-q"><Tex text={question.text} /></h2>
-        <PinDragger
-          key={question.seq}
-          image={question.image}
-          spots={question.spots}
-          labels={question.options}
-          disabled={locked}
-          onSubmit={(i) => submit(i)}
-        />
+        <h2 class="q-text tower-q">
+          <Tex text={question.text} />
+        </h2>
+        <PinDragger key={question.seq} image={question.image} spots={question.spots} labels={question.options} disabled={locked} onSubmit={(i) => submit(i)} />
       </main>
     );
   }
   return (
     <main class="answering">
-      <h2 class="q-text tower-q"><Tex text={question.text} /></h2>
+      <h2 class="q-text tower-q">
+        <Tex text={question.text} />
+      </h2>
       {question.image && <img class="q-img" src={`/${question.image}`} alt="" />}
       {question.type === "text" ? (
-        <TextAnswer
-          key={question.seq}
-          disabled={locked}
-          onSubmit={(text) => submit(0, text)}
-        />
+        <TextAnswer key={question.seq} disabled={locked} onSubmit={(text) => submit(0, text)} />
       ) : (
-      <div class={`answers n${question.options.length}`}>
-        {question.options.map((text, i) => {
-          const c = optionColor(question.type, i);
-          return (
-            <button
-              key={`${question.seq}-${i}`}
-              class={`answer opt-${c}`}
-              disabled={locked}
-              onClick={() => submit(i)}
-            >
-              <Shape index={c} />
-              <span><Tex text={text} /></span>
-            </button>
-          );
-        })}
-      </div>
+        <div class={`answers n${question.options.length}`}>
+          {question.options.map((text, i) => {
+            const c = optionColor(question.type, i);
+            return (
+              <button key={`${question.seq}-${i}`} class={`answer opt-${c}`} disabled={locked} onClick={() => submit(i)}>
+                <Shape index={c} />
+                <span>
+                  <Tex text={text} />
+                </span>
+              </button>
+            );
+          })}
+        </div>
       )}
     </main>
   );
@@ -107,4 +97,3 @@ export function Feedback({ feedback, rightText }: { feedback: StreamFeedbackView
     </div>
   );
 }
-

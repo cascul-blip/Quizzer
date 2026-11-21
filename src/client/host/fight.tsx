@@ -1,14 +1,17 @@
-import { fightName, fightTheme, type FightTheme } from "../../shared/fight-theme.ts";
-import { FightThemeProvider } from "../shared/fight-skin.tsx";
 import { useEffect, useRef, useState } from "preact/hooks";
-import { CORRECT_PER_DECISION, HILL_SETTINGS, TOWER_MAX_DAMAGE, type FightEvent, type FightShot, type HillSetting } from "../../shared/modes/fight.ts";
+import type { FightTheme } from "../../shared/fight-theme.ts";
+import { fightName, fightTheme } from "../../shared/fight-theme.ts";
+import type { FightEvent, FightShot, HillSetting } from "../../shared/modes/fight.ts";
+import { CORRECT_PER_DECISION, HILL_SETTINGS, TOWER_MAX_DAMAGE } from "../../shared/modes/fight.ts";
 import type { HostView } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { Battlefield, HealthBar, ShotLayer } from "../shared/fight-art.tsx";
+import { FightThemeProvider } from "../shared/fight-skin.tsx";
+import type { MusicCue } from "../shared/music/index.ts";
 import { play } from "../shared/sounds.ts";
 import { teamInk, teamVars, useCountdown } from "../shared/ui.tsx";
-import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
-import type { MusicCue } from "../shared/music/index.ts";
+import type { Send } from "./common.tsx";
+import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen } from "./common.tsx";
 import type { LobbyModeEntry, LobbySettingsProps } from "./lobby-modes.tsx";
 import { Award } from "./tower.tsx";
 
@@ -19,7 +22,11 @@ const HILL_NAME = { low: "Low hill", medium: "Medium hill", high: "High hill" } 
 
 /** Projector screen for Tower Fight: countdown → live battlefield → collapse → podium. */
 export function FightStage(props: { view: FightView; send: Send }) {
-  return <FightThemeProvider theme={props.view.theme}><FightStageContent {...props} /></FightThemeProvider>;
+  return (
+    <FightThemeProvider theme={props.view.theme}>
+      <FightStageContent {...props} />
+    </FightThemeProvider>
+  );
 }
 
 function FightStageContent({ view, send }: { view: FightView; send: Send }) {
@@ -73,7 +80,16 @@ function FightStageContent({ view, send }: { view: FightView; send: Send }) {
         <FightPodium view={view} send={send} />
       ) : (
         <main class={`fight-wrap ${view.phase === "collapse" ? "shake-long" : ""}`}>
-          <Battlefield hill={view.hill} shots={view.shots} terrain={view.terrain} damage={view.teams.map((t) => t.damage)} colors={view.teams.map((t) => t.color)} loaded={loaded} repairing={view.teams.map((t) => t.repairing)} collapsing={view.phase === "collapse" ? destroyed : null}>
+          <Battlefield
+            hill={view.hill}
+            shots={view.shots}
+            terrain={view.terrain}
+            damage={view.teams.map((t) => t.damage)}
+            colors={view.teams.map((t) => t.color)}
+            loaded={loaded}
+            repairing={view.teams.map((t) => t.repairing)}
+            collapsing={view.phase === "collapse" ? destroyed : null}
+          >
             <ShotLayer shots={view.shots} onLand={onLand} />
           </Battlefield>
           {view.teams.map((t) => (
@@ -95,9 +111,7 @@ function FightStageContent({ view, send }: { view: FightView; send: Send }) {
           <EventFeed events={view.events} teams={view.teams} />
           {view.phase === "countdown" && (
             <div class="countdown-overlay">
-              <div class="countdown-label">
-                Answer questions on your phone. Every {CORRECT_PER_DECISION} correct answers: attack or rebuild!
-              </div>
+              <div class="countdown-label">Answer questions on your phone. Every {CORRECT_PER_DECISION} correct answers: attack or rebuild!</div>
               <div class="countdown-num" key={secs}>
                 {Math.max(1, secs)}
               </div>
@@ -157,9 +171,17 @@ function FightPodium({ view, send }: { view: FightView; send: Send }) {
   return (
     <main class="podium tower-podium fight-podium">
       <div class="podium-bg" aria-hidden="true">
-        <Battlefield hill={view.hill} shots={view.shots} terrain={view.terrain} damage={view.teams.map((t) => t.damage)} colors={view.teams.map((t) => t.color)} />
+        <Battlefield
+          hill={view.hill}
+          shots={view.shots}
+          terrain={view.terrain}
+          damage={view.teams.map((t) => t.damage)}
+          colors={view.teams.map((t) => t.color)}
+        />
       </div>
-      <h1 style={winner ? { background: winner.color, color: teamInk(winner.color) } : undefined}>{winner ? `🏆 Team ${winner.name} wins!` : "🤝 It's a draw!"}</h1>
+      <h1 style={winner ? { background: winner.color, color: teamInk(winner.color) } : undefined}>
+        {winner ? `🏆 Team ${winner.name} wins!` : "🤝 It's a draw!"}
+      </h1>
       {showErrors ? (
         <ErrorsTable errors={view.errors ?? []} />
       ) : (
@@ -206,14 +228,21 @@ function FightSettings({ settings, send }: LobbySettingsProps<"fight">) {
     <>
       <label class="opt">
         Theme
-        <select aria-label="Tower Fight theme" value={fightTheme(settings.theme)} onChange={(e) => send({ type: "host.setModeSettings", mode: "fight", settings: { theme: e.currentTarget.value as FightTheme } })}>
+        <select
+          aria-label="Tower Fight theme"
+          value={fightTheme(settings.theme)}
+          onChange={(e) => send({ type: "host.setModeSettings", mode: "fight", settings: { theme: e.currentTarget.value as FightTheme } })}
+        >
           <option value="classic">🏰 Normal</option>
           <option value="christmas">🎄 Gingerbread Siege</option>
         </select>
       </label>
       <label class="opt">
         Hill
-        <select value={settings.hill} onChange={(e) => send({ type: "host.setModeSettings", mode: "fight", settings: { hill: e.currentTarget.value as HillSetting } })}>
+        <select
+          value={settings.hill}
+          onChange={(e) => send({ type: "host.setModeSettings", mode: "fight", settings: { hill: e.currentTarget.value as HillSetting } })}
+        >
           {HILL_SETTINGS.map((h) => (
             <option key={h} value={h}>
               {HILL_LABELS[h]}

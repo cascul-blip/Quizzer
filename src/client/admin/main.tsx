@@ -1,12 +1,25 @@
-import { saveQuizDraft, toDraft, type Draft } from "./save-quiz-draft.ts";
 import { render } from "preact";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
-import { QUIZ_REVISION_HEADER, DEFAULT_TIME_LIMIT, MAX_IMAGE_SIDE, MAX_MEDIA_BYTES, MAX_OPTIONS, MAX_PIN_SPOTS, MIN_OPTIONS, TF_OPTIONS, TIME_LIMITS, newId, pinLabel } from "../../shared/quiz-constants.ts";
 import { MUSIC_TRACKS } from "../../shared/music-tracks.ts";
+import {
+  DEFAULT_TIME_LIMIT,
+  MAX_IMAGE_SIDE,
+  MAX_MEDIA_BYTES,
+  MAX_OPTIONS,
+  MAX_PIN_SPOTS,
+  MIN_OPTIONS,
+  newId,
+  pinLabel,
+  QUIZ_REVISION_HEADER,
+  TF_OPTIONS,
+  TIME_LIMITS,
+} from "../../shared/quiz-constants.ts";
 import type { Question, Quiz, QuizSummary, SavedQuiz } from "../../shared/quiz-schema.ts";
 import { PinBoard } from "../shared/pin.tsx";
 import { Tex } from "../shared/tex.tsx";
-import { Shape, Toast, optionColor } from "../shared/ui.tsx";
+import { optionColor, Shape, Toast } from "../shared/ui.tsx";
+import type { Draft } from "./save-quiz-draft.ts";
+import { saveQuizDraft, toDraft } from "./save-quiz-draft.ts";
 
 // ---------- api ----------
 
@@ -241,14 +254,18 @@ function Library({ notify }: { notify: (m: string) => void }) {
 function MusicPanel({ dir }: { dir: string }) {
   const [files, setFiles] = useState<Record<string, string>>({});
   useEffect(() => {
-    api<{ files: Record<string, string> }>("/api/music").then((r) => setFiles(r.files), () => {});
+    api<{ files: Record<string, string> }>("/api/music").then(
+      (r) => setFiles(r.files),
+      () => {},
+    );
   }, []);
   return (
     <section class="info">
       <h2>Background music</h2>
       <p>
         Each game mode has built-in music. To use your own, put an audio file (MP3, OGG, M4A, WAV…) named after the track in <code>{dir}</code>, for example{" "}
-        <code>submarine-chase.mp3</code>. It replaces that track the next time the host screen loads. Use music you have the rights to (royalty-free or Creative Commons).
+        <code>submarine-chase.mp3</code>. It replaces that track the next time the host screen loads. Use music you have the rights to (royalty-free or Creative
+        Commons).
       </p>
       <table class="music-table">
         <thead>
@@ -294,8 +311,8 @@ function InfoPanel({ info, notify }: { info: Info; notify: (m: string) => void }
     <section class="info">
       <h2>Connect an AI agent (MCP)</h2>
       <p>
-        Agents can list, create, edit and delete quizzes. Use the <b>stdio</b> command (works even when Quizzer isn't running) or the <b>HTTP</b>{" "}
-        endpoint while it's running.
+        Agents can list, create, edit and delete quizzes. Use the <b>stdio</b> command (works even when Quizzer isn't running) or the <b>HTTP</b> endpoint while
+        it's running.
       </p>
       <Snippet label="Claude Code (stdio)" text={stdio} onCopy={copy} />
       <Snippet label="Claude Code (HTTP, while running)" text={http} onCopy={copy} />
@@ -389,11 +406,16 @@ function Editor({ id, notify }: { id: string; notify: (m: string) => void }) {
     if (!latest.current || !saved || saving) return false;
     setSaving(true);
     try {
-      const result = await saveQuizDraft(() => latest.current!, saved.revision, (submitted, revision) => {
-        const init = jsonInit("PUT", { ...submitted, createdAt: saved.createdAt, updatedAt: saved.updatedAt });
-        if (revision !== undefined) init.headers = { ...init.headers, [QUIZ_REVISION_HEADER]: revision };
-        return api<SavedQuiz>(`/api/quizzes/${encodeURIComponent(id)}`, init);
-      }, () => confirm("This quiz changed since you opened it. Save your current draft over those changes?"));
+      const result = await saveQuizDraft(
+        () => latest.current!,
+        saved.revision,
+        (submitted, revision) => {
+          const init = jsonInit("PUT", { ...submitted, createdAt: saved.createdAt, updatedAt: saved.updatedAt });
+          if (revision !== undefined) init.headers = { ...init.headers, [QUIZ_REVISION_HEADER]: revision };
+          return api<SavedQuiz>(`/api/quizzes/${encodeURIComponent(id)}`, init);
+        },
+        () => confirm("This quiz changed since you opened it. Save your current draft over those changes?"),
+      );
       if (!result) {
         notify("Not saved: the quiz was changed somewhere else");
         return false;
@@ -817,8 +839,8 @@ function PinSpotsEditor({ q, onChange, onRemove }: { q: Question; onChange: (q: 
       </div>
       <p class="note">
         {full ? `That's the most spots (${MAX_PIN_SPOTS}). ` : "Click the picture to add a spot. "}
-        Drag a spot to move it; click it to make it the answer. Extra spots are distractors. To ask about another spot on the same picture, duplicate
-        this question (⧉).
+        Drag a spot to move it; click it to make it the answer. Extra spots are distractors. To ask about another spot on the same picture, duplicate this
+        question (⧉).
       </p>
       {spots.length > 0 && (
         <ol class="pin-spot-list">

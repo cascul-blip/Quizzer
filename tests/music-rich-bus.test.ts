@@ -1,5 +1,6 @@
 import { expect, spyOn, test } from "bun:test";
-import { MusicPlayer, type Track } from "../src/client/shared/music/engine.ts";
+import type { Track } from "../src/client/shared/music/engine.ts";
+import { MusicPlayer } from "../src/client/shared/music/engine.ts";
 
 // A stand-in AudioContext with just what the player and the rich bus build.
 class FakeParam {
@@ -45,7 +46,11 @@ const track = (id: string, rich?: Track["rich"]): Track => ({ id, bpm: 120, bars
 
 test("the rich bus stays up until every rich track using it has faded out", () => {
   const ctx = new FakeCtx();
-  const music = new MusicPlayer(() => ctx as unknown as AudioContext, { a: track("a", "arcade"), b: track("b", "arcade"), c: track("c") }, () => null);
+  const music = new MusicPlayer(
+    () => ctx as unknown as AudioContext,
+    { a: track("a", "arcade"), b: track("b", "arcade"), c: track("c") },
+    () => null,
+  );
   const bus = () => (music as unknown as { rich: { input: FakeNode } | null }).rich;
   const fadeOuts: (() => void)[] = [];
   const timeouts = spyOn(globalThis, "setTimeout").mockImplementation(((fn: () => void) => {

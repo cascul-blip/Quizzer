@@ -17,13 +17,12 @@ import type { ComponentChildren, CSSProperties } from "preact";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { Avatar } from "./avatar-art.tsx";
-import { isPhoneArt } from "./phone-art.ts";
 import {
   DUEL_AVATAR,
   DUEL_BOX,
   DUEL_CLIPS,
-  DUEL_EFFECTS,
   DUEL_EFFECT_WIDTH,
+  DUEL_EFFECTS,
   DUEL_FILES,
   DUEL_HATS,
   DUEL_MUZZLE_RAW,
@@ -32,6 +31,7 @@ import {
   DUEL_POSE_HEAD,
   DUEL_PROJECTOR_ART,
 } from "./duel/meta.ts";
+import { isPhoneArt } from "./phone-art.ts";
 
 export type DuelPose = "idle" | "ready" | "draw" | "fire" | "stagger" | "tip" | "walk1" | "walk2";
 export type DuelClip = "draw-fire" | "stagger" | "holster-spin" | "walk";
@@ -170,7 +170,10 @@ export function WantedPoster({
 }) {
   const f = DUEL_FILES["wanted-frame"]!.projector!;
   return (
-    <div class={`sd-wanted ${winter ? "snowball-poster" : ""} ${cls}`} style={{ aspectRatio: `${f[0]} / ${f[1]}`, backgroundImage: winter ? undefined : `url(${duelArt("wanted-frame")})` }}>
+    <div
+      class={`sd-wanted ${winter ? "snowball-poster" : ""} ${cls}`}
+      style={{ aspectRatio: `${f[0]} / ${f[1]}`, backgroundImage: winter ? undefined : `url(${duelArt("wanted-frame")})` }}
+    >
       {heading && <div class="sd-wanted-heading">{heading}</div>}
       <div class="sd-wanted-face">
         <Avatar choice={avatar} />
@@ -423,7 +426,9 @@ export function BulletStreak({ from, to, class: cls = "", style }: { from: Point
       class={`sd-streak ${cls}`}
       style={{ left: pct(from[0]), top: pct(from[1]), width: geo ? `${geo.len}px` : 0, transform: `rotate(${geo?.angle ?? 0}deg)`, ...style }}
     >
-      {geo && <img src={duelArt("bullet-streak")} style={{ height: `${Math.max(3, Math.min(14, (geo.len * 0.45 * f[1]) / f[0]))}px` }} alt="" draggable={false} />}
+      {geo && (
+        <img src={duelArt("bullet-streak")} style={{ height: `${Math.max(3, Math.min(14, (geo.len * 0.45 * f[1]) / f[0]))}px` }} alt="" draggable={false} />
+      )}
     </div>
   );
 }
@@ -438,7 +443,19 @@ const HAT_PX = { w: (DUEL_HATS.brown.w / 100) * DUEL_BOX.w, h: (DUEL_HATS.brown.
  * "right" = the duelist faces right, so the hat flies off to the left. Projector: the brown hat
  * is the filmed clip; other hats (and phones) spin the still the same way.
  */
-export function FlyingHat({ hat, facing, phone, onEnd, class: cls = "" }: { hat: DuelHat; facing: DuelFacing; phone?: boolean; onEnd?: () => void; class?: string }) {
+export function FlyingHat({
+  hat,
+  facing,
+  phone,
+  onEnd,
+  class: cls = "",
+}: {
+  hat: DuelHat;
+  facing: DuelFacing;
+  phone?: boolean;
+  onEnd?: () => void;
+  class?: string;
+}) {
   const m = DUEL_OBJECTS["hat-fly"];
   const ph = phone ?? isPhoneArt();
   const frame = useFrames(m.frames, m.fps, true, false, onEnd);
@@ -456,7 +473,10 @@ export function FlyingHat({ hat, facing, phone, onEnd, class: cls = "" }: { hat:
     return (
       <div class={`sd-flying-hat ${cls}`}>
         <div class="sd-hat-unit" style={unit}>
-          <div class={`sd-hat-cell ${facing === "left" ? "sd-mirrored" : ""}`} style={{ width: pct(cw), height: pct(ch), left: pct(50 - cw / 2), top: pct(50 - ch / 2) }}>
+          <div
+            class={`sd-hat-cell ${facing === "left" ? "sd-mirrored" : ""}`}
+            style={{ width: pct(cw), height: pct(ch), left: pct(50 - cw / 2), top: pct(50 - ch / 2) }}
+          >
             <img src={duelArt("clip-hat-fly", false)} style={sheetCell(m.w, m.h, frame * m.cellW, 0, m.cellW, m.cellH)} alt="" draggable={false} />
           </div>
         </div>

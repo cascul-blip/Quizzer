@@ -1,13 +1,16 @@
 import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
-import { cleanAvatar, type AvatarChoice } from "../../shared/avatars.ts";
+import type { AvatarChoice } from "../../shared/avatars.ts";
+import { cleanAvatar } from "../../shared/avatars.ts";
 import type { ClientMsg } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { setPhoneArt } from "../shared/phone-art.ts";
-import { connect, type ConnStatus } from "../shared/ws.ts";
 import { ConnBanner, ErrorBoundary, Toast, teamInk } from "../shared/ui.tsx";
+import type { ConnStatus } from "../shared/ws.ts";
+import { connect } from "../shared/ws.ts";
 import { AvatarPicker } from "./avatar-picker.tsx";
-import { Bar, Center, type ClassicView, type Send } from "./common.tsx";
+import type { ClassicView, Send } from "./common.tsx";
+import { Bar, Center } from "./common.tsx";
 import { PLAYER_MODES, screenOf } from "./modes.tsx";
 import { initialPhoneScreen, PhoneSession } from "./session.ts";
 
@@ -65,12 +68,15 @@ function App() {
   const [{ view, joining, kicked, error }, show] = useState(initialPhoneScreen);
   const conn = useRef<{ send(m: ClientMsg): void } | null>(null);
   const send = (message: ClientMsg) => conn.current?.send(message);
-  const [session] = useState(() => new PhoneSession({
-    send,
-    saveToken: (token) => storage.set(TOKEN_KEY, token),
-    preloadImages,
-    show,
-  }));
+  const [session] = useState(
+    () =>
+      new PhoneSession({
+        send,
+        saveToken: (token) => storage.set(TOKEN_KEY, token),
+        preloadImages,
+        show,
+      }),
+  );
 
   useEffect(() => {
     const c = connect({
@@ -217,7 +223,9 @@ function Lobby({ view, send }: { view: ClassicView; send: Send }) {
           send({ type: "setAvatar", ...choice });
         }}
       />
-      <p class="muted small">{view.playerCount} player{view.playerCount === 1 ? "" : "s"} joined</p>
+      <p class="muted small">
+        {view.playerCount} player{view.playerCount === 1 ? "" : "s"} joined
+      </p>
     </main>
   );
 }

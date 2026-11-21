@@ -1,9 +1,9 @@
 import { useEffect, useState } from "preact/hooks";
-import { Tex, TexList } from "../shared/tex.tsx";
-import type { HostMsg, JoinInfo } from "../../shared/protocol.ts";
 import type { QuestionError } from "../../shared/mode-views.ts";
+import type { HostMsg, JoinInfo } from "../../shared/protocol.ts";
 import { musicEnabled, musicVolume, setMusicEnabled, setMusicVolume } from "../shared/music/index.ts";
 import { isMuted, setMuted } from "../shared/sounds.ts";
+import { Tex, TexList } from "../shared/tex.tsx";
 import { setVoiceEnabled, voiceEnabled } from "../shared/voice.ts";
 
 export type Send = (m: HostMsg) => void;

@@ -148,7 +148,18 @@ function osc(ctx: Ctx, dest: AudioNode, type: OscillatorType, freq: number, t: n
 }
 
 /** Filtered noise under an envelope: breath on a recorder, a bow on a string, a chiff. */
-function airNoise(ctx: Ctx, dest: AudioNode, t: number, peak: number, attack: number, hold: number, release: number, type: BiquadFilterType, freq: number, q: number) {
+function airNoise(
+  ctx: Ctx,
+  dest: AudioNode,
+  t: number,
+  peak: number,
+  attack: number,
+  hold: number,
+  release: number,
+  type: BiquadFilterType,
+  freq: number,
+  q: number,
+) {
   const s = ctx.createBufferSource();
   s.buffer = noise(ctx);
   s.loop = true;
@@ -202,7 +213,18 @@ function pluckBuffer(ctx: Ctx, period: number): AudioBuffer {
  * Play one note or hit in a rich style. Returns false for instruments the style has no rich version of,
  * so the caller plays the plain one instead (in the acoustic style: the drums, organ and the rest).
  */
-export function playRich(ctx: Ctx, dest: AudioNode, inst: string, t: number, freq: number, len: number, vol: number, detune: number, style: RichStyle = "acoustic", accent = false): boolean {
+export function playRich(
+  ctx: Ctx,
+  dest: AudioNode,
+  inst: string,
+  t: number,
+  freq: number,
+  len: number,
+  vol: number,
+  detune: number,
+  style: RichStyle = "acoustic",
+  accent = false,
+): boolean {
   if (style === "arcade") return playArcade(ctx, dest, inst, t, freq, len, vol * (accent ? 1.35 : 1), detune, accent);
   const v = vol;
   switch (inst) {

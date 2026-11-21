@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { siegeWords, type SiegeTheme } from "../src/shared/siege-theme.ts";
-import { FEEDBACK_MS, SIEGE_NO_GOLD, SiegeGame, type SiegeMonster, type SiegePlayer } from "../src/server/game/siege.ts";
-import { Lobby } from "../src/server/game/lobby.ts";
-import { buildSiegeResultsCsv } from "../src/server/game/siege.ts";
-import { loadSiegeRecord, saveSiegeRecord } from "../src/server/siege-records.ts";
-import { siegeRecordsPath } from "../src/server/paths.ts";
 import { writeFileSync } from "node:fs";
+import { Lobby } from "../src/server/game/lobby.ts";
+import type { SiegeMonster, SiegePlayer } from "../src/server/game/siege.ts";
+import { buildSiegeResultsCsv, FEEDBACK_MS, SIEGE_NO_GOLD, SiegeGame } from "../src/server/game/siege.ts";
+import { siegeRecordsPath } from "../src/server/paths.ts";
+import { loadSiegeRecord, saveSiegeRecord } from "../src/server/siege-records.ts";
+import type { Quiz } from "../src/shared/quiz-schema.ts";
+import type { SiegeWaves } from "../src/shared/siege-rules.ts";
 import {
   SIEGE_BREAK_MS,
   SIEGE_COUNTDOWN_MS,
@@ -21,20 +22,20 @@ import {
   SIEGE_WARNING_MS,
   siegeBaseBudget,
   siegeClassSizeFactor,
+  siegeDefenderGold,
+  siegeGiantPace,
   siegeGiants,
   siegeMaxEntering,
   siegeMonsterHealth,
   siegeNextScale,
-  siegeDefenderGold,
-  siegeGiantPace,
   siegeSpawnWindowMs,
   siegeTargetScale,
   siegeUpgradeCost,
   siegeWaveBudget,
   siegeWaveStrength,
-  type SiegeWaves,
 } from "../src/shared/siege-rules.ts";
-import type { Quiz } from "../src/shared/quiz-schema.ts";
+import type { SiegeTheme } from "../src/shared/siege-theme.ts";
+import { siegeWords } from "../src/shared/siege-theme.ts";
 import { FakeClock, sampleQuiz, tempDir } from "./helpers.ts";
 
 function quiz(count = 5): Quiz {
@@ -52,7 +53,7 @@ function quiz(count = 5): Quiz {
 
 function seeded(seed = 42) {
   let s = seed;
-  return () => ((s = (s * 1664525 + 1013904223) % 2 ** 32) / 2 ** 32);
+  return () => (s = (s * 1664525 + 1013904223) % 2 ** 32) / 2 ** 32;
 }
 
 const NAMES = ["Ana", "Ben", "Cal", "Dee", "Eve", "Fay"];
@@ -230,7 +231,11 @@ describe("gold and building", () => {
     expect(ben.upgrades).toBe(2);
     expect(ana.placed.knight).toBe(1);
     expect(ana.lastPlaced).toBe("knight");
-    expect(game.events.map((e) => `${e.nickname} ${e.text}`)).toEqual(["Ana placed a knight", "Ben upgraded a knight to Lv 2", "Ben upgraded a knight to Lv 3"]);
+    expect(game.events.map((e) => `${e.nickname} ${e.text}`)).toEqual([
+      "Ana placed a knight",
+      "Ben upgraded a knight to Lv 2",
+      "Ben upgraded a knight to Lv 3",
+    ]);
   });
 
   test("a player can't spend someone else's gold", () => {
@@ -586,8 +591,16 @@ describe("waves", () => {
       expect(game.battlefield.planWave(2, 20).some((s) => s.type === "troll" || s.type === "giant")).toBe(false);
       expect(game.battlefield.planWave(4, 20).some((s) => s.type === "giant")).toBe(false);
     }
-    expect(Array.from({ length: 20 }, () => game.battlefield.planWave(2, 20)).flat().some((s) => s.type === "wolf")).toBe(true);
-    expect(Array.from({ length: 20 }, () => game.battlefield.planWave(3, 20)).flat().some((s) => s.type === "troll")).toBe(true);
+    expect(
+      Array.from({ length: 20 }, () => game.battlefield.planWave(2, 20))
+        .flat()
+        .some((s) => s.type === "wolf"),
+    ).toBe(true);
+    expect(
+      Array.from({ length: 20 }, () => game.battlefield.planWave(3, 20))
+        .flat()
+        .some((s) => s.type === "troll"),
+    ).toBe(true);
     const five = game.battlefield.planWave(5, 3);
     expect(five.filter((s) => s.type === "giant")).toHaveLength(1);
     expect(five[five.length - 1]!.type).toBe("giant");
@@ -628,7 +641,12 @@ describe("waves", () => {
       clock.advance(SIEGE_OPENING_MS);
       game.wave = wave;
       const now = clock.now();
-      game.battlefield.pending = Array.from({ length: 20 }, (_, i) => ({ at: now + SIEGE_WARNING_MS + i * 50, type: "goblin" as const, group: 1000 + i, lane: -1 }));
+      game.battlefield.pending = Array.from({ length: 20 }, (_, i) => ({
+        at: now + SIEGE_WARNING_MS + i * 50,
+        type: "goblin" as const,
+        group: 1000 + i,
+        lane: -1,
+      }));
       let most = 0;
       for (let t = 0; t < 8000; t += SIEGE_TICK_MS) {
         clock.advance(SIEGE_TICK_MS);
@@ -948,7 +966,9 @@ describe("results", () => {
     game.end();
     const csv = buildSiegeResultsCsv(game);
     const lines = csv.replace("\ufeff", "").trim().split("\r\n");
-    expect(lines[0]).toBe("Nickname,Correct,Wrong,Accuracy %,Gold earned,Gold spent,Archers placed,Knights placed,Walls placed,Upgrades bought,Monsters defeated,Class result,Waves survived,Hearts left,Endless record");
+    expect(lines[0]).toBe(
+      "Nickname,Correct,Wrong,Accuracy %,Gold earned,Gold spent,Archers placed,Knights placed,Walls placed,Upgrades bought,Monsters defeated,Class result,Waves survived,Hearts left,Endless record",
+    );
     expect(lines[1]).toBe("Ana,1,1,50,25,50,1,0,0,0,0,Ended,0,7,");
     expect(lines.filter((l) => l.startsWith("Cal,"))).toHaveLength(1);
     expect(lines).toContain("Wave,Difficulty scale %,Defense gold,Strength boost,Monster budget,Monster health ×,Monsters sent,Class accuracy %,Hearts lost");

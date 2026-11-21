@@ -1,17 +1,18 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import { useDelayedCues } from "./delayed-cues.ts";
 import { ROBOT_LIVES, ROBOT_SHRINK_EVERY } from "../../shared/modes/robot.ts";
 import type { HostView } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
+import type { MusicCue } from "../shared/music/index.ts";
 import { RobotArena } from "../shared/robot-art.tsx";
 import { ROBOT_SKIN, SKIN_TEXT } from "../shared/robot-skin.ts";
-import { attackVoiceLine, attackerVoiceLines, warningVoiceLine } from "../shared/robot-voice.ts";
+import { attackerVoiceLines, attackVoiceLine, warningVoiceLine } from "../shared/robot-voice.ts";
 import { SnowmanArena } from "../shared/snowman-art.tsx";
 import { play } from "../shared/sounds.ts";
-import { preloadVoice, say } from "../shared/voice.ts";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
-import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
-import type { MusicCue } from "../shared/music/index.ts";
+import { preloadVoice, say } from "../shared/voice.ts";
+import type { Send } from "./common.tsx";
+import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen } from "./common.tsx";
+import { useDelayedCues } from "./delayed-cues.ts";
 import type { LobbyModeEntry } from "./lobby-modes.tsx";
 import { Award } from "./tower.tsx";
 
@@ -35,7 +36,8 @@ export function RobotStage({ view, send }: { view: RobotView; send: Send }) {
       if (view.phase === "quiz" && view.round === 1) play("start");
       if (view.phase === "move") play("tickHigh");
       if (view.phase === "attack") {
-        if (ROBOT_SKIN === "snowman") later(() => play("whoosh"), 800); // as the claws hit the board
+        if (ROBOT_SKIN === "snowman")
+          later(() => play("whoosh"), 800); // as the claws hit the board
         else play("laser");
         // One verdict per attack, once it has hit: someone out, then anyone hit, else everyone dodged.
         const line = attackVoiceLine(view.lastAttack, ROBOT_SKIN);
@@ -78,7 +80,10 @@ export function RobotStage({ view, send }: { view: RobotView; send: Send }) {
         </div>
         <ScreenControls voice join={view.join} />
         {view.phase !== "podium" && (
-          <button class="btn ghost small" onClick={() => confirm("End the game now? Players still standing are ranked by lives left.") && send({ type: "host.end" })}>
+          <button
+            class="btn ghost small"
+            onClick={() => confirm("End the game now? Players still standing are ranked by lives left.") && send({ type: "host.end" })}
+          >
             End game
           </button>
         )}
@@ -91,7 +96,14 @@ export function RobotStage({ view, send }: { view: RobotView; send: Send }) {
           <main class={`robot-wrap ${attack ? "shake" : ""}`}>
             <Arena players={alive} marked={view.marked} inset={view.inset} collapsing={view.collapsing} attack={attack} />
             <PlayerList view={view} />
-            {attack && <AttackBanner key={attack.seq} hit={attack.hit.length} out={attack.eliminated.length} names={view.players.filter((p) => attack.eliminated.includes(p.id)).map((p) => p.nickname)} />}
+            {attack && (
+              <AttackBanner
+                key={attack.seq}
+                hit={attack.hit.length}
+                out={attack.eliminated.length}
+                names={view.players.filter((p) => attack.eliminated.includes(p.id)).map((p) => p.nickname)}
+              />
+            )}
             {view.phase === "countdown" && (
               <div class="countdown-overlay">
                 <div class="countdown-label">
@@ -136,11 +148,7 @@ function PhaseBar({ view, secs }: { view: RobotView; secs: number }) {
   return (
     <div class={`robot-bar ${view.phase} ${view.marked.length > 0 && view.phase === "quiz" ? "warn" : ""}`}>
       {/* The key restarts the drain animation each phase; a negative delay catches up with time already passed. */}
-      <div
-        key={key}
-        class="robot-bar-fill"
-        style={{ animationDuration: `${view.phaseDurationMs}ms`, animationDelay: `-${elapsed}ms` }}
-      />
+      <div key={key} class="robot-bar-fill" style={{ animationDuration: `${view.phaseDurationMs}ms`, animationDelay: `-${elapsed}ms` }} />
       <div class="robot-bar-label">{label}</div>
     </div>
   );
@@ -191,7 +199,8 @@ function RobotPodium({ view, send }: { view: RobotView; send: Send }) {
   const standings = view.standings ?? [];
   const winners = standings.filter((s) => s.rank === 1);
   const a = view.awards;
-  const title = winners.length === 0 ? "Game over" : winners.length === 1 ? `🏆 ${winners[0]!.nickname} wins!` : `🏆 ${winners.map((w) => w.nickname).join(" & ")} win!`;
+  const title =
+    winners.length === 0 ? "Game over" : winners.length === 1 ? `🏆 ${winners[0]!.nickname} wins!` : `🏆 ${winners.map((w) => w.nickname).join(" & ")} win!`;
   return (
     <main class="podium tower-podium robot-podium">
       <div class="podium-bg" aria-hidden="true">

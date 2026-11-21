@@ -1,6 +1,7 @@
 import QRCode from "qrcode";
 import type { JoinInfo } from "../shared/protocol.ts";
-import { lanAddresses, type LanAddress } from "./network.ts";
+import type { LanAddress } from "./network.ts";
+import { lanAddresses } from "./network.ts";
 
 const ADDRESS_TTL_MS = 5000;
 

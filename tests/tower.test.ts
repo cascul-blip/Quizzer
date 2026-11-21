@@ -1,17 +1,17 @@
 import { describe, expect, test } from "bun:test";
 import { Lobby } from "../src/server/game/lobby.ts";
-import { buildTowerResultsCsv } from "../src/server/game/tower.ts";
+import type { TowerPlayer } from "../src/server/game/tower.ts";
 import {
+  buildTowerResultsCsv,
   COUNTDOWN_MS,
-  MONSTER_AT,
   DROP_COOLDOWN_MS,
   FEEDBACK_MS,
+  MONSTER_AT,
   SWEEP_MIN_MS,
   SWEEP_START_MS,
   SWEEP_STEP_MS,
-  TowerGame,
   sweepMsFor,
-  type TowerPlayer,
+  TowerGame,
 } from "../src/server/game/tower.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
 import { FakeClock, sampleQuiz } from "./helpers.ts";
@@ -30,7 +30,10 @@ function quiz(): Quiz {
   });
 }
 
-function setup(names: string[], opts: { teams?: number; minutes?: number; shuffleAnswers?: boolean; monster?: boolean; protect?: boolean; rng?: () => number } = {}) {
+function setup(
+  names: string[],
+  opts: { teams?: number; minutes?: number; shuffleAnswers?: boolean; monster?: boolean; protect?: boolean; rng?: () => number } = {},
+) {
   const clock = new FakeClock();
   let finished = 0;
   const lobby = new Lobby(quiz());

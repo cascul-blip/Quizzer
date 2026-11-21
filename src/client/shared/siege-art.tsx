@@ -1,13 +1,34 @@
-import { useChristmasSiege } from "./siege-skin.tsx";
-import toyboxManifest from "./siege/christmas/manifest.json";
+/**
+ * Kingdom Siege art: a hand-painted tabletop diorama with a castle wall on the left and 5
+ * lanes of meadow, painted miniatures for the defenders and monsters, and the effects drawn
+ * in code (warning arrows, lane flashes, hit flashes, the Lv 3 glow, dust, confetti).
+ *
+ * The pictures are painted: scripts/siege-art.py turns the sources in scripts/siege-art/
+ * into the WebPs in ./siege/ and the phone copies in ./siege/phone/. Every position below
+ * comes from ./siege/manifest.md (squares, anchors, cut-out pivots, layer order); change
+ * them there first. Phones only load the defender icons, the coin and the heart.
+ */
+import type { ComponentChildren, JSX } from "preact";
+import type { HostSiegeDefender, HostSiegeMonster } from "../../shared/modes/siege.ts";
+import type { SiegeDefenderType, SiegeMonsterType } from "../../shared/siege-rules.ts";
+import { SIEGE_CRACKED_HEARTS } from "../../shared/siege-rules.ts";
+import { pickArt } from "./phone-art.ts";
+import archerDrawImg from "./siege/archer-draw.webp";
+import archerReadyImg from "./siege/archer-ready.webp";
+import arrowImg from "./siege/arrow.webp";
+import bannerClothImg from "./siege/banner-cloth.webp";
+import boardImg from "./siege/board.webp";
+import castleImg from "./siege/castle-wall.webp";
+import castleCrackedImg from "./siege/castle-wall-cracked.webp";
+import castleFallenImg from "./siege/castle-wall-fallen.webp";
 import christmasArcherDrawImg from "./siege/christmas/archer-draw.webp";
 import christmasArcherReadyImg from "./siege/christmas/archer-ready.webp";
 import christmasArrowImg from "./siege/christmas/arrow.webp";
 import christmasBannerClothImg from "./siege/christmas/banner-cloth.webp";
 import christmasBoardImg from "./siege/christmas/board.webp";
+import christmasCastleImg from "./siege/christmas/castle-wall.webp";
 import christmasCastleCrackedImg from "./siege/christmas/castle-wall-cracked.webp";
 import christmasCastleFallenImg from "./siege/christmas/castle-wall-fallen.webp";
-import christmasCastleImg from "./siege/christmas/castle-wall.webp";
 import christmasCoinImg from "./siege/christmas/coin.webp";
 import christmasDustImg from "./siege/christmas/dust-puff.webp";
 import christmasGiantHeadImg from "./siege/christmas/giant-head.webp";
@@ -30,38 +51,18 @@ import christmasLv3TrimArcherImg from "./siege/christmas/lv3-trim-archer.webp";
 import christmasLv3TrimKnightImg from "./siege/christmas/lv3-trim-knight.webp";
 import christmasLv3TrimWallImg from "./siege/christmas/lv3-trim-wall.webp";
 import christmasLv3WallSpikesImg from "./siege/christmas/lv3-wall-spikes.webp";
+import toyboxManifest from "./siege/christmas/manifest.json";
 import christmasPhoneArcherIconImg from "./siege/christmas/phone/archer-icon.webp";
 import christmasPhoneCoinImg from "./siege/christmas/phone/coin.webp";
 import christmasPhoneHeartImg from "./siege/christmas/phone/heart.webp";
 import christmasPhoneKnightIconImg from "./siege/christmas/phone/knight-icon.webp";
 import christmasPhoneWallIconImg from "./siege/christmas/phone/stone-wall-icon.webp";
-import christmasStoneWallCrackedImg from "./siege/christmas/stone-wall-cracked.webp";
 import christmasStoneWallImg from "./siege/christmas/stone-wall.webp";
+import christmasStoneWallCrackedImg from "./siege/christmas/stone-wall-cracked.webp";
 import christmasTrollSmashImg from "./siege/christmas/troll-smash.webp";
 import christmasTrollWalkImg from "./siege/christmas/troll-walk.webp";
 import christmasWolfLeapImg from "./siege/christmas/wolf-leap.webp";
 import christmasWolfRunImg from "./siege/christmas/wolf-run.webp";
-/**
- * Kingdom Siege art: a hand-painted tabletop diorama with a castle wall on the left and 5
- * lanes of meadow, painted miniatures for the defenders and monsters, and the effects drawn
- * in code (warning arrows, lane flashes, hit flashes, the Lv 3 glow, dust, confetti).
- *
- * The pictures are painted: scripts/siege-art.py turns the sources in scripts/siege-art/
- * into the WebPs in ./siege/ and the phone copies in ./siege/phone/. Every position below
- * comes from ./siege/manifest.md (squares, anchors, cut-out pivots, layer order); change
- * them there first. Phones only load the defender icons, the coin and the heart.
- */
-import type { ComponentChildren, JSX } from "preact";
-import type { HostSiegeDefender, HostSiegeMonster } from "../../shared/modes/siege.ts";
-import { SIEGE_CRACKED_HEARTS, type SiegeDefenderType, type SiegeMonsterType } from "../../shared/siege-rules.ts";
-import archerDrawImg from "./siege/archer-draw.webp";
-import archerReadyImg from "./siege/archer-ready.webp";
-import arrowImg from "./siege/arrow.webp";
-import bannerClothImg from "./siege/banner-cloth.webp";
-import boardImg from "./siege/board.webp";
-import castleCrackedImg from "./siege/castle-wall-cracked.webp";
-import castleFallenImg from "./siege/castle-wall-fallen.webp";
-import castleImg from "./siege/castle-wall.webp";
 import coinImg from "./siege/coin.webp";
 import dustImg from "./siege/dust-puff.webp";
 import giantHeadImg from "./siege/giant-head.webp";
@@ -89,13 +90,13 @@ import phoneCoinImg from "./siege/phone/coin.webp";
 import phoneHeartImg from "./siege/phone/heart.webp";
 import phoneKnightIconImg from "./siege/phone/knight-icon.webp";
 import phoneWallIconImg from "./siege/phone/stone-wall-icon.webp";
-import stoneWallCrackedImg from "./siege/stone-wall-cracked.webp";
 import stoneWallImg from "./siege/stone-wall.webp";
+import stoneWallCrackedImg from "./siege/stone-wall-cracked.webp";
 import trollSmashImg from "./siege/troll-smash.webp";
 import trollWalkImg from "./siege/troll-walk.webp";
 import wolfLeapImg from "./siege/wolf-leap.webp";
 import wolfRunImg from "./siege/wolf-run.webp";
-import { pickArt } from "./phone-art.ts";
+import { useChristmasSiege } from "./siege-skin.tsx";
 
 /**
  * Classic file → Toybox file, keyed by bundled URL. Two classic files with the same name and bytes
@@ -145,7 +146,7 @@ const TOYBOX_ART: Record<string, string> = {
 /** Resolve the skin at render time so lobby changes and both clients share one art path. */
 function ArtImage({ src, ...props }: JSX.IntrinsicElements["img"]) {
   const christmas = useChristmasSiege();
-  return <img {...props} src={christmas && typeof src === "string" ? TOYBOX_ART[src] ?? src : src} />;
+  return <img {...props} src={christmas && typeof src === "string" ? (TOYBOX_ART[src] ?? src) : src} />;
 }
 
 // ---------- the numbers from ./siege/manifest.md ----------
@@ -156,11 +157,76 @@ const BOARD = { w: 1344, h: 768 };
 const CASTLE = { w: 360, h: 768 };
 /** Each lane's y range and its 8 squares' x ranges (square 1 next to the wall, square 8 the entry), in board px. */
 const LANES: readonly { y0: number; y1: number; x: readonly (readonly [number, number])[] }[] = [
-  { y0: 67, y1: 151, x: [[248, 376], [376, 505], [505, 633], [633, 762], [762, 890], [890, 1018], [1018, 1147], [1147, 1275]] },
-  { y0: 169, y1: 261, x: [[248, 380], [380, 512], [512, 645], [645, 777], [777, 909], [909, 1041], [1041, 1174], [1174, 1306]] },
-  { y0: 279, y1: 381, x: [[248, 384], [384, 521], [521, 657], [657, 794], [794, 930], [930, 1067], [1067, 1203], [1203, 1339]] },
-  { y0: 399, y1: 512, x: [[248, 385], [385, 522], [522, 659], [659, 796], [796, 933], [933, 1070], [1070, 1207], [1207, 1344]] },
-  { y0: 530, y1: 655, x: [[248, 385], [385, 522], [522, 659], [659, 796], [796, 933], [933, 1070], [1070, 1207], [1207, 1344]] },
+  {
+    y0: 67,
+    y1: 151,
+    x: [
+      [248, 376],
+      [376, 505],
+      [505, 633],
+      [633, 762],
+      [762, 890],
+      [890, 1018],
+      [1018, 1147],
+      [1147, 1275],
+    ],
+  },
+  {
+    y0: 169,
+    y1: 261,
+    x: [
+      [248, 380],
+      [380, 512],
+      [512, 645],
+      [645, 777],
+      [777, 909],
+      [909, 1041],
+      [1041, 1174],
+      [1174, 1306],
+    ],
+  },
+  {
+    y0: 279,
+    y1: 381,
+    x: [
+      [248, 384],
+      [384, 521],
+      [521, 657],
+      [657, 794],
+      [794, 930],
+      [930, 1067],
+      [1067, 1203],
+      [1203, 1339],
+    ],
+  },
+  {
+    y0: 399,
+    y1: 512,
+    x: [
+      [248, 385],
+      [385, 522],
+      [522, 659],
+      [659, 796],
+      [796, 933],
+      [933, 1070],
+      [1070, 1207],
+      [1207, 1344],
+    ],
+  },
+  {
+    y0: 530,
+    y1: 655,
+    x: [
+      [248, 385],
+      [385, 522],
+      [522, 659],
+      [659, 796],
+      [796, 933],
+      [933, 1070],
+      [1070, 1207],
+      [1207, 1344],
+    ],
+  },
 ];
 /** Figures are drawn at lane height / FIGURE_LANE_PX, with the anchor this share of the lane height below the square centre. */
 const FIGURE_LANE_PX = 130;
@@ -232,7 +298,21 @@ function placeStyle(c: Canvas, p: { px: number; py: number; scale: number }): JS
 }
 
 /** A layer on a figure canvas (full size unless given), placed in the canvas's own px. */
-function Layer({ src, c, box, origin, class: cls = "", style }: { src: string; c: Canvas; box?: [number, number, number, number]; origin?: readonly number[]; class?: string; style?: JSX.CSSProperties }) {
+function Layer({
+  src,
+  c,
+  box,
+  origin,
+  class: cls = "",
+  style,
+}: {
+  src: string;
+  c: Canvas;
+  box?: [number, number, number, number];
+  origin?: readonly number[];
+  class?: string;
+  style?: JSX.CSSProperties;
+}) {
   const [x, y, w, h] = box ?? [0, 0, c.w, c.h];
   return (
     <ArtImage
@@ -262,7 +342,17 @@ const flip = (name: string, seq: number) => (seq > 0 ? `${name}-${seq % 2 ? "a" 
 
 // ---------- the board ----------
 
-export function SiegeBoard({ hearts, castle = "auto", children, class: cls = "" }: { hearts: number; castle?: "auto" | "crumble" | "fallen"; children?: ComponentChildren; class?: string }) {
+export function SiegeBoard({
+  hearts,
+  castle = "auto",
+  children,
+  class: cls = "",
+}: {
+  hearts: number;
+  castle?: "auto" | "crumble" | "fallen";
+  children?: ComponentChildren;
+  class?: string;
+}) {
   const christmas = useChristmasSiege();
   const layer = castle === "fallen" ? castleFallenImg : hearts <= SIEGE_CRACKED_HEARTS ? castleCrackedImg : castleImg;
   return (
@@ -346,7 +436,14 @@ function Archer({ level, drawing }: { level: number; drawing: boolean }) {
     <>
       <Layer src={drawing ? archerDrawImg : archerReadyImg} c={c} />
       {level >= 3 && <Layer src={lv3TrimArcherImg} c={c} />}
-      {level >= 2 && <Layer src={lv2PennantArcherImg} c={c} box={footBox(PENNANT, ARCHER_PENNANT.foot, drawing ? ARCHER_PENNANT.draw : ARCHER_PENNANT.ready)} class="pennant" />}
+      {level >= 2 && (
+        <Layer
+          src={lv2PennantArcherImg}
+          c={c}
+          box={footBox(PENNANT, ARCHER_PENNANT.foot, drawing ? ARCHER_PENNANT.draw : ARCHER_PENNANT.ready)}
+          class="pennant"
+        />
+      )}
     </>
   );
 }
@@ -394,7 +491,11 @@ export function MonsterFigure({ m, x, posed }: { m: HostSiegeMonster; x: number;
     <div class={`siege-fig monster ${m.type} state-${m.state}`} style={placeStyle(c, p)}>
       <div class={`siege-move ${walking ? "bob" : ""} ${m.type === "giant" ? "" : flip("lunge", m.attackSeq)}`}>
         <div class={`siege-fig-inner ${flip("hit", m.hitSeq)}`}>
-          {m.type === "giant" ? <Giant attackSeq={m.attackSeq} /> : <Layer src={monsterPose(m.type, m.state === "leap" || (m.state === "attack" && posed))} c={c} />}
+          {m.type === "giant" ? (
+            <Giant attackSeq={m.attackSeq} />
+          ) : (
+            <Layer src={monsterPose(m.type, m.state === "leap" || (m.state === "attack" && posed))} c={c} />
+          )}
         </div>
       </div>
       {healthBar(m.health, m.maxHealth)}
@@ -451,7 +552,14 @@ export function DustPuff({ at }: { at?: { lane: number; x: number } }) {
   const p = boardPoint(at.lane, at.x);
   const w = 160 * p.scale;
   const h = 120 * p.scale;
-  return <ArtImage class="siege-dust loose" src={dustImg} alt="" style={{ left: pct(p.px - w / 2, BOARD.w), top: pct(p.py - h, BOARD.h), width: pct(w, BOARD.w), height: pct(h, BOARD.h), zIndex: Math.round(p.py) + 1 }} />;
+  return (
+    <ArtImage
+      class="siege-dust loose"
+      src={dustImg}
+      alt=""
+      style={{ left: pct(p.px - w / 2, BOARD.w), top: pct(p.py - h, BOARD.h), width: pct(w, BOARD.w), height: pct(h, BOARD.h), zIndex: Math.round(p.py) + 1 }}
+    />
+  );
 }
 
 /** An arrow flying from an archer to where it lands. */
@@ -486,7 +594,16 @@ export function Confetti() {
   return (
     <div class="siege-confetti" aria-hidden="true">
       {Array.from({ length: 60 }, (_, i) => (
-        <i key={i} style={{ left: `${(i * 37) % 100}%`, background: colors[i % colors.length], "--d": `${(i % 12) * 0.17}s`, "--s": `${2.6 + (i % 5) * 0.4}s`, "--r": `${(i * 53) % 360}deg` }} />
+        <i
+          key={i}
+          style={{
+            left: `${(i * 37) % 100}%`,
+            background: colors[i % colors.length],
+            "--d": `${(i % 12) * 0.17}s`,
+            "--s": `${2.6 + (i % 5) * 0.4}s`,
+            "--r": `${(i * 53) % 360}deg`,
+          }}
+        />
       ))}
     </div>
   );

@@ -10,9 +10,18 @@ const roundTrip = (a: unknown, b: unknown) => applyPatch(structuredClone(a), dif
 describe("diffView / applyPatch", () => {
   test("rebuilds the new view from the old one", () => {
     const cases: [unknown, unknown][] = [
-      [{ a: 1, b: "x" }, { a: 2, b: "x" }],
-      [{ a: 1, b: { c: [1, 2, 3] } }, { a: 1, b: { c: [1, 9, 3] } }],
-      [{ a: 1, gone: true }, { a: 1, added: null }],
+      [
+        { a: 1, b: "x" },
+        { a: 2, b: "x" },
+      ],
+      [
+        { a: 1, b: { c: [1, 2, 3] } },
+        { a: 1, b: { c: [1, 9, 3] } },
+      ],
+      [
+        { a: 1, gone: true },
+        { a: 1, added: null },
+      ],
       [{ list: [1, 2] }, { list: [1, 2, 3] }],
       [{ list: [{ x: 1 }, { x: 2 }] }, { list: [{ x: 1 }, { x: 3, y: 4 }] }],
       [{ v: null }, { v: { deep: [0] } }],
@@ -51,7 +60,9 @@ describe("diffView / applyPatch", () => {
 
 describe("Phone view delivery", () => {
   let t: ReturnType<typeof tempDir>;
-  beforeEach(() => { t = tempDir(); });
+  beforeEach(() => {
+    t = tempDir();
+  });
   afterEach(() => t.cleanup());
 
   test("patches changes, resends on request, and catches up after drain", async () => {

@@ -42,18 +42,38 @@ describe("QuizStore", () => {
   test("list() re-reads only quiz files that changed since the last call", async () => {
     const a = await store.create({ title: "A" });
     const b = await store.create({ title: "B" });
-    expect(store.list().map((s) => s.title).sort()).toEqual(["A", "B"]);
+    expect(
+      store
+        .list()
+        .map((s) => s.title)
+        .sort(),
+    ).toEqual(["A", "B"]);
     const reads = spyOn(store, "get");
-    expect(store.list().map((s) => s.title).sort()).toEqual(["A", "B"]);
+    expect(
+      store
+        .list()
+        .map((s) => s.title)
+        .sort(),
+    ).toEqual(["A", "B"]);
     expect(reads).toHaveBeenCalledTimes(0);
     await store.update(a.id, { title: "A2" });
     reads.mockClear(); // update() reads the quiz itself
-    expect(store.list().map((s) => s.title).sort()).toEqual(["A2", "B"]);
+    expect(
+      store
+        .list()
+        .map((s) => s.title)
+        .sort(),
+    ).toEqual(["A2", "B"]);
     expect(reads).toHaveBeenCalledTimes(1);
     // Edited in place by something else (another process, a text editor): still picked up.
     const file = join(t.dir, "quizzes", `${b.id}.json`);
     writeFileSync(file, readFileSync(file, "utf8").replace('"title": "B"', '"title": "Bee"'));
-    expect(store.list().map((s) => s.title).sort()).toEqual(["A2", "Bee"]);
+    expect(
+      store
+        .list()
+        .map((s) => s.title)
+        .sort(),
+    ).toEqual(["A2", "Bee"]);
     await store.delete(a.id);
     expect(store.list().map((s) => s.title)).toEqual(["Bee"]);
     reads.mockRestore();
@@ -80,17 +100,20 @@ describe("QuizStore", () => {
     expect((await store.replace(q.id, { title: "Forced" })).title).toBe("Forced");
   });
 
-  test.each(["{broken", '{"title":""}', '{"createdAt":"broken","updatedAt":"2026-01-01T00:00:00.000Z"}'])("a stale draft can recover an invalid hand-edit: %s", async (contents) => {
-    const q = await store.create({ title: "Original" });
-    const file = join(store.quizzesDir, q.id + ".json");
-    writeFileSync(file, contents);
-    const draft = { ...q, title: "Recovered" };
-    await expect(store.replace(q.id, draft, { revision: q.revision })).rejects.toThrow(ConflictError);
-    expect(readFileSync(file, "utf8")).toBe(contents);
-    const recovered = await store.replace(q.id, draft);
-    expect(recovered.createdAt).toBe(q.createdAt);
-    expect(store.get(q.id).title).toBe("Recovered");
-  });
+  test.each(["{broken", '{"title":""}', '{"createdAt":"broken","updatedAt":"2026-01-01T00:00:00.000Z"}'])(
+    "a stale draft can recover an invalid hand-edit: %s",
+    async (contents) => {
+      const q = await store.create({ title: "Original" });
+      const file = join(store.quizzesDir, q.id + ".json");
+      writeFileSync(file, contents);
+      const draft = { ...q, title: "Recovered" };
+      await expect(store.replace(q.id, draft, { revision: q.revision })).rejects.toThrow(ConflictError);
+      expect(readFileSync(file, "utf8")).toBe(contents);
+      const recovered = await store.replace(q.id, draft);
+      expect(recovered.createdAt).toBe(q.createdAt);
+      expect(store.get(q.id).title).toBe("Recovered");
+    },
+  );
 
   test("waiting for another quiz writer lets game timers run", async () => {
     const q = await store.create({ title: "Shared" });
@@ -109,15 +132,20 @@ describe("QuizStore", () => {
   test("independent processes preserve appends, reject stale replacements and respect deletion", async () => {
     const q = await store.create({ title: "Shared quiz" });
     async function runWriters(action: string, ...values: string[]) {
-      const workers = values.map((value) => Bun.spawn(
-        [process.execPath, join(import.meta.dir, "fixtures/quiz-writer.ts"), t.dir, q.id, action, value],
-        { stdin: "pipe", stdout: "pipe", stderr: "inherit" },
-      ));
+      const workers = values.map((value) =>
+        Bun.spawn([process.execPath, join(import.meta.dir, "fixtures/quiz-writer.ts"), t.dir, q.id, action, value], {
+          stdin: "pipe",
+          stdout: "pipe",
+          stderr: "inherit",
+        }),
+      );
       try {
-        await Promise.all(workers.map(async (worker) => {
-          const ready = await worker.stdout.getReader().read();
-          expect(new TextDecoder().decode(ready.value).trim()).toBe("ready");
-        }));
+        await Promise.all(
+          workers.map(async (worker) => {
+            const ready = await worker.stdout.getReader().read();
+            expect(new TextDecoder().decode(ready.value).trim()).toBe("ready");
+          }),
+        );
         for (const worker of workers) worker.stdin.end();
         return await Promise.all(workers.map((worker) => worker.exited));
       } finally {
@@ -139,7 +167,9 @@ describe("QuizStore", () => {
 
   test("invalid input is rejected and nothing is written", async () => {
     await expect(store.create({ title: "" })).rejects.toThrow(ValidationError);
-    await expect(store.create({ title: "x", questions: [{ type: "multiple_choice", text: "q", options: ["a"], correct: [0] }] })).rejects.toThrow(ValidationError);
+    await expect(store.create({ title: "x", questions: [{ type: "multiple_choice", text: "q", options: ["a"], correct: [0] }] })).rejects.toThrow(
+      ValidationError,
+    );
     expect(store.list()).toEqual([]);
   });
 
@@ -190,7 +220,10 @@ describe("QuizStore", () => {
   test("new spots on a pin with the default labels relabel it A, B, C… to match", async () => {
     const image = await store.saveMedia(PNG);
     const spot = (x: number) => ({ x, y: 0.5 });
-    const q = await store.create({ title: "Pins", questions: [{ type: "pin", text: "Where?", image, spots: [spot(0.1), spot(0.2), spot(0.3)], correct: [2] }] });
+    const q = await store.create({
+      title: "Pins",
+      questions: [{ type: "pin", text: "Where?", image, spots: [spot(0.1), spot(0.2), spot(0.3)], correct: [2] }],
+    });
     const id = q.questions[0]!.id;
     expect(q.questions[0]!.options).toEqual(["A", "B", "C"]);
     const four = await store.updateQuestion(q.id, id, { spots: [spot(0.1), spot(0.2), spot(0.3), spot(0.4)] });

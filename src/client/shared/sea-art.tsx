@@ -306,7 +306,7 @@ export function SeaBackdrop({ level, blend, paceRef }: { level: number; blend: n
       for (const track of rootEl.querySelectorAll<HTMLElement>("[data-rate]")) {
         const tile = track.querySelector<HTMLElement>(".floor-tile");
         const w = tile?.offsetWidth ?? 0;
-        if (w > 0) track.style.transform = `translate3d(${-(x * (Number(track.dataset.rate) || 1) % w)}px,0,0)`;
+        if (w > 0) track.style.transform = `translate3d(${-((x * (Number(track.dataset.rate) || 1)) % w)}px,0,0)`;
       }
       raf = requestAnimationFrame(loop);
     };

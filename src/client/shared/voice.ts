@@ -7,21 +7,20 @@ import type { VoiceLineId } from "../../shared/voice-lines.ts";
 import { music } from "./music/index.ts";
 import { getAudioContext, isMuted } from "./sounds.ts";
 import cannotEvade from "./voice/cannot-evade.mp3";
+import coldIsPatient from "./voice/coldispatient.mp3";
 import fleshIsWeak from "./voice/flesh-is-weak.mp3";
-import onlyMetalEndures from "./voice/only-metal-endures.mp3";
-import targetsAcquired from "./voice/targets-acquired.mp3";
-
+import frostyAim from "./voice/frostyaim.mp3";
 
 import lookWarm from "./voice/lookwarm.mp3";
-import frostyAim from "./voice/frostyaim.mp3";
-import coldIsPatient from "./voice/coldispatient.mp3";
+import onlyMetalEndures from "./voice/only-metal-endures.mp3";
+import targetsAcquired from "./voice/targets-acquired.mp3";
 import thawOut from "./voice/thawout.mp3";
 
 const CLIPS: Record<VoiceLineId, string> = {
-  "lookwarm": lookWarm,
-  "frostyaim": frostyAim,
-  "coldispatient": coldIsPatient,
-  "thawout": thawOut,
+  lookwarm: lookWarm,
+  frostyaim: frostyAim,
+  coldispatient: coldIsPatient,
+  thawout: thawOut,
   "targets-acquired": targetsAcquired,
   "flesh-is-weak": fleshIsWeak,
   "only-metal-endures": onlyMetalEndures,

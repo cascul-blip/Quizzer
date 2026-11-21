@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { ValidationError, normalizeQuestion, normalizeQuestions, slugify } from "../src/shared/quiz-schema.ts";
+import { normalizeQuestion, normalizeQuestions, slugify, ValidationError } from "../src/shared/quiz-schema.ts";
 
 describe("normalizeQuestion", () => {
   test("fills defaults and generates an id", () => {
@@ -50,9 +50,12 @@ describe("normalizeQuestions", () => {
     ]);
     expect(qs[0]!.id).toBe("same");
     expect(qs[1]!.id).not.toBe("same");
-    expect(() => normalizeQuestions([{ type: "true_false", text: "a", correct: [0] }, { type: "true_false", text: "", correct: [0] }])).toThrow(
-      /questions\.1/,
-    );
+    expect(() =>
+      normalizeQuestions([
+        { type: "true_false", text: "a", correct: [0] },
+        { type: "true_false", text: "", correct: [0] },
+      ]),
+    ).toThrow(/questions\.1/);
   });
 });
 

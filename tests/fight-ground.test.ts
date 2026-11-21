@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { gingerbreadGround, gingerbreadTerrain } from "../src/shared/fight-ground.ts";
-import { COLS, COL_W, GROUND, HILL_HEIGHTS, MAX_PULL, carve, launchVector, simulate, type HillHeight } from "../src/shared/fight-physics.ts";
 import { FightGame } from "../src/server/game/fight.ts";
+import { gingerbreadGround, gingerbreadTerrain } from "../src/shared/fight-ground.ts";
+import type { HillHeight } from "../src/shared/fight-physics.ts";
+import { COL_W, COLS, carve, GROUND, HILL_HEIGHTS, launchVector, MAX_PULL, simulate } from "../src/shared/fight-physics.ts";
 import { sampleQuiz } from "./helpers.ts";
 
 for (const hill of ["low", "medium", "high"] as HillHeight[]) {
@@ -39,10 +40,13 @@ for (const hill of ["low", "medium", "high"] as HillHeight[]) {
         let hit = false;
         for (let degrees = 20; degrees <= 85 && !hit; degrees += 2) {
           for (let pull = 40; pull <= MAX_PULL; pull += 4) {
-            const a = degrees * Math.PI / 180;
+            const a = (degrees * Math.PI) / 180;
             const v = launchVector((team ? 1 : -1) * Math.cos(a) * pull, -Math.sin(a) * pull)!;
             const result = simulate(gingerbreadTerrain(hill), team, v.vx, v.vy);
-            if (result.impact.kind === "tower" && result.impact.team === 1 - team) { hit = true; break; }
+            if (result.impact.kind === "tower" && result.impact.team === 1 - team) {
+              hit = true;
+              break;
+            }
           }
         }
         expect(hit).toBe(true);

@@ -1,30 +1,23 @@
-import { towerTheme, DEFAULT_TOWER_THEME } from "../../shared/tower-theme.ts";
 import type { AnswerValue } from "../../shared/answer-match.ts";
-import {
-  BLOCKS_PER_BUILD,
-  DROP_ZONES,
-  EGG_LEVELS_ABOVE,
-  MONSTER_DAMAGE,
-  type MonsterAttack,
-  type MonsterEggs,
-  type HostTowerState,
-  type PlayerTowerView,
-  type TowerAwards,
-  type TowerPhase,
-  type TowerSettings,
-  TOWER_MINUTES,
-} from "../../shared/modes/tower.ts";
-import { MAX_TEAMS } from "../../shared/protocol.ts";
-import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
-import type { Question, Quiz } from "../../shared/quiz-schema.ts";
-import { GameError, realClock, teamInfo, type Clock } from "./common.ts";
-import type { LobbyFacts } from "./lobby-facts.ts";
-import { Roster, type BasePlayer } from "./roster.ts";
-import { QuestionStream, type AnswerTotals } from "./stream.ts";
 import { answerOf } from "../../shared/answer-match.ts";
+import type { AvatarChoice } from "../../shared/avatars.ts";
+import { randomAvatar } from "../../shared/avatars.ts";
 import { MODE_NAMES } from "../../shared/mode-names.ts";
-import { handoffOptions, pickTheme, unhandled, type ModeEntry } from "./mode-entry.ts";
+import type { HostTowerState, MonsterAttack, MonsterEggs, PlayerTowerView, TowerAwards, TowerPhase, TowerSettings } from "../../shared/modes/tower.ts";
+import { BLOCKS_PER_BUILD, DROP_ZONES, EGG_LEVELS_ABOVE, MONSTER_DAMAGE, TOWER_MINUTES } from "../../shared/modes/tower.ts";
+import { MAX_TEAMS } from "../../shared/protocol.ts";
+import type { Question, Quiz } from "../../shared/quiz-schema.ts";
+import { DEFAULT_TOWER_THEME, towerTheme } from "../../shared/tower-theme.ts";
+import type { Clock } from "./common.ts";
+import { GameError, realClock, teamInfo } from "./common.ts";
+import type { LobbyFacts } from "./lobby-facts.ts";
+import type { ModeEntry } from "./mode-entry.ts";
+import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
 import { toCsv } from "./results.ts";
+import type { BasePlayer } from "./roster.ts";
+import { Roster } from "./roster.ts";
+import type { AnswerTotals } from "./stream.ts";
+import { QuestionStream } from "./stream.ts";
 
 export { FEEDBACK_MS } from "./stream.ts";
 
@@ -369,7 +362,13 @@ export class TowerGame {
         rank: ranked.get(t.index)!,
         members: players
           .filter((p) => p.team === t.index)
-          .map((p) => ({ id: p.id, nickname: p.nickname, avatar: p.avatar, connected: p.connected, building: p.state === "build" && this.phase === "playing" })),
+          .map((p) => ({
+            id: p.id,
+            nickname: p.nickname,
+            avatar: p.avatar,
+            connected: p.connected,
+            building: p.state === "build" && this.phase === "playing",
+          })),
       })),
       playerCount: players.length,
       dropCount: this.dropCount,
@@ -436,13 +435,37 @@ export class TowerGame {
 
 /** Tallest Tower: one row per player, grouped by team in final team order. */
 export function buildTowerResultsCsv(game: TowerGame): string {
-  const header = ["Team", "Team rank", "Team floors", "Team blocks", "Nickname", "Correct", "Wrong", "Accuracy %", "Blocks placed", "Blocks missed", "Monster hatched"];
+  const header = [
+    "Team",
+    "Team rank",
+    "Team floors",
+    "Team blocks",
+    "Nickname",
+    "Correct",
+    "Wrong",
+    "Accuracy %",
+    "Blocks placed",
+    "Blocks missed",
+    "Monster hatched",
+  ];
   const rows: (string | number)[][] = [];
   for (const t of game.rankedTeams()) {
     const members = [...game.players.values()].filter((p) => p.team === t.index).sort((a, b) => b.placed - a.placed || b.correct - a.correct);
     for (const p of members) {
       const answered = p.correct + p.wrong;
-      rows.push([t.name, t.rank, t.floors, t.placed, p.nickname, p.correct, p.wrong, answered ? Math.round((p.correct / answered) * 100) : "", p.placed, p.missed, p.hatched]);
+      rows.push([
+        t.name,
+        t.rank,
+        t.floors,
+        t.placed,
+        p.nickname,
+        p.correct,
+        p.wrong,
+        answered ? Math.round((p.correct / answered) * 100) : "",
+        p.placed,
+        p.missed,
+        p.hatched,
+      ]);
     }
   }
   return toCsv([header, ...rows]);

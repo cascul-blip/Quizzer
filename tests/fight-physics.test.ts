@@ -1,26 +1,26 @@
 import { describe, expect, test } from "bun:test";
+import type { HillHeight } from "../src/shared/fight-physics.ts";
 import {
   CATAPULT_X,
   COLS,
+  carve,
   GROUND,
+  groundAt,
   HILL_HEIGHTS,
+  launchVector,
   MAX_PULL,
   MAX_SPEED,
   MIN_GROUND,
   MIN_PULL,
-  TOWER_X,
-  carve,
-  groundAt,
-  launchVector,
   makeTerrain,
   simulate,
-  type HillHeight,
+  TOWER_X,
 } from "../src/shared/fight-physics.ts";
 
 /** Seeded RNG so terrain is reproducible. */
 function seeded(seed: number) {
   let s = seed;
-  return () => ((s = (s * 1664525 + 1013904223) % 4294967296) / 4294967296);
+  return () => (s = (s * 1664525 + 1013904223) % 4294967296) / 4294967296;
 }
 
 const flat = () => Array.from({ length: COLS + 1 }, () => GROUND);

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import type { LandPlayer } from "../src/server/game/land.ts";
+import { buildLandResultsCsv, CONQUEST_MS, COUNTDOWN_MS, FEEDBACK_MS, LandGame } from "../src/server/game/land.ts";
 import { Lobby } from "../src/server/game/lobby.ts";
-import { CONQUEST_MS, COUNTDOWN_MS, FEEDBACK_MS, LandGame, type LandPlayer } from "../src/server/game/land.ts";
-import { buildLandResultsCsv } from "../src/server/game/land.ts";
 import { EMPTY, hexDistance, neighbors } from "../src/shared/land-board.ts";
 import { LAND_EMPTY_MS } from "../src/shared/modes/land.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
@@ -89,7 +89,11 @@ describe("lobby → land", () => {
   });
 
   test("board size follows the team count and each team owns its starting tile", () => {
-    for (const [teams, size] of [[2, 10], [4, 12], [6, 14]] as const) {
+    for (const [teams, size] of [
+      [2, 10],
+      [4, 12],
+      [6, 14],
+    ] as const) {
       const { game } = setup(["A"], { teams });
       const v = game.hostView();
       expect(v.board.size).toBe(size);

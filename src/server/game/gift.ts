@@ -1,30 +1,33 @@
 import type { AnswerValue } from "../../shared/answer-match.ts";
-import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
+import { answerOf } from "../../shared/answer-match.ts";
+import type { AvatarChoice } from "../../shared/avatars.ts";
+import { randomAvatar } from "../../shared/avatars.ts";
+import type { GiftItem, GiftItemKind, GiftPower } from "../../shared/gift-rules.ts";
 import {
   GIFT_CORRECT_TO_PLAY,
+  GIFT_DEFAULT_MINUTES,
   GIFT_DUDS,
   GIFT_GOODS,
+  GIFT_MINUTES,
   GIFT_POINTS,
   GIFT_READY_MS,
   GIFT_ROUND_MS,
   GIFT_TAP_GRACE_MS,
   giftMultiplier,
-  type GiftItem,
-  type GiftItemKind,
-  type GiftPower,
-  GIFT_DEFAULT_MINUTES,
-  GIFT_MINUTES,
 } from "../../shared/gift-rules.ts";
+import { MODE_NAMES } from "../../shared/mode-names.ts";
 import type { GiftHit, GiftPhase, GiftStanding, HostGiftState, PlayerGiftView } from "../../shared/modes/gift.ts";
 import type { Quiz } from "../../shared/quiz-schema.ts";
-import { GameError, realClock, shuffle, type Clock } from "./common.ts";
+import type { Clock } from "./common.ts";
+import { GameError, realClock, shuffle } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
-import { Roster, type BasePlayer } from "./roster.ts";
-import { QuestionStream, type AnswerTotals } from "./stream.ts";
-import { answerOf } from "../../shared/answer-match.ts";
-import { MODE_NAMES } from "../../shared/mode-names.ts";
-import { handoffOptions, unhandled, type ModeEntry } from "./mode-entry.ts";
+import type { ModeEntry } from "./mode-entry.ts";
+import { handoffOptions, unhandled } from "./mode-entry.ts";
 import { toCsv } from "./results.ts";
+import type { BasePlayer } from "./roster.ts";
+import { Roster } from "./roster.ts";
+import type { AnswerTotals } from "./stream.ts";
+import { QuestionStream } from "./stream.ts";
 
 const COUNTDOWN_MS = 3_000;
 
@@ -70,11 +73,13 @@ function launchSchedule(round: number, rng: () => number): GiftItem[] {
     return batchItems;
   }).flat();
 
-  return Array.from({ length: GIFT_ROUND_MS / waveMs }, (_, wave) => shuffle([0, 1, 2], rng).map((lane, slot) => {
-    const id = wave * 3 + slot;
-    const from = wave * waveMs + slot * 65;
-    return { id, kind: kinds[id]!, lane, from, until: from + 1_050 };
-  })).flat();
+  return Array.from({ length: GIFT_ROUND_MS / waveMs }, (_, wave) =>
+    shuffle([0, 1, 2], rng).map((lane, slot) => {
+      const id = wave * 3 + slot;
+      const from = wave * waveMs + slot * 65;
+      return { id, kind: kinds[id]!, lane, from, until: from + 1_050 };
+    }),
+  ).flat();
 }
 
 function compare(a: GiftPlayer, b: GiftPlayer): number {
@@ -98,7 +103,13 @@ export class GiftGame {
   private timer: unknown = null;
   private phaseEndsAt = 0;
 
-  private constructor(private readonly quiz: Quiz, readonly minutes: number, shuffleAnswers: boolean, protect: boolean, opts: GiftOptions) {
+  private constructor(
+    private readonly quiz: Quiz,
+    readonly minutes: number,
+    shuffleAnswers: boolean,
+    protect: boolean,
+    opts: GiftOptions,
+  ) {
     this.quizId = quiz.id;
     this.title = quiz.title;
     this.clock = opts.clock ?? realClock;
@@ -302,24 +313,29 @@ export class GiftGame {
       rank: this.phase === "podium" ? this.standings().find((standing) => standing.id === id)!.rank : null,
       question: this.phase === "playing" && !bonus ? this.stream.questionView(player) : null,
       feedback: this.phase === "playing" || bonus ? this.stream.feedbackView(player) : null,
-      bonus: bonus ? {
-        round: player.rounds,
-        remainingMs: Math.max(0, bonus.endsAt - this.clock.now()),
-        multiplier: bonus.multiplier,
-        items: bonus.items,
-        hits: [...bonus.hits.values()],
-        power: bonus.power,
-      } : null,
+      bonus: bonus
+        ? {
+            round: player.rounds,
+            remainingMs: Math.max(0, bonus.endsAt - this.clock.now()),
+            multiplier: bonus.multiplier,
+            items: bonus.items,
+            hits: [...bonus.hits.values()],
+            power: bonus.power,
+          }
+        : null,
     };
   }
 }
 
 export function buildGiftResultsCsv(game: GiftGame): string {
   const header = ["Rank", "Nickname", "Score", "Correct", "Wrong", "Bonus rounds earned", "Gift taps", "Dud taps", "Power-ups collected"];
-  return toCsv([header, ...game.standings().map(({ id, rank }) => {
-    const player = game.players.get(id)!;
-    return [rank, player.nickname, player.score, player.correct, player.wrong, player.rounds, player.goodTaps, player.dudTaps, player.powerups];
-  })]);
+  return toCsv([
+    header,
+    ...game.standings().map(({ id, rank }) => {
+      const player = game.players.get(id)!;
+      return [rank, player.nickname, player.score, player.correct, player.wrong, player.rounds, player.goodTaps, player.dudTaps, player.powerups];
+    }),
+  ]);
 }
 
 export const giftMode: ModeEntry<"gift"> = {

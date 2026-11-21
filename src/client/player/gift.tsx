@@ -1,24 +1,23 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
-import {
-  GIFT_CORRECT_TO_PLAY, GIFT_DUDS, GIFT_READY_MS, GIFT_ROUND_MS, type GiftItem, type GiftItemKind,
-} from "../../shared/gift-rules.ts";
-import type { ClientMsg } from "../../shared/protocol.ts";
+import type { GiftItem, GiftItemKind } from "../../shared/gift-rules.ts";
+import { GIFT_CORRECT_TO_PLAY, GIFT_DUDS, GIFT_READY_MS, GIFT_ROUND_MS } from "../../shared/gift-rules.ts";
 import type { GiftHit, PlayerGiftView } from "../../shared/modes/gift.ts";
-import { formatClock, ordinal, useCountdown } from "../shared/ui.tsx";
-import { Feedback, StreamQuestion } from "./stream-question.tsx";
-import workshop from "../shared/gift/workshop.webp";
-import chest from "../shared/gift/chest.webp";
-import present from "../shared/gift/present.webp";
-import headphones from "../shared/gift/headphones.webp";
-import controller from "../shared/gift/controller.webp";
-import sneaker from "../shared/gift/sneaker.webp";
+import type { ClientMsg } from "../../shared/protocol.ts";
 import card from "../shared/gift/card.webp";
-import socks from "../shared/gift/socks.webp";
+import chest from "../shared/gift/chest.webp";
 import coal from "../shared/gift/coal.webp";
+import controller from "../shared/gift/controller.webp";
+import headphones from "../shared/gift/headphones.webp";
+import present from "../shared/gift/present.webp";
+import shield from "../shared/gift/shield.webp";
+import sneaker from "../shared/gift/sneaker.webp";
+import socks from "../shared/gift/socks.webp";
+import star from "../shared/gift/star.webp";
 import sweater from "../shared/gift/sweater.webp";
 import toothbrush from "../shared/gift/toothbrush.webp";
-import shield from "../shared/gift/shield.webp";
-import star from "../shared/gift/star.webp";
+import workshop from "../shared/gift/workshop.webp";
+import { formatClock, ordinal, useCountdown } from "../shared/ui.tsx";
+import { Feedback, StreamQuestion } from "./stream-question.tsx";
 import "./gift.css";
 
 type Send = (msg: ClientMsg) => void;
@@ -61,8 +60,14 @@ export function GiftPlayer({ view, send }: { view: PlayerGiftView; send: Send })
     <div class="game gift-game">
       <header class="bar">
         <span class="name">🎁 Gift Grab</span>
-        {view.phase === "playing" && <span class="qnum">{view.progress} / {GIFT_CORRECT_TO_PLAY} correct</span>}
-        <span class="score">{view.score.toLocaleString()} pts{view.phase === "playing" && ` · ${formatClock(seconds)}`}</span>
+        {view.phase === "playing" && (
+          <span class="qnum">
+            {view.progress} / {GIFT_CORRECT_TO_PLAY} correct
+          </span>
+        )}
+        <span class="score">
+          {view.score.toLocaleString()} pts{view.phase === "playing" && ` · ${formatClock(seconds)}`}
+        </span>
       </header>
       {view.question ? (
         <StreamQuestion question={view.question} onAnswer={(seq, option, text) => send({ type: "gift.answer", seq, option, text })} />
@@ -77,7 +82,9 @@ export function GiftPlayer({ view, send }: { view: PlayerGiftView; send: Send })
           ) : view.phase === "podium" ? (
             <>
               <h1>{view.rank !== null && `${ordinal(view.rank)} place`}</h1>
-              <p>{view.score.toLocaleString()} points · {view.correct} correct</p>
+              <p>
+                {view.score.toLocaleString()} points · {view.correct} correct
+              </p>
             </>
           ) : (
             <h1>Finishing bonus rounds…</h1>
@@ -155,9 +162,17 @@ function GiftBonus({ bonus, score, send }: { bonus: Bonus; score: number; send: 
           <span aria-label="Bonus time remaining">{(Math.ceil(Math.max(0, GIFT_ROUND_MS - Math.max(0, elapsed)) / 100) / 10).toFixed(1)}s</span>
           <span aria-label={`${bonus.multiplier} times points`}>×{bonus.multiplier}</span>
         </header>
-        {bonus.power && <div class="gift-power" role="status">{bonus.power === "shield" ? "Shield ready" : "Next gift doubled"}</div>}
+        {bonus.power && (
+          <div class="gift-power" role="status">
+            {bonus.power === "shield" ? "Shield ready" : "Next gift doubled"}
+          </div>
+        )}
         <img class="gift-chest" src={chest} alt="" draggable={false} />
-        {ready && elapsed >= -GIFT_READY_MS && <div class="gift-ready" role="status">Ready?</div>}
+        {ready && elapsed >= -GIFT_READY_MS && (
+          <div class="gift-ready" role="status">
+            Ready?
+          </div>
+        )}
         <svg class="gift-trails" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
           {active.map((item) => {
             const points = [135, 90, 45, 0].map((delay) => itemPosition(item, elapsed - delay));

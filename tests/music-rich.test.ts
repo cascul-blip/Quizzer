@@ -1,6 +1,21 @@
 import { describe, expect, test } from "bun:test";
-import { stepsPerBar, renderInto, scheduleStep, stepSeconds, type Track } from "../src/client/shared/music/engine.ts";
-import { ARCADE_TIGHTNESS, ECHO_STEPS, HUMAN_GAIN, HUMAN_TIME_S, STRUM_S, createEcho, createRichBus, humanize, impulseResponse, playRich, richStyle, saturationCurve, seeded } from "../src/client/shared/music/rich.ts";
+import type { Track } from "../src/client/shared/music/engine.ts";
+import { renderInto, scheduleStep, stepSeconds, stepsPerBar } from "../src/client/shared/music/engine.ts";
+import {
+  ARCADE_TIGHTNESS,
+  createEcho,
+  createRichBus,
+  ECHO_STEPS,
+  HUMAN_GAIN,
+  HUMAN_TIME_S,
+  humanize,
+  impulseResponse,
+  playRich,
+  richStyle,
+  STRUM_S,
+  saturationCurve,
+  seeded,
+} from "../src/client/shared/music/rich.ts";
 import { TRACKS } from "../src/client/shared/music/tracks.ts";
 
 // A stand-in for an AudioContext (tests have none): it records every node made and every source started.
@@ -84,7 +99,11 @@ const nearestGap = (t: number, grid: number[]) => Math.min(...grid.map((g) => Ma
 
 describe("rich sound is opt-in", () => {
   test("only Tower Fight and Kingdom Siege (acoustic) and Racer (arcade) tracks use it", () => {
-    const rich = Object.fromEntries(Object.values(TRACKS).filter((t) => t.rich).map((t) => [t.id, richStyle(t.rich)]));
+    const rich = Object.fromEntries(
+      Object.values(TRACKS)
+        .filter((t) => t.rich)
+        .map((t) => [t.id, richStyle(t.rich)]),
+    );
     expect(rich).toEqual({
       "fight-play": "acoustic",
       "siege-lobby": "acoustic",
@@ -114,7 +133,10 @@ describe("rich sound is opt-in", () => {
         for (const kind of ["panner", "shaper", "convolver", "compressor", "delay"]) expect(ctx.kinds().has(kind), `${track.id}: ${kind}`).toBe(false);
         // Every source starts on a step, or a fixed offset after it (claps, sonar echoes, the second heartbeat).
         const onGrid = new Set(grid.map((g) => g.toFixed(9)));
-        expect(ctx.starts.some((s) => onGrid.has(s.toFixed(9))), track.id).toBe(true);
+        expect(
+          ctx.starts.some((s) => onGrid.has(s.toFixed(9))),
+          track.id,
+        ).toBe(true);
       }
     }
   });
@@ -179,7 +201,8 @@ describe("arcade style (Racer)", () => {
   });
 
   test("the acoustic style still leaves drums to the plain sound, so Kingdom Siege's drums are unchanged", () => {
-    for (const inst of ["snare", "hat", "kick", "woodblock", "timpani", "cymbal"]) expect(playRich(fake(), dest(new FakeCtx()), inst, 1, 220, 0.2, 1, 0, "acoustic"), inst).toBe(false);
+    for (const inst of ["snare", "hat", "kick", "woodblock", "timpani", "cymbal"])
+      expect(playRich(fake(), dest(new FakeCtx()), inst, 1, 220, 0.2, 1, 0, "acoustic"), inst).toBe(false);
   });
 
   test("leads go to the echo when there is one; nothing else does", () => {
@@ -193,7 +216,10 @@ describe("arcade style (Racer)", () => {
         .flatMap((l) => Array.from({ length: track.bars }, (_, b) => l.bars[b % l.bars.length]!.split(/\s+/)))
         .flat()
         .filter((tok) => tok !== "." && tok !== "-").length;
-      expect(track.layers.filter((l) => l.echo).map((l) => l.inst), track.id).toEqual(["lead"]);
+      expect(
+        track.layers.filter((l) => l.echo).map((l) => l.inst),
+        track.id,
+      ).toEqual(["lead"]);
       expect(leadNotes).toBeGreaterThan(0);
       expect(echo.inputs, track.id).toBe(leadNotes);
       // Without the lead's echo amount, nothing reaches the echo.
@@ -291,11 +317,18 @@ describe("the rich bus", () => {
 
 describe("triple-meter sequencing", () => {
   test("a three-beat bar advances and loops without an extra silent beat", () => {
-    const track: Track = { id: "triple", bpm: 60, bars: 2, stepsPerBar: 12, samples: false, layers: [{ inst: "piano", bars: ["C4 - - - - - - - - - - -", "E4 - - - - - - - - - - -"] }] };
+    const track: Track = {
+      id: "triple",
+      bpm: 60,
+      bars: 2,
+      stepsPerBar: 12,
+      samples: false,
+      layers: [{ inst: "piano", bars: ["C4 - - - - - - - - - - -", "E4 - - - - - - - - - - -"] }],
+    };
     const ctx = fake();
     renderInto(ctx, dest(ctx), track, 7, 0);
     // Piano has several oscillators per note; count distinct attack times.
-    expect([...new Set(ctx.starts)]).toEqual([.05, 3.05, 6.05]);
+    expect([...new Set(ctx.starts)]).toEqual([0.05, 3.05, 6.05]);
     expect(stepsPerBar(TRACKS["land-play"])).toBe(16);
     expect(stepsPerBar(TRACKS["land-christmas-play"])).toBe(12);
   });

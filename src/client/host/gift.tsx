@@ -3,17 +3,18 @@ import { GIFT_MINUTES } from "../../shared/gift-rules.ts";
 import type { GiftStanding } from "../../shared/modes/gift.ts";
 import type { HostView } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
-import { formatClock, useCountdown } from "../shared/ui.tsx";
-import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
+import chestFull from "../shared/gift/chest-projector-full.webp";
+import chestMaximum from "../shared/gift/chest-projector-maximum.webp";
+import chestMedium from "../shared/gift/chest-projector-medium.webp";
+import chestOverflowing from "../shared/gift/chest-projector-overflowing.webp";
+import present from "../shared/gift/present.webp";
+import workshop from "../shared/gift/workshop-projector.webp";
 import type { MusicCue } from "../shared/music/index.ts";
+import { formatClock, useCountdown } from "../shared/ui.tsx";
+import type { Send } from "./common.tsx";
+import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen } from "./common.tsx";
 import type { LobbyModeEntry, LobbySettingsProps } from "./lobby-modes.tsx";
 import { Award } from "./tower.tsx";
-import workshop from "../shared/gift/workshop-projector.webp";
-import present from "../shared/gift/present.webp";
-import chestFull from "../shared/gift/chest-projector-full.webp";
-import chestOverflowing from "../shared/gift/chest-projector-overflowing.webp";
-import chestMedium from "../shared/gift/chest-projector-medium.webp";
-import chestMaximum from "../shared/gift/chest-projector-maximum.webp";
 import "./gift.css";
 
 type GiftView = Extract<HostView, { kind: "gift" }>;
@@ -35,11 +36,7 @@ function GiftStation({ player, position, final }: { player: GiftStanding; positi
     <li class={`gift-station ${leading ? "gift-leading" : ""} ${!player.connected && !final ? "gift-offline" : ""}`}>
       <div class="gift-station-art" aria-hidden="true">
         <div class="gift-chest-glow" />
-        <img
-          class="gift-station-chest gift-station-heap"
-          src={heap}
-          alt=""
-        />
+        <img class="gift-station-chest gift-station-heap" src={heap} alt="" />
         {burst > 0 && !final && <img key={burst} class="gift-scored-parcel" src={present} alt="" />}
       </div>
       <div class="gift-station-plaque">
@@ -47,7 +44,11 @@ function GiftStation({ player, position, final }: { player: GiftStanding; positi
         <div class="gift-station-identity">
           <Avatar choice={player.avatar} class="gift-avatar" />
           <span class="gift-name">{player.nickname}</span>
-          {final && <span class="gift-final-rank" aria-label={`Rank ${player.rank}`}>#{player.rank}</span>}
+          {final && (
+            <span class="gift-final-rank" aria-label={`Rank ${player.rank}`}>
+              #{player.rank}
+            </span>
+          )}
         </div>
         {player.inBonus && <span class="gift-in-bonus">Bonus round</span>}
       </div>
@@ -81,24 +82,36 @@ export function GiftStage({ view, send }: { view: GiftView; send: Send }) {
         <div class="title">{view.quiz.title}</div>
         <div class="spacer" />
         <ScreenControls join={view.join} />
-        {!final && <button class="btn ghost small" onClick={() => confirm("End Gift Grab now?") && send({ type: "host.end" })}>End game</button>}
+        {!final && (
+          <button class="btn ghost small" onClick={() => confirm("End Gift Grab now?") && send({ type: "host.end" })}>
+            End game
+          </button>
+        )}
       </header>
       <main class="gift-host-main">
         <div class="gift-host-heading">
           <h1>🎁 Gift Grab</h1>
-          {final ? <h2>Final standings</h2> : view.phase === "finishing" ? (
+          {final ? (
+            <h2>Final standings</h2>
+          ) : view.phase === "finishing" ? (
             <h2>Finishing bonus rounds…</h2>
           ) : (
-            <div class="gift-host-clock">
-              {view.phase === "countdown" ? Math.max(1, seconds) : formatClock(seconds)}
-            </div>
+            <div class="gift-host-clock">{view.phase === "countdown" ? Math.max(1, seconds) : formatClock(seconds)}</div>
           )}
           {view.phase === "countdown" && <p>Five correct answers earn 15 seconds at the gift chest.</p>}
         </div>
-        {final && showErrors ? <ErrorsTable errors={view.errors} /> : (
+        {final && showErrors ? (
+          <ErrorsTable errors={view.errors} />
+        ) : (
           <>
-            <ul class={`gift-standings ${stations.length > 6 ? "gift-standings-dense" : ""}`} style={{ "--gift-columns": columns }} aria-label={final ? "Final standings" : "Live standings"}>
-              {stations.map((player) => <GiftStation key={player.id} player={player} position={scoringPositions.get(player.id)!} final={final} />)}
+            <ul
+              class={`gift-standings ${stations.length > 6 ? "gift-standings-dense" : ""}`}
+              style={{ "--gift-columns": columns }}
+              aria-label={final ? "Final standings" : "Live standings"}
+            >
+              {stations.map((player) => (
+                <GiftStation key={player.id} player={player} position={scoringPositions.get(player.id)!} final={final} />
+              ))}
             </ul>
             {final && view.mostCorrect && <Award icon="✓" title="Most correct answers" award={view.mostCorrect} unit="correct" />}
           </>
@@ -106,8 +119,12 @@ export function GiftStage({ view, send }: { view: GiftView; send: Send }) {
         {final && (
           <footer class="gift-host-controls">
             <ErrorsButton shown={showErrors} onToggle={() => setShowErrors(!showErrors)} />
-            <button class="btn ghost" onClick={() => send({ type: "host.open", quizId: view.quiz.id })}>Play again</button>
-            <button class="btn primary" onClick={() => send({ type: "host.close" })}>Done</button>
+            <button class="btn ghost" onClick={() => send({ type: "host.open", quizId: view.quiz.id })}>
+              Play again
+            </button>
+            <button class="btn primary" onClick={() => send({ type: "host.close" })}>
+              Done
+            </button>
           </footer>
         )}
       </main>
@@ -123,8 +140,15 @@ function GiftSettings({ settings, send }: LobbySettingsProps<"gift">) {
     <>
       <label class="opt">
         Time
-        <select value={settings.minutes} onChange={(e) => send({ type: "host.setModeSettings", mode: "gift", settings: { minutes: Number(e.currentTarget.value) } })}>
-          {GIFT_MINUTES.map((minutes) => <option key={minutes} value={minutes}>{minutes} min</option>)}
+        <select
+          value={settings.minutes}
+          onChange={(e) => send({ type: "host.setModeSettings", mode: "gift", settings: { minutes: Number(e.currentTarget.value) } })}
+        >
+          {GIFT_MINUTES.map((minutes) => (
+            <option key={minutes} value={minutes}>
+              {minutes} min
+            </option>
+          ))}
         </select>
       </label>
       <span class="opt mode-hint">Every five correct answers earns 15 seconds to tap gifts and dodge duds. Later rounds are worth more.</span>
@@ -134,9 +158,7 @@ function GiftSettings({ settings, send }: LobbySettingsProps<"gift">) {
 
 /** The projector's music for Gift Grab. */
 export function giftCue(view: GiftView): MusicCue {
-  return view.phase === "podium"
-    ? { track: "tower-christmas-results" }
-    : { track: "tower-christmas-play", intensity: view.phase === "finishing" ? 1 : 0.4 };
+  return view.phase === "podium" ? { track: "tower-christmas-results" } : { track: "tower-christmas-play", intensity: view.phase === "finishing" ? 1 : 0.4 };
 }
 
 export const giftLobby: LobbyModeEntry<"gift"> = {

@@ -2,7 +2,58 @@ import shotUrl from "./sfx/shot.mp3";
 
 /** Tiny synthesized sound effects (WebAudio); a few use a bundled recording instead (RECORDINGS). */
 
-type Sfx = "cheerBlast" | "tick" | "tickHigh" | "timeUp" | "reveal" | "join" | "start" | "fanfare" | "thud" | "floor" | "rumble" | "roar" | "whoosh" | "chomp" | "bubble" | "heartbeat" | "laser" | "alarm" | "plant" | "capture" | "conquer" | "gearUp" | "skid" | "crash" | "repair" | "leverClick" | "land" | "diceRoll" | "diceLand" | "clink" | "gulp" | "poison" | "survive" | "gunshot" | "starterPistol" | "coins" | "bowTwang" | "arrowHit" | "swordClang" | "stoneThud" | "placeClack" | "upgradeChime" | "heartLost" | "giantHorn" | "drumRoll" | "wolfHowl" | "trollRoar" | "giantStomp" | "castleCrumble" | "victoryBells" | "jingle";
+type Sfx =
+  | "cheerBlast"
+  | "tick"
+  | "tickHigh"
+  | "timeUp"
+  | "reveal"
+  | "join"
+  | "start"
+  | "fanfare"
+  | "thud"
+  | "floor"
+  | "rumble"
+  | "roar"
+  | "whoosh"
+  | "chomp"
+  | "bubble"
+  | "heartbeat"
+  | "laser"
+  | "alarm"
+  | "plant"
+  | "capture"
+  | "conquer"
+  | "gearUp"
+  | "skid"
+  | "crash"
+  | "repair"
+  | "leverClick"
+  | "land"
+  | "diceRoll"
+  | "diceLand"
+  | "clink"
+  | "gulp"
+  | "poison"
+  | "survive"
+  | "gunshot"
+  | "starterPistol"
+  | "coins"
+  | "bowTwang"
+  | "arrowHit"
+  | "swordClang"
+  | "stoneThud"
+  | "placeClack"
+  | "upgradeChime"
+  | "heartLost"
+  | "giantHorn"
+  | "drumRoll"
+  | "wolfHowl"
+  | "trollRoar"
+  | "giantStomp"
+  | "castleCrumble"
+  | "victoryBells"
+  | "jingle";
 
 const MUTE_KEY = "quizzer.muted";
 let ctx: AudioContext | null = null;
@@ -88,7 +139,10 @@ function noise(start: number, dur: number, filter: BiquadFilterType, freq: numbe
   g.gain.setValueAtTime(0.0001, t0);
   g.gain.exponentialRampToValueAtTime(gain, t0 + 0.003);
   g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-  src.connect(f).connect(g).connect(out ?? ctx.destination);
+  src
+    .connect(f)
+    .connect(g)
+    .connect(out ?? ctx.destination);
   src.start(t0);
   src.stop(t0 + dur + 0.05);
 }
@@ -291,8 +345,7 @@ export function play(sfx: Sfx): void {
       tone(60, 0, 0.3, "sine", 0.35);
       [2400, 2000, 1600, 1250].forEach((f, i) => tone(f, 0.12 + i * 0.05, 0.06, "sine", 0.06));
       return;
-    case "gunshot":
-    {
+    case "gunshot": {
       if (playRecording("gunshot")) return;
       // A big revolver: a crack and a blast that darkens as it dies, a chest-thumping punch and a sub boom,
       // all driven hard through a soft clipper, then rolling echoes off the canyon walls.

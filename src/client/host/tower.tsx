@@ -1,37 +1,45 @@
-import { towerTheme, towerWords, type TowerTheme } from "../../shared/tower-theme.ts";
-import { TowerThemeProvider, useChristmasTower, ChristmasBackdrop } from "../shared/tower-skin.tsx";
 import { useEffect, useRef, useState } from "preact/hooks";
-import { EGG_LEVELS_ABOVE, MONSTER_DAMAGE, TOWER_MINUTES, type HostTowerTeam, type MonsterAttack, type MonsterEggs } from "../../shared/modes/tower.ts";
-import { MAX_TEAMS, type HostView } from "../../shared/protocol.ts";
+import type { HostTowerTeam, MonsterAttack, MonsterEggs } from "../../shared/modes/tower.ts";
+import { EGG_LEVELS_ABOVE, MONSTER_DAMAGE, TOWER_MINUTES } from "../../shared/modes/tower.ts";
+import type { HostView } from "../../shared/protocol.ts";
+import { MAX_TEAMS } from "../../shared/protocol.ts";
+import type { TowerTheme } from "../../shared/tower-theme.ts";
+import { towerTheme, towerWords } from "../../shared/tower-theme.ts";
+import type { MusicCue } from "../shared/music/index.ts";
 import { play } from "../shared/sounds.ts";
 import {
   BuildingBlock,
   Crane,
-  EggCell,
-  MonsterSvg,
-  useEventFlash,
   DustPuff,
+  EggCell,
   FloorSparkle,
+  hash01,
   METERS_PER_FLOOR,
+  MonsterSvg,
   RoofFlag,
   SKY_STAGES,
   SkylineSvg,
-  Tree,
-  hash01,
   skyStage,
+  Tree,
+  useEventFlash,
   useFreshKeys,
   useNewFloor,
 } from "../shared/tower-art.tsx";
+import { ChristmasBackdrop, TowerThemeProvider, useChristmasTower } from "../shared/tower-skin.tsx";
 import { formatClock, ordinal, teamVars, useCountdown } from "../shared/ui.tsx";
-import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
-import type { MusicCue } from "../shared/music/index.ts";
+import type { Send } from "./common.tsx";
+import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen } from "./common.tsx";
 import type { LobbyModeEntry, LobbySettingsProps } from "./lobby-modes.tsx";
 
 type TowerView = Extract<HostView, { kind: "tower" }>;
 
 /** Projector screen for Tallest Tower: countdown → live towers → podium. */
 export function TowerStage(props: { view: TowerView; send: Send }) {
-  return <TowerThemeProvider theme={props.view.theme}><TowerStageContent {...props} /></TowerThemeProvider>;
+  return (
+    <TowerThemeProvider theme={props.view.theme}>
+      <TowerStageContent {...props} />
+    </TowerThemeProvider>
+  );
 }
 
 function TowerStageContent({ view, send }: { view: TowerView; send: Send }) {
@@ -64,7 +72,8 @@ function TowerStageContent({ view, send }: { view: TowerView; send: Send }) {
   const teamName = (i: number) => `Team ${view.teams[i]?.name ?? "?"}`;
   let banner: string | null = null;
   if (attack) banner = `${words.creatureIcon} ${teamName(attack.byTeam)} ${words.action}! It smashed ${teamName(attack.target)} (−${MONSTER_DAMAGE} floors)`;
-  else if (eggNews) banner = `${words.itemIcon} ${christmas ? "Bells" : "Monster eggs"} appeared, ${EGG_LEVELS_ABOVE} levels above each tower! First team to land a block on its ${words.item} ${christmas ? "summons the yeti" : "hatches the monster"}`;
+  else if (eggNews)
+    banner = `${words.itemIcon} ${christmas ? "Bells" : "Monster eggs"} appeared, ${EGG_LEVELS_ABOVE} levels above each tower! First team to land a block on its ${words.item} ${christmas ? "summons the yeti" : "hatches the monster"}`;
 
   const lastTick = useRef(-1);
   useEffect(() => {
@@ -85,10 +94,16 @@ function TowerStageContent({ view, send }: { view: TowerView; send: Send }) {
     <div class={`stage tower-stage ${christmas ? "tower-christmas" : ""}`}>
       <header class="topbar">
         <div class="title">{view.quiz.title}</div>
-        <div class="pill">{words.icon} {words.name}</div>
+        <div class="pill">
+          {words.icon} {words.name}
+        </div>
         <div class="spacer" />
         {view.phase === "playing" && <div class={`tower-clock ${secs <= 30 ? "urgent" : ""}`}>{formatClock(secs)}</div>}
-        {view.phase === "playing" && view.egg && <div class="pill monster-pill">{words.itemIcon} {christmas ? "Bell" : "Egg"} is out!</div>}
+        {view.phase === "playing" && view.egg && (
+          <div class="pill monster-pill">
+            {words.itemIcon} {christmas ? "Bell" : "Egg"} is out!
+          </div>
+        )}
         {view.phase === "playing" && !view.egg && view.nextMonsterMs !== null && (
           <div class="pill monster-pill" title={`Next ${words.item}`}>
             {words.creatureIcon} {formatClock(monsterSecs)}
@@ -171,7 +186,14 @@ function Sky({ stage }: { stage: number }) {
       ))}
       <svg class={`stars ${stage >= 3 ? "on" : ""} ${stage >= 4 ? "bright" : ""}`} viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid slice">
         {Array.from({ length: 70 }, (_, i) => (
-          <circle key={i} cx={hash01(i, 11) * 1000} cy={hash01(i, 12) * 420} r={0.8 + hash01(i, 13) * 1.6} class={i % 3 === 0 ? "twinkle" : ""} style={{ animationDelay: `${hash01(i, 14) * 3}s` }} />
+          <circle
+            key={i}
+            cx={hash01(i, 11) * 1000}
+            cy={hash01(i, 12) * 420}
+            r={0.8 + hash01(i, 13) * 1.6}
+            class={i % 3 === 0 ? "twinkle" : ""}
+            style={{ animationDelay: `${hash01(i, 14) * 3}s` }}
+          />
         ))}
       </svg>
       <div class={`clouds ${stage <= 2 ? "on" : ""}`}>
@@ -191,7 +213,12 @@ function Sky({ stage }: { stage: number }) {
 function Towers({ teams, phase, egg, attack }: { teams: HostTowerTeam[]; phase: TowerView["phase"] } & MonsterProps) {
   const christmas = useChristmasTower();
   // One shared vertical scale so heights compare fairly between teams (egg and smashed blocks included).
-  const rows = Math.max(8, ...teams.map((t) => Math.max(...t.columns) + 2), egg ? Math.max(...egg.cells.map((c) => c.row)) + 2 : 0, attack ? Math.max(...attack.before) + 1 : 0);
+  const rows = Math.max(
+    8,
+    ...teams.map((t) => Math.max(...t.columns) + 2),
+    egg ? Math.max(...egg.cells.map((c) => c.row)) + 2 : 0,
+    attack ? Math.max(...attack.before) + 1 : 0,
+  );
   const leader = Math.max(...teams.map((t) => t.floors));
   return (
     <div class={`towers n${teams.length}`}>
@@ -266,9 +293,7 @@ function TowerSvg({ team, rows, phase, egg, attack }: { team: HostTowerTeam; row
       {!christmas && <Tree x={SIDE / 2 - 0.5} y={H} size={7} seed={team.index * 2} />}
       {!christmas && <Tree x={W - SIDE / 2 + 0.5} y={H} size={7} seed={team.index * 2 + 1} />}
       {blocks}
-      {newFloor !== null && newFloor <= team.floors && (
-        <FloorSparkle key={`s${newFloor}`} x={SIDE} y={H - newFloor * UNIT} width={3 * UNIT} size={UNIT} />
-      )}
+      {newFloor !== null && newFloor <= team.floors && <FloorSparkle key={`s${newFloor}`} x={SIDE} y={H - newFloor * UNIT} width={3 * UNIT} size={UNIT} />}
       {puffs}
       {attack &&
         attack.before.flatMap((top, c) =>
@@ -279,7 +304,11 @@ function TowerSvg({ team, rows, phase, egg, attack }: { team: HostTowerTeam; row
               <g
                 key={`d${c}-${r}`}
                 class="debris"
-                style={{ "--dx": `${dir * (20 + hash01(r, c) * 40)}px`, "--rot": `${dir * (90 + hash01(c, r, 3) * 200)}deg`, animationDelay: `${1300 + k * 40}ms` }}
+                style={{
+                  "--dx": `${dir * (20 + hash01(r, c) * 40)}px`,
+                  "--rot": `${dir * (90 + hash01(c, r, 3) * 200)}deg`,
+                  animationDelay: `${1300 + k * 40}ms`,
+                }}
               >
                 <BuildingBlock x={SIDE + c * UNIT} y={H - (r + 1) * UNIT} size={UNIT} color={team.color} team={team.index} col={c} row={r} fullFloor={false} />
               </g>
@@ -362,7 +391,19 @@ function TowerPodium({ view, send }: { view: TowerView; send: Send }) {
   );
 }
 
-export function Award({ icon, title, award, unit, valueText }: { icon: string; title: string; award: { value: number; nicknames: string[] } | null; unit: string; valueText?: (value: number) => string }) {
+export function Award({
+  icon,
+  title,
+  award,
+  unit,
+  valueText,
+}: {
+  icon: string;
+  title: string;
+  award: { value: number; nicknames: string[] } | null;
+  unit: string;
+  valueText?: (value: number) => string;
+}) {
   return (
     <div class="award">
       <div class="award-icon" aria-hidden="true">
@@ -371,11 +412,7 @@ export function Award({ icon, title, award, unit, valueText }: { icon: string; t
       <div>
         <div class="award-title">{title}</div>
         <div class="award-who">{award ? award.nicknames.join(", ") : "—"}</div>
-        {award && (
-          <div class="award-value">
-            {valueText ? valueText(award.value) : `${award.value} ${unit}`}
-          </div>
-        )}
+        {award && <div class="award-value">{valueText ? valueText(award.value) : `${award.value} ${unit}`}</div>}
       </div>
     </div>
   );
@@ -389,14 +426,27 @@ function TowerSettings({ settings, send }: LobbySettingsProps<"tower">) {
     <>
       <label class="opt">
         Theme
-        <select aria-label="Tower theme" value={towerTheme(settings.theme)} onChange={(e) => send({ type: "host.setModeSettings", mode: "tower", settings: { teams: settings.teams, minutes: settings.minutes, theme: e.currentTarget.value as TowerTheme } })}>
+        <select
+          aria-label="Tower theme"
+          value={towerTheme(settings.theme)}
+          onChange={(e) =>
+            send({
+              type: "host.setModeSettings",
+              mode: "tower",
+              settings: { teams: settings.teams, minutes: settings.minutes, theme: e.currentTarget.value as TowerTheme },
+            })
+          }
+        >
           <option value="christmas">🎄 North Pole Workshop</option>
           <option value="classic">🏗 Normal</option>
         </select>
       </label>
       <label class="opt">
         Teams
-        <select value={settings.teams} onChange={(e) => send({ type: "host.setModeSettings", mode: "tower", settings: { teams: Number(e.currentTarget.value), minutes: settings.minutes } })}>
+        <select
+          value={settings.teams}
+          onChange={(e) => send({ type: "host.setModeSettings", mode: "tower", settings: { teams: Number(e.currentTarget.value), minutes: settings.minutes } })}
+        >
           {Array.from({ length: MAX_TEAMS }, (_, i) => (
             <option key={i} value={i + 1}>
               {i + 1}
@@ -406,7 +456,10 @@ function TowerSettings({ settings, send }: LobbySettingsProps<"tower">) {
       </label>
       <label class="opt">
         Time
-        <select value={settings.minutes} onChange={(e) => send({ type: "host.setModeSettings", mode: "tower", settings: { teams: settings.teams, minutes: Number(e.currentTarget.value) } })}>
+        <select
+          value={settings.minutes}
+          onChange={(e) => send({ type: "host.setModeSettings", mode: "tower", settings: { teams: settings.teams, minutes: Number(e.currentTarget.value) } })}
+        >
           {TOWER_MINUTES.map((m) => (
             <option key={m} value={m}>
               {m} min
@@ -414,14 +467,26 @@ function TowerSettings({ settings, send }: LobbySettingsProps<"tower">) {
           ))}
         </select>
       </label>
-      <label class="opt check" title={settings.teams < 2 ? "Needs 2 or more teams" : `${towerWords(settings.theme).item === "bell" ? "Bells" : "Monster eggs"} appear 4 times per game`}>
+      <label
+        class="opt check"
+        title={
+          settings.teams < 2 ? "Needs 2 or more teams" : `${towerWords(settings.theme).item === "bell" ? "Bells" : "Monster eggs"} appear 4 times per game`
+        }
+      >
         <input
           type="checkbox"
           disabled={settings.teams < 2}
           checked={settings.monster && settings.teams >= 2}
-          onChange={(e) => send({ type: "host.setModeSettings", mode: "tower", settings: { teams: settings.teams, minutes: settings.minutes, monster: e.currentTarget.checked } })}
+          onChange={(e) =>
+            send({
+              type: "host.setModeSettings",
+              mode: "tower",
+              settings: { teams: settings.teams, minutes: settings.minutes, monster: e.currentTarget.checked },
+            })
+          }
         />
-        {towerWords(settings.theme).creatureIcon} {towerTheme(settings.theme) === "christmas" ? "Yeti" : "Monster"}{settings.teams < 2 ? " (needs 2+ teams)" : ""}
+        {towerWords(settings.theme).creatureIcon} {towerTheme(settings.theme) === "christmas" ? "Yeti" : "Monster"}
+        {settings.teams < 2 ? " (needs 2+ teams)" : ""}
       </label>
     </>
   );

@@ -1,12 +1,13 @@
-import { duelArenaName, duelTheme, type DuelTheme } from "../../shared/duel-theme.ts";
-import { SnowballScene, preloadSnowballArt } from "../shared/duel-christmas.tsx";
 import { useEffect, useState } from "preact/hooks";
-import type { ClientMsg } from "../../shared/protocol.ts";
+import type { DuelTheme } from "../../shared/duel-theme.ts";
+import { duelArenaName, duelTheme } from "../../shared/duel-theme.ts";
 import type { DuelArenaResult, DuelistResult, DuelPlayerRef, PlayerDuelView } from "../../shared/modes/duel.ts";
-import { DuelStreet, Duelist, DustPuff, GunSmoke, MuzzleFlash, WantedPoster } from "../shared/duel-art.tsx";
+import type { ClientMsg } from "../../shared/protocol.ts";
+import { Duelist, DuelStreet, DustPuff, GunSmoke, MuzzleFlash, WantedPoster } from "../shared/duel-art.tsx";
+import { preloadSnowballArt, SnowballScene } from "../shared/duel-christmas.tsx";
 import { PinBoard, PinDragger } from "../shared/pin.tsx";
-import { LockedChoice, Shape, TextAnswer, optionColor, ordinal, useCountdown } from "../shared/ui.tsx";
 import { Tex, visibleLength } from "../shared/tex.tsx";
+import { LockedChoice, optionColor, ordinal, Shape, TextAnswer, useCountdown } from "../shared/ui.tsx";
 
 type Send = (m: ClientMsg) => void;
 type Pose = "idle" | "ready" | "draw" | "fire" | "stagger" | "tip" | "walk1" | "walk2";
@@ -23,7 +24,9 @@ const secs = (ms: number) => `${(ms / 1000).toFixed(1)} s`;
 export function DuelPlayer({ view, send }: { view: PlayerDuelView; send: Send }) {
   const q = view.question;
   const watching = view.opponents.length === 0;
-  useEffect(() => { if (duelTheme(view.theme) === "christmas") preloadSnowballArt(true, view.arena); }, [view.theme, view.arena]);
+  useEffect(() => {
+    if (duelTheme(view.theme) === "christmas") preloadSnowballArt(true, view.arena);
+  }, [view.theme, view.arena]);
 
   let body;
   if (view.phase === "podium") {
@@ -131,10 +134,14 @@ function FaceOff({ view }: { view: PlayerDuelView }) {
 function SnowballFaceOff({ view }: { view: PlayerDuelView }) {
   const result = view.phase === "reveal" ? view.myDuel : null;
   const people = [{ ...view.me, answered: view.myChoice !== null || view.myText !== null }, ...view.opponents];
-  return <div class="duel-snow-strip">
-    <SnowballScene arena={view.arena} people={people} result={result} round={view.round} elapsedMs={view.revealElapsedMs} phone />
-    <div class="duel-caption"><b>{duelArenaName(view.arena, "christmas")}</b></div>
-  </div>;
+  return (
+    <div class="duel-snow-strip">
+      <SnowballScene arena={view.arena} people={people} result={result} round={view.round} elapsedMs={view.revealElapsedMs} phone />
+      <div class="duel-caption">
+        <b>{duelArenaName(view.arena, "christmas")}</b>
+      </div>
+    </div>
+  );
 }
 
 function DuelIntro({ view }: { view: PlayerDuelView }) {
@@ -142,7 +149,9 @@ function DuelIntro({ view }: { view: PlayerDuelView }) {
   const left = useCountdown(view.phaseRemainingMs, `intro:${view.round}`);
   return (
     <main class="center duel-watch">
-      <p class={`q-text duel-q ${qClass(q.text)}`}><Tex text={q.text} /></p>
+      <p class={`q-text duel-q ${qClass(q.text)}`}>
+        <Tex text={q.text} />
+      </p>
       {view.opponents.length === 0 ? (
         <p class="duel-ask">You'll join the bottom arena next round</p>
       ) : (
@@ -159,7 +168,9 @@ function DuelWatch({ view }: { view: PlayerDuelView }) {
   return (
     <main class="center duel-watch">
       <div class={`timer ${left <= 5 ? "urgent" : ""}`}>{left}</div>
-      <p class={`q-text duel-q ${qClass(q.text)}`}><Tex text={q.text} /></p>
+      <p class={`q-text duel-q ${qClass(q.text)}`}>
+        <Tex text={q.text} />
+      </p>
       <p class="duel-ask">You'll join the bottom arena next round</p>
       <p class="muted">Watch the projector for now.</p>
     </main>
@@ -177,11 +188,7 @@ function DuelAnswering({ view, send }: { view: PlayerDuelView; send: Send }) {
   if (chosen !== null || typed !== null) {
     return (
       <main class="center duel-locked">
-        {typed !== null ? (
-          <div class="locked-text">{typed}</div>
-        ) : (
-          <LockedChoice type={q.type} index={chosen!} label={q.options[chosen!] ?? ""} />
-        )}
+        {typed !== null ? <div class="locked-text">{typed}</div> : <LockedChoice type={q.type} index={chosen!} label={q.options[chosen!] ?? ""} />}
         <h1>Locked in</h1>
         <p class="duel-ask">{duelTheme(view.theme) === "christmas" ? "Snowball ready…" : "Hand on your holster…"}</p>
       </main>
@@ -198,7 +205,9 @@ function DuelAnswering({ view, send }: { view: PlayerDuelView; send: Send }) {
     <main class="answering">
       <div class="q-head">
         <div class={`timer ${left <= 5 ? "urgent" : ""}`}>{left}</div>
-        <h2 class={`q-text ${qClass(q.text)}`}><Tex text={q.text} /></h2>
+        <h2 class={`q-text ${qClass(q.text)}`}>
+          <Tex text={q.text} />
+        </h2>
       </div>
       {q.image && !pin && <img class="q-img" src={`/${q.image}`} alt="" />}
       {pin ? (
@@ -219,7 +228,9 @@ function DuelAnswering({ view, send }: { view: PlayerDuelView; send: Send }) {
             return (
               <button key={i} class={`answer opt-${c}`} onClick={() => choose(i)}>
                 <Shape index={c} />
-                <span><Tex text={text} /></span>
+                <span>
+                  <Tex text={text} />
+                </span>
               </button>
             );
           })}
@@ -269,11 +280,7 @@ function DuelReveal({ view }: { view: PlayerDuelView }) {
         <h1>{heading}</h1>
         {r?.ms != null && <div class="points duel-num">{secs(r.ms)}</div>}
       </div>
-      {line ? (
-        <div class={`duel-line ${line.tone}`}>{line.text}</div>
-      ) : (
-        <div class="duel-line">You'll join the bottom arena next round</div>
-      )}
+      {line ? <div class={`duel-line ${line.tone}`}>{line.text}</div> : <div class="duel-line">You'll join the bottom arena next round</div>}
       {!good && r && (
         <>
           {view.myText !== null && (
@@ -299,7 +306,9 @@ function DuelReveal({ view }: { view: PlayerDuelView }) {
                 return (
                   <li key={i} class={`reveal-item opt-${c} is-correct`}>
                     <Shape index={c} />
-                    <span class="t"><Tex text={q.options[i]!} /></span>
+                    <span class="t">
+                      <Tex text={q.options[i]!} />
+                    </span>
                     <span class="tag">✓ {r.correct.length > 1 ? "Correct" : "Answer"}</span>
                   </li>
                 );

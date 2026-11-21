@@ -1,14 +1,16 @@
 import type { RefObject } from "preact";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
-import type { HostView } from "../../shared/protocol.ts";
 import type { SubAward } from "../../shared/mode-views.ts";
+import type { HostView } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
-import { ChristmasGoblin, DogSled, WinterBackdrop, winterGradient, type SledRider } from "../shared/winter-art.tsx";
+import type { MusicCue } from "../shared/music/index.ts";
 import { play } from "../shared/sounds.ts";
 import { useEventFlash } from "../shared/tower-art.tsx";
 import { useCountdown } from "../shared/ui.tsx";
-import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
-import type { MusicCue } from "../shared/music/index.ts";
+import type { SledRider } from "../shared/winter-art.tsx";
+import { ChristmasGoblin, DogSled, WinterBackdrop, winterGradient } from "../shared/winter-art.tsx";
+import type { Send } from "./common.tsx";
+import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen } from "./common.tsx";
 import type { LobbyModeEntry } from "./lobby-modes.tsx";
 
 type SubView = Extract<HostView, { kind: "submarine" }>;
@@ -85,19 +87,19 @@ const MAX_POPS = 3;
 function useSledRiders(players: SubView["players"], boost: SubView["lastBoost"]): SledRider[] {
   const [offset, setOffset] = useState(0);
   useEffect(() => {
-    const timer = setInterval(() => setOffset(n => n + 1), 6000);
+    const timer = setInterval(() => setOffset((n) => n + 1), 6000);
     return () => clearInterval(timer);
   }, []);
   // The stage re-renders every frame during the chase: keep the same array until the riders change.
   return useMemo(() => {
-    const connected = players.filter(p => p.connected);
+    const connected = players.filter((p) => p.connected);
     const pool = connected.length ? connected : players;
     const riders = Array.from({ length: Math.min(3, pool.length) }, (_, i) => {
       const p = pool[(offset + i) % pool.length]!;
       return { key: p.id, choice: p.avatar };
     });
     if (boost) {
-      const existing = riders.findIndex(r => r.choice.avatar === boost.avatar.avatar && r.choice.accessory === boost.avatar.accessory);
+      const existing = riders.findIndex((r) => r.choice.avatar === boost.avatar.avatar && r.choice.accessory === boost.avatar.accessory);
       if (existing >= 0) riders.splice(existing, 1);
       riders.splice(1, 0, { key: `boost-${boost.seq}`, choice: boost.avatar });
     }
@@ -195,11 +197,7 @@ export function SubmarineStage({ view, send }: { view: SubView; send: Send }) {
       {view.phase === "podium" ? (
         <SubPodium view={view} send={send} />
       ) : (
-        <main
-          ref={seaRef}
-          class={`sea winter-stage ${danger ? "danger" : ""}`}
-          style={{ background: winterGradient() }}
-        >
+        <main ref={seaRef} class={`sea winter-stage ${danger ? "danger" : ""}`} style={{ background: winterGradient() }}>
           {backdrop}
           {view.phase === "dive" ? (
             <Dive view={view} faces={faces} craftRef={craftRef} />
@@ -217,7 +215,10 @@ export function SubmarineStage({ view, send }: { view: SubView; send: Send }) {
                 {/* The supplied goblin speeds up and leans toward the sled as the gap closes. */}
                 <ChristmasGoblin closeness={closeness} caught={caught} />
               </div>
-              <div ref={craftRef} class={`sub-pos ${boost ? "boosting" : ""} ${view.phase === "escaped" ? "escaping" : ""} ${caught ? "in-mouth" : ""} ${grabbed ? "eaten" : ""}`}>
+              <div
+                ref={craftRef}
+                class={`sub-pos ${boost ? "boosting" : ""} ${view.phase === "escaped" ? "escaping" : ""} ${caught ? "in-mouth" : ""} ${grabbed ? "eaten" : ""}`}
+              >
                 {boost && <div class="speed-lines" />}
                 <div class="boost-pops">
                   {pops.map((b, i) => (

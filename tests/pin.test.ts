@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { INTRO_MS, preparePlayOrder } from "../src/server/game/game.ts";
 import { QuestionStream } from "../src/server/game/stream.ts";
-import { QuizStore } from "../src/server/quiz/store.ts";
 import { SERVER_INSTRUCTIONS } from "../src/server/mcp/tools.ts";
-import { ValidationError, normalizeQuestion, type Question } from "../src/shared/quiz-schema.ts";
+import { QuizStore } from "../src/server/quiz/store.ts";
+import type { Question } from "../src/shared/quiz-schema.ts";
+import { normalizeQuestion, ValidationError } from "../src/shared/quiz-schema.ts";
 import { classicGame, FakeClock, sampleQuiz, tempDir } from "./helpers.ts";
 
 const IMAGE = "media/abc123.png";
@@ -72,7 +73,10 @@ describe("pin in the store", () => {
   afterEach(() => t.cleanup());
 
   test("switching a question to pin and back", async () => {
-    const quiz = await store.create({ title: "Muscles", questions: [{ type: "multiple_choice", text: "Where?", options: ["a", "b", "c"], correct: [2], image: IMAGE }] });
+    const quiz = await store.create({
+      title: "Muscles",
+      questions: [{ type: "multiple_choice", text: "Where?", options: ["a", "b", "c"], correct: [2], image: IMAGE }],
+    });
     const id = quiz.questions[0]!.id;
     const pin = await store.updateQuestion(quiz.id, id, { type: "pin", spots: SPOTS.slice(0, 3) });
     expect(pin).toMatchObject({ type: "pin", options: ["A", "B", "C"], correct: [0], spots: SPOTS.slice(0, 3) });

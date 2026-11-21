@@ -17,7 +17,7 @@ See `docs/agents/domain.md` before exploring the codebase.
 
 ### Building
 
-`bun run build` replaces the `dist/` executables the user runs. To check the build, use `bun run build -- linux --outdir <scratch dir>`. To check the code, use `bun run check` (typecheck then tests, one after the other as CI runs them).
+`bun run build` replaces the `dist/` executables the user runs. To check the build, use `bun run build -- linux --outdir <scratch dir>`. To check the code, use `bun run check` (Biome format and import check, typecheck, then tests, one after the other as CI runs them). Run `bun run format` to fix formatting and import order, including after a codemod.
 
 For phone component DOM tests, see `tests/stream-question.test.tsx` for the Happy DOM and Preact setup.
 

@@ -1,5 +1,6 @@
-import { ERRORS_SHOWN, TEAMS, type ShuffleOptions } from "../../shared/protocol.ts";
-import type { TeamInfo, QuestionError } from "../../shared/mode-views.ts";
+import type { QuestionError, TeamInfo } from "../../shared/mode-views.ts";
+import type { ShuffleOptions } from "../../shared/protocol.ts";
+import { ERRORS_SHOWN, TEAMS } from "../../shared/protocol.ts";
 import type { Question } from "../../shared/quiz-schema.ts";
 
 // Building blocks shared by every game mode.
@@ -36,13 +37,19 @@ export function shuffle<T>(arr: T[], rng: () => number): T[] {
 /** Shuffle a question's options; correct indices are remapped. True/False keeps its familiar order; pin spots stay put. */
 export function shuffleOptions<Q extends { type: string; options: string[]; correct: number[] }>(q: Q, rng: () => number): Q {
   if (q.type === "true_false" || q.type === "text" || q.type === "pin") return q;
-  const order = shuffle(q.options.map((_, i) => i), rng);
+  const order = shuffle(
+    q.options.map((_, i) => i),
+    rng,
+  );
   return { ...q, options: order.map((i) => q.options[i]!), correct: q.correct.map((c) => order.indexOf(c)).sort((a, b) => a - b) };
 }
 
 export function cleanNickname(raw: unknown): string {
   if (typeof raw !== "string") throw new GameError("Please enter a nickname");
-  const name = raw.replace(/[\p{C}]/gu, "").replace(/\s+/g, " ").trim();
+  const name = raw
+    .replace(/[\p{C}]/gu, "")
+    .replace(/\s+/g, " ")
+    .trim();
   if (!name) throw new GameError("Please enter a nickname");
   if ([...name].length > MAX_NICKNAME) throw new GameError(`Nickname must be at most ${MAX_NICKNAME} characters`);
   return name;

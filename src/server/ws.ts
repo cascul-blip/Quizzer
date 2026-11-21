@@ -1,19 +1,24 @@
 import type { ServerWebSocket } from "bun";
-import type { ClientMsg, HostView, PlayerView, ServerMsg } from "../shared/protocol.ts";
 import { cleanAvatar } from "../shared/avatars.ts";
+import type { ClientMsg, HostView, PlayerView, ServerMsg } from "../shared/protocol.ts";
 import { ValidationError } from "../shared/quiz-schema.ts";
-import { Lobby, type HandoffOptions, type LobbyChoices } from "./game/lobby.ts";
-import { MSG_MODE, isModeMsg, type LiveGame } from "./game/mode-entry.ts";
+import type { Clock } from "./game/common.ts";
+import { GameError } from "./game/common.ts";
+import type { HandoffOptions, LobbyChoices } from "./game/lobby.ts";
+import { Lobby } from "./game/lobby.ts";
+import type { LiveGame } from "./game/mode-entry.ts";
+import { isModeMsg, MSG_MODE } from "./game/mode-entry.ts";
 import { entryOf } from "./game/modes.ts";
-import { applyHostCommand, type HostCommandContext } from "./host-commands.ts";
 import { writeResultsFile } from "./game/results.ts";
-import { GameError, type Clock } from "./game/common.ts";
+import type { HostCommandContext } from "./host-commands.ts";
+import { applyHostCommand } from "./host-commands.ts";
 import { JoinInformation } from "./join-info.ts";
 import type { LanAddress } from "./network.ts";
 import { PhoneAttachments } from "./phone-attachments.ts";
 import { PhoneViewDelivery } from "./phone-view-delivery.ts";
+import type { QuizStore } from "./quiz/store.ts";
+import { NotFoundError } from "./quiz/store.ts";
 import { ViewUpdateScheduler } from "./view-update-scheduler.ts";
-import { NotFoundError, type QuizStore } from "./quiz/store.ts";
 
 export interface SocketData {
   /** Request came from this machine to a loopback hostname; may use host controls. */

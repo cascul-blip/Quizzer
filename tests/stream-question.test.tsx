@@ -39,18 +39,32 @@ describe("Streamed phone questions", () => {
     const onAnswer = (seq: number, option: number) => answers.push([seq, option]);
     act(() => render(<StreamQuestion question={question} onAnswer={onAnswer} />, root));
     const button = root.querySelector("button")!;
-    act(() => { button.click(); button.click(); });
+    act(() => {
+      button.click();
+      button.click();
+    });
     expect(answers).toEqual([[1, 0]]);
     expect(button.disabled).toBe(true);
     act(() => render(<StreamQuestion question={{ ...question, seq: 2 }} onAnswer={onAnswer} />, root));
     act(() => root.querySelector("button")!.click());
-    expect(answers).toEqual([[1, 0], [2, 0]]);
+    expect(answers).toEqual([
+      [1, 0],
+      [2, 0],
+    ]);
   });
 
   test("feedback appears immediately with the next question", () => {
     mount();
     const feedback = { seq: 1, correct: false, remainingMs: 1000, answers: ["One"], penaltyMs: 0 };
-    act(() => render(<><StreamQuestion question={{ ...question, seq: 2, text: "Next question" }} onAnswer={() => {}} /><Feedback feedback={feedback} rightText="Correct" /></>, root));
+    act(() =>
+      render(
+        <>
+          <StreamQuestion question={{ ...question, seq: 2, text: "Next question" }} onAnswer={() => {}} />
+          <Feedback feedback={feedback} rightText="Correct" />
+        </>,
+        root,
+      ),
+    );
     expect(root.textContent).toContain("Next question");
     expect(root.querySelector('[role="status"]')?.textContent).toContain("Not quite");
     expect(root.querySelector('[role="status"]')?.textContent).toContain("One");

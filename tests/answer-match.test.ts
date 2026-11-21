@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
+import { INTRO_MS } from "../src/server/game/game.ts";
 import { checkAnswer, matchesAnswer } from "../src/shared/answer-match.ts";
 import { normalizeQuestion } from "../src/shared/quiz-schema.ts";
 import { classicGame, FakeClock, sampleQuiz } from "./helpers.ts";
-import { INTRO_MS } from "../src/server/game/game.ts";
 
 describe("matchesAnswer", () => {
   test("ignores case, spacing and punctuation", () => {

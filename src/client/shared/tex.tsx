@@ -1,8 +1,8 @@
 import katex from "katex";
 import { Fragment } from "preact";
 import "./katex.css";
-import { addKatexFonts } from "./katex-fonts.ts";
 import { splitMath } from "../../shared/math-text.ts";
+import { addKatexFonts } from "./katex-fonts.ts";
 
 export { visibleLength } from "../../shared/math-text.ts";
 
@@ -27,5 +27,14 @@ export function Tex({ text }: { text: string }) {
 
 /** Several answers or labels, each typeset like <Tex>, joined by `sep`. */
 export function TexList({ items, sep }: { items: string[]; sep: string }) {
-  return <>{items.map((text, i) => <Fragment key={i}>{i > 0 && sep}<Tex text={text} /></Fragment>)}</>;
+  return (
+    <>
+      {items.map((text, i) => (
+        <Fragment key={i}>
+          {i > 0 && sep}
+          <Tex text={text} />
+        </Fragment>
+      ))}
+    </>
+  );
 }

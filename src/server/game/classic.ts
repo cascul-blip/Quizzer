@@ -1,7 +1,8 @@
 import { answerOf } from "../../shared/answer-match.ts";
 import { MODE_NAMES } from "../../shared/mode-names.ts";
 import { ClassicGame } from "./game.ts";
-import { handoffOptions, unhandled, type ModeEntry } from "./mode-entry.ts";
+import type { ModeEntry } from "./mode-entry.ts";
+import { handoffOptions, unhandled } from "./mode-entry.ts";
 import { toCsv } from "./results.ts";
 
 /** One row per player (by rank) with per-question answer, correctness, points and time. */

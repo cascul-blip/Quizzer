@@ -107,11 +107,7 @@ export function PinBoard({
 
 /** Projector, under a pin question's image: how to answer while open, the right spot on the reveal. */
 export function PinNote({ open, labels }: { open: boolean; labels: string[] }) {
-  return (
-    <div class={`pin-note ${open ? "" : "right"}`}>
-      {open ? "📍 Drag the pin onto the right label on your phone" : `✓ Spot ${labels.join(" / ")}`}
-    </div>
-  );
+  return <div class={`pin-note ${open ? "" : "right"}`}>{open ? "📍 Drag the pin onto the right label on your phone" : `✓ Spot ${labels.join(" / ")}`}</div>;
 }
 
 export function PinIcon({ class: cls = "", style }: { class?: string; style?: Record<string, string> }) {

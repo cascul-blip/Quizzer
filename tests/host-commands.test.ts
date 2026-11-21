@@ -1,12 +1,14 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { INTRO_MS } from "../src/server/game/game.ts";
-import { Lobby, type LobbyChoices } from "../src/server/game/lobby.ts";
-import { applyHostCommand, type HostCommandContext } from "../src/server/host-commands.ts";
+import type { LobbyChoices } from "../src/server/game/lobby.ts";
+import { Lobby } from "../src/server/game/lobby.ts";
+import type { HostCommandContext } from "../src/server/host-commands.ts";
+import { applyHostCommand } from "../src/server/host-commands.ts";
 import { QuizStore } from "../src/server/quiz/store.ts";
 import type { GameHub } from "../src/server/ws.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
 import { FakeClock, sampleQuiz, tempDir } from "./helpers.ts";
-import { HubSocket, fakeHub } from "./hub-harness.ts";
+import { fakeHub, HubSocket } from "./hub-harness.ts";
 
 const QUIZ = {
   title: "Host commands",

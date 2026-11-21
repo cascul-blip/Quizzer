@@ -5,7 +5,8 @@ export interface LanAddress {
   iface: string;
 }
 
-const VIRTUAL_IFACE = /docker|veth|^br-|virbr|vbox|virtualbox|vmnet|vmware|vethernet|hyper-v|wsl|tailscale|^zt|zerotier|^wg|wireguard|^tun|^tap|^utun|loopback/i;
+const VIRTUAL_IFACE =
+  /docker|veth|^br-|virbr|vbox|virtualbox|vmnet|vmware|vethernet|hyper-v|wsl|tailscale|^zt|zerotier|^wg|wireguard|^tun|^tap|^utun|loopback/i;
 
 function score(a: LanAddress): number {
   let s = 0;

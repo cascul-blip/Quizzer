@@ -18,8 +18,9 @@
  * Any of these can be replaced by an audio file in data/music/<id>.<ext>.
  */
 import type { MusicTrackId } from "../../../shared/music-tracks.ts";
+import type { RobotSkin } from "../robot-skin.ts";
+import { ROBOT_SKIN } from "../robot-skin.ts";
 import type { Track } from "./engine.ts";
-import { ROBOT_SKIN, type RobotSkin } from "../robot-skin.ts";
 
 // ---------- composing helpers (each returns one 16-step bar) ----------
 
@@ -37,7 +38,11 @@ const arp = (notes: string[], every = 1) => Array.from({ length: 16 }, (_, i) =>
 /** Eighth-note bass bouncing between a low and a high note. */
 const bounce = (low: string, high: string) => arp([low, high], 2);
 /** Repeat a note on the steps marked "x". */
-const pump = (note: string, pattern: string) => pattern.split("").map((c) => (c === "x" ? note : ".")).join(" ");
+const pump = (note: string, pattern: string) =>
+  pattern
+    .split("")
+    .map((c) => (c === "x" ? note : "."))
+    .join(" ");
 const chord = (notes: string) => notes.split(" ").join("+");
 const rest = drum("................");
 
@@ -63,7 +68,11 @@ const classicLobby: Track = {
         seq(["B4", 2], ["D5", 2], ["G5", 3], [".", 1], ["A5", 2], ["G5", 2], ["F5", 2], ["D5", 2]),
       ],
     },
-    { inst: "pluck", bars: [arp(["C5", "E5", "G5", "E5"], 2), arp(["A4", "C5", "E5", "C5"], 2), arp(["F4", "A4", "C5", "A4"], 2), arp(["G4", "B4", "D5", "B4"], 2)], vol: 0.45 },
+    {
+      inst: "pluck",
+      bars: [arp(["C5", "E5", "G5", "E5"], 2), arp(["A4", "C5", "E5", "C5"], 2), arp(["F4", "A4", "C5", "A4"], 2), arp(["G4", "B4", "D5", "B4"], 2)],
+      vol: 0.45,
+    },
   ],
 };
 
@@ -74,12 +83,21 @@ const classicQuestion: Track = {
   tempoBoost: 0.4,
   layers: [
     { inst: "tick", bars: [drum("x.x.x.x.x.x.x.x.")], vol: 0.9 },
-    { inst: "bass", bars: [pump("A1", "x.x.x.x.x.x.x.x."), pump("F1", "x.x.x.x.x.x.x.x."), pump("D2", "x.x.x.x.x.x.x.x."), pump("E1", "x.x.x.x.x.x.x.x.")], vol: 0.8 },
+    {
+      inst: "bass",
+      bars: [pump("A1", "x.x.x.x.x.x.x.x."), pump("F1", "x.x.x.x.x.x.x.x."), pump("D2", "x.x.x.x.x.x.x.x."), pump("E1", "x.x.x.x.x.x.x.x.")],
+      vol: 0.8,
+    },
     { inst: "pad", bars: [hold(chord("A3 C4 E4")), hold(chord("F3 A3 C4")), hold(chord("D3 F3 A3")), hold(chord("E3 G#3 B3"))], vol: 0.7 },
     { inst: "kick", bars: [drum("x.......x.......")], from: 0.3, to: 0.6 },
     { inst: "kick", bars: [drum("x...x...x...x...")], from: 0.6 },
     { inst: "hat", bars: [drum("xxxxxxxxxxxxxxxx")], vol: 0.45, from: 0.5 },
-    { inst: "pulse", bars: [arp(["A4", "C5", "E5", "C5"]), arp(["F4", "A4", "C5", "A4"]), arp(["D4", "F4", "A4", "F4"]), arp(["E4", "G#4", "B4", "G#4"])], vol: 0.5, from: 0.6 },
+    {
+      inst: "pulse",
+      bars: [arp(["A4", "C5", "E5", "C5"]), arp(["F4", "A4", "C5", "A4"]), arp(["D4", "F4", "A4", "F4"]), arp(["E4", "G#4", "B4", "G#4"])],
+      vol: 0.5,
+      from: 0.6,
+    },
     { inst: "snare", bars: [drum("....x.......x..."), drum("....x.......x..."), drum("....x.......x..."), drum("....x...x.x.xxxx")], vol: 0.8, from: 0.8 },
     {
       inst: "lead",
@@ -153,7 +171,11 @@ const classicResults: Track = {
         seq(["C5", 8], ["E5", 4], ["C5", 4]),
       ],
     },
-    { inst: "bell", bars: [arp(["C6", "G5", "E6", "G5"], 2), arp(["C6", "A5", "F5", "A5"], 2), arp(["B5", "G5", "D6", "G5"], 2), arp(["C6", "G5", "E6", "C7"], 2)], vol: 0.35 },
+    {
+      inst: "bell",
+      bars: [arp(["C6", "G5", "E6", "G5"], 2), arp(["C6", "A5", "F5", "A5"], 2), arp(["B5", "G5", "D6", "G5"], 2), arp(["C6", "G5", "E6", "C7"], 2)],
+      vol: 0.35,
+    },
   ],
 };
 
@@ -166,7 +188,11 @@ const towerLobby: Track = {
   bars: 4,
   layers: [
     { inst: "tribass", bars: [bounce("G2", "G3"), bounce("E2", "E3"), bounce("C2", "C3"), bounce("D2", "D3")] },
-    { inst: "pulse", bars: [arp(["G4", "B4", "D5", "B4"]), arp(["E4", "G4", "B4", "G4"]), arp(["C4", "E4", "G4", "E4"]), arp(["D4", "F#4", "A4", "F#4"])], vol: 0.45 },
+    {
+      inst: "pulse",
+      bars: [arp(["G4", "B4", "D5", "B4"]), arp(["E4", "G4", "B4", "G4"]), arp(["C4", "E4", "G4", "E4"]), arp(["D4", "F#4", "A4", "F#4"])],
+      vol: 0.45,
+    },
     { inst: "chipnoise", bars: [drum("..x...x...x...x.")], vol: 0.5 },
     { inst: "kick", bars: [drum("x.......x.......")], vol: 0.7 },
     {
@@ -192,7 +218,11 @@ const towerPlay: Track = {
     { inst: "tribass", bars: [pump("E2", "x.x.x.x.x.x.x.x."), pump("C2", "x.x.x.x.x.x.x.x."), pump("G2", "x.x.x.x.x.x.x.x."), pump("D2", "x.x.x.x.x.x.x.x.")] },
     { inst: "kick", bars: [drum("x...x...x...x...")], vol: 0.75 },
     { inst: "chipnoise", bars: [drum("....o.......o...")], vol: 0.8 },
-    { inst: "pulse", bars: [arp(["E4", "G4", "B4", "G4"]), arp(["C4", "E4", "G4", "E4"]), arp(["G4", "B4", "D5", "B4"]), arp(["D4", "F#4", "A4", "F#4"])], vol: 0.4 },
+    {
+      inst: "pulse",
+      bars: [arp(["E4", "G4", "B4", "G4"]), arp(["C4", "E4", "G4", "E4"]), arp(["G4", "B4", "D5", "B4"]), arp(["D4", "F#4", "A4", "F#4"])],
+      vol: 0.4,
+    },
     {
       inst: "lead",
       bars: [
@@ -205,7 +235,12 @@ const towerPlay: Track = {
       from: 0.4,
     },
     { inst: "chipnoise", bars: [drum("xxxxxxxxxxxxxxxx")], vol: 0.3, from: 0.75 },
-    { inst: "pulse", bars: [arp(["B5", "G5", "E5", "G5"]), arp(["G5", "E5", "C5", "E5"]), arp(["D6", "B5", "G5", "B5"]), arp(["A5", "F#5", "D5", "F#5"])], vol: 0.3, from: 0.75 },
+    {
+      inst: "pulse",
+      bars: [arp(["B5", "G5", "E5", "G5"]), arp(["G5", "E5", "C5", "E5"]), arp(["D6", "B5", "G5", "B5"]), arp(["A5", "F#5", "D5", "F#5"])],
+      vol: 0.3,
+      from: 0.75,
+    },
   ],
 };
 
@@ -218,7 +253,11 @@ const towerResults: Track = {
     { inst: "tribass", bars: [bounce("C2", "C3"), bounce("F2", "F3"), bounce("G2", "G3"), bounce("C2", "C3")] },
     { inst: "kick", bars: [drum("x...x...x...x...")], vol: 0.7 },
     { inst: "chipnoise", bars: [drum("..x...x...x...x.")], vol: 0.5 },
-    { inst: "pulse", bars: [arp(["C5", "E5", "G5", "E5"]), arp(["F4", "A4", "C5", "A4"]), arp(["G4", "B4", "D5", "B4"]), arp(["C5", "E5", "G5", "C6"])], vol: 0.4 },
+    {
+      inst: "pulse",
+      bars: [arp(["C5", "E5", "G5", "E5"]), arp(["F4", "A4", "C5", "A4"]), arp(["G4", "B4", "D5", "B4"]), arp(["C5", "E5", "G5", "C6"])],
+      vol: 0.4,
+    },
     {
       inst: "lead",
       bars: [
@@ -255,67 +294,81 @@ const JINGLE_BELLS = [
 const JINGLE_CHORDS = ["C", "C", "C", "C", "F", "C", "G7", "G7", "C", "C", "C", "C", "F", "C", "G7", "C"];
 const JINGLE_VOICINGS: Record<string, string> = { C: "C4+E4+G4", F: "C4+F4+A4", G7: "B3+D4+F4+G4" };
 const JINGLE_ROOTS: Record<string, [string, string]> = { C: ["C2", "G2"], F: ["F2", "C3"], G7: ["G2", "D3"] };
-const JINGLE_PADS = JINGLE_CHORDS.map(c => hold(JINGLE_VOICINGS[c]!));
-const JINGLE_COMP = JINGLE_CHORDS.map(c => pump(JINGLE_VOICINGS[c]!, "....x.......x..."));
-const JINGLE_BASS = JINGLE_CHORDS.map(c => {
+const JINGLE_PADS = JINGLE_CHORDS.map((c) => hold(JINGLE_VOICINGS[c]!));
+const JINGLE_COMP = JINGLE_CHORDS.map((c) => pump(JINGLE_VOICINGS[c]!, "....x.......x..."));
+const JINGLE_BASS = JINGLE_CHORDS.map((c) => {
   const [root, fifth] = JINGLE_ROOTS[c]!;
   return seq([root, 3], [".", 1], [fifth, 3], [".", 1], [root, 3], [".", 1], [fifth, 3], [".", 1]);
 });
-const JINGLE_BELLS_UP = JINGLE_BELLS.map(bar => bar.replace(/([A-G][#b]?)(\d)/g, (_, n, oct) => `${n}${Number(oct) + 1}`));
-const JINGLE_BELLS_DOWN = JINGLE_BELLS.map(bar => bar.replace(/([A-G][#b]?)(\d)/g, (_, n, oct) => `${n}${Number(oct) - 1}`));
+const JINGLE_BELLS_UP = JINGLE_BELLS.map((bar) => bar.replace(/([A-G][#b]?)(\d)/g, (_, n, oct) => `${n}${Number(oct) + 1}`));
+const JINGLE_BELLS_DOWN = JINGLE_BELLS.map((bar) => bar.replace(/([A-G][#b]?)(\d)/g, (_, n, oct) => `${n}${Number(oct) - 1}`));
 const SLED_BELLS = drum("o.x.x.x.o.x.x.x.");
 
 const submarineLobby: Track = {
-  id: "submarine-lobby", bpm: 100, bars: JINGLE_BELLS.length, reverb: .3,
+  id: "submarine-lobby",
+  bpm: 100,
+  bars: JINGLE_BELLS.length,
+  reverb: 0.3,
   layers: [
-    { inst: "flute", bars: JINGLE_BELLS, vol: .5 },
-    { inst: "bell", bars: JINGLE_BELLS_UP, vol: .18 },
-    { inst: "strings", bars: JINGLE_PADS, vol: .28 },
-    { inst: "piano", bars: JINGLE_BASS, vol: .4 },
-    { inst: "pluck", bars: JINGLE_COMP, vol: .25 },
-    { inst: "hat", bars: [SLED_BELLS], vol: .22 },
+    { inst: "flute", bars: JINGLE_BELLS, vol: 0.5 },
+    { inst: "bell", bars: JINGLE_BELLS_UP, vol: 0.18 },
+    { inst: "strings", bars: JINGLE_PADS, vol: 0.28 },
+    { inst: "piano", bars: JINGLE_BASS, vol: 0.4 },
+    { inst: "pluck", bars: JINGLE_COMP, vol: 0.25 },
+    { inst: "hat", bars: [SLED_BELLS], vol: 0.22 },
   ],
 };
 
 const submarineChase: Track = {
-  id: "submarine-chase", bpm: 120, bars: JINGLE_BELLS.length, tempoBoost: .25, swing: .06, reverb: .25,
+  id: "submarine-chase",
+  bpm: 120,
+  bars: JINGLE_BELLS.length,
+  tempoBoost: 0.25,
+  swing: 0.06,
+  reverb: 0.25,
   layers: [
-    { inst: "brass", bars: JINGLE_BELLS, vol: .58 },
-    { inst: "bell", bars: JINGLE_BELLS_UP, vol: .2 },
-    { inst: "piano", bars: JINGLE_BASS, vol: .55 },
-    { inst: "pluck", bars: JINGLE_COMP, vol: .36 },
-    { inst: "strings", bars: JINGLE_PADS, vol: .3 },
-    { inst: "hat", bars: [SLED_BELLS], vol: .32 },
-    { inst: "kick", bars: [drum("x.......x.......")], vol: .3 },
-    { inst: "snare", bars: [drum("....x.......x...")], vol: .24, from: .35 },
-    { inst: "flute", bars: JINGLE_BELLS, vol: .3, from: .65 },
-    { inst: "hat", bars: [drum("..x...x...x...x.")], vol: .22, from: .8 },
-    { inst: "cymbal", bars: [once("x"), ...Array(15).fill(rest)], vol: .22, from: .8 },
+    { inst: "brass", bars: JINGLE_BELLS, vol: 0.58 },
+    { inst: "bell", bars: JINGLE_BELLS_UP, vol: 0.2 },
+    { inst: "piano", bars: JINGLE_BASS, vol: 0.55 },
+    { inst: "pluck", bars: JINGLE_COMP, vol: 0.36 },
+    { inst: "strings", bars: JINGLE_PADS, vol: 0.3 },
+    { inst: "hat", bars: [SLED_BELLS], vol: 0.32 },
+    { inst: "kick", bars: [drum("x.......x.......")], vol: 0.3 },
+    { inst: "snare", bars: [drum("....x.......x...")], vol: 0.24, from: 0.35 },
+    { inst: "flute", bars: JINGLE_BELLS, vol: 0.3, from: 0.65 },
+    { inst: "hat", bars: [drum("..x...x...x...x.")], vol: 0.22, from: 0.8 },
+    { inst: "cymbal", bars: [once("x"), ...Array(15).fill(rest)], vol: 0.22, from: 0.8 },
   ],
 };
 
 // Quiet piano and glockenspiel leave room for spoken symbol instructions.
 const submarineDive: Track = {
-  id: "submarine-dive", bpm: 88, bars: JINGLE_BELLS.length, reverb: .25,
+  id: "submarine-dive",
+  bpm: 88,
+  bars: JINGLE_BELLS.length,
+  reverb: 0.25,
   layers: [
-    { inst: "piano", bars: JINGLE_BELLS_DOWN, vol: .32 },
-    { inst: "bell", bars: JINGLE_BELLS, vol: .12 },
-    { inst: "strings", bars: JINGLE_PADS, vol: .18 },
-    { inst: "pluck", bars: JINGLE_CHORDS.map(c => hold(JINGLE_ROOTS[c]![0].replace(/(\d)$/, n => String(Number(n) + 1)))), vol: .24 },
+    { inst: "piano", bars: JINGLE_BELLS_DOWN, vol: 0.32 },
+    { inst: "bell", bars: JINGLE_BELLS, vol: 0.12 },
+    { inst: "strings", bars: JINGLE_PADS, vol: 0.18 },
+    { inst: "pluck", bars: JINGLE_CHORDS.map((c) => hold(JINGLE_ROOTS[c]![0].replace(/(\d)$/, (n) => String(Number(n) + 1)))), vol: 0.24 },
   ],
 };
 
 const submarineResults: Track = {
-  id: "submarine-results", bpm: 108, bars: JINGLE_BELLS.length, reverb: .35,
+  id: "submarine-results",
+  bpm: 108,
+  bars: JINGLE_BELLS.length,
+  reverb: 0.35,
   layers: [
-    { inst: "brass", bars: JINGLE_BELLS, vol: .6 },
-    { inst: "bell", bars: JINGLE_BELLS_UP, vol: .26 },
-    { inst: "strings", bars: JINGLE_PADS, vol: .36 },
-    { inst: "piano", bars: JINGLE_BASS, vol: .5 },
-    { inst: "pluck", bars: JINGLE_COMP, vol: .28 },
-    { inst: "hat", bars: [SLED_BELLS], vol: .25 },
-    { inst: "snare", bars: [drum("....x.......x...")], vol: .2 },
-    { inst: "cymbal", bars: [once("x"), ...Array(15).fill(rest)], vol: .2 },
+    { inst: "brass", bars: JINGLE_BELLS, vol: 0.6 },
+    { inst: "bell", bars: JINGLE_BELLS_UP, vol: 0.26 },
+    { inst: "strings", bars: JINGLE_PADS, vol: 0.36 },
+    { inst: "piano", bars: JINGLE_BASS, vol: 0.5 },
+    { inst: "pluck", bars: JINGLE_COMP, vol: 0.28 },
+    { inst: "hat", bars: [SLED_BELLS], vol: 0.25 },
+    { inst: "snare", bars: [drum("....x.......x...")], vol: 0.2 },
+    { inst: "cymbal", bars: [once("x"), ...Array(15).fill(rest)], vol: 0.2 },
   ],
 };
 
@@ -366,15 +419,24 @@ const fortressMelody = [
   seq(["A4", 4], ["F4", 2], ["E4", 2], ["D4", 4], ["C4", 4]),
 ];
 const fortressHarmony = [
-  ["C3 E3 G3", "C3 E3 G3"], ["G2 B2 D3", "D3 F#3 A3"],
-  ["C3 E3 G3", "A2 C3 E3"], ["F2 A2 C3", "G2 B2 D3"],
-  ["C3 E3 G3", "C3 E3 G3"], ["G2 B2 D3", "D3 F#3 A3"],
-  ["C3 E3 G3", "A2 C3 E3"], ["F2 A2 C3", "G2 B2 D3"],
-  ["C3 E3 G3", "A2 C3 E3"], ["D3 F#3 A3", "G2 B2 D3"],
-  ["C3 E3 G3", "F2 A2 C3"], ["G2 B2 D3", "C3 E3 G3"],
-  ["E3 G#3 B3", "A2 C3 E3"], ["D3 F#3 A3", "G2 B2 D3"],
-  ["F2 A2 C3", "A2 C#3 E3"], ["D3 F3 A3", "E3 G#3 B3"],
-  ["C3 E3 G3", "A2 C3 E3"], ["F2 A2 C3", "C3 E3 G3"],
+  ["C3 E3 G3", "C3 E3 G3"],
+  ["G2 B2 D3", "D3 F#3 A3"],
+  ["C3 E3 G3", "A2 C3 E3"],
+  ["F2 A2 C3", "G2 B2 D3"],
+  ["C3 E3 G3", "C3 E3 G3"],
+  ["G2 B2 D3", "D3 F#3 A3"],
+  ["C3 E3 G3", "A2 C3 E3"],
+  ["F2 A2 C3", "G2 B2 D3"],
+  ["C3 E3 G3", "A2 C3 E3"],
+  ["D3 F#3 A3", "G2 B2 D3"],
+  ["C3 E3 G3", "F2 A2 C3"],
+  ["G2 B2 D3", "C3 E3 G3"],
+  ["E3 G#3 B3", "A2 C3 E3"],
+  ["D3 F#3 A3", "G2 B2 D3"],
+  ["F2 A2 C3", "A2 C#3 E3"],
+  ["D3 F3 A3", "E3 G#3 B3"],
+  ["C3 E3 G3", "A2 C3 E3"],
+  ["F2 A2 C3", "C3 E3 G3"],
 ];
 
 const fightPlay: Track = {
@@ -454,7 +516,16 @@ const robotLobby: Track = {
     // A flute line floats over the second half.
     {
       inst: "flute",
-      bars: [rest, rest, rest, rest, seq(["D5", 8], ["B4", 4], ["D5", 4]), seq(["D5", 8], ["E5", 8]), seq(["F#5", 8], ["D#5", 4], ["F#5", 4]), seq(["E5", 12], [".", 4])],
+      bars: [
+        rest,
+        rest,
+        rest,
+        rest,
+        seq(["D5", 8], ["B4", 4], ["D5", 4]),
+        seq(["D5", 8], ["E5", 8]),
+        seq(["F#5", 8], ["D#5", 4], ["F#5", 4]),
+        seq(["E5", 12], [".", 4]),
+      ],
       vol: 0.6,
     },
   ],
@@ -517,7 +588,11 @@ const robotMove: Track = {
       ],
       vol: 0.8,
     },
-    { inst: "timpani", bars: [seq([".", 4], ["G2", 1], [".", 11]), once("G2"), seq([".", 4], ["C3", 1], [".", 11]), seq([".", 8], ["G2", 1], [".", 7])], vol: 0.7 },
+    {
+      inst: "timpani",
+      bars: [seq([".", 4], ["G2", 1], [".", 11]), once("G2"), seq([".", 4], ["C3", 1], [".", 11]), seq([".", 8], ["G2", 1], [".", 7])],
+      vol: 0.7,
+    },
   ],
 };
 
@@ -536,7 +611,16 @@ const robotResults: Track = {
     { inst: "brass", bars: ODE, vol: 0.7 },
     {
       inst: "strings",
-      bars: [hold(ODE_D), seq([ODE_D, 8], [ODE_A, 8]), hold(ODE_D), hold(ODE_A), hold(ODE_D), seq([ODE_D, 8], [ODE_A, 8]), hold(ODE_D), seq([ODE_A, 8], [ODE_D, 8])],
+      bars: [
+        hold(ODE_D),
+        seq([ODE_D, 8], [ODE_A, 8]),
+        hold(ODE_D),
+        hold(ODE_A),
+        hold(ODE_D),
+        seq([ODE_D, 8], [ODE_A, 8]),
+        hold(ODE_D),
+        seq([ODE_A, 8], [ODE_D, 8]),
+      ],
       vol: 0.6,
     },
     {
@@ -553,7 +637,11 @@ const robotResults: Track = {
       ],
       vol: 0.8,
     },
-    { inst: "timpani", bars: [once("D3"), once("D3"), once("D3"), once("A2"), once("D3"), once("D3"), once("D3"), seq(["A2", 1], [".", 7], ["D3", 1], [".", 7])], vol: 0.5 },
+    {
+      inst: "timpani",
+      bars: [once("D3"), once("D3"), once("D3"), once("A2"), once("D3"), once("D3"), once("D3"), seq(["A2", 1], [".", 7], ["D3", 1], [".", 7])],
+      vol: 0.5,
+    },
     { inst: "cymbal", bars: [drum("x..............."), rest, rest, rest], vol: 0.5 },
   ],
 };
@@ -573,38 +661,72 @@ const eighths = (tok: string) => pump(tok, "x.x.x.x.x.x.x.x.");
 // Twelve steps keep its three-beat phrasing intact instead of padding each bar to 4/4.
 const lullaby = (...parts: [string, number][]) => seq(...parts);
 const SILENT_NIGHT = [
-  lullaby(["G4", 6], ["A4", 2], ["G4", 4]), lullaby(["E4", 12]),
-  lullaby(["G4", 6], ["A4", 2], ["G4", 4]), lullaby(["E4", 12]),
-  lullaby(["D5", 8], ["D5", 4]), lullaby(["B4", 12]),
-  lullaby(["C5", 8], ["C5", 4]), lullaby(["G4", 12]),
-  lullaby(["A4", 8], ["A4", 4]), lullaby(["C5", 6], ["B4", 2], ["A4", 4]),
-  lullaby(["G4", 6], ["A4", 2], ["G4", 4]), lullaby(["E4", 12]),
-  lullaby(["A4", 8], ["A4", 4]), lullaby(["C5", 6], ["B4", 2], ["A4", 4]),
-  lullaby(["G4", 6], ["A4", 2], ["G4", 4]), lullaby(["E4", 12]),
-  lullaby(["D5", 8], ["D5", 4]), lullaby(["F5", 6], ["D5", 2], ["B4", 4]),
-  lullaby(["C5", 12]), lullaby(["E5", 12]),
-  lullaby(["C5", 4], ["G4", 4], ["E4", 4]), lullaby(["G4", 6], ["F4", 2], ["D4", 4]),
-  lullaby(["C4", 12]), lullaby(["C4", 8], [".", 4]),
+  lullaby(["G4", 6], ["A4", 2], ["G4", 4]),
+  lullaby(["E4", 12]),
+  lullaby(["G4", 6], ["A4", 2], ["G4", 4]),
+  lullaby(["E4", 12]),
+  lullaby(["D5", 8], ["D5", 4]),
+  lullaby(["B4", 12]),
+  lullaby(["C5", 8], ["C5", 4]),
+  lullaby(["G4", 12]),
+  lullaby(["A4", 8], ["A4", 4]),
+  lullaby(["C5", 6], ["B4", 2], ["A4", 4]),
+  lullaby(["G4", 6], ["A4", 2], ["G4", 4]),
+  lullaby(["E4", 12]),
+  lullaby(["A4", 8], ["A4", 4]),
+  lullaby(["C5", 6], ["B4", 2], ["A4", 4]),
+  lullaby(["G4", 6], ["A4", 2], ["G4", 4]),
+  lullaby(["E4", 12]),
+  lullaby(["D5", 8], ["D5", 4]),
+  lullaby(["F5", 6], ["D5", 2], ["B4", 4]),
+  lullaby(["C5", 12]),
+  lullaby(["E5", 12]),
+  lullaby(["C5", 4], ["G4", 4], ["E4", 4]),
+  lullaby(["G4", 6], ["F4", 2], ["D4", 4]),
+  lullaby(["C4", 12]),
+  lullaby(["C4", 8], [".", 4]),
 ];
 // New accompaniment, aligned to all 24 melody bars, rather than an unrelated short loop.
 const SILENT_HARMONY = [
-  "C3 E3 G3", "C3 E3 G3", "C3 E3 G3", "C3 E3 G3",
-  "G2 B2 D3", "G2 B2 D3", "C3 E3 G3", "C3 E3 G3",
-  "F2 A2 C3", "F2 A2 C3", "C3 E3 G3", "C3 E3 G3",
-  "F2 A2 C3", "F2 A2 C3", "C3 E3 G3", "C3 E3 G3",
-  "G2 B2 D3", "G2 B2 D3", "C3 E3 G3", "C3 E3 G3",
-  "C3 E3 G3", "G2 B2 D3", "C3 E3 G3", "C3 E3 G3",
+  "C3 E3 G3",
+  "C3 E3 G3",
+  "C3 E3 G3",
+  "C3 E3 G3",
+  "G2 B2 D3",
+  "G2 B2 D3",
+  "C3 E3 G3",
+  "C3 E3 G3",
+  "F2 A2 C3",
+  "F2 A2 C3",
+  "C3 E3 G3",
+  "C3 E3 G3",
+  "F2 A2 C3",
+  "F2 A2 C3",
+  "C3 E3 G3",
+  "C3 E3 G3",
+  "G2 B2 D3",
+  "G2 B2 D3",
+  "C3 E3 G3",
+  "C3 E3 G3",
+  "C3 E3 G3",
+  "G2 B2 D3",
+  "C3 E3 G3",
+  "C3 E3 G3",
 ];
-const silentChords = SILENT_HARMONY.map(notes => lullaby([chord(notes), 6], [".", 6]));
-const silentStrings = SILENT_HARMONY.map(notes => lullaby([chord(notes), 12]));
-const silentHarp = SILENT_HARMONY.map(notes => {
+const silentChords = SILENT_HARMONY.map((notes) => lullaby([chord(notes), 6], [".", 6]));
+const silentStrings = SILENT_HARMONY.map((notes) => lullaby([chord(notes), 12]));
+const silentHarp = SILENT_HARMONY.map((notes) => {
   const [root, third, fifth] = notes.split(" ") as [string, string, string];
   return lullaby([root, 2], [fifth, 2], [third, 2], [fifth, 2], [third, 2], [fifth, 2]);
 });
-const silentBells = SILENT_HARMONY.map((_, bar) => bar % 4 === 0 ? lullaby(["G5", 2], [".", 10]) : lullaby([".", 12]));
+const silentBells = SILENT_HARMONY.map((_, bar) => (bar % 4 === 0 ? lullaby(["G5", 2], [".", 10]) : lullaby([".", 12])));
 
 const christmasLandLobby: Track = {
-  id: "land-christmas-lobby", bpm: 60, bars: 24, stepsPerBar: 12, reverb: 0.28,
+  id: "land-christmas-lobby",
+  bpm: 60,
+  bars: 24,
+  stepsPerBar: 12,
+  reverb: 0.28,
   layers: [
     { inst: "piano", bars: SILENT_NIGHT, vol: 0.7 },
     { inst: "piano", bars: silentChords, vol: 0.3 },
@@ -613,31 +735,50 @@ const christmasLandLobby: Track = {
   ],
 };
 const christmasLandPlay: Track = {
-  id: "land-christmas-play", bpm: 60, bars: 24, stepsPerBar: 12, tempoBoost: 1, reverb: 0.28,
+  id: "land-christmas-play",
+  bpm: 60,
+  bars: 24,
+  stepsPerBar: 12,
+  tempoBoost: 1,
+  reverb: 0.28,
   layers: [
     // The complete melody stays on piano from calm to capture, without restarting.
     ...christmasLandLobby.layers,
     { inst: "pluck", bars: silentHarp, vol: 0.28, from: 0.25 },
     { inst: "strings", bars: SILENT_NIGHT, vol: 0.3, from: 0.45 },
-    { inst: "piano", bars: SILENT_HARMONY.map(notes => {
-      const root = notes.split(" ")[0]!;
-      return lullaby([root, 4], [".", 2], [root, 4], [".", 2]);
-    }), vol: 0.3, from: 0.65 },
+    {
+      inst: "piano",
+      bars: SILENT_HARMONY.map((notes) => {
+        const root = notes.split(" ")[0]!;
+        return lullaby([root, 4], [".", 2], [root, 4], [".", 2]);
+      }),
+      vol: 0.3,
+      from: 0.65,
+    },
     { inst: "flute", bars: SILENT_NIGHT, vol: 0.32, from: 0.8 },
     // Closing ring: moving low strings and a warm horn double give the tune momentum.
     { inst: "strings", bars: silentHarp, vol: 0.4, from: 0.65 },
     { inst: "brass", bars: SILENT_NIGHT, vol: 0.32, from: 0.8 },
     { inst: "snare", bars: [drum("....x.....x.")], vol: 0.22, from: 0.8 },
-    { inst: "timpani", bars: SILENT_HARMONY.map(notes => {
-      const [root, , fifth] = notes.split(" ");
-      return lullaby([root!, 2], [".", 2], [root!, 2], [".", 2], [fifth!, 2], [".", 2]);
-    }), vol: 0.28, from: 0.85 },
+    {
+      inst: "timpani",
+      bars: SILENT_HARMONY.map((notes) => {
+        const [root, , fifth] = notes.split(" ");
+        return lullaby([root!, 2], [".", 2], [root!, 2], [".", 2], [fifth!, 2], [".", 2]);
+      }),
+      vol: 0.28,
+      from: 0.85,
+    },
     { inst: "bell", bars: shift(SILENT_NIGHT, 1), vol: 0.2, from: 0.9 },
     { inst: "cymbal", bars: [lullaby(["x", 1], [".", 11]), lullaby([".", 12]), lullaby([".", 12]), lullaby([".", 12])], vol: 0.12, from: 0.9 },
   ],
 };
 const christmasLandResults: Track = {
-  id: "land-christmas-results", bpm: 68, bars: 24, stepsPerBar: 12, reverb: 0.3,
+  id: "land-christmas-results",
+  bpm: 68,
+  bars: 24,
+  stepsPerBar: 12,
+  reverb: 0.3,
   layers: [
     { inst: "piano", bars: SILENT_NIGHT, vol: 0.75 },
     { inst: "piano", bars: silentChords, vol: 0.3 },
@@ -667,7 +808,11 @@ const landLobby: Track = {
       ],
     },
     // A few high notes, far apart.
-    { inst: "piano", bars: [rest, seq([".", 10], ["G5", 2], ["E5", 4]), rest, seq([".", 8], ["B5", 4], ["G5", 4]), rest, rest, seq([".", 12], ["E5", 4]), rest], vol: 0.4 },
+    {
+      inst: "piano",
+      bars: [rest, seq([".", 10], ["G5", 2], ["E5", 4]), rest, seq([".", 8], ["B5", 4], ["G5", 4]), rest, rest, seq([".", 12], ["E5", 4]), rest],
+      vol: 0.4,
+    },
     {
       inst: "pad",
       bars: [
@@ -721,20 +866,42 @@ const landPlay: Track = {
     },
     { inst: "pad", bars: [hold(chord("A3 C4 E4")), hold(chord("F3 A3 C4")), hold(chord("G3 C4 E4")), hold(chord("G3 B3 D4"))], vol: 0.5 },
     // Something is stirring: the piano starts to flow and picks up the theme.
-    { inst: "piano", bars: [rolled("A3 E4 A4 C5 E5 C5 A4 E4"), rolled("F3 C4 F4 A4 C5 A4 F4 C4"), rolled("C3 G3 C4 E4 G4 E4 C4 G3"), rolled("G3 D4 G4 B4 D5 B4 G4 D4")], vol: 0.6, from: 0.25, to: 0.85 },
+    {
+      inst: "piano",
+      bars: [rolled("A3 E4 A4 C5 E5 C5 A4 E4"), rolled("F3 C4 F4 A4 C5 A4 F4 C4"), rolled("C3 G3 C4 E4 G4 E4 C4 G3"), rolled("G3 D4 G4 B4 D5 B4 G4 D4")],
+      vol: 0.6,
+      from: 0.25,
+      to: 0.85,
+    },
     { inst: "piano", bars: LAND_THEME, from: 0.25, to: 0.45 },
     { inst: "tribass", bars: [hold("A2"), hold("F2"), hold("C2"), hold("G2")], vol: 0.6, from: 0.25, to: 0.65 },
     // A ring is taking shape: strings take the theme over a heartbeat.
     { inst: "strings", bars: LAND_THEME, vol: 0.9, from: 0.45 },
-    { inst: "strings", bars: [hold(chord("A3 C4 E4")), hold(chord("F3 A3 C4")), hold(chord("G3 C4 E4")), hold(chord("G3 B3 D4"))], vol: 0.55, from: 0.45, to: 0.65 },
+    {
+      inst: "strings",
+      bars: [hold(chord("A3 C4 E4")), hold(chord("F3 A3 C4")), hold(chord("G3 C4 E4")), hold(chord("G3 B3 D4"))],
+      vol: 0.55,
+      from: 0.45,
+      to: 0.65,
+    },
     { inst: "heart", bars: [drum("x.......x.......")], vol: 0.6, from: 0.45, to: 0.65 },
     // Nearly closed: driving low strings, brass and timpani.
     { inst: "strings", bars: [eighths(chord("A2 E3")), eighths(chord("F2 C3")), eighths(chord("C3 G3")), eighths(chord("G2 D3"))], vol: 0.75, from: 0.65 },
     { inst: "tribass", bars: [eighths("A1"), eighths("F1"), eighths("C2"), eighths("G1")], vol: 0.7, from: 0.65 },
     { inst: "brass", bars: shift(LAND_THEME, -1), vol: 0.8, from: 0.65 },
-    { inst: "timpani", bars: [pump("A2", "x...x...x...x..."), pump("F2", "x...x...x...x..."), pump("C3", "x...x...x...x..."), pump("G2", "x...x...x...x...")], vol: 0.5, from: 0.65 },
+    {
+      inst: "timpani",
+      bars: [pump("A2", "x...x...x...x..."), pump("F2", "x...x...x...x..."), pump("C3", "x...x...x...x..."), pump("G2", "x...x...x...x...")],
+      vol: 0.5,
+      from: 0.65,
+    },
     // One tile from closing: everything at once.
-    { inst: "piano", bars: [arp(["A4", "C5", "E5", "A5"]), arp(["F4", "A4", "C5", "F5"]), arp(["G4", "C5", "E5", "G5"]), arp(["G4", "B4", "D5", "G5"])], vol: 0.5, from: 0.85 },
+    {
+      inst: "piano",
+      bars: [arp(["A4", "C5", "E5", "A5"]), arp(["F4", "A4", "C5", "F5"]), arp(["G4", "C5", "E5", "G5"]), arp(["G4", "B4", "D5", "G5"])],
+      vol: 0.5,
+      from: 0.85,
+    },
     { inst: "strings", bars: shift(LAND_THEME, 1), vol: 0.6, from: 0.85 },
     { inst: "taiko", bars: [drum("o..x..x.o..x.x..")], vol: 0.6, from: 0.85 },
     { inst: "cymbal", bars: [drum("x..............."), rest], vol: 0.6, from: 0.85 },
@@ -940,7 +1107,11 @@ const racerResults: Track = {
     { inst: "chipnoise", bars: [drum("....o.......o..."), drum("....o.......o..."), drum("....o.......o..."), drum("....o...o.o.oooo")], vol: 0.7 },
     { inst: "hat", bars: [drum("..x...x...x...x.")], vol: 0.6 },
     { inst: "tribass", bars: [octaves("A1", "A2"), octaves("D2", "D3"), octaves("E2", "E3"), octaves("A1", "A2")] },
-    { inst: "pulse", bars: [arp(["A4", "C#5", "E5", "C#5"]), arp(["A4", "D5", "F#5", "D5"]), arp(["G#4", "B4", "E5", "B4"]), arp(["A4", "C#5", "E5", "A5"])], vol: 0.35 },
+    {
+      inst: "pulse",
+      bars: [arp(["A4", "C#5", "E5", "C#5"]), arp(["A4", "D5", "F#5", "D5"]), arp(["G#4", "B4", "E5", "B4"]), arp(["A4", "C#5", "E5", "A5"])],
+      vol: 0.35,
+    },
     {
       inst: "lead",
       bars: [
@@ -954,7 +1125,6 @@ const racerResults: Track = {
     },
   ],
 };
-
 
 // ---------- Cup of Death: spaghetti western (original themes) ----------
 
@@ -1007,7 +1177,16 @@ const CUP_THEME = [
   seq(["A4", 12], [".", 4]),
 ];
 const CUP_CHORDS = [AM, G_, F_, E_, AM, G_, E_, AM];
-const CUP_BASS = [boomChick("A2", "E2"), boomChick("G2", "D2"), boomChick("F2", "C3"), boomChick("E2", "B2"), boomChick("A2", "E2"), boomChick("G2", "D2"), boomChick("E2", "B2"), boomChick("A2", "E2")];
+const CUP_BASS = [
+  boomChick("A2", "E2"),
+  boomChick("G2", "D2"),
+  boomChick("F2", "C3"),
+  boomChick("E2", "B2"),
+  boomChick("A2", "E2"),
+  boomChick("G2", "D2"),
+  boomChick("E2", "B2"),
+  boomChick("A2", "E2"),
+];
 const CUP_ROOTS = ["A2", "G2", "F2", "E2", "A2", "G2", "E2", "A2"];
 
 const cupQuiz: Track = {
@@ -1042,7 +1221,12 @@ const cupDrink: Track = {
     { inst: "twang", bars: [seq(["A2", 8], [".", 8]), seq(["F2", 8], [".", 8]), seq(["D2", 8], [".", 8]), seq(["E2", 8], [".", 8])], vol: 0.8 },
     { inst: "whistle", bars: [seq([".", 8], ["E5", 8]), seq(["F5", 8], ["E5", 8]), seq(["D5", 12], [".", 4]), seq(["G#4", 8], ["B4", 8])], vol: 0.7 },
     { inst: "bell", bars: [once("A3")], vol: 0.6 },
-    { inst: "timpani", bars: [pump("A2", "x...x...x...x..."), pump("F2", "x...x...x...x..."), pump("D2", "x...x...x...x..."), pump("E2", "x.x.x.x.xxxxxxxx")], vol: 0.45, from: 0.6 },
+    {
+      inst: "timpani",
+      bars: [pump("A2", "x...x...x...x..."), pump("F2", "x...x...x...x..."), pump("D2", "x...x...x...x..."), pump("E2", "x.x.x.x.xxxxxxxx")],
+      vol: 0.45,
+      from: 0.6,
+    },
   ],
 };
 
@@ -1064,7 +1248,11 @@ const cupResults: Track = {
     { inst: "whistle", bars: [seq([".", 8], ["A5", 8]), seq([".", 8], ["F#5", 8]), seq([".", 8], ["E5", 8]), seq([".", 4], ["E5", 4], ["A5", 8])], vol: 0.5 },
     { inst: "strings", bars: [hold(chord("A3 C#4 E4")), hold(chord("D4 F#4 A4")), hold(chord("E3 G#3 B3")), hold(chord("A3 C#4 E4"))], vol: 0.8 },
     { inst: "twang", bars: [boomChick("A2", "E2"), boomChick("D2", "A2"), boomChick("E2", "B2"), boomChick("A2", "E2")], vol: 0.8 },
-    { inst: "timpani", bars: [pump("A2", "x.......x.x....."), pump("D2", "x.......x.x....."), pump("E2", "x.......x.x....."), pump("A2", "x...x...x.x.x...")], vol: 0.5 },
+    {
+      inst: "timpani",
+      bars: [pump("A2", "x.......x.x....."), pump("D2", "x.......x.x....."), pump("E2", "x.......x.x....."), pump("A2", "x...x...x.x.x...")],
+      vol: 0.5,
+    },
     { inst: "woodblock", bars: [GALLOP], vol: 0.45 },
     { inst: "cymbal", bars: [rest, rest, rest, once("x")], vol: 0.6 },
   ],
@@ -1086,8 +1274,16 @@ const siegeLobby: Track = {
   reverb: 0.3,
   layers: [
     // The lute.
-    { inst: "pluck", bars: [arp(["G3", "D4", "B4", "D4"], 2), arp(["C4", "G4", "E5", "G4"], 2), arp(["E3", "B3", "G4", "B3"], 2), arp(["D4", "A4", "F#5", "A4"], 2)], vol: 0.5 },
-    { inst: "bass", bars: [pump("G2", "x.......x......."), pump("C2", "x.......x......."), pump("E2", "x.......x......."), pump("D2", "x.......x.......")], vol: 0.5 },
+    {
+      inst: "pluck",
+      bars: [arp(["G3", "D4", "B4", "D4"], 2), arp(["C4", "G4", "E5", "G4"], 2), arp(["E3", "B3", "G4", "B3"], 2), arp(["D4", "A4", "F#5", "A4"], 2)],
+      vol: 0.5,
+    },
+    {
+      inst: "bass",
+      bars: [pump("G2", "x.......x......."), pump("C2", "x.......x......."), pump("E2", "x.......x......."), pump("D2", "x.......x.......")],
+      vol: 0.5,
+    },
     // A soft tabor.
     { inst: "woodblock", bars: [drum("x.....x.x.......")], vol: 0.25 },
     // The recorder.
@@ -1105,7 +1301,16 @@ const siegeLobby: Track = {
   ],
 };
 
-const SIEGE_MARCH = [chord("Bb3 D4 F4"), chord("Eb4 G4 Bb4"), chord("F3 A3 C4"), chord("G3 Bb3 D4"), chord("Bb3 D4 F4"), chord("Eb4 G4 Bb4"), chord("C4 Eb4 G4"), chord("F3 A3 C4")];
+const SIEGE_MARCH = [
+  chord("Bb3 D4 F4"),
+  chord("Eb4 G4 Bb4"),
+  chord("F3 A3 C4"),
+  chord("G3 Bb3 D4"),
+  chord("Bb3 D4 F4"),
+  chord("Eb4 G4 Bb4"),
+  chord("C4 Eb4 G4"),
+  chord("F3 A3 C4"),
+];
 const SIEGE_ROOTS = ["Bb1", "Eb2", "F2", "G1", "Bb1", "Eb2", "C2", "F2"];
 
 const siegeBattle: Track = {
@@ -1143,7 +1348,17 @@ const siegeBattle: Track = {
     { inst: "hat", bars: [drum("..x...x...x...x.")], vol: 0.35, from: 0.6 },
     { inst: "cymbal", bars: [once("x"), rest, rest, rest], vol: 0.45, from: 0.7 },
     // The giant.
-    { inst: "tribass", bars: SIEGE_ROOTS.map((r) => pump(r.replace(/\d/, (n) => String(Number(n) - 1)), "x.......x.......")), vol: 0.6, from: 0.85 },
+    {
+      inst: "tribass",
+      bars: SIEGE_ROOTS.map((r) =>
+        pump(
+          r.replace(/\d/, (n) => String(Number(n) - 1)),
+          "x.......x.......",
+        ),
+      ),
+      vol: 0.6,
+      from: 0.85,
+    },
     { inst: "timpani", bars: SIEGE_ROOTS.map((r) => pump(r.replace("1", "2"), "x.....x.x.......")), vol: 0.6, from: 0.85 },
   ],
 };
@@ -1203,22 +1418,39 @@ const PATAPAN = [
 ];
 // Newly written accompaniment, not a copy of the score's SATB harmonization.
 const PATAPAN_CHORDS: Record<string, string[]> = {
-  Am: ["A3", "C4", "E4"], E: ["E3", "G#3", "B3"], Dm: ["D3", "F3", "A3"],
+  Am: ["A3", "C4", "E4"],
+  E: ["E3", "G#3", "B3"],
+  Dm: ["D3", "F3", "A3"],
 };
 const PATAPAN_HARMONY = [
-  ["Am", "E"], ["Dm", "Am"], ["E", "Am"], ["Am", "E"],
-  ["E", "E"], ["Am", "Am"], ["Am", "Am"], ["Dm", "E"],
-  ["E", "E"], ["Am", "Am"], ["Dm", "Am"], ["E", "Am"],
+  ["Am", "E"],
+  ["Dm", "Am"],
+  ["E", "Am"],
+  ["Am", "E"],
+  ["E", "E"],
+  ["Am", "Am"],
+  ["Am", "Am"],
+  ["Dm", "E"],
+  ["E", "E"],
+  ["Am", "Am"],
+  ["Dm", "Am"],
+  ["E", "Am"],
 ];
 const patapanPad = PATAPAN_HARMONY.map(([a, b]) => seq([chord(PATAPAN_CHORDS[a!]!.join(" ")), 8], [chord(PATAPAN_CHORDS[b!]!.join(" ")), 8]));
 const patapanBass = PATAPAN_HARMONY.map(([a, b]) => {
   const root = (name: string) => PATAPAN_CHORDS[name]![0]!.replace("3", "2");
   return seq([root(a!), 4], [".", 4], [root(b!), 4], [".", 4]);
 });
-const patapanPluck = PATAPAN_HARMONY.map(([a, b]) => arp([...PATAPAN_CHORDS[a!]!, PATAPAN_CHORDS[a!]![1]!, ...PATAPAN_CHORDS[b!]!, PATAPAN_CHORDS[b!]![1]!], 2));
+const patapanPluck = PATAPAN_HARMONY.map(([a, b]) =>
+  arp([...PATAPAN_CHORDS[a!]!, PATAPAN_CHORDS[a!]![1]!, ...PATAPAN_CHORDS[b!]!, PATAPAN_CHORDS[b!]![1]!], 2),
+);
 
 const christmasSiegeLobby: Track = {
-  id: "siege-christmas-lobby", rich: true, bpm: 96, bars: PATAPAN.length, reverb: 0.25,
+  id: "siege-christmas-lobby",
+  rich: true,
+  bpm: 96,
+  bars: PATAPAN.length,
+  reverb: 0.25,
   layers: [
     { inst: "flute", bars: PATAPAN, vol: 0.55 },
     { inst: "bell", bars: shift(PATAPAN, 1), vol: 0.16 },
@@ -1230,7 +1462,12 @@ const christmasSiegeLobby: Track = {
   ],
 };
 const christmasSiegeBattle: Track = {
-  id: "siege-christmas-battle", rich: true, bpm: 112, tempoBoost: 0.15, bars: PATAPAN.length, reverb: 0.2,
+  id: "siege-christmas-battle",
+  rich: true,
+  bpm: 112,
+  tempoBoost: 0.15,
+  bars: PATAPAN.length,
+  reverb: 0.2,
   layers: [
     // Keep the recognizable carol audible during countdowns and build breaks too.
     { inst: "flute", bars: PATAPAN, vol: 0.55 },
@@ -1248,7 +1485,11 @@ const christmasSiegeBattle: Track = {
   ],
 };
 const christmasSiegeResults: Track = {
-  id: "siege-christmas-results", rich: true, bpm: 100, bars: PATAPAN.length, reverb: 0.32,
+  id: "siege-christmas-results",
+  rich: true,
+  bpm: 100,
+  bars: PATAPAN.length,
+  reverb: 0.32,
   layers: [
     { inst: "flute", bars: PATAPAN, vol: 0.45 },
     { inst: "piano", bars: patapanBass, vol: 0.35 },
@@ -1301,12 +1542,7 @@ const SHOW_FLUTE = [
   seq([".", 12], ["A5", 4]),
 ];
 /** The same first phrase, with the 3rd and 7th raised, over D G A D. */
-const SHOW_SUNSET = [
-  seq([".", 6], ["A5", 10]),
-  seq(["G5", 6], ["F#5", 6], [".", 4]),
-  seq(["C#6", 8], [".", 8]),
-  seq(["D5", 10], [".", 6]),
-];
+const SHOW_SUNSET = [seq([".", 6], ["A5", 10]), seq(["G5", 6], ["F#5", 6], [".", 4]), seq(["C#6", 8], [".", 8]), seq(["D5", 10], [".", 6])];
 const SUN_CHORDS = ["D3 F#3 A3", "G3 B3 D4", "A3 C#4 E4", "D3 F#3 A3"].map(chord);
 const SUN_ROOTS = ["D2", "G2", "A2", "D2"];
 /** The jaw harp boings the D drone on the same beats as the low guitar. */
@@ -1421,7 +1657,20 @@ const XMAS_CHORDS: Record<string, string> = {
   "F#m": "F#3 A3 C#4",
   "C#m7": "G#3 B3 C#4 E4",
 };
-const XMAS_ROOTS: Record<string, string> = { G: "G2", D: "D2", D7: "D2", A: "A2", A7: "A2", Em: "E2", C: "C3", Am: "A2", B7: "B2", Bm: "B2", "F#m": "F#2", "C#m7": "C#3" };
+const XMAS_ROOTS: Record<string, string> = {
+  G: "G2",
+  D: "D2",
+  D7: "D2",
+  A: "A2",
+  A7: "A2",
+  Em: "E2",
+  C: "C3",
+  Am: "A2",
+  B7: "B2",
+  Bm: "B2",
+  "F#m": "F#2",
+  "C#m7": "C#3",
+};
 
 /** One bar from four beats of chords: each beat's 4 steps follow `beat` ("x" = play, "-" = hold, "." = rest). */
 const beats = (q: string[], beat: string, pick: (chordName: string, step: number) => string) =>
@@ -1441,7 +1690,14 @@ const rootBeats = (q: string[]) => beats(q, "x---", (c) => XMAS_ROOTS[c]!);
 /** Eighth notes bouncing between the root and its octave. */
 const rootBounce = (q: string[]) => beats(q, "x.x.", (c, i) => (i % 4 === 0 ? XMAS_ROOTS[c]! : octaveUp(XMAS_ROOTS[c]!)));
 /** A chord on the off-beat ("oom-pah"), an octave up. */
-const offbeatChords = (q: string[]) => beats(q, "..x.", (c) => chord(XMAS_CHORDS[c]!.split(" ").map((n) => octaveUp(n)).join(" ")));
+const offbeatChords = (q: string[]) =>
+  beats(q, "..x.", (c) =>
+    chord(
+      XMAS_CHORDS[c]!.split(" ")
+        .map((n) => octaveUp(n))
+        .join(" "),
+    ),
+  );
 /** Broken chords in eighths, an octave up. */
 const brokenChords = (q: string[]) =>
   beats(q, "x.x.", (c, i) => {
@@ -1476,11 +1732,26 @@ const ADESTE = [
   seq(["G4", 12], ["G4", 4]), // … O
 ];
 const ADESTE_HARMONY = [
-  ["G", "G", "D", "G"], ["D", "D", "D", "D"], ["G", "D", "G", "C"], ["G", "G", "D", "G"],
-  ["G", "G", "D", "C"], ["D", "Em", "D", "G"], ["D", "D", "A", "A"], ["D", "D", "D", "D"],
-  ["G", "G", "D7", "G"], ["C", "C", "G", "G"], ["D", "G", "C", "D"], ["D", "A", "D", "G"],
-  ["G", "D", "G", "D"], ["G", "G", "D", "G"], ["G", "D", "G", "C"], ["G", "G", "D", "G"],
-  ["C", "G", "D", "Em"], ["D", "D", "G", "C"], ["G", "G", "D7", "D7"], ["G", "G", "G", "G"],
+  ["G", "G", "D", "G"],
+  ["D", "D", "D", "D"],
+  ["G", "D", "G", "C"],
+  ["G", "G", "D", "G"],
+  ["G", "G", "D", "C"],
+  ["D", "Em", "D", "G"],
+  ["D", "D", "A", "A"],
+  ["D", "D", "D", "D"],
+  ["G", "G", "D7", "G"],
+  ["C", "C", "G", "G"],
+  ["D", "G", "C", "D"],
+  ["D", "A", "D", "G"],
+  ["G", "D", "G", "D"],
+  ["G", "G", "D", "G"],
+  ["G", "D", "G", "C"],
+  ["G", "G", "D", "G"],
+  ["C", "G", "D", "Em"],
+  ["D", "D", "G", "C"],
+  ["G", "G", "D7", "D7"],
+  ["G", "G", "G", "G"],
 ];
 
 // Joy to the World in D (the hymn's 2/4 bars paired into 4/4). The tune is 9½ bars; bar 10
@@ -1498,8 +1769,16 @@ const ANTIOCH = [
   seq(["D4", 8], [".", 8]), // sing.
 ];
 const ANTIOCH_HARMONY = [
-  ["D", "D", "D", "D"], ["D", "A", "D", "D"], ["G", "G", "A", "A"], ["D", "D", "D", "D"], ["A7", "D", "D", "D"],
-  ["A7", "D", "D", "D"], ["D", "D", "A", "A"], ["A7", "A7", "D", "G"], ["D", "D", "D", "A7"], ["D", "D", "D", "D"],
+  ["D", "D", "D", "D"],
+  ["D", "A", "D", "D"],
+  ["G", "G", "A", "A"],
+  ["D", "D", "D", "D"],
+  ["A7", "D", "D", "D"],
+  ["A7", "D", "D", "D"],
+  ["D", "D", "A", "A"],
+  ["A7", "A7", "D", "G"],
+  ["D", "D", "D", "A7"],
+  ["D", "D", "D", "D"],
 ];
 
 // O Come, O Come, Emmanuel ("Veni Emmanuel", a 15th-century French processional tune) in E minor,
@@ -1525,12 +1804,24 @@ const EMMANUEL = [
   seq(["D4", 4], ["E4", 12]), // el.
 ];
 const EMMANUEL_HARMONY = [
-  ["Em", "Em", "Em", "G"], ["G", "D", "Am", "Em"], ["D", "G", "G", "G"],
-  ["D", "G", "Em", "C"], ["C", "Am", "D", "Em"], ["D", "Em", "Em", "Em"],
-  ["Am", "D", "Am", "C"], ["D", "G", "D", "Em"], ["G", "G", "D", "D"],
-  ["Em", "D", "G", "G"], ["G", "D", "Am", "Em"], ["D", "G", "G", "G"],
-  ["G", "D", "G", "Em"], ["G", "D", "Am", "Em"], ["D", "G", "G", "G"],
-  ["D", "G", "Em", "C"], ["C", "Am", "B7", "Em"], ["D", "Em", "Em", "Em"],
+  ["Em", "Em", "Em", "G"],
+  ["G", "D", "Am", "Em"],
+  ["D", "G", "G", "G"],
+  ["D", "G", "Em", "C"],
+  ["C", "Am", "D", "Em"],
+  ["D", "Em", "Em", "Em"],
+  ["Am", "D", "Am", "C"],
+  ["D", "G", "D", "Em"],
+  ["G", "G", "D", "D"],
+  ["Em", "D", "G", "G"],
+  ["G", "D", "Am", "Em"],
+  ["D", "G", "G", "G"],
+  ["G", "D", "G", "Em"],
+  ["G", "D", "Am", "Em"],
+  ["D", "G", "G", "G"],
+  ["D", "G", "Em", "C"],
+  ["C", "Am", "B7", "Em"],
+  ["D", "Em", "Em", "Em"],
 ];
 /** A backbeat with a fill at the end of each line (every third bar). */
 const EMMANUEL_SNARE = Array.from({ length: 18 }, (_, i) => drum(i % 3 === 2 ? "....x...x.x.xxxx" : "....x.......x..."));
@@ -1587,11 +1878,25 @@ const HARK = [
   ...HARK_REFRAIN,
   ...HARK_REFRAIN,
 ];
-const HARK_REFRAIN_HARMONY = [["C", "C", "Am", "G"], ["C", "G", "Am", "D7"], ["D", "Em", "Am", "G"], ["G", "D7", "G", "G"]];
+const HARK_REFRAIN_HARMONY = [
+  ["C", "C", "Am", "G"],
+  ["C", "G", "Am", "D7"],
+  ["D", "Em", "Am", "G"],
+  ["G", "D7", "G", "G"],
+];
 const HARK_HARMONY = [
-  ["G", "G", "G", "D"], ["G", "Em", "G", "D"], ["G", "G", "G", "D7"], ["G", "D", "G", "G"],
-  ["G", "G", "G", "D"], ["G", "Em", "G", "D"], ["D", "D", "D", "D"], ["D", "A7", "D", "D"],
-  ["G", "D", "G", "C"], ["C", "G", "G", "D"], ["G", "D", "G", "C"], ["C", "G", "G", "D"],
+  ["G", "G", "G", "D"],
+  ["G", "Em", "G", "D"],
+  ["G", "G", "G", "D7"],
+  ["G", "D", "G", "G"],
+  ["G", "G", "G", "D"],
+  ["G", "Em", "G", "D"],
+  ["D", "D", "D", "D"],
+  ["D", "A7", "D", "D"],
+  ["G", "D", "G", "C"],
+  ["C", "G", "G", "D"],
+  ["G", "D", "G", "C"],
+  ["C", "G", "G", "D"],
   ...HARK_REFRAIN_HARMONY,
   ...HARK_REFRAIN_HARMONY,
 ];
@@ -1624,7 +1929,10 @@ const christmasTowerResults: Track = {
 // Melody sources and CC0 instrument provenance: samples/CREDITS.md.
 // Keep the tune present at zero intensity: late rounds can last only seven seconds.
 const snowmanLobby: Track = {
-  id: "robot-lobby", bpm: 92, bars: ADESTE.length, reverb: 0.3,
+  id: "robot-lobby",
+  bpm: 92,
+  bars: ADESTE.length,
+  reverb: 0.3,
   layers: [
     { inst: "flute", bars: ADESTE, vol: 0.55 },
     { inst: "bell", bars: shift(ADESTE, 1), vol: 0.22 },
@@ -1636,7 +1944,11 @@ const snowmanLobby: Track = {
 };
 
 const snowmanQuiz: Track = {
-  id: "robot-quiz", bpm: 90, tempoBoost: 0.5, bars: GOD_REST.length, reverb: 0.25,
+  id: "robot-quiz",
+  bpm: 90,
+  tempoBoost: 0.5,
+  bars: GOD_REST.length,
+  reverb: 0.25,
   layers: [
     { inst: "pluck", bars: GOD_REST, vol: 0.65 },
     { inst: "strings", bars: GOD_REST_HARMONY.map(padBar), vol: 0.3 },
@@ -1653,7 +1965,10 @@ const snowmanQuiz: Track = {
 };
 
 const snowmanMove: Track = {
-  id: "robot-move", bpm: 116, bars: EMMANUEL.length, reverb: 0.25,
+  id: "robot-move",
+  bpm: 116,
+  bars: EMMANUEL.length,
+  reverb: 0.25,
   layers: [
     { inst: "strings", bars: EMMANUEL, vol: 0.65 },
     { inst: "brass", bars: EMMANUEL, vol: 0.4 },
@@ -1667,7 +1982,10 @@ const snowmanMove: Track = {
 };
 
 const snowmanResults: Track = {
-  id: "robot-results", bpm: 112, bars: ANTIOCH.length, reverb: 0.35,
+  id: "robot-results",
+  bpm: 112,
+  bars: ANTIOCH.length,
+  reverb: 0.35,
   layers: [
     { inst: "brass", bars: ANTIOCH, vol: 0.65 },
     { inst: "strings", bars: ANTIOCH, vol: 0.4 },
@@ -1718,20 +2036,38 @@ const HOLY_NIGHT = [
   seq(["D5", 8], [".", 8]),
 ];
 const HOLY_NIGHT_HARMONY = [
-  ["D", "D", "D", "D"], ["D", "D", "G", "G"], ["D", "D", "D", "D"], ["D", "D", "A7", "A7"],
-  ["D", "D", "D", "D"], ["D", "D", "D", "D"], ["D", "D", "G", "G"], ["D", "D", "D7", "D7"],
-  ["F#m", "F#m", "C#m7", "C#m7"], ["F#m", "F#m", "F#m", "F#m"],
-  ["A7", "A7", "A7", "A7"], ["D", "D", "D", "D"], ["A7", "A7", "A7", "A7"], ["D", "D", "D", "D"],
-  ["Bm", "Bm", "Bm", "Bm"], ["F#m", "F#m", "F#m", "F#m"], ["Em", "Em", "Em", "Em"], ["Bm", "Bm", "Bm", "Bm"],
-  ["D", "D", "A7", "A7"], ["D", "D", "Em", "Em"], ["D", "D", "A7", "A7"], ["D", "D", "D", "D"],
-  ["A7", "A7", "A7", "A7"], ["D", "D", "Em", "Em"], ["D", "D", "A7", "A7"], ["D", "D", "D", "D"],
+  ["D", "D", "D", "D"],
+  ["D", "D", "G", "G"],
+  ["D", "D", "D", "D"],
+  ["D", "D", "A7", "A7"],
+  ["D", "D", "D", "D"],
+  ["D", "D", "D", "D"],
+  ["D", "D", "G", "G"],
+  ["D", "D", "D7", "D7"],
+  ["F#m", "F#m", "C#m7", "C#m7"],
+  ["F#m", "F#m", "F#m", "F#m"],
+  ["A7", "A7", "A7", "A7"],
+  ["D", "D", "D", "D"],
+  ["A7", "A7", "A7", "A7"],
+  ["D", "D", "D", "D"],
+  ["Bm", "Bm", "Bm", "Bm"],
+  ["F#m", "F#m", "F#m", "F#m"],
+  ["Em", "Em", "Em", "Em"],
+  ["Bm", "Bm", "Bm", "Bm"],
+  ["D", "D", "A7", "A7"],
+  ["D", "D", "Em", "Em"],
+  ["D", "D", "A7", "A7"],
+  ["D", "D", "D", "D"],
+  ["A7", "A7", "A7", "A7"],
+  ["D", "D", "Em", "Em"],
+  ["D", "D", "A7", "A7"],
+  ["D", "D", "D", "D"],
 ];
 
 function christmasTowerLayers(includeHolyNight: boolean): Track["layers"] {
   const holyNightRest = HOLY_NIGHT.map(() => rest);
-  const followWith = (joyBars: string[], holyNightBars = holyNightRest) => includeHolyNight
-    ? [...ANTIOCH.map((_, bar) => joyBars[bar % joyBars.length]!), ...holyNightBars]
-    : joyBars;
+  const followWith = (joyBars: string[], holyNightBars = holyNightRest) =>
+    includeHolyNight ? [...ANTIOCH.map((_, bar) => joyBars[bar % joyBars.length]!), ...holyNightBars] : joyBars;
 
   return [
     { inst: "flute", bars: followWith(ANTIOCH, HOLY_NIGHT), vol: 0.55 },
@@ -1741,7 +2077,15 @@ function christmasTowerLayers(includeHolyNight: boolean): Track["layers"] {
     { inst: "pluck", bars: followWith(ANTIOCH_HARMONY.map(brokenChords), HOLY_NIGHT_HARMONY.map(brokenChords)), vol: 0.25 },
     { inst: "hat", bars: followWith([BELLS_8THS]), vol: 0.25 },
     { inst: "piano", bars: followWith(ANTIOCH_HARMONY.map(offbeatChords)), vol: 0.22, from: 0.3 },
-    { inst: "brass", bars: followWith(ANTIOCH, HOLY_NIGHT.map((bar, i) => i >= 14 ? bar : rest)), vol: 0.45, from: 0.5 },
+    {
+      inst: "brass",
+      bars: followWith(
+        ANTIOCH,
+        HOLY_NIGHT.map((bar, i) => (i >= 14 ? bar : rest)),
+      ),
+      vol: 0.45,
+      from: 0.5,
+    },
     { inst: "kick", bars: followWith([drum("x.......x.......")]), vol: 0.4, from: 0.5 },
     { inst: "snare", bars: followWith([drum("....x.......x...")]), vol: 0.3, from: 0.75 },
     { inst: "hat", bars: followWith([BELLS_16THS]), vol: 0.2, from: 0.85 },
@@ -1750,11 +2094,17 @@ function christmasTowerLayers(includeHolyNight: boolean): Track["layers"] {
 }
 
 const christmasTowerPlay: Track = {
-  id: "tower-christmas-play", bpm: 104, tempoBoost: 0.25, bars: ANTIOCH.length, reverb: 0.25,
+  id: "tower-christmas-play",
+  bpm: 104,
+  tempoBoost: 0.25,
+  bars: ANTIOCH.length,
+  reverb: 0.25,
   layers: christmasTowerLayers(false),
 };
 const christmasTowerMedley: Track = {
-  ...christmasTowerPlay, id: "tower-christmas-medley", bars: ANTIOCH.length + HOLY_NIGHT.length,
+  ...christmasTowerPlay,
+  id: "tower-christmas-medley",
+  bars: ANTIOCH.length + HOLY_NIGHT.length,
   layers: christmasTowerLayers(true),
 };
 
@@ -1777,28 +2127,41 @@ const GLORIA_REFRAIN = [
 ];
 const GLORIA = [...GLORIA_VERSE, ...GLORIA_VERSE, ...GLORIA_REFRAIN, ...GLORIA_REFRAIN, hold("G4")];
 const GLORIA_VERSE_HARMONY = [
-  ["G", "G", "Em", "G"], ["C", "D7", "G", "G"],
-  ["G", "D", "G", "G"], ["G", "D7", "G", "G"],
+  ["G", "G", "Em", "G"],
+  ["C", "D7", "G", "G"],
+  ["G", "D", "G", "G"],
+  ["G", "D7", "G", "G"],
 ];
 const GLORIA_REFRAIN_HARMONY = [
-  ["G", "G", "Em", "Em"], ["Am", "Am", "D7", "D7"],
-  ["G", "G", "C", "C"], ["D", "D", "D", "D"],
-  ["G", "D", "G", "C"], ["G", "G", "D7", "D7"],
+  ["G", "G", "Em", "Em"],
+  ["Am", "Am", "D7", "D7"],
+  ["G", "G", "C", "C"],
+  ["D", "D", "D", "D"],
+  ["G", "D", "G", "C"],
+  ["G", "G", "D7", "D7"],
 ];
-const GLORIA_HARMONY = [
-  ...GLORIA_VERSE_HARMONY, ...GLORIA_VERSE_HARMONY,
-  ...GLORIA_REFRAIN_HARMONY, ...GLORIA_REFRAIN_HARMONY, ["G", "G", "G", "G"],
-];
+const GLORIA_HARMONY = [...GLORIA_VERSE_HARMONY, ...GLORIA_VERSE_HARMONY, ...GLORIA_REFRAIN_HARMONY, ...GLORIA_REFRAIN_HARMONY, ["G", "G", "G", "G"]];
 
 /** Arcade sixteenth-note sparkle, following each beat's harmony. */
-const carolArcadeArp = (q: string[]) => beats(q, "xxxx", (c, step) => {
-  const notes = XMAS_CHORDS[c]!.split(" ");
-  return octaveUp(notes[[0, 1, 2, 1][step % 4]!]!, 2);
-});
-const carolArcadeStabs = (q: string[]) => beats(q, "..x.", c => chord(XMAS_CHORDS[c]!.split(" ").map(n => octaveUp(n)).join(" ")));
+const carolArcadeArp = (q: string[]) =>
+  beats(q, "xxxx", (c, step) => {
+    const notes = XMAS_CHORDS[c]!.split(" ");
+    return octaveUp(notes[[0, 1, 2, 1][step % 4]!]!, 2);
+  });
+const carolArcadeStabs = (q: string[]) =>
+  beats(q, "..x.", (c) =>
+    chord(
+      XMAS_CHORDS[c]!.split(" ")
+        .map((n) => octaveUp(n))
+        .join(" "),
+    ),
+  );
 
 const christmasRacerLobby: Track = {
-  id: "racer-christmas-lobby", rich: "arcade", bpm: 104, bars: GLORIA.length,
+  id: "racer-christmas-lobby",
+  rich: "arcade",
+  bpm: 104,
+  bars: GLORIA.length,
   layers: [
     { inst: "bell", bars: shift(GLORIA, 1), vol: 0.42 },
     { inst: "lead", bars: GLORIA, vol: 0.35, echo: 0.2 },
@@ -1811,7 +2174,11 @@ const christmasRacerLobby: Track = {
 };
 
 const christmasRacerDrive: Track = {
-  id: "racer-christmas-drive", rich: "arcade", bpm: 112, tempoBoost: 0.45, bars: GOD_REST.length,
+  id: "racer-christmas-drive",
+  rich: "arcade",
+  bpm: 112,
+  tempoBoost: 0.45,
+  bars: GOD_REST.length,
   layers: [
     // Keep the carol recognizable at every speed, with a sparse rhythm while crashed.
     { inst: "lead", bars: GOD_REST, vol: 0.7, echo: 0.25 },
@@ -1832,7 +2199,10 @@ const christmasRacerDrive: Track = {
 };
 
 const christmasRacerResults: Track = {
-  id: "racer-christmas-results", rich: "arcade", bpm: 126, bars: HARK.length,
+  id: "racer-christmas-results",
+  rich: "arcade",
+  bpm: 126,
+  bars: HARK.length,
   layers: [
     { inst: "brass", bars: HARK, vol: 0.6 },
     { inst: "bell", bars: shift(HARK, 1), vol: 0.3 },

@@ -1,26 +1,23 @@
 import { Database } from "bun:sqlite";
 import { createHash } from "node:crypto";
-import { musicTrackForFile } from "../../shared/music-tracks.ts";
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { MAX_IMAGE_SIDE, MAX_MEDIA_BYTES, SHRINK_ABOVE_BYTES, pinLabel } from "../../shared/quiz-constants.ts";
+import { musicTrackForFile } from "../../shared/music-tracks.ts";
+import { MAX_IMAGE_SIDE, MAX_MEDIA_BYTES, pinLabel, SHRINK_ABOVE_BYTES } from "../../shared/quiz-constants.ts";
+import type { Question, QuizSettings, QuizSummary, SavedQuiz } from "../../shared/quiz-schema.ts";
 import {
   DEFAULT_SETTINGS,
+  formatZodError,
   MEDIA_REF_RE,
+  newId,
+  normalizeQuestion,
+  normalizeQuestions,
   QUESTION_ID_RE,
   QUIZ_ID_RE,
   Quiz,
   QuizDraft,
-  ValidationError,
-  formatZodError,
-  newId,
-  normalizeQuestion,
-  normalizeQuestions,
   slugify,
-  type Question,
-  type SavedQuiz,
-  type QuizSettings,
-  type QuizSummary,
+  ValidationError,
 } from "../../shared/quiz-schema.ts";
 
 export class NotFoundError extends Error {}
@@ -40,6 +37,7 @@ function writeAtomic(path: string, data: string | Uint8Array): void {
 export class ConflictError extends Error {}
 
 export { MAX_MEDIA_BYTES };
+
 /** Images with more pixels than this are refused rather than decoded. */
 const MAX_IMAGE_PIXELS = 64_000_000;
 const MEDIA_TYPES: Record<string, string> = {
@@ -410,7 +408,9 @@ export class QuizStore {
     const mime = sniffImageType(bytes);
     if (!mime) throw new ValidationError("Unsupported image type (use PNG, JPEG, GIF or WebP)");
     const hash = createHash("sha256").update(bytes).digest("hex").slice(0, 20);
-    const existing = Object.values(MEDIA_TYPES).map((ext) => `media/${hash}.${ext}`).find((ref) => existsSync(join(this.dataDir, ref)));
+    const existing = Object.values(MEDIA_TYPES)
+      .map((ext) => `media/${hash}.${ext}`)
+      .find((ref) => existsSync(join(this.dataDir, ref)));
     if (existing) return existing;
     const out = await shrinkImage(bytes, mime);
     const ref = `media/${hash}.${MEDIA_TYPES[out.mime]}`;

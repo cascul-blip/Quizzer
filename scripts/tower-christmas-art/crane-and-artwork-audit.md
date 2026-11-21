@@ -16,18 +16,18 @@ Use case: background-extraction. Edit target: the supplied North Pole workshop c
 
 Reviewed src/client/shared/tower-art.tsx, src/client/host/tower.tsx and src/client/player/tower.tsx.
 
-| Original element | Christmas status |
-| --- | --- |
-| Four office tiles, lobby, shop | Six source tiles created |
-| Rooftop crane | crane.png created: snowy green timber hoist, red cabin, brass fittings and candy-cane accent |
-| Monster egg | bell.png created; target-slot outline and glow can be adapted in code |
-| Monster | yeti.png created as one pose; original SVG has animated head, jaw, arm and legs |
-| Skyline, sky gradient, clouds, stars, street/sidewalk | background.png supplies snowy scenery; existing layers must be replaced/adapted during integration, including phone framing and original height-based sky changes |
-| Small foreground trees beside each tower | Separate snowy evergreen sprite not yet created; background trees do not replace these automatically |
-| Rooftop team flag on results scene | Festive flag/pole art not yet created; preserve team-color identity |
-| Landing dust puff | Snow-puff version not yet created; can adapt existing SVG/CSS effect |
-| Completed-floor sparkles | Can reuse existing SVG or adapt to gold sparkles/snowflakes; no separate seasonal sprite created |
-| Falling blocks and smash debris | Reuse building tiles; no additional source art needed |
-| Floor ledges, height scale, block meter, drop-zone markers, podium and awards | Existing SVG/CSS/text/emoji UI, no separate image assets required; seasonal styling can be handled in integration |
+| Original element                                                              | Christmas status                                                                                                                                                  |
+| ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Four office tiles, lobby, shop                                                | Six source tiles created                                                                                                                                          |
+| Rooftop crane                                                                 | crane.png created: snowy green timber hoist, red cabin, brass fittings and candy-cane accent                                                                      |
+| Monster egg                                                                   | bell.png created; target-slot outline and glow can be adapted in code                                                                                             |
+| Monster                                                                       | yeti.png created as one pose; original SVG has animated head, jaw, arm and legs                                                                                   |
+| Skyline, sky gradient, clouds, stars, street/sidewalk                         | background.png supplies snowy scenery; existing layers must be replaced/adapted during integration, including phone framing and original height-based sky changes |
+| Small foreground trees beside each tower                                      | Separate snowy evergreen sprite not yet created; background trees do not replace these automatically                                                              |
+| Rooftop team flag on results scene                                            | Festive flag/pole art not yet created; preserve team-color identity                                                                                               |
+| Landing dust puff                                                             | Snow-puff version not yet created; can adapt existing SVG/CSS effect                                                                                              |
+| Completed-floor sparkles                                                      | Can reuse existing SVG or adapt to gold sparkles/snowflakes; no separate seasonal sprite created                                                                  |
+| Falling blocks and smash debris                                               | Reuse building tiles; no additional source art needed                                                                                                             |
+| Floor ledges, height scale, block meter, drop-zone markers, podium and awards | Existing SVG/CSS/text/emoji UI, no separate image assets required; seasonal styling can be handled in integration                                                 |
 
 Team-colored variants, host/phone exports and the temporary theme selector remain integration work. Existing normal-theme assets are preserved.

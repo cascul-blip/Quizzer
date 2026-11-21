@@ -1,8 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync } from "node:fs";
-import { STEPS_PER_BAR, stepsPerBar, instrumentsOf, renderInto, stepSeconds, tokens, usesSamples, noteFreq, type Track } from "../src/client/shared/music/engine.ts";
-import { VOICES, loadSamples, nearestZone, playSample, samplesReady, setSamplesEnabled, urlsFor } from "../src/client/shared/music/samples.ts";
+import type { Track } from "../src/client/shared/music/engine.ts";
+import { instrumentsOf, noteFreq, renderInto, STEPS_PER_BAR, stepSeconds, stepsPerBar, tokens, usesSamples } from "../src/client/shared/music/engine.ts";
 import { SAMPLE_SETS } from "../src/client/shared/music/samples/manifest.ts";
+import { loadSamples, nearestZone, playSample, samplesReady, setSamplesEnabled, urlsFor, VOICES } from "../src/client/shared/music/samples.ts";
 import { TRACKS } from "../src/client/shared/music/tracks.ts";
 
 // A stand-in for an AudioContext (tests have none) that counts the nodes made.
@@ -155,7 +156,8 @@ describe("playSample", () => {
   test("chiptune and sound-effect voices have no recordings; ?music=synth turns them all off", async () => {
     const ctx = fake();
     await loadSamples(ctx, ALL, noBytes);
-    for (const inst of ["pulse", "lead", "chipnoise", "sonar", "bubble", "heart", "tick", "whistle"]) expect(playSample(ctx, ctx.createGain() as unknown as AudioNode, inst, 0, 440, 0.5, 1)).toBe(false);
+    for (const inst of ["pulse", "lead", "chipnoise", "sonar", "bubble", "heart", "tick", "whistle"])
+      expect(playSample(ctx, ctx.createGain() as unknown as AudioNode, inst, 0, 440, 0.5, 1)).toBe(false);
     setSamplesEnabled(false);
     try {
       expect(playSample(ctx, ctx.createGain() as unknown as AudioNode, "piano", 0, 440, 0.5, 1)).toBe(false);
@@ -167,7 +169,8 @@ describe("playSample", () => {
 
 describe("tracks", () => {
   test("Tallest Tower (chiptune) and Racer (arcade) keep their synth voices; the rest use recordings", () => {
-    for (const t of Object.values(TRACKS)) expect(usesSamples(t)).toBe((!t.id.startsWith("tower-") || t.id.startsWith("tower-christmas-")) && !t.id.startsWith("racer-"));
+    for (const t of Object.values(TRACKS))
+      expect(usesSamples(t)).toBe((!t.id.startsWith("tower-") || t.id.startsWith("tower-christmas-")) && !t.id.startsWith("racer-"));
   });
 
   test("a track on recordings makes far fewer audio nodes than on synth voices", async () => {

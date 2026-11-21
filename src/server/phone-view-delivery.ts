@@ -2,7 +2,19 @@ import type { PlayerView, ServerMsg } from "../shared/protocol.ts";
 import { diffView } from "../shared/view-patch.ts";
 
 /** View fields holding "time left" (relative to when the message arrives). */
-const COUNTDOWN_KEYS = new Set(["remainingMs", "phaseRemainingMs", "gameRemainingMs", "decisionMs", "repairMs", "emptyMs", "lockedMs", "symbolRemainingMs", "nextMonsterMs", "protectedMs", "fuelMs"]);
+const COUNTDOWN_KEYS = new Set([
+  "remainingMs",
+  "phaseRemainingMs",
+  "gameRemainingMs",
+  "decisionMs",
+  "repairMs",
+  "emptyMs",
+  "lockedMs",
+  "symbolRemainingMs",
+  "nextMonsterMs",
+  "protectedMs",
+  "fuelMs",
+]);
 /** View fields holding "time since" something started; phones only read them to place the start. */
 const ELAPSED_KEYS = new Set(["revealElapsedMs", "elapsedMs"]);
 

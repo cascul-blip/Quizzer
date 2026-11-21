@@ -8,8 +8,12 @@ import { FakeClock, sampleQuiz } from "./helpers.ts";
 
 describe("Kingdom Siege themes", () => {
   test("defenders read the same in a sentence on the server and the phone, with the right article", () => {
-    expect(["archer", "knight", "wall"].map((t) => siegeDefenderPhrase(t as never, "classic"))).toEqual(["an archer", "a knight", "a stone wall"]);
-    expect(["archer", "knight", "wall"].map((t) => siegeDefenderPhrase(t as never, "christmas"))).toEqual(["an elf archer", "a nutcracker", "a present barricade"]);
+    expect((["archer", "knight", "wall"] as const).map((t) => siegeDefenderPhrase(t, "classic"))).toEqual(["an archer", "a knight", "a stone wall"]);
+    expect((["archer", "knight", "wall"] as const).map((t) => siegeDefenderPhrase(t, "christmas"))).toEqual([
+      "an elf archer",
+      "a nutcracker",
+      "a present barricade",
+    ]);
   });
 
   test("Christmas is the default and both clients receive the selected look", () => {
@@ -46,7 +50,9 @@ test("no two classic files in the Toybox swap share bytes (the bundler would giv
   expect(keys.length).toBeGreaterThan(30);
   const byHash = new Map<string, string>();
   for (const key of keys) {
-    const hash = createHash("sha256").update(readFileSync(new URL(files.get(key)!, dir))).digest("hex");
+    const hash = createHash("sha256")
+      .update(readFileSync(new URL(files.get(key)!, dir)))
+      .digest("hex");
     expect(byHash.get(hash) ?? key).toBe(key);
     byHash.set(hash, key);
   }

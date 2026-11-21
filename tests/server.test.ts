@@ -1,15 +1,15 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { COUNTDOWN_MS } from "../src/server/game/tower.ts";
-import { startServer, type RunningServer } from "../src/server/http.ts";
+import type { RunningServer } from "../src/server/http.ts";
+import { startServer } from "../src/server/http.ts";
 import { isAdminRequest } from "../src/server/network.ts";
 import { QuizStore } from "../src/server/quiz/store.ts";
 import type { ClientMsg } from "../src/shared/protocol.ts";
-import { MessageLog, pastThrottle, withoutTimers } from "./hub-harness.ts";
 import { FakeClock, tempDir } from "./helpers.ts";
+import { MessageLog, pastThrottle, withoutTimers } from "./hub-harness.ts";
 
 // Only what a real socket can show lives here: HTTP routes, the WebSocket upgrade, patches over the wire and
 // resume after a reconnect. Hub logic runs on fake sockets in tests/hub.test.ts and tests/game-modes.test.ts.
-
 
 /** A phone or projector on a real WebSocket to the running server. */
 class TestSocket extends MessageLog {
@@ -33,8 +33,6 @@ class TestSocket extends MessageLog {
     this.ws.close();
   }
 }
-
-
 
 /** The view a phone built from patches matches a fresh snapshot of the same player. */
 async function expectInSync(s: TestSocket, wsUrl: string) {
@@ -95,9 +93,17 @@ describe("REST API", () => {
     });
     const renamed = await r.json();
     expect(renamed.title).toBe("Renamed");
-    r = await fetch(`${base}/api/quizzes/${q.id}`, { method: "PUT", headers: { "x-quiz-updated-at": q.updatedAt }, body: JSON.stringify({ ...q, title: "Stale" }) });
+    r = await fetch(`${base}/api/quizzes/${q.id}`, {
+      method: "PUT",
+      headers: { "x-quiz-updated-at": q.updatedAt },
+      body: JSON.stringify({ ...q, title: "Stale" }),
+    });
     expect(r.status).toBe(409);
-    r = await fetch(`${base}/api/quizzes/${q.id}`, { method: "PUT", headers: { "x-quiz-updated-at": renamed.updatedAt }, body: JSON.stringify({ ...q, title: "Fresh" }) });
+    r = await fetch(`${base}/api/quizzes/${q.id}`, {
+      method: "PUT",
+      headers: { "x-quiz-updated-at": renamed.updatedAt },
+      body: JSON.stringify({ ...q, title: "Fresh" }),
+    });
     expect((await r.json()).title).toBe("Fresh");
     r = await fetch(`${base}/api/quizzes/${q.id}`, { method: "PUT", body: JSON.stringify({ title: "x", questions: [{ type: "bogus" }] }) });
     expect(r.status).toBe(400);
@@ -117,11 +123,12 @@ describe("REST API", () => {
     const path = join(store.quizzesDir, `${q.id}.json`);
     const onDisk = await Bun.file(path).json();
     writeFileSync(path, JSON.stringify({ ...onDisk, title: "Corrected by hand" }));
-    const save = (revision?: string) => fetch(url, {
-      method: "PUT",
-      headers: revision === undefined ? {} : { "x-quiz-revision": revision },
-      body: JSON.stringify({ title: "Editor draft" }),
-    });
+    const save = (revision?: string) =>
+      fetch(url, {
+        method: "PUT",
+        headers: revision === undefined ? {} : { "x-quiz-revision": revision },
+        body: JSON.stringify({ title: "Editor draft" }),
+      });
     expect((await save(opened.revision)).status).toBe(409);
     const corrected = await (await fetch(url)).json();
     expect(corrected.title).toBe("Corrected by hand");
@@ -221,7 +228,10 @@ describe("WebSocket transport", () => {
     await host.hostState((v) => v.kind === "classic" && v.mode === "tower" && v.settings.tower.teams === 2);
 
     const [ann, bob] = await Promise.all([TestSocket.open(wsUrl), TestSocket.open(wsUrl)]);
-    for (const [p, nickname] of [[ann!, "Ann"], [bob!, "Bob"]] as const) {
+    for (const [p, nickname] of [
+      [ann!, "Ann"],
+      [bob!, "Bob"],
+    ] as const) {
       p.sendMsg({ type: "join", nickname });
       expect(await p.waitFor((m) => m.type === "joined")).toMatchObject({ images: [image] });
     }

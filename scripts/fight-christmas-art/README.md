@@ -48,7 +48,6 @@ Seamless tileable square texture of thick white vanilla icing snowy frosting, su
 
 Each stage uses castle-0.png as its edit target, preserving canvas, position, scale and baseline with a transparent background. Stage 1 adds cracks and chips in the upper-right battlements; stage 2 breaks the right battlements and adds spreading cracks and missing icing; stage 3 removes a larger upper-right section and breaks windows; stage 4 removes most of the upper-right wall, with severe cracks and broken icing, while keeping the left portion standing and the base intact. No fire, smoke, floating debris, ground, scenery, or text.
 
-
 Ground generation and refinement prompts are recorded in [ground-prompts.md](ground-prompts.md).
 
 ## Painted icing terrain

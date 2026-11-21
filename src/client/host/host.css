@@ -651,7 +651,9 @@ select {
   font-weight: 800;
   box-shadow: var(--shadow);
   overflow-wrap: anywhere;
-  transition: opacity 0.3s, filter 0.3s;
+  transition:
+    opacity 0.3s,
+    filter 0.3s;
 }
 
 .tile .shape {
@@ -2308,7 +2310,6 @@ select {
   opacity: 0.35;
 }
 
-
 .fight-reason {
   margin: -1.5vh 0 2vh;
   font-size: clamp(18px, 1.8vw, 32px);
@@ -2350,7 +2351,6 @@ select {
   font-size: clamp(16px, 1.4vw, 26px);
   font-weight: 700;
 }
-
 
 /* ----- avatars in classic mode ----- */
 
@@ -2395,13 +2395,27 @@ select {
   filter: grayscale(0.6);
 }
 
-.pickers .picker:nth-child(1) { animation-delay: 0.1s; }
-.pickers .picker:nth-child(2) { animation-delay: 0.16s; }
-.pickers .picker:nth-child(3) { animation-delay: 0.22s; }
-.pickers .picker:nth-child(4) { animation-delay: 0.28s; }
-.pickers .picker:nth-child(5) { animation-delay: 0.34s; }
-.pickers .picker:nth-child(6) { animation-delay: 0.4s; }
-.pickers .picker:nth-child(n + 7) { animation-delay: 0.46s; }
+.pickers .picker:nth-child(1) {
+  animation-delay: 0.1s;
+}
+.pickers .picker:nth-child(2) {
+  animation-delay: 0.16s;
+}
+.pickers .picker:nth-child(3) {
+  animation-delay: 0.22s;
+}
+.pickers .picker:nth-child(4) {
+  animation-delay: 0.28s;
+}
+.pickers .picker:nth-child(5) {
+  animation-delay: 0.34s;
+}
+.pickers .picker:nth-child(6) {
+  animation-delay: 0.4s;
+}
+.pickers .picker:nth-child(n + 7) {
+  animation-delay: 0.46s;
+}
 
 .picker-more {
   align-self: center;
@@ -3147,7 +3161,9 @@ select {
   height: 3vh;
   border-radius: 0.8vh;
   background: var(--racer-orange);
-  box-shadow: 0 0.5vh 0 rgba(0, 0, 0, 0.35), inset 0 0.5vh 0 rgba(255, 255, 255, 0.3);
+  box-shadow:
+    0 0.5vh 0 rgba(0, 0, 0, 0.35),
+    inset 0 0.5vh 0 rgba(255, 255, 255, 0.3);
   transform: translate(-50%, -50%);
   transition: top 0.25s ease-out;
 }
@@ -3487,7 +3503,8 @@ select {
   background: #12392f;
   border-bottom-color: #bb913f;
 }
-.cup-christmas .cup-wrap, .cup-stage.cup-christmas {
+.cup-christmas .cup-wrap,
+.cup-stage.cup-christmas {
   background: #1d0d04;
 }
 .cup-christmas .cheer-workshop .table-big {
@@ -3500,17 +3517,31 @@ select {
   stroke: #fff2ce;
   stroke-width: 1px;
 }
-.cup-christmas .cheer-workshop .table-text.bad .table-big { fill: #a52d28; }
-.cup-christmas .cheer-workshop .table-text.good .table-big { fill: #18563d; }
-.saloon .seat.launching .seat-body { transform: none; }
-.saloon .seat.launching .seat-name, .saloon .seat.launching .seat-glow {
-  animation: cheer-label-away .7s forwards;
+.cup-christmas .cheer-workshop .table-text.bad .table-big {
+  fill: #a52d28;
+}
+.cup-christmas .cheer-workshop .table-text.good .table-big {
+  fill: #18563d;
+}
+.saloon .seat.launching .seat-body {
+  transform: none;
+}
+.saloon .seat.launching .seat-name,
+.saloon .seat.launching .seat-glow {
+  animation: cheer-label-away 0.7s forwards;
 }
 .saloon .table-cup.supercharged {
   filter: drop-shadow(0 0 10px #ffdf7d);
   animation: cheer-label-away 1.2s forwards;
 }
-@keyframes cheer-label-away { 60% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes cheer-label-away {
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
 
 .cup-stage {
   background: #1d0d04;
@@ -3844,7 +3875,9 @@ select {
   font-style: italic;
   letter-spacing: 0.04em;
   color: #fff0cf;
-  text-shadow: 0 3px 0 rgba(40, 16, 4, 0.9), 0 0 24px rgba(0, 0, 0, 0.6);
+  text-shadow:
+    0 3px 0 rgba(40, 16, 4, 0.9),
+    0 0 24px rgba(0, 0, 0, 0.6);
   text-align: center;
 }
 
@@ -5158,12 +5191,31 @@ select {
   background: #33271d;
 }
 @media (max-width: 1100px) {
-  .land-christmas .land-wrap { gap: 1vw; padding-right: 1vw; }
-  .land-christmas .land-side { --card-w: clamp(180px, 23vw, 250px); }
-  .land-christmas .land-team header { flex-wrap: wrap; gap: 0; }
+  .land-christmas .land-wrap {
+    gap: 1vw;
+    padding-right: 1vw;
+  }
+  .land-christmas .land-side {
+    --card-w: clamp(180px, 23vw, 250px);
+  }
+  .land-christmas .land-team header {
+    flex-wrap: wrap;
+    gap: 0;
+  }
 }
 
 /* Snowball Showdown keeps the question layout and changes the Western surround. */
-.duel-stage.christmas { --duel-dusk:#0b1b30; --duel-wood:#24445e; --duel-sand:#dcefff; --duel-gold:#c9eff9; --duel-red:#66c1df; background:linear-gradient(#0b1b30,#142e49); }
-.duel-stage.christmas .topbar { background:#0d2035; }
-.duel-stage.christmas .duel-timer-fill { background:linear-gradient(90deg,#4398bd,#c5f4ff); }
+.duel-stage.christmas {
+  --duel-dusk: #0b1b30;
+  --duel-wood: #24445e;
+  --duel-sand: #dcefff;
+  --duel-gold: #c9eff9;
+  --duel-red: #66c1df;
+  background: linear-gradient(#0b1b30, #142e49);
+}
+.duel-stage.christmas .topbar {
+  background: #0d2035;
+}
+.duel-stage.christmas .duel-timer-fill {
+  background: linear-gradient(90deg, #4398bd, #c5f4ff);
+}

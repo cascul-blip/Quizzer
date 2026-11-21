@@ -1,9 +1,10 @@
 import type { HostSiegeState, SiegeFallen, SiegeMapView, SiegeShot } from "../../shared/modes/siege.ts";
+import type { SiegeDefenderType, SiegeMonsterType } from "../../shared/siege-rules.ts";
 import {
-  SIEGE_DANGER_SQUARES,
-  SIEGE_DEFENDERS,
-  SIEGE_DEFENDER_TYPES,
   SIEGE_BUILD_SQUARES,
+  SIEGE_DANGER_SQUARES,
+  SIEGE_DEFENDER_TYPES,
+  SIEGE_DEFENDERS,
   SIEGE_FALLEN_SHOWN,
   SIEGE_GIANT_WAIT_MS,
   SIEGE_GROUP_GAP_MS,
@@ -11,8 +12,8 @@ import {
   SIEGE_LANES,
   SIEGE_LEAP_MS,
   SIEGE_MAP_DOTS_MS,
-  SIEGE_MONSTERS,
   SIEGE_MONSTER_ODDS,
+  SIEGE_MONSTERS,
   SIEGE_SHOTS_SHOWN,
   SIEGE_SQUARES,
   SIEGE_STOMP_SPLASH,
@@ -24,8 +25,6 @@ import {
   siegeMonsterHealth,
   siegeSpawnWindowMs,
   siegeUpgradeCost,
-  type SiegeDefenderType,
-  type SiegeMonsterType,
 } from "../../shared/siege-rules.ts";
 import type { Clock } from "./common.ts";
 
@@ -84,7 +83,6 @@ export interface SiegeSpawn {
   /** Chosen when its warning arrow shows; -1 until then. */
   lane: number;
 }
-
 
 /** What one battle tick changed, for deciding who needs a new view. */
 export interface SiegeTickResult {
@@ -240,7 +238,6 @@ export class SiegeBattlefield<O> {
     return out.sort((a, b) => a.at - b.at);
   }
 
-
   /** One fixed battle step: spawns, monsters, then defenders. */
   tick(now: number): SiegeTickResult {
     const before = { hearts: this.hearts, alert: this.alert?.seq, defenders: this.defenders.length };
@@ -296,7 +293,8 @@ export class SiegeBattlefield<O> {
     const mate = this.groupLanes.get(s.group);
     const cap = siegeMaxEntering(this.wave());
     if (mate !== undefined) return busy(mate) < cap ? mate : -1;
-    const giantLanes = s.type === "giant" ? new Set([...this.monsters, ...this.pending].filter((m) => m.type === "giant" && m.lane >= 0).map((m) => m.lane)) : new Set<number>();
+    const giantLanes =
+      s.type === "giant" ? new Set([...this.monsters, ...this.pending].filter((m) => m.type === "giant" && m.lane >= 0).map((m) => m.lane)) : new Set<number>();
     const open = Array.from({ length: SIEGE_LANES }, (_, i) => i).filter((l) => busy(l) < cap && !giantLanes.has(l));
     if (open.length === 0) return -1;
     const least = Math.min(...open.map(busy));
@@ -522,7 +520,6 @@ export class SiegeBattlefield<O> {
     return [...lanes].sort((a, b) => a - b);
   }
 
-
   // ---------- occupancy ----------
 
   /** Why a defender can't go on a square, or null when it can. */
@@ -557,11 +554,24 @@ export class SiegeBattlefield<O> {
   // ---------- observations ----------
 
   /** The board as the projector shows it. Monsters only glide toward their target while the battle runs. */
-  hostBoard(playing: boolean, ending: boolean): Pick<HostSiegeState, "defenders" | "monsters" | "shots" | "fallen" | "warnings" | "danger" | "giant" | "giantSeq" | "wallHitSeq" | "monsterCount"> {
+  hostBoard(
+    playing: boolean,
+    ending: boolean,
+  ): Pick<HostSiegeState, "defenders" | "monsters" | "shots" | "fallen" | "warnings" | "danger" | "giant" | "giantSeq" | "wallHitSeq" | "monsterCount"> {
     const now = this.clock.now();
     const giant = this.monsters.find((m) => m.type === "giant" && m.state === "wait");
     return {
-      defenders: this.defenders.map((d) => ({ id: d.id, type: d.type, lane: d.lane, square: d.square, level: d.level, health: d.health, maxHealth: d.maxHealth, hitSeq: d.hitSeq, attackSeq: d.attackSeq })),
+      defenders: this.defenders.map((d) => ({
+        id: d.id,
+        type: d.type,
+        lane: d.lane,
+        square: d.square,
+        level: d.level,
+        health: d.health,
+        maxHealth: d.maxHealth,
+        hitSeq: d.hitSeq,
+        attackSeq: d.attackSeq,
+      })),
       monsters: this.monsters.map((m) => {
         const x = this.monsterX(m);
         let toX = x;
@@ -574,7 +584,19 @@ export class SiegeBattlefield<O> {
           toX = m.leapTo;
           moveMs = Math.max(0, m.leapEndsAt - now);
         }
-        return { id: m.id, type: m.type, lane: m.lane, x, toX, moveMs, state: m.state, health: m.health, maxHealth: m.maxHealth, hitSeq: m.hitSeq, attackSeq: m.attackSeq };
+        return {
+          id: m.id,
+          type: m.type,
+          lane: m.lane,
+          x,
+          toX,
+          moveMs,
+          state: m.state,
+          health: m.health,
+          maxHealth: m.maxHealth,
+          hitSeq: m.hitSeq,
+          attackSeq: m.attackSeq,
+        };
       }),
       shots: this.shots,
       fallen: this.fallen,

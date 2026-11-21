@@ -2,14 +2,15 @@ import { describe, expect, test } from "bun:test";
 import { topErrors } from "../src/server/game/common.ts";
 import { COUNTDOWN_MS as FIGHT_COUNTDOWN_MS, FightGame } from "../src/server/game/fight.ts";
 import { INTRO_MS } from "../src/server/game/game.ts";
-import { Lobby } from "../src/server/game/lobby.ts";
 import { COUNTDOWN_MS as LAND_COUNTDOWN_MS, LandGame } from "../src/server/game/land.ts";
+import { Lobby } from "../src/server/game/lobby.ts";
 import { COUNTDOWN_MS as ROBOT_COUNTDOWN_MS, RobotGame } from "../src/server/game/robot.ts";
 import { FEEDBACK_MS } from "../src/server/game/stream.ts";
 import { COUNTDOWN_MS as SUB_COUNTDOWN_MS, SubGame } from "../src/server/game/submarine.ts";
 import { COUNTDOWN_MS as TOWER_COUNTDOWN_MS, TowerGame } from "../src/server/game/tower.ts";
-import { ERRORS_SHOWN, type GameMode } from "../src/shared/protocol.ts";
 import type { QuestionError } from "../src/shared/mode-views.ts";
+import type { GameMode } from "../src/shared/protocol.ts";
+import { ERRORS_SHOWN } from "../src/shared/protocol.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
 import { classicGame, FakeClock, sampleQuiz } from "./helpers.ts";
 
@@ -40,7 +41,10 @@ describe("topErrors", () => {
   });
 
   test("only the ten worst are listed; every correct option is named", () => {
-    const errors = topErrors(questions, questions.map((_, i) => i + 1));
+    const errors = topErrors(
+      questions,
+      questions.map((_, i) => i + 1),
+    );
     expect(errors).toHaveLength(ERRORS_SHOWN);
     expect(errors[0]).toEqual({ wrong: 14, text: "Question 13", answers: ["yes 13", "also 13"] });
     expect(errors.at(-1)!.wrong).toBe(5);
@@ -71,10 +75,21 @@ describe("Classic", () => {
 
   test("wrong answers are counted per question; unanswered questions are not", () => {
     const s = play();
-    answerAll(s, [[s.a.id, false], [s.b.id, true]]); // C lets it time out
+    answerAll(s, [
+      [s.a.id, false],
+      [s.b.id, true],
+    ]); // C lets it time out
     expect(s.game.hostView().errors).toBeNull();
-    answerAll(s, [[s.a.id, false], [s.b.id, false], [s.c.id, false]]);
-    answerAll(s, [[s.a.id, true], [s.b.id, true], [s.c.id, true]]);
+    answerAll(s, [
+      [s.a.id, false],
+      [s.b.id, false],
+      [s.c.id, false],
+    ]);
+    answerAll(s, [
+      [s.a.id, true],
+      [s.b.id, true],
+      [s.c.id, true],
+    ]);
     expect(s.game.phase).toBe("podium");
     expect(s.game.hostView().errors).toEqual([
       { wrong: 3, text: "Question 1", answers: ["yes 1"] },

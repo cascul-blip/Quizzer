@@ -39,4 +39,3 @@ Use case: stylized-concept. Asset type: isolated impact effect sprite for a Chri
 ### Elf transparency refinement
 
 Use case: background-extraction. Edit target: attached eight-pose headless elf sprite sheet. Remove ONLY the white background and its shadows, replacing all space around and between the eight bodies including all empty head areas with genuinely fully transparent alpha (alpha zero). Preserve all eight body drawings, poses, costumes, their exact scale, canvas layout and positions. Keep white fur trim and snowballs opaque. No new artwork or changes to character silhouettes. Output transparent-background PNG.
-

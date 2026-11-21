@@ -1,6 +1,6 @@
+import type { QuizStore } from "../src/server/quiz/store.ts";
 import type { GameHub, SocketData } from "../src/server/ws.ts";
 import { GameHub as Hub } from "../src/server/ws.ts";
-import type { QuizStore } from "../src/server/quiz/store.ts";
 import type { ClientMsg, HostView, PlayerView, ServerMsg } from "../src/shared/protocol.ts";
 import { applyPatch } from "../src/shared/view-patch.ts";
 import type { FakeClock } from "./helpers.ts";

@@ -11,8 +11,10 @@ import type { Clock } from "./game/game.ts";
 import { handleMcpRequest } from "./mcp/http.ts";
 import { isAdminRequest } from "./network.ts";
 import { isCompiled } from "./paths.ts";
-import { ConflictError, MAX_MEDIA_BYTES, MEDIA_MIME, NotFoundError, type QuizStore } from "./quiz/store.ts";
-import { GameHub, type SocketData } from "./ws.ts";
+import type { QuizStore } from "./quiz/store.ts";
+import { ConflictError, MAX_MEDIA_BYTES, MEDIA_MIME, NotFoundError } from "./quiz/store.ts";
+import type { SocketData } from "./ws.ts";
+import { GameHub } from "./ws.ts";
 
 interface ServerOptions {
   store: QuizStore;
@@ -76,7 +78,7 @@ export function startServer(opts: ServerOptions): RunningServer {
         if (method === "GET") return json(store.get(id));
         if (method === "PUT") {
           const revision = req.headers.get(QUIZ_REVISION_HEADER);
-          const base = revision === null ? req.headers.get(BASE_VERSION_HEADER) ?? undefined : { revision };
+          const base = revision === null ? (req.headers.get(BASE_VERSION_HEADER) ?? undefined) : { revision };
           return json(await store.replace(id, await readJson(req), base));
         }
         if (method === "DELETE") {
@@ -105,7 +107,10 @@ export function startServer(opts: ServerOptions): RunningServer {
         musicDir: store.musicDir,
         port: server.port,
         joinUrl: hub.join.url(),
-        mcp: { httpUrl: `http://localhost:${server.port}/mcp`, stdioCommand: [process.execPath, ...(isCompiled() ? [] : [Bun.main]), "mcp", "--data-dir", store.dataDir] },
+        mcp: {
+          httpUrl: `http://localhost:${server.port}/mcp`,
+          stdioCommand: [process.execPath, ...(isCompiled() ? [] : [Bun.main]), "mcp", "--data-dir", store.dataDir],
+        },
       });
     }
 
