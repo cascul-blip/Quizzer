@@ -8,6 +8,7 @@ import { PinBoard, PinNote } from "../shared/pin.tsx";
 import { onMuteChange, play, startRev, type Rev } from "../shared/sounds.ts";
 import { Shape, optionColor, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
+import type { MusicCue } from "../shared/music/index.ts";
 import type { LobbyModeEntry, LobbySettingsProps } from "./lobby-modes.tsx";
 import { Award } from "./tower.tsx";
 import { Tex, visibleLength } from "../shared/tex.tsx";
@@ -418,7 +419,18 @@ function RacerSettings({ settings, send, children }: LobbySettingsProps<"racer">
   );
 }
 
+/** The projector's music for the racer. */
+export function racerCue(view: RacerView): MusicCue {
+  const christmas = racerTheme(view.theme) === "christmas";
+  if (view.phase === "podium") return { track: christmas ? "racer-christmas-results" : "racer-results" };
+  // One continuous drive: tempo and layers follow the car's speed. No key, so the
+  // music never restarts between questions; useMusic glides to each new intensity.
+  const { speed, crashed } = view.car;
+  return { track: christmas ? "racer-christmas-drive" : "racer-drive", intensity: crashed ? 0.03 : Math.max(0.1, Math.min(1, speed / 150)) };
+}
+
 export const racerLobby: LobbyModeEntry<"racer"> = {
   label: (settings) => racerName(settings?.theme),
   Settings: RacerSettings,
+  lobbyTrack: (settings) => (racerTheme(settings.theme) === "christmas" ? "racer-christmas-lobby" : "racer-lobby"),
 };

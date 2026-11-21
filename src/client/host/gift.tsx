@@ -4,6 +4,7 @@ import type { GiftStanding, HostView } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { formatClock, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
+import type { MusicCue } from "../shared/music/index.ts";
 import type { LobbyModeEntry, LobbySettingsProps } from "./lobby-modes.tsx";
 import { Award } from "./tower.tsx";
 import workshop from "../shared/gift/workshop-projector.webp";
@@ -130,7 +131,15 @@ function GiftSettings({ settings, send }: LobbySettingsProps<"gift">) {
   );
 }
 
+/** The projector's music for Gift Grab. */
+export function giftCue(view: GiftView): MusicCue {
+  return view.phase === "podium"
+    ? { track: "tower-christmas-results" }
+    : { track: "tower-christmas-play", intensity: view.phase === "finishing" ? 1 : 0.4 };
+}
+
 export const giftLobby: LobbyModeEntry<"gift"> = {
   label: () => "🎁 Gift Grab",
   Settings: GiftSettings,
+  lobbyTrack: () => "tower-christmas-lobby",
 };

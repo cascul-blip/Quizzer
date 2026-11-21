@@ -7,6 +7,7 @@ import { play } from "../shared/sounds.ts";
 import { useEventFlash } from "../shared/tower-art.tsx";
 import { useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
+import type { MusicCue } from "../shared/music/index.ts";
 import type { LobbyModeEntry, LobbySettingsProps } from "./lobby-modes.tsx";
 
 type SubView = Extract<HostView, { kind: "submarine" }>;
@@ -334,7 +335,18 @@ function SubSettings() {
   return <span class="opt mode-hint">Everyone works together to outrun the Christmas goblin. The game ends when it catches you.</span>;
 }
 
+/** The projector's music for Sled Squad. */
+export function subCue(view: SubView): MusicCue {
+  if (view.phase === "podium") return { track: "submarine-results" };
+  if (view.phase === "dive") return { track: "submarine-dive" };
+  if (view.phase === "countdown") return { track: "submarine-lobby" };
+  if (view.phase === "caught") return { track: "submarine-chase", intensity: 1 };
+  // The closer the Christmas goblin, the faster and more layered the music.
+  return { track: "submarine-chase", intensity: Math.max(0, Math.min(1, 1 - view.gap / view.maxGap)) };
+}
+
 export const subLobby: LobbyModeEntry<"submarine"> = {
   label: () => "🛷 Sled Squad",
   Settings: SubSettings,
+  lobbyTrack: () => "submarine-lobby",
 };

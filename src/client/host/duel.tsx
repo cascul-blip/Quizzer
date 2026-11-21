@@ -25,7 +25,7 @@ import {
   type DuelHat,
   type DuelPose,
 } from "../shared/duel-art.tsx";
-import { music } from "../shared/music/index.ts";
+import { music, type MusicCue } from "../shared/music/index.ts";
 import { PinBoard, PinNote } from "../shared/pin.tsx";
 import { play } from "../shared/sounds.ts";
 import { Shape, optionColor, ordinal, useCountdown } from "../shared/ui.tsx";
@@ -665,8 +665,26 @@ function DuelSettings({ settings, send, children }: LobbySettingsProps<"duel">) 
   );
 }
 
+/** The projector's music for Showdown. */
+export function duelCue(view: DuelView): MusicCue {
+  if (duelTheme(view.theme) === "christmas") return { track: view.phase === "podium" ? "tower-christmas-results" : "tower-christmas-play", intensity: view.phase === "open" ? 0.6 : 0.25 };
+  if (view.phase === "podium") return { track: "showdown-results" };
+  // Rounds are quick, so the build starts in the intro (the whistle is already on the tune)
+  // and reaches full gallop halfway through the question's time.
+  if (view.phase === "intro") return { track: "showdown", intensity: 0.3, rampTo: 0.5, rampMs: view.phaseRemainingMs, key: `duel-r${view.round}-intro` };
+  if (view.phase === "open") {
+    const full = view.phaseDurationMs / 2;
+    const elapsed = Math.max(0, view.phaseDurationMs - view.phaseRemainingMs);
+    const start = Math.min(1, elapsed / Math.max(1, full));
+    return { track: "showdown", intensity: 0.5 + start * 0.5, rampTo: 1, rampMs: Math.max(0, full - elapsed), key: `duel-r${view.round}-open` };
+  }
+  // The reveal eases back to the riding beat (no silence between quick rounds); the draw sting (DuelStage) plays over it.
+  return { track: "showdown", intensity: 0.3, key: `duel-r${view.round}-${view.phase}` };
+}
+
 export const duelLobby: LobbyModeEntry<"duel"> = {
   label: (settings) => (duelTheme(settings.theme) === "christmas" ? "❄️ Snowball Showdown" : "🤠 Showdown"),
   Settings: DuelSettings,
   Preview: ({ settings }) => (duelTheme(settings.theme) === "christmas" ? <SnowballLobbyPreview /> : null),
+  lobbyTrack: (settings) => (duelTheme(settings.theme) === "christmas" ? "tower-christmas-lobby" : "showdown-lobby"),
 };
