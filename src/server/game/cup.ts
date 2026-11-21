@@ -17,7 +17,7 @@ import {
   type PlayerCupView,
   CUP_MAX_CUPS,
   CUP_MIN_CUPS,
-} from "../../shared/protocol.ts";
+} from "../../shared/modes/cup.ts";
 import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import { GameError, realClock, shuffle, type Clock } from "./common.ts";

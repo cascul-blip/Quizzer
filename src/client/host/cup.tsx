@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { useDelayedCues } from "./delayed-cues.ts";
-import { CUP_MAX_CUPS, CUP_MIN_CUPS, type HostView } from "../../shared/protocol.ts";
+import { CUP_MAX_CUPS, CUP_MIN_CUPS } from "../../shared/modes/cup.ts";
+import type { HostView } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { SaloonScene, TABLE_CENTER, type SaloonMode } from "../shared/cup-art.tsx";
 import { play } from "../shared/sounds.ts";
