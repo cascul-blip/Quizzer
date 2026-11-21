@@ -1,7 +1,8 @@
 import { towerWords } from "../../shared/tower-theme.ts";
 import { TowerThemeProvider, useChristmasTower, useTowerTheme, ChristmasBackdrop } from "../shared/tower-skin.tsx";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
-import { BLOCKS_PER_BUILD, DROP_ZONES, MONSTER_DAMAGE, type ClientMsg, type MonsterEgg, type PlayerTowerView } from "../../shared/protocol.ts";
+import { BLOCKS_PER_BUILD, DROP_ZONES, MONSTER_DAMAGE, type MonsterEgg, type PlayerTowerView } from "../../shared/modes/tower.ts";
+import type { ClientMsg } from "../../shared/protocol.ts";
 import { BuildingBlock, COLUMN_NAMES, EggCell, useEventFlash, viewBaseRow, DustPuff, FloorSparkle, SKY_STAGES, SkylineSvg, skyStage, useFreshKeys, useNewFloor } from "../shared/tower-art.tsx";
 import { formatClock, ordinal, teamInk, teamVars, useCountdown } from "../shared/ui.tsx";
 import { Feedback, StreamQuestion } from "./stream-question.tsx";

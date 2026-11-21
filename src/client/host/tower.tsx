@@ -1,7 +1,8 @@
 import { towerTheme, towerWords, type TowerTheme } from "../../shared/tower-theme.ts";
 import { TowerThemeProvider, useChristmasTower, ChristmasBackdrop } from "../shared/tower-skin.tsx";
 import { useEffect, useRef, useState } from "preact/hooks";
-import { EGG_LEVELS_ABOVE, MAX_TEAMS, MONSTER_DAMAGE, TOWER_MINUTES, type HostTowerTeam, type HostView, type MonsterAttack, type MonsterEggs } from "../../shared/protocol.ts";
+import { EGG_LEVELS_ABOVE, MONSTER_DAMAGE, TOWER_MINUTES, type HostTowerTeam, type MonsterAttack, type MonsterEggs } from "../../shared/modes/tower.ts";
+import { MAX_TEAMS, type HostView } from "../../shared/protocol.ts";
 import { play } from "../shared/sounds.ts";
 import {
   BuildingBlock,

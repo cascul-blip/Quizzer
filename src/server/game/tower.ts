@@ -12,9 +12,9 @@ import {
   type TowerAwards,
   type TowerPhase,
   type TowerSettings,
-  MAX_TEAMS,
   TOWER_MINUTES,
-} from "../../shared/protocol.ts";
+} from "../../shared/modes/tower.ts";
+import { MAX_TEAMS } from "../../shared/protocol.ts";
 import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import { GameError, realClock, teamInfo, type Clock } from "./common.ts";

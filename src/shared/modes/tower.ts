@@ -1,0 +1,113 @@
+import type { AvatarChoice } from "../avatars.ts";
+import type { QuestionError, StreamFeedbackView, StreamQuestionView, TeamInfo } from "../mode-views.ts";
+import type { TowerTheme } from "../tower-theme.ts";
+
+// Tallest Tower protocol types.
+
+export type TowerPhase = "countdown" | "playing" | "podium";
+
+export const TOWER_MINUTES = [2, 3, 5, 7, 10] as const;
+/** Correct answers (blocks) needed before a player switches to build mode. */
+export const BLOCKS_PER_BUILD = 4;
+/** Drop zones across the build screen: miss · left · center · right · miss. */
+export const DROP_ZONES = 5;
+
+export interface TowerSettings {
+  /** Optional for older callers; defaults to the seasonal look. */
+  theme?: TowerTheme;
+  teams: number;
+  minutes: number;
+  /** Monster eggs 4 times per game, evenly spaced (needs 2+ teams). */
+  monster: boolean;
+}
+
+/** Floors the monster knocks off the tower it attacks. */
+export const MONSTER_DAMAGE = 2;
+
+/** How many levels above a tower's highest complete floor its egg is placed. */
+export const EGG_LEVELS_ABOVE = 4;
+
+/** One team's monster egg: the first block landing on it hatches the monster. */
+export interface MonsterEgg {
+  seq: number;
+  col: number;
+  /** 0-based row: level (row + 1). */
+  row: number;
+}
+
+/** Every team's egg from one announcement; cells[i] belongs to team i. */
+export interface MonsterEggs {
+  seq: number;
+  cells: { col: number; row: number }[];
+}
+
+export interface MonsterAttack {
+  seq: number;
+  byTeam: number;
+  byNickname: string;
+  target: number;
+  /** Target's columns before and after the attack (for the smash animation). */
+  before: number[];
+  after: number[];
+}
+
+export interface TowerAwards {
+  mostCorrect: { value: number; nicknames: string[] } | null;
+  masterBuilder: { value: number; nicknames: string[] } | null;
+}
+
+export interface PlayerTowerView {
+  kind: "tower";
+  theme?: TowerTheme;
+  phase: TowerPhase;
+  title: string;
+  /** Countdown to play (countdown phase) or to the end of the game (playing). */
+  remainingMs: number;
+  me: { id: string; nickname: string; avatar: AvatarChoice; correct: number; placed: number };
+  team: TeamInfo;
+  state: "question" | "build";
+  blocksHeld: number;
+  question: StreamQuestionView | null;
+  /** Result of the last answer while its 1 s flash is still showing. */
+  feedback: StreamFeedbackView | null;
+  egg: MonsterEgg | null;
+  /** Latest monster news for this player (shown once per seq). */
+  monsterEvent: { seq: number; kind: "egg" | "hatched" | "smashed"; byTeam: string | null; target: string | null } | null;
+  /** The team tower, while this player is building. */
+  build: { columns: number[]; floors: number; sweepMs: number } | null;
+  result: {
+    teamRank: number;
+    teamCount: number;
+    floors: number;
+    placed: number;
+    awards: string[];
+  } | null;
+}
+
+export interface HostTowerTeam extends TeamInfo {
+  columns: number[];
+  floors: number;
+  placed: number;
+  rank: number;
+  members: { id: string; nickname: string; avatar: AvatarChoice; connected: boolean; building: boolean }[];
+}
+
+export interface HostTowerState {
+  kind: "tower";
+  theme?: TowerTheme;
+  phase: TowerPhase;
+  quiz: { id: string; title: string; questionCount: number };
+  remainingMs: number;
+  teams: HostTowerTeam[];
+  playerCount: number;
+  /** Increments with every drop so screens can animate/sound new blocks. */
+  dropCount: number;
+  monster: boolean;
+  egg: MonsterEggs | null;
+  lastAttack: MonsterAttack | null;
+  /** Time until the next egg announcement, or null if none is coming. */
+  nextMonsterMs: number | null;
+  awards: TowerAwards | null;
+  /** The questions answered wrongly most often (podium only). */
+  errors: QuestionError[] | null;
+}
