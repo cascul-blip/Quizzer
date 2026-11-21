@@ -58,10 +58,6 @@ export const EVERY_MSG_HAS_A_MODE: [Exclude<PlayerMsg["type"], "join" | "resume"
 /** The phone messages of one game mode (of any mode, for GameMode). */
 export type ModeMsg<M extends GameMode> = Extract<PlayerMsg, { type: { [T in ModeMsgType]: MsgModeMap[T] extends M ? T : never }[ModeMsgType] }>;
 
-export function isModeMsg(msg: { type: string }): msg is ModeMsg<GameMode> {
-  return modeOfMsg(msg.type) !== undefined;
-}
-
 /** Raw mode settings from the host, read by the mode's readSettings. */
 export type RawSettings = Readonly<Record<string, unknown>>;
 
