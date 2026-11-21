@@ -160,30 +160,32 @@ describe("Mode settings carryover", () => {
   }
 });
 
-test("unknown phone messages report an error even before a phone attaches", () => {
-  const phone = new HubSocket(hub);
-  hub.onMessage(phone, JSON.stringify({ type: "toString" }));
-  expect(errors(phone)).toEqual([{ type: "error", message: "Unknown message toString" }]);
-});
+describe("Phone message dispatch", () => {
+  test("unknown phone messages report an error even before a phone attaches", () => {
+    const phone = new HubSocket(hub);
+    hub.onMessage(phone, JSON.stringify({ type: "toString" }));
+    expect(errors(phone)).toEqual([{ type: "error", message: "Unknown message toString" }]);
+  });
 
-test("a current-mode message is ignored until the phone attaches", () => {
-  openLobby("tower", ["Noel"]);
-  send(host, { type: "host.start", pacing: "manual" });
-  const phone = new HubSocket(hub);
-  phone.raw = [];
-  send(phone, PHONE_MSG.tower);
-  expect(phone.raw).toEqual([]);
-});
+  test("a current-mode message is ignored until the phone attaches", () => {
+    openLobby("tower", ["Noel"]);
+    send(host, { type: "host.start", pacing: "manual" });
+    const phone = new HubSocket(hub);
+    phone.raw = [];
+    send(phone, PHONE_MSG.tower);
+    expect(phone.raw).toEqual([]);
+  });
 
-test("a current-mode handler can force delivery of an unchanged phone view", async () => {
-  const [{ phone }] = openLobby("tower", ["Noel"]);
-  send(host, { type: "host.start", pacing: "manual" });
-  await phone.playerState((view) => view.kind === "tower" && view.phase === "countdown");
-  const before = phone.view;
-  phone.raw = [];
-  send(phone, PHONE_MSG.tower);
-  expect(phone.raw).toEqual([{ type: "player.patch", ops: [] }]);
-  expect(phone.view).toEqual(before);
+  test("a current-mode handler can force delivery of an unchanged phone view", async () => {
+    const [{ phone }] = openLobby("tower", ["Noel"]);
+    send(host, { type: "host.start", pacing: "manual" });
+    await phone.playerState((view) => view.kind === "tower" && view.phase === "countdown");
+    const before = phone.view;
+    phone.raw = [];
+    send(phone, PHONE_MSG.tower);
+    expect(phone.raw).toEqual([{ type: "player.patch", ops: [] }]);
+    expect(phone.view).toEqual(before);
+  });
 });
 
 describe("Game modes", () => {
