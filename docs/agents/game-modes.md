@@ -1,3 +1,16 @@
+# Mode docs
+
+Design notes for the app and individual modes live in `docs/modes/`:
+
+- [Quizzer](../modes/Quizzer.md): the original requirements for the app
+- [Cup of Death](../modes/Cup%20of%20Death.md)
+- [Land Grab](../modes/Land%20Grab.md)
+- [Racer](../modes/Racer.md)
+- [Robot Attack](../modes/Robot%20Attack.md)
+- [Showdown](../modes/Showdown.md)
+
+Put a new mode's doc in `docs/modes/` and link it here.
+
 # Adding or removing a game mode
 
 A mode's server knowledge lives in its entry: a `ModeEntry` (`src/server/game/mode-entry.ts`) exported from the mode's own file in `src/server/game/`, collected in `MODES` (`src/server/game/modes.ts`). `MODES` is typed over `GameMode`, so a mode without an entry is a compile error. The hub, lobby and handoff look the entry up by `game.runningMode` and never branch on the mode; `tests/standards.test.ts` enforces that.
