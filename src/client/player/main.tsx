@@ -1,9 +1,7 @@
 import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { cleanAvatar, type AvatarChoice } from "../../shared/avatars.ts";
-import type { ClientMsg, PlayerView, ServerMsg } from "../../shared/protocol.ts";
-import { shownView } from "./resume.ts";
-import { applyPatch } from "../../shared/view-patch.ts";
+import type { ClientMsg } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { setPhoneArt } from "../shared/phone-art.ts";
 import { connect, type ConnStatus } from "../shared/ws.ts";
@@ -11,6 +9,7 @@ import { ConnBanner, ErrorBoundary, Toast, teamInk } from "../shared/ui.tsx";
 import { AvatarPicker } from "./avatar-picker.tsx";
 import { Bar, Center, type ClassicView, type Send } from "./common.tsx";
 import { PLAYER_MODES, screenOf } from "./modes.tsx";
+import { initialPhoneScreen, PhoneSession } from "./session.ts";
 
 const TOKEN_KEY = "quizzer.token";
 const NAME_KEY = "quizzer.nickname";
@@ -63,72 +62,32 @@ function savedAvatar(): AvatarChoice | null {
 
 function App() {
   const [status, setStatus] = useState<ConnStatus>("connecting");
-  const [serverView, setView] = useState<PlayerView | null>(null);
-  /** A resume is on its way: the server's first snapshot on a new socket is "not joined" until it's answered. */
-  const [resuming, setResuming] = useState(false);
-  const lastJoined = useRef<PlayerView | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [kicked, setKicked] = useState(false);
-  const [joining, setJoining] = useState(false);
+  const [{ view, joining, kicked, error }, show] = useState(initialPhoneScreen);
   const conn = useRef<{ send(m: ClientMsg): void } | null>(null);
+  const send = (message: ClientMsg) => conn.current?.send(message);
+  const [session] = useState(() => new PhoneSession({
+    send,
+    saveToken: (token) => storage.set(TOKEN_KEY, token),
+    preloadImages,
+    show,
+  }));
 
   useEffect(() => {
     const c = connect({
       onStatus: setStatus,
-      onOpen: (send) => {
-        const token = storage.get(TOKEN_KEY);
-        if (!token) return;
-        setResuming(true);
-        send({ type: "resume", token });
-      },
-      onMessage: (msg: ServerMsg) => {
-        switch (msg.type) {
-          case "player.state":
-            setView(msg.view);
-            setJoining(false);
-            break;
-          case "player.patch":
-            setView((v) => (v ? applyPatch(v, msg.ops) : v));
-            setJoining(false);
-            break;
-          case "joined":
-            storage.set(TOKEN_KEY, msg.token);
-            // Fetch the question images now so none has to load mid-game (they're cached as immutable).
-            preloadImages(msg.images ?? []);
-            break;
-          case "resumeFailed":
-            storage.set(TOKEN_KEY, null);
-            setResuming(false);
-            break;
-          case "kicked":
-            storage.set(TOKEN_KEY, null);
-            setKicked(true);
-            break;
-          case "error":
-            setError(msg.message);
-            setJoining(false);
-            break;
-        }
-      },
+      onOpen: () => session.open(storage.get(TOKEN_KEY)),
+      onMessage: (message) => session.receive(message),
     });
     conn.current = c;
     return () => c.close();
-  }, []);
-
-  useEffect(() => {
-    if (serverView && serverView.kind !== "none") setResuming(false);
-  }, [serverView]);
-
-  const send = (m: ClientMsg) => conn.current?.send(m);
-  if (serverView && serverView.kind !== "none") lastJoined.current = serverView;
-  const view = shownView(serverView, resuming, lastJoined.current);
+  }, [session]);
 
   let body;
   if (kicked) {
     body = (
       <Center>
         <h1>You were removed from the game</h1>
-        <button class="btn primary" onClick={() => setKicked(false)}>
+        <button class="btn primary" onClick={() => session.dismissKick()}>
           OK
         </button>
       </Center>
@@ -161,9 +120,8 @@ function App() {
           title={view.game.title}
           busy={joining}
           onJoin={(nickname) => {
-            setJoining(true);
             storage.set(NAME_KEY, nickname);
-            send({ type: "join", nickname, ...savedAvatar() });
+            session.join({ type: "join", nickname, ...savedAvatar() });
           }}
         />
       );
@@ -180,7 +138,7 @@ function App() {
     <>
       <ConnBanner status={view ? status : "open"} />
       {body}
-      <Toast message={error} onDone={() => setError(null)} />
+      <Toast message={error} onDone={() => session.dismissError()} />
     </>
   );
 }
