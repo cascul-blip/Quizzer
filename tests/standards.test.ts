@@ -64,6 +64,8 @@ describe("Coding standards: mode entries", () => {
   });
 });
 
+/** HubSocket owns opening in-memory sockets. */
+const DIRECT_SOCKET_OPEN = /\.\s*onOpen\s*\(/;
 /** A temp directory cleaned up in a test's own finally block instead of an afterEach. */
 const FINALLY_CLEANUP = /\bfinally\s*\{[^}]*\.cleanup\(\)/;
 
@@ -75,6 +77,15 @@ const testFiles = readdirSync(join(ROOT, "tests"))
 describe("Coding standards: tests", () => {
   test("finds the test files", () => {
     expect(testFiles.some(({ path }) => path === "tests/store.test.ts")).toBe(true);
+  });
+
+  test("hub tests open in-memory sockets through HubSocket", () => {
+    expect(testFiles.filter(({ text }) => DIRECT_SOCKET_OPEN.test(text)).map(({ path }) => path)).toEqual([]);
+  });
+
+  test("the socket guard flags direct onOpen calls", () => {
+    expect(DIRECT_SOCKET_OPEN.test("hub.onOpen(socket)")).toBe(true);
+    expect(DIRECT_SOCKET_OPEN.test("new HubSocket(hub)")).toBe(false);
   });
 
   test("shared fixtures are cleaned up in afterEach or afterAll, not in a test's finally block", () => {

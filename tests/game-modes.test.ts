@@ -4,12 +4,12 @@ import type { ModeMsg } from "../src/server/game/mode-entry.ts";
 import { Lobby } from "../src/server/game/lobby.ts";
 import { MODES } from "../src/server/game/modes.ts";
 import { QuizStore } from "../src/server/quiz/store.ts";
-import { GameHub } from "../src/server/ws.ts";
+import type { GameHub } from "../src/server/ws.ts";
 import { MODE_FLAGS } from "../src/shared/mode-flags.ts";
 import { MODE_NAMES } from "../src/shared/mode-names.ts";
 import type { ClientMsg, GameMode, ModeSettingsInput, ServerMsg } from "../src/shared/protocol.ts";
 import { FakeClock, tempDir } from "./helpers.ts";
-import { HubSocket } from "./hub-harness.ts";
+import { fakeHub, HubSocket } from "./hub-harness.ts";
 
 const GAME_MODES = Object.keys(MODES) as GameMode[];
 
@@ -119,7 +119,7 @@ beforeEach(async () => {
     ],
   });
   quizId = quiz.id;
-  hub = new GameHub(store, { clock: new FakeClock() });
+  hub = fakeHub(store, new FakeClock());
   host = new HubSocket(hub, { admin: true, role: "host" });
   send(host, { type: "host.hello" });
 });
