@@ -21,7 +21,7 @@ interface LobbyOptions extends Partial<LobbyChoices> {
   onChange?: () => void;
 }
 
-interface HandoffOptions extends StartContext {
+export interface HandoffOptions extends StartContext {
   install: (game: LiveGame, activate: () => void) => void;
   log: (message: string) => void;
 }
