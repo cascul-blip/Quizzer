@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import { type ClientMsg, type PlayerCupView } from "../../shared/protocol.ts";
+import type { ClientMsg } from "../../shared/protocol.ts";
+import type { PlayerCupView } from "../../shared/modes/cup.ts";
 import { CupArt, Die, RollingDie, RocketHead } from "../shared/cup-art.tsx";
 import { CupThemeProvider, useChristmasCup } from "../shared/cup-skin.tsx";
 import { ordinal, useCountdown } from "../shared/ui.tsx";

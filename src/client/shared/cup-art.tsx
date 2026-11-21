@@ -7,7 +7,7 @@
 import type { ComponentChildren } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import type { AvatarChoice } from "../../shared/avatars.ts";
-import { CUP_DEFAULT_CUPS, CUP_DIE_SIDES, type CupDrinkView } from "../../shared/protocol.ts";
+import { CUP_DEFAULT_CUPS, CUP_DIE_SIDES, type CupDrinkView } from "../../shared/modes/cup.ts";
 import { ACCESSORY_ART, AVATAR_ART } from "./avatar-art.tsx";
 import saloonImg from "./cup/saloon.webp";
 import tableImg from "./cup/table.webp";

@@ -1,7 +1,8 @@
 /** Interactive preview using the production host and phone components. */
 import { render } from "preact";
 import { useState } from "preact/hooks";
-import type { HostView, PlayerCupView, CupPhase } from "../../src/shared/protocol.ts";
+import type { HostView } from "../../src/shared/protocol.ts";
+import type { PlayerCupView, CupPhase } from "../../src/shared/modes/cup.ts";
 import type { CupTheme } from "../../src/shared/cup-theme.ts";
 import type { AvatarId } from "../../src/shared/avatars.ts";
 import { CupStage } from "../../src/client/host/cup.tsx";
