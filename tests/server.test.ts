@@ -173,7 +173,7 @@ describe("REST API", () => {
     expect((await fetch(`${base}/api/quizzes/%E0%A4%A`)).status).toBe(404);
   });
 
-  test("the latest results CSV is served as a download once a game has finished", async () => {
+  test("the latest results sheet is served as a CSV download once a game has finished", async () => {
     const url = `${base}/api/results/latest.csv`;
     srv.hub.lastResults = null;
     expect((await fetch(url)).status).toBe(404);

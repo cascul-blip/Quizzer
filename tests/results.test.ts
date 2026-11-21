@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { buildClassicResults } from "../src/server/game/classic.ts";
 import { INTRO_MS } from "../src/server/game/game.ts";
-import { records, resultsCsv, saveResults, sheet, toCsv } from "../src/server/game/results.ts";
+import { BOM, records, resultsCsv, saveResults, sheet, toCsv } from "../src/server/game/results.ts";
 import { classicGame, FakeClock, sampleQuiz, tempDir } from "./helpers.ts";
 
 test("classic results have one row per player in rank order, with per-question columns", () => {
@@ -36,7 +36,7 @@ test("classic results have one row per player in rank order, with per-question c
 
 test("CSV cells are quoted where needed and formula-looking text is neutralised", () => {
   const csv = toCsv([['Say "hi", ok?', "=cmd", -3, "-x"]]);
-  expect(csv).toBe(String.fromCodePoint(0xfeff) + '"Say ""hi"", ok?",\'=cmd,-3,\'-x\r\n');
+  expect(csv).toBe(BOM + '"Say ""hi"", ok?",\'=cmd,-3,\'-x\r\n');
 });
 
 test("a row narrower or wider than the header is refused", () => {

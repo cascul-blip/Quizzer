@@ -348,7 +348,7 @@ describe("end of game", () => {
     expect(c.hits).toBe(0);
   });
 
-  test("results CSV lists the winners first", () => {
+  test("results sheet lists the winners first", () => {
     const { game, clock } = setup(["A", "B"]);
     shoot(game, clock, byName(game, "B"), 0);
     game.end();

@@ -306,7 +306,7 @@ describe("end of game", () => {
     expect(game.awards()).toEqual({ mostCorrect: null, masterBuilder: null });
   });
 
-  test("results CSV", () => {
+  test("results sheet", () => {
     const { game, clock } = play(["Ann", "=Bob"], { teams: 1 });
     const ann = byName(game, "Ann");
     answer(game, clock, ann, true);
