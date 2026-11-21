@@ -1,17 +1,15 @@
 import { racerTheme, type RacerTheme, DEFAULT_RACER_THEME } from "../../shared/racer-theme.ts";
 import type {
   HostRacerState,
-  Pacing,
   PlayerRacerView,
-  QuestionView,
   RacerAwards,
   RacerDriver,
   RacerPhase,
   RacerResult,
   RacerTurn,
-  ShuffleOptions,
-} from "../../shared/protocol.ts";
-import type { QuestionError } from "../../shared/mode-views.ts";
+} from "../../shared/modes/racer.ts";
+import type { Pacing, QuestionView, QuestionError } from "../../shared/mode-views.ts";
+import type { ShuffleOptions } from "../../shared/protocol.ts";
 import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import { MAX_TYPED_ANSWER, checkAnswer, type AnswerValue, answerOf } from "../../shared/answer-match.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";

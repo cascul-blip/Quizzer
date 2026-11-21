@@ -41,3 +41,20 @@ export interface TeamInfo {
   name: string;
   color: string;
 }
+
+export type Pacing = "manual" | "auto";
+
+export interface QuestionView {
+  index: number;
+  total: number;
+  type: QuestionType;
+  text: string;
+  image?: string;
+  timeLimitSec: number;
+  /** Empty during the intro phase so phones can't answer early. */
+  options: string[];
+  /** Pin questions: where each option's spot sits on the image (sent together with options). */
+  spots?: PinSpot[];
+  /** Milliseconds left when the message was sent (clients add it to their own clock). */
+  remainingMs: number;
+}

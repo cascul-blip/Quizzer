@@ -1,6 +1,7 @@
 import { cleanAvatar, randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import { MODE_FLAGS } from "../../shared/mode-flags.ts";
-import type { GameMode, HostGameState, ModeSettingsMap, Pacing, PlayerView, ShuffleOptions } from "../../shared/protocol.ts";
+import type { GameMode, HostGameState, ModeSettingsMap, PlayerView, ShuffleOptions } from "../../shared/protocol.ts";
+import type { Pacing } from "../../shared/mode-views.ts";
 import type { Quiz } from "../../shared/quiz-schema.ts";
 import { isSeasonTheme } from "../../shared/season-theme.ts";
 import { assignTeams, GameError, teamInfo } from "./common.ts";

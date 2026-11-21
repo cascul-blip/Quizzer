@@ -8,12 +8,10 @@ import type {
   DuelRound,
   HostDuelPlayer,
   HostDuelState,
-  Pacing,
   PlayerDuelView,
-  QuestionView,
   ShuffleOptions,
 } from "../../shared/protocol.ts";
-import type { QuestionError, SubAward } from "../../shared/mode-views.ts";
+import type { Pacing, QuestionView, QuestionError, SubAward } from "../../shared/mode-views.ts";
 import { DUEL_DEFAULT_ROUNDS, DUEL_ROUNDS } from "../../shared/protocol.ts";
 import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import { MAX_TYPED_ANSWER, checkAnswer, type AnswerValue, answerOf } from "../../shared/answer-match.ts";

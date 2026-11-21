@@ -63,7 +63,7 @@ describe("Server import graph", () => {
 // Each mode's protocol types live in src/shared/modes/<mode>.ts, imported directly (no re-exports from protocol.ts).
 // When a mode migrates, add its file here; its exports must not come back to protocol.ts.
 const MODES_DIR = join(ROOT, "src/shared/modes");
-const MIGRATED_MODES = ["submarine.ts", "tower.ts", "fight.ts", "robot.ts", "cup.ts", "land.ts"];
+const MIGRATED_MODES = ["submarine.ts", "tower.ts", "fight.ts", "robot.ts", "cup.ts", "land.ts", "racer.ts"];
 
 /** Every relative import path in a file, type-only ones included. */
 function allImports(file: string): string[] {

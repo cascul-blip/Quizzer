@@ -1,4 +1,5 @@
-import type { GameMode, ModeSettingsMap, Pacing, PlayerMsg } from "../../shared/protocol.ts";
+import type { GameMode, ModeSettingsMap, PlayerMsg } from "../../shared/protocol.ts";
+import type { Pacing } from "../../shared/mode-views.ts";
 import { MODE_FLAGS } from "../../shared/mode-flags.ts";
 import { isSeasonTheme, type SeasonTheme } from "../../shared/season-theme.ts";
 import { GameError, type Clock } from "./common.ts";
