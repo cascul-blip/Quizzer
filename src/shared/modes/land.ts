@@ -1,7 +1,7 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { LandStart } from "../land-board.ts";
 import type { LandTheme } from "../land-theme.ts";
-import type { QuestionError, StreamFeedbackView, StreamQuestionView, SubAward, TeamInfo } from "../mode-views.ts";
+import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward, TeamInfo } from "../mode-views.ts";
 
 // Land Grab protocol types.
 
@@ -109,7 +109,7 @@ export interface PlayerLandView {
 
 /** What a phone sends during Land Grab games. */
 export type LandMsg =
-  | { type: "land.answer"; seq: number; option: number; text?: string }
+  | StreamAnswerMsg<"land">
   | { type: "land.place"; tile: number }
   /** Leave the land early; unused claims are kept for next time. */
   | { type: "land.done" };

@@ -1,6 +1,6 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { DuelTheme } from "../duel-theme.ts";
-import type { Pacing, QuestionError, QuestionView, SubAward } from "../mode-views.ts";
+import type { PacedAnswerMsg, Pacing, QuestionError, QuestionView, SubAward } from "../mode-views.ts";
 
 // Showdown protocol types.
 //
@@ -155,5 +155,5 @@ export interface PlayerDuelView {
 
 /** What a phone sends during Showdown games. */
 export type DuelMsg =
-  /** Showdown, open phase: `index` is the question's index (QuestionView.index), as in racer.answer. One answer per player per round. */
-  { type: "duel.answer"; index: number; option: number; text?: string };
+  /** Open phase only. One answer per player per round. */
+  PacedAnswerMsg<"duel">;

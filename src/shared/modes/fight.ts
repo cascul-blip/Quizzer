@@ -1,7 +1,7 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { HillHeight, ShotImpact } from "../fight-physics.ts";
 import type { FightTheme } from "../fight-theme.ts";
-import type { QuestionError, StreamFeedbackView, StreamQuestionView, SubAward, TeamInfo } from "../mode-views.ts";
+import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward, TeamInfo } from "../mode-views.ts";
 
 // Tower Fight protocol types.
 
@@ -116,7 +116,7 @@ export interface PlayerFightView {
 
 /** What a phone sends during Tower Fight games. */
 export type FightMsg =
-  | { type: "fight.answer"; seq: number; option: number; text?: string }
+  | StreamAnswerMsg<"fight">
   | { type: "fight.choose"; action: "attack" | "rebuild" }
   /** The slingshot pull in field units (y up); the shot flies the opposite way. */
   | { type: "fight.fire"; dx: number; dy: number };

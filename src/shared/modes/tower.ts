@@ -1,5 +1,5 @@
 import type { AvatarChoice } from "../avatars.ts";
-import type { QuestionError, StreamFeedbackView, StreamQuestionView, TeamInfo } from "../mode-views.ts";
+import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, TeamInfo } from "../mode-views.ts";
 import type { TowerTheme } from "../tower-theme.ts";
 
 // Tallest Tower protocol types.
@@ -113,4 +113,4 @@ export interface HostTowerState {
 }
 
 /** What a phone sends during Tallest Tower games. */
-export type TowerMsg = { type: "tower.answer"; seq: number; option: number; text?: string } | { type: "tower.drop"; zone: number };
+export type TowerMsg = StreamAnswerMsg<"tower"> | { type: "tower.drop"; zone: number };
