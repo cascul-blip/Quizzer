@@ -85,13 +85,13 @@ const errors = (ws: HubSocket) => ws.raw.filter((m) => m.type === "error");
 /** A phone's view in the lobby. */
 function phoneLobbyView(playerId: string) {
   const view = hub.game?.playerView(playerId);
-  if (view?.kind !== "classic") throw new Error(`expected the lobby, got ${view?.kind}`);
+  if (view?.kind !== "lobby") throw new Error(`expected the lobby, got ${view?.kind}`);
   return view;
 }
 
 function lobbyView() {
   const view = hub.hostView();
-  if (view.kind !== "classic") throw new Error(`expected the lobby, got ${view.kind}`);
+  if (view.kind !== "lobby") throw new Error(`expected the lobby, got ${view.kind}`);
   return view;
 }
 
@@ -192,9 +192,9 @@ describe("Game modes", () => {
         expect(PLAYER_MODES[mode].banner !== null).toBe(BANNER.has(mode));
       });
 
-      test(`phones in the lobby ${BANNER.has(mode) ? "show" : "don't show"} a mode banner`, () => {
+      test("the phone lobby view carries the selected mode", () => {
         const [noel] = openLobby(mode, ["Noel"]);
-        expect(phoneLobbyView(noel!.playerId).banner).toBe(BANNER.has(mode) ? mode : undefined);
+        expect(phoneLobbyView(noel!.playerId).mode).toBe(mode);
       });
 
       test(`pacing ${PACED.has(mode) ? "is set during the game and carries over" : "is not available and doesn't carry over"}`, async () => {

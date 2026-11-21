@@ -19,9 +19,6 @@ export function ClassicPlayer({ view, send }: { view: ClassicView; send: Send })
 function Phase({ view, send }: { view: ClassicView; send: Send }) {
   const q = view.question;
   switch (view.phase) {
-    case "lobby":
-      // main.tsx shows the lobby screen, in every game mode.
-      return null;
     case "intro":
       return (
         <Center>

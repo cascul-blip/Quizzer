@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { INTRO_MS, preparePlayOrder } from "../src/server/game/game.ts";
+import { INTRO_MS, preparePlayOrder } from "../src/server/game/classic.ts";
 import { QuestionStream } from "../src/server/game/stream.ts";
 import { SERVER_INSTRUCTIONS } from "../src/server/mcp/tools.ts";
 import { QuizStore } from "../src/server/quiz/store.ts";

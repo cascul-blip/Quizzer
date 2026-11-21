@@ -43,8 +43,8 @@ function App() {
   useEffect(() => {
     const previous = previousView.current;
     previousView.current = view;
-    if (previous?.phase !== "lobby" || !view) return;
-    if (view.phase === "lobby" && view.players.length > previous.players.length) play("join");
+    if (previous?.kind !== "lobby" || !view) return;
+    if (view.kind === "lobby" && view.players.length > previous.players.length) play("join");
   }, [view]);
 
   // Arriving from the admin page with ?quiz=… opens that quiz, unless a game is already running.
@@ -82,11 +82,11 @@ function App() {
     );
   } else if (view.kind === "idle") {
     body = <Idle onOpen={(quizId) => send({ type: "host.open", quizId })} />;
-  } else if (view.phase === "lobby") {
+  } else if (view.kind === "lobby") {
     body = <LobbyStage view={view} send={send} />;
   } else {
     const Stage = stageOf(view);
-    body = <Stage view={view} send={send} enteredFromLobby={previousView.current?.phase === "lobby"} />;
+    body = <Stage view={view} send={send} enteredFromLobby={previousView.current?.kind === "lobby"} />;
   }
 
   return (

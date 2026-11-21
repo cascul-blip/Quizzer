@@ -17,7 +17,7 @@ import { SiegeStage, siegeCue, siegeLobby } from "./siege.tsx";
 import { SubmarineStage, submarineCue, submarineLobby } from "./submarine.tsx";
 import { TowerStage, towerCue, towerLobby } from "./tower.tsx";
 
-/** The projector's view of a game of the mode; its kind is the mode. Classic's also carries the lobby. */
+/** The projector's view of a game of the mode; its kind is the mode. */
 export type HostModeView<M extends GameMode> = Extract<HostView, { kind: M }>;
 
 type StageProps<M extends GameMode> = { view: HostModeView<M>; send: Send; enteredFromLobby: boolean };

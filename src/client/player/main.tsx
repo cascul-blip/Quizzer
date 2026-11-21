@@ -3,15 +3,13 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { cleanAvatar } from "../../shared/avatars.ts";
 import type { ClientMsg } from "../../shared/protocol.ts";
-import { Avatar } from "../shared/avatar-art.tsx";
 import { setPhoneArt } from "../shared/phone-art.ts";
-import { ConnBanner, ErrorBoundary, Toast, teamInk } from "../shared/ui.tsx";
+import { ConnBanner, ErrorBoundary, Toast } from "../shared/ui.tsx";
 import type { ConnStatus } from "../shared/ws.ts";
 import { connect } from "../shared/ws.ts";
-import { AvatarPicker } from "./avatar-picker.tsx";
-import type { ClassicView, Send } from "./common.tsx";
-import { Bar, Center } from "./common.tsx";
-import { PLAYER_MODES, screenOf } from "./modes.tsx";
+import { Center } from "./common.tsx";
+import { LobbyScreen } from "./lobby.tsx";
+import { screenOf } from "./modes.tsx";
 import { initialPhoneScreen, PhoneSession } from "./session.ts";
 
 const TOKEN_KEY = "quizzer.token";
@@ -132,9 +130,16 @@ function App() {
         />
       );
     }
-  } else if (view.phase === "lobby") {
-    // Only Classic's view has a lobby phase: the lobby belongs to no mode, so it is shown before looking up the entry.
-    body = <LobbyScreen view={view} send={send} />;
+  } else if (view.kind === "lobby") {
+    body = (
+      <LobbyScreen
+        view={view}
+        onAvatarPick={(choice) => {
+          storage.set(AVATAR_KEY, JSON.stringify(choice));
+          send({ type: "setAvatar", ...choice });
+        }}
+      />
+    );
   } else {
     const Screen = screenOf(view);
     body = <Screen view={view} send={send} />;
@@ -182,51 +187,6 @@ function JoinForm({ title, busy, onJoin }: { title: string; busy: boolean; onJoi
         </button>
       </form>
     </Center>
-  );
-}
-
-/** The lobby, in every game mode: Classic's view in its first phase, with the mode's banner if it has one. */
-function LobbyScreen({ view, send }: { view: ClassicView; send: Send }) {
-  return (
-    <div class="game">
-      <Bar view={view} />
-      <Lobby view={view} send={send} />
-    </div>
-  );
-}
-
-function Lobby({ view, send }: { view: ClassicView; send: Send }) {
-  // Show a pick straight away; the next snapshot from the server confirms it.
-  const [picked, setPicked] = useState<AvatarChoice | null>(null);
-  const server = view.me.avatar;
-  useEffect(() => setPicked(null), [server.avatar, server.accessory]);
-  const look = picked ?? server;
-  const banner = view.banner ? PLAYER_MODES[view.banner].banner : null;
-  return (
-    <main class="center lobby-wait">
-      <div class={`me-avatar ${banner ? banner.avatarClass : ""}`}>
-        <Avatar choice={look} />
-      </div>
-      <h1>You're in!</h1>
-      {banner && <banner.Line />}
-      {view.team && (
-        <div class="team-badge" style={{ background: view.team.color, color: teamInk(view.team.color) }}>
-          Team {view.team.name}
-        </div>
-      )}
-      <p class="muted">Pick your look while you wait. It shows on the big screen!</p>
-      <AvatarPicker
-        value={look}
-        onPick={(choice) => {
-          setPicked(choice);
-          storage.set(AVATAR_KEY, JSON.stringify(choice));
-          send({ type: "setAvatar", ...choice });
-        }}
-      />
-      <p class="muted small">
-        {view.playerCount} player{view.playerCount === 1 ? "" : "s"} joined
-      </p>
-    </main>
   );
 }
 

@@ -225,7 +225,7 @@ describe("WebSocket transport", () => {
     host.sendMsg({ type: "host.open", quizId: quiz.id });
     host.sendMsg({ type: "host.setMode", mode: "tower" });
     host.sendMsg({ type: "host.setModeSettings", mode: "tower", settings: { teams: 2, minutes: 2 } });
-    await host.hostState((v) => v.kind === "classic" && v.mode === "tower" && v.settings.tower.teams === 2);
+    await host.hostState((v) => v.kind === "lobby" && v.mode === "tower" && v.settings.tower.teams === 2);
 
     const [ann, bob] = await Promise.all([TestSocket.open(wsUrl), TestSocket.open(wsUrl)]);
     for (const [p, nickname] of [

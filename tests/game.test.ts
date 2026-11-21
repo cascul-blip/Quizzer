@@ -1,7 +1,7 @@
 import { describe, expect, spyOn, test } from "bun:test";
+import type { ClassicGame } from "../src/server/game/classic.ts";
+import { AUTO_LEADERBOARD_MS, AUTO_REVEAL_MS, GameError, GRACE_MS, INTRO_MS, preparePlayOrder } from "../src/server/game/classic.ts";
 import { FightGame } from "../src/server/game/fight.ts";
-import type { ClassicGame } from "../src/server/game/game.ts";
-import { AUTO_LEADERBOARD_MS, AUTO_REVEAL_MS, GameError, GRACE_MS, INTRO_MS, preparePlayOrder } from "../src/server/game/game.ts";
 import { LandGame } from "../src/server/game/land.ts";
 import { Lobby } from "../src/server/game/lobby.ts";
 import { TowerGame } from "../src/server/game/tower.ts";
@@ -250,8 +250,8 @@ describe("views", () => {
       ranked.mockRestore();
       return views;
     };
-    expect(batched()).toEqual(ids.map((id) => game.playerView(id)));
     game.start();
+    expect(batched()).toEqual(ids.map((id) => game.playerView(id)));
     toOpen(game, clock);
     game.answer(ids[2]!, 0, 1);
     clock.advance(500);
@@ -334,7 +334,7 @@ describe("lobby shuffle options", () => {
     const clock = new FakeClock();
     const quiz = sampleQuiz({ settings: { shuffleQuestions: true, shuffleAnswers: false } });
     const game = classicGame(quiz, { clock, rng: () => 0 });
-    expect(game.hostView().shuffle).toEqual({ questions: true, answers: false });
+    expect(game.shuffle).toEqual({ questions: true, answers: false });
     // Lobby keeps the authored order until Start.
     expect(game.questions.map((q) => q.id)).toEqual(["q1", "q2", "q3"]);
     game.join("A");
@@ -346,7 +346,7 @@ describe("lobby shuffle options", () => {
   test("the host can change them in the lobby only", () => {
     const game = classicGame(sampleQuiz(), { clock: new FakeClock(), rng: () => 0 });
     game.setShuffle({ questions: false, answers: true });
-    expect(game.hostView().shuffle).toEqual({ questions: false, answers: true });
+    expect(game.shuffle).toEqual({ questions: false, answers: true });
     game.join("A");
     game.start();
     expect(game.questions.map((q) => q.id)).toEqual(["q1", "q2", "q3"]);
@@ -380,7 +380,7 @@ describe("lobby teams", () => {
     const layout = () => game.hostView().teams!.map((t) => t.members.map((p) => p.nickname));
     const badge = (id: string) => {
       const v = game.playerView(id);
-      return v.kind === "classic" ? v.team : null;
+      return v.kind === "lobby" ? v.team : null;
     };
     return { game, clock, ids, layout, badge };
   }
