@@ -532,7 +532,7 @@ export class Game {
     const q = this.currentQuestion;
     const ans = this.qIndex >= 0 ? p.answers[this.qIndex] : undefined;
     return {
-      kind: "player",
+      kind: "classic",
       phase: this.phase,
       title: this.title,
       me: { id: p.id, nickname: p.nickname, avatar: p.avatar, score: p.score, rank: this.rankOf(p.id), streak: p.streak },

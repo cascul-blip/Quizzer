@@ -94,9 +94,9 @@ describe("text questions", () => {
     game.skip();
     const va = game.playerView(a.id);
     const vb = game.playerView(b.id);
-    expect(va.kind === "player" && va.result?.wasCorrect).toBe(true);
-    expect(va.kind === "player" && va.myText).toBe("Airplanes");
-    expect(vb.kind === "player" && vb.result?.wasCorrect).toBe(false);
+    expect(va.kind === "classic" && va.result?.wasCorrect).toBe(true);
+    expect(va.kind === "classic" && va.myText).toBe("Airplanes");
+    expect(vb.kind === "classic" && vb.result?.wasCorrect).toBe(false);
     expect(game.hostView().question?.options).toEqual(["Airplane"]);
   });
 });

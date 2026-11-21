@@ -102,7 +102,7 @@ const errors = (ws: Socket) => ws.sent.filter((m) => m.type === "error");
 /** A phone's view in the lobby. */
 function phoneLobbyView(playerId: string) {
   const view = hub.game?.playerView(playerId);
-  if (view?.kind !== "player") throw new Error(`expected the lobby, got ${view?.kind}`);
+  if (view?.kind !== "classic") throw new Error(`expected the lobby, got ${view?.kind}`);
   return view;
 }
 

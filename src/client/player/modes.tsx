@@ -1,5 +1,6 @@
 import type { ComponentType } from "preact";
 import type { GameMode, PlayerView } from "../../shared/protocol.ts";
+import { entryOf } from "../shared/entry-of.ts";
 import { ClassicPlayer } from "./classic.tsx";
 import type { PhoneBanner, Send } from "./common.tsx";
 import { CupPlayer } from "./cup.tsx";
@@ -16,11 +17,8 @@ import { TowerPlayer } from "./tower.tsx";
 /** A joined phone's view. */
 export type PhoneView = Exclude<PlayerView, { kind: "none" }>;
 
-/** The kind of a mode's phone view: the mode, except Classic's, which is "player". */
-type PhoneKind<M extends GameMode> = M extends "classic" ? "player" : M;
-
-/** A phone's view of a game of the mode. Classic's also carries the lobby, which main.tsx shows itself. */
-export type PhoneModeView<M extends GameMode> = Extract<PhoneView, { kind: PhoneKind<M> }>;
+/** A phone's view of a game of the mode; its kind is the mode. Classic's also carries the lobby, which main.tsx shows itself. */
+export type PhoneModeView<M extends GameMode> = Extract<PhoneView, { kind: M }>;
 
 type ScreenProps<M extends GameMode> = { view: PhoneModeView<M>; send: Send };
 
@@ -49,7 +47,5 @@ export const PLAYER_MODES: { [M in GameMode]: PlayerModeEntry<M> } = {
 
 /** The screen of the mode a joined phone's view belongs to, to render with that same view. */
 export function screenOf(view: PhoneView): ComponentType<ScreenProps<GameMode>> {
-  const mode: GameMode = view.kind === "player" ? "classic" : view.kind;
-  // The one place the per-mode types meet: the caller passes back the view it looked the screen up with.
-  return PLAYER_MODES[mode].Screen as ComponentType<ScreenProps<GameMode>>;
+  return entryOf<PlayerModeEntry<GameMode>>(PLAYER_MODES, view.kind).Screen;
 }

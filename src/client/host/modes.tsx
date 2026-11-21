@@ -1,5 +1,6 @@
 import type { ComponentType } from "preact";
 import type { GameMode, HostView } from "../../shared/protocol.ts";
+import { entryOf } from "../shared/entry-of.ts";
 import type { MusicCue } from "../shared/music/index.ts";
 import { ClassicStage, classicCue } from "./classic.tsx";
 import type { Send } from "./common.tsx";
@@ -45,12 +46,10 @@ export const HOST_MODES: { [M in GameMode]: HostModeEntry<M> } = {
 
 /** The music cue of the mode a view belongs to, for that same view. */
 export function cueOf(view: HostModeView<GameMode>): MusicCue {
-  // As in stageOf, the per-mode types meet here: the cue is called with the view it was looked up with.
-  return (HOST_MODES[view.kind].cue as (view: HostModeView<GameMode>) => MusicCue)(view);
+  return entryOf<HostModeEntry<GameMode>>(HOST_MODES, view.kind).cue(view);
 }
 
 /** The stage of the mode a view belongs to, to render with that same view. */
 export function stageOf(view: HostModeView<GameMode>): ComponentType<StageProps<GameMode>> {
-  // The per-mode types meet here (and in cueOf): the caller passes back the view it looked the stage up with.
-  return HOST_MODES[view.kind].Stage as ComponentType<StageProps<GameMode>>;
+  return entryOf<HostModeEntry<GameMode>>(HOST_MODES, view.kind).Stage;
 }

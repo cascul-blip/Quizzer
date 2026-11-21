@@ -1,5 +1,5 @@
 import { GIFT_GOODS, GIFT_READY_MS } from "../src/shared/gift-rules.ts";
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { AUTO_REVEAL_MS, INTRO_MS } from "../src/server/game/game.ts";
 import { RacerGame } from "../src/server/game/racer.ts";
 import type { SiegeGame } from "../src/server/game/siege.ts";
@@ -17,6 +17,10 @@ import { CUP_ROLL_MS, CUP_SIP_MS, ROBOT_MOVE_MS, cupQuizMs, robotQuizMs, type Cl
 import { applyPatch } from "../src/shared/view-patch.ts";
 import { FakeClock, tempDir } from "./helpers.ts";
 import { OFFERED_ACCESSORIES, OFFERED_AVATARS } from "../src/shared/avatars.ts";
+
+// Real sockets wait on the machine: give a slow local run (typecheck alongside, say) room before calling it a hang.
+const WAIT_MS = 10_000;
+setDefaultTimeout(30_000);
 
 class TestSocket {
   msgs: ServerMsg[] = [];
@@ -53,7 +57,7 @@ class TestSocket {
   /** Wait for (and consume up to) the first queued or future message matching the predicate. */
   async waitFor<T extends ServerMsg>(pred: (m: ServerMsg) => m is T, timeout?: number): Promise<T>;
   async waitFor(pred: (m: ServerMsg) => boolean, timeout?: number): Promise<ServerMsg>;
-  async waitFor(pred: (m: ServerMsg) => boolean, timeout = 2000): Promise<ServerMsg> {
+  async waitFor(pred: (m: ServerMsg) => boolean, timeout = WAIT_MS): Promise<ServerMsg> {
     const deadline = Date.now() + timeout;
     for (;;) {
       const i = this.msgs.findIndex(pred);
@@ -262,7 +266,7 @@ describe("full game over WebSockets", () => {
     await host.hostState((v) => v.phase === "intro");
     clock.advance(INTRO_MS);
     await srv.hub.broadcast();
-    await players[0]!.playerState((v) => v.kind === "player" && v.phase === "open");
+    await players[0]!.playerState((v) => v.kind === "classic" && v.phase === "open");
 
     // Q1: Ann right, Bob wrong, Cy right.
     players[0]!.send({ type: "answer", qIndex: 0, option: 1 });
@@ -271,18 +275,18 @@ describe("full game over WebSockets", () => {
     const reveal = await host.hostState((v) => v.phase === "reveal");
     expect(reveal.view.kind === "classic" && reveal.view.answerCounts).toEqual([1, 2]);
 
-    const bobResult = await players[1]!.playerState((v) => v.kind === "player" && v.phase === "reveal");
-    expect(bobResult.view.kind === "player" && bobResult.view.result).toEqual({ choice: 0, correct: [1], wasCorrect: false, points: 0 });
-    const annResult = await players[0]!.playerState((v) => v.kind === "player" && v.phase === "reveal");
-    expect(annResult.view.kind === "player" && annResult.view.result?.wasCorrect).toBe(true);
+    const bobResult = await players[1]!.playerState((v) => v.kind === "classic" && v.phase === "reveal");
+    expect(bobResult.view.kind === "classic" && bobResult.view.result).toEqual({ choice: 0, correct: [1], wasCorrect: false, points: 0 });
+    const annResult = await players[0]!.playerState((v) => v.kind === "classic" && v.phase === "reveal");
+    expect(annResult.view.kind === "classic" && annResult.view.result?.wasCorrect).toBe(true);
 
     // Bob's phone reloads: resume with the token and keep the same identity.
     players[1]!.close();
     await host.hostState((v) => v.kind === "classic" && v.players.some((p) => p.nickname === "Bob" && !p.connected));
     const bob2 = await TestSocket.open(wsUrl);
     bob2.send({ type: "resume", token: tokens[1]! });
-    const resumed = await bob2.playerState((v) => v.kind === "player");
-    expect(resumed.view.kind === "player" && resumed.view.me.nickname).toBe("Bob");
+    const resumed = await bob2.playerState((v) => v.kind === "classic");
+    expect(resumed.view.kind === "classic" && resumed.view.me.nickname).toBe("Bob");
     players[1] = bob2;
 
     host.send({ type: "host.next" }); // leaderboard
@@ -304,8 +308,8 @@ describe("full game over WebSockets", () => {
     const errors = podium.view.kind === "classic" ? podium.view.errors! : [];
     expect(errors.length).toBeGreaterThan(0);
     expect(errors.every((e) => e.wrong > 0 && !!e.text && e.answers.length > 0)).toBe(true);
-    const annFinal = await players[0]!.playerState((v) => v.kind === "player" && v.phase === "podium");
-    expect(annFinal.view.kind === "player" && annFinal.view.me.rank).toBe(1);
+    const annFinal = await players[0]!.playerState((v) => v.kind === "classic" && v.phase === "podium");
+    expect(annFinal.view.kind === "classic" && annFinal.view.me.rank).toBe(1);
 
     const csv = await fetch(`${base}/api/results/latest.csv`);
     expect(csv.headers.get("content-disposition")).toContain(".csv");
@@ -379,8 +383,8 @@ describe("Tallest Tower over WebSockets", () => {
     }
     const lobby = await host.hostState((v) => v.kind === "classic" && !!v.teams && v.players.length === 3);
     expect(lobby.view.kind === "classic" && lobby.view.teams!.map((t) => t.members.map((m) => m.nickname))).toEqual([["Ann", "Cy"], ["Bob"]]);
-    const annLobby = await players[0]!.playerState((v) => v.kind === "player" && !!v.team);
-    expect(annLobby.view.kind === "player" && annLobby.view.team?.name).toBe("Red");
+    const annLobby = await players[0]!.playerState((v) => v.kind === "classic" && !!v.team);
+    expect(annLobby.view.kind === "classic" && annLobby.view.team?.name).toBe("Red");
 
     host.send({ type: "host.start", pacing: "manual" });
     const themedHost = await host.hostState((v) => v.kind === "tower" && v.phase === "countdown");
@@ -471,13 +475,13 @@ describe("Lobby teams over WebSockets", () => {
     }
     const lobby = await host.hostState((v) => v.kind === "classic" && !!v.teams && v.players.length === 3);
     const ann = lobby.view.kind === "classic" ? lobby.view.players.find((p) => p.nickname === "Ann")! : null;
-    await players[0]!.playerState((v) => v.kind === "player" && v.team?.name === "Red");
+    await players[0]!.playerState((v) => v.kind === "classic" && v.team?.name === "Red");
 
     host.send({ type: "host.setTeam", playerId: ann!.id, team: 1 });
     const moved = await host.hostState((v) => v.kind === "classic" && !!v.teams && v.teams[1]!.members.length === 2);
     expect(moved.view.kind === "classic" && moved.view.teams!.map((t) => t.members.map((m) => m.nickname))).toEqual([["Cy"], ["Ann", "Bob"]]);
-    const annLobby = await players[0]!.playerState((v) => v.kind === "player" && v.team?.name === "Blue");
-    expect(annLobby.view.kind === "player" && annLobby.view.team?.index).toBe(1);
+    const annLobby = await players[0]!.playerState((v) => v.kind === "classic" && v.team?.name === "Blue");
+    expect(annLobby.view.kind === "classic" && annLobby.view.team?.index).toBe(1);
 
     host.send({ type: "host.setTeam", playerId: ann!.id, team: 2 });
     expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: "Unknown team" });

@@ -71,7 +71,7 @@ describe("in the lobby", () => {
     expect(changes).toBe(before + 1);
     expect(game.hostView().players[0]!.avatar).toEqual({ avatar: A2, accessory: X2 });
     const view = game.playerView(p.id);
-    expect(view.kind === "player" && view.me.avatar).toEqual({ avatar: A2, accessory: X2 });
+    expect(view.kind === "classic" && view.me.avatar).toEqual({ avatar: A2, accessory: X2 });
 
     expect(() => game.setAvatar(p.id, A2, "jetpack")).toThrow(GameError);
     expect(p.avatar.accessory).toBe(X2);

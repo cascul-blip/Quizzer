@@ -97,7 +97,7 @@ describe("lobby → tower", () => {
     ]);
     const a = lobby.players.get([...lobby.players.keys()][0]!)!;
     const pv = lobby.playerView(a.id);
-    expect(pv.kind === "player" && pv.team?.name).toBe("Red");
+    expect(pv.kind === "classic" && pv.team?.name).toBe("Red");
     // Same ids and tokens after the handover.
     expect(game.byToken(a.token)?.id).toBe(a.id);
     expect([...game.players.values()].map((p) => [p.nickname, p.team])).toEqual([
