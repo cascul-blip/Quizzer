@@ -4,7 +4,7 @@ import { AUTO_REVEAL_MS, AWARD_BIGGEST_CLIMB, AWARD_LONGEST_REIGN, AWARD_MOST_WI
 import { buildDuelResultsCsv } from "../src/server/game/duel.ts";
 import { DUEL_DEFAULT_ROUNDS, type Pacing, type ShuffleOptions } from "../src/shared/protocol.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
-import { viewKey } from "../src/server/ws.ts";
+import { viewKey } from "../src/server/phone-view-delivery.ts";
 import { FakeClock, sampleQuiz } from "./helpers.ts";
 
 function quiz(count = 20): Quiz {

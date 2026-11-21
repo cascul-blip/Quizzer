@@ -5,7 +5,7 @@ import { buildFightResultsCsv } from "../src/server/game/fight.ts";
 import { MAX_PULL, launchVector, simulate } from "../src/shared/fight-physics.ts";
 import { CORRECT_PER_DECISION, DECISION_MS, REPAIR_MS, TOWER_MAX_DAMAGE } from "../src/shared/protocol.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
-import { viewKey } from "../src/server/ws.ts";
+import { viewKey } from "../src/server/phone-view-delivery.ts";
 import { FakeClock, sampleQuiz } from "./helpers.ts";
 
 function quiz(): Quiz {
