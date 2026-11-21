@@ -1,5 +1,5 @@
 import { GIFT_GOODS, GIFT_READY_MS } from "../src/shared/gift-rules.ts";
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { AUTO_REVEAL_MS, INTRO_MS } from "../src/server/game/game.ts";
 import { RacerGame } from "../src/server/game/racer.ts";
 import type { SiegeGame } from "../src/server/game/siege.ts";
@@ -8,7 +8,7 @@ import { COUNTDOWN_MS as FIGHT_COUNTDOWN_MS, RESULT_MS } from "../src/server/gam
 import { COUNTDOWN_MS as LAND_COUNTDOWN_MS } from "../src/server/game/land.ts";
 import { COUNTDOWN_MS as ROBOT_COUNTDOWN_MS } from "../src/server/game/robot.ts";
 import { COUNTDOWN_MS as CUP_COUNTDOWN_MS } from "../src/server/game/cup.ts";
-import { SIEGE_COUNTDOWN_MS, SIEGE_OPENING_MS } from "../src/shared/siege-rules.ts";
+import { SIEGE_COUNTDOWN_MS, SIEGE_OPENING_MS, SIEGE_TICK_MS, SIEGE_GIANT_WAIT_MS } from "../src/shared/siege-rules.ts";
 import { BOOST_MIN_HOLD_MS, COUNTDOWN_MS as SUB_COUNTDOWN_MS } from "../src/server/game/submarine.ts";
 import { QuizStore } from "../src/server/quiz/store.ts";
 import type { GameHub } from "../src/server/ws.ts";
@@ -533,6 +533,30 @@ describe("Game mode: Cup of Death", () => {
 });
 
 describe("Game mode: Kingdom Siege", () => {
+  test("a giant starting to walk refreshes the projector without reading phone views", async () => {
+    const quiz = await store.create({ title: "Siege ticks", questions: [{ type: "true_false", text: "Q", correct: [0] }] });
+    const host = new HubSocket(hub, { admin: true, role: "host" });
+    host.sendMsg({ type: "host.open", quizId: quiz.id });
+    host.sendMsg({ type: "host.setMode", mode: "siege" });
+    const phone = new HubSocket(hub);
+    phone.sendMsg({ type: "join", nickname: "Ann" });
+    host.sendMsg({ type: "host.start", pacing: "manual" });
+    clock.advance(SIEGE_COUNTDOWN_MS);
+    await host.hostState((v) => v.kind === "siege" && v.phase === "build");
+    if (!hub.game || !("spawn" in hub.game)) throw new Error("Expected Kingdom Siege to be running");
+    hub.game.spawn("giant", 0);
+    const phoneView = spyOn(hub, "playerView");
+    host.raw = [];
+    phone.raw = [];
+
+    clock.advance(Math.ceil(SIEGE_GIANT_WAIT_MS / SIEGE_TICK_MS) * SIEGE_TICK_MS);
+    await Promise.resolve();
+
+    expect(host.raw).toEqual([{ type: "host.state", view: expect.objectContaining({ kind: "siege" }) }]);
+    expect(phone.raw).toEqual([]);
+    expect(phoneView).not.toHaveBeenCalled();
+  });
+
   test("Endless lobby → build → lane map → wave 1 → end → results and record → play again", async () => {
     const quiz = await store.create({
       title: "Siege E2E",

@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { MAX_JOINS_PER_ADDRESS, MAX_SOCKETS_PER_ADDRESS } from "../src/server/game/common.ts";
 import { QuizStore } from "../src/server/quiz/store.ts";
 import type { GameHub } from "../src/server/ws.ts";
@@ -6,7 +6,8 @@ import { FakeClock, tempDir } from "./helpers.ts";
 import { fakeHub, HubSocket } from "./hub-harness.ts";
 
 describe("Per-device caps", () => {
-  const t = tempDir();
+  let t: ReturnType<typeof tempDir>;
+  beforeAll(() => { t = tempDir(); });
   afterAll(() => t.cleanup());
 
   async function openHub() {

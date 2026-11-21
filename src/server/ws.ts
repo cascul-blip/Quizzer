@@ -11,6 +11,7 @@ import { GameError, type Clock } from "./game/common.ts";
 import { lanAddresses, type LanAddress } from "./network.ts";
 import { PhoneAttachments } from "./phone-attachments.ts";
 import { PhoneViewDelivery } from "./phone-view-delivery.ts";
+import { ViewUpdateScheduler } from "./view-update-scheduler.ts";
 import { NotFoundError, type QuizStore } from "./quiz/store.ts";
 
 export interface SocketData {
@@ -40,8 +41,6 @@ interface LastResults {
 }
 
 const PACINGS = new Set<Pacing>(["manual", "auto"]);
-/** Answers can arrive from every phone at once: the acting player is updated at once, everyone else at most this often. */
-const ACTIVITY_THROTTLE_MS = 100;
 /** Compress what goes to phones over Wi-Fi; the host screen is on this machine, so it isn't worth the CPU. */
 const compressFor = (ws: WS) => ws.data.role !== "host";
 
@@ -60,8 +59,17 @@ export class GameHub {
   private qrCache = new Map<string, string>();
   /** Image refs of the open quiz, sent to phones on join so they can preload them. */
   private images: string[] = [];
-  private broadcastQueued = false;
-  private activityTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly viewUpdates = new ViewUpdateScheduler(
+    this.phoneAttachments,
+    () => this.hostView(),
+    (ws, force) => this.sendState(ws, force),
+    (send) => {
+      // Games that can share work between the views of one broadcast (Classic, Showdown).
+      const game = this.game;
+      if (game && "viewBatch" in game) game.viewBatch(send);
+      else send();
+    },
+  );
   /** Mode, mode settings and pacing carry over to the next lobby ("Play again"). */
   private lastSetup: Partial<LobbyChoices> = {};
   private readonly log: (msg: string) => void;
@@ -97,7 +105,7 @@ export class GameHub {
       throw new GameError(`${address} is not an address of this computer`);
     }
     this.selected = address;
-    this.scheduleBroadcast();
+    this.viewUpdates.scheduleBroadcast();
   }
 
   joinUrl(): string {
@@ -112,7 +120,7 @@ export class GameHub {
       QRCode.toString(url, { type: "svg", margin: 1, errorCorrectionLevel: "M" })
         .then((svg) => {
           this.qrCache.set(url, svg);
-          this.scheduleBroadcast();
+          this.viewUpdates.scheduleBroadcast();
         })
         .catch((e) => this.log(`QR code generation failed: ${e}`));
       qrSvg = "";
@@ -155,43 +163,8 @@ export class GameHub {
     this.phoneViews.onDrain(ws, () => this.playerView(ws));
   }
 
-  /** Coalesce bursts of changes (e.g. many answers) into one push per tick. */
-  scheduleBroadcast(): void {
-    if (this.broadcastQueued) return;
-    this.broadcastQueued = true;
-    queueMicrotask(() => {
-      this.broadcastQueued = false;
-      this.broadcast();
-    });
-  }
-
-  /** One player acted (Tallest Tower): update them now and everyone else shortly. */
-  private onActivity(playerId: string): void {
-    for (const ws of this.phoneAttachments.forPlayer(playerId)) this.sendState(ws);
-    this.activityTimer ??= setTimeout(() => {
-      this.activityTimer = null;
-      this.broadcast();
-    }, ACTIVITY_THROTTLE_MS);
-  }
-
-  /** Refresh only the projector for high-frequency game ticks. */
-  private pushHost(): void {
-    let hostMsg: string | null = null;
-    for (const ws of this.phoneAttachments) if (ws.data.role === "host") ws.send((hostMsg ??= JSON.stringify({ type: "host.state", view: this.hostView() } satisfies ServerMsg)));
-  }
-
   broadcast(): void {
-    const send = () => {
-      let hostMsg: string | null = null;
-      for (const ws of this.phoneAttachments) {
-        if (ws.data.role === "host") ws.send((hostMsg ??= JSON.stringify({ type: "host.state", view: this.hostView() } satisfies ServerMsg)));
-        else this.sendState(ws, false);
-      }
-    };
-    // Games that can share work between the views of one broadcast (Classic, Showdown).
-    const game = this.game;
-    if (game && "viewBatch" in game) game.viewBatch(send);
-    else send();
+    this.viewUpdates.broadcast();
   }
 
   // ---------- socket lifecycle ----------
@@ -302,9 +275,9 @@ export class GameHub {
         if (quiz.questions.length === 0) throw new GameError("This quiz has no questions yet");
         this.closeGame();
         this.images = [...new Set(quiz.questions.flatMap((q) => (q.image ? [q.image] : [])))];
-        this.game = new Lobby(quiz, { ...this.lastSetup, onChange: () => this.scheduleBroadcast() });
+        this.game = new Lobby(quiz, { ...this.lastSetup, onChange: () => this.viewUpdates.scheduleBroadcast() });
         this.log(`Game opened: ${quiz.title}. Players join at ${this.joinUrl()}`);
-        this.scheduleBroadcast();
+        this.viewUpdates.scheduleBroadcast();
         return;
       }
       case "host.start": {
@@ -362,7 +335,7 @@ export class GameHub {
       }
       case "host.close":
         this.closeGame();
-        this.scheduleBroadcast();
+        this.viewUpdates.scheduleBroadcast();
         return;
       case "host.setAddress":
         return this.setAddress(String(msg.address));
@@ -375,9 +348,9 @@ export class GameHub {
     return {
       clock: this.opts.clock,
       dataDir: this.store.dataDir,
-      onChange: () => this.scheduleBroadcast(),
-      onActivity: (id: string) => this.onActivity(id),
-      onTick: () => this.pushHost(),
+      onChange: () => this.viewUpdates.scheduleBroadcast(),
+      onActivity: (id: string) => this.viewUpdates.onActivity(id),
+      onTick: () => this.viewUpdates.pushHost(),
       onFinish: (game: LiveGame) => this.onFinish(game),
       install: (game: LiveGame, activate: () => void) => {
         const lobby = this.game;
@@ -395,8 +368,7 @@ export class GameHub {
   }
 
   closeGame(): void {
-    if (this.activityTimer) clearTimeout(this.activityTimer);
-    this.activityTimer = null;
+    this.viewUpdates.cancelPending();
     if (!this.game) return;
     if (this.game instanceof Lobby) this.lastSetup = this.game.choices;
     else this.game.dispose();
