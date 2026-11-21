@@ -1,4 +1,6 @@
-import type { MODE_FLAGS } from "../../shared/mode-flags.ts";
+import { keysOf } from "../../shared/keys-of.ts";
+import type { SharedOf } from "../../shared/mode-entries.ts";
+import { SHARED_MODES } from "../../shared/mode-entries.ts";
 import type { Pacing } from "../../shared/mode-views.ts";
 import type { GameMode, ModeSettingsMap, PlayerMsg } from "../../shared/protocol.ts";
 import type { SeasonTheme } from "../../shared/season-theme.ts";
@@ -36,36 +38,20 @@ export interface ModeGame {
 /** The game the hub holds; its runningMode names its mode's entry in MODES. */
 export type LiveGame = ModeGame[GameMode];
 
-/** The game mode each phone message belongs to; join and resume belong to every mode and stay with the hub. */
-export const MSG_MODE = {
-  answer: "classic",
-  setAvatar: "classic",
-  "tower.answer": "tower",
-  "tower.drop": "tower",
-  "sub.answer": "submarine",
-  "sub.boost": "submarine",
-  "sub.tap": "submarine",
-  "fight.answer": "fight",
-  "fight.choose": "fight",
-  "fight.fire": "fight",
-  "robot.answer": "robot",
-  "robot.move": "robot",
-  "gift.answer": "gift",
-  "gift.tap": "gift",
-  "land.answer": "land",
-  "land.place": "land",
-  "land.done": "land",
-  "racer.lever": "racer",
-  "racer.go": "racer",
-  "racer.answer": "racer",
-  "duel.answer": "duel",
-  "cup.answer": "cup",
-  "cup.pick": "cup",
-  "siege.answer": "siege",
-  "siege.place": "siege",
-  "siege.upgrade": "siege",
-  "siege.map": "siege",
-} as const satisfies Record<Exclude<PlayerMsg["type"], "join" | "resume">, GameMode>;
+type MsgTypeOf<M extends GameMode> = SharedOf<M>["msgTypes"][number];
+
+/** Each phone message type, mapped to the mode whose shared mode entry lists it. */
+type MsgModeMap = { [T in MsgTypeOf<GameMode>]: { [M in GameMode]: T extends MsgTypeOf<M> ? M : never }[GameMode] };
+
+function msgModes(): MsgModeMap {
+  const map: Record<string, GameMode> = {};
+  for (const mode of keysOf(SHARED_MODES)) for (const type of SHARED_MODES[mode].msgTypes) map[type] = mode;
+  // Built from the same msgTypes tuples MsgModeMap is computed from.
+  return map as MsgModeMap;
+}
+
+/** The game mode each phone message belongs to, from the shared mode entries; join and resume belong to every mode and stay with the hub. */
+export const MSG_MODE = msgModes() satisfies Record<Exclude<PlayerMsg["type"], "join" | "resume">, GameMode>;
 
 type ModeMsgType = keyof typeof MSG_MODE;
 
@@ -98,7 +84,7 @@ export interface PacedGame {
   skip(): void;
 }
 
-type PacedFlag<M extends GameMode> = (typeof MODE_FLAGS)[M]["paced"];
+type PacedFlag<M extends GameMode> = SharedOf<M>["flags"]["paced"];
 
 /** A ModeEntry's pacing: a function in a paced mode, null in any other, and either when M is not one mode. */
 type PacingOf<M extends GameMode> = [PacedFlag<M>] extends [true]
@@ -112,9 +98,11 @@ export interface FinishContext {
   log: (message: string) => void;
 }
 
-/** Everything the server knows about one game mode; the hub, lobby and handoff look it up in MODES instead of branching on the mode. */
-export interface ModeEntry<M extends GameMode> {
-  name: string;
+/** Everything the server knows about one game mode, its shared mode entry included; the hub, lobby and handoff look it up in MODES instead of branching on the mode. */
+export type ModeEntry<M extends GameMode> = SharedOf<M> & ServerModeEntry<M>;
+
+/** What only the server knows about one game mode. */
+interface ServerModeEntry<M extends GameMode> {
   /** Error text for a lobby control received after this game starts. */
   lobbyControlError?(message: string): string;
   defaultSettings: ModeSettingsMap[M];
@@ -122,12 +110,10 @@ export interface ModeEntry<M extends GameMode> {
   readSettings(raw: RawSettings, current: ModeSettingsMap[M]): ModeSettingsMap[M];
   /** Build the mode's game from the lobby, not started yet, and the line to log once it starts. */
   start(lobby: LobbyFacts<M>, ctx: StartContext): { game: ModeGame[M]; log: string | null };
-  /** For a paced mode (MODE_FLAGS), its game as a PacedGame: next, skip and pacing work, and the pacing carries over to the next lobby. Null otherwise; the compiler holds each entry to its flag. */
+  /** For a paced mode (its shared mode entry's flags), its game as a PacedGame: next, skip and pacing work, and the pacing carries over to the next lobby. Null otherwise; the compiler holds each entry to its flag. */
   pacing: PacingOf<M>;
   /** How many teams the lobby previews and assigns players to with these settings; null in a solo mode. */
   teams(settings: ModeSettingsMap[M]): number | null;
-  /** Phones in the lobby show the mode's banner instead of the plain waiting screen (Kingdom Siege's castle). */
-  lobbyBanner: boolean;
   resultsCsv(game: ModeGame[M]): string;
   /** After the results are saved. */
   finished?(game: ModeGame[M], ctx: FinishContext): void;

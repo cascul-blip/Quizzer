@@ -2,6 +2,7 @@ import type { AvatarChoice } from "../avatars.ts";
 import type { LandStart } from "../land-board.ts";
 import type { LandTheme } from "../land-theme.ts";
 import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward, TeamInfo } from "../mode-views.ts";
+import { sharedModeEntry } from "../mode-views.ts";
 
 // Land Grab protocol types.
 
@@ -113,3 +114,11 @@ export type LandMsg =
   | { type: "land.place"; tile: number }
   /** Leave the land early; unused claims are kept for next time. */
   | { type: "land.done" };
+
+/** Land Grab's shared mode entry. */
+export const landShared = sharedModeEntry<LandMsg>()({
+  name: "Land Grab",
+  flags: { paced: false, protect: false },
+  lobbyBanner: false,
+  msgTypes: ["land.answer", "land.place", "land.done"],
+});

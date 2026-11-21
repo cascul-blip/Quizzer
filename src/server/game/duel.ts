@@ -5,7 +5,6 @@ import { randomAvatar } from "../../shared/avatars.ts";
 import { arenaOf, arenaPoints, climbLadder, duelOutcome, pairArenas, standings } from "../../shared/duel-rules.ts";
 import type { DuelTheme } from "../../shared/duel-theme.ts";
 import { DEFAULT_DUEL_THEME, duelTheme } from "../../shared/duel-theme.ts";
-import { MODE_NAMES } from "../../shared/mode-names.ts";
 import type { Pacing, QuestionError, QuestionView, SubAward } from "../../shared/mode-views.ts";
 import type {
   DuelArena,
@@ -18,7 +17,7 @@ import type {
   HostDuelState,
   PlayerDuelView,
 } from "../../shared/modes/duel.ts";
-import { DUEL_DEFAULT_ROUNDS, DUEL_ROUNDS } from "../../shared/modes/duel.ts";
+import { DUEL_DEFAULT_ROUNDS, DUEL_ROUNDS, duelShared } from "../../shared/modes/duel.ts";
 import type { ShuffleOptions } from "../../shared/protocol.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import type { Clock } from "./common.ts";
@@ -643,7 +642,7 @@ export function buildDuelResultsCsv(game: DuelGame): string {
 }
 
 export const duelMode: ModeEntry<"duel"> = {
-  name: MODE_NAMES.duel,
+  ...duelShared,
   defaultSettings: { rounds: DUEL_DEFAULT_ROUNDS, theme: DEFAULT_DUEL_THEME },
   readSettings(raw, current) {
     const rounds = Number(raw.rounds);
@@ -656,7 +655,6 @@ export const duelMode: ModeEntry<"duel"> = {
   },
   pacing: (game) => game,
   teams: () => null,
-  lobbyBanner: false,
   resultsCsv: buildDuelResultsCsv,
   handle(game, playerId, msg) {
     switch (msg.type) {

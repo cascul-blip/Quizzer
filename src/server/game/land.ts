@@ -5,7 +5,6 @@ import { randomAvatar } from "../../shared/avatars.ts";
 import type { LandStart } from "../../shared/land-board.ts";
 import { EMPTY, enclosedBy, landBoardSize, placementCost, startTiles } from "../../shared/land-board.ts";
 import { DEFAULT_LAND_THEME, landTheme } from "../../shared/land-theme.ts";
-import { MODE_NAMES } from "../../shared/mode-names.ts";
 import type {
   HostLandState,
   LandAwards,
@@ -17,7 +16,15 @@ import type {
   LandState,
   PlayerLandView,
 } from "../../shared/modes/land.ts";
-import { LAND_EMPTY_MS, LAND_GUARD_COST, LAND_MIN_TEAMS, LAND_MINUTES, LAND_QUESTIONS_PER_ROUND, LAND_STEAL_COST } from "../../shared/modes/land.ts";
+import {
+  LAND_EMPTY_MS,
+  LAND_GUARD_COST,
+  LAND_MIN_TEAMS,
+  LAND_MINUTES,
+  LAND_QUESTIONS_PER_ROUND,
+  LAND_STEAL_COST,
+  landShared,
+} from "../../shared/modes/land.ts";
 import { MAX_TEAMS } from "../../shared/protocol.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import type { Clock } from "./common.ts";
@@ -543,7 +550,7 @@ export function buildLandResultsCsv(game: LandGame): string {
 }
 
 export const landMode: ModeEntry<"land"> = {
-  name: MODE_NAMES.land,
+  ...landShared,
   defaultSettings: { teams: 2, minutes: 5, theme: DEFAULT_LAND_THEME },
   readSettings(raw, current) {
     const teams = Math.trunc(Number(raw.teams));
@@ -558,7 +565,6 @@ export const landMode: ModeEntry<"land"> = {
   },
   pacing: null,
   teams: (settings) => settings.teams,
-  lobbyBanner: false,
   resultsCsv: buildLandResultsCsv,
   handle(game, playerId, msg) {
     switch (msg.type) {

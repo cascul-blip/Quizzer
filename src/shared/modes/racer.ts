@@ -1,5 +1,6 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { PacedAnswerMsg, Pacing, QuestionError, QuestionView, SubAward } from "../mode-views.ts";
+import { sharedModeEntry } from "../mode-views.ts";
 import type { RacerCar, RacerConfidence, RacerTurnResult } from "../racer-rules.ts";
 import type { RacerTheme } from "../racer-theme.ts";
 
@@ -158,3 +159,11 @@ export type RacerMsg =
   | { type: "racer.go" }
   /** Open phase only. One answer per player per question. */
   | PacedAnswerMsg<"racer">;
+
+/** Racer's shared mode entry. */
+export const racerShared = sharedModeEntry<RacerMsg>()({
+  name: "Racer",
+  flags: { paced: true, protect: false },
+  lobbyBanner: false,
+  msgTypes: ["racer.lever", "racer.go", "racer.answer"],
+});

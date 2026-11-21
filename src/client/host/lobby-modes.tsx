@@ -6,7 +6,7 @@ import type { Send } from "./common.tsx";
 export type LobbySettingsProps<M extends GameMode> = {
   settings: ModeSettingsMap[M];
   send: Send;
-  /** For a paced mode (MODE_FLAGS), the Pacing and Shuffle question order rows the lobby draws; the panel places them among its own. */
+  /** For a paced mode (its shared mode entry's flags), the Pacing and Shuffle question order rows the lobby draws; the panel places them among its own. */
   children?: ComponentChildren;
 };
 

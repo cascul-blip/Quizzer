@@ -1,6 +1,5 @@
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { cleanAvatar, randomAvatar } from "../../shared/avatars.ts";
-import { MODE_FLAGS } from "../../shared/mode-flags.ts";
 import type { Pacing } from "../../shared/mode-views.ts";
 import type { GameMode, HostGameState, ModeSettingsMap, PlayerView, ShuffleOptions } from "../../shared/protocol.ts";
 import type { Quiz } from "../../shared/quiz-schema.ts";
@@ -194,7 +193,7 @@ export class Lobby {
       settings: this.modeSettings[mode],
       lobbyView: { mode: this.mode, settings: { ...this.settings }, protect: this.protect },
       shuffle: { ...this.shuffle },
-      protect: MODE_FLAGS[mode].protect && this.protect,
+      protect: MODES[mode].flags.protect && this.protect,
       pacing: this.pacing,
       players: [...this.players.values()],
       teams: this.teamCount() === null ? new Map([...this.players.keys()].map((id) => [id, 0])) : new Map(this.teams),

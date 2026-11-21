@@ -2,9 +2,9 @@ import type { AnswerValue } from "../../shared/answer-match.ts";
 import { answerOf, checkAnswer, MAX_TYPED_ANSWER } from "../../shared/answer-match.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { randomAvatar } from "../../shared/avatars.ts";
-import { MODE_NAMES } from "../../shared/mode-names.ts";
 import type { Pacing, QuestionError, QuestionView } from "../../shared/mode-views.ts";
 import type { HostRacerState, PlayerRacerView, RacerAwards, RacerDriver, RacerPhase, RacerResult, RacerTurn } from "../../shared/modes/racer.ts";
+import { racerShared } from "../../shared/modes/racer.ts";
 import type { ShuffleOptions } from "../../shared/protocol.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import type { RacerCar, RacerConfidence } from "../../shared/racer-rules.ts";
@@ -563,7 +563,7 @@ export function buildRacerResultsCsv(game: RacerGame): string {
 }
 
 export const racerMode: ModeEntry<"racer"> = {
-  name: MODE_NAMES.racer,
+  ...racerShared,
   defaultSettings: { theme: DEFAULT_RACER_THEME },
   readSettings: (raw, current) => ({ theme: pickTheme(raw.theme, racerTheme(current.theme), "racer") }),
   start(lobby, ctx) {
@@ -572,7 +572,6 @@ export const racerMode: ModeEntry<"racer"> = {
   },
   pacing: (game) => game,
   teams: () => null,
-  lobbyBanner: false,
   resultsCsv: buildRacerResultsCsv,
   handle(game, playerId, msg) {
     switch (msg.type) {

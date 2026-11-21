@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
-import { MODE_NAMES } from "../src/shared/mode-names.ts";
-import type { GameMode } from "../src/shared/protocol.ts";
+import { keysOf } from "../src/shared/keys-of.ts";
+import { SHARED_MODES } from "../src/shared/mode-entries.ts";
 
 const ROOT = resolve(import.meta.dir, "..");
 const DIRS = ["src/server", "src/shared"].map((d) => join(ROOT, d));
@@ -63,16 +63,9 @@ describe("Server import graph", () => {
 });
 
 // Each mode's protocol types live in src/shared/modes/<mode>.ts, imported directly (no re-exports from protocol.ts).
-// The list comes from MODE_NAMES, which the compiler keeps complete over GameMode. Classic is the one mode whose types stay in protocol.ts.
+// The list comes from SHARED_MODES, whose entries the mode files themselves declare.
 const MODES_DIR = join(ROOT, "src/shared/modes");
-const PROTOCOL_ONLY_MODES: readonly GameMode[] = ["classic"];
-/** The modes MODE_NAMES lists, narrowed by a runtime check instead of a cast. */
-function gameModes(): GameMode[] {
-  return Object.keys(MODE_NAMES).filter((key): key is GameMode => Object.hasOwn(MODE_NAMES, key));
-}
-const MODE_FILES = gameModes()
-  .filter((m) => !PROTOCOL_ONLY_MODES.includes(m))
-  .map((m) => `${m}.ts`);
+const MODE_FILES = keysOf(SHARED_MODES).map((m) => `${m}.ts`);
 
 /** Every relative import path in a file, type-only ones included. */
 function allImports(file: string): string[] {

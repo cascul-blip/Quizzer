@@ -4,7 +4,6 @@ import type { AvatarChoice } from "../../shared/avatars.ts";
 import { randomAvatar } from "../../shared/avatars.ts";
 import type { CupTheme } from "../../shared/cup-theme.ts";
 import { cupTheme, DEFAULT_CUP_THEME } from "../../shared/cup-theme.ts";
-import { MODE_NAMES } from "../../shared/mode-names.ts";
 import type { CupAwards, CupPhase, CupRevealView, CupStanding, HostCupState, PlayerCupView } from "../../shared/modes/cup.ts";
 import {
   CUP_ALL_SAFE_MS,
@@ -17,6 +16,7 @@ import {
   CUP_SIP_MS,
   CUP_VERDICT_MS,
   cupQuizMs,
+  cupShared,
 } from "../../shared/modes/cup.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import type { Clock } from "./common.ts";
@@ -575,7 +575,7 @@ export function buildCupResultsCsv(game: CupGame): string {
 }
 
 export const cupMode: ModeEntry<"cup"> = {
-  name: MODE_NAMES.cup,
+  ...cupShared,
   defaultSettings: { cups: CUP_DEFAULT_CUPS, theme: DEFAULT_CUP_THEME },
   readSettings(raw, current) {
     const cups = Number(raw.cups);
@@ -589,7 +589,6 @@ export const cupMode: ModeEntry<"cup"> = {
   },
   pacing: null,
   teams: () => null,
-  lobbyBanner: false,
   resultsCsv: buildCupResultsCsv,
   handle(game, playerId, msg) {
     switch (msg.type) {

@@ -15,8 +15,8 @@ import {
   GIFT_TAP_GRACE_MS,
   giftMultiplier,
 } from "../../shared/gift-rules.ts";
-import { MODE_NAMES } from "../../shared/mode-names.ts";
 import type { GiftHit, GiftPhase, GiftStanding, HostGiftState, PlayerGiftView } from "../../shared/modes/gift.ts";
+import { giftShared } from "../../shared/modes/gift.ts";
 import type { Quiz } from "../../shared/quiz-schema.ts";
 import type { Clock } from "./common.ts";
 import { GameError, realClock, shuffle } from "./common.ts";
@@ -339,7 +339,7 @@ export function buildGiftResultsCsv(game: GiftGame): string {
 }
 
 export const giftMode: ModeEntry<"gift"> = {
-  name: MODE_NAMES.gift,
+  ...giftShared,
   defaultSettings: { minutes: GIFT_DEFAULT_MINUTES },
   readSettings(raw) {
     const minutes = Number(raw.minutes);
@@ -352,7 +352,6 @@ export const giftMode: ModeEntry<"gift"> = {
   },
   pacing: null,
   teams: () => null,
-  lobbyBanner: false,
   resultsCsv: buildGiftResultsCsv,
   handle(game, playerId, msg) {
     switch (msg.type) {

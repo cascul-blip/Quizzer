@@ -2,7 +2,6 @@ import type { AnswerValue } from "../../shared/answer-match.ts";
 import { answerOf } from "../../shared/answer-match.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { randomAvatar } from "../../shared/avatars.ts";
-import { MODE_NAMES } from "../../shared/mode-names.ts";
 import type {
   HostSiegeState,
   PlayerSiegeView,
@@ -13,6 +12,7 @@ import type {
   SiegeResult,
   SiegeSettings,
 } from "../../shared/modes/siege.ts";
+import { siegeShared } from "../../shared/modes/siege.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import type { SiegeDefenderType, SiegeWaves } from "../../shared/siege-rules.ts";
 import {
@@ -724,7 +724,7 @@ export function buildSiegeResultsCsv(game: SiegeGame): string {
 }
 
 export const siegeMode: ModeEntry<"siege"> = {
-  name: MODE_NAMES.siege,
+  ...siegeShared,
   defaultSettings: { waves: 5, theme: DEFAULT_SIEGE_THEME },
   readSettings(raw, current) {
     const waves = raw.waves === "endless" ? "endless" : Number(raw.waves);
@@ -742,7 +742,6 @@ export const siegeMode: ModeEntry<"siege"> = {
   },
   pacing: null,
   teams: () => null,
-  lobbyBanner: true,
   resultsCsv: buildSiegeResultsCsv,
   finished(game, ctx) {
     const r = game.result();

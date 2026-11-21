@@ -2,6 +2,7 @@ import type { AvatarChoice } from "../avatars.ts";
 import type { HillHeight, ShotImpact } from "../fight-physics.ts";
 import type { FightTheme } from "../fight-theme.ts";
 import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward, TeamInfo } from "../mode-views.ts";
+import { sharedModeEntry } from "../mode-views.ts";
 
 // Tower Fight protocol types.
 
@@ -120,3 +121,11 @@ export type FightMsg =
   | { type: "fight.choose"; action: "attack" | "rebuild" }
   /** The slingshot pull in field units (y up); the shot flies the opposite way. */
   | { type: "fight.fire"; dx: number; dy: number };
+
+/** Tower Fight's shared mode entry. */
+export const fightShared = sharedModeEntry<FightMsg>()({
+  name: "Tower Fight",
+  flags: { paced: false, protect: true },
+  lobbyBanner: false,
+  msgTypes: ["fight.answer", "fight.choose", "fight.fire"],
+});
