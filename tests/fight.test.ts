@@ -38,14 +38,16 @@ function setup(names: string[], hill: "low" | "medium" | "high" | "random" = "me
 const byName = (game: FightGame, name: string) => [...game.players.values()].find((p) => p.nickname === name)!;
 
 function answer(game: FightGame, clock: FakeClock, p: FightPlayer, right: boolean) {
-  const cur = p.current!;
-  const option = right ? cur.correct[0]! : cur.options.findIndex((_, i) => !cur.correct.includes(i));
+  const cur = game.playerView(p.id)!.question!;
+  const option = right ? cur.options.indexOf("yes") : cur.options.findIndex((option) => option !== "yes");
   expect(game.answer(p.id, cur.seq, option)).toBe(true);
   clock.advance(FEEDBACK_MS);
+  return cur.seq + 1;
 }
 
 function earnDecision(game: FightGame, clock: FakeClock, p: FightPlayer) {
-  for (let i = 0; i < CORRECT_PER_DECISION; i++) answer(game, clock, p, true);
+  for (let i = 1; i < CORRECT_PER_DECISION; i++) answer(game, clock, p, true);
+  return answer(game, clock, p, true);
 }
 
 /** Find a pull that sends `team`'s shot onto the given tower (on the game's current terrain). */
@@ -111,12 +113,12 @@ describe("decisions", () => {
     answer(game, clock, a, true);
     expect(a.state).toBe("question");
     expect(game.playerView(a.id)!.towardDecision).toBe(3);
-    answer(game, clock, a, true);
+    const nextSeq = answer(game, clock, a, true);
     // Undamaged tower: nothing to rebuild, straight to the catapult (no time limit there).
     expect(a.state).toBe("aim");
     expect(game.playerView(a.id)!.question).toBeNull();
     expect(game.playerView(a.id)!.decisionMs).toBe(0);
-    expect(game.answer(a.id, a.current!.seq, 0)).toBe(false);
+    expect(game.answer(a.id, nextSeq, 0)).toBe(false);
   });
 
   test("with a damaged tower the player chooses; rebuild takes REPAIR_MS, then repairs one damage", () => {
@@ -125,7 +127,7 @@ describe("decisions", () => {
     const b = byName(game, "B");
     shoot(game, clock, b, 0);
     expect(game.teams[0]!.damage).toBe(1);
-    earnDecision(game, clock, a);
+    const nextSeq = earnDecision(game, clock, a);
     expect(a.state).toBe("decide");
     expect(game.choose(a.id, "rebuild")).toBe(true);
     expect(a.state).toBe("repair");
@@ -133,7 +135,7 @@ describe("decisions", () => {
     expect(game.hostView().teams.map((t) => t.repairing)).toEqual([true, false]);
     // No questions while repairing, and the decide timer no longer applies.
     expect(game.playerView(a.id)!.question).toBeNull();
-    expect(game.answer(a.id, a.current!.seq, 0)).toBe(false);
+    expect(game.answer(a.id, nextSeq, 0)).toBe(false);
     clock.advance(REPAIR_MS - 1);
     expect(game.teams[0]!.damage).toBe(1);
     expect(a.rebuilds).toBe(0);

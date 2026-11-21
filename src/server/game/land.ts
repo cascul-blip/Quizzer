@@ -24,7 +24,7 @@ import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import { GameError, realClock, teamInfo, type Clock } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
-import { QuestionStream, newStreamPlayer, type StreamPlayer } from "./stream.ts";
+import { QuestionStream, type AnswerTotals } from "./stream.ts";
 import { answerOf } from "../../shared/answer-match.ts";
 import { MODE_NAMES } from "../../shared/mode-names.ts";
 import { handoffOptions, pickTheme, unhandled, type ModeEntry } from "./mode-entry.ts";
@@ -48,7 +48,7 @@ interface LandTeam {
   outOrder: number;
 }
 
-export interface LandPlayer extends BasePlayer, StreamPlayer {
+export interface LandPlayer extends BasePlayer, AnswerTotals {
   /** Changes when the player's team is conquered: they join the conquerors. */
   team: number;
   firstTeam: number;
@@ -136,11 +136,10 @@ export class LandGame {
   }
 
   private newPlayer(base: BasePlayer, team: number): LandPlayer {
-    return {
+    return this.stream.registerPlayer({
       ...base,
       team,
       firstTeam: team,
-      ...newStreamPlayer(),
       state: "question",
       claims: 0,
       answered: 0,
@@ -150,7 +149,7 @@ export class LandGame {
       captured: 0,
       conquered: null,
       timer: null,
-    };
+    });
   }
 
   get starts(): LandStart[] {
@@ -172,7 +171,7 @@ export class LandGame {
     const ms = this.settings.minutes * 60_000;
     this.phase = "playing";
     this.phaseEndsAt = this.clock.now() + ms;
-    for (const p of this.players.values()) if (!p.current) this.stream.deal(p);
+    for (const p of this.players.values()) this.stream.open(p);
     this.timer = this.clock.setTimeout(() => this.finish(), ms);
     this.onChange();
   }
@@ -218,7 +217,7 @@ export class LandGame {
   join(rawNickname: unknown, avatar?: AvatarChoice | null): LandPlayer {
     if (this.phase === "podium") throw new GameError("This game has finished");
     const player = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), (base) => this.newPlayer(base, this.smallestTeam()));
-    if (this.phase === "playing") this.stream.deal(player);
+    if (this.phase === "playing") this.stream.open(player);
     this.onChange();
     return player;
   }
@@ -250,14 +249,14 @@ export class LandGame {
   private backToQuestions(p: LandPlayer): void {
     this.clearPlayerTimer(p);
     p.state = "question";
-    p.readyAt = Math.max(p.readyAt, this.clock.now());
+    this.stream.resume(p);
   }
 
   // ---------- questions ----------
 
   answer(playerId: string, seq: number, option: AnswerValue): boolean {
     const p = this.players.get(playerId);
-    if (!p || !p.current || this.phase !== "playing" || p.state !== "question") return false;
+    if (!p || this.phase !== "playing" || p.state !== "question") return false;
     const correct = this.stream.answer(p, seq, option);
     if (correct === null) return false;
     if (correct) p.claims++;
@@ -266,7 +265,7 @@ export class LandGame {
       if (p.claims === 0) {
         // The message starts once the ✗ flash is over.
         p.state = "empty";
-        p.emptyEndsAt = p.readyAt + LAND_EMPTY_MS;
+        p.emptyEndsAt = this.stream.feedbackEndsAt(p) + LAND_EMPTY_MS;
         p.timer = this.clock.setTimeout(() => this.endEmpty(p.id), p.emptyEndsAt - this.clock.now());
       } else if (this.canPlace(p)) {
         p.state = "claim";
@@ -303,7 +302,7 @@ export class LandGame {
   /** Put the player's team colour on a tile. Returns whether it was taken. */
   place(playerId: string, tile: number): boolean {
     const p = this.players.get(playerId);
-    if (!p || this.phase !== "playing" || p.state !== "claim" || this.clock.now() < p.readyAt) return false;
+    if (!p || this.phase !== "playing" || p.state !== "claim" || this.clock.now() < this.stream.feedbackEndsAt(p)) return false;
     const cost = this.costFor(p.team, tile);
     if (cost === null || cost > p.claims) return false;
     const stolen = this.owners[tile] !== EMPTY;

@@ -39,8 +39,8 @@ function setup(names: string[], rng?: () => number) {
 const byName = (game: SubGame, name: string) => [...game.players.values()].find((p) => p.nickname === name)!;
 
 function answerRight(game: SubGame, clock: FakeClock, p: SubPlayer) {
-  const cur = p.current!;
-  expect(game.answer(p.id, cur.seq, cur.correct[0]!)).toBe(true);
+  const cur = game.playerView(p.id)!.question!;
+  expect(game.answer(p.id, cur.seq, sampleQuiz().questions.find((q) => q.text === cur.text)!.correct[0]!)).toBe(true);
   clock.advance(FEEDBACK_MS);
 }
 
@@ -74,6 +74,37 @@ describe("chase", () => {
     expect(a.state).toBe("question");
     expect(game.lastBoost).toMatchObject({ nickname: "A" });
     expect(game.boost(a.id)).toBe(false); // no boost left
+  });
+
+  test("the boost hold starts when answer feedback ends, even if dealing takes time", () => {
+    const clock = new FakeClock();
+    const fixture = sampleQuiz();
+    const lobby = new Lobby(sampleQuiz({ questions: fixture.questions.slice(0, 2) }));
+    lobby.setMode("submarine");
+    const player = lobby.join("A");
+    let dealDelay = 0;
+    const game = SubGame.fromLobby(lobby.handoffFacts("submarine"), {
+      clock,
+      rng: () => {
+        clock.advance(dealDelay);
+        return 0.5;
+      },
+    });
+    game.start();
+    clock.advance(COUNTDOWN_MS);
+    const a = byName(game, "A");
+    for (let i = 0; i < 3; i++) answerRight(game, clock, a);
+
+    const question = game.playerView(player.id)!.question!;
+    const option = fixture.questions.find((q) => q.text === question.text)!.correct[0]!;
+    const answeredAt = clock.now();
+    dealDelay = 3; // The fourth answer rolls over the two-question deck.
+    expect(game.answer(player.id, question.seq, option)).toBe(true);
+    expect(clock.now()).toBe(answeredAt + 3);
+    clock.advance(answeredAt + 1000 + BOOST_MIN_HOLD_MS - clock.now() - 1);
+    expect(game.boost(player.id)).toBe(false);
+    clock.advance(1);
+    expect(game.boost(player.id)).toBe(true);
   });
 
   test("more players need more boosts, each worth less", () => {

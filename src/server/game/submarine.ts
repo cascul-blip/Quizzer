@@ -13,7 +13,7 @@ import { CHRISTMAS_GLYPHS, glyphId, parseGlyph, variantsOf } from "../../shared/
 import { GameError, realClock, shuffle, type Clock } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
-import { FEEDBACK_MS, QuestionStream, newStreamPlayer, type StreamPlayer } from "./stream.ts";
+import { QuestionStream, type AnswerTotals } from "./stream.ts";
 import { answerOf } from "../../shared/answer-match.ts";
 import { MODE_NAMES } from "../../shared/mode-names.ts";
 import { handoffOptions, unhandled, type ModeEntry } from "./mode-entry.ts";
@@ -50,7 +50,7 @@ const MAX_INSTRUCTORS = 4;
 
 export const speedFor = (level: number) => 1 + SPEED_STEP * (level - 1);
 
-export interface SubPlayer extends BasePlayer, StreamPlayer {
+export interface SubPlayer extends BasePlayer, AnswerTotals {
   state: "question" | "boost" | "waiting";
   towardBoost: number;
   boostReadyAt: number;
@@ -145,7 +145,7 @@ export class SubGame {
   }
 
   private newPlayer(base: BasePlayer): SubPlayer {
-    return { ...base, ...newStreamPlayer(), state: "question", towardBoost: 0, boostReadyAt: 0, boosts: 0, diveHits: 0, instructorRounds: 0, grid: [], lockedUntil: 0 };
+    return this.stream.registerPlayer({ ...base, state: "question", towardBoost: 0, boostReadyAt: 0, boosts: 0, diveHits: 0, instructorRounds: 0, grid: [], lockedUntil: 0 });
   }
 
   // ---------- lifecycle ----------
@@ -215,7 +215,7 @@ export class SubGame {
     this.gapAt = this.clock.now();
     for (const p of this.players.values()) {
       if (p.state === "waiting") p.state = "question";
-      if (!p.current) this.stream.deal(p);
+      this.stream.open(p);
     }
     this.scheduleCatch();
     this.onChange();
@@ -246,7 +246,7 @@ export class SubGame {
     if (correct && ++p.towardBoost >= CORRECT_PER_BOOST) {
       p.towardBoost = 0;
       p.state = "boost";
-      p.boostReadyAt = this.clock.now() + FEEDBACK_MS;
+      p.boostReadyAt = this.stream.feedbackEndsAt(p);
     }
     this.onActivity(p.id);
     return true;
@@ -406,7 +406,7 @@ export class SubGame {
     const p = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), (base) => this.newPlayer(base));
     // Joining mid-dive: wait for the next level (like Kahoot).
     if (this.phase === "dive") p.state = "waiting";
-    else if (this.phase === "chase") this.stream.deal(p);
+    else if (this.phase === "chase") this.stream.open(p);
     this.onChange();
     return p;
   }

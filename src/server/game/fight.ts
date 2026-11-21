@@ -23,7 +23,7 @@ import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import { GameError, realClock, teamInfo, type Clock } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
-import { QuestionStream, newStreamPlayer, type StreamPlayer } from "./stream.ts";
+import { QuestionStream, type AnswerTotals } from "./stream.ts";
 import { answerOf } from "../../shared/answer-match.ts";
 import { MODE_NAMES } from "../../shared/mode-names.ts";
 import { handoffOptions, pickTheme, unhandled, type ModeEntry } from "./mode-entry.ts";
@@ -50,7 +50,7 @@ interface FightTeam {
   damage: number;
 }
 
-export interface FightPlayer extends BasePlayer, StreamPlayer {
+export interface FightPlayer extends BasePlayer, AnswerTotals {
   team: number;
   towardDecision: number;
   state: FightState;
@@ -147,10 +147,9 @@ export class FightGame {
   }
 
   private newPlayer(base: BasePlayer, team: number): FightPlayer {
-    return {
+    return this.stream.registerPlayer({
       ...base,
       team,
-      ...newStreamPlayer(),
       towardDecision: 0,
       state: "question",
       deadline: 0,
@@ -162,7 +161,7 @@ export class FightGame {
       repairEndsAt: 0,
       lastRepair: null,
       timer: null,
-    };
+    });
   }
 
   // ---------- lifecycle ----------
@@ -179,7 +178,7 @@ export class FightGame {
     if (this.phase !== "countdown") return;
     this.phase = "playing";
     this.phaseEndsAt = 0;
-    for (const p of this.players.values()) if (!p.current) this.stream.deal(p);
+    for (const p of this.players.values()) this.stream.open(p);
     this.onChange();
   }
 
@@ -244,7 +243,7 @@ export class FightGame {
   join(rawNickname: unknown, avatar?: AvatarChoice | null): FightPlayer {
     if (this.phase === "podium") throw new GameError("This game has finished");
     const player = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), (base) => this.newPlayer(base, this.smallestTeam()));
-    if (this.phase === "playing" || this.phase === "collapse") this.stream.deal(player);
+    if (this.phase === "playing" || this.phase === "collapse") this.stream.open(player);
     this.onChange();
     return player;
   }
@@ -281,14 +280,14 @@ export class FightGame {
     this.clearPlayerTimer(p);
     p.state = "question";
     p.shotId = null;
-    p.readyAt = Math.max(p.readyAt, this.clock.now());
+    this.stream.resume(p);
   }
 
   // ---------- questions ----------
 
   answer(playerId: string, seq: number, option: AnswerValue): boolean {
     const p = this.players.get(playerId);
-    if (!p || !p.current || this.phase !== "playing" || p.state !== "question") return false;
+    if (!p || this.phase !== "playing" || p.state !== "question") return false;
     const correct = this.stream.answer(p, seq, option);
     if (correct === null) return false;
     if (correct && ++p.towardDecision >= CORRECT_PER_DECISION) {

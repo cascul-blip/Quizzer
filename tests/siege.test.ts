@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { siegeWords, type SiegeTheme } from "../src/shared/siege-theme.ts";
 import { FEEDBACK_MS, SIEGE_NO_GOLD, SiegeGame, type SiegeMonster, type SiegePlayer } from "../src/server/game/siege.ts";
 import { Lobby } from "../src/server/game/lobby.ts";
-import { WRONG_PENALTY_2_MS } from "../src/server/game/stream.ts";
 import { buildSiegeResultsCsv } from "../src/server/game/siege.ts";
 import { loadSiegeRecord, saveSiegeRecord } from "../src/server/siege-records.ts";
 import { siegeRecordsPath } from "../src/server/paths.ts";
@@ -91,8 +90,8 @@ const fund = (game: SiegeGame, gold = 1000) => {
 };
 
 function answer(game: SiegeGame, clock: FakeClock, p: SiegePlayer, right: boolean) {
-  const cur = p.current!;
-  const option = right ? cur.correct[0]! : cur.options.findIndex((_, i) => !cur.correct.includes(i));
+  const cur = game.playerView(p.id)!.question!;
+  const option = right ? cur.options.indexOf("yes") : cur.options.findIndex((option) => option !== "yes");
   expect(game.answer(p.id, cur.seq, option)).toBe(true);
   clock.advance(FEEDBACK_MS);
 }
@@ -197,10 +196,10 @@ describe("gold and building", () => {
     const game = SiegeGame.fromLobby(lobby.handoffFacts("siege"), { clock, rng: seeded() });
     game.start();
     const ana = byName(game, "Ana");
-    expect(ana.current).toBeNull();
+    expect(game.playerView(ana.id)!.question).toBeNull();
     expect(game.place(ana.id, "archer", 0, 1)).not.toBeNull();
     clock.advance(SIEGE_COUNTDOWN_MS);
-    expect(ana.current).not.toBeNull();
+    expect(game.playerView(ana.id)!.question).not.toBeNull();
   });
 
   test("placing and upgrading spend the player's own gold; upgrades add the extra health to what is left", () => {
@@ -778,9 +777,9 @@ describe("players", () => {
     const { game, clock } = setup({ protect: true });
     const ana = byName(game, "Ana");
     answer(game, clock, ana, false);
-    const cur = ana.current!;
+    const cur = game.playerView(ana.id)!.question!;
     expect(game.answer(ana.id, cur.seq, 1)).toBe(true);
-    expect(ana.readyAt - clock.now()).toBe(FEEDBACK_MS + WRONG_PENALTY_2_MS);
+    expect(game.playerView(ana.id)!.feedback!.remainingMs).toBe(4000);
   });
 
   test("reconnects keep the same player; an open map closes on disconnect", () => {
@@ -800,7 +799,7 @@ describe("players", () => {
   test("late joiners answer right away and count for the class size from the next wave", () => {
     const { game, clock } = quietWave({ players: 2 });
     const zed = game.join("Zed");
-    expect(zed.current).not.toBeNull();
+    expect(game.playerView(zed.id)!.question).not.toBeNull();
     expect(zed.gold).toBe(SIEGE_START_GOLD);
     answer(game, clock, zed, true);
     expect(zed.gold).toBe(SIEGE_START_GOLD + 25);
@@ -817,7 +816,6 @@ describe("players", () => {
     clock.advance(1000);
     expect(game.phase).toBe("fallen");
     const late = game.join("Late");
-    expect(late.current).toBeNull();
     expect(game.playerView(late.id)!.question).toBeNull();
   });
 
@@ -847,10 +845,10 @@ describe("players", () => {
       for (let t = 0; t < 30 * 60_000 && game.phase !== "podium"; t += 500) {
         clock.advance(500);
         for (const p of game.players.values()) {
-          if (!p.current || clock.now() < p.readyAt || rng() < 0.6) continue;
+          const view = game.playerView(p.id)!;
+          if (!view.question || view.feedback || rng() < 0.6) continue;
           const right = rng() < 0.75;
-          const option = right ? p.current.correct[0]! : p.current.options.findIndex((_, i) => !p.current!.correct.includes(i));
-          game.answer(p.id, p.current.seq, option);
+          game.answer(p.id, view.question.seq, right ? 0 : 1);
           const lane = Math.floor(rng() * 5);
           const type = (["archer", "knight", "wall"] as const)[Math.floor(rng() * 3)]!;
           if (game.place(p.id, type, lane, 1 + Math.floor(rng() * 7)) !== null) game.upgrade(p.id, lane, 1 + Math.floor(rng() * 7));

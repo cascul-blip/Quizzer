@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { INTRO_MS, preparePlayOrder } from "../src/server/game/game.ts";
-import { QuestionStream, newStreamPlayer } from "../src/server/game/stream.ts";
+import { QuestionStream } from "../src/server/game/stream.ts";
 import { QuizStore } from "../src/server/quiz/store.ts";
 import { SERVER_INSTRUCTIONS } from "../src/server/mcp/tools.ts";
 import { ValidationError, normalizeQuestion, type Question } from "../src/shared/quiz-schema.ts";
@@ -121,12 +121,12 @@ describe("pin in a game", () => {
   test("self-paced modes: the stream sends spots and scores the spot index", () => {
     const clock = new FakeClock();
     const stream = new QuestionStream([pinQuestion()], true, () => 0.3, clock);
-    const p = newStreamPlayer();
-    stream.deal(p);
+    const p = stream.registerPlayer({});
+    stream.open(p);
     const view = stream.questionView(p)!;
     expect(view.spots).toEqual(SPOTS);
     expect(stream.answer(p, view.seq, 2)).toBe(false);
-    expect(p.feedback?.answers).toEqual(["60"]);
+    expect(stream.feedbackView(p)?.answers).toEqual(["60"]);
     clock.advance(5000);
     expect(stream.answer(p, stream.questionView(p)!.seq, 4)).toBe(true);
   });
