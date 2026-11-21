@@ -3,10 +3,10 @@ import { STREAK_MIN } from "../../shared/protocol.ts";
 import { PinBoard, PinDragger } from "../shared/pin.tsx";
 import { Tex } from "../shared/tex.tsx";
 import { LockedChoice, Shape, TextAnswer, optionColor, ordinal, useCountdown } from "../shared/ui.tsx";
-import { Bar, Center, type Joined, type Send } from "./common.tsx";
+import { Bar, Center, type ClassicView, type Send } from "./common.tsx";
 
 /** Phone screen for Classic: the question, the answer buttons, the result and the final rank. */
-export function ClassicPlayer({ view, send }: { view: Joined; send: Send }) {
+export function ClassicPlayer({ view, send }: { view: ClassicView; send: Send }) {
   return (
     <div class="game">
       <Bar view={view} />
@@ -15,7 +15,7 @@ export function ClassicPlayer({ view, send }: { view: Joined; send: Send }) {
   );
 }
 
-function Phase({ view, send }: { view: Joined; send: Send }) {
+function Phase({ view, send }: { view: ClassicView; send: Send }) {
   const q = view.question;
   switch (view.phase) {
     case "lobby":
@@ -51,7 +51,7 @@ function Phase({ view, send }: { view: Joined; send: Send }) {
   }
 }
 
-function Answering({ view, send }: { view: Joined; send: Send }) {
+function Answering({ view, send }: { view: ClassicView; send: Send }) {
   const q = view.question!;
   const [pending, setPending] = useState<number | null>(null);
   const secs = useCountdown(q.remainingMs, `open:${q.index}`);
@@ -125,7 +125,7 @@ function Answering({ view, send }: { view: Joined; send: Send }) {
   );
 }
 
-function Result({ view }: { view: Joined }) {
+function Result({ view }: { view: ClassicView }) {
   const q = view.question!;
   const r = view.result!;
   const correctSet = new Set(r.correct);

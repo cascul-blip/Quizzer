@@ -9,7 +9,7 @@ import { setPhoneArt } from "../shared/phone-art.ts";
 import { connect, type ConnStatus } from "../shared/ws.ts";
 import { ConnBanner, ErrorBoundary, Toast, teamInk } from "../shared/ui.tsx";
 import { AvatarPicker } from "./avatar-picker.tsx";
-import { Bar, Center, type Joined, type Send } from "./common.tsx";
+import { Bar, Center, type ClassicView, type Send } from "./common.tsx";
 import { PLAYER_MODES, screenOf } from "./modes.tsx";
 
 const TOKEN_KEY = "quizzer.token";
@@ -222,7 +222,7 @@ function JoinForm({ title, busy, onJoin }: { title: string; busy: boolean; onJoi
 }
 
 /** The lobby, in every game mode: Classic's view in its first phase, with the mode's banner if it has one. */
-function LobbyScreen({ view, send }: { view: Joined; send: Send }) {
+function LobbyScreen({ view, send }: { view: ClassicView; send: Send }) {
   return (
     <div class="game">
       <Bar view={view} />
@@ -231,7 +231,7 @@ function LobbyScreen({ view, send }: { view: Joined; send: Send }) {
   );
 }
 
-function Lobby({ view, send }: { view: Joined; send: Send }) {
+function Lobby({ view, send }: { view: ClassicView; send: Send }) {
   // Show a pick straight away; the next snapshot from the server confirms it.
   const [picked, setPicked] = useState<AvatarChoice | null>(null);
   const server = view.me.avatar;
