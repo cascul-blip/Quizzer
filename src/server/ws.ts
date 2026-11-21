@@ -1,7 +1,7 @@
 import type { ServerWebSocket } from "bun";
 import { cleanAvatar } from "../shared/avatars.ts";
 import type { GameMode } from "../shared/mode-entries.ts";
-import type { ClientMsg, HostView, PlayerView, ServerMsg } from "../shared/protocol.ts";
+import type { ClientMsg, HostView, PlayerView } from "../shared/protocol.ts";
 import { ValidationError } from "../shared/quiz-schema.ts";
 import type { Clock } from "./game/common.ts";
 import { GameError } from "./game/common.ts";
@@ -16,10 +16,9 @@ import { applyHostCommand } from "./host-commands.ts";
 import { JoinInformation } from "./join-info.ts";
 import type { LanAddress } from "./network.ts";
 import { PhoneAttachments } from "./phone-attachments.ts";
-import { PhoneViewDelivery } from "./phone-view-delivery.ts";
 import type { QuizStore } from "./quiz/store.ts";
 import { NotFoundError } from "./quiz/store.ts";
-import { ViewUpdateScheduler } from "./view-update-scheduler.ts";
+import { ViewDelivery } from "./view-delivery.ts";
 
 export interface SocketData {
   /** Request came from this machine to a loopback hostname; may use host controls. */
@@ -47,9 +46,6 @@ interface LastResults {
   file: string | null;
 }
 
-/** Compress what goes to phones over Wi-Fi; the host screen is on this machine, so it isn't worth the CPU. */
-const compressFor = (ws: WS) => ws.data.role !== "host";
-
 /** Owns the single live game and every connected socket; pushes each phone its view (or a patch of it) on every change. */
 export class GameHub {
   game: Lobby | LiveGame | null = null;
@@ -58,15 +54,15 @@ export class GameHub {
   readonly serverId = crypto.randomUUID();
 
   private readonly phoneAttachments = new PhoneAttachments<WS>((id, connected) => this.game?.setConnected(id, connected));
-  private readonly phoneViews: PhoneViewDelivery;
   /** Where players join: address, URL and QR code. */
   readonly join: JoinInformation;
   /** Image refs of the open quiz, sent to phones on join so they can preload them. */
   private images: string[] = [];
-  private readonly viewUpdates = new ViewUpdateScheduler(
+  private readonly views = new ViewDelivery(
     this.phoneAttachments,
     () => this.hostView(),
-    (ws, force) => this.sendState(ws, force),
+    (ws) => this.playerView(ws),
+    () => this.opts.clock?.now() ?? Date.now(),
     (send) => {
       // Games that can share work between the views of one broadcast (Classic, Showdown).
       const game = this.game;
@@ -82,13 +78,12 @@ export class GameHub {
     private readonly store: QuizStore,
     private readonly opts: HubOptions = {},
   ) {
-    this.phoneViews = new PhoneViewDelivery(() => opts.clock?.now() ?? Date.now());
     this.join = new JoinInformation({
       address: opts.address,
       discoverAddresses: opts.discoverAddresses,
       now: opts.clock ? () => opts.clock!.now() : undefined,
       log: opts.log,
-      onQrReady: () => this.viewUpdates.scheduleBroadcast(),
+      onQrReady: () => this.views.scheduleBroadcast(),
     });
     this.log = opts.log ?? (() => {});
   }
@@ -97,7 +92,7 @@ export class GameHub {
 
   setAddress(address: string): void {
     if (!this.join.select(address)) throw new GameError(`${address} is not an address of this computer`);
-    this.viewUpdates.scheduleBroadcast();
+    this.views.scheduleBroadcast();
   }
 
   // ---------- views ----------
@@ -114,27 +109,12 @@ export class GameHub {
     return playerId ? (this.game.playerView(playerId) ?? none) : none;
   }
 
-  private send(ws: WS, msg: ServerMsg): void {
-    // The page may change what it shows on any other message: make sure the next snapshot goes out.
-    if (msg.type !== "player.state") this.phoneViews.requestRefresh(ws);
-    ws.send(JSON.stringify(msg), compressFor(ws));
-  }
-
-  private sendState(ws: WS, force = true): void {
-    if (ws.data.role === "host") return this.send(ws, { type: "host.state", view: this.hostView() });
-    this.phoneViews.push(ws, () => this.playerView(ws), force);
-  }
-
   onDrain(ws: WS): void {
-    if (ws.data.role === "host") {
-      if (this.phoneViews.takePendingDrain(ws)) this.sendState(ws);
-      return;
-    }
-    this.phoneViews.onDrain(ws, () => this.playerView(ws));
+    this.views.onDrain(ws);
   }
 
   broadcast(): void {
-    this.viewUpdates.broadcast();
+    this.views.broadcast();
   }
 
   // ---------- socket lifecycle ----------
@@ -146,8 +126,8 @@ export class GameHub {
 
   onOpen(ws: WS): void {
     this.phoneAttachments.open(ws);
-    this.send(ws, { type: "hello", serverId: this.serverId });
-    this.sendState(ws);
+    this.views.send(ws, { type: "hello", serverId: this.serverId });
+    this.views.refresh(ws);
   }
 
   onClose(ws: WS): void {
@@ -160,7 +140,7 @@ export class GameHub {
       msg = JSON.parse(typeof raw === "string" ? raw : raw.toString());
       if (!msg || typeof msg !== "object" || typeof msg.type !== "string") throw new Error();
     } catch {
-      return this.send(ws, { type: "error", message: "Malformed message" });
+      return this.views.send(ws, { type: "error", message: "Malformed message" });
     }
     try {
       if (msg.type.startsWith("host.")) {
@@ -171,10 +151,10 @@ export class GameHub {
       }
     } catch (e) {
       if (e instanceof GameError || e instanceof ValidationError || e instanceof NotFoundError) {
-        this.send(ws, { type: "error", message: e.message });
+        this.views.send(ws, { type: "error", message: e.message });
       } else {
         this.log(`Error handling ${msg.type}: ${(e as Error).stack ?? e}`);
-        this.send(ws, { type: "error", message: "Something went wrong" });
+        this.views.send(ws, { type: "error", message: "Something went wrong" });
       }
     }
   }
@@ -184,26 +164,26 @@ export class GameHub {
       case "join": {
         if (!this.game) throw new GameError("No game is open yet. Wait for the host.");
         const playerId = this.phoneAttachments.playerId(ws);
-        if (playerId && this.game.players.has(playerId)) return this.sendState(ws);
+        if (playerId && this.game.players.has(playerId)) return this.views.refresh(ws);
         if (this.phoneAttachments.joinLimitReached(ws, this.game.players)) throw new GameError("Too many players from this device");
         const p = this.game.join(msg.nickname, cleanAvatar(msg.avatar, msg.accessory));
         this.phoneAttachments.attach(ws, p.id);
-        this.send(ws, { type: "joined", token: p.token, playerId: p.id, images: this.images });
+        this.views.send(ws, { type: "joined", token: p.token, playerId: p.id, images: this.images });
         this.log(`Player joined: ${p.nickname}`);
         return;
       }
       case "resume": {
         const p = this.game?.byToken(msg.token);
         if (!p) {
-          this.send(ws, { type: "resumeFailed" });
-          return this.sendState(ws);
+          this.views.send(ws, { type: "resumeFailed" });
+          return this.views.refresh(ws);
         }
         this.phoneAttachments.attach(ws, p.id);
-        this.send(ws, { type: "joined", token: p.token, playerId: p.id, images: this.images });
-        return this.sendState(ws);
+        this.views.send(ws, { type: "joined", token: p.token, playerId: p.id, images: this.images });
+        return this.views.refresh(ws);
       }
       default:
-        if (dispatchPhoneMessage(this.game, this.phoneAttachments.playerId(ws), msg) === "resend") this.sendState(ws);
+        if (dispatchPhoneMessage(this.game, this.phoneAttachments.playerId(ws), msg) === "resend") this.views.refresh(ws);
     }
   }
 
@@ -214,25 +194,22 @@ export class GameHub {
       get game() {
         return hub.game;
       },
-      becomeHost: () => {
-        ws.data.role = "host";
-        this.sendState(ws);
-      },
+      becomeHost: () => this.views.becomeHost(ws),
       loadQuiz: (quizId) => this.store.get(quizId),
       openLobby: (quiz) => {
         this.closeGame();
         this.images = [...new Set(quiz.questions.flatMap((q) => (q.image ? [q.image] : [])))];
-        this.game = new Lobby(quiz, { ...this.lastSetup, onChange: () => this.viewUpdates.scheduleBroadcast() });
+        this.game = new Lobby(quiz, { ...this.lastSetup, onChange: () => this.views.scheduleBroadcast() });
         this.log(`Game opened: ${quiz.title}. Players join at ${this.join.url()}`);
-        this.viewUpdates.scheduleBroadcast();
+        this.views.scheduleBroadcast();
       },
       closeGame: () => {
         this.closeGame();
-        this.viewUpdates.scheduleBroadcast();
+        this.views.scheduleBroadcast();
       },
       setAddress: (address) => this.setAddress(address),
       kicked: (p) => {
-        for (const s of this.phoneAttachments.detachPlayer(p.id)) this.send(s, { type: "kicked" });
+        for (const s of this.phoneAttachments.detachPlayer(p.id)) this.views.send(s, { type: "kicked" });
         this.log(`Player removed: ${p.nickname}`);
       },
       handoff: (lobby, action) => this.handoff(lobby, action),
@@ -248,9 +225,9 @@ export class GameHub {
     const context: StartContext = {
       clock: this.opts.clock,
       dataDir: this.store.dataDir,
-      onChange: () => this.viewUpdates.scheduleBroadcast(),
-      onActivity: (id) => this.viewUpdates.onActivity(id),
-      onTick: () => this.viewUpdates.pushHost(),
+      onChange: () => this.views.scheduleBroadcast(),
+      onActivity: (id) => this.views.onActivity(id),
+      onTick: () => this.views.pushHost(),
       onFinish: (game) => this.onFinish(game),
     };
     const choices = lobby.choices;
@@ -281,13 +258,13 @@ export class GameHub {
   }
 
   closeGame(): void {
-    this.viewUpdates.cancelPending();
+    this.views.cancelPending();
     if (!this.game) return;
     if (this.game instanceof Lobby) this.lastSetup = this.game.choices;
     else this.game.dispose();
     this.game = null;
     this.phoneAttachments.detachAll();
-    for (const s of this.phoneAttachments) this.phoneViews.requestRefresh(s);
+    this.views.refreshOnNextUpdate();
   }
 
   private onFinish(game: LiveGame): void {

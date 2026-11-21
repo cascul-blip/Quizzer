@@ -58,7 +58,7 @@ describe("diffView / applyPatch", () => {
   });
 });
 
-describe("Phone view delivery", () => {
+describe("View delivery", () => {
   let t: ReturnType<typeof tempDir>;
   beforeEach(() => {
     t = tempDir();
@@ -77,7 +77,9 @@ describe("Phone view delivery", () => {
     phone.raw = [];
 
     const avatar = OFFERED_AVATARS[4]!.id;
+    phone.sendMsg({ type: "setAvatar", avatar: OFFERED_AVATARS[1]!.id, accessory: "none" });
     phone.sendMsg({ type: "setAvatar", avatar, accessory: "none" });
+    expect(phone.raw).toEqual([]);
     await Promise.resolve();
     expect(phone.raw).toEqual([{ type: "player.patch", ops: [[["me", "avatar", "avatar"], avatar]] }]);
 
@@ -88,6 +90,14 @@ describe("Phone view delivery", () => {
     // A join retry from an already joined phone requests the current view.
     phone.sendMsg({ type: "join", nickname: "Ann" });
     expect(phone.raw).toEqual([{ type: "player.patch", ops: [] }]);
+    phone.raw = [];
+
+    hub.onMessage(phone, "{");
+    hub.broadcast();
+    expect(phone.raw).toEqual([
+      { type: "error", message: "Malformed message" },
+      { type: "player.patch", ops: [] },
+    ]);
     phone.raw = [];
 
     // Drain also forces a refresh when the queued attempt saw no view change.
@@ -113,5 +123,28 @@ describe("Phone view delivery", () => {
     // A socket that keeps up isn't sent anything extra on drain.
     hub.onDrain(phone);
     expect(phone.raw).toHaveLength(1);
+    expect(phone.compression.every((compress) => compress)).toBe(true);
+    expect(host.compression.every((compress) => !compress)).toBe(true);
+  });
+
+  test("a pending phone drain sends the current projector snapshot after promotion", () => {
+    const hub = fakeHub(new QuizStore(t.dir), new FakeClock());
+    const socket = new HubSocket(hub, { admin: true });
+    const projector = new HubSocket(hub, { role: "host" });
+    expect(socket.raw.map((m) => m.type)).toEqual(["hello", "player.state"]);
+    expect(socket.compression).toEqual([true, true]);
+
+    socket.bufferedAmount = 4096;
+    hub.broadcast();
+    expect(socket.raw).toHaveLength(2);
+    socket.sendMsg({ type: "host.hello" });
+    expect(socket.raw[2]).toEqual(projector.raw[projector.raw.length - 1]!);
+
+    socket.bufferedAmount = 0;
+    hub.onDrain(socket);
+    expect(socket.raw[3]).toEqual({ type: "host.state", view: hub.hostView() });
+    hub.onDrain(socket);
+    expect(socket.raw).toHaveLength(4);
+    expect(socket.compression).toEqual([true, true, false, false]);
   });
 });

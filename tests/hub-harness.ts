@@ -65,6 +65,7 @@ export abstract class MessageLog {
 export class HubSocket extends MessageLog {
   closed = false;
   bufferedAmount = 0;
+  compression: boolean[] = [];
   readonly data: SocketData;
   constructor(
     readonly hub: GameHub,
@@ -76,8 +77,9 @@ export class HubSocket extends MessageLog {
     hub.onOpen(this);
   }
   /** Called by the hub. */
-  send(text: string) {
+  send(text: string, compress = false) {
     if (this.closed) return 0;
+    this.compression.push(compress);
     this.receive(JSON.parse(text));
     return text.length;
   }
