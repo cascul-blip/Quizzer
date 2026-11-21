@@ -1,10 +1,11 @@
 import type { ServerWebSocket } from "bun";
-import type { ClientMsg, HostView, Pacing, PlayerView, ServerMsg } from "../shared/protocol.ts";
+import type { ClientMsg, HostView, PlayerView, ServerMsg } from "../shared/protocol.ts";
 import { cleanAvatar } from "../shared/avatars.ts";
 import { ValidationError } from "../shared/quiz-schema.ts";
-import { Lobby, type LobbyChoices } from "./game/lobby.ts";
+import { Lobby, type HandoffOptions, type LobbyChoices } from "./game/lobby.ts";
 import { MSG_MODE, isModeMsg, type LiveGame } from "./game/mode-entry.ts";
-import { entryOf, MODES } from "./game/modes.ts";
+import { entryOf } from "./game/modes.ts";
+import { applyHostCommand, type HostCommandContext } from "./host-commands.ts";
 import { writeResultsFile } from "./game/results.ts";
 import { GameError, type Clock } from "./game/common.ts";
 import { JoinInformation } from "./join-info.ts";
@@ -40,7 +41,6 @@ interface LastResults {
   file: string | null;
 }
 
-const PACINGS = new Set<Pacing>(["manual", "auto"]);
 /** Compress what goes to phones over Wi-Fi; the host screen is on this machine, so it isn't worth the CPU. */
 const compressFor = (ws: WS) => ws.data.role !== "host";
 
@@ -159,7 +159,7 @@ export class GameHub {
     try {
       if (msg.type.startsWith("host.")) {
         if (!ws.data.admin) throw new GameError("Host controls are only available on the host computer (http://localhost)");
-        this.handleHost(ws, msg);
+        applyHostCommand(msg, this.hostCommandContext(ws));
       } else {
         this.handlePlayer(ws, msg);
       }
@@ -213,102 +213,42 @@ export class GameHub {
     }
   }
 
-  private handleHost(ws: WS, msg: ClientMsg): void {
-    const game = () => {
-      if (!this.game) throw new GameError("No game is open");
-      return this.game;
-    };
-    const lobby = (closedMessage: string | (() => string)) => {
-      const current = game();
-      if (current instanceof Lobby) return current;
-      const entry = entryOf(current);
-      throw new GameError(entry.lobbyControlError?.(typeof closedMessage === "string" ? closedMessage : closedMessage()) ?? `Not available in ${entry.name}`);
-    };
-    /** Paced games go question by question. */
-    const paced = (g: LiveGame) => {
-      const entry = entryOf(g);
-      if (!entry.pacing) throw new GameError(`Not available in ${entry.name}`);
-      return entry.pacing(g);
-    };
-    switch (msg.type) {
-      case "host.hello":
+  /** What a Host command from this socket reaches beyond the game itself. */
+  private hostCommandContext(ws: WS): HostCommandContext {
+    const hub = this;
+    return {
+      get game() {
+        return hub.game;
+      },
+      becomeHost: () => {
         ws.data.role = "host";
-        return this.sendState(ws);
-      case "host.open": {
-        const quiz = this.store.get(String(msg.quizId));
-        if (quiz.questions.length === 0) throw new GameError("This quiz has no questions yet");
+        this.sendState(ws);
+      },
+      loadQuiz: (quizId) => this.store.get(quizId),
+      openLobby: (quiz) => {
         this.closeGame();
         this.images = [...new Set(quiz.questions.flatMap((q) => (q.image ? [q.image] : [])))];
         this.game = new Lobby(quiz, { ...this.lastSetup, onChange: () => this.viewUpdates.scheduleBroadcast() });
         this.log(`Game opened: ${quiz.title}. Players join at ${this.join.url()}`);
         this.viewUpdates.scheduleBroadcast();
-        return;
-      }
-      case "host.start": {
-        const pacing = PACINGS.has(msg.pacing) ? msg.pacing : undefined;
-        const current = lobby("The game has already started");
-        current.start(pacing, this.handoffOptions());
-        this.lastSetup = current.choices;
-        return;
-      }
-      case "host.setPacing": {
-        if (!PACINGS.has(msg.pacing)) throw new GameError("Unknown pacing");
-        const current = game();
-        if (current instanceof Lobby) current.setPacing(msg.pacing);
-        else {
-          paced(current).setPacing(msg.pacing);
-          this.lastSetup.pacing = msg.pacing;
-        }
-        return;
-      }
-      case "host.setShuffle":
-        return lobby("Shuffle can only be changed before the game starts").setShuffle({ questions: !!msg.questions, answers: !!msg.answers });
-      case "host.setProtect":
-        return lobby("Protect from abuse can only be changed before the game starts").setProtect(!!msg.on);
-      case "host.setMode":
-        return lobby("The game mode can only be changed before the game starts").setMode(msg.mode);
-      case "host.setModeSettings":
-        return lobby(() => {
-          if (!Object.hasOwn(MODES, msg.mode)) return "Unknown game mode";
-          return `${MODES[msg.mode].name} settings can only be changed before the game starts`;
-        }).setModeSettings(msg.mode, msg.settings);
-      case "host.next":
-      case "host.end": {
-        const current = game();
-        const action = msg.type === "host.next" ? "next" : "end";
-        if (current instanceof Lobby) {
-          current.advanceClassic(action, this.handoffOptions());
-          this.lastSetup = current.choices;
-        } else if (action === "next") paced(current).next();
-        else current.end();
-        return;
-      }
-      case "host.skip": {
-        const current = game();
-        if (!(current instanceof Lobby)) paced(current).skip();
-        return;
-      }
-      case "host.setTeam":
-        return lobby("Teams can only be changed before the game starts").setTeam(String(msg.playerId), Number(msg.team));
-      case "host.kick": {
-        const p = game().kick(String(msg.playerId));
-        if (!p) return;
-        for (const s of this.phoneAttachments.detachPlayer(p.id)) this.send(s, { type: "kicked" });
-        this.log(`Player removed: ${p.nickname}`);
-        return;
-      }
-      case "host.close":
+      },
+      closeGame: () => {
         this.closeGame();
         this.viewUpdates.scheduleBroadcast();
-        return;
-      case "host.setAddress":
-        return this.setAddress(String(msg.address));
-      default:
-        throw new GameError(`Unknown message ${(msg as { type: string }).type}`);
-    }
+      },
+      setAddress: (address) => this.setAddress(address),
+      kicked: (p) => {
+        for (const s of this.phoneAttachments.detachPlayer(p.id)) this.send(s, { type: "kicked" });
+        this.log(`Player removed: ${p.nickname}`);
+      },
+      handoffOptions: () => this.handoffOptions(),
+      rememberSetup: (setup) => {
+        this.lastSetup = { ...this.lastSetup, ...setup };
+      },
+    };
   }
 
-  private handoffOptions() {
+  private handoffOptions(): HandoffOptions {
     return {
       clock: this.opts.clock,
       dataDir: this.store.dataDir,
