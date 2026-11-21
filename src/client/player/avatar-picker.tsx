@@ -1,5 +1,6 @@
 import { useState } from "preact/hooks";
-import { OFFERED_ACCESSORIES, OFFERED_AVATARS, type AvatarChoice } from "../../shared/avatars.ts";
+import type { AvatarChoice } from "../../shared/avatars.ts";
+import { OFFERED_ACCESSORIES, OFFERED_AVATARS } from "../../shared/avatars.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 
 /** Lobby picker: a Character tab and an Accessory tab, each a grid previewing the option on the current look. */

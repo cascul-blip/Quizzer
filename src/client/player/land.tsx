@@ -1,10 +1,11 @@
-import { LandThemeProvider, useNorthPole } from "../shared/land-skin.tsx";
 import type { ComponentChildren } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { EMPTY, placementCost } from "../../shared/land-board.ts";
-import { LAND_GUARD_COST, LAND_QUESTIONS_PER_ROUND, LAND_STEAL_COST, type LandBoard, type PlayerLandView } from "../../shared/modes/land.ts";
+import type { LandBoard, PlayerLandView } from "../../shared/modes/land.ts";
+import { LAND_GUARD_COST, LAND_QUESTIONS_PER_ROUND, LAND_STEAL_COST } from "../../shared/modes/land.ts";
 import type { ClientMsg } from "../../shared/protocol.ts";
 import { HexBoard, LandShape, landArt } from "../shared/land-art.tsx";
+import { LandThemeProvider, useNorthPole } from "../shared/land-skin.tsx";
 import { useEventFlash } from "../shared/tower-art.tsx";
 import { formatClock, ordinal, teamInk, teamVars, useCountdown } from "../shared/ui.tsx";
 import { Feedback, StreamQuestion } from "./stream-question.tsx";
@@ -19,7 +20,11 @@ const OPEN_ZOOM = 1.5;
 
 /** Phone screen for Land Grab: three questions, then place the tiles they earned. */
 export function LandPlayer({ view, send }: { view: PlayerLandView; send: Send }) {
-  return <LandThemeProvider theme={view.theme}><LandPlayerContent view={view} send={send} /></LandThemeProvider>;
+  return (
+    <LandThemeProvider theme={view.theme}>
+      <LandPlayerContent view={view} send={send} />
+    </LandThemeProvider>
+  );
 }
 
 function LandPlayerContent({ view, send }: { view: PlayerLandView; send: Send }) {
@@ -48,9 +53,7 @@ function LandPlayerContent({ view, send }: { view: PlayerLandView; send: Send })
           <LandShape team={view.team.index} />
           Team {view.team.name}
         </div>
-        <p class="muted">
-          Every {LAND_QUESTIONS_PER_ROUND} questions, your correct answers become tiles. Surround land to capture it!
-        </p>
+        <p class="muted">Every {LAND_QUESTIONS_PER_ROUND} questions, your correct answers become tiles. Surround land to capture it!</p>
         <div class="tower-count">{Math.max(1, secs)}</div>
       </main>
     );
@@ -161,7 +164,10 @@ function ClaimMode(props: { board: LandBoard; live: boolean; claims: number; tea
   if (!live) hint = "Nice one!";
   else if (selected === null) hint = "Tap a tile to pick it";
   else if (cost === null) hint = "Too close to another team's starting point";
-  else if (cost > claims) hint = steal ? `Stealing a tile takes ${cost} tiles; you have ${claims}` : `So close to another team's starting point, a tile takes ${cost}; you have ${claims}`;
+  else if (cost > claims)
+    hint = steal
+      ? `Stealing a tile takes ${cost} tiles; you have ${claims}`
+      : `So close to another team's starting point, a tile takes ${cost}; you have ${claims}`;
   else if (steal) {
     hint = `Take this tile from the other team for ${cost} tiles`;
     action = `⚔ Steal (${cost})`;
@@ -186,9 +192,7 @@ function ClaimMode(props: { board: LandBoard; live: boolean; claims: number; tea
     <main class="land-claim">
       <div class="build-head">
         <b>{live ? `Place your tiles! ${claims} left` : "Tile placed!"}</b>
-        <span>
-          Unclaimed land costs 1 · numbered tiles cost that many · pinch to zoom
-        </span>
+        <span>Unclaimed land costs 1 · numbered tiles cost that many · pinch to zoom</span>
       </div>
       <PanZoom focus={() => focusTiles(board, team)} onTap={(tile) => live && setSelected(tile === selected ? null : tile)}>
         <HexBoard board={board} viewer={team} selected={selected} />
@@ -320,7 +324,16 @@ function PanZoom({ children, focus, onTap }: { children: ComponentChildren; focu
   };
 
   return (
-    <div class="land-area" style={{ backgroundImage: christmas ? undefined : `url(${landArt("felt-tile")})` }} ref={box} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} onPointerLeave={onUp}>
+    <div
+      class="land-area"
+      style={{ backgroundImage: christmas ? undefined : `url(${landArt("felt-tile")})` }}
+      ref={box}
+      onPointerDown={onDown}
+      onPointerMove={onMove}
+      onPointerUp={onUp}
+      onPointerCancel={onUp}
+      onPointerLeave={onUp}
+    >
       <div class="land-pan" ref={inner}>
         {children}
       </div>

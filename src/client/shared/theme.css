@@ -86,10 +86,18 @@ button:disabled {
   box-shadow: none;
 }
 
-.opt-0 { background: var(--opt-0); }
-.opt-1 { background: var(--opt-1); }
-.opt-2 { background: var(--opt-2); }
-.opt-3 { background: var(--opt-3); }
+.opt-0 {
+  background: var(--opt-0);
+}
+.opt-1 {
+  background: var(--opt-1);
+}
+.opt-2 {
+  background: var(--opt-2);
+}
+.opt-3 {
+  background: var(--opt-3);
+}
 
 .shape {
   width: 1em;
@@ -423,7 +431,9 @@ a.btn {
 }
 
 @keyframes tower-bell-slot {
-  to { fill: #ffd56855; }
+  to {
+    fill: #ffd56855;
+  }
 }
 
 .tower-christmas .tower-bell-cell .egg-glow {
@@ -454,8 +464,12 @@ a.btn {
 }
 
 @keyframes workshop-hoist-sway {
-  from { transform: rotate(-1deg); }
-  to { transform: rotate(1deg); }
+  from {
+    transform: rotate(-1deg);
+  }
+  to {
+    transform: rotate(1deg);
+  }
 }
 
 /* One complete painted sprite: stomp, wind up and lunge at the debris cue. */
@@ -465,12 +479,30 @@ a.btn {
 }
 
 @keyframes tower-yeti-smash {
-  0%, 12%, 22%, 30% { transform: translateY(0); }
-  8%, 18%, 26% { transform: translateY(-6px) rotate(3deg); }
-  34% { transform: translateX(8px) rotate(12deg) scale(0.94, 1.05); }
-  40% { transform: translateX(-24px) rotate(-18deg) scale(1.1, 0.9); }
-  48% { transform: translateX(-6px) rotate(-4deg); }
-  58%, 100% { transform: none; }
+  0%,
+  12%,
+  22%,
+  30% {
+    transform: translateY(0);
+  }
+  8%,
+  18%,
+  26% {
+    transform: translateY(-6px) rotate(3deg);
+  }
+  34% {
+    transform: translateX(8px) rotate(12deg) scale(0.94, 1.05);
+  }
+  40% {
+    transform: translateX(-24px) rotate(-18deg) scale(1.1, 0.9);
+  }
+  48% {
+    transform: translateX(-6px) rotate(-4deg);
+  }
+  58%,
+  100% {
+    transform: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1703,52 +1735,109 @@ a.btn {
   animation: cheer-liftoff 1.7s both;
 }
 .cheer-energy-head {
-  animation: cheer-charge .65s linear both;
+  animation: cheer-charge 0.65s linear both;
   transform-origin: 0 0;
 }
 .cheer-energy-ring {
-  animation: cheer-energy .16s ease-in-out 4 alternate;
+  animation: cheer-energy 0.16s ease-in-out 4 alternate;
   transform-origin: 0 0;
 }
 .cheer-sparkle {
   opacity: 0;
-  animation: cheer-glitter .65s ease-out both;
+  animation: cheer-glitter 0.65s ease-out both;
 }
 .cheer-steam {
   animation: cheer-steam 2s ease-in-out infinite alternate;
 }
 @keyframes cheer-charge {
-  0% { transform: translateX(0) scale(1); }
-  15%, 35%, 55%, 75% { transform: translateX(-5px) rotate(-5deg) scale(1.08); }
-  25%, 45%, 65%, 85% { transform: translateX(5px) rotate(5deg) scale(1.12); }
-  100% { transform: translateY(4px) scale(.95, 1.15); }
+  0% {
+    transform: translateX(0) scale(1);
+  }
+  15%,
+  35%,
+  55%,
+  75% {
+    transform: translateX(-5px) rotate(-5deg) scale(1.08);
+  }
+  25%,
+  45%,
+  65%,
+  85% {
+    transform: translateX(5px) rotate(5deg) scale(1.12);
+  }
+  100% {
+    transform: translateY(4px) scale(0.95, 1.15);
+  }
 }
 @keyframes cheer-energy {
-  from { opacity: .2; transform: scale(.95); }
-  to { opacity: .9; transform: scale(1.22); }
+  from {
+    opacity: 0.2;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 0.9;
+    transform: scale(1.22);
+  }
 }
 @keyframes cheer-liftoff {
-  0%, 38% { transform: translate(0, 0); opacity: 1; }
-  44% { transform: translate(-2px, -12px); animation-timing-function: cubic-bezier(.55, 0, 1, .5); }
-  80% { opacity: 1; }
-  85%, 100% { transform: translate(-160px, -1500px); opacity: 0; }
+  0%,
+  38% {
+    transform: translate(0, 0);
+    opacity: 1;
+  }
+  44% {
+    transform: translate(-2px, -12px);
+    animation-timing-function: cubic-bezier(0.55, 0, 1, 0.5);
+  }
+  80% {
+    opacity: 1;
+  }
+  85%,
+  100% {
+    transform: translate(-160px, -1500px);
+    opacity: 0;
+  }
 }
 @keyframes cheer-glitter {
-  0% { opacity: 0; }
-  15%, 50% { opacity: 1; }
-  100% { opacity: 0; }
+  0% {
+    opacity: 0;
+  }
+  15%,
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
 }
 @keyframes cheer-steam {
-  to { opacity: .3; transform: translateY(-5px); }
+  to {
+    opacity: 0.3;
+    transform: translateY(-5px);
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .cheer-rocket-motion { animation: cheer-reduced-launch 1s both; }
-  .cheer-energy-head, .cheer-energy-ring, .cheer-steam { animation: none; }
-  .cheer-sparkle { animation: none; opacity: 0; }
+  .cheer-rocket-motion {
+    animation: cheer-reduced-launch 1s both;
+  }
+  .cheer-energy-head,
+  .cheer-energy-ring,
+  .cheer-steam {
+    animation: none;
+  }
+  .cheer-sparkle {
+    animation: none;
+    opacity: 0;
+  }
 }
 @keyframes cheer-reduced-launch {
-  0%, 60% { opacity: 1; }
-  100% { opacity: 0; }
+  0%,
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
 }
 
 /* ----- Cup of Death: dice and bubbling cups (projector and phones) ----- */
@@ -2260,11 +2349,21 @@ a.btn {
   animation: ginger-snowfall 9s linear infinite;
 }
 @keyframes ginger-snowfall {
-  from { transform: translate(0, -70px); opacity: 0; }
-  15%, 85% { opacity: .65; }
-  to { transform: translate(25px, 140px); opacity: 0; }
+  from {
+    transform: translate(0, -70px);
+    opacity: 0;
+  }
+  15%,
+  85% {
+    opacity: 0.65;
+  }
+  to {
+    transform: translate(25px, 140px);
+    opacity: 0;
+  }
 }
-.fight-stage[data-theme="christmas"], .fight-game[data-theme="christmas"] {
+.fight-stage[data-theme="christmas"],
+.fight-game[data-theme="christmas"] {
   background-color: #39273e;
   color: #fff4e5;
 }
@@ -2273,31 +2372,41 @@ a.btn {
   border-bottom-color: #b78657;
 }
 .fight-stage[data-theme="christmas"] .fight-team {
-  background: rgba(49, 29, 47, .85);
+  background: rgba(49, 29, 47, 0.85);
   border-color: #ddbd8b;
 }
 .fight-game[data-theme="christmas"] .fight-strip {
   background: #4b2e3e;
 }
 .fight-game[data-theme="christmas"] .fight-choice {
-  background: rgba(56, 32, 40, .94);
+  background: rgba(56, 32, 40, 0.94);
   border-color: #efd5ad;
 }
 .fight-game[data-theme="christmas"] .repair-wall {
   background-color: #6d3b23;
 }
 .fight-game[data-theme="christmas"] .health i,
-.fight-stage[data-theme="christmas"] .health i { border-radius: 50%; }
+.fight-stage[data-theme="christmas"] .health i {
+  border-radius: 50%;
+}
 @media (prefers-reduced-motion: reduce) {
-  .ginger-snow circle { animation: none; }
+  .ginger-snow circle {
+    animation: none;
+  }
 }
 .ginger-sugar-puff {
   transform-box: fill-box;
   transform-origin: center;
   animation: smoke-rise 1.8s ease-out infinite both;
 }
-@media (prefers-reduced-motion: reduce) { .ginger-sugar-puff { animation: none; } }
-.fight-game[data-theme="christmas"] .repair-wall .wall { background: #4a2d26; }
+@media (prefers-reduced-motion: reduce) {
+  .ginger-sugar-puff {
+    animation: none;
+  }
+}
+.fight-game[data-theme="christmas"] .repair-wall .wall {
+  background: #4a2d26;
+}
 .fight-game[data-theme="christmas"] .repair-wall .brick {
   background-color: #d99b53;
   background-blend-mode: normal;
@@ -2305,11 +2414,21 @@ a.btn {
   border-radius: 7px;
   box-shadow: inset 0 0 0 2px #e7ad72;
 }
-@media (prefers-reduced-motion: reduce) { .ginger-crumbs circle { animation: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .ginger-crumbs circle {
+    animation: none;
+  }
+}
 
 /* Fine graphite grid over one continuous North Pole illustration. */
-.hex-north-pole .hex-edge { stroke: #4c4942; stroke-opacity: 0.32; stroke-width: 0.35; }
-.hex-north-pole .hex.owned .hex-edge { stroke-opacity: 0.7; }
+.hex-north-pole .hex-edge {
+  stroke: #4c4942;
+  stroke-opacity: 0.32;
+  stroke-width: 0.35;
+}
+.hex-north-pole .hex.owned .hex-edge {
+  stroke-opacity: 0.7;
+}
 :is(.siege-stage, .siege-game).siege-christmas {
   background: #14382d;
   color: #fff3d5;
@@ -2323,43 +2442,217 @@ a.btn {
   background: #173b30;
   color: #fff3d5;
 }
-.siege-christmas .siege-pick { border-color: #d5b36855; }
-.siege-christmas .siege-pick-name { min-height: 2.4em; font-size: 12px; }
-.siege-christmas .siege-cell { background: #c49b69; color: #302315; }
-.siege-christmas .siege-row .siege-cell:nth-of-type(even) { background: #dfc394; }
-.siege-christmas .siege-wall-edge { background: #9c332b; border: 1px solid #dbb86c; }
-.siege-christmas .siege-cell.has { background: #fff2d0 !important; }
-.siege-christmas .siege-build.ready { background: #a8312b; color: #fff3d5; }
-.siege-board.siege-christmas { border: 2px solid #c4a262; }
+.siege-christmas .siege-pick {
+  border-color: #d5b36855;
+}
+.siege-christmas .siege-pick-name {
+  min-height: 2.4em;
+  font-size: 12px;
+}
+.siege-christmas .siege-cell {
+  background: #c49b69;
+  color: #302315;
+}
+.siege-christmas .siege-row .siege-cell:nth-of-type(even) {
+  background: #dfc394;
+}
+.siege-christmas .siege-wall-edge {
+  background: #9c332b;
+  border: 1px solid #dbb86c;
+}
+.siege-christmas .siege-cell.has {
+  background: #fff2d0 !important;
+}
+.siege-christmas .siege-build.ready {
+  background: #a8312b;
+  color: #fff3d5;
+}
+.siege-board.siege-christmas {
+  border: 2px solid #c4a262;
+}
 
 /* North Pole Snowball Showdown: shared host/phone painting and avatar layers. */
-.snowball-scene { position:absolute; inset:0; overflow:hidden; background:#afc6ed; }
-.snowball-backdrop { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
-.snowball-world { position:absolute; top:0; left:50%; height:100%; aspect-ratio:16/9; transform:translateX(-50%); }
-.snowball-elf { position:absolute; aspect-ratio:1; }
-.snowball-elf.away { opacity:.55; }
-.snowball-elf.departed { opacity:0; transition:opacity .25s; }
-.snowball-body { position:absolute; inset:0; background-size:400% 200%; background-repeat:no-repeat; z-index:2; }
-.snowball-body.mirrored { transform:scaleX(-1); }
-.snowball-head { position:absolute; width:38%; aspect-ratio:1; z-index:1; }
-.snowball-head .avatar { width:100%; height:100%; display:block; }
-.snowball-shadow { position:absolute; left:22%; top:92%; width:58%; height:5%; border-radius:50%; background:#19345755; filter:blur(3px); }
-.snowball-ready { position:absolute; right:6%; top:35%; z-index:3; font-size:clamp(10px,1.5vw,22px); background:#164b37; border-radius:50%; padding:0 5px; color:#fff; }
-.snowball-projectile { position:absolute; width:2%; aspect-ratio:1; border-radius:50%; background:radial-gradient(circle at 30% 25%, white 20%, #ecf6ff 55%, #9cafcf); transform:translate(-50%,-50%); box-shadow:0 2px 4px #2b4c7655; z-index:4; }
-.snowball-impact { position:absolute; width:20%; height:auto; aspect-ratio:1; object-fit:contain; z-index:5; pointer-events:none; }
-.snowball-impact.miss { width:14%; }
-.snowball-label { position:absolute; top:90%; z-index:6; transform:translateX(-50%); max-width:30%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:clamp(9px,1vw,15px); color:white; background:#102039dc; padding:2px 8px; border-radius:20px; }
-.snowball-label.slot2 { top:61%; }
-.snowball-lobby-preview { position:relative; aspect-ratio:16/6; width:min(760px,100%); margin:16px auto; overflow:hidden; border-radius:16px; }
-.snowball-lobby-preview > span { position:absolute; top:10px; left:50%; transform:translateX(-50%); background:#102039dc; padding:6px 16px; border-radius:20px; color:white; white-space:nowrap; }
-.duel-panel.christmas .duel-sign { background:#102039dc; color:#f1fafc; }
-.duel-panel.christmas .duel-name { background:#102039e8; color:#fff; }
-.duel-panel.christmas .duel-draw { background:#102039e8; color:#fff; }
-.duel-podium.christmas .sd-wanted { background:linear-gradient(140deg,#e8f7ff,#b4d7e7); border:3px solid #8fbbcd; border-radius:18px; box-shadow:0 6px 24px #05182a66; }
-.duel-podium.christmas .sd-wanted-heading { color:#193e56; }
-.duel-snow-strip { position:relative; height:clamp(108px,21vh,178px); flex:none; overflow:hidden; border-bottom:3px solid #92bdd2; }
-.duel-snow-strip .duel-caption { z-index:7; background:#102039dc; }
-@media(prefers-reduced-motion:reduce) { .snowball-elf.departed { transition:none; } }
-.snowball-poster { background:linear-gradient(140deg,#e8f7ff,#b4d7e7); border:3px solid #8fbbcd; border-radius:18px; box-shadow:0 6px 24px #05182a66; }
-.snowball-poster .sd-wanted-heading { color:#193e56; }
-.snowball-poster .sd-wanted-face { filter:none; border-color:#78a4bd; background:#f2fbff; }
+.snowball-scene {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #afc6ed;
+}
+.snowball-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.snowball-world {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  height: 100%;
+  aspect-ratio: 16 / 9;
+  transform: translateX(-50%);
+}
+.snowball-elf {
+  position: absolute;
+  aspect-ratio: 1;
+}
+.snowball-elf.away {
+  opacity: 0.55;
+}
+.snowball-elf.departed {
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+.snowball-body {
+  position: absolute;
+  inset: 0;
+  background-size: 400% 200%;
+  background-repeat: no-repeat;
+  z-index: 2;
+}
+.snowball-body.mirrored {
+  transform: scaleX(-1);
+}
+.snowball-head {
+  position: absolute;
+  width: 38%;
+  aspect-ratio: 1;
+  z-index: 1;
+}
+.snowball-head .avatar {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.snowball-shadow {
+  position: absolute;
+  left: 22%;
+  top: 92%;
+  width: 58%;
+  height: 5%;
+  border-radius: 50%;
+  background: #19345755;
+  filter: blur(3px);
+}
+.snowball-ready {
+  position: absolute;
+  right: 6%;
+  top: 35%;
+  z-index: 3;
+  font-size: clamp(10px, 1.5vw, 22px);
+  background: #164b37;
+  border-radius: 50%;
+  padding: 0 5px;
+  color: #fff;
+}
+.snowball-projectile {
+  position: absolute;
+  width: 2%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 25%, white 20%, #ecf6ff 55%, #9cafcf);
+  transform: translate(-50%, -50%);
+  box-shadow: 0 2px 4px #2b4c7655;
+  z-index: 4;
+}
+.snowball-impact {
+  position: absolute;
+  width: 20%;
+  height: auto;
+  aspect-ratio: 1;
+  object-fit: contain;
+  z-index: 5;
+  pointer-events: none;
+}
+.snowball-impact.miss {
+  width: 14%;
+}
+.snowball-label {
+  position: absolute;
+  top: 90%;
+  z-index: 6;
+  transform: translateX(-50%);
+  max-width: 30%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: clamp(9px, 1vw, 15px);
+  color: white;
+  background: #102039dc;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+.snowball-label.slot2 {
+  top: 61%;
+}
+.snowball-lobby-preview {
+  position: relative;
+  aspect-ratio: 16 / 6;
+  width: min(760px, 100%);
+  margin: 16px auto;
+  overflow: hidden;
+  border-radius: 16px;
+}
+.snowball-lobby-preview > span {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #102039dc;
+  padding: 6px 16px;
+  border-radius: 20px;
+  color: white;
+  white-space: nowrap;
+}
+.duel-panel.christmas .duel-sign {
+  background: #102039dc;
+  color: #f1fafc;
+}
+.duel-panel.christmas .duel-name {
+  background: #102039e8;
+  color: #fff;
+}
+.duel-panel.christmas .duel-draw {
+  background: #102039e8;
+  color: #fff;
+}
+.duel-podium.christmas .sd-wanted {
+  background: linear-gradient(140deg, #e8f7ff, #b4d7e7);
+  border: 3px solid #8fbbcd;
+  border-radius: 18px;
+  box-shadow: 0 6px 24px #05182a66;
+}
+.duel-podium.christmas .sd-wanted-heading {
+  color: #193e56;
+}
+.duel-snow-strip {
+  position: relative;
+  height: clamp(108px, 21vh, 178px);
+  flex: none;
+  overflow: hidden;
+  border-bottom: 3px solid #92bdd2;
+}
+.duel-snow-strip .duel-caption {
+  z-index: 7;
+  background: #102039dc;
+}
+@media (prefers-reduced-motion: reduce) {
+  .snowball-elf.departed {
+    transition: none;
+  }
+}
+.snowball-poster {
+  background: linear-gradient(140deg, #e8f7ff, #b4d7e7);
+  border: 3px solid #8fbbcd;
+  border-radius: 18px;
+  box-shadow: 0 6px 24px #05182a66;
+}
+.snowball-poster .sd-wanted-heading {
+  color: #193e56;
+}
+.snowball-poster .sd-wanted-face {
+  filter: none;
+  border-color: #78a4bd;
+  background: #f2fbff;
+}

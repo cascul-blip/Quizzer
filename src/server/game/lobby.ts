@@ -1,14 +1,16 @@
-import { cleanAvatar, randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
+import type { AvatarChoice } from "../../shared/avatars.ts";
+import { cleanAvatar, randomAvatar } from "../../shared/avatars.ts";
 import { MODE_FLAGS } from "../../shared/mode-flags.ts";
-import type { GameMode, HostGameState, ModeSettingsMap, PlayerView, ShuffleOptions } from "../../shared/protocol.ts";
 import type { Pacing } from "../../shared/mode-views.ts";
+import type { GameMode, HostGameState, ModeSettingsMap, PlayerView, ShuffleOptions } from "../../shared/protocol.ts";
 import type { Quiz } from "../../shared/quiz-schema.ts";
 import { isSeasonTheme } from "../../shared/season-theme.ts";
 import { assignTeams, GameError, teamInfo } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
 import type { LiveGame, ModeEntry, ModeGame, RawSettings, StartContext } from "./mode-entry.ts";
 import { entryOf, MODES } from "./modes.ts";
-import { Roster, type BasePlayer } from "./roster.ts";
+import type { BasePlayer } from "./roster.ts";
+import { Roster } from "./roster.ts";
 
 export interface LobbyChoices {
   mode: GameMode;
@@ -43,7 +45,10 @@ export class Lobby {
   shuffle: ShuffleOptions;
   protect: boolean;
 
-  constructor(readonly quiz: Quiz, opts: LobbyOptions = {}) {
+  constructor(
+    readonly quiz: Quiz,
+    opts: LobbyOptions = {},
+  ) {
     this.quizId = quiz.id;
     this.title = quiz.title;
     this.rng = opts.rng ?? Math.random;
@@ -192,9 +197,7 @@ export class Lobby {
       protect: MODE_FLAGS[mode].protect && this.protect,
       pacing: this.pacing,
       players: [...this.players.values()],
-      teams: this.teamCount() === null
-        ? new Map([...this.players.keys()].map((id) => [id, 0]))
-        : new Map(this.teams),
+      teams: this.teamCount() === null ? new Map([...this.players.keys()].map((id) => [id, 0])) : new Map(this.teams),
     };
   }
 
@@ -227,10 +230,13 @@ export class Lobby {
       phase: this.phase,
       mode: this.mode,
       settings: this.settings,
-      teams: count === null ? null : Array.from({ length: count }, (_, i) => ({
-        ...teamInfo(i),
-        members: players.filter((player) => this.teams.get(player.id) === i),
-      })),
+      teams:
+        count === null
+          ? null
+          : Array.from({ length: count }, (_, i) => ({
+              ...teamInfo(i),
+              members: players.filter((player) => this.teams.get(player.id) === i),
+            })),
       quiz: { id: this.quizId, title: this.title, questionCount: this.quiz.questions.length },
       pacing: this.pacing,
       shuffle: this.shuffle,
@@ -268,8 +274,7 @@ export class Lobby {
 }
 
 type InitialSettings = {
-  [M in GameMode]?: Partial<Omit<ModeSettingsMap[M], "theme">> &
-    ("theme" extends keyof ModeSettingsMap[M] ? { theme?: string } : object);
+  [M in GameMode]?: Partial<Omit<ModeSettingsMap[M], "theme">> & ("theme" extends keyof ModeSettingsMap[M] ? { theme?: string } : object);
 };
 
 /**
@@ -301,4 +306,3 @@ function knownTheme<S extends object>(settings: S, defaults: S): S {
   if (!("theme" in settings) || isSeasonTheme(settings.theme) || !("theme" in defaults)) return settings;
   return { ...settings, theme: defaults.theme };
 }
-

@@ -1,29 +1,29 @@
 /** Generated Christmas pictures for Sled Squad's trail challenge. */
 import { glyphId, parseGlyph } from "../../shared/glyphs.ts";
-import treeStarBaubles from "./winter/symbols/tree-star-baubles.webp";
-import treeBowBaubles from "./winter/symbols/tree-bow-baubles.webp";
-import treeStarGarland from "./winter/symbols/tree-star-garland.webp";
-import treeBells from "./winter/symbols/tree-bells.webp";
-import treeSnow from "./winter/symbols/tree-snow.webp";
-import treeStarBow from "./winter/symbols/tree-star-bow.webp";
-import giftSquare from "./winter/symbols/gift-square.webp";
-import giftTall from "./winter/symbols/gift-tall.webp";
-import giftHolly from "./winter/symbols/gift-holly.webp";
-import giftRound from "./winter/symbols/gift-round.webp";
 import giftDots from "./winter/symbols/gift-dots.webp";
 import giftHeart from "./winter/symbols/gift-heart.webp";
-import stockingRight from "./winter/symbols/stocking-right.webp";
-import stockingLeft from "./winter/symbols/stocking-left.webp";
-import stockingStar from "./winter/symbols/stocking-star.webp";
+import giftHolly from "./winter/symbols/gift-holly.webp";
+import giftRound from "./winter/symbols/gift-round.webp";
+import giftSquare from "./winter/symbols/gift-square.webp";
+import giftTall from "./winter/symbols/gift-tall.webp";
 import stockingDots from "./winter/symbols/stocking-dots.webp";
+import stockingLeft from "./winter/symbols/stocking-left.webp";
+import stockingRight from "./winter/symbols/stocking-right.webp";
+import stockingStar from "./winter/symbols/stocking-star.webp";
 import stockingStripes from "./winter/symbols/stocking-stripes.webp";
 import stockingTree from "./winter/symbols/stocking-tree.webp";
-import wreathBottomBow from "./winter/symbols/wreath-bottom-bow.webp";
-import wreathTopBow from "./winter/symbols/wreath-top-bow.webp";
+import treeBells from "./winter/symbols/tree-bells.webp";
+import treeBowBaubles from "./winter/symbols/tree-bow-baubles.webp";
+import treeSnow from "./winter/symbols/tree-snow.webp";
+import treeStarBaubles from "./winter/symbols/tree-star-baubles.webp";
+import treeStarBow from "./winter/symbols/tree-star-bow.webp";
+import treeStarGarland from "./winter/symbols/tree-star-garland.webp";
 import wreathBells from "./winter/symbols/wreath-bells.webp";
-import wreathStar from "./winter/symbols/wreath-star.webp";
+import wreathBottomBow from "./winter/symbols/wreath-bottom-bow.webp";
 import wreathCandyCanes from "./winter/symbols/wreath-candy-canes.webp";
 import wreathSnowflake from "./winter/symbols/wreath-snowflake.webp";
+import wreathStar from "./winter/symbols/wreath-star.webp";
+import wreathTopBow from "./winter/symbols/wreath-top-bow.webp";
 
 const pictures: Record<string, string> = {
   "christmas:tree:star-baubles": treeStarBaubles,

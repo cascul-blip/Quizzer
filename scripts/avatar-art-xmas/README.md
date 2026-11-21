@@ -5,7 +5,6 @@ accessories. See `../avatar-art-clay/README.md` and `../avatar-clay-art.py` for
 the transparent sources and current build pipeline. The files below are
 retained only as legacy references.
 
-
 Source stickers (1024x1024, on flat magenta) for the Christmas characters and accessories:
 15 of each, listed at the end of `AVATARS` and `ACCESSORIES` in `src/shared/avatars.ts`.
 

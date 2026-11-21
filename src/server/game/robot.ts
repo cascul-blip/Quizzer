@@ -1,4 +1,9 @@
 import type { AnswerValue } from "../../shared/answer-match.ts";
+import { answerOf } from "../../shared/answer-match.ts";
+import type { AvatarChoice } from "../../shared/avatars.ts";
+import { randomAvatar } from "../../shared/avatars.ts";
+import { MODE_NAMES } from "../../shared/mode-names.ts";
+import type { HostRobotState, PlayerRobotView, RobotAttack, RobotAwards, RobotDir, RobotPhase, RobotStanding } from "../../shared/modes/robot.ts";
 import {
   ROBOT_ATTACK_MS,
   ROBOT_BOARD,
@@ -12,24 +17,18 @@ import {
   robotInBounds,
   robotQuizMs,
   robotRing,
-  type HostRobotState,
-  type PlayerRobotView,
-  type RobotAttack,
-  type RobotAwards,
-  type RobotDir,
-  type RobotPhase,
-  type RobotStanding,
 } from "../../shared/modes/robot.ts";
-import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
-import { GameError, realClock, shuffle, type Clock } from "./common.ts";
+import type { Clock } from "./common.ts";
+import { GameError, realClock, shuffle } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
-import { Roster, type BasePlayer } from "./roster.ts";
-import { QuestionStream, type AnswerTotals } from "./stream.ts";
-import { answerOf } from "../../shared/answer-match.ts";
-import { MODE_NAMES } from "../../shared/mode-names.ts";
-import { handoffOptions, unhandled, type ModeEntry } from "./mode-entry.ts";
+import type { ModeEntry } from "./mode-entry.ts";
+import { handoffOptions, unhandled } from "./mode-entry.ts";
 import { toCsv } from "./results.ts";
+import type { BasePlayer } from "./roster.ts";
+import { Roster } from "./roster.ts";
+import type { AnswerTotals } from "./stream.ts";
+import { QuestionStream } from "./stream.ts";
 
 export { FEEDBACK_MS } from "./stream.ts";
 
@@ -477,7 +476,18 @@ export function buildRobotResultsCsv(game: RobotGame): string {
     const p = game.players.get(s.id)!;
     const answered = p.correct + p.wrong;
     const status = s.rank === 1 ? "Winner" : p.outRound === null ? "Survived" : `Out in round ${p.outRound}`;
-    return [s.rank, p.nickname, status, p.lives, p.outRound === null ? game.attacks : p.outRound - 1, p.correct, p.wrong, answered ? Math.round((p.correct / answered) * 100) : "", p.moves, p.hits];
+    return [
+      s.rank,
+      p.nickname,
+      status,
+      p.lives,
+      p.outRound === null ? game.attacks : p.outRound - 1,
+      p.correct,
+      p.wrong,
+      answered ? Math.round((p.correct / answered) * 100) : "",
+      p.moves,
+      p.hits,
+    ];
   });
   return toCsv([header, ...rows]);
 }

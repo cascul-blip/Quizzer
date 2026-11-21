@@ -1,34 +1,35 @@
-import { landTheme, DEFAULT_LAND_THEME } from "../../shared/land-theme.ts";
 import type { AnswerValue } from "../../shared/answer-match.ts";
-import {
-  LAND_EMPTY_MS,
-  LAND_GUARD_COST,
-  LAND_QUESTIONS_PER_ROUND,
-  LAND_STEAL_COST,
-  type HostLandState,
-  type LandAwards,
-  type LandBoard,
-  type LandCapture,
-  type LandPhase,
-  type LandPlace,
-  type LandSettings,
-  type LandState,
-  type PlayerLandView,
-  LAND_MINUTES,
-  LAND_MIN_TEAMS,
-} from "../../shared/modes/land.ts";
-import { MAX_TEAMS } from "../../shared/protocol.ts";
-import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
-import { EMPTY, enclosedBy, landBoardSize, placementCost, startTiles, type LandStart } from "../../shared/land-board.ts";
-import type { Question, Quiz } from "../../shared/quiz-schema.ts";
-import { GameError, realClock, teamInfo, type Clock } from "./common.ts";
-import type { LobbyFacts } from "./lobby-facts.ts";
-import { Roster, type BasePlayer } from "./roster.ts";
-import { QuestionStream, type AnswerTotals } from "./stream.ts";
 import { answerOf } from "../../shared/answer-match.ts";
+import type { AvatarChoice } from "../../shared/avatars.ts";
+import { randomAvatar } from "../../shared/avatars.ts";
+import type { LandStart } from "../../shared/land-board.ts";
+import { EMPTY, enclosedBy, landBoardSize, placementCost, startTiles } from "../../shared/land-board.ts";
+import { DEFAULT_LAND_THEME, landTheme } from "../../shared/land-theme.ts";
 import { MODE_NAMES } from "../../shared/mode-names.ts";
-import { handoffOptions, pickTheme, unhandled, type ModeEntry } from "./mode-entry.ts";
+import type {
+  HostLandState,
+  LandAwards,
+  LandBoard,
+  LandCapture,
+  LandPhase,
+  LandPlace,
+  LandSettings,
+  LandState,
+  PlayerLandView,
+} from "../../shared/modes/land.ts";
+import { LAND_EMPTY_MS, LAND_GUARD_COST, LAND_MIN_TEAMS, LAND_MINUTES, LAND_QUESTIONS_PER_ROUND, LAND_STEAL_COST } from "../../shared/modes/land.ts";
+import { MAX_TEAMS } from "../../shared/protocol.ts";
+import type { Question, Quiz } from "../../shared/quiz-schema.ts";
+import type { Clock } from "./common.ts";
+import { GameError, realClock, teamInfo } from "./common.ts";
+import type { LobbyFacts } from "./lobby-facts.ts";
+import type { ModeEntry } from "./mode-entry.ts";
+import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
 import { toCsv } from "./results.ts";
+import type { BasePlayer } from "./roster.ts";
+import { Roster } from "./roster.ts";
+import type { AnswerTotals } from "./stream.ts";
+import { QuestionStream } from "./stream.ts";
 
 export { FEEDBACK_MS } from "./stream.ts";
 
@@ -504,14 +505,38 @@ export class LandGame {
 
 /** Land Grab: one row per player, grouped by the team they started on, in final team order. */
 export function buildLandResultsCsv(game: LandGame): string {
-  const header = ["Team", "Team rank", "Team tiles", "Knocked out by", "Nickname", "Correct", "Wrong", "Accuracy %", "Tiles placed", "Tiles stolen", "Tiles surrounded"];
+  const header = [
+    "Team",
+    "Team rank",
+    "Team tiles",
+    "Knocked out by",
+    "Nickname",
+    "Correct",
+    "Wrong",
+    "Accuracy %",
+    "Tiles placed",
+    "Tiles stolen",
+    "Tiles surrounded",
+  ];
   const rows: (string | number)[][] = [];
   for (const t of game.rankedTeams()) {
     const members = [...game.players.values()].filter((p) => p.firstTeam === t.index).sort((a, b) => b.placed - a.placed || b.correct - a.correct);
     for (const p of members) {
       const answered = p.correct + p.wrong;
       const by = t.conqueredBy === null ? "" : game.teams[t.conqueredBy]!.name;
-      rows.push([t.name, t.rank, t.tiles, by, p.nickname, p.correct, p.wrong, answered ? Math.round((p.correct / answered) * 100) : "", p.placed, p.stolen, p.captured]);
+      rows.push([
+        t.name,
+        t.rank,
+        t.tiles,
+        by,
+        p.nickname,
+        p.correct,
+        p.wrong,
+        answered ? Math.round((p.correct / answered) * 100) : "",
+        p.placed,
+        p.stolen,
+        p.captured,
+      ]);
     }
   }
   return toCsv([header, ...rows]);

@@ -1,15 +1,19 @@
-import { LandThemeProvider, useNorthPole, northPoleArt } from "../shared/land-skin.tsx";
 import { useEffect, useRef, useState } from "preact/hooks";
-import { LAND_GUARD_COST, LAND_MINUTES, LAND_MIN_TEAMS, LAND_STEAL_COST, type HostLandTeam, type LandBoard } from "../../shared/modes/land.ts";
-import { MAX_TEAMS, type HostView } from "../../shared/protocol.ts";
 import { captureThreat } from "../../shared/land-board.ts";
-import { landTheme, type LandTheme } from "../../shared/land-theme.ts";
-import { BANNER_CAPTURE, BANNER_KNOCKOUT, HexBoard, LandShape, Plinth, landArt, useBanner, useTeamCard } from "../shared/land-art.tsx";
+import type { LandTheme } from "../../shared/land-theme.ts";
+import { landTheme } from "../../shared/land-theme.ts";
+import type { HostLandTeam, LandBoard } from "../../shared/modes/land.ts";
+import { LAND_GUARD_COST, LAND_MIN_TEAMS, LAND_MINUTES, LAND_STEAL_COST } from "../../shared/modes/land.ts";
+import type { HostView } from "../../shared/protocol.ts";
+import { MAX_TEAMS } from "../../shared/protocol.ts";
+import { BANNER_CAPTURE, BANNER_KNOCKOUT, HexBoard, LandShape, landArt, Plinth, useBanner, useTeamCard } from "../shared/land-art.tsx";
+import { LandThemeProvider, northPoleArt, useNorthPole } from "../shared/land-skin.tsx";
+import type { MusicCue } from "../shared/music/index.ts";
 import { play } from "../shared/sounds.ts";
 import { useEventFlash } from "../shared/tower-art.tsx";
 import { formatClock, ordinal, teamInk, teamVars, useCountdown } from "../shared/ui.tsx";
-import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
-import type { MusicCue } from "../shared/music/index.ts";
+import type { Send } from "./common.tsx";
+import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen } from "./common.tsx";
 import type { LobbyModeEntry, LobbySettingsProps } from "./lobby-modes.tsx";
 import { Award } from "./tower.tsx";
 
@@ -19,7 +23,11 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 /** Projector screen for Land Grab: countdown → the land → podium. */
 export function LandStage({ view, send }: { view: LandView; send: Send }) {
-  return <LandThemeProvider theme={view.theme}><LandStageContent view={view} send={send} /></LandThemeProvider>;
+  return (
+    <LandThemeProvider theme={view.theme}>
+      <LandStageContent view={view} send={send} />
+    </LandThemeProvider>
+  );
 }
 
 function LandStageContent({ view, send }: { view: LandView; send: Send }) {
@@ -58,8 +66,12 @@ function LandStageContent({ view, send }: { view: LandView; send: Send }) {
   let banner: { text: string; color: string } | null = null;
   if (view.phase === "conquered" && alive[0]) banner = { text: `👑 ${teamName(alive[0].index)} rules the whole land!`, color: alive[0].color };
   else if (capture?.knockedOut.length)
-    banner = { text: `💥 ${teamName(capture.team)} surrounded ${capture.knockedOut.map(teamName).join(" and ")}! Their players switch sides`, color: BANNER_KNOCKOUT };
-  else if (capture) banner = { text: `🚩 ${capture.nickname} closed the ring: ${teamName(capture.team)} takes ${plural(capture.tiles.length, "tile")}`, color: BANNER_CAPTURE };
+    banner = {
+      text: `💥 ${teamName(capture.team)} surrounded ${capture.knockedOut.map(teamName).join(" and ")}! Their players switch sides`,
+      color: BANNER_KNOCKOUT,
+    };
+  else if (capture)
+    banner = { text: `🚩 ${capture.nickname} closed the ring: ${teamName(capture.team)} takes ${plural(capture.tiles.length, "tile")}`, color: BANNER_CAPTURE };
 
   return (
     <div class={`stage ${christmas ? "land-christmas" : ""}`}>
@@ -219,14 +231,27 @@ function LandSettings({ settings, send }: LobbySettingsProps<"land">) {
     <>
       <label class="opt">
         Theme
-        <select aria-label="Land Grab theme" value={landTheme(settings.theme)} onChange={(e) => send({ type: "host.setModeSettings", mode: "land", settings: { teams: settings.teams, minutes: settings.minutes, theme: e.currentTarget.value as LandTheme } })}>
+        <select
+          aria-label="Land Grab theme"
+          value={landTheme(settings.theme)}
+          onChange={(e) =>
+            send({
+              type: "host.setModeSettings",
+              mode: "land",
+              settings: { teams: settings.teams, minutes: settings.minutes, theme: e.currentTarget.value as LandTheme },
+            })
+          }
+        >
           <option value="christmas">🎄 North Pole</option>
           <option value="classic">🚩 Classic</option>
         </select>
       </label>
       <label class="opt">
         Teams
-        <select value={settings.teams} onChange={(e) => send({ type: "host.setModeSettings", mode: "land", settings: { teams: Number(e.currentTarget.value), minutes: settings.minutes } })}>
+        <select
+          value={settings.teams}
+          onChange={(e) => send({ type: "host.setModeSettings", mode: "land", settings: { teams: Number(e.currentTarget.value), minutes: settings.minutes } })}
+        >
           {Array.from({ length: MAX_TEAMS - LAND_MIN_TEAMS + 1 }, (_, i) => (
             <option key={i} value={i + LAND_MIN_TEAMS}>
               {i + LAND_MIN_TEAMS}
@@ -236,7 +261,10 @@ function LandSettings({ settings, send }: LobbySettingsProps<"land">) {
       </label>
       <label class="opt">
         Time
-        <select value={settings.minutes} onChange={(e) => send({ type: "host.setModeSettings", mode: "land", settings: { teams: settings.teams, minutes: Number(e.currentTarget.value) } })}>
+        <select
+          value={settings.minutes}
+          onChange={(e) => send({ type: "host.setModeSettings", mode: "land", settings: { teams: settings.teams, minutes: Number(e.currentTarget.value) } })}
+        >
           {LAND_MINUTES.map((m) => (
             <option key={m} value={m}>
               {m} min
@@ -244,7 +272,9 @@ function LandSettings({ settings, send }: LobbySettingsProps<"land">) {
           ))}
         </select>
       </label>
-      <span class="opt mode-hint">Every 3 questions, correct answers become tiles. Surround land to capture it, and another team's starting point to knock them out.</span>
+      <span class="opt mode-hint">
+        Every 3 questions, correct answers become tiles. Surround land to capture it, and another team's starting point to knock them out.
+      </span>
     </>
   );
 }

@@ -11,8 +11,10 @@
  * oscillator voices here until those are loaded; chiptune and arcade tracks keep the synths.
  * A track with `rich: true` (or `rich: "arcade"`) is played with the fuller sound in rich.ts instead.
  */
+
+import type { Echo, RichBus, RichStyle } from "./rich.ts";
+import { createEcho, createRichBus, humanize, panFor, playRich, richStyle, STRUM_S } from "./rich.ts";
 import { loadSamples, playSample } from "./samples.ts";
-import { STRUM_S, createEcho, createRichBus, humanize, panFor, playRich, richStyle, type Echo, type RichBus, type RichStyle } from "./rich.ts";
 
 type Instrument =
   | "kick"
@@ -45,7 +47,21 @@ type Instrument =
   | "heart"
   | "chipnoise";
 
-export const DRUMS = new Set<Instrument>(["kick", "snare", "hat", "openhat", "clap", "tick", "cymbal", "woodblock", "sonar", "taiko", "bubble", "heart", "chipnoise"]);
+export const DRUMS = new Set<Instrument>([
+  "kick",
+  "snare",
+  "hat",
+  "openhat",
+  "clap",
+  "tick",
+  "cymbal",
+  "woodblock",
+  "sonar",
+  "taiko",
+  "bubble",
+  "heart",
+  "chipnoise",
+]);
 
 export interface Layer {
   inst: Instrument;
@@ -147,7 +163,18 @@ function env(g: GainNode, t: number, peak: number, attack: number, hold: number,
   g.gain.exponentialRampToValueAtTime(0.0001, t + attack + hold + release);
 }
 
-function osc(ctx: Ctx, dest: AudioNode, type: OscillatorType | "pulse", freq: number, t: number, peak: number, attack: number, hold: number, release: number, detune = 0) {
+function osc(
+  ctx: Ctx,
+  dest: AudioNode,
+  type: OscillatorType | "pulse",
+  freq: number,
+  t: number,
+  peak: number,
+  attack: number,
+  hold: number,
+  release: number,
+  detune = 0,
+) {
   const o = ctx.createOscillator();
   if (type === "pulse") o.setPeriodicWave(pulseWave(ctx));
   else o.type = type;
@@ -559,7 +586,8 @@ export function scheduleStep(ctx: Ctx, dest: AudioNode, track: Track, step: numb
       const pitch = noteFreq(tok) ?? 0;
       const accent = tok === "o";
       if (sampled && playSample(ctx, out, layer.inst, at, pitch, dur, vol, detune, accent)) return;
-      if (!(style && playRich(ctx, out, layer.inst, at, pitch, dur, vol, detune, style, accent))) playInstrument(ctx, out, layer.inst, at, pitch, dur, vol, accent);
+      if (!(style && playRich(ctx, out, layer.inst, at, pitch, dur, vol, detune, style, accent)))
+        playInstrument(ctx, out, layer.inst, at, pitch, dur, vol, accent);
       return;
     }
     let held = 1;
@@ -788,15 +816,18 @@ export class MusicPlayer {
       old.gain.gain.setValueAtTime(old.gain.gain.value, now);
       old.gain.gain.linearRampToValueAtTime(0, now + FADE_S);
       const audio = old.audio;
-      setTimeout(() => {
-        old.gain.disconnect();
-        old.echo?.dispose();
-        audio?.pause();
-        if (old.track?.rich && --this.richUsers === 0 && this.rich) {
-          this.rich.dispose();
-          this.rich = null;
-        }
-      }, FADE_S * 1000 + 200);
+      setTimeout(
+        () => {
+          old.gain.disconnect();
+          old.echo?.dispose();
+          audio?.pause();
+          if (old.track?.rich && --this.richUsers === 0 && this.rich) {
+            this.rich.dispose();
+            this.rich = null;
+          }
+        },
+        FADE_S * 1000 + 200,
+      );
     }
     this.current = null;
     if (!id) return;

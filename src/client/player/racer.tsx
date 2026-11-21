@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import type { ClientMsg } from "../../shared/protocol.ts";
 import type { PlayerRacerView, RacerTurn } from "../../shared/modes/racer.ts";
+import type { ClientMsg } from "../../shared/protocol.ts";
 import type { RacerConfidence } from "../../shared/racer-rules.ts";
 import { RACER_CONFIDENCE, RACER_CONFIDENCE_LEVELS } from "../../shared/racer-rules.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
+import { PinDragger } from "../shared/pin.tsx";
 import { RacerScene } from "../shared/racer-art.tsx";
 import { play } from "../shared/sounds.ts";
-import { PinDragger } from "../shared/pin.tsx";
-import { LockedChoice, Shape, TextAnswer, optionColor, useCountdown } from "../shared/ui.tsx";
 import { Tex, visibleLength } from "../shared/tex.tsx";
+import { LockedChoice, optionColor, Shape, TextAnswer, useCountdown } from "../shared/ui.tsx";
 
 type Send = (m: ClientMsg) => void;
 
@@ -46,7 +46,9 @@ export function RacerPlayer({ view, send }: { view: PlayerRacerView; send: Send 
   } else if (view.phase === "intro") {
     body = (
       <main class="center racer-watch">
-        <p class={`q-text racer-q ${qClass(q.text)}`}><Tex text={q.text} /></p>
+        <p class={`q-text racer-q ${qClass(q.text)}`}>
+          <Tex text={q.text} />
+        </p>
         <p class="racer-ask">The car has crashed. Get at least half right to repair it.</p>
       </main>
     );
@@ -122,7 +124,9 @@ function DriverScreen({ view, send }: { view: PlayerRacerView; send: Send }) {
           <div class={`timer racer-num ${secs <= 5 ? "urgent" : ""}`}>{secs}</div>
           <h1>You're the driver</h1>
         </div>
-        <p class={`q-text racer-q ${qClass(q.text)}`}><Tex text={q.text} /></p>
+        <p class={`q-text racer-q ${qClass(q.text)}`}>
+          <Tex text={q.text} />
+        </p>
         {q.image && <img class="q-img racer-q-img" src={`/${q.image}`} alt="" />}
         <p class="racer-ask">How confident are you in the class?</p>
       </div>
@@ -139,7 +143,9 @@ function WatchScreen({ view }: { view: PlayerRacerView }) {
   const q = view.question!;
   return (
     <main class="center racer-watch">
-      <p class={`q-text racer-q ${qClass(q.text)}`}><Tex text={q.text} /></p>
+      <p class={`q-text racer-q ${qClass(q.text)}`}>
+        <Tex text={q.text} />
+      </p>
       {view.driver && (
         <div class="racer-driver">
           <div class="racer-avatar">
@@ -197,7 +203,19 @@ function Lever({ level, onChange }: { level: RacerConfidence; onChange?: (level:
   const topDown = [...RACER_CONFIDENCE_LEVELS].reverse();
   return (
     <div class={`racer-lever ${onChange ? "" : "small"} ${dragPos !== null ? "dragging" : ""}`}>
-      <div class="racer-track" ref={track} role="slider" aria-label="Confidence" aria-orientation="vertical" aria-valuemin={0} aria-valuemax={last} aria-valuenow={RACER_CONFIDENCE_LEVELS.indexOf(level)} aria-valuetext={RACER_CONFIDENCE[level].label} aria-readonly={!onChange} {...handlers}>
+      <div
+        class="racer-track"
+        ref={track}
+        role="slider"
+        aria-label="Confidence"
+        aria-orientation="vertical"
+        aria-valuemin={0}
+        aria-valuemax={last}
+        aria-valuenow={RACER_CONFIDENCE_LEVELS.indexOf(level)}
+        aria-valuetext={RACER_CONFIDENCE[level].label}
+        aria-readonly={!onChange}
+        {...handlers}
+      >
         <div class="racer-slot" />
         {topDown.map((lv, i) => (
           <i key={lv} class="racer-notch" style={{ top: `${((2 * i + 1) / (2 * topDown.length)) * 100}%` }} />
@@ -323,11 +341,7 @@ function RacerAnswering({ view, send }: { view: PlayerRacerView; send: Send }) {
   if (chosen !== null || typed !== null) {
     return (
       <main class="center">
-        {typed !== null ? (
-          <div class="locked-text">{typed}</div>
-        ) : (
-          <LockedChoice type={q.type} index={chosen!} label={q.options[chosen!] ?? ""} />
-        )}
+        {typed !== null ? <div class="locked-text">{typed}</div> : <LockedChoice type={q.type} index={chosen!} label={q.options[chosen!] ?? ""} />}
         <h1>Answer locked in</h1>
         <p class="muted">Waiting for the others…</p>
       </main>
@@ -346,7 +360,9 @@ function RacerAnswering({ view, send }: { view: PlayerRacerView; send: Send }) {
     <main class="answering">
       <div class="q-head">
         <div class={`timer ${secs <= 5 ? "urgent" : ""}`}>{secs}</div>
-        <h2 class={`q-text ${qClass(q.text)}`}><Tex text={q.text} /></h2>
+        <h2 class={`q-text ${qClass(q.text)}`}>
+          <Tex text={q.text} />
+        </h2>
       </div>
       {q.image && !pin && <img class="q-img" src={`/${q.image}`} alt="" />}
       <div class="racer-chip">
@@ -379,7 +395,9 @@ function RacerAnswering({ view, send }: { view: PlayerRacerView; send: Send }) {
             return (
               <button key={i} class={`answer opt-${c}`} onClick={() => choose(i)}>
                 <Shape index={c} />
-                <span><Tex text={text} /></span>
+                <span>
+                  <Tex text={text} />
+                </span>
               </button>
             );
           })}
@@ -420,7 +438,9 @@ function RacerReveal({ view }: { view: PlayerRacerView }) {
               return (
                 <li key={i} class={`reveal-item opt-${c} is-correct`}>
                   <Shape index={c} />
-                  <span class="t"><Tex text={q.options[i]!} /></span>
+                  <span class="t">
+                    <Tex text={q.options[i]!} />
+                  </span>
                   <span class="tag">✓ {r!.correct.length > 1 ? "Correct" : "Answer"}</span>
                 </li>
               );
@@ -445,7 +465,12 @@ function RacerReveal({ view }: { view: PlayerRacerView }) {
         )}
       </div>
       <div class="racer-strip">
-        <RacerScene theme={view.theme} speed={view.car.speed} crashed={view.car.crashed} ejected={!good && t ? { key: t.index, riders: [{ avatar: view.me.avatar, name: view.me.nickname }] } : undefined} />
+        <RacerScene
+          theme={view.theme}
+          speed={view.car.speed}
+          crashed={view.car.crashed}
+          ejected={!good && t ? { key: t.index, riders: [{ avatar: view.me.avatar, name: view.me.nickname }] } : undefined}
+        />
       </div>
     </main>
   );

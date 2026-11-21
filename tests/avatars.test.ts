@@ -1,15 +1,16 @@
 import { describe, expect, test } from "bun:test";
-import type { AccessoryId, AvatarId } from "../src/shared/avatars.ts";
 import { ACCESSORY_ART, AVATAR_ART } from "../src/client/shared/avatar-art.tsx";
 import { GameError } from "../src/server/game/game.ts";
 import { Lobby } from "../src/server/game/lobby.ts";
 import { SubGame } from "../src/server/game/submarine.ts";
 import { TowerGame } from "../src/server/game/tower.ts";
-import { ACCESSORIES, AVATARS, AVATAR_SET, cleanAvatar, OFFERED_ACCESSORIES, OFFERED_AVATARS, randomAvatar } from "../src/shared/avatars.ts";
+import type { AccessoryId, AvatarId } from "../src/shared/avatars.ts";
+import { ACCESSORIES, AVATAR_SET, AVATARS, cleanAvatar, OFFERED_ACCESSORIES, OFFERED_AVATARS, randomAvatar } from "../src/shared/avatars.ts";
 
 // Ids from whichever set is offered, so these tests pass with either AVATAR_SET.
 const [A1, A2, A3] = OFFERED_AVATARS.map((a) => a.id) as [AvatarId, AvatarId, AvatarId];
 const [, X1, X2, X3] = OFFERED_ACCESSORIES.map((a) => a.id) as [AccessoryId, AccessoryId, AccessoryId, AccessoryId];
+
 import { classicGame, FakeClock, sampleQuiz } from "./helpers.ts";
 
 describe("catalog", () => {
@@ -82,7 +83,10 @@ describe("in the lobby", () => {
   });
 
   test("the avatar carries over into Tallest Tower and Submarine Squad", () => {
-    for (const make of [(g: Lobby) => TowerGame.fromLobby(g.handoffFacts("tower"), { clock: new FakeClock() }), (g: Lobby) => SubGame.fromLobby(g.handoffFacts("submarine"), { clock: new FakeClock() })]) {
+    for (const make of [
+      (g: Lobby) => TowerGame.fromLobby(g.handoffFacts("tower"), { clock: new FakeClock() }),
+      (g: Lobby) => SubGame.fromLobby(g.handoffFacts("submarine"), { clock: new FakeClock() }),
+    ]) {
       const lobby = new Lobby(sampleQuiz());
       const p = lobby.join("A");
       lobby.setAvatar(p.id, A3, X3);

@@ -1,7 +1,9 @@
-import { checkAnswer, type AnswerValue } from "../../shared/answer-match.ts";
-import type { Question } from "../../shared/quiz-schema.ts";
+import type { AnswerValue } from "../../shared/answer-match.ts";
+import { checkAnswer } from "../../shared/answer-match.ts";
 import type { QuestionError, StreamQuestionView } from "../../shared/mode-views.ts";
-import { shuffle, shuffleOptions, topErrors, type Clock } from "./common.ts";
+import type { Question } from "../../shared/quiz-schema.ts";
+import type { Clock } from "./common.ts";
+import { shuffle, shuffleOptions, topErrors } from "./common.ts";
 
 /** How long the ✓/✗ flash shows before the next question can be answered. */
 export const FEEDBACK_MS = 1000;
@@ -92,7 +94,10 @@ export class QuestionStream {
   private deal(state: QuestionState): void {
     const last = state.current?.qIndex;
     if (state.deck.length === 0) {
-      state.deck = shuffle(this.questions.map((_, i) => i), this.rng);
+      state.deck = shuffle(
+        this.questions.map((_, i) => i),
+        this.rng,
+      );
       // Don't repeat the question just answered across a reshuffle.
       if (state.deck.length > 1 && state.deck[0] === last) state.deck.push(state.deck.shift()!);
     }

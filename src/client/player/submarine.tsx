@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "preact/hooks";
+import type { PlayerSubView } from "../../shared/modes/submarine.ts";
+import { CORRECT_PER_BOOST } from "../../shared/modes/submarine.ts";
 import type { ClientMsg } from "../../shared/protocol.ts";
-import { CORRECT_PER_BOOST, type PlayerSubView } from "../../shared/modes/submarine.ts";
 import { GlyphSymbol } from "../shared/glyph-symbol.tsx";
-import { winterGradient } from "../shared/winter-gradient.ts";
-import { play, startRev, type Rev } from "../shared/sounds.ts";
+import type { Rev } from "../shared/sounds.ts";
+import { play, startRev } from "../shared/sounds.ts";
 import { useCountdown } from "../shared/ui.tsx";
+import { winterGradient } from "../shared/winter-gradient.ts";
 import { Feedback, StreamQuestion } from "./stream-question.tsx";
 
 type Send = (m: ClientMsg) => void;
@@ -34,7 +36,10 @@ export function SubmarinePlayer({ view, send }: { view: PlayerSubView; send: Sen
       <main class="center">
         <div class="sub-emoji">🐕🛷🎄</div>
         <h1>Get ready!</h1>
-        <p class="muted">Answer questions to earn boosts. Every {CORRECT_PER_BOOST} correct answers, hold the boost button to send the sled racing away from the Christmas goblin!</p>
+        <p class="muted">
+          Answer questions to earn boosts. Every {CORRECT_PER_BOOST} correct answers, hold the boost button to send the sled racing away from the Christmas
+          goblin!
+        </p>
         <div class="tower-count">{Math.max(1, secs)}</div>
       </main>
     );
@@ -232,7 +237,9 @@ function DiveScreen({ view, send }: { view: PlayerSubView; send: Send }) {
     <main class="dive-diver">
       <div class="dive-head">
         <b>❄️ Listen to the instructors!</b>
-        <span>Tap the symbol being described · {Math.min(dive.index + 1, dive.total)} / {dive.total}</span>
+        <span>
+          Tap the symbol being described · {Math.min(dive.index + 1, dive.total)} / {dive.total}
+        </span>
       </div>
       {dive.index < dive.total && <SymbolTimer index={dive.index} remainingMs={dive.symbolRemainingMs} totalMs={dive.symbolMs} />}
       {dive.done ? (

@@ -1,26 +1,26 @@
 import { describe, expect, test } from "bun:test";
 import { Lobby } from "../src/server/game/lobby.ts";
-import { buildSubResultsCsv } from "../src/server/game/submarine.ts";
+import { FEEDBACK_MS } from "../src/server/game/stream.ts";
+import type { SubPlayer } from "../src/server/game/submarine.ts";
 import {
   BOOST_MIN_HOLD_MS,
   BOOST_POWER,
   BOOSTS_BASE,
+  buildSubResultsCsv,
   CAUGHT_MS,
   COUNTDOWN_MS,
   DIVE_METERS_PER_HIT,
-  DIVE_SYMBOLS,
-  LOOKALIKES,
   DIVE_SYMBOL_TIMEOUT_MS,
+  DIVE_SYMBOLS,
   DIVE_WRONG_LOCK_MS,
   ESCAPED_MS,
   GAP_MAX,
   GAP_START,
   LEVEL_METERS,
+  LOOKALIKES,
   SubGame,
   speedFor,
-  type SubPlayer,
 } from "../src/server/game/submarine.ts";
-import { FEEDBACK_MS } from "../src/server/game/stream.ts";
 import { CHRISTMAS_GLYPHS, glyphId, parseGlyph } from "../src/shared/glyphs.ts";
 import { FakeClock, sampleQuiz } from "./helpers.ts";
 
@@ -215,7 +215,10 @@ describe("dive", () => {
   });
 
   test("a full class gets 20 different Christmas targets", () => {
-    const { game } = toDive(Array.from({ length: 30 }, (_, i) => `P${i}`), () => 0);
+    const { game } = toDive(
+      Array.from({ length: 30 }, (_, i) => `P${i}`),
+      () => 0,
+    );
     const targets = game.instructors.flatMap((i) => i.symbols);
     expect(targets).toHaveLength(4 * DIVE_SYMBOLS);
     expect(new Set(targets).size).toBe(targets.length);

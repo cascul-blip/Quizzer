@@ -1,6 +1,6 @@
 import type { AvatarChoice } from "../avatars.ts";
-import type { FightTheme } from "../fight-theme.ts";
 import type { HillHeight, ShotImpact } from "../fight-physics.ts";
+import type { FightTheme } from "../fight-theme.ts";
 import type { QuestionError, StreamFeedbackView, StreamQuestionView, SubAward, TeamInfo } from "../mode-views.ts";
 
 // Tower Fight protocol types.

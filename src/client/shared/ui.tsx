@@ -1,4 +1,5 @@
-import { Component, type ComponentChildren } from "preact";
+import type { ComponentChildren } from "preact";
+import { Component } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { STREAK_MIN, TEAMS } from "../../shared/protocol.ts";
 import { PinIcon } from "./pin.tsx";
@@ -152,7 +153,19 @@ export class ErrorBoundary extends Component<{ children: ComponentChildren }, { 
   render() {
     if (!this.state.failed) return this.props.children;
     return (
-      <main class="center" style={{ minHeight: "100dvh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "16px", padding: "24px", textAlign: "center" }}>
+      <main
+        class="center"
+        style={{
+          minHeight: "100dvh",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "16px",
+          padding: "24px",
+          textAlign: "center",
+        }}
+      >
         <h1 style={{ margin: 0 }}>Something went wrong</h1>
         <button class="btn primary" onClick={() => location.reload()}>
           Tap to reload

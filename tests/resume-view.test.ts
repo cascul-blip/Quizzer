@@ -26,7 +26,9 @@ function phone() {
     send: (message) => sent.push(message),
     saveToken: (token) => tokens.push(token),
     preloadImages: (refs) => images.push(refs),
-    show: (state) => { screen = state; },
+    show: (state) => {
+      screen = state;
+    },
   });
   return { session, sent, tokens, images, screen: () => screen };
 }

@@ -9,11 +9,7 @@
       "type": "face",
       "subject": "a round warm-white snowman face, orange carrot nose, black coal smile",
       "prompt": "Use case: stylized-concept. Production game sprite, one single isolated asset. Input reference image is STYLE REFERENCE ONLY: match the \"Toybox Clay\" collection's smooth matte polymer-clay material, chunky rounded forms, warm festive colors, soft frontal studio lighting, cheerful collectible-toy personality. Generate ONLY a round warm-white snowman face, orange carrot nose, black coal smile. HEAD ONLY, straight-on front view, symmetrical overall head, two friendly open eyes, slight smile, no neck, no shoulders, no body, NO hats, glasses, scarf or other removable accessories. Standardized facial landmarks: eye centers at 40% and 60% of head width and 48% of head height; mouth at 68% height. Keep ears/antlers compact and crown unobstructed for separate hats. Square canvas, entire single object centered with generous empty margin on all sides, fully visible, no cropped edges. GENUINELY TRANSPARENT BACKGROUND alpha, no floor, no ground shadow, no cast backdrop, no checkerboard drawing. Crisp clean silhouette edges, no fuzzy fibers. No lettering, no labels, no watermark, no title, no other objects.",
-      "eyes": [
-        0.317,
-        0.695,
-        0.437
-      ]
+      "eyes": [0.317, 0.695, 0.437]
     },
     {
       "id": "reindeer",
@@ -21,11 +17,7 @@
       "type": "face",
       "subject": "a cinnamon-brown reindeer face with a bright red nose, cream muzzle and compact branching antlers",
       "prompt": "Use case: stylized-concept. Production game sprite, one single isolated asset. Input reference image is STYLE REFERENCE ONLY: match the \"Toybox Clay\" collection's smooth matte polymer-clay material, chunky rounded forms, warm festive colors, soft frontal studio lighting, cheerful collectible-toy personality. Generate ONLY a cinnamon-brown reindeer face with a bright red nose, cream muzzle and compact branching antlers. HEAD ONLY, straight-on front view, symmetrical overall head, two friendly open eyes, slight smile, no neck, no shoulders, no body, NO hats, glasses, scarf or other removable accessories. Standardized facial landmarks: eye centers at 40% and 60% of head width and 48% of head height; mouth at 68% height. Keep ears/antlers compact and crown unobstructed for separate hats. Square canvas, entire single object centered with generous empty margin on all sides, fully visible, no cropped edges. GENUINELY TRANSPARENT BACKGROUND alpha, no floor, no ground shadow, no cast backdrop, no checkerboard drawing. Crisp clean silhouette edges, no fuzzy fibers. No lettering, no labels, no watermark, no title, no other objects.",
-      "eyes": [
-        0.337,
-        0.665,
-        0.54
-      ]
+      "eyes": [0.337, 0.665, 0.54]
     },
     {
       "id": "polarbear",
@@ -33,11 +25,7 @@
       "type": "face",
       "subject": "a white polar bear face, small round ears, cream muzzle, black nose",
       "prompt": "Use case: stylized-concept. Production game sprite, one single isolated asset. Input reference image is STYLE REFERENCE ONLY: match the \"Toybox Clay\" collection's smooth matte polymer-clay material, chunky rounded forms, warm festive colors, soft frontal studio lighting, cheerful collectible-toy personality. Generate ONLY a white polar bear face, small round ears, cream muzzle, black nose. HEAD ONLY, straight-on front view, symmetrical overall head, two friendly open eyes, slight smile, no neck, no shoulders, no body, NO hats, glasses, scarf or other removable accessories. Standardized facial landmarks: eye centers at 40% and 60% of head width and 48% of head height; mouth at 68% height. Keep ears/antlers compact and crown unobstructed for separate hats. Square canvas, entire single object centered with generous empty margin on all sides, fully visible, no cropped edges. GENUINELY TRANSPARENT BACKGROUND alpha, no floor, no ground shadow, no cast backdrop, no checkerboard drawing. Crisp clean silhouette edges, no fuzzy fibers. No lettering, no labels, no watermark, no title, no other objects.",
-      "eyes": [
-        0.312,
-        0.69,
-        0.48
-      ]
+      "eyes": [0.312, 0.69, 0.48]
     },
     {
       "id": "gingerbread",
@@ -45,11 +33,7 @@
       "type": "face",
       "subject": "a round golden gingerbread cookie face, white icing trim, icing smile and rosy cheeks",
       "prompt": "Use case: stylized-concept. Production game sprite, one single isolated asset. Input reference image is STYLE REFERENCE ONLY: match the \"Toybox Clay\" collection's smooth matte polymer-clay material, chunky rounded forms, warm festive colors, soft frontal studio lighting, cheerful collectible-toy personality. Generate ONLY a round golden gingerbread cookie face, white icing trim, icing smile and rosy cheeks. HEAD ONLY, straight-on front view, symmetrical overall head, two friendly open eyes, slight smile, no neck, no shoulders, no body, NO hats, glasses, scarf or other removable accessories. Standardized facial landmarks: eye centers at 40% and 60% of head width and 48% of head height; mouth at 68% height. Keep ears/antlers compact and crown unobstructed for separate hats. Square canvas, entire single object centered with generous empty margin on all sides, fully visible, no cropped edges. GENUINELY TRANSPARENT BACKGROUND alpha, no floor, no ground shadow, no cast backdrop, no checkerboard drawing. Crisp clean silhouette edges, no fuzzy fibers. No lettering, no labels, no watermark, no title, no other objects.",
-      "eyes": [
-        0.33,
-        0.674,
-        0.47
-      ]
+      "eyes": [0.33, 0.674, 0.47]
     },
     {
       "id": "elf",
@@ -57,11 +41,7 @@
       "type": "face",
       "subject": "a friendly Christmas elf face, warm brown skin, dark curly hair and pointed ears",
       "prompt": "Use case: stylized-concept. Production game sprite, one single isolated asset. Input reference image is STYLE REFERENCE ONLY: match the \"Toybox Clay\" collection's smooth matte polymer-clay material, chunky rounded forms, warm festive colors, soft frontal studio lighting, cheerful collectible-toy personality. Generate ONLY a friendly Christmas elf face, warm brown skin, dark curly hair and pointed ears. HEAD ONLY, straight-on front view, symmetrical overall head, two friendly open eyes, slight smile, no neck, no shoulders, no body, NO hats, glasses, scarf or other removable accessories. Standardized facial landmarks: eye centers at 40% and 60% of head width and 48% of head height; mouth at 68% height. Keep ears/antlers compact and crown unobstructed for separate hats. Square canvas, entire single object centered with generous empty margin on all sides, fully visible, no cropped edges. GENUINELY TRANSPARENT BACKGROUND alpha, no floor, no ground shadow, no cast backdrop, no checkerboard drawing. Crisp clean silhouette edges, no fuzzy fibers. No lettering, no labels, no watermark, no title, no other objects.",
-      "eyes": [
-        0.35,
-        0.651,
-        0.6
-      ]
+      "eyes": [0.35, 0.651, 0.6]
     },
     {
       "id": "nutcracker",
@@ -69,11 +49,7 @@
       "type": "face",
       "subject": "a friendly wooden nutcracker soldier face, peach skin, white curled moustache and blocky square jaw, bare crown, no hat",
       "prompt": "Use case: stylized-concept. Production game sprite, one single isolated asset. Input reference image is STYLE REFERENCE ONLY: match the \"Toybox Clay\" collection's smooth matte polymer-clay material, chunky rounded forms, warm festive colors, soft frontal studio lighting, cheerful collectible-toy personality. Generate ONLY a friendly wooden nutcracker soldier face, peach skin, white curled moustache and blocky square jaw, bare crown, no hat. HEAD ONLY, straight-on front view, symmetrical overall head, two friendly open eyes, slight smile, no neck, no shoulders, no body, NO hats, glasses, scarf or other removable accessories. Standardized facial landmarks: eye centers at 40% and 60% of head width and 48% of head height; mouth at 68% height. Keep ears/antlers compact and crown unobstructed for separate hats. Square canvas, entire single object centered with generous empty margin on all sides, fully visible, no cropped edges. GENUINELY TRANSPARENT BACKGROUND alpha, no floor, no ground shadow, no cast backdrop, no checkerboard drawing. Crisp clean silhouette edges, no fuzzy fibers. No lettering, no labels, no watermark, no title, no other objects.",
-      "eyes": [
-        0.371,
-        0.643,
-        0.44
-      ],
+      "eyes": [0.371, 0.643, 0.44],
       "revision": "Removed the generated crown with built-in image_gen; preserved the face, moustache and white side hair.",
       "revision_prompt": "Edit this single transparent game avatar. Remove ONLY the entire gold crown from the top of the nutcracker's head. Replace the covered forehead/top of head with a simple bare peach wooden/clay scalp, rounded at the top, with the white side hair retained. Keep the exact same friendly nutcracker face, white curled moustache, cheeks, eyes, nose, square jaw and clay material. No hat, NO crown, NO headwear of any kind. Head only, no neck, shoulders, body. Entire head centered fully visible with generous transparent margin on all sides, no crop. Keep the background genuinely transparent."
     },
@@ -83,11 +59,7 @@
       "type": "face",
       "subject": "a round white snowy owl face, subtle gray feather markings, amber eyes and tiny dark beak",
       "prompt": "Use case: stylized-concept. Production game sprite, one single isolated asset. Input reference image is STYLE REFERENCE ONLY: match the \"Toybox Clay\" collection's smooth matte polymer-clay material, chunky rounded forms, warm festive colors, soft frontal studio lighting, cheerful collectible-toy personality. Generate ONLY a round white snowy owl face, subtle gray feather markings, amber eyes and tiny dark beak. HEAD ONLY, straight-on front view, symmetrical overall head, two friendly open eyes, slight smile, no neck, no shoulders, no body, NO hats, glasses, scarf or other removable accessories. Standardized facial landmarks: eye centers at 40% and 60% of head width and 48% of head height; mouth at 68% height. Keep ears/antlers compact and crown unobstructed for separate hats. Square canvas, entire single object centered with generous empty margin on all sides, fully visible, no cropped edges. GENUINELY TRANSPARENT BACKGROUND alpha, no floor, no ground shadow, no cast backdrop, no checkerboard drawing. Crisp clean silhouette edges, no fuzzy fibers. No lettering, no labels, no watermark, no title, no other objects.",
-      "eyes": [
-        0.337,
-        0.691,
-        0.481
-      ]
+      "eyes": [0.337, 0.691, 0.481]
     },
     {
       "id": "arcticfox",
@@ -95,11 +67,7 @@
       "type": "face",
       "subject": "a white arctic fox face, triangular ears, tiny black nose and pale blue-gray inner ears",
       "prompt": "Use case: stylized-concept. Production game sprite, one single isolated asset. Input reference image is STYLE REFERENCE ONLY: match the \"Toybox Clay\" collection's smooth matte polymer-clay material, chunky rounded forms, warm festive colors, soft frontal studio lighting, cheerful collectible-toy personality. Generate ONLY a white arctic fox face, triangular ears, tiny black nose and pale blue-gray inner ears. HEAD ONLY, straight-on front view, symmetrical overall head, two friendly open eyes, slight smile, no neck, no shoulders, no body, NO hats, glasses, scarf or other removable accessories. Standardized facial landmarks: eye centers at 40% and 60% of head width and 48% of head height; mouth at 68% height. Keep ears/antlers compact and crown unobstructed for separate hats. Square canvas, entire single object centered with generous empty margin on all sides, fully visible, no cropped edges. GENUINELY TRANSPARENT BACKGROUND alpha, no floor, no ground shadow, no cast backdrop, no checkerboard drawing. Crisp clean silhouette edges, no fuzzy fibers. No lettering, no labels, no watermark, no title, no other objects.",
-      "eyes": [
-        0.328,
-        0.677,
-        0.573
-      ]
+      "eyes": [0.328, 0.677, 0.573]
     },
     {
       "id": "emperorchick",
@@ -107,11 +75,7 @@
       "type": "face",
       "subject": "a gray emperor penguin chick face, white face patches and dark charcoal crown, tiny black beak",
       "prompt": "Use case: stylized-concept. Production game sprite, one single isolated asset. Input reference image is STYLE REFERENCE ONLY: match the \"Toybox Clay\" collection's smooth matte polymer-clay material, chunky rounded forms, warm festive colors, soft frontal studio lighting, cheerful collectible-toy personality. Generate ONLY a gray emperor penguin chick face, white face patches and dark charcoal crown, tiny black beak. HEAD ONLY, straight-on front view, symmetrical overall head, two friendly open eyes, slight smile, no neck, no shoulders, no body, NO hats, glasses, scarf or other removable accessories. Standardized facial landmarks: eye centers at 40% and 60% of head width and 48% of head height; mouth at 68% height. Keep ears/antlers compact and crown unobstructed for separate hats. Square canvas, entire single object centered with generous empty margin on all sides, fully visible, no cropped edges. GENUINELY TRANSPARENT BACKGROUND alpha, no floor, no ground shadow, no cast backdrop, no checkerboard drawing. Crisp clean silhouette edges, no fuzzy fibers. No lettering, no labels, no watermark, no title, no other objects.",
-      "eyes": [
-        0.3,
-        0.702,
-        0.536
-      ]
+      "eyes": [0.3, 0.702, 0.536]
     },
     {
       "id": "seal",
@@ -119,11 +83,7 @@
       "type": "face",
       "subject": "a white harp seal pup face with tiny earless round head, dark nose and delicate short whiskers",
       "prompt": "Use case: stylized-concept. Production game sprite, one single isolated asset. Input reference image is STYLE REFERENCE ONLY: match the \"Toybox Clay\" collection's smooth matte polymer-clay material, chunky rounded forms, warm festive colors, soft frontal studio lighting, cheerful collectible-toy personality. Generate ONLY a white harp seal pup face with tiny earless round head, dark nose and delicate short whiskers. HEAD ONLY, straight-on front view, symmetrical overall head, two friendly open eyes, slight smile, no neck, no shoulders, no body, NO hats, glasses, scarf or other removable accessories. Standardized facial landmarks: eye centers at 40% and 60% of head width and 48% of head height; mouth at 68% height. Keep ears/antlers compact and crown unobstructed for separate hats. Square canvas, entire single object centered with generous empty margin on all sides, fully visible, no cropped edges. GENUINELY TRANSPARENT BACKGROUND alpha, no floor, no ground shadow, no cast backdrop, no checkerboard drawing. Crisp clean silhouette edges, no fuzzy fibers. No lettering, no labels, no watermark, no title, no other objects.",
-      "eyes": [
-        0.317,
-        0.702,
-        0.478
-      ]
+      "eyes": [0.317, 0.702, 0.478]
     },
     {
       "id": "husky",
@@ -131,11 +91,7 @@
       "type": "face",
       "subject": "a gray and white husky dog face with pointed ears, blue eyes and friendly smile",
       "prompt": "Use case: stylized-concept. Production game sprite, one single isolated asset. Input reference image is STYLE REFERENCE ONLY: match the \"Toybox Clay\" collection's smooth matte polymer-clay material, chunky rounded forms, warm festive colors, soft frontal studio lighting, cheerful collectible-toy personality. Generate ONLY a gray and white husky dog face with pointed ears, blue eyes and friendly smile. HEAD ONLY, straight-on front view, symmetrical overall head, two friendly open eyes, slight smile, no neck, no shoulders, no body, NO hats, glasses, scarf or other removable accessories. Standardized facial landmarks: eye centers at 40% and 60% of head width and 48% of head height; mouth at 68% height. Keep ears/antlers compact and crown unobstructed for separate hats. Square canvas, entire single object centered with generous empty margin on all sides, fully visible, no cropped edges. GENUINELY TRANSPARENT BACKGROUND alpha, no floor, no ground shadow, no cast backdrop, no checkerboard drawing. Crisp clean silhouette edges, no fuzzy fibers. No lettering, no labels, no watermark, no title, no other objects.",
-      "eyes": [
-        0.324,
-        0.676,
-        0.555
-      ]
+      "eyes": [0.324, 0.676, 0.555]
     },
     {
       "id": "snowbunny",
@@ -143,11 +99,7 @@
       "type": "face",
       "subject": "a white snowshoe hare face, short upright rounded ears, pink inner ears and tiny pink nose",
       "prompt": "Use case: stylized-concept. Production game sprite, one single isolated asset. Input reference image is STYLE REFERENCE ONLY: match the \"Toybox Clay\" collection's smooth matte polymer-clay material, chunky rounded forms, warm festive colors, soft frontal studio lighting, cheerful collectible-toy personality. Generate ONLY a white snowshoe hare face, short upright rounded ears, pink inner ears and tiny pink nose. HEAD ONLY, straight-on front view, symmetrical overall head, two friendly open eyes, slight smile, no neck, no shoulders, no body, NO hats, glasses, scarf or other removable accessories. Standardized facial landmarks: eye centers at 40% and 60% of head width and 48% of head height; mouth at 68% height. Keep ears/antlers compact and crown unobstructed for separate hats. Square canvas, entire single object centered with generous empty margin on all sides, fully visible, no cropped edges. GENUINELY TRANSPARENT BACKGROUND alpha, no floor, no ground shadow, no cast backdrop, no checkerboard drawing. Crisp clean silhouette edges, no fuzzy fibers. No lettering, no labels, no watermark, no title, no other objects.",
-      "eyes": [
-        0.317,
-        0.693,
-        0.604
-      ]
+      "eyes": [0.317, 0.693, 0.604]
     },
     {
       "id": "moose",
@@ -155,11 +107,7 @@
       "type": "face",
       "subject": "a warm brown moose face with broad cream muzzle and compact wide palmate antlers",
       "prompt": "Use case: stylized-concept. Production game sprite, one single isolated asset. Input reference image is STYLE REFERENCE ONLY: match the \"Toybox Clay\" collection's smooth matte polymer-clay material, chunky rounded forms, warm festive colors, soft frontal studio lighting, cheerful collectible-toy personality. Generate ONLY a warm brown moose face with broad cream muzzle and compact wide palmate antlers. HEAD ONLY, straight-on front view, symmetrical overall head, two friendly open eyes, slight smile, no neck, no shoulders, no body, NO hats, glasses, scarf or other removable accessories. Standardized facial landmarks: eye centers at 40% and 60% of head width and 48% of head height; mouth at 68% height. Keep ears/antlers compact and crown unobstructed for separate hats. Square canvas, entire single object centered with generous empty margin on all sides, fully visible, no cropped edges. GENUINELY TRANSPARENT BACKGROUND alpha, no floor, no ground shadow, no cast backdrop, no checkerboard drawing. Crisp clean silhouette edges, no fuzzy fibers. No lettering, no labels, no watermark, no title, no other objects.",
-      "eyes": [
-        0.352,
-        0.65,
-        0.564
-      ]
+      "eyes": [0.352, 0.65, 0.564]
     },
     {
       "id": "sheep",
@@ -167,11 +115,7 @@
       "type": "face",
       "subject": "a cream lamb face with rounded clay wool curls, floppy ears and pink nose",
       "prompt": "Use case: stylized-concept. Production game sprite, one single isolated asset. Input reference image is STYLE REFERENCE ONLY: match the \"Toybox Clay\" collection's smooth matte polymer-clay material, chunky rounded forms, warm festive colors, soft frontal studio lighting, cheerful collectible-toy personality. Generate ONLY a cream lamb face with rounded clay wool curls, floppy ears and pink nose. HEAD ONLY, straight-on front view, symmetrical overall head, two friendly open eyes, slight smile, no neck, no shoulders, no body, NO hats, glasses, scarf or other removable accessories. Standardized facial landmarks: eye centers at 40% and 60% of head width and 48% of head height; mouth at 68% height. Keep ears/antlers compact and crown unobstructed for separate hats. Square canvas, entire single object centered with generous empty margin on all sides, fully visible, no cropped edges. GENUINELY TRANSPARENT BACKGROUND alpha, no floor, no ground shadow, no cast backdrop, no checkerboard drawing. Crisp clean silhouette edges, no fuzzy fibers. No lettering, no labels, no watermark, no title, no other objects.",
-      "eyes": [
-        0.368,
-        0.639,
-        0.582
-      ]
+      "eyes": [0.368, 0.639, 0.582]
     },
     {
       "id": "angelkid",
@@ -179,11 +123,7 @@
       "type": "face",
       "subject": "a smiling angel child face, deep brown skin and short black sculpted curls, no wings or halo",
       "prompt": "Use case: stylized-concept. Production game sprite, one single isolated asset. Input reference image is STYLE REFERENCE ONLY: match the \"Toybox Clay\" collection's smooth matte polymer-clay material, chunky rounded forms, warm festive colors, soft frontal studio lighting, cheerful collectible-toy personality. Generate ONLY a smiling angel child face, deep brown skin and short black sculpted curls, no wings or halo. HEAD ONLY, straight-on front view, symmetrical overall head, two friendly open eyes, slight smile, no neck, no shoulders, no body, NO hats, glasses, scarf or other removable accessories. Standardized facial landmarks: eye centers at 40% and 60% of head width and 48% of head height; mouth at 68% height. Keep ears/antlers compact and crown unobstructed for separate hats. Square canvas, entire single object centered with generous empty margin on all sides, fully visible, no cropped edges. GENUINELY TRANSPARENT BACKGROUND alpha, no floor, no ground shadow, no cast backdrop, no checkerboard drawing. Crisp clean silhouette edges, no fuzzy fibers. No lettering, no labels, no watermark, no title, no other objects.",
-      "eyes": [
-        0.329,
-        0.672,
-        0.622
-      ]
+      "eyes": [0.329, 0.672, 0.622]
     },
     {
       "id": "santaclaus",
@@ -191,11 +131,7 @@
       "type": "face",
       "subject": "a cheerful Santa Claus face, rosy light skin, white eyebrows, white moustache and round white beard, bare crown, no hat",
       "prompt": "Use case: stylized-concept. Production game sprite, one single isolated asset. Input reference image is STYLE REFERENCE ONLY: match the \"Toybox Clay\" collection's smooth matte polymer-clay material, chunky rounded forms, warm festive colors, soft frontal studio lighting, cheerful collectible-toy personality. Generate ONLY a cheerful Santa Claus face, rosy light skin, white eyebrows, white moustache and round white beard, bare crown, no hat. HEAD ONLY, straight-on front view, symmetrical overall head, two friendly open eyes, slight smile, no neck, no shoulders, no body, NO hats, glasses, scarf or other removable accessories. Standardized facial landmarks: eye centers at 40% and 60% of head width and 48% of head height; mouth at 68% height. Keep ears/antlers compact and crown unobstructed for separate hats. Square canvas, entire single object centered with generous empty margin on all sides, fully visible, no cropped edges. GENUINELY TRANSPARENT BACKGROUND alpha, no floor, no ground shadow, no cast backdrop, no checkerboard drawing. Crisp clean silhouette edges, no fuzzy fibers. No lettering, no labels, no watermark, no title, no other objects.",
-      "eyes": [
-        0.357,
-        0.651,
-        0.401
-      ]
+      "eyes": [0.357, 0.651, 0.401]
     },
     {
       "id": "mrsclaus",
@@ -203,11 +139,7 @@
       "type": "face",
       "subject": "a friendly Mrs. Claus face, rosy light skin, white hair in a compact bun, no glasses and no hat",
       "prompt": "Use case: stylized-concept. Production game sprite, one single isolated asset. Input reference image is STYLE REFERENCE ONLY: match the \"Toybox Clay\" collection's smooth matte polymer-clay material, chunky rounded forms, warm festive colors, soft frontal studio lighting, cheerful collectible-toy personality. Generate ONLY a friendly Mrs. Claus face, rosy light skin, white hair in a compact bun, no glasses and no hat. HEAD ONLY, straight-on front view, symmetrical overall head, two friendly open eyes, slight smile, no neck, no shoulders, no body, NO hats, glasses, scarf or other removable accessories. Standardized facial landmarks: eye centers at 40% and 60% of head width and 48% of head height; mouth at 68% height. Keep ears/antlers compact and crown unobstructed for separate hats. Square canvas, entire single object centered with generous empty margin on all sides, fully visible, no cropped edges. GENUINELY TRANSPARENT BACKGROUND alpha, no floor, no ground shadow, no cast backdrop, no checkerboard drawing. Crisp clean silhouette edges, no fuzzy fibers. No lettering, no labels, no watermark, no title, no other objects.",
-      "eyes": [
-        0.338,
-        0.666,
-        0.619
-      ]
+      "eyes": [0.338, 0.666, 0.619]
     },
     {
       "id": "yeticub",
@@ -215,11 +147,7 @@
       "type": "face",
       "subject": "a friendly pale ice-blue yeti cub face, rounded white sculpted hair tufts and two tiny bottom teeth, no horns",
       "prompt": "Use case: stylized-concept. Production game sprite, one single isolated asset. Input reference image is STYLE REFERENCE ONLY: match the \"Toybox Clay\" collection's smooth matte polymer-clay material, chunky rounded forms, warm festive colors, soft frontal studio lighting, cheerful collectible-toy personality. Generate ONLY a friendly pale ice-blue yeti cub face, rounded white sculpted hair tufts and two tiny bottom teeth, no horns. HEAD ONLY, straight-on front view, symmetrical overall head, two friendly open eyes, slight smile, no neck, no shoulders, no body, NO hats, glasses, scarf or other removable accessories. Standardized facial landmarks: eye centers at 40% and 60% of head width and 48% of head height; mouth at 68% height. Keep ears/antlers compact and crown unobstructed for separate hats. Square canvas, entire single object centered with generous empty margin on all sides, fully visible, no cropped edges. GENUINELY TRANSPARENT BACKGROUND alpha, no floor, no ground shadow, no cast backdrop, no checkerboard drawing. Crisp clean silhouette edges, no fuzzy fibers. No lettering, no labels, no watermark, no title, no other objects.",
-      "eyes": [
-        0.361,
-        0.639,
-        0.579
-      ]
+      "eyes": [0.361, 0.639, 0.579]
     },
     {
       "id": "robin",
@@ -227,11 +155,7 @@
       "type": "face",
       "subject": "a round winter robin bird face with warm brown crown, orange-red cheeks and throat, small dark beak",
       "prompt": "Use case: stylized-concept. Production game sprite, one single isolated asset. Input reference image is STYLE REFERENCE ONLY: match the \"Toybox Clay\" collection's smooth matte polymer-clay material, chunky rounded forms, warm festive colors, soft frontal studio lighting, cheerful collectible-toy personality. Generate ONLY a round winter robin bird face with warm brown crown, orange-red cheeks and throat, small dark beak. HEAD ONLY, straight-on front view, symmetrical overall head, two friendly open eyes, slight smile, no neck, no shoulders, no body, NO hats, glasses, scarf or other removable accessories. Standardized facial landmarks: eye centers at 40% and 60% of head width and 48% of head height; mouth at 68% height. Keep ears/antlers compact and crown unobstructed for separate hats. Square canvas, entire single object centered with generous empty margin on all sides, fully visible, no cropped edges. GENUINELY TRANSPARENT BACKGROUND alpha, no floor, no ground shadow, no cast backdrop, no checkerboard drawing. Crisp clean silhouette edges, no fuzzy fibers. No lettering, no labels, no watermark, no title, no other objects.",
-      "eyes": [
-        0.306,
-        0.7,
-        0.496
-      ]
+      "eyes": [0.306, 0.7, 0.496]
     },
     {
       "id": "walrus",
@@ -239,11 +163,7 @@
       "type": "face",
       "subject": "a friendly cinnamon walrus face with two short ivory tusks, broad mustachioed muzzle and round nose",
       "prompt": "Use case: stylized-concept. Production game sprite, one single isolated asset. Input reference image is STYLE REFERENCE ONLY: match the \"Toybox Clay\" collection's smooth matte polymer-clay material, chunky rounded forms, warm festive colors, soft frontal studio lighting, cheerful collectible-toy personality. Generate ONLY a friendly cinnamon walrus face with two short ivory tusks, broad mustachioed muzzle and round nose. HEAD ONLY, straight-on front view, symmetrical overall head, two friendly open eyes, slight smile, no neck, no shoulders, no body, NO hats, glasses, scarf or other removable accessories. Standardized facial landmarks: eye centers at 40% and 60% of head width and 48% of head height; mouth at 68% height. Keep ears/antlers compact and crown unobstructed for separate hats. Square canvas, entire single object centered with generous empty margin on all sides, fully visible, no cropped edges. GENUINELY TRANSPARENT BACKGROUND alpha, no floor, no ground shadow, no cast backdrop, no checkerboard drawing. Crisp clean silhouette edges, no fuzzy fibers. No lettering, no labels, no watermark, no title, no other objects.",
-      "eyes": [
-        0.318,
-        0.691,
-        0.39
-      ]
+      "eyes": [0.318, 0.691, 0.39]
     },
     {
       "id": "santahat",
@@ -274,13 +194,7 @@
       "subject": "two round red earmuff cups joined by a thin curved green overhead band, empty transparent space between cups",
       "prompt": "Use case: stylized-concept. Production game sprite, one single isolated asset. Input reference image is STYLE REFERENCE ONLY: match the \"Toybox Clay\" collection's smooth matte polymer-clay material, chunky rounded forms, warm festive colors, soft frontal studio lighting, cheerful collectible-toy personality. Generate ONLY two round red earmuff cups joined by a thin curved green overhead band, empty transparent space between cups. ACCESSORY ONLY: NO face, NO head, NO mannequin, NO body. This will be layered over a separate avatar. Frontal view suitable for overlay on a flat frontal face. Keep all openings such as eyeglass lenses, headband interiors and neck holes genuinely transparent. Square canvas, entire single object centered with generous empty margin on all sides, fully visible, no cropped edges. GENUINELY TRANSPARENT BACKGROUND alpha, no floor, no ground shadow, no cast backdrop, no checkerboard drawing. Crisp clean silhouette edges, no fuzzy fibers. No lettering, no labels, no watermark, no title, no other objects.",
       "revision_prompt": "Edit this single game accessory to keep the avatar's eyes visible. Preserve the matte red clay cups, cream trim, cream snowflake decoration and green curved band. Make the two cups MUCH SMALLER: each cup diameter at most 18 percent of the entire object's width. Move them far apart to the two ends of a wide slender overhead band. Keep a large open transparent gap between the cups at least 60 percent of entire object width. Overall width 1.8 times height. The cups must be narrow side details, not big disks over the face. Straight frontal view, accessory only, no head, no mannequin or body. Centered fully visible with margin on genuinely transparent background.",
-      "layout": [
-        0.74,
-        0.33,
-        0.5,
-        0.22,
-        "top"
-      ],
+      "layout": [0.74, 0.33, 0.5, 0.22, "top"],
       "stretch": true
     },
     {
@@ -325,13 +239,7 @@
       "type": "band",
       "subject": "a thin red curved overhead headband with two compact brown reindeer antlers, open transparent area under the band",
       "prompt": "Use case: stylized-concept. Production game sprite, one single isolated asset. Input reference image is STYLE REFERENCE ONLY: match the \"Toybox Clay\" collection's smooth matte polymer-clay material, chunky rounded forms, warm festive colors, soft frontal studio lighting, cheerful collectible-toy personality. Generate ONLY a thin red curved overhead headband with two compact brown reindeer antlers, open transparent area under the band. ACCESSORY ONLY: NO face, NO head, NO mannequin, NO body. This will be layered over a separate avatar. Frontal view suitable for overlay on a flat frontal face. Keep all openings such as eyeglass lenses, headband interiors and neck holes genuinely transparent. Square canvas, entire single object centered with generous empty margin on all sides, fully visible, no cropped edges. GENUINELY TRANSPARENT BACKGROUND alpha, no floor, no ground shadow, no cast backdrop, no checkerboard drawing. Crisp clean silhouette edges, no fuzzy fibers. No lettering, no labels, no watermark, no title, no other objects.",
-      "layout": [
-        0.8,
-        0.58,
-        0.5,
-        0.08,
-        "top"
-      ],
+      "layout": [0.8, 0.58, 0.5, 0.08, "top"],
       "stretch": true
     },
     {

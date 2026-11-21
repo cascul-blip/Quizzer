@@ -1,8 +1,19 @@
 import { describe, expect, test } from "bun:test";
-import { COUNTDOWN_MS, CupGame, FEEDBACK_MS, type CupPlayer } from "../src/server/game/cup.ts";
+import type { CupPlayer } from "../src/server/game/cup.ts";
+import { buildCupResultsCsv, COUNTDOWN_MS, CupGame, FEEDBACK_MS } from "../src/server/game/cup.ts";
 import { Lobby } from "../src/server/game/lobby.ts";
-import { buildCupResultsCsv } from "../src/server/game/cup.ts";
-import { CUP_ALL_SAFE_MS, CUP_DEFAULT_CUPS, CUP_DRINK_MS, CUP_MAX_CUPS, CUP_MIN_CUPS, CUP_QUIZ_MIN_MS, CUP_ROLL_MS, CUP_SIP_MS, CUP_VERDICT_MS, cupQuizMs } from "../src/shared/modes/cup.ts";
+import {
+  CUP_ALL_SAFE_MS,
+  CUP_DEFAULT_CUPS,
+  CUP_DRINK_MS,
+  CUP_MAX_CUPS,
+  CUP_MIN_CUPS,
+  CUP_QUIZ_MIN_MS,
+  CUP_ROLL_MS,
+  CUP_SIP_MS,
+  CUP_VERDICT_MS,
+  cupQuizMs,
+} from "../src/shared/modes/cup.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
 import { FakeClock, sampleQuiz } from "./helpers.ts";
 
@@ -22,7 +33,7 @@ function quiz(): Quiz {
 /** Deterministic rng. */
 function seeded(seed = 42) {
   let s = seed;
-  return () => ((s = (s * 1664525 + 1013904223) % 2 ** 32) / 2 ** 32);
+  return () => (s = (s * 1664525 + 1013904223) % 2 ** 32) / 2 ** 32;
 }
 
 /** An rng that plays back fixed values, then falls back to a seeded one. */
@@ -161,33 +172,34 @@ describe("Cup of Death", () => {
     expect(b.outRound).toBeNull();
   });
 
-  for (const theme of ["classic", "christmas"] as const) test(`${theme}: an eliminating cup knocks the player out; they keep answering for practice`, () => {
-    const { rng, values } = scripted([]);
-    const { game, clock } = setup(["A", "B", "C"], rng, CUP_DEFAULT_CUPS, theme);
-    const a = byName(game, "A");
-    const c = byName(game, "C");
-    toQuiz(game, clock);
-    makeSafe(game, clock, a);
-    makeSafe(game, clock, c);
-    endQuiz(game, clock);
-    const b = byName(game, "B");
-    values.push(0); // poison in cup 0
-    game.pick(b.id, 0);
-    clock.advance(CUP_SIP_MS);
-    expect(b.outRound).toBe(1);
-    expect(b.poisonedFrom).toBe(CUP_DEFAULT_CUPS);
-    expect(game.hostView().players.find((p) => p.id === b.id)!.out).toBe(true);
-    clock.advance(CUP_VERDICT_MS);
-    expect(game.phase).toBe("roll");
-    // Poisoned players answer any time, but it doesn't count toward anything.
-    expect(game.playerView(b.id)!.question).not.toBeNull();
-    answer(game, clock, b, true);
-    expect(b.progress).toBe(0);
-    expect(b.target).toBe(0);
-    expect(game.playerView(b.id)!.me.out).toBe(true);
-    game.end();
-    expect(buildCupResultsCsv(game)).toContain(`${theme === "christmas" ? "Blasted off" : "Poisoned"} in round 1`);
-  });
+  for (const theme of ["classic", "christmas"] as const)
+    test(`${theme}: an eliminating cup knocks the player out; they keep answering for practice`, () => {
+      const { rng, values } = scripted([]);
+      const { game, clock } = setup(["A", "B", "C"], rng, CUP_DEFAULT_CUPS, theme);
+      const a = byName(game, "A");
+      const c = byName(game, "C");
+      toQuiz(game, clock);
+      makeSafe(game, clock, a);
+      makeSafe(game, clock, c);
+      endQuiz(game, clock);
+      const b = byName(game, "B");
+      values.push(0); // poison in cup 0
+      game.pick(b.id, 0);
+      clock.advance(CUP_SIP_MS);
+      expect(b.outRound).toBe(1);
+      expect(b.poisonedFrom).toBe(CUP_DEFAULT_CUPS);
+      expect(game.hostView().players.find((p) => p.id === b.id)!.out).toBe(true);
+      clock.advance(CUP_VERDICT_MS);
+      expect(game.phase).toBe("roll");
+      // Poisoned players answer any time, but it doesn't count toward anything.
+      expect(game.playerView(b.id)!.question).not.toBeNull();
+      answer(game, clock, b, true);
+      expect(b.progress).toBe(0);
+      expect(b.target).toBe(0);
+      expect(game.playerView(b.id)!.me.out).toBe(true);
+      game.end();
+      expect(buildCupResultsCsv(game)).toContain(`${theme === "christmas" ? "Blasted off" : "Poisoned"} in round 1`);
+    });
 
   test("the lobby sets the cups, 1 to 6, 3 by default", () => {
     const lobby = new Lobby(quiz());
@@ -339,7 +351,12 @@ describe("Cup of Death", () => {
     clock.advance(game.phaseEndsAt - clock.now());
     expect(game.phase).toBe("podium");
     const s = game.standings();
-    expect(s.filter((x) => x.rank === 1).map((x) => x.nickname).sort()).toEqual(["A", "B"]);
+    expect(
+      s
+        .filter((x) => x.rank === 1)
+        .map((x) => x.nickname)
+        .sort(),
+    ).toEqual(["A", "B"]);
     expect(s.find((x) => x.nickname === "C")!.rank).toBe(3);
     expect(buildCupResultsCsv(game)).toContain("Winner");
   });

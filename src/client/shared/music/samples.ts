@@ -9,7 +9,8 @@
  * Until an instrument's recordings are decoded (or if they fail to load) playSample returns
  * false and the caller plays the synthesized voice instead, so music never waits on a download.
  */
-import { SAMPLE_SETS, type SampleSet, type Zone } from "./samples/manifest.ts";
+import type { SampleSet, Zone } from "./samples/manifest.ts";
+import { SAMPLE_SETS } from "./samples/manifest.ts";
 
 type Ctx = BaseAudioContext;
 
@@ -99,7 +100,10 @@ export function loadSamples(ctx: Ctx, instruments: Iterable<string>, get: Fetche
         const map = done;
         p = download(url, get)
           .then((data) => (data ? ctx.decodeAudioData(data.slice(0)) : null))
-          .then((buf) => void map.set(url, buf), () => void map.set(url, null));
+          .then(
+            (buf) => void map.set(url, buf),
+            () => void map.set(url, null),
+          );
         pending.set(url, p);
       }
       all.push(p);

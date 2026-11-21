@@ -1,18 +1,21 @@
-import { racerName, racerTheme, type RacerTheme } from "../../shared/racer-theme.ts";
 import { useEffect, useRef, useState } from "preact/hooks";
-import type { HostView } from "../../shared/protocol.ts";
 import type { RacerTurn } from "../../shared/modes/racer.ts";
+import type { HostView } from "../../shared/protocol.ts";
 import { RACER_CONFIDENCE, RACER_CONFIDENCE_LEVELS, RACER_REPAIR_MPH } from "../../shared/racer-rules.ts";
+import type { RacerTheme } from "../../shared/racer-theme.ts";
+import { racerName, racerTheme } from "../../shared/racer-theme.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
-import { RacerScene } from "../shared/racer-art.tsx";
-import { PinBoard, PinNote } from "../shared/pin.tsx";
-import { onMuteChange, play, startRev, type Rev } from "../shared/sounds.ts";
-import { Shape, optionColor, useCountdown } from "../shared/ui.tsx";
-import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
 import type { MusicCue } from "../shared/music/index.ts";
+import { PinBoard, PinNote } from "../shared/pin.tsx";
+import { RacerScene } from "../shared/racer-art.tsx";
+import type { Rev } from "../shared/sounds.ts";
+import { onMuteChange, play, startRev } from "../shared/sounds.ts";
+import { Tex, visibleLength } from "../shared/tex.tsx";
+import { optionColor, Shape, useCountdown } from "../shared/ui.tsx";
+import type { Send } from "./common.tsx";
+import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen } from "./common.tsx";
 import type { LobbyModeEntry, LobbySettingsProps } from "./lobby-modes.tsx";
 import { Award } from "./tower.tsx";
-import { Tex, visibleLength } from "../shared/tex.tsx";
 
 type RacerView = Extract<HostView, { kind: "racer" }>;
 
@@ -130,7 +133,11 @@ export function RacerStage({ view, send }: { view: RacerView; send: Send }) {
               speed={view.car.speed}
               crashed={view.car.crashed}
               onLand={() => play("land")}
-              ejected={view.phase === "reveal" && view.lastTurn && view.ejected?.length ? { key: view.lastTurn.index, riders: view.ejected.map((e) => ({ avatar: e.avatar, name: e.nickname })) } : undefined}
+              ejected={
+                view.phase === "reveal" && view.lastTurn && view.ejected?.length
+                  ? { key: view.lastTurn.index, riders: view.ejected.map((e) => ({ avatar: e.avatar, name: e.nickname })) }
+                  : undefined
+              }
             />
             {/* Bottom left, driver over speed, leaving the right of the scene clear for whoever falls out. */}
             <div class="racer-huds">
@@ -234,7 +241,9 @@ function Turn({ view, send, secs }: { view: RacerView; send: Send; secs: number 
   return (
     <>
       <div class={`racer-question ${visibleLength(q.text) > 160 ? "long" : visibleLength(q.text) > 80 ? "medium" : ""} ${pin ? "is-pin" : ""}`}>
-        <h1><Tex text={q.text} /></h1>
+        <h1>
+          <Tex text={q.text} />
+        </h1>
         {pin ? (
           <PinBoard image={pin.image} spots={pin.spots} labels={q.options} correct={reveal ? [...correct] : undefined} counts={reveal ? counts : undefined} />
         ) : (
@@ -265,7 +274,9 @@ function Turn({ view, send, secs }: { view: RacerView; send: Send; secs: number 
             return (
               <div key={i} class={`tile opt-${c} ${state}`}>
                 <Shape index={c} />
-                <span class="tile-text"><Tex text={text} /></span>
+                <span class="tile-text">
+                  <Tex text={text} />
+                </span>
                 {state === "right" && <span class="tick">✓</span>}
                 {reveal && q.type !== "text" && <span class="racer-count">{counts[i] ?? 0}</span>}
               </div>
@@ -409,7 +420,11 @@ function RacerSettings({ settings, send, children }: LobbySettingsProps<"racer">
     <>
       <label class="opt">
         Theme
-        <select aria-label="Racer theme" value={racerTheme(settings?.theme)} onChange={(e) => send({ type: "host.setModeSettings", mode: "racer", settings: { theme: e.currentTarget.value as RacerTheme } })}>
+        <select
+          aria-label="Racer theme"
+          value={racerTheme(settings?.theme)}
+          onChange={(e) => send({ type: "host.setModeSettings", mode: "racer", settings: { theme: e.currentTarget.value as RacerTheme } })}
+        >
           <option value="christmas">🎄 Neon Noel</option>
           <option value="classic">🏎 Normal</option>
         </select>

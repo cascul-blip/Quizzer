@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import { useDelayedCues } from "./delayed-cues.ts";
-import { siegeName, siegeTheme, siegeWords, type SiegeTheme } from "../../shared/siege-theme.ts";
-import { SiegeThemeProvider, useChristmasSiege } from "../shared/siege-skin.tsx";
-import type { HostView } from "../../shared/protocol.ts";
 import type { SiegeSettings } from "../../shared/modes/siege.ts";
 import type { MusicTrackId } from "../../shared/music-tracks.ts";
+import type { HostView } from "../../shared/protocol.ts";
 import { SIEGE_HEARTS, SIEGE_WAVE_CHOICES } from "../../shared/siege-rules.ts";
+import type { SiegeTheme } from "../../shared/siege-theme.ts";
+import { siegeName, siegeTheme, siegeWords } from "../../shared/siege-theme.ts";
+import type { MusicCue } from "../shared/music/index.ts";
 import {
   ArrowShot,
   Confetti,
@@ -19,10 +19,12 @@ import {
   SiegeIcon,
   WarningArrow,
 } from "../shared/siege-art.tsx";
+import { SiegeThemeProvider, useChristmasSiege } from "../shared/siege-skin.tsx";
 import { play } from "../shared/sounds.ts";
 import { useCountdown } from "../shared/ui.tsx";
-import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
-import type { MusicCue } from "../shared/music/index.ts";
+import type { Send } from "./common.tsx";
+import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen } from "./common.tsx";
+import { useDelayedCues } from "./delayed-cues.ts";
 import type { LobbyModeEntry, LobbySettingsProps } from "./lobby-modes.tsx";
 import { Award } from "./tower.tsx";
 
@@ -40,7 +42,11 @@ function waveLabel(wave: number, waves: SiegeSettings["waves"]): string {
 
 /** Projector screen for Kingdom Siege: countdown → build break → waves (with breaks) → the kingdom stands or the castle falls → podium. */
 export function SiegeStage({ view, send }: { view: SiegeView; send: Send }) {
-  return <SiegeThemeProvider theme={view.settings.theme}><SiegeStageContent view={view} send={send} /></SiegeThemeProvider>;
+  return (
+    <SiegeThemeProvider theme={view.settings.theme}>
+      <SiegeStageContent view={view} send={send} />
+    </SiegeThemeProvider>
+  );
 }
 
 function SiegeStageContent({ view, send }: { view: SiegeView; send: Send }) {
@@ -58,7 +64,9 @@ function SiegeStageContent({ view, send }: { view: SiegeView; send: Send }) {
     <div class={`stage siege-stage ${christmas ? "siege-christmas" : ""}`}>
       <header class="topbar">
         <div class="title">{view.quiz.title}</div>
-        <div class="pill">{christmas ? "🎄" : "🛡️"} {siegeName(view.settings.theme)}</div>
+        <div class="pill">
+          {christmas ? "🎄" : "🛡️"} {siegeName(view.settings.theme)}
+        </div>
         {view.wave > 0 && battle && <div class="pill">{waveLabel(view.wave, view.settings.waves)}</div>}
         <div class="spacer" />
         {battle && <Treasury gold={view.gold} hearts={view.hearts} />}
@@ -193,9 +201,18 @@ function Battlefield({ view }: { view: SiegeView }) {
     return a.at;
   };
 
-  const shots = useFirstSeen(view.shots.map((s) => s.seq), now);
-  const fallen = useFirstSeen(view.fallen.map((f) => f.seq), now);
-  const defenders = useFirstSeen(view.defenders.map((d) => d.id), now);
+  const shots = useFirstSeen(
+    view.shots.map((s) => s.seq),
+    now,
+  );
+  const fallen = useFirstSeen(
+    view.fallen.map((f) => f.seq),
+    now,
+  );
+  const defenders = useFirstSeen(
+    view.defenders.map((d) => d.id),
+    now,
+  );
 
   // Defenders that disappeared leave a puff of dust.
   const prevDefenders = useRef(view.defenders);
@@ -220,7 +237,12 @@ function Battlefield({ view }: { view: SiegeView }) {
           <WarningArrow key={`w${w.lane}-${i}`} lane={w.lane} />
         ))}
         {view.defenders.map((d) => (
-          <DefenderFigure key={d.id} d={d} fresh={!defenders.old(d.id) && now - defenders.at(d.id) < 700} drawing={d.type === "archer" && now - lastAttack(`d${d.id}`, d.attackSeq) < 350} />
+          <DefenderFigure
+            key={d.id}
+            d={d}
+            fresh={!defenders.old(d.id) && now - defenders.at(d.id) < 700}
+            drawing={d.type === "archer" && now - lastAttack(`d${d.id}`, d.attackSeq) < 350}
+          />
         ))}
         {view.monsters.map((m) => {
           const t = m.moveMs > 0 ? Math.min(1, since / m.moveMs) : 0;
@@ -244,7 +266,11 @@ function Battlefield({ view }: { view: SiegeView }) {
       <SiegeEvents view={view} />
       {view.phase === "countdown" && <Countdown view={view} />}
       {view.phase === "build" && <BuildBreak view={view} />}
-      {view.giant && <div class="siege-banner giant" role="alert">⚠️ A giant approaches!</div>}
+      {view.giant && (
+        <div class="siege-banner giant" role="alert">
+          ⚠️ A giant approaches!
+        </div>
+      )}
       {view.phase === "stands" && <Stands view={view} />}
       {view.phase === "fallen" && <Fallen view={view} />}
     </main>
@@ -271,7 +297,8 @@ function Countdown({ view }: { view: SiegeView }) {
       <div class="countdown-label">
         Defend the {siegeWords(view.settings.theme).home} together!
         <br />
-        Every right answer adds 25 gold to your own purse. Spend it on {view.settings.theme === "christmas" ? "elf archers, nutcrackers and present barricades" : "archers, knights and stone walls"}.
+        Every right answer adds 25 gold to your own purse. Spend it on{" "}
+        {view.settings.theme === "christmas" ? "elf archers, nutcrackers and present barricades" : "archers, knights and stone walls"}.
       </div>
       <div class="countdown-num" key={n}>
         {Math.max(1, n)}
@@ -308,7 +335,9 @@ function Stands({ view }: { view: SiegeView }) {
 function Fallen({ view }: { view: SiegeView }) {
   return (
     <div class="siege-ending fallen">
-      <h1>The {siegeWords(view.settings.theme).fallen} has fallen on wave {view.result?.wave ?? view.wave}.</h1>
+      <h1>
+        The {siegeWords(view.settings.theme).fallen} has fallen on wave {view.result?.wave ?? view.wave}.
+      </h1>
       {view.settings.waves === "endless" && <p>{view.result?.headline}</p>}
     </div>
   );
@@ -320,9 +349,9 @@ function Fallen({ view }: { view: SiegeView }) {
 export function SiegeLobbyPreview({ theme }: { theme?: SiegeTheme }) {
   return (
     <SiegeThemeProvider theme={theme}>
-    <div class="siege-lobby-preview" aria-hidden="true">
-      <SiegeBoard hearts={SIEGE_HEARTS} />
-    </div>
+      <div class="siege-lobby-preview" aria-hidden="true">
+        <SiegeBoard hearts={SIEGE_HEARTS} />
+      </div>
     </SiegeThemeProvider>
   );
 }
@@ -340,7 +369,10 @@ function SiegePodium({ view, send }: { view: SiegeView; send: Send }) {
       <div class="podium-bg" aria-hidden="true">
         <SiegeBoard hearts={r?.hearts ?? SIEGE_HEARTS} castle={r?.outcome === "fallen" ? "fallen" : "auto"} />
       </div>
-      <h1>{r?.outcome === "stands" ? "🏰 " : r?.outcome === "fallen" ? "🛡️ " : ""}{r?.headline}</h1>
+      <h1>
+        {r?.outcome === "stands" ? "🏰 " : r?.outcome === "fallen" ? "🛡️ " : ""}
+        {r?.headline}
+      </h1>
       {r && view.settings.waves === "endless" && (
         <p class={`siege-verdict ${good ? "good" : ""}`}>
           {r.outcome === "ended" && `${plural(r.wavesSurvived, "wave")} survived · `}
@@ -358,7 +390,13 @@ function SiegePodium({ view, send }: { view: SiegeView; send: Send }) {
         <ErrorsTable errors={view.errors ?? []} />
       ) : (
         <div class="awards siege-awards">
-          <Award icon="🏹" title={words.topArcher} award={a?.topArcher ?? null} unit="" valueText={(n) => `${plural(n, "monster")} defeated by their ${words.archers}`} />
+          <Award
+            icon="🏹"
+            title={words.topArcher}
+            award={a?.topArcher ?? null}
+            unit=""
+            valueText={(n) => `${plural(n, "monster")} defeated by their ${words.archers}`}
+          />
           <Award icon="🧱" title={words.masterMason} award={a?.masterMason ?? null} unit="" valueText={(n) => `${plural(n, words.wall)} and upgrades`} />
           <Award icon="🎯" title="Most correct answers" award={a?.mostCorrect ?? null} unit="correct" />
         </div>
@@ -384,14 +422,28 @@ function SiegeSettings({ settings, send }: LobbySettingsProps<"siege">) {
     <>
       <label class="opt">
         Theme
-        <select aria-label="Kingdom Siege theme" value={siegeTheme(settings.theme)} onChange={(e) => send({ type: "host.setModeSettings", mode: "siege", settings: { ...settings, theme: e.currentTarget.value as SiegeTheme } })}>
+        <select
+          aria-label="Kingdom Siege theme"
+          value={siegeTheme(settings.theme)}
+          onChange={(e) => send({ type: "host.setModeSettings", mode: "siege", settings: { ...settings, theme: e.currentTarget.value as SiegeTheme } })}
+        >
           <option value="classic">🛡️ Classic Kingdom Siege</option>
           <option value="christmas">🎄 Christmas Toybox</option>
         </select>
       </label>
       <label class="opt">
         Waves
-        <select aria-label="Kingdom Siege waves" value={String(settings.waves)} onChange={(e) => send({ type: "host.setModeSettings", mode: "siege", settings: { ...settings, waves: e.currentTarget.value === "endless" ? "endless" : (Number(e.currentTarget.value) as 5 | 10) } })}>
+        <select
+          aria-label="Kingdom Siege waves"
+          value={String(settings.waves)}
+          onChange={(e) =>
+            send({
+              type: "host.setModeSettings",
+              mode: "siege",
+              settings: { ...settings, waves: e.currentTarget.value === "endless" ? "endless" : (Number(e.currentTarget.value) as 5 | 10) },
+            })
+          }
+        >
           {SIEGE_WAVE_CHOICES.map((w) => (
             <option key={w} value={String(w)}>
               {w === "endless" ? "♾ Endless" : `${w} waves`}
@@ -399,7 +451,11 @@ function SiegeSettings({ settings, send }: LobbySettingsProps<"siege">) {
           ))}
         </select>
       </label>
-      <span class="opt mode-hint">The whole class defends one castle. Every right answer earns you gold to spend on {siegeTheme(settings.theme) === "christmas" ? "elf archers, nutcrackers and present barricades" : "archers, knights and stone walls"} before the monsters reach the wall.</span>
+      <span class="opt mode-hint">
+        The whole class defends one castle. Every right answer earns you gold to spend on{" "}
+        {siegeTheme(settings.theme) === "christmas" ? "elf archers, nutcrackers and present barricades" : "archers, knights and stone walls"} before the
+        monsters reach the wall.
+      </span>
     </>
   );
 }

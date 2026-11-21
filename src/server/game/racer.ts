@@ -1,25 +1,24 @@
-import { racerTheme, type RacerTheme, DEFAULT_RACER_THEME } from "../../shared/racer-theme.ts";
-import type {
-  HostRacerState,
-  PlayerRacerView,
-  RacerAwards,
-  RacerDriver,
-  RacerPhase,
-  RacerResult,
-  RacerTurn,
-} from "../../shared/modes/racer.ts";
-import type { Pacing, QuestionView, QuestionError } from "../../shared/mode-views.ts";
-import type { ShuffleOptions } from "../../shared/protocol.ts";
-import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
-import { MAX_TYPED_ANSWER, checkAnswer, type AnswerValue, answerOf } from "../../shared/answer-match.ts";
-import type { Question, Quiz } from "../../shared/quiz-schema.ts";
-import { RACER_CONFIDENCE_LEVELS, applyRacerTurn, newRacerCar, type RacerCar, type RacerConfidence } from "../../shared/racer-rules.ts";
-import { GameError, realClock, shuffle, topErrors, type Clock, AUTO_REVEAL_MS, GRACE_MS, preparePlayOrder } from "./common.ts";
-import type { LobbyFacts } from "./lobby-facts.ts";
-import { Roster, type BasePlayer } from "./roster.ts";
+import type { AnswerValue } from "../../shared/answer-match.ts";
+import { answerOf, checkAnswer, MAX_TYPED_ANSWER } from "../../shared/answer-match.ts";
+import type { AvatarChoice } from "../../shared/avatars.ts";
+import { randomAvatar } from "../../shared/avatars.ts";
 import { MODE_NAMES } from "../../shared/mode-names.ts";
-import { handoffOptions, pickTheme, unhandled, type ModeEntry } from "./mode-entry.ts";
+import type { Pacing, QuestionError, QuestionView } from "../../shared/mode-views.ts";
+import type { HostRacerState, PlayerRacerView, RacerAwards, RacerDriver, RacerPhase, RacerResult, RacerTurn } from "../../shared/modes/racer.ts";
+import type { ShuffleOptions } from "../../shared/protocol.ts";
+import type { Question, Quiz } from "../../shared/quiz-schema.ts";
+import type { RacerCar, RacerConfidence } from "../../shared/racer-rules.ts";
+import { applyRacerTurn, newRacerCar, RACER_CONFIDENCE_LEVELS } from "../../shared/racer-rules.ts";
+import type { RacerTheme } from "../../shared/racer-theme.ts";
+import { DEFAULT_RACER_THEME, racerTheme } from "../../shared/racer-theme.ts";
+import type { Clock } from "./common.ts";
+import { AUTO_REVEAL_MS, GameError, GRACE_MS, preparePlayOrder, realClock, shuffle, topErrors } from "./common.ts";
+import type { LobbyFacts } from "./lobby-facts.ts";
+import type { ModeEntry } from "./mode-entry.ts";
+import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
 import { toCsv } from "./results.ts";
+import type { BasePlayer } from "./roster.ts";
+import { Roster } from "./roster.ts";
 
 export { AUTO_REVEAL_MS, GRACE_MS } from "./common.ts";
 
@@ -500,7 +499,16 @@ export class RacerGame {
       theme: this.theme,
       phase: this.phase,
       title: this.title,
-      me: { id: p.id, nickname: p.nickname, avatar: p.avatar, correct: p.correct, wrong: p.wrong, turnsDriven: p.turnsDriven, mphGained: p.mphGained, failsAsDriver: p.failsAsDriver },
+      me: {
+        id: p.id,
+        nickname: p.nickname,
+        avatar: p.avatar,
+        correct: p.correct,
+        wrong: p.wrong,
+        turnsDriven: p.turnsDriven,
+        mphGained: p.mphGained,
+        failsAsDriver: p.failsAsDriver,
+      },
       playerCount: this.players.size,
       question: this.questionView(),
       phaseRemainingMs: this.remainingMs(),
@@ -521,13 +529,35 @@ export class RacerGame {
 
 /** Racer: one row per player; the class's shared distance, top speed and crashes are in every row. */
 export function buildRacerResultsCsv(game: RacerGame): string {
-  const header = ["Nickname", "Correct", "Wrong", "Accuracy %", "Turns driven", "Mph gained", "Fail points as driver", "Class distance (miles)", "Top speed (mph)", "Crashes"];
+  const header = [
+    "Nickname",
+    "Correct",
+    "Wrong",
+    "Accuracy %",
+    "Turns driven",
+    "Mph gained",
+    "Fail points as driver",
+    "Class distance (miles)",
+    "Top speed (mph)",
+    "Crashes",
+  ];
   const round = (v: number) => Math.round(v * 100) / 100;
   const rows: (string | number)[][] = [...game.players.values()]
     .sort((a, b) => b.correct - a.correct || b.mphGained - a.mphGained)
     .map((p) => {
       const answered = p.correct + p.wrong;
-      return [p.nickname, p.correct, p.wrong, answered ? Math.round((p.correct / answered) * 100) : "", p.turnsDriven, p.mphGained, p.failsAsDriver, round(game.car.distance), round(game.car.topSpeed), game.car.crashes];
+      return [
+        p.nickname,
+        p.correct,
+        p.wrong,
+        answered ? Math.round((p.correct / answered) * 100) : "",
+        p.turnsDriven,
+        p.mphGained,
+        p.failsAsDriver,
+        round(game.car.distance),
+        round(game.car.topSpeed),
+        game.car.crashes,
+      ];
     });
   return toCsv([header, ...rows]);
 }

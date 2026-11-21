@@ -1,8 +1,18 @@
 import { describe, expect, test } from "bun:test";
 import { Lobby } from "../src/server/game/lobby.ts";
-import { buildRobotResultsCsv } from "../src/server/game/robot.ts";
-import { COUNTDOWN_MS, FEEDBACK_MS, RobotGame, spreadTile, type RobotPlayer } from "../src/server/game/robot.ts";
-import { ROBOT_ATTACK_MS, ROBOT_BOARD, ROBOT_LIVES, ROBOT_MOVE_MS, ROBOT_QUIZ_MIN_MS, ROBOT_WARN_MS, robotInBounds, robotQuizMs, robotRing } from "../src/shared/modes/robot.ts";
+import type { RobotPlayer } from "../src/server/game/robot.ts";
+import { buildRobotResultsCsv, COUNTDOWN_MS, FEEDBACK_MS, RobotGame, spreadTile } from "../src/server/game/robot.ts";
+import {
+  ROBOT_ATTACK_MS,
+  ROBOT_BOARD,
+  ROBOT_LIVES,
+  ROBOT_MOVE_MS,
+  ROBOT_QUIZ_MIN_MS,
+  ROBOT_WARN_MS,
+  robotInBounds,
+  robotQuizMs,
+  robotRing,
+} from "../src/shared/modes/robot.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
 import { FakeClock, sampleQuiz } from "./helpers.ts";
 
@@ -22,7 +32,7 @@ function quiz(): Quiz {
 /** Deterministic rng so boards are reproducible. */
 function seeded(seed = 42) {
   let s = seed;
-  return () => ((s = (s * 1664525 + 1013904223) % 2 ** 32) / 2 ** 32);
+  return () => (s = (s * 1664525 + 1013904223) % 2 ** 32) / 2 ** 32;
 }
 
 function setup(names: string[]) {

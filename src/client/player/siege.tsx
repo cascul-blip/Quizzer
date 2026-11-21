@@ -1,22 +1,22 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import { siegeDefenderLabel, siegeDefenderPhrase, siegeWords } from "../../shared/siege-theme.ts";
-import { SiegeThemeProvider, useChristmasSiege, useSiegeTheme } from "../shared/siege-skin.tsx";
-import type { ClientMsg } from "../../shared/protocol.ts";
 import type { PlayerSiegeView } from "../../shared/modes/siege.ts";
+import type { ClientMsg } from "../../shared/protocol.ts";
+import type { SiegeDefenderType } from "../../shared/siege-rules.ts";
 import {
   SIEGE_BUILD_SQUARES,
   SIEGE_CHEAPEST,
-  SIEGE_DEFENDERS,
   SIEGE_DEFENDER_TYPES,
+  SIEGE_DEFENDERS,
   SIEGE_GOLD_PER_CORRECT,
   SIEGE_HEARTS,
   SIEGE_LANES,
   SIEGE_MAP_IDLE_MS,
   SIEGE_SQUARES,
   siegeUpgradeCost,
-  type SiegeDefenderType,
 } from "../../shared/siege-rules.ts";
+import { siegeDefenderLabel, siegeDefenderPhrase, siegeWords } from "../../shared/siege-theme.ts";
 import { DEFENDER_EMOJI, SiegeIcon } from "../shared/siege-art.tsx";
+import { SiegeThemeProvider, useChristmasSiege, useSiegeTheme } from "../shared/siege-skin.tsx";
 import { useCountdown } from "../shared/ui.tsx";
 import type { PhoneBanner } from "./common.tsx";
 import { Feedback, StreamQuestion } from "./stream-question.tsx";
@@ -34,7 +34,11 @@ export const siegeBanner: PhoneBanner = {
 
 /** Phone screen for Kingdom Siege: answer questions for gold, and tap Build to place or upgrade defenders on the lane map. */
 export function SiegePlayer({ view, send }: { view: PlayerSiegeView; send: Send }) {
-  return <SiegeThemeProvider theme={view.theme}><SiegePlayerContent view={view} send={send} /></SiegeThemeProvider>;
+  return (
+    <SiegeThemeProvider theme={view.theme}>
+      <SiegePlayerContent view={view} send={send} />
+    </SiegeThemeProvider>
+  );
 }
 
 function SiegePlayerContent({ view, send }: { view: PlayerSiegeView; send: Send }) {
@@ -58,7 +62,8 @@ function SiegePlayerContent({ view, send }: { view: PlayerSiegeView; send: Send 
   let body;
   if (view.phase === "countdown") body = <Countdown view={view} />;
   else if (view.result) body = <SiegeResult view={view} />;
-  else if (view.question) body = <StreamQuestion question={view.question} onAnswer={(seq, option, text) => send({ type: "siege.answer", seq, option, text })} />;
+  else if (view.question)
+    body = <StreamQuestion question={view.question} onAnswer={(seq, option, text) => send({ type: "siege.answer", seq, option, text })} />;
   else
     body = (
       <main class="center">
@@ -81,7 +86,10 @@ function SiegePlayerContent({ view, send }: { view: PlayerSiegeView; send: Send 
       {body}
       {playing && !mapOpen && view.question && (
         <button class={`siege-build ${view.gold >= SIEGE_CHEAPEST ? "ready" : ""}`} onClick={() => openMap(true)}>
-          🔨 Build <span class="siege-build-gold">· <SiegeIcon kind="coin" /> {view.gold}</span>
+          🔨 Build{" "}
+          <span class="siege-build-gold">
+            · <SiegeIcon kind="coin" /> {view.gold}
+          </span>
         </button>
       )}
       {playing && mapOpen && <LaneMap view={view} send={send} onClose={() => openMap(false)} />}
@@ -215,7 +223,9 @@ function LaneMap({ view, send, onClose }: { view: PlayerSiegeView; send: Send; o
                   key={square}
                   class={`siege-cell ${entry ? "entry" : ""} ${d ? `has ${d.type}` : ""} ${isBubble ? "picked" : ""}`}
                   disabled={entry || (!d && dots > 0)}
-                  aria-label={d ? `${siegeDefenderLabel(d.type, theme)} level ${d.level}, lane ${lane + 1} square ${square}` : `Lane ${lane + 1} square ${square}`}
+                  aria-label={
+                    d ? `${siegeDefenderLabel(d.type, theme)} level ${d.level}, lane ${lane + 1} square ${square}` : `Lane ${lane + 1} square ${square}`
+                  }
                   onClick={() => tapSquare(lane, square)}
                 >
                   {d && (
@@ -270,8 +280,12 @@ function SiegeResult({ view }: { view: PlayerSiegeView }) {
             <li>
               {DEFENDER_EMOJI.archer} {r.placed.archer} · {DEFENDER_EMOJI.knight} {r.placed.knight} · {DEFENDER_EMOJI.wall} {r.placed.wall} placed
             </li>
-            <li>⬆️ {r.upgrades} upgrade{r.upgrades === 1 ? "" : "s"}</li>
-            <li>⚔️ {r.defeated} monster{r.defeated === 1 ? "" : "s"} defeated by your defenders</li>
+            <li>
+              ⬆️ {r.upgrades} upgrade{r.upgrades === 1 ? "" : "s"}
+            </li>
+            <li>
+              ⚔️ {r.defeated} monster{r.defeated === 1 ? "" : "s"} defeated by your defenders
+            </li>
           </ul>
           {r.awards.length > 0 && (
             <div class="siege-awards-mine">

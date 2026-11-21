@@ -3,11 +3,11 @@
 The built-in music plays these recordings (trimmed, levelled and converted to MP3 by
 `scripts/music-samples.py`).
 
-| Instruments | Source | License |
-|---|---|---|
-| String sections (cello, viola, violin; also the pads), brass (French horn, trumpet), flute, harp, pipe organ, timpani | [VSCO 2 Community Edition](https://github.com/sgossner/VSCO-2-CE) by Versilian Studios | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
-| Grand piano (Kawai), tubular bells, glockenspiel, concert bass drum (kick and taiko), snare drum, hi-hat, claps, suspended cymbal, woodblock | [VCSL, the Versilian Community Sample Library](https://github.com/sgossner/VCSL) by Versilian Studios | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
-| Finger bass (`bass`), acoustic bass (`tribass`), clean electric guitar (`twang`) | FluidR3_GM SoundFont by Frank Wen, as rendered by [gleitz/midi-js-soundfonts](https://github.com/gleitz/midi-js-soundfonts) | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/us/) |
+| Instruments                                                                                                                                  | Source                                                                                                                      | License                                                       |
+| -------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| String sections (cello, viola, violin; also the pads), brass (French horn, trumpet), flute, harp, pipe organ, timpani                        | [VSCO 2 Community Edition](https://github.com/sgossner/VSCO-2-CE) by Versilian Studios                                      | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| Grand piano (Kawai), tubular bells, glockenspiel, concert bass drum (kick and taiko), snare drum, hi-hat, claps, suspended cymbal, woodblock | [VCSL, the Versilian Community Sample Library](https://github.com/sgossner/VCSL) by Versilian Studios                       | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| Finger bass (`bass`), acoustic bass (`tribass`), clean electric guitar (`twang`)                                                             | FluidR3_GM SoundFont by Frank Wen, as rendered by [gleitz/midi-js-soundfonts](https://github.com/gleitz/midi-js-soundfonts) | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/us/)  |
 
 ## Evil Snowman Christmas arrangements
 
@@ -15,12 +15,12 @@ The seasonal Robot Attack soundtrack uses traditional public-domain melodies wit
 accompaniment arranged in code for this game, without third-party song recordings
 or modern published arrangements:
 
-| Cue | Traditional melody | Source |
-|---|---|---|
-| Lobby | O Come, All Ye Faithful (ADESTE FIDELES, John Francis Wade, 18th century) | [Hymnary: public-domain tune](https://hymnary.org/tune/adeste_fideles_wade) |
-| Quiz | God Rest Ye Merry, Gentlemen (traditional English) | [Hymnary: public-domain tune](https://hymnary.org/tune/god_rest_you_merry_11554) |
+| Cue               | Traditional melody                                                                                             | Source                                                                                                                   |
+| ----------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Lobby             | O Come, All Ye Faithful (ADESTE FIDELES, John Francis Wade, 18th century)                                      | [Hymnary: public-domain tune](https://hymnary.org/tune/adeste_fideles_wade)                                              |
+| Quiz              | God Rest Ye Merry, Gentlemen (traditional English)                                                             | [Hymnary: public-domain tune](https://hymnary.org/tune/god_rest_you_merry_11554)                                         |
 | Movement / attack | O Come, O Come, Emmanuel (VENI EMMANUEL, historic French melody; published in The Hymnal Noted, Part II, 1856) | [Hymnology Archive: historical score and publication history](https://www.hymnologyarchive.com/bone-jesu-dulcis-cunctis) |
-| Results | Joy to the World (ANTIOCH, Lowell Mason, 19th century) | [Hymnary: public-domain tune](https://hymnary.org/tune/antioch_handel) |
+| Results           | Joy to the World (ANTIOCH, Lowell Mason, 19th century)                                                         | [Hymnary: public-domain tune](https://hymnary.org/tune/antioch_handel)                                                   |
 
 Only the CC0 VSCO 2 CE and VCSL instruments listed above are used in these four
 arrangements: flute, harp (`pluck`), strings, brass, piano, bells, timpani, and
@@ -39,12 +39,12 @@ The Christmas theme selects these built-in cues; the classic theme retains the
 original chiptune cues. These reuse the game's carol melodies and accompaniment,
 with no third-party song recordings or modern published arrangements:
 
-| Cue | Public-domain melody | Source |
-|---|---|---|
-| `tower-christmas-lobby` | O Come, All Ye Faithful (ADESTE FIDELES, attributed to John Francis Wade, 18th century) | [Hymnary: tune and public-domain status](https://hymnary.org/tune/adeste_fideles_wade) |
-| `tower-christmas-play` | Joy to the World (ANTIOCH, Lowell Mason, 19th century) | [Hymnary: tune and public-domain status](https://hymnary.org/tune/antioch_handel) |
-| `tower-christmas-medley` | Joy to the World, followed by O Holy Night (CANTIQUE DE NOËL, Adolphe Adam, 19th century) | [Hymnary: ANTIOCH](https://hymnary.org/tune/antioch_handel), [Mutopia Project: public-domain Léon Grus score](https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=640) |
-| `tower-christmas-results` | Hark! The Herald Angels Sing (MENDELSSOHN, Felix Mendelssohn, 1840; adapted by William H. Cummings, 1855) | [Hymnary: tune and public-domain status](https://hymnary.org/tune/mendelssohn_mendelssohn) |
+| Cue                       | Public-domain melody                                                                                      | Source                                                                                                                                                                     |
+| ------------------------- | --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tower-christmas-lobby`   | O Come, All Ye Faithful (ADESTE FIDELES, attributed to John Francis Wade, 18th century)                   | [Hymnary: tune and public-domain status](https://hymnary.org/tune/adeste_fideles_wade)                                                                                     |
+| `tower-christmas-play`    | Joy to the World (ANTIOCH, Lowell Mason, 19th century)                                                    | [Hymnary: tune and public-domain status](https://hymnary.org/tune/antioch_handel)                                                                                          |
+| `tower-christmas-medley`  | Joy to the World, followed by O Holy Night (CANTIQUE DE NOËL, Adolphe Adam, 19th century)                 | [Hymnary: ANTIOCH](https://hymnary.org/tune/antioch_handel), [Mutopia Project: public-domain Léon Grus score](https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=640) |
+| `tower-christmas-results` | Hark! The Herald Angels Sing (MENDELSSOHN, Felix Mendelssohn, 1840; adapted by William H. Cummings, 1855) | [Hymnary: tune and public-domain status](https://hymnary.org/tune/mendelssohn_mendelssohn)                                                                                 |
 
 The underlying compositions are public domain in the United States. All instrument
 recordings in these cues come from the CC0 VSCO 2 CE and VCSL libraries above;
@@ -56,11 +56,11 @@ both melodies at every intensity and builds from 104 to 130 BPM.
 The Christmas racer uses original game arrangements of these public-domain
 melodies. The classic theme retains its original arcade soundtrack.
 
-| Cue | Public-domain melody | Source |
-|---|---|---|
-| `racer-christmas-lobby` | Angels We Have Heard on High (GLORIA, traditional French carol) | [Hymnary: public-domain score](https://hymnary.org/media/fetch/100443); [public-domain melody transcription by Douglas D. Anderson](https://abcnotation.com/tunePage?a=trillian.mit.edu%2F~jc%2Fmusic%2Fabc%2Fmirror%2Fwww.stephenmerrony.co.uk%2FAngels_We_Have_Heard_On_High%2F0000) |
-| `racer-christmas-drive` | God Rest Ye Merry, Gentlemen (traditional English carol) | [Hymnary: public-domain tune](https://hymnary.org/tune/god_rest_you_merry_11554) |
-| `racer-christmas-results` | Hark! The Herald Angels Sing (MENDELSSOHN, Felix Mendelssohn, 1840; adapted by William H. Cummings, 1855) | [Hymnary: public-domain tune](https://hymnary.org/tune/mendelssohn_mendelssohn) |
+| Cue                       | Public-domain melody                                                                                      | Source                                                                                                                                                                                                                                                                                 |
+| ------------------------- | --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `racer-christmas-lobby`   | Angels We Have Heard on High (GLORIA, traditional French carol)                                           | [Hymnary: public-domain score](https://hymnary.org/media/fetch/100443); [public-domain melody transcription by Douglas D. Anderson](https://abcnotation.com/tunePage?a=trillian.mit.edu%2F~jc%2Fmusic%2Fabc%2Fmirror%2Fwww.stephenmerrony.co.uk%2FAngels_We_Have_Heard_On_High%2F0000) |
+| `racer-christmas-drive`   | God Rest Ye Merry, Gentlemen (traditional English carol)                                                  | [Hymnary: public-domain tune](https://hymnary.org/tune/god_rest_you_merry_11554)                                                                                                                                                                                                       |
+| `racer-christmas-results` | Hark! The Herald Angels Sing (MENDELSSOHN, Felix Mendelssohn, 1840; adapted by William H. Cummings, 1855) | [Hymnary: public-domain tune](https://hymnary.org/tune/mendelssohn_mendelssohn)                                                                                                                                                                                                        |
 
 The underlying compositions are public domain in the United States. All voices
 are synthesized in WebAudio, including the FM bells and brass: no third-party

@@ -6,17 +6,19 @@
  * question wrong fall out of the back: on the road they bounce away down it, in space they
  * drift off. Shared by the projector and the phones.
  */
-import { racerTheme, type RacerTheme } from "../../shared/racer-theme.ts";
-import christmasCar from "./racer/christmas/car.webp";
-import christmasCrash from "./racer/christmas/car-crashed.webp";
-import christmasSkyline from "./racer/christmas/skyline.webp";
-import christmasTree from "./racer/christmas/tree.webp";
-import santaFlyby from "./racer/christmas/santa-flyby.webp";
+
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { AvatarChoice } from "../../shared/avatars.ts";
+import type { RacerTheme } from "../../shared/racer-theme.ts";
+import { racerTheme } from "../../shared/racer-theme.ts";
 import { Avatar } from "./avatar-art.tsx";
-import carCrashedImg from "./racer/car-crashed.webp";
 import carImg from "./racer/car.webp";
+import carCrashedImg from "./racer/car-crashed.webp";
+import christmasCar from "./racer/christmas/car.webp";
+import christmasCrash from "./racer/christmas/car-crashed.webp";
+import santaFlyby from "./racer/christmas/santa-flyby.webp";
+import christmasSkyline from "./racer/christmas/skyline.webp";
+import christmasTree from "./racer/christmas/tree.webp";
 import palmImg from "./racer/palm.webp";
 import skylineImg from "./racer/skyline.webp";
 
@@ -331,7 +333,9 @@ export function RacerScene({ speed, crashed, onLand, ejected, theme, class: cls 
     return () => clearTimeout(t);
   }, [ejection]);
 
-  const palmRow = PALMS.map((left) => <img key={left} class="racer-scene-palm" src={christmas ? christmasTree : palmImg} alt="" style={{ left: `${left}%` }} />);
+  const palmRow = PALMS.map((left) => (
+    <img key={left} class="racer-scene-palm" src={christmas ? christmasTree : palmImg} alt="" style={{ left: `${left}%` }} />
+  ));
   return (
     <div ref={root} class={`racer-scene ${crashed ? "crashed" : ""} ${cls ?? ""}`} data-theme={racerTheme(theme)} aria-hidden="true">
       <canvas ref={stars} class="racer-scene-stars" />
@@ -356,7 +360,7 @@ export function RacerScene({ speed, crashed, onLand, ejected, theme, class: cls 
         </div>
       )}
       <div ref={car} class="racer-scene-car">
-        <img src={christmas ? (crashed ? christmasCrash : christmasCar) : (crashed ? carCrashedImg : carImg)} alt="" />
+        <img src={christmas ? (crashed ? christmasCrash : christmasCar) : crashed ? carCrashedImg : carImg} alt="" />
         {crashed && (
           <div class="racer-scene-smoke">
             <i />

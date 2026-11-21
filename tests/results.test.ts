@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
-import { INTRO_MS } from "../src/server/game/game.ts";
 import { buildResultsCsv } from "../src/server/game/classic.ts";
+import { INTRO_MS } from "../src/server/game/game.ts";
 import { classicGame, FakeClock, sampleQuiz } from "./helpers.ts";
 
 test("results CSV has one row per player in rank order", () => {

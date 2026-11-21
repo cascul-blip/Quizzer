@@ -7,7 +7,9 @@ import { fakeHub, HubSocket } from "./hub-harness.ts";
 
 describe("Per-device caps", () => {
   let t: ReturnType<typeof tempDir>;
-  beforeAll(() => { t = tempDir(); });
+  beforeAll(() => {
+    t = tempDir();
+  });
   afterAll(() => t.cleanup());
 
   async function openHub() {

@@ -1,4 +1,5 @@
-import { createContext, type ComponentChildren } from "preact";
+import type { ComponentChildren } from "preact";
+import { createContext } from "preact";
 import { useContext } from "preact/hooks";
 import type { SeasonTheme } from "../../shared/season-theme.ts";
 

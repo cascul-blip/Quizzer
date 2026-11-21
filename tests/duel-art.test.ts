@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync, statSync } from "node:fs";
+import { DUEL_CLIPS, DUEL_OBJECTS } from "../src/client/shared/duel/meta.ts";
 import {
   DUEL_ASPECT,
   DUEL_FEET_Y,
@@ -12,7 +13,6 @@ import {
   duelMuzzle,
   duelStreetId,
 } from "../src/client/shared/duel-art.tsx";
-import { DUEL_CLIPS, DUEL_OBJECTS } from "../src/client/shared/duel/meta.ts";
 
 const dir = new URL("../src/client/shared/duel/", import.meta.url);
 
@@ -42,7 +42,10 @@ describe("showdown art files", () => {
     expect(Object.keys(DUEL_PROJECTOR_ART).sort()).toEqual(onDisk("./"));
     expect(Object.keys(DUEL_PHONE_ART).sort()).toEqual(onDisk("phone/"));
     for (const [id, f] of Object.entries(DUEL_FILES)) {
-      for (const [sub, size] of [["", f.projector], ["phone/", f.phone]] as const) {
+      for (const [sub, size] of [
+        ["", f.projector],
+        ["phone/", f.phone],
+      ] as const) {
         if (!size) continue;
         const b = readFileSync(new URL(`${sub}${id}.webp`, dir));
         expect([id, ...webpSize(b)]).toEqual([id, ...size]);

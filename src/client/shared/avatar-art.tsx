@@ -10,8 +10,8 @@
  * scripts/avatar-art.py, so a hat still lands on every head.
  */
 import type { JSX } from "preact";
-import { ACCESSORIES, AVATARS, type AccessoryId, type AvatarChoice, type AvatarId } from "../../shared/avatars.ts";
-import { isPhoneArt } from "./phone-art.ts";
+import type { AccessoryId, AvatarChoice, AvatarId } from "../../shared/avatars.ts";
+import { ACCESSORIES, AVATARS } from "../../shared/avatars.ts";
 import alienImg from "./avatar/alien.webp";
 import angelkidImg from "./avatar/angelkid.webp";
 import antlersImg from "./avatar/antlers.webp";
@@ -44,10 +44,12 @@ import elfImg from "./avatar/elf.webp";
 import elfhatImg from "./avatar/elfhat.webp";
 import emperorchickImg from "./avatar/emperorchick.webp";
 import eyepatchImg from "./avatar/eyepatch.webp";
+import festivebowtieImg from "./avatar/festivebowtie.webp";
 import flowersImg from "./avatar/flowers.webp";
 import foxImg from "./avatar/fox.webp";
 import frogImg from "./avatar/frog.webp";
 import ghostImg from "./avatar/ghost.webp";
+import giftbowImg from "./avatar/giftbow.webp";
 import gingerbreadImg from "./avatar/gingerbread.webp";
 import gogglesImg from "./avatar/goggles.webp";
 import headphonesImg from "./avatar/headphones.webp";
@@ -68,6 +70,7 @@ import monocleImg from "./avatar/monocle.webp";
 import monsterImg from "./avatar/monster.webp";
 import mooseImg from "./avatar/moose.webp";
 import mouseImg from "./avatar/mouse.webp";
+import mrsclausImg from "./avatar/mrsclaus.webp";
 import mustacheImg from "./avatar/mustache.webp";
 import nerdImg from "./avatar/nerd.webp";
 import nutcrackerImg from "./avatar/nutcracker.webp";
@@ -84,10 +87,13 @@ import pigtailsImg from "./avatar/pigtails.webp";
 import pirateImg from "./avatar/pirate.webp";
 import polarbearImg from "./avatar/polarbear.webp";
 import propellerImg from "./avatar/propeller.webp";
+import puddinghatImg from "./avatar/puddinghat.webp";
 import raccoonImg from "./avatar/raccoon.webp";
 import reindeerImg from "./avatar/reindeer.webp";
 import reindeerbandImg from "./avatar/reindeerband.webp";
+import robinImg from "./avatar/robin.webp";
 import robotImg from "./avatar/robot.webp";
+import santaclausImg from "./avatar/santaclaus.webp";
 import santahatImg from "./avatar/santahat.webp";
 import scarfImg from "./avatar/scarf.webp";
 import sealImg from "./avatar/seal.webp";
@@ -96,6 +102,7 @@ import sheepImg from "./avatar/sheep.webp";
 import snorkelImg from "./avatar/snorkel.webp";
 import snowbunnyImg from "./avatar/snowbunny.webp";
 import snowflakesImg from "./avatar/snowflakes.webp";
+import snowgogglesImg from "./avatar/snowgoggles.webp";
 import snowmanImg from "./avatar/snowman.webp";
 import snowyowlImg from "./avatar/snowyowl.webp";
 import spikyImg from "./avatar/spiky.webp";
@@ -108,18 +115,12 @@ import tophatImg from "./avatar/tophat.webp";
 import turtleImg from "./avatar/turtle.webp";
 import unicornImg from "./avatar/unicorn.webp";
 import vikingImg from "./avatar/viking.webp";
+import walrusImg from "./avatar/walrus.webp";
+import wintercrownImg from "./avatar/wintercrown.webp";
 import wizardImg from "./avatar/wizard.webp";
 import xmasscarfImg from "./avatar/xmasscarf.webp";
-import santaclausImg from "./avatar/santaclaus.webp";
-import mrsclausImg from "./avatar/mrsclaus.webp";
 import yeticubImg from "./avatar/yeticub.webp";
-import robinImg from "./avatar/robin.webp";
-import walrusImg from "./avatar/walrus.webp";
-import snowgogglesImg from "./avatar/snowgoggles.webp";
-import giftbowImg from "./avatar/giftbow.webp";
-import wintercrownImg from "./avatar/wintercrown.webp";
-import puddinghatImg from "./avatar/puddinghat.webp";
-import festivebowtieImg from "./avatar/festivebowtie.webp";
+import { isPhoneArt } from "./phone-art.ts";
 
 /** Layout of the phone sheets, as written by scripts/phone-art.py. */
 const CELL = 192;
@@ -256,7 +257,10 @@ const GEAR_IMG: Record<Exclude<AccessoryId, "none">, string> = {
   festivebowtie: festivebowtieImg,
 };
 
-export const AVATAR_ART = Object.fromEntries(AVATARS.map((a, i) => [a.id, painted(FACE_IMG[a.id], facesSheet, i, AVATARS.length)])) as Record<AvatarId, () => JSX.Element>;
+export const AVATAR_ART = Object.fromEntries(AVATARS.map((a, i) => [a.id, painted(FACE_IMG[a.id], facesSheet, i, AVATARS.length)])) as Record<
+  AvatarId,
+  () => JSX.Element
+>;
 
 const GEAR = ACCESSORIES.filter((a): a is Exclude<(typeof ACCESSORIES)[number], { id: "none" }> => a.id !== "none");
 export const ACCESSORY_ART = {

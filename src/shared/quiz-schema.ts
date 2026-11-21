@@ -5,11 +5,11 @@ import {
   MAX_PIN_SPOTS,
   MEDIA_REF_RE,
   MIN_OPTIONS,
+  newId,
+  pinLabel,
   QUESTION_ID_RE,
   QUIZ_ID_RE,
   TF_OPTIONS,
-  newId,
-  pinLabel,
 } from "./quiz-constants.ts";
 
 export * from "./quiz-constants.ts";
@@ -49,9 +49,7 @@ export const QuestionDraft = z.object({
     .min(MIN_OPTIONS)
     .max(MAX_PIN_SPOTS)
     .optional()
-    .describe(
-      `pin only: 2–${MAX_PIN_SPOTS} target spots on the image as {x, y} fractions (0 = left/top, 1 = right/bottom). Extra spots act as distractors.`,
-    ),
+    .describe(`pin only: 2–${MAX_PIN_SPOTS} target spots on the image as {x, y} fractions (0 = left/top, 1 = right/bottom). Extra spots act as distractors.`),
   correct: z
     .array(z.number().int().min(0))
     .min(1)
@@ -110,10 +108,10 @@ export const Question = z
 export type Question = z.infer<typeof Question>;
 
 export const QuizSettings = z.object({
-  shuffleQuestions: z.boolean().describe("Default for the lobby's \"shuffle questions\" toggle: randomize question order each game."),
+  shuffleQuestions: z.boolean().describe('Default for the lobby\'s "shuffle questions" toggle: randomize question order each game.'),
   shuffleAnswers: z
     .boolean()
-    .describe("Default for the lobby's \"shuffle answers\" toggle: randomize answer positions/colors each game (same order for everyone)."),
+    .describe('Default for the lobby\'s "shuffle answers" toggle: randomize answer positions/colors each game (same order for everyone).'),
 });
 export type QuizSettings = z.infer<typeof QuizSettings>;
 export const DEFAULT_SETTINGS: QuizSettings = { shuffleQuestions: false, shuffleAnswers: false };

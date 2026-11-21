@@ -1,7 +1,4 @@
 import type { AvatarChoice } from "./avatars.ts";
-import type { RacerConfidence } from "./racer-rules.ts";
-import type { SiegeDefenderType } from "./siege-rules.ts";
-import type { PatchOp } from "./view-patch.ts";
 import type { Pacing, QuestionError, QuestionView, TeamInfo } from "./mode-views.ts";
 import type { CupPhase, CupSettings, HostCupState, PlayerCupView } from "./modes/cup.ts";
 import type { DuelPhase, DuelSettings, HostDuelState, PlayerDuelView } from "./modes/duel.ts";
@@ -13,6 +10,9 @@ import type { HostRobotState, PlayerRobotView, RobotDir, RobotPhase } from "./mo
 import type { HostSiegeState, PlayerSiegeView, SiegePhase, SiegeSettings } from "./modes/siege.ts";
 import type { HostSubState, PlayerSubView, SubPhase } from "./modes/submarine.ts";
 import type { HostTowerState, PlayerTowerView, TowerPhase, TowerSettings } from "./modes/tower.ts";
+import type { RacerConfidence } from "./racer-rules.ts";
+import type { SiegeDefenderType } from "./siege-rules.ts";
+import type { PatchOp } from "./view-patch.ts";
 
 export type Phase = "lobby" | "intro" | "open" | "reveal" | "leaderboard" | "podium";
 
@@ -157,7 +157,13 @@ export interface PlayerResult {
 
 export type PlayerView =
   | { kind: "none"; game: null }
-  | { kind: "none"; game: { title: string; phase: Phase | TowerPhase | SubPhase | FightPhase | RobotPhase | LandPhase | RacerPhase | CupPhase | SiegePhase | DuelPhase | GiftPhase } }
+  | {
+      kind: "none";
+      game: {
+        title: string;
+        phase: Phase | TowerPhase | SubPhase | FightPhase | RobotPhase | LandPhase | RacerPhase | CupPhase | SiegePhase | DuelPhase | GiftPhase;
+      };
+    }
   | {
       kind: "classic";
       phase: Phase;
@@ -253,8 +259,7 @@ export type ServerMsg =
   /** Changes to the last player.state (see view-patch.ts), sent when smaller than a new snapshot. */
   | { type: "player.patch"; ops: PatchOp[] }
   | { type: "host.state"; view: HostView }
-  | { type: "joined"; token: string; playerId: string; /** Question images of the quiz, to preload. */ images?: string[] }
+  | { type: "joined"; token: string; playerId: string /** Question images of the quiz, to preload. */; images?: string[] }
   | { type: "kicked" }
   | { type: "resumeFailed" }
   | { type: "error"; message: string };
-

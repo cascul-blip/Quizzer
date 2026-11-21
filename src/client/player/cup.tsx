@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import type { ClientMsg } from "../../shared/protocol.ts";
 import type { PlayerCupView } from "../../shared/modes/cup.ts";
-import { CupArt, Die, RollingDie, RocketHead } from "../shared/cup-art.tsx";
+import type { ClientMsg } from "../../shared/protocol.ts";
+import { CupArt, Die, RocketHead, RollingDie } from "../shared/cup-art.tsx";
 import { CupThemeProvider, useChristmasCup } from "../shared/cup-skin.tsx";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
 import { Feedback, StreamQuestion } from "./stream-question.tsx";
@@ -24,7 +24,11 @@ function RollScreen({ round, target, rollMs }: { round: number; target: number; 
 
 /** Phone screen for Cup of Death: roll, answer, and (if you fall short) pick a cup. */
 export function CupPlayer({ view, send }: { view: PlayerCupView; send: Send }) {
-  return <CupThemeProvider theme={view.theme}><CupPlayerContent view={view} send={send} /></CupThemeProvider>;
+  return (
+    <CupThemeProvider theme={view.theme}>
+      <CupPlayerContent view={view} send={send} />
+    </CupThemeProvider>
+  );
 }
 
 function CupPlayerContent({ view, send }: { view: PlayerCupView; send: Send }) {
@@ -39,7 +43,11 @@ function CupPlayerContent({ view, send }: { view: PlayerCupView; send: Send }) {
       <main class="center">
         <div class="cup-emoji">{christmas ? "☕" : "🤠"}</div>
         <h1>{christmas ? "Cup of Cheer" : "Cup of Death"}</h1>
-        <p class="muted">{christmas ? "Roll the die and answer that many questions before time runs out. Fall short and sip some cocoa. One cup is supercharged: shake, sparkle and blast off!" : "Roll the die, then answer that many questions right before time runs out. Fall short and you'll have to drink. One cup is poisoned!"}</p>
+        <p class="muted">
+          {christmas
+            ? "Roll the die and answer that many questions before time runs out. Fall short and sip some cocoa. One cup is supercharged: shake, sparkle and blast off!"
+            : "Roll the die, then answer that many questions right before time runs out. Fall short and you'll have to drink. One cup is poisoned!"}
+        </p>
         <div class="tower-count">{Math.max(1, secs)}</div>
       </main>
     );
@@ -136,7 +144,13 @@ function CupPicker({ view, secs, send }: { view: PlayerCupView; secs: number; se
     <main class="cup-pick">
       <h1>{forced ? "Your last cup…" : picked === null ? "Pick a cup!" : "Bottoms up soon…"}</h1>
       <p class="muted">
-        {forced ? christmas ? "Supercharged cocoa. Get ready for liftoff!" : "No choice left. Drink up, partner." : picked === null ? `One of these is ${christmas ? "supercharged" : "poisoned"}. ${secs}s left, or one gets picked for you.` : "Waiting for the others to choose…"}
+        {forced
+          ? christmas
+            ? "Supercharged cocoa. Get ready for liftoff!"
+            : "No choice left. Drink up, partner."
+          : picked === null
+            ? `One of these is ${christmas ? "supercharged" : "poisoned"}. ${secs}s left, or one gets picked for you.`
+            : "Waiting for the others to choose…"}
       </p>
       <div class={`cup-row n${count}`}>
         {Array.from({ length: count }, (_, i) => (
@@ -174,14 +188,22 @@ function RevealScreen({ view }: { view: PlayerCupView }) {
       <main class="center cup-safe">
         <div class="cup-emoji">🍻</div>
         <h1>{view.phase === "reveal" ? "Watch the table!" : "…"}</h1>
-        <p class="muted">{view.alive} {christmas ? "still in the workshop" : "still alive"}</p>
+        <p class="muted">
+          {view.alive} {christmas ? "still in the workshop" : "still alive"}
+        </p>
       </main>
     );
   }
   if (d.verdict === "poison") {
     return (
       <main class={`center cup-verdict ${christmas ? "cheer-blastoff" : "poison"}`}>
-        {christmas ? <svg key={d.seq} class="cheer-phone-launch" viewBox="-80 -100 160 220" aria-label="Your avatar shakes with energy and blasts off with sparkles"><RocketHead choice={view.me.avatar} /></svg> : <div class="cup-emoji">☠️</div>}
+        {christmas ? (
+          <svg key={d.seq} class="cheer-phone-launch" viewBox="-80 -100 160 220" aria-label="Your avatar shakes with energy and blasts off with sparkles">
+            <RocketHead choice={view.me.avatar} />
+          </svg>
+        ) : (
+          <div class="cup-emoji">☠️</div>
+        )}
         <h1>{christmas ? "Blast off!" : "Poisoned!"}</h1>
         <p class="muted">You're out, but you can keep answering questions to learn.</p>
       </main>
@@ -228,9 +250,19 @@ function CupResult({ view }: { view: PlayerCupView }) {
   if (!r) return null;
   return (
     <main class="center">
-      <div class="cup-emoji">{r.won ? christmas ? "🎄" : "🤠" : christmas ? "🚀" : "☠️"}</div>
+      <div class="cup-emoji">{r.won ? (christmas ? "🎄" : "🤠") : christmas ? "🚀" : "☠️"}</div>
       <div class={`final-rank ${r.won ? "top" : ""}`}>{r.won ? "You win!" : `${ordinal(r.rank)} of ${r.playerCount}`}</div>
-      <p class="muted">{r.outRound === null ? (r.won ? christmas ? "Last one in Santa's workshop!" : "Last one standing in the saloon!" : "You survived to the end.") : r.won ? `${christmas ? "Blasted off" : "Poisoned"} in round ${r.outRound}, along with everyone else left. Shared win!` : `${christmas ? "Blasted off" : "Poisoned"} in round ${r.outRound}.`}</p>
+      <p class="muted">
+        {r.outRound === null
+          ? r.won
+            ? christmas
+              ? "Last one in Santa's workshop!"
+              : "Last one standing in the saloon!"
+            : "You survived to the end."
+          : r.won
+            ? `${christmas ? "Blasted off" : "Poisoned"} in round ${r.outRound}, along with everyone else left. Shared win!`
+            : `${christmas ? "Blasted off" : "Poisoned"} in round ${r.outRound}.`}
+      </p>
       <p class="big-score">{view.me.correct} correct</p>
       {r.awards.map((a) => (
         <div key={a} class="award-chip">

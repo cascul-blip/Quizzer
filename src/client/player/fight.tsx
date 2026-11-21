@@ -1,9 +1,10 @@
-import { FightThemeProvider, useGingerbread, fightChristmasArt } from "../shared/fight-skin.tsx";
 import { useEffect, useRef, useState } from "preact/hooks";
-import { CATAPULT_X, LAUNCH_Y, MAX_PULL, launchVector, shotPos, simulate } from "../../shared/fight-physics.ts";
-import { CORRECT_PER_DECISION, REPAIR_MS, TOWER_MAX_DAMAGE, type FightShot, type PlayerFightView } from "../../shared/modes/fight.ts";
+import { CATAPULT_X, LAUNCH_Y, launchVector, MAX_PULL, shotPos, simulate } from "../../shared/fight-physics.ts";
+import type { FightShot, PlayerFightView } from "../../shared/modes/fight.ts";
+import { CORRECT_PER_DECISION, REPAIR_MS, TOWER_MAX_DAMAGE } from "../../shared/modes/fight.ts";
 import type { ClientMsg } from "../../shared/protocol.ts";
 import { AvatarSprite, Battlefield, FIGHT_PHONE_UI, HealthBar, ShotLayer, sy } from "../shared/fight-art.tsx";
+import { FightThemeProvider, fightChristmasArt, useGingerbread } from "../shared/fight-skin.tsx";
 import { teamInk, teamVars, useCountdown } from "../shared/ui.tsx";
 import { Feedback, StreamQuestion } from "./stream-question.tsx";
 
@@ -34,7 +35,11 @@ const PHONE_SPRITE_R = 32;
 
 /** Phone screen for Tower Fight: own questions at own pace; every 4 correct answers, attack or rebuild. */
 export function FightPlayer(props: { view: PlayerFightView; send: Send }) {
-  return <FightThemeProvider theme={props.view.theme}><FightPlayerContent {...props} /></FightThemeProvider>;
+  return (
+    <FightThemeProvider theme={props.view.theme}>
+      <FightPlayerContent {...props} />
+    </FightThemeProvider>
+  );
 }
 
 function FightPlayerContent({ view, send }: { view: PlayerFightView; send: Send }) {
@@ -62,9 +67,7 @@ function FightPlayerContent({ view, send }: { view: PlayerFightView; send: Send 
         <div class="team-badge big" style={{ background: view.team.color, color: teamInk(view.team.color) }}>
           Team {view.team.name}
         </div>
-        <p class="muted">
-          Answer questions to earn moves. Every {CORRECT_PER_DECISION} correct answers, attack the other tower or repair yours!
-        </p>
+        <p class="muted">Answer questions to earn moves. Every {CORRECT_PER_DECISION} correct answers, attack the other tower or repair yours!</p>
         <div class="tower-count">{Math.max(1, secs)}</div>
       </main>
     );
@@ -72,7 +75,15 @@ function FightPlayerContent({ view, send }: { view: PlayerFightView; send: Send 
     const fallen = view.damage.findIndex((d) => d >= TOWER_MAX_DAMAGE);
     body = (
       <main class="fight-screen" style={BACKDROP}>
-        <Battlefield hill={view.hill} shots={view.shot ? [view.shot] : []} spriteR={PHONE_SPRITE_R} terrain={view.terrain} damage={view.damage} colors={colors} collapsing={fallen} />
+        <Battlefield
+          hill={view.hill}
+          shots={view.shot ? [view.shot] : []}
+          spriteR={PHONE_SPRITE_R}
+          terrain={view.terrain}
+          damage={view.damage}
+          colors={colors}
+          collapsing={fallen}
+        />
         <h1 class="fight-msg">{fallen === view.team.index ? "😱 Your tower is falling!" : `🎉 Team ${view.teams[fallen]?.name}'s tower is falling!`}</h1>
       </main>
     );
@@ -100,7 +111,11 @@ function FightPlayerContent({ view, send }: { view: PlayerFightView; send: Send 
 
   const [me, them] = [view.team.index, 1 - view.team.index];
   return (
-    <div class="game fight-game" data-theme={view.theme ?? "classic"} style={{ ...teamVars(view.team.color), ...(view.theme === "christmas" ? { "--fight-backdrop": `url(${fightChristmasArt().sky})` } : {}) }}>
+    <div
+      class="game fight-game"
+      data-theme={view.theme ?? "classic"}
+      style={{ ...teamVars(view.team.color), ...(view.theme === "christmas" ? { "--fight-backdrop": `url(${fightChristmasArt().sky})` } : {}) }}
+    >
       <header class="bar team-bar">
         <span class="name">{view.me.nickname}</span>
         {view.phase === "playing" && (
@@ -148,7 +163,14 @@ function DecideScreen({ view, send }: { view: PlayerFightView; send: Send }) {
   };
   return (
     <main class="fight-screen" style={BACKDROP}>
-      <Battlefield hill={view.hill} shots={view.shot ? [view.shot] : []} spriteR={PHONE_SPRITE_R} terrain={view.terrain} damage={view.damage} colors={view.teams.map((t) => t.color)} />
+      <Battlefield
+        hill={view.hill}
+        shots={view.shot ? [view.shot] : []}
+        spriteR={PHONE_SPRITE_R}
+        terrain={view.terrain}
+        damage={view.damage}
+        colors={view.teams.map((t) => t.color)}
+      />
       <div class="fight-head">
         <b>Your move!</b>
         <DecisionClock view={view} />
@@ -217,7 +239,13 @@ function AimScreen({ view, send }: { view: PlayerFightView; send: Send }) {
   const len = pull ? Math.hypot(pull.dx, pull.dy) : 0;
   const power = Math.round((Math.min(len, MAX_PULL) / MAX_PULL) * 100);
   const cx = CATAPULT_X[team]!;
-  const back = pull && len > 0 ? { x: cx + (pull.dx / len) * (Math.min(len, MAX_PULL) / MAX_PULL) * PULL_DRAW, y: LAUNCH_Y + (pull.dy / len) * (Math.min(len, MAX_PULL) / MAX_PULL) * PULL_DRAW } : null;
+  const back =
+    pull && len > 0
+      ? {
+          x: cx + (pull.dx / len) * (Math.min(len, MAX_PULL) / MAX_PULL) * PULL_DRAW,
+          y: LAUNCH_Y + (pull.dy / len) * (Math.min(len, MAX_PULL) / MAX_PULL) * PULL_DRAW,
+        }
+      : null;
   const dots = [];
   if (v) {
     const flightMs = simulate(view.terrain, team, v.vx, v.vy).durationMs;
@@ -228,8 +256,24 @@ function AimScreen({ view, send }: { view: PlayerFightView; send: Send }) {
   }
 
   return (
-    <main class="fight-screen aim" style={BACKDROP} ref={areaRef} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={() => ((start.current = null), setPull(null))}>
-      <Battlefield hill={view.hill} shots={view.shot ? [view.shot] : []} spriteR={PHONE_SPRITE_R} terrain={view.terrain} damage={view.damage} colors={view.teams.map((t) => t.color)} loaded={team === 0 ? [back ? null : view.me.avatar, null] : [null, back ? null : view.me.avatar]}>
+    <main
+      class="fight-screen aim"
+      style={BACKDROP}
+      ref={areaRef}
+      onPointerDown={onDown}
+      onPointerMove={onMove}
+      onPointerUp={onUp}
+      onPointerCancel={() => ((start.current = null), setPull(null))}
+    >
+      <Battlefield
+        hill={view.hill}
+        shots={view.shot ? [view.shot] : []}
+        spriteR={PHONE_SPRITE_R}
+        terrain={view.terrain}
+        damage={view.damage}
+        colors={view.teams.map((t) => t.color)}
+        loaded={team === 0 ? [back ? null : view.me.avatar, null] : [null, back ? null : view.me.avatar]}
+      >
         {back && (
           <>
             <line x1={cx - 12} y1={sy(LAUNCH_Y) - 4} x2={back.x} y2={sy(back.y)} stroke="#3b2412" stroke-width="4" />
@@ -321,7 +365,14 @@ function WatchScreen({ view, shot }: { view: PlayerFightView; shot: FightShot })
         : "🌪 Whoosh… right off the map";
   return (
     <main class="fight-screen" style={BACKDROP}>
-      <Battlefield hill={view.hill} shots={view.shot ? [view.shot] : []} spriteR={PHONE_SPRITE_R} terrain={view.terrain} damage={view.damage} colors={view.teams.map((t) => t.color)}>
+      <Battlefield
+        hill={view.hill}
+        shots={view.shot ? [view.shot] : []}
+        spriteR={PHONE_SPRITE_R}
+        terrain={view.terrain}
+        damage={view.damage}
+        colors={view.teams.map((t) => t.color)}
+      >
         <ShotLayer
           shots={[shot]}
           spriteR={PHONE_SPRITE_R}

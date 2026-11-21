@@ -1,5 +1,5 @@
-import { parseArgs } from "node:util";
 import { resolve } from "node:path";
+import { parseArgs } from "node:util";
 import pkg from "../../package.json" with { type: "json" };
 import { defaultDataDir, isCompiled } from "./paths.ts";
 import { QuizStore } from "./quiz/store.ts";
@@ -22,8 +22,7 @@ Options:
 `;
 
 function openBrowser(url: string): void {
-  const cmd =
-    process.platform === "win32" ? ["cmd", "/c", "start", "", url] : process.platform === "darwin" ? ["open", url] : ["xdg-open", url];
+  const cmd = process.platform === "win32" ? ["cmd", "/c", "start", "", url] : process.platform === "darwin" ? ["open", url] : ["xdg-open", url];
   try {
     Bun.spawn(cmd, { stdio: ["ignore", "ignore", "ignore"] }).unref();
   } catch {

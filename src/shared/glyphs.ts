@@ -9,8 +9,9 @@ export const GLYPH_FAMILIES = {
 export type GlyphFamily = keyof typeof GLYPH_FAMILIES;
 export type Glyph = { [F in GlyphFamily]: { family: F; design: (typeof GLYPH_FAMILIES)[F][number] } }[GlyphFamily];
 
-export const CHRISTMAS_GLYPHS: readonly Glyph[] = (Object.keys(GLYPH_FAMILIES) as GlyphFamily[])
-  .flatMap((family) => GLYPH_FAMILIES[family].map((design) => ({ family, design }) as Glyph));
+export const CHRISTMAS_GLYPHS: readonly Glyph[] = (Object.keys(GLYPH_FAMILIES) as GlyphFamily[]).flatMap((family) =>
+  GLYPH_FAMILIES[family].map((design) => ({ family, design }) as Glyph),
+);
 
 export function glyphId(g: Glyph): string {
   return `christmas:${g.family}:${g.design}`;

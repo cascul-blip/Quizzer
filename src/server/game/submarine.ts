@@ -1,17 +1,23 @@
 import type { AnswerValue } from "../../shared/answer-match.ts";
-import type { SubAward } from "../../shared/mode-views.ts";
-import { CORRECT_PER_BOOST, type HostSubState, type PlayerSubView, type SubAwards, type SubPhase } from "../../shared/modes/submarine.ts";
-import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
-import type { Quiz } from "../../shared/quiz-schema.ts";
-import { CHRISTMAS_GLYPHS, glyphId, parseGlyph, variantsOf } from "../../shared/glyphs.ts";
-import { GameError, realClock, shuffle, type Clock } from "./common.ts";
-import type { LobbyFacts } from "./lobby-facts.ts";
-import { Roster, type BasePlayer } from "./roster.ts";
-import { QuestionStream, type AnswerTotals } from "./stream.ts";
 import { answerOf } from "../../shared/answer-match.ts";
+import type { AvatarChoice } from "../../shared/avatars.ts";
+import { randomAvatar } from "../../shared/avatars.ts";
+import { CHRISTMAS_GLYPHS, glyphId, parseGlyph, variantsOf } from "../../shared/glyphs.ts";
 import { MODE_NAMES } from "../../shared/mode-names.ts";
-import { handoffOptions, unhandled, type ModeEntry } from "./mode-entry.ts";
+import type { SubAward } from "../../shared/mode-views.ts";
+import type { HostSubState, PlayerSubView, SubAwards, SubPhase } from "../../shared/modes/submarine.ts";
+import { CORRECT_PER_BOOST } from "../../shared/modes/submarine.ts";
+import type { Quiz } from "../../shared/quiz-schema.ts";
+import type { Clock } from "./common.ts";
+import { GameError, realClock, shuffle } from "./common.ts";
+import type { LobbyFacts } from "./lobby-facts.ts";
+import type { ModeEntry } from "./mode-entry.ts";
+import { handoffOptions, unhandled } from "./mode-entry.ts";
 import { toCsv } from "./results.ts";
+import type { BasePlayer } from "./roster.ts";
+import { Roster } from "./roster.ts";
+import type { AnswerTotals } from "./stream.ts";
+import { QuestionStream } from "./stream.ts";
 
 // ---------- tuning (all in one place) ----------
 export const COUNTDOWN_MS = 3000;
@@ -139,7 +145,17 @@ export class SubGame {
   }
 
   private newPlayer(base: BasePlayer): SubPlayer {
-    return this.stream.registerPlayer({ ...base, state: "question", towardBoost: 0, boostReadyAt: 0, boosts: 0, diveHits: 0, instructorRounds: 0, grid: [], lockedUntil: 0 });
+    return this.stream.registerPlayer({
+      ...base,
+      state: "question",
+      towardBoost: 0,
+      boostReadyAt: 0,
+      boosts: 0,
+      diveHits: 0,
+      instructorRounds: 0,
+      grid: [],
+      lockedUntil: 0,
+    });
   }
 
   // ---------- lifecycle ----------
@@ -484,7 +500,10 @@ export class SubGame {
 
   private diveView(p: SubPlayer): PlayerSubView["dive"] {
     if (this.phase !== "dive") return null;
-    const timer = (i: Instructor) => ({ symbolRemainingMs: i.index >= DIVE_SYMBOLS ? 0 : Math.max(0, i.endsAt - this.clock.now()), symbolMs: DIVE_SYMBOL_TIMEOUT_MS });
+    const timer = (i: Instructor) => ({
+      symbolRemainingMs: i.index >= DIVE_SYMBOLS ? 0 : Math.max(0, i.endsAt - this.clock.now()),
+      symbolMs: DIVE_SYMBOL_TIMEOUT_MS,
+    });
     const lead = this.instructors.find((i) => i.playerId === p.id && !i.solo);
     if (lead) {
       return {

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { PLAYER_MODES } from "../src/client/player/modes.tsx";
-import type { ModeMsg } from "../src/server/game/mode-entry.ts";
 import { Lobby } from "../src/server/game/lobby.ts";
+import type { ModeMsg } from "../src/server/game/mode-entry.ts";
 import { MODES } from "../src/server/game/modes.ts";
 import { QuizStore } from "../src/server/quiz/store.ts";
 import type { GameHub } from "../src/server/ws.ts";
@@ -68,7 +68,6 @@ const PHONE_MSG: { [M in GameMode]: ModeMsg<M> } = {
   duel: { type: "duel.answer", index: 0, option: 0 },
   gift: { type: "gift.tap", round: 0, item: 0 },
 };
-
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 

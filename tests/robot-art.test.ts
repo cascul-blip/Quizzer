@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { ROBOT_BOARD } from "../src/shared/modes/robot.ts";
-import { tileBox } from "../src/client/shared/robot-art.tsx";
 import { TILE_ART } from "../src/client/shared/robot/tiles.ts";
+import { tileBox } from "../src/client/shared/robot-art.tsx";
 import { TILE_ART as SNOW_TILE_ART } from "../src/client/shared/snowman/tiles.ts";
-import { POSE, RS, armForTip, boardPt, contactTime, layout, planAttack } from "../src/client/shared/snowman-art.tsx";
+import { armForTip, boardPt, contactTime, layout, POSE, planAttack, RS } from "../src/client/shared/snowman-art.tsx";
+import { ROBOT_BOARD } from "../src/shared/modes/robot.ts";
 
 const dir = new URL("../src/client/shared/robot/", import.meta.url);
 const tilesDir = new URL("tiles/", dir);
@@ -55,7 +55,9 @@ describe("robot arena art", () => {
 describe("evil snowman art (seasonal Robot Attack skin)", () => {
   test("there is one snow/ice tile per board index, imported in order, baked for the same boxes as the granite", () => {
     const n = ROBOT_BOARD * ROBOT_BOARD;
-    const onDisk = readdirSync(snowTilesDir).filter((f) => f.startsWith("t-")).sort();
+    const onDisk = readdirSync(snowTilesDir)
+      .filter((f) => f.startsWith("t-"))
+      .sort();
     expect(onDisk).toEqual(Array.from({ length: n }, (_, i) => tileFile(i)));
     expect(SNOW_TILE_ART.length).toBe(n);
     SNOW_TILE_ART.forEach((url, i) => expect(url.endsWith(`snowman/tiles/${tileFile(i)}`)).toBe(true));
@@ -72,7 +74,12 @@ describe("evil snowman art (seasonal Robot Attack skin)", () => {
   });
 
   test("the claw tip lands where the rake asks (IK, rigid twigs)", () => {
-    for (const [u, v] of [[11.9, 4], [8, 4.15], [5.7, 4], [9, 2]] as const) {
+    for (const [u, v] of [
+      [11.9, 4],
+      [8, 4.15],
+      [5.7, 4],
+      [9, 2],
+    ] as const) {
       const P = boardPt(u, v);
       const tip = layout(RS, armForTip(P, 108, POSE.open)).tip;
       expect(Math.hypot(tip.x - P.x, tip.y - P.y)).toBeLessThan(0.01);

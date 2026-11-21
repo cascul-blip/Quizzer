@@ -46,7 +46,11 @@ class RecordingCtx {
 
 function player() {
   const ctx = new RecordingCtx();
-  const music = new MusicPlayer(() => ctx as unknown as AudioContext, {}, () => null);
+  const music = new MusicPlayer(
+    () => ctx as unknown as AudioContext,
+    {},
+    () => null,
+  );
   // An unknown sting builds the output chain and plays nothing.
   music.sting("nothing");
   return { ctx, music };

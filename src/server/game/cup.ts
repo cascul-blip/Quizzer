@@ -1,33 +1,34 @@
 import type { AnswerValue } from "../../shared/answer-match.ts";
-import { cupTheme, type CupTheme, DEFAULT_CUP_THEME } from "../../shared/cup-theme.ts";
+import { answerOf } from "../../shared/answer-match.ts";
+import type { AvatarChoice } from "../../shared/avatars.ts";
+import { randomAvatar } from "../../shared/avatars.ts";
+import type { CupTheme } from "../../shared/cup-theme.ts";
+import { cupTheme, DEFAULT_CUP_THEME } from "../../shared/cup-theme.ts";
+import { MODE_NAMES } from "../../shared/mode-names.ts";
+import type { CupAwards, CupPhase, CupRevealView, CupStanding, HostCupState, PlayerCupView } from "../../shared/modes/cup.ts";
 import {
   CUP_ALL_SAFE_MS,
   CUP_DEFAULT_CUPS,
   CUP_DIE_SIDES,
   CUP_DRINK_MS,
+  CUP_MAX_CUPS,
+  CUP_MIN_CUPS,
   CUP_ROLL_MS,
   CUP_SIP_MS,
   CUP_VERDICT_MS,
   cupQuizMs,
-  type CupAwards,
-  type CupPhase,
-  type CupRevealView,
-  type CupStanding,
-  type HostCupState,
-  type PlayerCupView,
-  CUP_MAX_CUPS,
-  CUP_MIN_CUPS,
 } from "../../shared/modes/cup.ts";
-import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
-import { GameError, realClock, shuffle, type Clock } from "./common.ts";
+import type { Clock } from "./common.ts";
+import { GameError, realClock, shuffle } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
-import { Roster, type BasePlayer } from "./roster.ts";
-import { QuestionStream, type AnswerTotals } from "./stream.ts";
-import { answerOf } from "../../shared/answer-match.ts";
-import { MODE_NAMES } from "../../shared/mode-names.ts";
-import { handoffOptions, pickTheme, unhandled, type ModeEntry } from "./mode-entry.ts";
+import type { ModeEntry } from "./mode-entry.ts";
+import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
 import { toCsv } from "./results.ts";
+import type { BasePlayer } from "./roster.ts";
+import { Roster } from "./roster.ts";
+import type { AnswerTotals } from "./stream.ts";
+import { QuestionStream } from "./stream.ts";
 
 export { FEEDBACK_MS } from "./stream.ts";
 
@@ -129,7 +130,11 @@ export class CupGame {
 
   /** Take over a lobby's players (same ids and tokens). */
   static fromLobby(lobby: LobbyFacts<"cup">, opts: CupOptions = {}): CupGame {
-    const game = new CupGame(lobby.quiz, { cups: lobby.settings.cups, theme: lobby.settings.theme, shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
+    const game = new CupGame(
+      lobby.quiz,
+      { cups: lobby.settings.cups, theme: lobby.settings.theme, shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect },
+      opts,
+    );
     game.roster.adoptFrom(lobby.players, (base) => game.newPlayer(base));
     return game;
   }
@@ -523,7 +528,17 @@ export class CupGame {
       round: this.round,
       phaseRemainingMs: this.remainingMs(),
       phaseDurationMs: this.phaseDurationMs,
-      me: { id: p.id, nickname: p.nickname, avatar: p.avatar, cups: p.cups, out: p.outRound !== null, target: p.target, progress: p.progress, safe: p.safe, correct: p.correct },
+      me: {
+        id: p.id,
+        nickname: p.nickname,
+        avatar: p.avatar,
+        cups: p.cups,
+        out: p.outRound !== null,
+        target: p.target,
+        progress: p.progress,
+        safe: p.safe,
+        correct: p.correct,
+      },
       startCups: this.startCups,
       question: this.answering(p) ? this.stream.questionView(p) : null,
       feedback: this.stream.feedbackView(p),
@@ -541,8 +556,20 @@ export function buildCupResultsCsv(game: CupGame): string {
   const rows: (string | number)[][] = game.standings().map((s) => {
     const p = game.players.get(s.id)!;
     const answered = p.correct + p.wrong;
-    const status = s.rank === 1 ? "Winner" : p.outRound === null ? "Survived" : `${game.theme === "christmas" ? "Blasted off" : "Poisoned"} in round ${p.outRound}`;
-    return [s.rank, p.nickname, status, p.cups, p.outRound === null ? game.round : p.outRound - 1, p.correct, p.wrong, answered ? Math.round((p.correct / answered) * 100) : "", p.drinksSurvived, p.safeRounds];
+    const status =
+      s.rank === 1 ? "Winner" : p.outRound === null ? "Survived" : `${game.theme === "christmas" ? "Blasted off" : "Poisoned"} in round ${p.outRound}`;
+    return [
+      s.rank,
+      p.nickname,
+      status,
+      p.cups,
+      p.outRound === null ? game.round : p.outRound - 1,
+      p.correct,
+      p.wrong,
+      answered ? Math.round((p.correct / answered) * 100) : "",
+      p.drinksSurvived,
+      p.safeRounds,
+    ];
   });
   return toCsv([header, ...rows]);
 }
@@ -552,7 +579,8 @@ export const cupMode: ModeEntry<"cup"> = {
   defaultSettings: { cups: CUP_DEFAULT_CUPS, theme: DEFAULT_CUP_THEME },
   readSettings(raw, current) {
     const cups = Number(raw.cups);
-    if (!(Number.isInteger(cups) && cups >= CUP_MIN_CUPS && cups <= CUP_MAX_CUPS)) throw new GameError(`Cups must be between ${CUP_MIN_CUPS} and ${CUP_MAX_CUPS}`);
+    if (!(Number.isInteger(cups) && cups >= CUP_MIN_CUPS && cups <= CUP_MAX_CUPS))
+      throw new GameError(`Cups must be between ${CUP_MIN_CUPS} and ${CUP_MAX_CUPS}`);
     return { cups, theme: pickTheme(raw.theme, cupTheme(current.theme), "cup") };
   },
   start(lobby, ctx) {

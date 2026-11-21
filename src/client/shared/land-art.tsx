@@ -1,8 +1,7 @@
-import { useNorthPole, northPoleArt } from "./land-skin.tsx";
-import { canvasUrl, loadImage } from "./tint.ts";
 import { useEffect, useState } from "preact/hooks";
-import { EMPTY, borderEdges, boardExtent, hexCenter, isProtected, placementCost } from "../../shared/land-board.ts";
-import { LAND_GUARD_COST, LAND_STEAL_COST, type LandBoard, type LandCapture, type LandPlace } from "../../shared/modes/land.ts";
+import { boardExtent, borderEdges, EMPTY, hexCenter, isProtected, placementCost } from "../../shared/land-board.ts";
+import type { LandBoard, LandCapture, LandPlace } from "../../shared/modes/land.ts";
+import { LAND_GUARD_COST, LAND_STEAL_COST } from "../../shared/modes/land.ts";
 import { TEAMS } from "../../shared/protocol.ts";
 import backgroundImg from "./land/background.webp";
 import bannerImg from "./land/banner.webp";
@@ -26,25 +25,6 @@ import keepPinkImg from "./land/keep-pink.webp";
 import keepPurpleImg from "./land/keep-purple.webp";
 import keepRedImg from "./land/keep-red.webp";
 import keepYellowImg from "./land/keep-yellow.webp";
-import placePopImg from "./land/place-pop.webp";
-import podiumFirstImg from "./land/podium-1st.webp";
-import podiumFirstTintImg from "./land/podium-1st-tint.webp";
-import podiumSecondImg from "./land/podium-2nd.webp";
-import podiumSecondTintImg from "./land/podium-2nd-tint.webp";
-import podiumThirdImg from "./land/podium-3rd.webp";
-import podiumThirdTintImg from "./land/podium-3rd-tint.webp";
-import shapeCircleImg from "./land/shape-circle.webp";
-import shapeDiamondImg from "./land/shape-diamond.webp";
-import shapeHeartImg from "./land/shape-heart.webp";
-import shapeSquareImg from "./land/shape-square.webp";
-import shapeStarImg from "./land/shape-star.webp";
-import shapeTriangleImg from "./land/shape-triangle.webp";
-import stateBlockedImg from "./land/state-blocked.webp";
-import stateGuardedImg from "./land/state-guarded.webp";
-import stateSelectedImg from "./land/state-selected.webp";
-import teamCardImg from "./land/team-card.webp";
-import teamCardTintImg from "./land/team-card-tint.webp";
-import trayWoodImg from "./land/tray-wood.webp";
 import phoneBackgroundImg from "./land/phone/background.webp";
 import phoneCaptureFlashImg from "./land/phone/capture-flash.webp";
 import phoneClaimed1Img from "./land/phone/claimed-1.webp";
@@ -79,7 +59,28 @@ import phoneStateBlockedImg from "./land/phone/state-blocked.webp";
 import phoneStateGuardedImg from "./land/phone/state-guarded.webp";
 import phoneStateSelectedImg from "./land/phone/state-selected.webp";
 import phoneTrayWoodImg from "./land/phone/tray-wood.webp";
+import placePopImg from "./land/place-pop.webp";
+import podiumFirstImg from "./land/podium-1st.webp";
+import podiumFirstTintImg from "./land/podium-1st-tint.webp";
+import podiumSecondImg from "./land/podium-2nd.webp";
+import podiumSecondTintImg from "./land/podium-2nd-tint.webp";
+import podiumThirdImg from "./land/podium-3rd.webp";
+import podiumThirdTintImg from "./land/podium-3rd-tint.webp";
+import shapeCircleImg from "./land/shape-circle.webp";
+import shapeDiamondImg from "./land/shape-diamond.webp";
+import shapeHeartImg from "./land/shape-heart.webp";
+import shapeSquareImg from "./land/shape-square.webp";
+import shapeStarImg from "./land/shape-star.webp";
+import shapeTriangleImg from "./land/shape-triangle.webp";
+import stateBlockedImg from "./land/state-blocked.webp";
+import stateGuardedImg from "./land/state-guarded.webp";
+import stateSelectedImg from "./land/state-selected.webp";
+import teamCardImg from "./land/team-card.webp";
+import teamCardTintImg from "./land/team-card-tint.webp";
+import trayWoodImg from "./land/tray-wood.webp";
+import { northPoleArt, useNorthPole } from "./land-skin.tsx";
 import { pickArt } from "./phone-art.ts";
+import { canvasUrl, loadImage } from "./tint.ts";
 import { teamInk } from "./ui.tsx";
 
 /*
@@ -91,7 +92,7 @@ import { teamInk } from "./ui.tsx";
 
 /** Projector picture and phone copy for each piece. */
 const ART = {
-  "background": [backgroundImg, phoneBackgroundImg],
+  background: [backgroundImg, phoneBackgroundImg],
   "felt-tile": [feltTileImg, phoneFeltTileImg],
   "tray-wood": [trayWoodImg, phoneTrayWoodImg],
   "grass-1": [grass1Img, phoneGrass1Img],
@@ -128,7 +129,7 @@ const ART = {
   "shape-heart": [shapeHeartImg, phoneShapeHeartImg],
   "team-card": [teamCardImg, teamCardImg],
   "team-card-tint": [teamCardTintImg, teamCardTintImg],
-  "banner": [bannerImg, bannerImg],
+  banner: [bannerImg, bannerImg],
   "banner-tint": [bannerTintImg, bannerTintImg],
   "podium-1st": [podiumFirstImg, podiumFirstImg],
   "podium-1st-tint": [podiumFirstTintImg, podiumFirstTintImg],
@@ -208,10 +209,35 @@ const toHex = (c: number[]) => `#${c.map((v) => Math.round(v).toString(16).padSt
 const shade = (hex: string, f: number) => toHex(rgb(hex).map((v) => v * f));
 
 /** A picture drawn over the tile's whole box (`scale` times the tile), centred on (x, y). */
-function TileImage({ id, x, y, scale = 1, class: cls, style }: { id: LandArtId; x: number; y: number; scale?: number; class?: string; style?: Record<string, string> }) {
+function TileImage({
+  id,
+  x,
+  y,
+  scale = 1,
+  class: cls,
+  style,
+}: {
+  id: LandArtId;
+  x: number;
+  y: number;
+  scale?: number;
+  class?: string;
+  style?: Record<string, string>;
+}) {
   const w = TILE_W * scale;
   const h = TILE_R * 2 * scale;
-  return <image class={cls} href={landArt(id)} x={(x - w / 2).toFixed(2)} y={(y - h / 2).toFixed(2)} width={w.toFixed(2)} height={h.toFixed(2)} preserveAspectRatio="none" style={style} />;
+  return (
+    <image
+      class={cls}
+      href={landArt(id)}
+      x={(x - w / 2).toFixed(2)}
+      y={(y - h / 2).toFixed(2)}
+      width={w.toFixed(2)}
+      height={h.toFixed(2)}
+      preserveAspectRatio="none"
+      style={style}
+    />
+  );
 }
 
 interface HexBoardProps {
@@ -266,7 +292,15 @@ export function HexBoard({ board, viewer, selected, placed, capture, label }: He
         <>
           <polygon class="hex-fill" points={TILE} style={{ fill: "transparent" }} />
           <g class="hex-claim">
-            <image href={map} x={(-c.x).toFixed(2)} y={(-c.y).toFixed(2)} width={mapW} height={mapH} preserveAspectRatio="none" clip-path={`url(#${CLIP_ID})`} />
+            <image
+              href={map}
+              x={(-c.x).toFixed(2)}
+              y={(-c.y).toFixed(2)}
+              width={mapW}
+              height={mapH}
+              preserveAspectRatio="none"
+              clip-path={`url(#${CLIP_ID})`}
+            />
             <polygon points={TILE} fill={CLAIM_PAPER} fill-opacity={CLAIM_LIGHTEN[color.toLowerCase()] ?? 0.4} />
             <polygon points={TILE} fill={color} style={{ mixBlendMode: "multiply" }} />
           </g>
@@ -345,7 +379,13 @@ export function HexBoard({ board, viewer, selected, placed, capture, label }: He
           return [
             <g key={tile}>
               <TileImage id="state-guarded" x={t.x} y={t.y} />
-              <image href={landArt(cost === 2 ? "cost-2" : "cost-blank")} x={(t.x - BADGE / 2).toFixed(2)} y={(t.y - BADGE / 2).toFixed(2)} width={BADGE.toFixed(2)} height={BADGE.toFixed(2)} />
+              <image
+                href={landArt(cost === 2 ? "cost-2" : "cost-blank")}
+                x={(t.x - BADGE / 2).toFixed(2)}
+                y={(t.y - BADGE / 2).toFixed(2)}
+                width={BADGE.toFixed(2)}
+                height={BADGE.toFixed(2)}
+              />
               {cost !== 2 && (
                 <text class="hex-cost" x={t.x.toFixed(2)} y={(t.y + BADGE * 0.17).toFixed(2)}>
                   {cost}
@@ -357,10 +397,12 @@ export function HexBoard({ board, viewer, selected, placed, capture, label }: He
   const sel = selected != null && selected < owners.length ? top(selected) : null;
 
   const pop = placed && placed.tile < owners.length ? top(placed.tile) : null;
-  const flashes = capture?.tiles.filter((t) => t < owners.length).map((t, i) => {
-    const c = top(t);
-    return <TileImage key={`${capture.seq}-${t}`} id="capture-flash" x={c.x} y={c.y} scale={FLASH} class="fx-flash" style={flipDelay(i)} />;
-  });
+  const flashes = capture?.tiles
+    .filter((t) => t < owners.length)
+    .map((t, i) => {
+      const c = top(t);
+      return <TileImage key={`${capture.seq}-${t}`} id="capture-flash" x={c.x} y={c.y} scale={FLASH} class="fx-flash" style={flipDelay(i)} />;
+    });
 
   return (
     <svg
@@ -371,9 +413,11 @@ export function HexBoard({ board, viewer, selected, placed, capture, label }: He
       aria-label={label ?? (christmas ? "North Pole territory map" : "The land")}
     >
       <defs>
-        {christmas && map && <mask id="north-pole-paper" maskUnits="userSpaceOnUse" x="0" y="0" width={mapW} height={mapH} style={{ maskType: "alpha" }}>
-          <image href={map} x="0" y="0" width={mapW} height={mapH} preserveAspectRatio="none" />
-        </mask>}
+        {christmas && map && (
+          <mask id="north-pole-paper" maskUnits="userSpaceOnUse" x="0" y="0" width={mapW} height={mapH} style={{ maskType: "alpha" }}>
+            <image href={map} x="0" y="0" width={mapW} height={mapH} preserveAspectRatio="none" />
+          </mask>
+        )}
         <clipPath id={CLIP_ID}>
           <polygon points={TILE} />
         </clipPath>
@@ -401,7 +445,19 @@ export function HexBoard({ board, viewer, selected, placed, capture, label }: He
           </g>
           <g style={{ fill: `url(#${WOOD_ID})` }}>{edge(EDGE_R)}</g>
         </g>
-        {map && <image class="hex-map" href={map} x="0" y="0" width={mapW} height={mapH} preserveAspectRatio="none" clip-path={christmas ? undefined : `url(#${MAP_CLIP_ID})`} onError={() => setMapFailed(mapId!)} />}
+        {map && (
+          <image
+            class="hex-map"
+            href={map}
+            x="0"
+            y="0"
+            width={mapW}
+            height={mapH}
+            preserveAspectRatio="none"
+            clip-path={christmas ? undefined : `url(#${MAP_CLIP_ID})`}
+            onError={() => setMapFailed(mapId!)}
+          />
+        )}
         {tiles}
         <g class="hex-borders">{borders}</g>
         <g class="hex-overlay">{keeps}</g>
@@ -411,7 +467,17 @@ export function HexBoard({ board, viewer, selected, placed, capture, label }: He
           {sel && <TileImage id="state-selected" x={sel.x} y={sel.y} scale={SELECTED} class="hex-selected" />}
         </g>
         <g class="hex-overlay hex-fx">
-          {pop && <image key={placed!.seq} class="fx-pop" href={landArt("place-pop")} x={(pop.x - POP / 2).toFixed(2)} y={(pop.y - POP / 2).toFixed(2)} width={POP.toFixed(2)} height={POP.toFixed(2)} />}
+          {pop && (
+            <image
+              key={placed!.seq}
+              class="fx-pop"
+              href={landArt("place-pop")}
+              x={(pop.x - POP / 2).toFixed(2)}
+              y={(pop.y - POP / 2).toFixed(2)}
+              width={POP.toFixed(2)}
+              height={POP.toFixed(2)}
+            />
+          )}
           {flashes}
         </g>
       </g>

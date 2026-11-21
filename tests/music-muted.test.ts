@@ -41,7 +41,11 @@ class FakeCtx {
 
 test("with music off or muted, no notes are built; turning it back on brings them back", () => {
   const ctx = new FakeCtx();
-  const music = new MusicPlayer(() => ctx as unknown as AudioContext, TRACKS, () => null);
+  const music = new MusicPlayer(
+    () => ctx as unknown as AudioContext,
+    TRACKS,
+    () => null,
+  );
   try {
     music.setLevel(0);
     music.play("racer-lobby");

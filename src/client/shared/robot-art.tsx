@@ -13,8 +13,8 @@ import socketImg from "./robot/arm-socket.webp";
 import backdropImg from "./robot/backdrop.webp";
 import bodyImg from "./robot/body.webp";
 import emitterImg from "./robot/emitter.webp";
-import reticleGlowImg from "./robot/reticle-glow.webp";
 import reticleImg from "./robot/reticle.webp";
+import reticleGlowImg from "./robot/reticle-glow.webp";
 import doomedImg from "./robot/tile-doomed.webp";
 import { TILE_ART } from "./robot/tiles.ts";
 import { ROBOT_SKIN, SKIN_TEXT } from "./robot-skin.ts";
@@ -81,11 +81,49 @@ const EMITTERS: Pt[] = [
  * port, arcing over the hood.
  */
 const ARMS: Pt[][] = [
-  [{ x: 458, y: 182 }, { x: 441, y: 136.5 }, { x: 412.9, y: 101.1 }, { x: 377.1, y: 79 }, { x: 339, y: 68.7 }, { x: 302.7, y: 72.2 }, { x: 271.8, y: 87.2 }, { x: 249.5, y: 110 }, { x: 235.8, y: 136.5 }, { x: 231.1, y: 164 }, EMITTERS[0]!],
-  [{ x: 686, y: 151 }, { x: 697, y: 124.5 }, { x: 702.6, y: 98.4 }, { x: 700.5, y: 73.6 }, { x: 692, y: 52 }, { x: 678.1, y: 35.3 }, { x: 662.1, y: 22.9 }, { x: 645.2, y: 14.3 }, { x: 627.9, y: 12.8 }, { x: 613, y: 19.8 }, EMITTERS[1]!],
-  [{ x: 738, y: 182 }, { x: 755.2, y: 136.1 }, { x: 783.7, y: 100.6 }, { x: 820, y: 78.5 }, { x: 858.4, y: 68.5 }, { x: 895.1, y: 72.6 }, { x: 926.3, y: 87.4 }, { x: 949.5, y: 109.8 }, { x: 964, y: 136.1 }, { x: 969, y: 163.7 }, EMITTERS[2]!],
+  [
+    { x: 458, y: 182 },
+    { x: 441, y: 136.5 },
+    { x: 412.9, y: 101.1 },
+    { x: 377.1, y: 79 },
+    { x: 339, y: 68.7 },
+    { x: 302.7, y: 72.2 },
+    { x: 271.8, y: 87.2 },
+    { x: 249.5, y: 110 },
+    { x: 235.8, y: 136.5 },
+    { x: 231.1, y: 164 },
+    EMITTERS[0]!,
+  ],
+  [
+    { x: 686, y: 151 },
+    { x: 697, y: 124.5 },
+    { x: 702.6, y: 98.4 },
+    { x: 700.5, y: 73.6 },
+    { x: 692, y: 52 },
+    { x: 678.1, y: 35.3 },
+    { x: 662.1, y: 22.9 },
+    { x: 645.2, y: 14.3 },
+    { x: 627.9, y: 12.8 },
+    { x: 613, y: 19.8 },
+    EMITTERS[1]!,
+  ],
+  [
+    { x: 738, y: 182 },
+    { x: 755.2, y: 136.1 },
+    { x: 783.7, y: 100.6 },
+    { x: 820, y: 78.5 },
+    { x: 858.4, y: 68.5 },
+    { x: 895.1, y: 72.6 },
+    { x: 926.3, y: 87.4 },
+    { x: 949.5, y: 109.8 },
+    { x: 964, y: 136.1 },
+    { x: 969, y: 163.7 },
+    EMITTERS[2]!,
+  ],
 ];
-const ARM_SEGMENTS = ARMS.map((pts) => pts.slice(1).map((p, i) => ({ len: Math.hypot(p.x - pts[i]!.x, p.y - pts[i]!.y), ang: Math.atan2(p.y - pts[i]!.y, p.x - pts[i]!.x) })));
+const ARM_SEGMENTS = ARMS.map((pts) =>
+  pts.slice(1).map((p, i) => ({ len: Math.hypot(p.x - pts[i]!.x, p.y - pts[i]!.y), ang: Math.atan2(p.y - pts[i]!.y, p.x - pts[i]!.x) })),
+);
 /** One slow sway, back and forth. */
 const SWAY_PERIOD_MS = 7000;
 /** Bend added at each joint at the sway's peak (radians); it builds up toward the tip. */
@@ -161,7 +199,12 @@ export function RobotArena(props: {
   const clock = useSwayClock(props.attack?.seq ?? null);
   const tips = [0, 1, 2].map((k) => armPose(k, prefersStill() ? null : clock.frozenAt).at(-1)!);
   return (
-    <svg class={`robot-arena ${props.class ?? ""} ${props.attack ? "attacking" : ""}`} viewBox={`0 0 ${ARENA_W} ${ARENA_H}`} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+    <svg
+      class={`robot-arena ${props.class ?? ""} ${props.attack ? "attacking" : ""}`}
+      viewBox={`0 0 ${ARENA_W} ${ARENA_H}`}
+      preserveAspectRatio="xMidYMid meet"
+      aria-hidden="true"
+    >
       <defs>
         <radialGradient id="ra-eye" cx="0.5" cy="0.5" r="0.5">
           <stop offset="0" stop-color="#fff1e0" />
@@ -244,7 +287,17 @@ function Board({ marked, inset, collapsing }: { marked: Set<number>; inset: numb
 }
 
 /** Avatars on their tiles, far rows first so nearer ones overlap them. */
-export function Pieces({ players, hit, me, zapDelay }: { players: ArenaPlayer[]; hit: Set<string>; me: string | null; /** When each hit player's flicker starts (s), if not the default. */ zapDelay?: Map<string, number> }) {
+export function Pieces({
+  players,
+  hit,
+  me,
+  zapDelay,
+}: {
+  players: ArenaPlayer[];
+  hit: Set<string>;
+  me: string | null /** When each hit player's flicker starts (s), if not the default. */;
+  zapDelay?: Map<string, number>;
+}) {
   const byTile = new Map<number, ArenaPlayer[]>();
   for (const p of players) {
     const i = p.y * ROBOT_BOARD + p.x;
@@ -272,7 +325,14 @@ export function Pieces({ players, hit, me, zapDelay }: { players: ArenaPlayer[];
         const art = AVATAR_ART[p.avatar.avatar] ?? AVATAR_ART.cat;
         const extra = ACCESSORY_ART[p.avatar.accessory] ?? ACCESSORY_ART.none;
         out.push(
-          <g key={p.id} class={`piece ${hit.has(p.id) ? "zapped" : ""} ${p.id === me ? "mine" : ""}`} style={{ transform: `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`, ...(zapDelay?.has(p.id) ? { "--zap-delay": `${zapDelay.get(p.id)!.toFixed(2)}s` } : {}) }}>
+          <g
+            key={p.id}
+            class={`piece ${hit.has(p.id) ? "zapped" : ""} ${p.id === me ? "mine" : ""}`}
+            style={{
+              transform: `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`,
+              ...(zapDelay?.has(p.id) ? { "--zap-delay": `${zapDelay.get(p.id)!.toFixed(2)}s` } : {}),
+            }}
+          >
             <ellipse cx={size / 2} cy={size * 0.98} rx={size * 0.34} ry={size * 0.09} fill="rgba(0,0,0,0.45)" />
             {p.id === me && <ellipse class="mine-ring" cx={size / 2} cy={size * 0.98} rx={size * 0.46} ry={size * 0.14} />}
             <g transform={`scale(${size / 100})`}>
@@ -360,7 +420,16 @@ function MechArm({ pts, k }: { pts: Pt[]; k: number }) {
     const h = armH(k, i);
     // Flipped on arms running right to left, so the painted rim light stays on top.
     segs.push(
-      <image key={`s${i}`} href={segImg} x="0" y={f1(-h / 2)} width={f1(len - g0 - g1)} height={f1(h)} preserveAspectRatio="none" transform={`translate(${f1(s.x)},${f1(s.y)}) rotate(${f1(deg(dy, dx))}) scale(1,${dx < 0 ? -1 : 1})`} />,
+      <image
+        key={`s${i}`}
+        href={segImg}
+        x="0"
+        y={f1(-h / 2)}
+        width={f1(len - g0 - g1)}
+        height={f1(h)}
+        preserveAspectRatio="none"
+        transform={`translate(${f1(s.x)},${f1(s.y)}) rotate(${f1(deg(dy, dx))}) scale(1,${dx < 0 ? -1 : 1})`}
+      />,
     );
   }
   for (let j = 1; j < n; j++) {
@@ -383,7 +452,16 @@ function MechArm({ pts, k }: { pts: Pt[]; k: number }) {
     const len = d + 2 * OVER * h;
     const w = CONN_W * h;
     cons.push(
-      <image key={`c${j}`} href={connImg} x={f1(-len / 2)} y={f1(-w / 2)} width={f1(len)} height={f1(w)} preserveAspectRatio="none" transform={`translate(${f1((a.x + b.x) / 2)},${f1((a.y + b.y) / 2)}) rotate(${f1(deg(vy, vx))}) scale(1,${vx < 0 ? -1 : 1})`} />,
+      <image
+        key={`c${j}`}
+        href={connImg}
+        x={f1(-len / 2)}
+        y={f1(-w / 2)}
+        width={f1(len)}
+        height={f1(w)}
+        preserveAspectRatio="none"
+        transform={`translate(${f1((a.x + b.x) / 2)},${f1((a.y + b.y) / 2)}) rotate(${f1(deg(vy, vx))}) scale(1,${vx < 0 ? -1 : 1})`}
+      />,
     );
   }
   // Connectors underneath; segments root to tip, so each one's brass band overlaps the last one's end.
@@ -402,7 +480,17 @@ function ArmSocket({ k }: { k: number }) {
   const len = SOCK_L * ARM_H0[k]!;
   const w = SOCK_W * ARM_H0[k]!;
   const a = (ARM_SEGMENTS[k]![0]!.ang * 180) / Math.PI;
-  return <image href={socketImg} x={f1(-SOCK_BACK * len)} y={f1(-w / 2)} width={f1(len)} height={f1(w)} preserveAspectRatio="none" transform={`translate(${p0.x},${p0.y}) rotate(${f1(a)}) scale(1,${p1.x < p0.x ? -1 : 1})`} />;
+  return (
+    <image
+      href={socketImg}
+      x={f1(-SOCK_BACK * len)}
+      y={f1(-w / 2)}
+      width={f1(len)}
+      height={f1(w)}
+      preserveAspectRatio="none"
+      transform={`translate(${p0.x},${p0.y}) rotate(${f1(a)}) scale(1,${p1.x < p0.x ? -1 : 1})`}
+    />
+  );
 }
 
 const EMITTER_R = 40;

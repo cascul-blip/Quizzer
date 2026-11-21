@@ -11,7 +11,15 @@ describe("Christmas dive pictures", () => {
   });
 
   test("malformed, legacy and unknown picture ids are rejected", () => {
-    for (const bad of ["", "g:ring.c.l.0", "christmas:tree", "christmas:tree:unknown", "christmas:unknown:star", "christmas:tree:bells:extra", "christmas:__proto__:bells"])
+    for (const bad of [
+      "",
+      "g:ring.c.l.0",
+      "christmas:tree",
+      "christmas:tree:unknown",
+      "christmas:unknown:star",
+      "christmas:tree:bells:extra",
+      "christmas:__proto__:bells",
+    ])
       expect(parseGlyph(bad)).toBeNull();
   });
 

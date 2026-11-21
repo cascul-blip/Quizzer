@@ -1,6 +1,7 @@
 # Land Grab art manifest: style B (storybook parchment map)
 
 Style B, from mockups/style-b.png. The user picked it to replace style A.
+
 - Made by `src/build.py` (helpers in `src/common.py`, copied from the A build) from the sources in `src/` (prompts in `PROMPTS` at the top of build.py; Pillow + numpy only).
 - `python3 src/build.py [step …]` rebuilds everything or single steps.
 - Projector files are in this folder, phone copies in `phone/` at half size.
@@ -9,6 +10,7 @@ Style B, from mockups/style-b.png. The user picked it to replace style A.
 - Previews: `preview.png` (contact sheet), `preview-scene.png` (12x12, 3 teams, built only from these files, using `map-12`) and `preview-maps.png` (all three maps as boards, plus 1:1 crops of the phone copies). Claimed look (map tinted by team): `preview-scene.png` is the new look, `preview-scene-v1.png` the previous one (claimed-N overlay); `preview-claimed-14x6.png` (6 teams on map-14) and `preview-claimed-phone.png` (1080×1500 window from `phone/map-12` at its native 112 px/R, i.e. a phone zoomed in about 2.5×). Recipe tests: `mockups/claimed-variants.png`, Chrome check: `mockups/claimed-chrome-check.png`. `src/halo-check.png` is the fringe check over white and magenta.
 
 **Drop-in rule.** Every A file name exists here with the **same pixel size, the same phone size, the same anchor and the same slice / text-box numbers**. Replacing `src/client/shared/land/` with these files works without breaking layout.
+
 - New files: `compass-rose.webp`, and the continuous maps `map-10/12/14.webp` (see **Continuous map**).
 - Nothing is renamed. Two names are kept for drop-in even though their content changed meaning (marked **≠ content**): `felt-tile`, `tray-wood`.
 - The look needs some code changes (see Code changes for B). Without them, B renders but A's raised sides, wood-tray offset and white edge strokes will look wrong on parchment.
@@ -21,29 +23,29 @@ Red `#d81e3a` circle · Blue `#1f5ee0` square · Yellow `#f5c400` triangle · Cy
 
 "Same" = same name, size and phone size as A.
 
-| File | Size: projector (phone) | vs A | Alpha | Use in B |
-|---|---|---|---|---|
-| `background.webp` | 1920×1080 (960×540) | same | no | aged parchment with darker burnt edges and a plain centre; cover |
-| `felt-tile.webp` | 512×512 (256×256) | same, **≠ content** | no | seamless plain parchment (phone `.land-area` repeat) |
-| `tray-wood.webp` | 512×512 (256×256) | same, **≠ content** | no | seamless darker tea-stained parchment for the board's edge band, which code draws instead of the wooden tray |
-| `compass-rose.webp` | 320×320 (160×160) | **NEW** | yes | optional plain 8-point compass with "N" only; place in a corner of the board area (preview: 150 px, bottom-left) |
-| `map-10.webp` | 2725×2322 (2044×1742) | **NEW** | no | continuous map for the 10x10 board (2 teams). Covers the board extent exactly. 2.03 MB (1.25 MB) |
-| `map-12.webp` | 3245×2773 (2434×2080) | **NEW** | no | continuous map for 12x12 (3–4 teams). 2.66 MB (1.67 MB) |
-| `map-14.webp` | 3771×3229 (2828×2422) | **NEW** | no | continuous map for 14x14 (5–6 teams). 3.87 MB (2.37 MB) |
-| `grass-1…4.webp` | 444×512 (222×256) | same | hex-clipped | **fallback only** now (a board size with no map, or the map fails to load): sepia ink trees, tufts and shrubs |
-| `claimed-1…3.webp` | 444×512 (222×256) | same | translucent | **Fallback only** (used when the board size has no map or the map fails to load). **watercolour-wash overlay** drawn over a team-coloured hexagon (same method as A). It adds: paper showing through unevenly (a lighter wash), ink drawing darkening, pigment pooled at the hex edge |
-| `state-blocked.webp` | 444×512 (222×256) | same | yes | sepia wash plus ink cross-hatch |
-| `state-guarded.webp` | 444×512 (222×256) | same | yes | dashed **dark ink** ring on a cream underlay (white would vanish on parchment) |
-| `cost-2.webp`, `cost-blank.webp` | 160×160 (80×80) | same | yes | parchment disc, ink ring, serif "2". Same placement as A |
-| `state-selected.webp` | 532×614 (266×307) | same | yes | dark ink rim with a thin gold inner line and a soft gold glow; 1.2× the tile canvas, centred |
-| `keep-red/blue/yellow/cyan/purple/pink.webp` | 552×801 (276×400) | same | yes | the shield pre-tinted per team. **Code uses these** |
-| `keep-out.webp` | 552×801 (276×400) | same | yes (80% opacity baked in) | knocked out: greyed, faded shield |
-| `place-pop.webp` | 768×768 (384×384) | same | yes | ring of sepia ink stars and gold flecks. **Normal blend** (screen would erase it on parchment) |
-| `capture-flash.webp` | 577×665 (288×332) | same | yes | warm cream core with a gold glow, per flipped tile. **Normal blend** |
-| `team-card.webp` / `-tint` | 800×310 (–) | same size, slices and ribbon x | yes / mask | parchment card, hand-inked double border, cloth ribbon at x 59–96 (mask = ribbon) |
-| `banner.webp` / `-tint` | 1200×185 (–) | same size, slices and text box | yes / mask | A's cloth ribbon, warmed, with an inked outline drawn inward (the mask is the cloth inside the ink) |
-| `podium-1st/2nd/3rd.webp` / `-tint` | 418×534, 388×434, 380×369 (–) | same canvases | yes / mask | ink-and-watercolour stone plinths with drapes. Content is bottom-centred at one common scale; see the podium section |
-| `shape-circle…heart.webp` | 256×256 (128×128) | same | yes | cream tokens with an ink outline, ink hatching lower-right and a sepia shadow. Use as-is, or tint by multiply |
+| File                                         | Size: projector (phone)       | vs A                           | Alpha                      | Use in B                                                                                                                                                                                                                                                                              |
+| -------------------------------------------- | ----------------------------- | ------------------------------ | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `background.webp`                            | 1920×1080 (960×540)           | same                           | no                         | aged parchment with darker burnt edges and a plain centre; cover                                                                                                                                                                                                                      |
+| `felt-tile.webp`                             | 512×512 (256×256)             | same, **≠ content**            | no                         | seamless plain parchment (phone `.land-area` repeat)                                                                                                                                                                                                                                  |
+| `tray-wood.webp`                             | 512×512 (256×256)             | same, **≠ content**            | no                         | seamless darker tea-stained parchment for the board's edge band, which code draws instead of the wooden tray                                                                                                                                                                          |
+| `compass-rose.webp`                          | 320×320 (160×160)             | **NEW**                        | yes                        | optional plain 8-point compass with "N" only; place in a corner of the board area (preview: 150 px, bottom-left)                                                                                                                                                                      |
+| `map-10.webp`                                | 2725×2322 (2044×1742)         | **NEW**                        | no                         | continuous map for the 10x10 board (2 teams). Covers the board extent exactly. 2.03 MB (1.25 MB)                                                                                                                                                                                      |
+| `map-12.webp`                                | 3245×2773 (2434×2080)         | **NEW**                        | no                         | continuous map for 12x12 (3–4 teams). 2.66 MB (1.67 MB)                                                                                                                                                                                                                               |
+| `map-14.webp`                                | 3771×3229 (2828×2422)         | **NEW**                        | no                         | continuous map for 14x14 (5–6 teams). 3.87 MB (2.37 MB)                                                                                                                                                                                                                               |
+| `grass-1…4.webp`                             | 444×512 (222×256)             | same                           | hex-clipped                | **fallback only** now (a board size with no map, or the map fails to load): sepia ink trees, tufts and shrubs                                                                                                                                                                         |
+| `claimed-1…3.webp`                           | 444×512 (222×256)             | same                           | translucent                | **Fallback only** (used when the board size has no map or the map fails to load). **watercolour-wash overlay** drawn over a team-coloured hexagon (same method as A). It adds: paper showing through unevenly (a lighter wash), ink drawing darkening, pigment pooled at the hex edge |
+| `state-blocked.webp`                         | 444×512 (222×256)             | same                           | yes                        | sepia wash plus ink cross-hatch                                                                                                                                                                                                                                                       |
+| `state-guarded.webp`                         | 444×512 (222×256)             | same                           | yes                        | dashed **dark ink** ring on a cream underlay (white would vanish on parchment)                                                                                                                                                                                                        |
+| `cost-2.webp`, `cost-blank.webp`             | 160×160 (80×80)               | same                           | yes                        | parchment disc, ink ring, serif "2". Same placement as A                                                                                                                                                                                                                              |
+| `state-selected.webp`                        | 532×614 (266×307)             | same                           | yes                        | dark ink rim with a thin gold inner line and a soft gold glow; 1.2× the tile canvas, centred                                                                                                                                                                                          |
+| `keep-red/blue/yellow/cyan/purple/pink.webp` | 552×801 (276×400)             | same                           | yes                        | the shield pre-tinted per team. **Code uses these**                                                                                                                                                                                                                                   |
+| `keep-out.webp`                              | 552×801 (276×400)             | same                           | yes (80% opacity baked in) | knocked out: greyed, faded shield                                                                                                                                                                                                                                                     |
+| `place-pop.webp`                             | 768×768 (384×384)             | same                           | yes                        | ring of sepia ink stars and gold flecks. **Normal blend** (screen would erase it on parchment)                                                                                                                                                                                        |
+| `capture-flash.webp`                         | 577×665 (288×332)             | same                           | yes                        | warm cream core with a gold glow, per flipped tile. **Normal blend**                                                                                                                                                                                                                  |
+| `team-card.webp` / `-tint`                   | 800×310 (–)                   | same size, slices and ribbon x | yes / mask                 | parchment card, hand-inked double border, cloth ribbon at x 59–96 (mask = ribbon)                                                                                                                                                                                                     |
+| `banner.webp` / `-tint`                      | 1200×185 (–)                  | same size, slices and text box | yes / mask                 | A's cloth ribbon, warmed, with an inked outline drawn inward (the mask is the cloth inside the ink)                                                                                                                                                                                   |
+| `podium-1st/2nd/3rd.webp` / `-tint`          | 418×534, 388×434, 380×369 (–) | same canvases                  | yes / mask                 | ink-and-watercolour stone plinths with drapes. Content is bottom-centred at one common scale; see the podium section                                                                                                                                                                  |
+| `shape-circle…heart.webp`                    | 256×256 (128×128)             | same                           | yes                        | cream tokens with an ink outline, ink hatching lower-right and a sepia shadow. Use as-is, or tint by multiply                                                                                                                                                                         |
 
 46 projector files (10.4 MB, of which the 3 maps are 8.6 MB) and 36 phone files (5.9 MB, maps 5.3 MB). The phone set is A's 32 plus `compass-rose` and the 3 maps. A game loads only the one map for its board size: projector 2.0–3.9 MB, phone 1.25–2.4 MB.
 
@@ -142,7 +144,7 @@ Claimed tiles show the map tinted by the owner (code change 11). Checked at proj
    - Team cards: dark ink text (see above).
    - The top bar can stay dark (`rgba(60,38,20,0.92)` reads well) with cream text.
    - Optional: use Georgia/serif for the board UI, matching the storybook look (Quizzer already uses Georgia for Cup of Death).
-10. **Continuous map** (`land-art.tsx`, about 25 lines). Draw the map once under the tiles, clipped to the union of every tile at 0.95R; claimed tiles paint over it; unclaimed tiles keep their transparent `hex-fill` (so taps still land on `data-tile`) and their ink edge. If the size has no map or the image fails, it falls back to the per-tile `grass-N`.
+9. **Continuous map** (`land-art.tsx`, about 25 lines). Draw the map once under the tiles, clipped to the union of every tile at 0.95R; claimed tiles paint over it; unclaimed tiles keep their transparent `hex-fill` (so taps still land on `data-tile`) and their ink edge. If the size has no map or the image fails, it falls back to the per-tile `grass-N`.
 
 ```tsx
 import map10Img from "./land/map-10.webp";
@@ -183,27 +185,28 @@ const MAPS: Partial<Record<number, LandArtId>> = { 10: "map-10", 12: "map-12", 1
   )}
 ```
 
-   - Notes: `useState` is already imported. Keep the `GRASS` / `grass-1…4` entries: they are the fallback. One `<image>` costs far less than 144–196 clipped copies of a 9 MP picture, and nothing animates grass tiles, so one draw is enough. If a grass tile ever needs to move on its own (an animation on `.hex.grass .hex-body`), use the per-tile form instead: inside the tile group, `<image href={map} x={-c.x} y={-c.y} width={width*R} height={height*R} preserveAspectRatio="none" clip-path={`url(#${CLIP_ID})`} />`. The same image is drawn in every tile, offset so the tile's own part lands under it.
-   - Preload hint (optional): the map is the largest file, so start it early, e.g. `new Image().src = landArt(MAPS[size])` when the Land Grab round is announced.
+- Notes: `useState` is already imported. Keep the `GRASS` / `grass-1…4` entries: they are the fallback. One `<image>` costs far less than 144–196 clipped copies of a 9 MP picture, and nothing animates grass tiles, so one draw is enough. If a grass tile ever needs to move on its own (an animation on `.hex.grass .hex-body`), use the per-tile form instead: inside the tile group, `<image href={map} x={-c.x} y={-c.y} width={width*R} height={height*R} preserveAspectRatio="none" clip-path={`url(#${CLIP_ID})`} />`. The same image is drawn in every tile, offset so the tile's own part lands under it.
+- Preload hint (optional): the map is the largest file, so start it early, e.g. `new Image().src = landArt(MAPS[size])` when the Land Grab round is announced.
+
 11. **Claimed tiles: the map tinted by the team** (`land-art.tsx` ~20 lines + 3 lines CSS). Replaces the team-colour hexagon + `claimed-N` whenever `useMap` is on. Inside the claimed tile's `.hex-body`, back to front:
-   1. the map, per tile: `<image href={map}>` offset by the tile centre and clipped to the tile (the per-tile form from 10);
-   2. **lighten:** `<polygon points={TILE}>`, fill `#fffaf0`, normal blend, `fill-opacity` per team (table);
-   3. **tint:** `<polygon points={TILE}>`, fill = the team colour, `fill-opacity` 1, `mix-blend-mode: multiply`;
-   4. then the ink `hex-edge`, the keep and the ×0.55 territory border as now.
+1. the map, per tile: `<image href={map}>` offset by the tile centre and clipped to the tile (the per-tile form from 10);
+1. **lighten:** `<polygon points={TILE}>`, fill `#fffaf0`, normal blend, `fill-opacity` per team (table);
+1. **tint:** `<polygon points={TILE}>`, fill = the team colour, `fill-opacity` 1, `mix-blend-mode: multiply`;
+1. then the ink `hex-edge`, the keep and the ×0.55 territory border as now.
 
-   | team | colour | lighten fill-opacity | multiply opacity |
-   |---|---|---|---|
-   | red | #d81e3a | 0.35 | 1 |
-   | blue | #1f5ee0 | 0.40 | 1 |
-   | yellow | #f5c400 | 0.45 | 1 |
-   | cyan | #12b5cb | 0.35 | 1 |
-   | purple | #7d3cc8 | 0.40 | 1 |
-   | pink | #f0559e | 0.35 | 1 |
-   | (any other colour) | | 0.40 | 1 |
+| team               | colour  | lighten fill-opacity | multiply opacity |
+| ------------------ | ------- | -------------------- | ---------------- |
+| red                | #d81e3a | 0.35                 | 1                |
+| blue               | #1f5ee0 | 0.40                 | 1                |
+| yellow             | #f5c400 | 0.45                 | 1                |
+| cyan               | #12b5cb | 0.35                 | 1                |
+| purple             | #7d3cc8 | 0.40                 | 1                |
+| pink               | #f0559e | 0.35                 | 1                |
+| (any other colour) |         | 0.40                 | 1                |
 
-   Per pixel this is `b' = b + L·(#fffaf0 − b)`, then `out = b' · team / 255` (8-bit sRGB, what browsers do). The lighten lifts the ink from near-black to a mid brown, so the multiply leaves the ink visible as a darker shade of the team colour and dense forest tiles still read as their team. Yellow, blue and purple get more lighten: yellow so it stays golden rather than olive in forests, blue and purple so their ink keeps contrast and they stay apart. Verified in headless Chrome (`mockups/claimed/svgtest/`): matches the simulation within about 2/255 (resampling noise).
+Per pixel this is `b' = b + L·(#fffaf0 − b)`, then `out = b' · team / 255` (8-bit sRGB, what browsers do). The lighten lifts the ink from near-black to a mid brown, so the multiply leaves the ink visible as a darker shade of the team colour and dense forest tiles still read as their team. Yellow, blue and purple get more lighten: yellow so it stays golden rather than olive in forests, blue and purple so their ink keeps contrast and they stay apart. Verified in headless Chrome (`mockups/claimed/svgtest/`): matches the simulation within about 2/255 (resampling noise).
 
-   **Why the map goes inside the tile (isolation):** `mix-blend-mode` blends with whatever is below *inside the nearest isolated group*. `hex-pop` animates `opacity` and `hex-flip` animates `filter`, and both isolate `.hex-body` while they run. If the multiply polygon sat over the single board map from 10, a placed or flipped tile would flash flat team colour for 0.45–0.7 s. With its own copy of the map inside `.hex-body` (and `isolation: isolate` so it is the same when still and when animating) the tinted map pops and flips as one piece. Checked in Chrome: identical when still, tinted map mid-flip. The board-wide map from 10 stays underneath for grass tiles; it can stay clipped to all tiles.
+**Why the map goes inside the tile (isolation):** `mix-blend-mode` blends with whatever is below _inside the nearest isolated group_. `hex-pop` animates `opacity` and `hex-flip` animates `filter`, and both isolate `.hex-body` while they run. If the multiply polygon sat over the single board map from 10, a placed or flipped tile would flash flat team colour for 0.45–0.7 s. With its own copy of the map inside `.hex-body` (and `isolation: isolate` so it is the same when still and when animating) the tinted map pops and flips as one piece. Checked in Chrome: identical when still, tinted map mid-flip. The board-wide map from 10 stays underneath for grass tiles; it can stay clipped to all tiles.
 
 ```tsx
 /** Lighten before the multiply tint; yellow/blue/purple get more (see manifest). */
@@ -230,11 +233,16 @@ const CLAIM_LIGHTEN: Record<string, number> = { "#d81e3a": 0.35, "#1f5ee0": 0.4,
 ```
 
 ```css
-.hex-claim { isolation: isolate; pointer-events: none; }
+.hex-claim {
+  isolation: isolate;
+  pointer-events: none;
+}
 ```
-   - `CLIP_ID` is the existing per-tile `<clipPath>` (TILE at the origin), and `c` is the tile's `hexCenter`, as in the per-tile form in 10. Taps still land on the transparent `hex-fill`. All claimed tiles share one decoded map, so the extra `<image>` elements cost draw time, not memory.
-   - **`claimed-1…3`:** keep them. They are used only in the fallback (no map for the size, or `onError`), together with `grass-1…4`. If the Coder drops the fallback, they can be deleted from the repo; nothing else uses them.
-   - The tint colours are the TEAMS palette as is: no shading, no alpha. Don't put `opacity` on `.hex-claim` or `.hex-body` outside the animations.
+
+- `CLIP_ID` is the existing per-tile `<clipPath>` (TILE at the origin), and `c` is the tile's `hexCenter`, as in the per-tile form in 10. Taps still land on the transparent `hex-fill`. All claimed tiles share one decoded map, so the extra `<image>` elements cost draw time, not memory.
+- **`claimed-1…3`:** keep them. They are used only in the fallback (no map for the size, or `onError`), together with `grass-1…4`. If the Coder drops the fallback, they can be deleted from the repo; nothing else uses them.
+- The tint colours are the TEAMS palette as is: no shading, no alpha. Don't put `opacity` on `.hex-claim` or `.hex-body` outside the animations.
+
 12. **No change** to: tile size and clip, keep anchor and size, state and effect placement, the card 9-slice, banner slices and text box, podium placement, the palette and shapes, the 1.5× phone default zoom.
 
 ## Notes / compromises

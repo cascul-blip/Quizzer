@@ -1,5 +1,20 @@
 import { describe, expect, test } from "bun:test";
-import { EMPTY, START_MARGIN, borderEdges, captureThreat, enclosedBy, hexDistance, isGuarded, isProtected, landBoardSize, neighborAcross, neighbors, placementCost, startTiles, type LandStart } from "../src/shared/land-board.ts";
+import type { LandStart } from "../src/shared/land-board.ts";
+import {
+  borderEdges,
+  captureThreat,
+  EMPTY,
+  enclosedBy,
+  hexDistance,
+  isGuarded,
+  isProtected,
+  landBoardSize,
+  neighborAcross,
+  neighbors,
+  placementCost,
+  START_MARGIN,
+  startTiles,
+} from "../src/shared/land-board.ts";
 import { TEAMS } from "../src/shared/protocol.ts";
 
 const at = (size: number, row: number, col: number) => row * size + col;
@@ -220,7 +235,14 @@ describe("borders", () => {
 
   test("sides run clockwise from the top right", () => {
     // Row 4 is even, so its upper neighbours are in row 3 at columns 3 and 4.
-    expect([0, 1, 2, 3, 4, 5].map((side) => neighborAcross(10, at(10, 4, 4), side))).toEqual([at(10, 3, 4), at(10, 4, 5), at(10, 5, 4), at(10, 5, 3), at(10, 4, 3), at(10, 3, 3)]);
+    expect([0, 1, 2, 3, 4, 5].map((side) => neighborAcross(10, at(10, 4, 4), side))).toEqual([
+      at(10, 3, 4),
+      at(10, 4, 5),
+      at(10, 5, 4),
+      at(10, 5, 3),
+      at(10, 4, 3),
+      at(10, 3, 3),
+    ]);
     expect(neighborAcross(10, 0, 5)).toBeNull();
   });
 

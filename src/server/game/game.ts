@@ -1,19 +1,17 @@
-import type {
-  HostGameState,
-  Phase,
-  PlayerView,
-  RankedEntry,
-  ShuffleOptions,
-} from "../../shared/protocol.ts";
-import type { Pacing, QuestionView, QuestionError } from "../../shared/mode-views.ts";
-import { cleanAvatar, randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
-import { MAX_TYPED_ANSWER, checkAnswer, type AnswerValue } from "../../shared/answer-match.ts";
+import type { AnswerValue } from "../../shared/answer-match.ts";
+import { checkAnswer, MAX_TYPED_ANSWER } from "../../shared/answer-match.ts";
+import type { AvatarChoice } from "../../shared/avatars.ts";
+import { cleanAvatar, randomAvatar } from "../../shared/avatars.ts";
+import type { Pacing, QuestionError, QuestionView } from "../../shared/mode-views.ts";
+import type { HostGameState, Phase, PlayerView, RankedEntry, ShuffleOptions } from "../../shared/protocol.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
-import { AUTO_REVEAL_MS, GRACE_MS, GameError, preparePlayOrder, realClock, topErrors, type Clock } from "./common.ts";
-import { Roster, type BasePlayer } from "./roster.ts";
+import type { Clock } from "./common.ts";
+import { AUTO_REVEAL_MS, GameError, GRACE_MS, preparePlayOrder, realClock, topErrors } from "./common.ts";
+import type { BasePlayer } from "./roster.ts";
+import { Roster } from "./roster.ts";
 import { rankScores, scoreAnswer } from "./scoring.ts";
 
-export { AUTO_REVEAL_MS, GRACE_MS, GameError, preparePlayOrder, type Clock } from "./common.ts";
+export { AUTO_REVEAL_MS, type Clock, GameError, GRACE_MS, preparePlayOrder } from "./common.ts";
 
 export const INTRO_MS = 3000;
 export const AUTO_LEADERBOARD_MS = 5000;

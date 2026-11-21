@@ -1,11 +1,9 @@
 import { describe, expect, test } from "bun:test";
+import { buildGiftResultsCsv, GiftGame } from "../src/server/game/gift.ts";
 import { Lobby } from "../src/server/game/lobby.ts";
-import { GiftGame } from "../src/server/game/gift.ts";
-import { buildGiftResultsCsv } from "../src/server/game/gift.ts";
 import { FEEDBACK_MS } from "../src/server/game/stream.ts";
-import {
-  GIFT_DUDS, GIFT_GOODS, GIFT_READY_MS, GIFT_ROUND_MS, GIFT_TAP_GRACE_MS, type GiftItem,
-} from "../src/shared/gift-rules.ts";
+import type { GiftItem } from "../src/shared/gift-rules.ts";
+import { GIFT_DUDS, GIFT_GOODS, GIFT_READY_MS, GIFT_ROUND_MS, GIFT_TAP_GRACE_MS } from "../src/shared/gift-rules.ts";
 import { normalizeQuestions } from "../src/shared/quiz-schema.ts";
 import { FakeClock, sampleQuiz } from "./helpers.ts";
 
@@ -81,7 +79,16 @@ describe("Gift Grab", () => {
     const clock = new FakeClock();
     const questions = normalizeQuestions([
       { type: "text", text: "Who brings the gifts?", options: ["Santa Claus"] },
-      { type: "pin", text: "Which marker is the North Pole?", image: "media/map.png", spots: [{ x: 0.5, y: 0.1 }, { x: 0.5, y: 0.9 }], correct: [0] },
+      {
+        type: "pin",
+        text: "Which marker is the North Pole?",
+        image: "media/map.png",
+        spots: [
+          { x: 0.5, y: 0.1 },
+          { x: 0.5, y: 0.9 },
+        ],
+        correct: [0],
+      },
     ]);
     const lobby = new Lobby(sampleQuiz({ questions }));
     const { id } = lobby.join("Noel");
@@ -146,7 +153,9 @@ describe("Gift Grab", () => {
         const target = bonus.items.find((item) => item.from > power.from && (expected === "shield" ? dud(item.kind) : good(item.kind)))!;
         clock.advance(start + target.from - clock.now());
         expect(game.tap(id, round, target.id)).toBe(true);
-        expect(game.playerView(id)?.bonus?.hits.at(-1)).toMatchObject(expected === "shield" ? { delta: 0, effect: "blocked" } : { delta: 20 * bonus.multiplier });
+        expect(game.playerView(id)?.bonus?.hits.at(-1)).toMatchObject(
+          expected === "shield" ? { delta: 0, effect: "blocked" } : { delta: 20 * bonus.multiplier },
+        );
         expect(game.playerView(id)?.bonus?.power).toBeNull();
       }
       clock.advance(start + GIFT_ROUND_MS - clock.now());

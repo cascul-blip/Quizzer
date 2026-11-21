@@ -1,4 +1,12 @@
-import { duelTheme, type DuelTheme, DEFAULT_DUEL_THEME } from "../../shared/duel-theme.ts";
+import type { AnswerValue } from "../../shared/answer-match.ts";
+import { answerOf, checkAnswer, MAX_TYPED_ANSWER } from "../../shared/answer-match.ts";
+import type { AvatarChoice } from "../../shared/avatars.ts";
+import { randomAvatar } from "../../shared/avatars.ts";
+import { arenaOf, arenaPoints, climbLadder, duelOutcome, pairArenas, standings } from "../../shared/duel-rules.ts";
+import type { DuelTheme } from "../../shared/duel-theme.ts";
+import { DEFAULT_DUEL_THEME, duelTheme } from "../../shared/duel-theme.ts";
+import { MODE_NAMES } from "../../shared/mode-names.ts";
+import type { Pacing, QuestionError, QuestionView, SubAward } from "../../shared/mode-views.ts";
 import type {
   DuelArena,
   DuelArenaResult,
@@ -10,19 +18,17 @@ import type {
   HostDuelState,
   PlayerDuelView,
 } from "../../shared/modes/duel.ts";
-import type { ShuffleOptions } from "../../shared/protocol.ts";
-import type { Pacing, QuestionView, QuestionError, SubAward } from "../../shared/mode-views.ts";
 import { DUEL_DEFAULT_ROUNDS, DUEL_ROUNDS } from "../../shared/modes/duel.ts";
-import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
-import { MAX_TYPED_ANSWER, checkAnswer, type AnswerValue, answerOf } from "../../shared/answer-match.ts";
+import type { ShuffleOptions } from "../../shared/protocol.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
-import { arenaOf, arenaPoints, climbLadder, duelOutcome, pairArenas, standings } from "../../shared/duel-rules.ts";
-import { GameError, realClock, shuffle, topErrors, type Clock, AUTO_REVEAL_MS, GRACE_MS, preparePlayOrder } from "./common.ts";
+import type { Clock } from "./common.ts";
+import { AUTO_REVEAL_MS, GameError, GRACE_MS, preparePlayOrder, realClock, shuffle, topErrors } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
-import { Roster, type BasePlayer } from "./roster.ts";
-import { MODE_NAMES } from "../../shared/mode-names.ts";
-import { handoffOptions, pickTheme, unhandled, type ModeEntry } from "./mode-entry.ts";
+import type { ModeEntry } from "./mode-entry.ts";
+import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
 import { toCsv } from "./results.ts";
+import type { BasePlayer } from "./roster.ts";
+import { Roster } from "./roster.ts";
 
 export { AUTO_REVEAL_MS, GRACE_MS } from "./common.ts";
 
@@ -106,7 +112,13 @@ export class DuelGame {
   phaseDurationMs = 0;
   private phaseStartedAt = 0;
   /** Set while views are built in a batch: what every phone's view shares, computed once. */
-  private batch: { ranked?: DuelPlayer[]; rankById?: Map<string, number>; ladderArenas?: Map<string, number>; arenaById?: Map<string, number>; awards?: DuelAwards } | null = null;
+  private batch: {
+    ranked?: DuelPlayer[];
+    rankById?: Map<string, number>;
+    ladderArenas?: Map<string, number>;
+    arenaById?: Map<string, number>;
+    awards?: DuelAwards;
+  } | null = null;
 
   private readonly source: Question[];
   /** Index into the quiz's questions for each slot. */
@@ -323,7 +335,10 @@ export class DuelGame {
   /** Close as soon as every connected duelist has answered. Returns whether it closed. */
   private maybeCloseEarly(): boolean {
     if (this.phase !== "open") return false;
-    const duelists = this.arenas.flat().map((id) => this.players.get(id)!).filter((p) => p.connected);
+    const duelists = this.arenas
+      .flat()
+      .map((id) => this.players.get(id)!)
+      .filter((p) => p.connected);
     if (duelists.length === 0 || !duelists.every((p) => p.answers[this.qIndex])) return false;
     this.closeQuestion();
     return true;
@@ -539,7 +554,10 @@ export class DuelGame {
     }
   }
 
-  private shared<K extends keyof NonNullable<DuelGame["batch"]>>(key: K, make: () => NonNullable<NonNullable<DuelGame["batch"]>[K]>): NonNullable<NonNullable<DuelGame["batch"]>[K]> {
+  private shared<K extends keyof NonNullable<DuelGame["batch"]>>(
+    key: K,
+    make: () => NonNullable<NonNullable<DuelGame["batch"]>[K]>,
+  ): NonNullable<NonNullable<DuelGame["batch"]>[K]> {
     if (!this.batch) return make();
     return (this.batch[key] ??= make()) as NonNullable<NonNullable<DuelGame["batch"]>[K]>;
   }
@@ -549,7 +567,9 @@ export class DuelGame {
     if (!p) return null;
     const q = this.currentQuestion;
     const ladderArenas = this.shared("ladderArenas", () => this.ladderArenas());
-    const rank = this.batch ? (this.shared("rankById", () => new Map(this.rankedNow().map((x, i) => [x.id, i + 1]))).get(p.id) ?? 0) : this.ranked().indexOf(p) + 1;
+    const rank = this.batch
+      ? (this.shared("rankById", () => new Map(this.rankedNow().map((x, i) => [x.id, i + 1]))).get(p.id) ?? 0)
+      : this.ranked().indexOf(p) + 1;
     const arenaNow = this.arenaNow(p.id, ladderArenas);
     // This round's arena and opponents (still this round's on the reveal); a late joiner waiting for the next round
     // gets the arena the ladder puts them in and no opponents.

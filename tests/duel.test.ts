@@ -1,12 +1,21 @@
 import { describe, expect, spyOn, test } from "bun:test";
+import type { DuelPlayer } from "../src/server/game/duel.ts";
+import {
+  AUTO_REVEAL_MS,
+  AWARD_BIGGEST_CLIMB,
+  AWARD_LONGEST_REIGN,
+  AWARD_MOST_WINS,
+  buildDuelResultsCsv,
+  DuelGame,
+  GRACE_MS,
+  INTRO_MS,
+} from "../src/server/game/duel.ts";
 import { Lobby } from "../src/server/game/lobby.ts";
-import { AUTO_REVEAL_MS, AWARD_BIGGEST_CLIMB, AWARD_LONGEST_REIGN, AWARD_MOST_WINS, DuelGame, GRACE_MS, INTRO_MS, type DuelPlayer } from "../src/server/game/duel.ts";
-import { buildDuelResultsCsv } from "../src/server/game/duel.ts";
+import { viewKey } from "../src/server/phone-view-delivery.ts";
+import type { Pacing } from "../src/shared/mode-views.ts";
 import { DUEL_DEFAULT_ROUNDS } from "../src/shared/modes/duel.ts";
 import type { ShuffleOptions } from "../src/shared/protocol.ts";
-import type { Pacing } from "../src/shared/mode-views.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
-import { viewKey } from "../src/server/phone-view-delivery.ts";
 import { FakeClock, sampleQuiz } from "./helpers.ts";
 
 function quiz(count = 20): Quiz {
@@ -27,7 +36,7 @@ const keepOrder = () => 0.999999;
 
 function seeded(seed = 42) {
   let s = seed;
-  return () => ((s = (s * 1664525 + 1013904223) % 2 ** 32) / 2 ** 32);
+  return () => (s = (s * 1664525 + 1013904223) % 2 ** 32) / 2 ** 32;
 }
 
 function setup(names: string[], opts: { questions?: number; rounds?: number; pacing?: Pacing; shuffle?: ShuffleOptions; rng?: () => number } = {}) {
@@ -84,7 +93,11 @@ describe("Showdown", () => {
       return views;
     };
     expect(batched()).toEqual(ids.map((id) => game.playerView(id)));
-    round(game, clock, [["A", true], ["B", false], ["C", true]]);
+    round(game, clock, [
+      ["A", true],
+      ["B", false],
+      ["C", true],
+    ]);
     expect(batched()).toEqual(ids.map((id) => game.playerView(id)));
     game.end();
     expect(game.phase).toBe("podium");
@@ -115,7 +128,10 @@ describe("Showdown", () => {
     const classic = DuelGame.fromLobby(lobby.handoffFacts("duel"), { clock });
     expect(classic.theme).toBe("classic");
     expect(() => lobby.setModeSettings("duel", { rounds: 10, theme: "bogus" as never })).toThrow("Unknown Showdown theme");
-    round(game, clock, [["A", true], ["B", false]]);
+    round(game, clock, [
+      ["A", true],
+      ["B", false],
+    ]);
     clock.advance(1800);
     expect(game.hostView().revealElapsedMs).toBe(1800);
     game.setPacing("auto");
@@ -127,7 +143,10 @@ describe("Showdown", () => {
 
   test("a phone's view key ignores the reveal clock running up, so it isn't re-sent", () => {
     const { game, clock } = setup(["A", "B"]);
-    round(game, clock, [["A", true], ["B", false]]);
+    round(game, clock, [
+      ["A", true],
+      ["B", false],
+    ]);
     clock.advance(200);
     const b = byName(game, "B").id;
     const before = game.playerView(b)!;
@@ -141,15 +160,49 @@ describe("Showdown", () => {
   test("starts straight into round 1: the ladder in arenas, options hidden", () => {
     const { game } = setup(["A", "B", "C", "D", "E", "F"]);
     expect(game.phase).toBe("intro");
-    expect(arenaNames(game)).toEqual([["A", "B"], ["C", "D"], ["E", "F"]]);
+    expect(arenaNames(game)).toEqual([
+      ["A", "B"],
+      ["C", "D"],
+      ["E", "F"],
+    ]);
     const v = game.hostView();
-    expect(v).toMatchObject({ kind: "duel", phase: "intro", round: 1, rounds: 15, pacing: "manual", answeredCount: 0, playerCount: 6, correct: null, lastRound: null, awards: null, errors: null });
+    expect(v).toMatchObject({
+      kind: "duel",
+      phase: "intro",
+      round: 1,
+      rounds: 15,
+      pacing: "manual",
+      answeredCount: 0,
+      playerCount: 6,
+      correct: null,
+      lastRound: null,
+      awards: null,
+      errors: null,
+    });
     expect(v.quiz).toEqual({ id: "sample-abcd", title: "Sample", questionCount: 20 });
     expect(v.question).toMatchObject({ index: 0, total: 15, text: "Question 0", options: [], remainingMs: INTRO_MS });
     expect(v.arenas.map((a) => [a.arena, a.duelists.map((d) => [d.nickname, d.connected, d.answered])])).toEqual([
-      [1, [["A", true, false], ["B", true, false]]],
-      [2, [["C", true, false], ["D", true, false]]],
-      [3, [["E", true, false], ["F", true, false]]],
+      [
+        1,
+        [
+          ["A", true, false],
+          ["B", true, false],
+        ],
+      ],
+      [
+        2,
+        [
+          ["C", true, false],
+          ["D", true, false],
+        ],
+      ],
+      [
+        3,
+        [
+          ["E", true, false],
+          ["F", true, false],
+        ],
+      ],
     ]);
     expect(v.players.map((p) => [p.nickname, p.rank, p.arena, p.startArena])).toEqual([
       ["A", 1, 1, 1],
@@ -160,7 +213,18 @@ describe("Showdown", () => {
       ["F", 6, 3, 3],
     ]);
     const c = game.playerView(byName(game, "C").id)!;
-    expect(c).toMatchObject({ kind: "duel", phase: "intro", round: 1, rounds: 15, arena: 2, arenaCount: 3, myChoice: null, reveal: null, myDuel: null, result: null });
+    expect(c).toMatchObject({
+      kind: "duel",
+      phase: "intro",
+      round: 1,
+      rounds: 15,
+      arena: 2,
+      arenaCount: 3,
+      myChoice: null,
+      reveal: null,
+      myDuel: null,
+      result: null,
+    });
     expect(c.me).toMatchObject({ nickname: "C", arena: 2, rank: 3, wins: 0 });
     expect(c.opponents.map((o) => o.nickname)).toEqual(["D"]);
     expect(c.question!.options).toEqual([]);
@@ -193,13 +257,38 @@ describe("Showdown", () => {
     expect(v.answeredCount).toBe(6);
     expect(v.question!.options).toEqual(["yes", "no", "maybe"]);
     // The arenas still show the round as it was played.
-    expect(v.arenas.map((a) => a.duelists.map((d) => d.nickname))).toEqual([["A", "B"], ["C", "D"], ["E", "F"]]);
+    expect(v.arenas.map((a) => a.duelists.map((d) => d.nickname))).toEqual([
+      ["A", "B"],
+      ["C", "D"],
+      ["E", "F"],
+    ]);
     expect(v.lastRound!.round).toBe(1);
     expect(v.lastRound!.arenas.map((a) => [a.arena, a.draw, a.duelists.map((d) => [d.nickname, d.correct, d.ms, d.outcome, d.nextArena])])).toEqual([
-      [1, false, [["A", true, 300, "win", 1], ["B", false, 400, "lose", 2]]],
-      [2, false, [["C", true, 200, "lose", 2], ["D", true, 100, "win", 1]]],
+      [
+        1,
+        false,
+        [
+          ["A", true, 300, "win", 1],
+          ["B", false, 400, "lose", 2],
+        ],
+      ],
+      [
+        2,
+        false,
+        [
+          ["C", true, 200, "lose", 2],
+          ["D", true, 100, "win", 1],
+        ],
+      ],
       // The draw blocks the boundary above it: C stays in Arena 2.
-      [3, true, [["E", false, 500, "stay", 3], ["F", false, 600, "stay", 3]]],
+      [
+        3,
+        true,
+        [
+          ["E", false, 500, "stay", 3],
+          ["F", false, 600, "stay", 3],
+        ],
+      ],
     ]);
     expect(ladderNames(game)).toEqual(["A", "D", "B", "C", "E", "F"]);
     expect(v.players.map((p) => [p.nickname, p.arena, p.wins, p.losses, p.draws, p.correct, p.wrong, p.reign])).toEqual([
@@ -211,20 +300,34 @@ describe("Showdown", () => {
       ["F", 3, 0, 0, 1, 0, 1, 0],
     ]);
     const d = game.playerView(byName(game, "D").id)!;
-    expect(d).toMatchObject({ phase: "reveal", arena: 2, myChoice: 0, reveal: { choice: 0, correct: [0], wasCorrect: true, ms: 100 }, me: { arena: 1, rank: 2, wins: 1 } });
+    expect(d).toMatchObject({
+      phase: "reveal",
+      arena: 2,
+      myChoice: 0,
+      reveal: { choice: 0, correct: [0], wasCorrect: true, ms: 100 },
+      me: { arena: 1, rank: 2, wins: 1 },
+    });
     expect(d.opponents.map((o) => o.nickname)).toEqual(["C"]);
     expect(d.myDuel!.arena).toBe(2);
 
     game.next();
     expect(game.phase).toBe("intro");
     expect(game.round).toBe(2);
-    expect(arenaNames(game)).toEqual([["A", "D"], ["B", "C"], ["E", "F"]]);
+    expect(arenaNames(game)).toEqual([
+      ["A", "D"],
+      ["B", "C"],
+      ["E", "F"],
+    ]);
     expect(game.playerView(byName(game, "B").id)!.opponents.map((o) => o.nickname)).toEqual(["C"]);
   });
 
   test("7 players: the bottom arena is a 3-way duel", () => {
     const { game, clock } = setup(["A", "B", "C", "D", "E", "F", "G"]);
-    expect(arenaNames(game)).toEqual([["A", "B"], ["C", "D"], ["E", "F", "G"]]);
+    expect(arenaNames(game)).toEqual([
+      ["A", "B"],
+      ["C", "D"],
+      ["E", "F", "G"],
+    ]);
     expect(game.playerView(byName(game, "F").id)!.opponents.map((o) => o.nickname)).toEqual(["E", "G"]);
     // Arena 2: C beats D. Arena 3: G right (wins), E wrong (middle), F no answer (loses).
     round(game, clock, [
@@ -245,7 +348,11 @@ describe("Showdown", () => {
     // B ↔ C at boundary 1-2, D ↔ G at boundary 2-3; F stays at the bottom.
     expect(ladderNames(game)).toEqual(["A", "C", "B", "G", "D", "E", "F"]);
     game.next();
-    expect(arenaNames(game)).toEqual([["A", "C"], ["B", "G"], ["D", "E", "F"]]);
+    expect(arenaNames(game)).toEqual([
+      ["A", "C"],
+      ["B", "G"],
+      ["D", "E", "F"],
+    ]);
   });
 
   test("the question closes early once every connected duelist has answered; away players count as no answer", () => {
@@ -266,7 +373,10 @@ describe("Showdown", () => {
     ]);
     // Arena 1 drew, so C can't climb; D is still on the ladder.
     expect(ladderNames(game)).toEqual(["A", "B", "C", "D"]);
-    expect(game.hostView().arenas[1]!.duelists.map((d) => [d.nickname, d.connected])).toEqual([["C", true], ["D", false]]);
+    expect(game.hostView().arenas[1]!.duelists.map((d) => [d.nickname, d.connected])).toEqual([
+      ["C", true],
+      ["D", false],
+    ]);
   });
 
   test("a player who disconnects while the question is open may complete it", () => {
@@ -292,7 +402,10 @@ describe("Showdown", () => {
     expect(game.lastRound).toBeNull();
     clock.advance(GRACE_MS);
     expect(game.phase).toBe("reveal");
-    expect(game.lastRound!.arenas[0]!.duelists.map((d) => [d.nickname, d.ms, d.outcome])).toEqual([["A", null, "lose"], ["B", 20_000, "win"]]);
+    expect(game.lastRound!.arenas[0]!.duelists.map((d) => [d.nickname, d.ms, d.outcome])).toEqual([
+      ["A", null, "lose"],
+      ["B", 20_000, "win"],
+    ]);
     expect(ladderNames(game)).toEqual(["B", "A"]);
     expect(game.hostView().phaseRemainingMs).toBe(AUTO_REVEAL_MS);
     clock.advance(AUTO_REVEAL_MS);
@@ -329,7 +442,10 @@ describe("Showdown", () => {
     expect(game.hostView().players.find((p) => p.nickname === "Late")).toMatchObject({ rank: 5, arena: 2, startArena: 2, wins: 0 });
     game.next();
     // A beat B in Arena 1 (stays), C beat D; Late joins the bottom arena: a 3-way duel.
-    expect(arenaNames(game)).toEqual([["A", "B"], ["C", "D", "Late"]]);
+    expect(arenaNames(game)).toEqual([
+      ["A", "B"],
+      ["C", "D", "Late"],
+    ]);
     expect(byName(game, "Late").startArena).toBe(2);
     expect(game.playerView(late.id)!.opponents.map((o) => o.nickname)).toEqual(["C", "D"]);
   });
@@ -346,14 +462,29 @@ describe("Showdown", () => {
     expect(game.kick(byName(game, "D").id)!.nickname).toBe("D");
     expect(game.phase).toBe("reveal");
     expect(game.lastRound!.arenas.map((a) => [a.draw, a.duelists.map((d) => [d.nickname, d.outcome])])).toEqual([
-      [false, [["A", "win"], ["B", "lose"]]],
+      [
+        false,
+        [
+          ["A", "win"],
+          ["B", "lose"],
+        ],
+      ],
       [false, [["C", "stay"]]],
-      [false, [["E", "lose"], ["F", "win"]]],
+      [
+        false,
+        [
+          ["E", "lose"],
+          ["F", "win"],
+        ],
+      ],
     ]);
     // C's arena has no winner or loser: both of its boundaries are blocked. F moves to the top of Arena 3.
     expect(ladderNames(game)).toEqual(["A", "B", "C", "F", "E"]);
     game.next();
-    expect(arenaNames(game)).toEqual([["A", "B"], ["C", "F", "E"]]);
+    expect(arenaNames(game)).toEqual([
+      ["A", "B"],
+      ["C", "F", "E"],
+    ]);
     expect(game.kick("nobody")).toBeNull();
     // A kicked player whose arena empties takes the arena with them.
     const solo = setup(["A", "B", "C", "D", "E"]);
@@ -366,7 +497,13 @@ describe("Showdown", () => {
   test("questions repeat in fresh cycles when the rounds outnumber them; errors count per quiz question", () => {
     const { game, clock } = setup(["A", "B"], { questions: 3, rounds: 10, shuffle: { questions: true, answers: true }, rng: seeded(7) });
     expect(game.questions).toHaveLength(10);
-    for (let c = 0; c < 3; c++) expect(game.questions.slice(3 * c, 3 * c + 3).map((q) => q.id).sort()).toEqual(["q0", "q1", "q2"]);
+    for (let c = 0; c < 3; c++)
+      expect(
+        game.questions
+          .slice(3 * c, 3 * c + 3)
+          .map((q) => q.id)
+          .sort(),
+      ).toEqual(["q0", "q1", "q2"]);
     expect(game.questions[9]).toBeDefined();
     const seen: string[] = [];
     for (let r = 0; r < 10; r++) {
@@ -441,7 +578,14 @@ describe("Showdown", () => {
       ["Question 1", 3],
     ]);
     const f = game.playerView(byName(game, "F").id)!;
-    expect(f).toMatchObject({ phase: "podium", question: null, opponents: [], arena: 1, arenaCount: 3, result: { rank: 2, playerCount: 6, awards: [AWARD_MOST_WINS, AWARD_BIGGEST_CLIMB] } });
+    expect(f).toMatchObject({
+      phase: "podium",
+      question: null,
+      opponents: [],
+      arena: 1,
+      arenaCount: 3,
+      result: { rank: 2, playerCount: 6, awards: [AWARD_MOST_WINS, AWARD_BIGGEST_CLIMB] },
+    });
     expect(game.playerView(byName(game, "D").id)!.result!.awards).toEqual([AWARD_LONGEST_REIGN, AWARD_MOST_WINS]);
     expect(game.playerView(byName(game, "C").id)!.result).toEqual({ rank: 6, playerCount: 6, awards: [] });
 
@@ -543,7 +687,9 @@ describe("Showdown", () => {
     expect(arenaNames(game)).toEqual([["Solo"]]);
     expect(game.playerView(byName(game, "Solo").id)!.opponents).toEqual([]);
     round(game, clock, [["Solo", true]]);
-    expect(game.lastRound!.arenas).toEqual([{ arena: 1, draw: false, duelists: [expect.objectContaining({ nickname: "Solo", correct: true, outcome: "stay", nextArena: 1 })] }]);
+    expect(game.lastRound!.arenas).toEqual([
+      { arena: 1, draw: false, duelists: [expect.objectContaining({ nickname: "Solo", correct: true, outcome: "stay", nextArena: 1 })] },
+    ]);
     expect(byName(game, "Solo")).toMatchObject({ correct: 1, wins: 0, draws: 0 });
   });
 });

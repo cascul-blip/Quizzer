@@ -3,7 +3,8 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { QUESTION_ID_RE, QuestionDraft, QuizSettings, ValidationError } from "../../shared/quiz-schema.ts";
-import { MAX_MEDIA_BYTES, NotFoundError, type QuizStore } from "../quiz/store.ts";
+import type { QuizStore } from "../quiz/store.ts";
+import { MAX_MEDIA_BYTES, NotFoundError } from "../quiz/store.ts";
 
 export const SERVER_INSTRUCTIONS = `Quizzer stores Kahoot-style quizzes that are played live on a projector with players answering on their phones.
 
@@ -145,8 +146,7 @@ export function createMcpServer(store: QuizStore, version: string): McpServer {
   server.registerTool(
     "update_question",
     {
-      description:
-        "Change fields of an existing question. Only the fields you pass are changed. When changing options, also pass correct if indices shift.",
+      description: "Change fields of an existing question. Only the fields you pass are changed. When changing options, also pass correct if indices shift.",
       inputSchema: {
         quizId,
         questionId,

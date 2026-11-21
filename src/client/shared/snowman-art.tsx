@@ -8,7 +8,8 @@
  */
 import { useEffect, useRef, useState } from "preact/hooks";
 import { ROBOT_BOARD, robotRing } from "../../shared/modes/robot.ts";
-import { ARENA_H, ARENA_W, BACKDROP, EDGE, Pieces, TILE, prefersStill, project, quad, tileBox, type ArenaPlayer } from "./robot-art.tsx";
+import type { ArenaPlayer } from "./robot-art.tsx";
+import { ARENA_H, ARENA_W, BACKDROP, EDGE, Pieces, prefersStill, project, quad, TILE, tileBox } from "./robot-art.tsx";
 import elbowImg from "./snowman/arm-elbow.webp";
 import foreImg from "./snowman/arm-fore.webp";
 import shoulderImg from "./snowman/arm-shoulder.webp";
@@ -64,7 +65,12 @@ interface Arm {
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const mixHand = (p: Hand, q: Hand, t: number): Hand => p.map((v, i) => lerp(v, q[i]!, t)) as Hand;
-const mixArm = (a: Arm, b: Arm, t: number): Arm => ({ shoulder: lerp(a.shoulder, b.shoulder, t), elbow: lerp(a.elbow, b.elbow, t), wrist: lerp(a.wrist, b.wrist, t), hand: mixHand(a.hand, b.hand, t) });
+const mixArm = (a: Arm, b: Arm, t: number): Arm => ({
+  shoulder: lerp(a.shoulder, b.shoulder, t),
+  elbow: lerp(a.elbow, b.elbow, t),
+  wrist: lerp(a.wrist, b.wrist, t),
+  hand: mixHand(a.hand, b.hand, t),
+});
 const rad = (d: number) => (d * Math.PI) / 180;
 const deg = (r: number) => (r * 180) / Math.PI;
 const at = (p: Pt, d: number, len: number): Pt => ({ x: p.x + len * Math.cos(rad(d)), y: p.y + len * Math.sin(rad(d)) });
@@ -91,7 +97,16 @@ function ik(S: Pt, T: Pt): { shoulder: number; elbow: number } {
 }
 
 type PieceName = "upper" | "fore" | "elbow" | "thumb" | "palm" | "prox" | "dist" | "shoulder";
-const PIECE_ART: Record<PieceName, string> = { upper: upperImg, fore: foreImg, elbow: elbowImg, thumb: thumbImg, palm: palmImg, prox: clawProxImg, dist: clawDistImg, shoulder: shoulderImg };
+const PIECE_ART: Record<PieceName, string> = {
+  upper: upperImg,
+  fore: foreImg,
+  elbow: elbowImg,
+  thumb: thumbImg,
+  palm: palmImg,
+  prox: clawProxImg,
+  dist: clawDistImg,
+  shoulder: shoulderImg,
+};
 /** Height ÷ width of the pieces drawn at their own aspect ratio. */
 const ASPECT = { thumb: 34 / 112, dist: 51 / 128, shoulder: 150 / 192 };
 
@@ -166,7 +181,16 @@ function Ops({ ops }: { ops: Op[] }) {
   return (
     <>
       {ops.map((o, i) => (
-        <image key={i} href={PIECE_ART[o.name]} x={f1(o.ox)} y={f1(o.oy)} width={f1(o.w)} height={f1(o.h)} preserveAspectRatio="none" transform={`translate(${f1(o.x)},${f1(o.y)}) rotate(${f1(o.deg)}) scale(1,${o.flip ? -1 : 1})`} />
+        <image
+          key={i}
+          href={PIECE_ART[o.name]}
+          x={f1(o.ox)}
+          y={f1(o.oy)}
+          width={f1(o.w)}
+          height={f1(o.h)}
+          preserveAspectRatio="none"
+          transform={`translate(${f1(o.x)},${f1(o.y)}) rotate(${f1(o.deg)}) scale(1,${o.flip ? -1 : 1})`}
+        />
       ))}
     </>
   );
@@ -197,8 +221,18 @@ interface Pose {
 
 function idle(t: number): Pose {
   const w = (2 * Math.PI * t) / IDLE_T;
-  const R: Arm = { shoulder: 4 * Math.sin(w), elbow: -60 + 6 * Math.sin(w + 0.9), wrist: 15 + 5 * Math.sin(2 * w + 0.4), hand: mixHand(POSE.half, POSE.closed, 0.25 + 0.25 * Math.sin(2 * w)) };
-  const L: Arm = { shoulder: -5 + 4 * Math.sin(w + 2.1), elbow: -60 + 6 * Math.sin(w + 3.0), wrist: 15 + 5 * Math.sin(2 * w + 2.5), hand: mixHand(POSE.open, POSE.half, 0.3 + 0.3 * Math.sin(2 * w + 1.7)) };
+  const R: Arm = {
+    shoulder: 4 * Math.sin(w),
+    elbow: -60 + 6 * Math.sin(w + 0.9),
+    wrist: 15 + 5 * Math.sin(2 * w + 0.4),
+    hand: mixHand(POSE.half, POSE.closed, 0.25 + 0.25 * Math.sin(2 * w)),
+  };
+  const L: Arm = {
+    shoulder: -5 + 4 * Math.sin(w + 2.1),
+    elbow: -60 + 6 * Math.sin(w + 3.0),
+    wrist: 15 + 5 * Math.sin(2 * w + 2.5),
+    hand: mixHand(POSE.open, POSE.half, 0.3 + 0.3 * Math.sin(2 * w + 1.7)),
+  };
   // The claws twitch.
   R.hand = [R.hand[0], R.hand[1] + 8 * Math.sin(4 * w), R.hand[2], R.hand[3]];
   L.hand = [L.hand[0], L.hand[1] + 8 * Math.sin(4 * w + 1.3), L.hand[2], L.hand[3]];
@@ -291,7 +325,12 @@ export function contactTime(r: Rake, u: number): number {
 /** A swept collapsing tile, `age` s after the claws hit it: slides with them, hops, tips over and drops off. */
 function tileMotion(age: number): { dx: number; dy: number; rot: number; alpha: number } {
   const a = age / TILE_FX_T;
-  return { dx: -95 * ease(a / 0.7), dy: -16 * Math.sin(Math.PI * Math.min(a / 0.45, 1)) + 300 * Math.max(0, a - 0.35) ** 2, rot: 55 * easeIn(a), alpha: 1 - ease((a - 0.55) / 0.45) };
+  return {
+    dx: -95 * ease(a / 0.7),
+    dy: -16 * Math.sin(Math.PI * Math.min(a / 0.45, 1)) + 300 * Math.max(0, a - 0.35) ** 2,
+    rot: 55 * easeIn(a),
+    alpha: 1 - ease((a - 0.55) / 0.45),
+  };
 }
 
 const half = ROBOT_BOARD / 2;
@@ -425,7 +464,12 @@ export function SnowmanArena(props: {
   }
   const collapsing = new Set(props.collapsing ?? []);
   return (
-    <svg class={`robot-arena snowman ${props.class ?? ""} ${props.attack ? "attacking" : ""}`} viewBox={`0 0 ${ARENA_W} ${ARENA_H}`} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+    <svg
+      class={`robot-arena snowman ${props.class ?? ""} ${props.attack ? "attacking" : ""}`}
+      viewBox={`0 0 ${ARENA_W} ${ARENA_H}`}
+      preserveAspectRatio="xMidYMid meet"
+      aria-hidden="true"
+    >
       <defs>
         <filter id="sa-blur" x="-20%" y="-20%" width="140%" height="140%">
           <feGaussianBlur stdDeviation="3" />
@@ -453,7 +497,14 @@ function Snowman({ clock, plan }: { clock: Clock; plan: Plan | null }) {
   const r = 13 * (0.8 + 0.4 * pose.eye);
   return (
     <g class="snowman">
-      <image href={bodyImg} x={f1(BODY.x - (BODY.w * b) / 2)} y={f1(BODY.y - BODY.h * b)} width={f1(BODY.w * (1 + b))} height={f1(BODY.h * (1 + b))} preserveAspectRatio="none" />
+      <image
+        href={bodyImg}
+        x={f1(BODY.x - (BODY.w * b) / 2)}
+        y={f1(BODY.y - BODY.h * b)}
+        width={f1(BODY.w * (1 + b))}
+        height={f1(BODY.h * (1 + b))}
+        preserveAspectRatio="none"
+      />
       {behind.map((s) => (
         <Ops key={s} ops={armOps(s, pose.arms[s])} />
       ))}
@@ -526,7 +577,10 @@ const SNOWFLAKE: [number, number, number, number][] = (() => {
     const a = (k * Math.PI) / 3 + Math.PI / 6;
     const at = (r: number, da = 0) => [0.5 + r * Math.cos(a + da), 0.5 + r * Math.sin(a + da)] as const;
     segs.push([0.5, 0.5, ...at(R)]);
-    for (const [r, len] of [[0.17, 0.11], [0.28, 0.08]]) {
+    for (const [r, len] of [
+      [0.17, 0.11],
+      [0.28, 0.08],
+    ]) {
       const [bx, by] = at(r);
       for (const side of [-1, 1]) {
         const b = a + (side * Math.PI) / 3;
@@ -644,7 +698,19 @@ function SweepFx({ clock, plan, players, hit }: { clock: Clock; plan: Plan; play
     }
     for (let j = 1; j < pts.length; j++) {
       const f = j / pts.length;
-      fx.push(<line key={`${side}t${j}`} x1={f1(pts[j - 1]!.x)} y1={f1(pts[j - 1]!.y)} x2={f1(pts[j]!.x)} y2={f1(pts[j]!.y)} class="sweep-trail" stroke-width={f1(6 + 23 * f)} stroke-opacity={(0.8 * f).toFixed(2)} filter="url(#sa-blur)" />);
+      fx.push(
+        <line
+          key={`${side}t${j}`}
+          x1={f1(pts[j - 1]!.x)}
+          y1={f1(pts[j - 1]!.y)}
+          x2={f1(pts[j]!.x)}
+          y2={f1(pts[j]!.y)}
+          class="sweep-trail"
+          stroke-width={f1(6 + 23 * f)}
+          stroke-opacity={(0.8 * f).toFixed(2)}
+          filter="url(#sa-blur)"
+        />,
+      );
     }
     // Snow spray, kicked up from the tip while the claws are on the board.
     for (let n = 0; ; n++) {
@@ -658,7 +724,18 @@ function SweepFx({ clock, plan, players, hit }: { clock: Clock; plan: Plan; play
       const r1 = rand(n, 1);
       const s = (40 + 40 * rand(n, 2)) * (0.7 + 1.8 * age);
       const pos = m({ x: p.x + 90 * age * (r0 - 0.2) + 40 * age, y: p.y - 60 * age * (0.5 + r1) + 90 * age * age });
-      fx.push(<image key={`${side}s${n}`} href={sprayImg} x={f1(-s / 2)} y={f1(-s / 2)} width={f1(s)} height={f1(s)} opacity={(1 - age / SPRAY_LIFE).toFixed(2)} transform={`translate(${f1(pos.x)},${f1(pos.y)}) rotate(${f1(rand(n, 3) * 360)})`} />);
+      fx.push(
+        <image
+          key={`${side}s${n}`}
+          href={sprayImg}
+          x={f1(-s / 2)}
+          y={f1(-s / 2)}
+          width={f1(s)}
+          height={f1(s)}
+          opacity={(1 - age / SPRAY_LIFE).toFixed(2)}
+          transform={`translate(${f1(pos.x)},${f1(pos.y)}) rotate(${f1(rand(n, 3) * 360)})`}
+        />,
+      );
     }
   }
   // A frost puff over each player the claws catch.
@@ -669,7 +746,17 @@ function SweepFx({ clock, plan, players, hit }: { clock: Clock; plan: Plan; play
     const c = project(p.x + 0.5, p.y + 0.62);
     const size = TILE * 0.95 * c.s;
     const w = 90 * c.s * (0.7 + age);
-    fx.push(<image key={`hit-${p.id}`} href={frostHitImg} x={f1(c.x - w / 2)} y={f1(c.y - size * 0.55 - w / 2)} width={f1(w)} height={f1(w)} opacity={(1 - age / 0.6).toFixed(2)} />);
+    fx.push(
+      <image
+        key={`hit-${p.id}`}
+        href={frostHitImg}
+        x={f1(c.x - w / 2)}
+        y={f1(c.y - size * 0.55 - w / 2)}
+        width={f1(w)}
+        height={f1(w)}
+        opacity={(1 - age / 0.6).toFixed(2)}
+      />,
+    );
   }
   return (
     <g class="sweep">

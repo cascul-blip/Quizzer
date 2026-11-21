@@ -1,5 +1,8 @@
-import { siegeDefenderPhrase, siegeTheme, siegeWords, DEFAULT_SIEGE_THEME } from "../../shared/siege-theme.ts";
 import type { AnswerValue } from "../../shared/answer-match.ts";
+import { answerOf } from "../../shared/answer-match.ts";
+import type { AvatarChoice } from "../../shared/avatars.ts";
+import { randomAvatar } from "../../shared/avatars.ts";
+import { MODE_NAMES } from "../../shared/mode-names.ts";
 import type {
   HostSiegeState,
   PlayerSiegeView,
@@ -10,6 +13,8 @@ import type {
   SiegeResult,
   SiegeSettings,
 } from "../../shared/modes/siege.ts";
+import type { Question, Quiz } from "../../shared/quiz-schema.ts";
+import type { SiegeDefenderType, SiegeWaves } from "../../shared/siege-rules.ts";
 import {
   SIEGE_BREAK_MS,
   SIEGE_COUNTDOWN_MS,
@@ -21,27 +26,26 @@ import {
   SIEGE_OPENING_MS,
   SIEGE_START_GOLD,
   SIEGE_TICK_MS,
+  SIEGE_WAVE_CHOICES,
+  siegeGiantPace,
   siegeNextScale,
   siegeUpgradeCost,
   siegeWaveBudget,
   siegeWaveStrength,
-  siegeGiantPace,
-  type SiegeDefenderType,
-  SIEGE_WAVE_CHOICES,
-  type SiegeWaves,
 } from "../../shared/siege-rules.ts";
-import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
-import type { Question, Quiz } from "../../shared/quiz-schema.ts";
-import { GameError, realClock, type Clock } from "./common.ts";
-import type { LobbyFacts } from "./lobby-facts.ts";
-import { Roster, type BasePlayer } from "./roster.ts";
-import { QuestionStream, type AnswerTotals } from "./stream.ts";
+import { DEFAULT_SIEGE_THEME, siegeDefenderPhrase, siegeTheme, siegeWords } from "../../shared/siege-theme.ts";
 import { loadSiegeRecord, saveSiegeRecord } from "../siege-records.ts";
-import { answerOf } from "../../shared/answer-match.ts";
-import { MODE_NAMES } from "../../shared/mode-names.ts";
-import { handoffOptions, pickTheme, unhandled, type ModeEntry } from "./mode-entry.ts";
+import type { Clock } from "./common.ts";
+import { GameError, realClock } from "./common.ts";
+import type { LobbyFacts } from "./lobby-facts.ts";
+import type { ModeEntry } from "./mode-entry.ts";
+import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
 import { toCsv } from "./results.ts";
+import type { BasePlayer } from "./roster.ts";
+import { Roster } from "./roster.ts";
 import { SiegeBattlefield } from "./siege-battlefield.ts";
+import type { AnswerTotals } from "./stream.ts";
+import { QuestionStream } from "./stream.ts";
 
 export type { SiegeMonster } from "./siege-battlefield.ts";
 
@@ -102,7 +106,6 @@ interface SiegeGameSettings extends SiegeSettings {
   /** Longer waits for wrong answers in a row (the lobby's "Protect from abuse"). */
   protect?: boolean;
 }
-
 
 /**
  * Kingdom Siege: the whole class defends one castle wall against waves of monsters marching
@@ -270,7 +273,12 @@ export class SiegeGame {
     this.wave = wave;
     const defense = Math.round(this.defenseGold());
     // A board stronger than par makes the wave stronger; the boost only climbs after a wave that cost no hearts.
-    const { boost, budget, toughness } = siegeWaveStrength(siegeWaveBudget(wave, this.connectedCount(), this.scale), defense, prev?.boost ?? 1, !prev || prev.heartsLost === 0);
+    const { boost, budget, toughness } = siegeWaveStrength(
+      siegeWaveBudget(wave, this.connectedCount(), this.scale),
+      defense,
+      prev?.boost ?? 1,
+      !prev || prev.heartsLost === 0,
+    );
     this.battlefield.beginWave({ wave, budget, toughness, giantPace: siegeGiantPace(boost) });
     this.waveLog.push({ wave, scale: this.scale, defense, boost, budget, toughness, sent: 0, correct: 0, answered: 0, heartsLost: 0 });
     if (this.timer !== null) this.clock.clearTimeout(this.timer);
@@ -512,7 +520,10 @@ export class SiegeGame {
       return { value: top, nicknames: winners.map((p) => p.nickname) };
     };
     return {
-      topArcher: best((p) => p.archerKills, (p) => p.archerUpgrades),
+      topArcher: best(
+        (p) => p.archerKills,
+        (p) => p.archerUpgrades,
+      ),
       masterMason: best((p) => p.placed.wall + p.wallUpgrades),
       mostCorrect: best((p) => p.correct),
     };
@@ -552,7 +563,17 @@ export class SiegeGame {
       newRecord = survived > 0 && (!prev || survived > prev.waves || (survived === prev.waves && avg > prev.avgScale));
       record = newRecord ? { waves: survived, avgScale: avg, date: new Date(this.clock.now()).toISOString() } : prev;
     }
-    return { outcome, wave: Math.max(1, this.wave), waves, wavesSurvived: survived, hearts: this.hearts, headline, avgScale: waves === "endless" ? avg : null, record, newRecord };
+    return {
+      outcome,
+      wave: Math.max(1, this.wave),
+      waves,
+      wavesSurvived: survived,
+      hearts: this.hearts,
+      headline,
+      avgScale: waves === "endless" ? avg : null,
+      record,
+      newRecord,
+    };
   }
 
   // ---------- views ----------
@@ -605,7 +626,13 @@ export class SiegeGame {
         placed: { ...p.placed },
         upgrades: p.upgrades,
         defeated: p.defeated,
-        awards: podium ? [...(won(a.topArcher) ? [words.topArcher] : []), ...(won(a.masterMason) ? [words.masterMason] : []), ...(won(a.mostCorrect) ? ["Most correct answers"] : [])] : [],
+        awards: podium
+          ? [
+              ...(won(a.topArcher) ? [words.topArcher] : []),
+              ...(won(a.masterMason) ? [words.masterMason] : []),
+              ...(won(a.mostCorrect) ? ["Most correct answers"] : []),
+            ]
+          : [],
       };
     }
     return {
@@ -681,7 +708,17 @@ export function buildSiegeResultsCsv(game: SiegeGame): string {
   const log: (string | number)[][] = [
     [],
     ["Wave", "Difficulty scale %", "Defense gold", "Strength boost", "Monster budget", "Monster health ×", "Monsters sent", "Class accuracy %", "Hearts lost"],
-    ...game.waveLog.map((w) => [w.wave, w.scale, w.defense, w.boost, w.budget, w.toughness, w.sent, w.answered ? Math.round((w.correct / w.answered) * 100) : "", w.heartsLost]),
+    ...game.waveLog.map((w) => [
+      w.wave,
+      w.scale,
+      w.defense,
+      w.boost,
+      w.budget,
+      w.toughness,
+      w.sent,
+      w.answered ? Math.round((w.correct / w.answered) * 100) : "",
+      w.heartsLost,
+    ]),
   ];
   return toCsv([header, ...rows, ...log]);
 }

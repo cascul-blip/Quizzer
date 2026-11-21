@@ -52,6 +52,9 @@ export function addKatexFonts(): void {
   if (added) return;
   added = true;
   const el = document.createElement("style");
-  el.textContent = FACES.map(([family, weight, style, url]) => `@font-face{font-family:${family};font-weight:${weight};font-style:${style};font-display:block;src:url(${url}) format("woff2")}`).join("\n");
+  el.textContent = FACES.map(
+    ([family, weight, style, url]) =>
+      `@font-face{font-family:${family};font-weight:${weight};font-style:${style};font-display:block;src:url(${url}) format("woff2")}`,
+  ).join("\n");
   document.head.append(el);
 }

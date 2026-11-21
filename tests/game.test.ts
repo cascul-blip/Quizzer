@@ -1,8 +1,9 @@
 import { describe, expect, spyOn, test } from "bun:test";
-import { AUTO_LEADERBOARD_MS, AUTO_REVEAL_MS, GRACE_MS, type ClassicGame, GameError, INTRO_MS, preparePlayOrder } from "../src/server/game/game.ts";
-import { Lobby } from "../src/server/game/lobby.ts";
 import { FightGame } from "../src/server/game/fight.ts";
+import type { ClassicGame } from "../src/server/game/game.ts";
+import { AUTO_LEADERBOARD_MS, AUTO_REVEAL_MS, GameError, GRACE_MS, INTRO_MS, preparePlayOrder } from "../src/server/game/game.ts";
 import { LandGame } from "../src/server/game/land.ts";
+import { Lobby } from "../src/server/game/lobby.ts";
 import { TowerGame } from "../src/server/game/tower.ts";
 import { classicGame, FakeClock, sampleQuiz } from "./helpers.ts";
 
@@ -282,7 +283,7 @@ describe("preparePlayOrder", () => {
     const q1Positions = new Set<number>();
     for (let seed = 0; seed < 20; seed++) {
       let s = seed + 1;
-      const rng = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+      const rng = () => (s = (s * 16807) % 2147483647) / 2147483647;
       const [q1, q2, q3] = preparePlayOrder(quiz.questions, { questions: false, answers: true }, rng);
       expect(q1!.correct.map((i) => q1!.options[i])).toEqual(["4"]);
       expect([...q1!.options].sort()).toEqual(["22", "3", "4", "5"]);
@@ -297,7 +298,11 @@ describe("preparePlayOrder", () => {
   });
 
   test("question shuffle is a permutation", () => {
-    expect(preparePlayOrder(sampleQuiz().questions, { questions: true, answers: false }, () => 0).map((q) => q.id).sort()).toEqual(["q1", "q2", "q3"]);
+    expect(
+      preparePlayOrder(sampleQuiz().questions, { questions: true, answers: false }, () => 0)
+        .map((q) => q.id)
+        .sort(),
+    ).toEqual(["q1", "q2", "q3"]);
   });
 });
 
@@ -386,7 +391,10 @@ describe("lobby teams", () => {
     game.kick([...game.players.keys()][0]!);
     expect(layout()).toEqual([["B", "E"], ["C"], ["D"]]);
     game.setModeSettings("tower", { teams: 2, minutes: 5 });
-    expect(layout()).toEqual([["B", "D"], ["C", "E"]]);
+    expect(layout()).toEqual([
+      ["B", "D"],
+      ["C", "E"],
+    ]);
   });
 
   test("setTeam moves only that player; the phone badge follows", () => {
@@ -402,13 +410,25 @@ describe("lobby teams", () => {
     const { game, ids, layout } = teamLobby(["A", "B", "C", "D", "E"]);
     game.setTeam(ids[0]!, 2);
     game.join("F");
-    expect(layout()).toEqual([["D", "F"], ["B", "E"], ["A", "C"]]);
+    expect(layout()).toEqual([
+      ["D", "F"],
+      ["B", "E"],
+      ["A", "C"],
+    ]);
     game.join("G"); // all equal: lowest index
-    expect(layout()).toEqual([["D", "F", "G"], ["B", "E"], ["A", "C"]]);
+    expect(layout()).toEqual([
+      ["D", "F", "G"],
+      ["B", "E"],
+      ["A", "C"],
+    ]);
     game.kick(ids[1]!);
     expect(layout()).toEqual([["D", "F", "G"], ["E"], ["A", "C"]]);
     game.join("H");
-    expect(layout()).toEqual([["D", "F", "G"], ["E", "H"], ["A", "C"]]);
+    expect(layout()).toEqual([
+      ["D", "F", "G"],
+      ["E", "H"],
+      ["A", "C"],
+    ]);
   });
 
   test("shrinking re-homes players of removed teams to the smallest team; growing keeps everyone", () => {
@@ -416,13 +436,19 @@ describe("lobby teams", () => {
     game.setTeam(ids[3]!, 1);
     expect(layout()).toEqual([["A"], ["B", "D", "E"], ["C"]]);
     game.setModeSettings("tower", { teams: 2, minutes: 5 });
-    expect(layout()).toEqual([["A", "C"], ["B", "D", "E"]]);
+    expect(layout()).toEqual([
+      ["A", "C"],
+      ["B", "D", "E"],
+    ]);
     game.setModeSettings("tower", { teams: 4, minutes: 5 });
     expect(layout()).toEqual([["A", "C"], ["B", "D", "E"], [], []]);
     // Another team mode keeps what fits (Tower Fight has 2 teams).
     game.setTeam(ids[4]!, 3);
     game.setMode("fight");
-    expect(layout()).toEqual([["A", "C", "E"], ["B", "D"]]);
+    expect(layout()).toEqual([
+      ["A", "C", "E"],
+      ["B", "D"],
+    ]);
   });
 
   test("a solo mode hides but does not reset manual team assignments", () => {
@@ -499,7 +525,12 @@ test("answer avatars list pickers in answer order and match the counts", () => {
   game.start();
   clock.advance(INTRO_MS);
   // P3 fastest, then P1, then P4 — all on option 1; P2 on option 0.
-  for (const [p, opt] of [[ps[2]!, 1], [ps[0]!, 1], [ps[1]!, 0], [ps[3]!, 1]] as const) {
+  for (const [p, opt] of [
+    [ps[2]!, 1],
+    [ps[0]!, 1],
+    [ps[1]!, 0],
+    [ps[3]!, 1],
+  ] as const) {
     clock.advance(500);
     game.answer(p.id, 0, opt);
   }
@@ -507,4 +538,3 @@ test("answer avatars list pickers in answer order and match the counts", () => {
   expect(v.answerAvatars![1]).toEqual([ps[2]!.avatar, ps[0]!.avatar, ps[3]!.avatar]);
   expect(v.answerAvatars!.map((x) => x.length)).toEqual(v.answerCounts!);
 });
-

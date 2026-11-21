@@ -5,7 +5,11 @@ import { TRACKS } from "../../src/client/shared/music/tracks.ts";
 import type { MusicTrackId } from "../../src/shared/music-tracks.ts";
 
 const context = new AudioContext();
-const player = new MusicPlayer(() => context, TRACKS, () => null);
+const player = new MusicPlayer(
+  () => context,
+  TRACKS,
+  () => null,
+);
 player.setLevel(0.6);
 document.title = "North Pole Land Grab · music review";
 document.body.innerHTML = `<style>
@@ -28,14 +32,34 @@ function update() {
   if (playing) player.play(id());
   player.setIntensity(Number(threat.value), 600);
   const state = info();
-  document.querySelector("#status")!.textContent = `${state.playing ? "Playing" : "Stopped"} · ${Math.round(state.bpm)} BPM · ${Math.round(state.intensity * 100)}% threat`;
+  document.querySelector("#status")!.textContent =
+    `${state.playing ? "Playing" : "Stopped"} · ${Math.round(state.bpm)} BPM · ${Math.round(state.intensity * 100)}% threat`;
 }
-document.querySelector("#play")!.addEventListener("click", async () => { await context.resume(); playing = true; update(); });
-document.querySelector("#stop")!.addEventListener("click", () => { playing = false; player.play(null); update(); });
+document.querySelector("#play")!.addEventListener("click", async () => {
+  await context.resume();
+  playing = true;
+  update();
+});
+document.querySelector("#stop")!.addEventListener("click", () => {
+  playing = false;
+  player.play(null);
+  update();
+});
 for (const el of [theme, scene, threat]) el.addEventListener("input", update);
-for (const [selector, value] of [["#calm", "0"], ["#close", "1"], ["#broken", "0"]]) {
-  document.querySelector(selector!)!.addEventListener("click", () => { threat.value = value!; update(); });
+for (const [selector, value] of [
+  ["#calm", "0"],
+  ["#close", "1"],
+  ["#broken", "0"],
+]) {
+  document.querySelector(selector!)!.addEventListener("click", () => {
+    threat.value = value!;
+    update();
+  });
 }
-declare global { interface Window { landMusicReview: { player: MusicPlayer; context: AudioContext; info: typeof info } } }
+declare global {
+  interface Window {
+    landMusicReview: { player: MusicPlayer; context: AudioContext; info: typeof info };
+  }
+}
 window.landMusicReview = { player, context, info };
 update();

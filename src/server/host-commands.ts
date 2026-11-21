@@ -1,8 +1,9 @@
-import type { ClientMsg } from "../shared/protocol.ts";
 import type { Pacing } from "../shared/mode-views.ts";
+import type { ClientMsg } from "../shared/protocol.ts";
 import type { Quiz } from "../shared/quiz-schema.ts";
 import { GameError } from "./game/common.ts";
-import { Lobby, type HandoffOptions, type LobbyChoices } from "./game/lobby.ts";
+import type { HandoffOptions, LobbyChoices } from "./game/lobby.ts";
+import { Lobby } from "./game/lobby.ts";
 import type { LiveGame } from "./game/mode-entry.ts";
 import { entryOf, MODES } from "./game/modes.ts";
 

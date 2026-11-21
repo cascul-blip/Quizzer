@@ -1,33 +1,36 @@
-import { gingerbreadTerrain } from "../../shared/fight-ground.ts";
-import { fightTheme, type FightTheme, DEFAULT_FIGHT_THEME } from "../../shared/fight-theme.ts";
 import type { AnswerValue } from "../../shared/answer-match.ts";
-import {
-  CORRECT_PER_DECISION,
-  DECISION_MS,
-  REPAIR_MS,
-  TOWER_MAX_DAMAGE,
-  type FightAwards,
-  type FightEvent,
-  type FightOutcome,
-  type FightPhase,
-  type FightSettings,
-  type FightShot,
-  type FightState,
-  type HostFightState,
-  type PlayerFightView,
-  HILL_SETTINGS,
-} from "../../shared/modes/fight.ts";
-import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
-import { HILL_HEIGHTS, carve, launchVector, makeTerrain, simulate, type HillHeight, type ShotImpact } from "../../shared/fight-physics.ts";
-import type { Question, Quiz } from "../../shared/quiz-schema.ts";
-import { GameError, realClock, teamInfo, type Clock } from "./common.ts";
-import type { LobbyFacts } from "./lobby-facts.ts";
-import { Roster, type BasePlayer } from "./roster.ts";
-import { QuestionStream, type AnswerTotals } from "./stream.ts";
 import { answerOf } from "../../shared/answer-match.ts";
+import type { AvatarChoice } from "../../shared/avatars.ts";
+import { randomAvatar } from "../../shared/avatars.ts";
+import { gingerbreadTerrain } from "../../shared/fight-ground.ts";
+import type { HillHeight, ShotImpact } from "../../shared/fight-physics.ts";
+import { carve, HILL_HEIGHTS, launchVector, makeTerrain, simulate } from "../../shared/fight-physics.ts";
+import type { FightTheme } from "../../shared/fight-theme.ts";
+import { DEFAULT_FIGHT_THEME, fightTheme } from "../../shared/fight-theme.ts";
 import { MODE_NAMES } from "../../shared/mode-names.ts";
-import { handoffOptions, pickTheme, unhandled, type ModeEntry } from "./mode-entry.ts";
+import type {
+  FightAwards,
+  FightEvent,
+  FightOutcome,
+  FightPhase,
+  FightSettings,
+  FightShot,
+  FightState,
+  HostFightState,
+  PlayerFightView,
+} from "../../shared/modes/fight.ts";
+import { CORRECT_PER_DECISION, DECISION_MS, HILL_SETTINGS, REPAIR_MS, TOWER_MAX_DAMAGE } from "../../shared/modes/fight.ts";
+import type { Question, Quiz } from "../../shared/quiz-schema.ts";
+import type { Clock } from "./common.ts";
+import { GameError, realClock, teamInfo } from "./common.ts";
+import type { LobbyFacts } from "./lobby-facts.ts";
+import type { ModeEntry } from "./mode-entry.ts";
+import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
 import { toCsv } from "./results.ts";
+import type { BasePlayer } from "./roster.ts";
+import { Roster } from "./roster.ts";
+import type { AnswerTotals } from "./stream.ts";
+import { QuestionStream } from "./stream.ts";
 
 export { FEEDBACK_MS } from "./stream.ts";
 
@@ -549,7 +552,19 @@ export function buildFightResultsCsv(game: FightGame): string {
     const members = [...game.players.values()].filter((p) => p.team === t.index).sort((a, b) => b.hits - a.hits || b.correct - a.correct);
     for (const p of members) {
       const answered = p.correct + p.wrong;
-      rows.push([t.name, result, t.damage, p.nickname, p.correct, p.wrong, answered ? Math.round((p.correct / answered) * 100) : "", p.shots, p.hits, p.friendlyHits, p.rebuilds]);
+      rows.push([
+        t.name,
+        result,
+        t.damage,
+        p.nickname,
+        p.correct,
+        p.wrong,
+        answered ? Math.round((p.correct / answered) * 100) : "",
+        p.shots,
+        p.hits,
+        p.friendlyHits,
+        p.rebuilds,
+      ]);
     }
   }
   return toCsv([header, ...rows]);

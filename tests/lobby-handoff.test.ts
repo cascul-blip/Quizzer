@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { DuelGame } from "../src/server/game/duel.ts";
 import { ClassicGame, GameError } from "../src/server/game/game.ts";
-import { Lobby } from "../src/server/game/lobby.ts";
 import { GiftGame } from "../src/server/game/gift.ts";
+import { Lobby } from "../src/server/game/lobby.ts";
 import type { LiveGame } from "../src/server/game/mode-entry.ts";
 import { MODES } from "../src/server/game/modes.ts";
 import { RacerGame } from "../src/server/game/racer.ts";
@@ -70,19 +70,26 @@ describe("Lobby handoff", () => {
     lobby.start(undefined, opts);
     const game = installedGame();
     const expectedTeams = [0, 1, 0, 1, 1];
-    expect(joined.map(({ id }) => {
-      const view = game?.playerView(id);
-      return view?.kind === "tower" ? view.team.index : null;
-    })).toEqual(expectedTeams);
+    expect(
+      joined.map(({ id }) => {
+        const view = game?.playerView(id);
+        return view?.kind === "tower" ? view.team.index : null;
+      }),
+    ).toEqual(expectedTeams);
     expect(lobby.hostView().teams?.map((t) => t.members.map((p) => p.nickname))).toEqual([["A", "C"], ["B", "D", "E"], [], []]);
-    expect(joined.map(({ id }) => {
-      const view = lobby.playerView(id);
-      return view.kind === "classic" ? view.team?.index : null;
-    })).toEqual(expectedTeams);
+    expect(
+      joined.map(({ id }) => {
+        const view = lobby.playerView(id);
+        return view.kind === "classic" ? view.team?.index : null;
+      }),
+    ).toEqual(expectedTeams);
   });
 
   test("Racer and Showdown carry the chosen pacing forward to the next lobby", () => {
-    for (const [mode, kind] of [["racer", RacerGame], ["duel", DuelGame]] as const) {
+    for (const [mode, kind] of [
+      ["racer", RacerGame],
+      ["duel", DuelGame],
+    ] as const) {
       const { lobby, opts, installedGame } = setup(mode, ["Noel", "Holly"]);
       lobby.start("auto", opts);
       expect(lobby.choices.pacing).toBe("auto");
@@ -97,7 +104,11 @@ describe("Lobby handoff", () => {
   });
 
   test("Protect from abuse reaches the started mode as the host set it, and stays off in a mode that doesn't protect", () => {
-    for (const [mode, host, expected] of [["gift", true, true], ["gift", false, false], ["land", true, false]] as const) {
+    for (const [mode, host, expected] of [
+      ["gift", true, true],
+      ["gift", false, false],
+      ["land", true, false],
+    ] as const) {
       const { lobby, opts } = setup(mode, ["Noel"]);
       lobby.setProtect(host);
       const start = spyOn(MODES[mode], "start");

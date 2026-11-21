@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { h, type ComponentChildren, type FunctionComponent } from "preact";
+import type { ComponentChildren, FunctionComponent } from "preact";
+import { h } from "preact";
 import type { LobbySettingsProps } from "../src/client/host/lobby-modes.tsx";
 import { HOST_MODES, lobbyEntryOf } from "../src/client/host/modes.tsx";
 import { MODES } from "../src/server/game/modes.ts";

@@ -1,10 +1,11 @@
 import { useEffect, useState } from "preact/hooks";
 import { MODE_FLAGS } from "../../shared/mode-flags.ts";
-import type { GameMode, HostPlayer, HostView } from "../../shared/protocol.ts";
 import type { Pacing } from "../../shared/mode-views.ts";
+import type { GameMode, HostPlayer, HostView } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { teamVars } from "../shared/ui.tsx";
-import { ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
+import type { Send } from "./common.tsx";
+import { ScreenControls, toggleFullscreen } from "./common.tsx";
 import { HOST_MODES, lobbyEntryOf } from "./modes.tsx";
 
 type LobbyView = Extract<HostView, { kind: "classic" }>;
@@ -99,9 +100,7 @@ function Lobby({ view, send }: { view: LobbyView; send: Send }) {
               {join.addresses.length === 0 && <option value={join.address}>{join.address}</option>}
             </select>
           </label>
-          <p>
-            If phones can't load the page, pick the address of the Wi-Fi/Ethernet adapter, and allow port {join.port} through the firewall.
-          </p>
+          <p>If phones can't load the page, pick the address of the Wi-Fi/Ethernet adapter, and allow port {join.port} through the firewall.</p>
         </details>
       </section>
       <section class="players-panel">
@@ -109,11 +108,7 @@ function Lobby({ view, send }: { view: LobbyView; send: Send }) {
           <h2>
             {connected} player{connected === 1 ? "" : "s"}
           </h2>
-          <button
-            class="btn primary start"
-            disabled={connected === 0}
-            onClick={() => send({ type: "host.start", pacing: view.pacing })}
-          >
+          <button class="btn primary start" disabled={connected === 0} onClick={() => send({ type: "host.start", pacing: view.pacing })}>
             Start
           </button>
         </div>

@@ -118,7 +118,15 @@ export function isGuarded(size: number, starts: LandStart[], team: number, tile:
  * Claims needed for `team` to take a tile: 1 for grass, `stealCost` for enemy land, null if it can't be taken.
  * A guarded tile costs at least `guardCost`, whoever holds it.
  */
-export function placementCost(owners: number[], size: number, starts: LandStart[], team: number, tile: number, stealCost: number, guardCost: number): number | null {
+export function placementCost(
+  owners: number[],
+  size: number,
+  starts: LandStart[],
+  team: number,
+  tile: number,
+  stealCost: number,
+  guardCost: number,
+): number | null {
   if (!Number.isInteger(tile) || tile < 0 || tile >= owners.length) return null;
   const owner = owners[tile]!;
   if (owner === team || isProtected(size, starts, team, tile)) return null;
@@ -164,7 +172,16 @@ const THREAT_CAPTURE_MAX = 0.75;
  * A minimum cut: the team's own tiles are walls already, tiles it can't take can't be cut,
  * and every other tile costs what it costs to claim.
  */
-function claimsToEnclose(owners: number[], size: number, starts: LandStart[], team: number, target: number, stealCost: number, guardCost: number, limit: number): number {
+function claimsToEnclose(
+  owners: number[],
+  size: number,
+  starts: LandStart[],
+  team: number,
+  target: number,
+  stealCost: number,
+  guardCost: number,
+  limit: number,
+): number {
   // Each tile is two nodes (in = 2t, out = 2t + 1) joined by an edge of its cost; the sink is past the board edge.
   const n = owners.length;
   const sink = 2 * n;

@@ -1,7 +1,14 @@
 import { describe, expect, test } from "bun:test";
-import { type BasePlayer, Roster } from "../src/server/game/roster.ts";
+import type { BasePlayer } from "../src/server/game/roster.ts";
+import { Roster } from "../src/server/game/roster.ts";
 
-const base = (id: string): BasePlayer => ({ id, nickname: "N" + id, token: "t" + id, connected: true, avatar: { avatar: "a", accessory: "b" } as unknown as BasePlayer["avatar"] });
+const base = (id: string): BasePlayer => ({
+  id,
+  nickname: "N" + id,
+  token: "t" + id,
+  connected: true,
+  avatar: { avatar: "a", accessory: "b" } as unknown as BasePlayer["avatar"],
+});
 
 describe("Roster", () => {
   test("adoptFrom copies only the base fields and keeps id and token", () => {

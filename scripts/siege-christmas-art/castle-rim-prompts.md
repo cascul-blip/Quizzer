@@ -1,6 +1,7 @@
 # Left-rim footprint correction (v5)
 
 Measured on the normalized intact runtime image, the left edge at the back border moves from x=136 in v4 to x=94 in v5; the board's left rim is x=80 there. Clearance at the front stays approximately 16 px, so the far end no longer pulls away. The browser check compares these clearances for intact and cracked states.
+
 ## Final surface-damage refinement
 
 The first damaged variant moved the far section again, so the final cracked source uses this surface-only edit of the intact v5 source:

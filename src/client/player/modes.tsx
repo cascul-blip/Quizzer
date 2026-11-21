@@ -10,7 +10,7 @@ import { GiftPlayer } from "./gift.tsx";
 import { LandPlayer } from "./land.tsx";
 import { RacerPlayer } from "./racer.tsx";
 import { RobotPlayer } from "./robot.tsx";
-import { siegeBanner, SiegePlayer } from "./siege.tsx";
+import { SiegePlayer, siegeBanner } from "./siege.tsx";
 import { SubmarinePlayer } from "./submarine.tsx";
 import { TowerPlayer } from "./tower.tsx";
 

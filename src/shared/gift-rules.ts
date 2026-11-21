@@ -9,8 +9,8 @@ export const GIFT_POINTS = 10;
 export const GIFT_GOODS = ["present", "headphones", "controller", "sneaker", "card"] as const;
 export const GIFT_DUDS = ["socks", "coal", "sweater", "toothbrush"] as const;
 export const GIFT_POWERS = ["shield", "star"] as const;
-export type GiftPower = typeof GIFT_POWERS[number];
-export type GiftItemKind = typeof GIFT_GOODS[number] | typeof GIFT_DUDS[number] | GiftPower;
+export type GiftPower = (typeof GIFT_POWERS)[number];
+export type GiftItemKind = (typeof GIFT_GOODS)[number] | (typeof GIFT_DUDS)[number] | GiftPower;
 
 export interface GiftItem {
   id: number;
@@ -23,5 +23,5 @@ export interface GiftItem {
 }
 
 export function giftMultiplier(elapsedMs: number, durationMs: number): number {
-  return Math.max(1, Math.min(3, 1 + Math.floor(elapsedMs * 3 / durationMs)));
+  return Math.max(1, Math.min(3, 1 + Math.floor((elapsedMs * 3) / durationMs)));
 }
