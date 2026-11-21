@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { PLAYER_MODES } from "../src/client/player/modes.tsx";
 import type { ModeMsg } from "../src/server/game/mode-entry.ts";
 import { Game } from "../src/server/game/game.ts";
 import { MODES } from "../src/server/game/modes.ts";
@@ -47,6 +48,15 @@ const TEAMS: { [M in GameMode]: number | null } = {
   duel: null,
   gift: null,
 };
+
+/** Modes played question by question, whose pacing the host sets and the next lobby keeps. */
+const PACED = new Set<GameMode>(["classic", "racer", "duel"]);
+
+/** Modes whose phones show a banner in the lobby. */
+const BANNER = new Set<GameMode>(["siege"]);
+
+/** Modes where Protect from abuse applies and the lobby offers it. */
+const PROTECT = new Set<GameMode>(["tower", "submarine", "fight", "robot", "cup", "siege", "gift"]);
 
 /** One phone message of each game mode. */
 const PHONE_MSG: { [M in GameMode]: ModeMsg<M> } = {
@@ -164,20 +174,27 @@ describe("Game modes", () => {
         expect(phoneLobbyView(noel!.playerId).team !== null).toBe(TEAMS[mode] !== null);
       });
 
-      test(`phones in the lobby ${MODES[mode].lobbyBanner ? "show" : "don't show"} a mode banner`, () => {
-        const [noel] = openLobby(mode, ["Noel"]);
-        expect(phoneLobbyView(noel!.playerId).banner).toBe(MODES[mode].lobbyBanner ? mode : undefined);
+      test(`is declared ${PACED.has(mode) ? "paced" : "not paced"}, ${PROTECT.has(mode) ? "protected" : "not protected"}, ${BANNER.has(mode) ? "with" : "without"} a lobby banner`, () => {
+        expect(MODE_FLAGS[mode].paced).toBe(PACED.has(mode));
+        expect(MODE_FLAGS[mode].protect).toBe(PROTECT.has(mode));
+        expect(MODES[mode].lobbyBanner).toBe(BANNER.has(mode));
+        expect(PLAYER_MODES[mode].banner !== null).toBe(BANNER.has(mode));
       });
 
-      test(`pacing ${MODE_FLAGS[mode].paced ? "is set during the game and carries over" : "is not available and doesn't carry over"}`, async () => {
+      test(`phones in the lobby ${BANNER.has(mode) ? "show" : "don't show"} a mode banner`, () => {
+        const [noel] = openLobby(mode, ["Noel"]);
+        expect(phoneLobbyView(noel!.playerId).banner).toBe(BANNER.has(mode) ? mode : undefined);
+      });
+
+      test(`pacing ${PACED.has(mode) ? "is set during the game and carries over" : "is not available and doesn't carry over"}`, async () => {
         openLobby(mode, ["Noel"]);
         send(host, { type: "host.start", pacing: "auto" });
         send(host, { type: "host.setPacing", pacing: "auto" });
-        expect(errors(host).map((e) => e.type === "error" && e.message)).toEqual(MODE_FLAGS[mode].paced ? [] : [`Not available in ${MODES[mode].name}`]);
+        expect(errors(host).map((e) => e.type === "error" && e.message)).toEqual(PACED.has(mode) ? [] : [`Not available in ${MODES[mode].name}`]);
         send(host, { type: "host.end" });
         await flush();
         send(host, { type: "host.open", quizId });
-        expect(lobbyView().pacing).toBe(MODE_FLAGS[mode].paced ? "auto" : "manual");
+        expect(lobbyView().pacing).toBe(PACED.has(mode) ? "auto" : "manual");
       });
 
       test.if("theme" in MODES[mode].defaultSettings)("an unknown carried-over theme becomes the default, but the host can't choose it", () => {
