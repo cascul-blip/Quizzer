@@ -1,4 +1,4 @@
-import { siegeDefenderPhrase, siegeTheme, siegeWords } from "../../shared/siege-theme.ts";
+import { siegeDefenderPhrase, siegeTheme, siegeWords, DEFAULT_SIEGE_THEME } from "../../shared/siege-theme.ts";
 import type { AnswerValue } from "../../shared/answer-match.ts";
 import {
   type HostSiegeState,
@@ -51,6 +51,8 @@ import {
   siegeDefenderGold,
   type SiegeDefenderType,
   type SiegeMonsterType,
+  SIEGE_WAVE_CHOICES,
+  type SiegeWaves,
 } from "../../shared/siege-rules.ts";
 import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
@@ -58,6 +60,11 @@ import { GameError, realClock, type Clock } from "./common.ts";
 import type { Game } from "./game.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
 import { QuestionStream, newStreamPlayer, type StreamPlayer } from "./stream.ts";
+import { loadSiegeRecord, saveSiegeRecord } from "../siege-records.ts";
+import { answerOf } from "../../shared/answer-match.ts";
+import { MODE_NAMES } from "../../shared/mode-names.ts";
+import { handoffOptions, pickTheme, unhandled, type ModeEntry } from "./mode-entry.ts";
+import { toCsv } from "./results.ts";
 
 export { FEEDBACK_MS } from "./stream.ts";
 
@@ -180,6 +187,7 @@ interface SiegeGameSettings extends SiegeSettings {
  * The battle runs in fixed SIEGE_TICK_MS steps on the game clock.
  */
 export class SiegeGame {
+  readonly runningMode = "siege" as const;
   readonly quizId: string;
   readonly title: string;
   readonly questions: Question[];
@@ -258,7 +266,7 @@ export class SiegeGame {
 
   /** Take over a lobby's players (same ids and tokens). */
   static fromLobby(lobby: Game, opts: SiegeOptions = {}): SiegeGame {
-    const game = new SiegeGame(lobby.quiz, { ...lobby.siege, shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
+    const game = new SiegeGame(lobby.quiz, { ...lobby.settings.siege, shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
     for (const p of lobby.players.values()) {
       game.roster.adopt(game.newPlayer({ id: p.id, nickname: p.nickname, token: p.token, connected: p.connected, avatar: p.avatar }));
     }
@@ -1059,3 +1067,111 @@ export class SiegeGame {
     };
   }
 }
+
+/**
+ * Kingdom Siege: one row per player (kicked players included), each with the class result,
+ * then a wave log with one row per wave.
+ */
+export function buildSiegeResultsCsv(game: SiegeGame): string {
+  const header = [
+    "Nickname",
+    "Correct",
+    "Wrong",
+    "Accuracy %",
+    "Gold earned",
+    "Gold spent",
+    "Archers placed",
+    "Knights placed",
+    "Walls placed",
+    "Upgrades bought",
+    "Monsters defeated",
+    "Class result",
+    "Waves survived",
+    "Hearts left",
+    "Endless record",
+  ];
+  const r = game.result();
+  const result = r.outcome === "stands" ? "Stood" : r.outcome === "fallen" ? "Fell" : "Ended";
+  const record = r.record ? `${r.record.waves} waves, ${r.record.avgScale}% difficulty${r.newRecord ? " (new record)" : ""}` : "";
+  const rows: (string | number)[][] = game.everyone
+    .sort((a, b) => b.goldEarned - a.goldEarned || b.correct - a.correct)
+    .map((p) => {
+      const answered = p.correct + p.wrong;
+      return [
+        p.nickname,
+        p.correct,
+        p.wrong,
+        answered ? Math.round((p.correct / answered) * 100) : "",
+        p.goldEarned,
+        p.goldSpent,
+        p.placed.archer,
+        p.placed.knight,
+        p.placed.wall,
+        p.upgrades,
+        p.defeated,
+        result,
+        r.wavesSurvived,
+        r.hearts,
+        record,
+      ];
+    });
+  const log: (string | number)[][] = [
+    [],
+    ["Wave", "Difficulty scale %", "Defense gold", "Strength boost", "Monster budget", "Monster health ×", "Monsters sent", "Class accuracy %", "Hearts lost"],
+    ...game.waveLog.map((w) => [w.wave, w.scale, w.defense, w.boost, w.budget, w.toughness, w.sent, w.answered ? Math.round((w.correct / w.answered) * 100) : "", w.heartsLost]),
+  ];
+  return toCsv([header, ...rows, ...log]);
+}
+
+export const siegeMode: ModeEntry<"siege"> = {
+  name: MODE_NAMES.siege,
+  defaultSettings: { waves: 5, theme: DEFAULT_SIEGE_THEME },
+  readSettings(raw, current) {
+    const waves = raw.waves === "endless" ? "endless" : Number(raw.waves);
+    if (!(SIEGE_WAVE_CHOICES as readonly unknown[]).includes(waves)) throw new GameError("Unsupported number of waves");
+    return { waves: waves as SiegeWaves, theme: pickTheme(raw.theme, siegeTheme(current.theme), "Kingdom Siege") };
+  },
+  start(lobby, ctx) {
+    const game = SiegeGame.fromLobby(lobby, {
+      ...handoffOptions(ctx),
+      onTick: ctx.onTick,
+      record: lobby.settings.siege.waves === "endless" ? loadSiegeRecord(ctx.dataDir, lobby.quizId) : null,
+    });
+    const waves = game.settings.waves;
+    return { game, log: `${this.name} started with ${game.players.size} player(s), ${waves === "endless" ? "Endless" : `${waves} waves`}` };
+  },
+  pacing: null,
+  teams: () => null,
+  lobbyBanner: true,
+  resultsCsv: buildSiegeResultsCsv,
+  finished(game, ctx) {
+    const r = game.result();
+    if (!r.newRecord || !r.record) return;
+    try {
+      saveSiegeRecord(ctx.dataDir, game.quizId, r.record);
+    } catch (e) {
+      ctx.log(`Could not save the ${this.name} record: ${(e as Error).message}`);
+    }
+  },
+  handle(game, playerId, msg) {
+    switch (msg.type) {
+      case "siege.answer":
+        return game.answer(playerId, Number(msg.seq), answerOf(msg)) ? undefined : "resend";
+      case "siege.place": {
+        const err = game.place(playerId, msg.defender, msg.lane, msg.square);
+        if (err) throw new GameError(err);
+        return;
+      }
+      case "siege.upgrade": {
+        const err = game.upgrade(playerId, msg.lane, msg.square);
+        if (err) throw new GameError(err);
+        return;
+      }
+      case "siege.map":
+        game.setMap(playerId, msg.open === true);
+        return;
+      default:
+        return unhandled(msg);
+    }
+  },
+};

@@ -1,4 +1,5 @@
-import { ERRORS_SHOWN, TEAMS, type QuestionError, type TeamInfo } from "../../shared/protocol.ts";
+import { ERRORS_SHOWN, TEAMS, type QuestionError, type ShuffleOptions, type TeamInfo } from "../../shared/protocol.ts";
+import type { Question } from "../../shared/quiz-schema.ts";
 
 // Building blocks shared by every game mode.
 
@@ -64,4 +65,16 @@ export function teamInfo(index: number): TeamInfo {
 /** Round-robin by join order: 1st player → team 0, 2nd → team 1, … */
 export function assignTeams(count: number, teamCount: number): number[] {
   return Array.from({ length: count }, (_, i) => i % Math.max(1, teamCount));
+}
+
+export const AUTO_REVEAL_MS = 5000;
+/** Answers sent just before the deadline may arrive slightly after it. */
+export const GRACE_MS = 500;
+
+/** Shuffle once per game (same order for everyone); correct indices are remapped. */
+export function preparePlayOrder(source: Question[], opts: ShuffleOptions, rng: () => number = Math.random): Question[] {
+  let questions = source.map((q) => ({ ...q, options: [...q.options], correct: [...q.correct] }));
+  if (opts.questions) questions = shuffle(questions, rng);
+  if (opts.answers) questions = questions.map((q) => shuffleOptions(q, rng));
+  return questions;
 }

@@ -1,30 +1,8 @@
-import { DEFAULT_DUEL_THEME, duelTheme } from "../../shared/duel-theme.ts";
-import { DEFAULT_LAND_THEME, landTheme } from "../../shared/land-theme.ts";
-import { DEFAULT_SIEGE_THEME, siegeTheme } from "../../shared/siege-theme.ts";
-import { DEFAULT_RACER_THEME, racerTheme } from "../../shared/racer-theme.ts";
-import { DEFAULT_CUP_THEME, cupTheme } from "../../shared/cup-theme.ts";
-import { DEFAULT_TOWER_THEME, towerTheme } from "../../shared/tower-theme.ts";
-import { DEFAULT_FIGHT_THEME, fightTheme } from "../../shared/fight-theme.ts";
-import { isSeasonTheme, type SeasonTheme } from "../../shared/season-theme.ts";
+import { MODE_NAMES } from "../../shared/mode-names.ts";
 import {
-  CUP_DEFAULT_CUPS,
-  CUP_MAX_CUPS,
-  CUP_MIN_CUPS,
-  DUEL_DEFAULT_ROUNDS,
-  DUEL_ROUNDS,
-  HILL_SETTINGS,
-  LAND_MINUTES,
-  LAND_MIN_TEAMS,
-  MAX_TEAMS,
-  TOWER_MINUTES,
-  type CupSettings,
-  type DuelSettings,
-  type FightSettings,
   type GameMode,
-  type HillSetting,
-  type GiftSettings,
   type HostGameState,
-  type LandSettings,
+  type ModeSettingsMap,
   type Pacing,
   type Phase,
   type PlayerView,
@@ -32,35 +10,22 @@ import {
   type QuestionView,
   type RankedEntry,
   type ShuffleOptions,
-  type SiegeSettings,
-  type RacerSettings,
-  type TowerSettings,
 } from "../../shared/protocol.ts";
-import { SIEGE_WAVE_CHOICES, type SiegeWaves } from "../../shared/siege-rules.ts";
-import { GIFT_DEFAULT_MINUTES, GIFT_MINUTES } from "../../shared/gift-rules.ts";
+import { isSeasonTheme } from "../../shared/season-theme.ts";
 import { cleanAvatar, randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import { MAX_TYPED_ANSWER, checkAnswer, type AnswerValue } from "../../shared/answer-match.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
-import { GameError, assignTeams, realClock, shuffle, shuffleOptions, teamInfo, topErrors, type Clock } from "./common.ts";
+import { AUTO_REVEAL_MS, GRACE_MS, GameError, assignTeams, preparePlayOrder, realClock, teamInfo, topErrors, type Clock } from "./common.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
+import type { ModeEntry, RawSettings } from "./mode-entry.ts";
+import { MODES } from "./modes.ts";
 import { rankScores, scoreAnswer } from "./scoring.ts";
 
-export { GameError, type Clock } from "./common.ts";
+export { AUTO_REVEAL_MS, GRACE_MS, GameError, preparePlayOrder, type Clock } from "./common.ts";
 
 export const INTRO_MS = 3000;
-export const AUTO_REVEAL_MS = 5000;
 export const AUTO_LEADERBOARD_MS = 5000;
-/** Answers sent just before the deadline may arrive slightly after it. */
-export const GRACE_MS = 500;
 const LEADERBOARD_SIZE = 10;
-export const DEFAULT_RACER: RacerSettings = { theme: DEFAULT_RACER_THEME };
-export const DEFAULT_TOWER: TowerSettings = { teams: 2, minutes: 5, monster: true, theme: DEFAULT_TOWER_THEME };
-export const DEFAULT_FIGHT: FightSettings = { hill: "random", theme: DEFAULT_FIGHT_THEME };
-export const DEFAULT_LAND: LandSettings = { teams: 2, minutes: 5, theme: DEFAULT_LAND_THEME };
-export const DEFAULT_CUP: CupSettings = { cups: CUP_DEFAULT_CUPS, theme: DEFAULT_CUP_THEME };
-export const DEFAULT_SIEGE: SiegeSettings = { waves: 5, theme: DEFAULT_SIEGE_THEME };
-export const DEFAULT_DUEL: DuelSettings = { rounds: DUEL_DEFAULT_ROUNDS, theme: DEFAULT_DUEL_THEME };
-export const DEFAULT_GIFT: GiftSettings = { minutes: GIFT_DEFAULT_MINUTES };
 
 interface Answer {
   /** Chosen option index; -1 for a typed answer. */
@@ -81,20 +46,43 @@ interface Player extends BasePlayer {
   answers: (Answer | undefined)[];
 }
 
-/** Shuffle once per game (same order for everyone); correct indices are remapped. */
-export function preparePlayOrder(source: Question[], opts: ShuffleOptions, rng: () => number = Math.random): Question[] {
-  let questions = source.map((q) => ({ ...q, options: [...q.options], correct: [...q.correct] }));
-  if (opts.questions) questions = shuffle(questions, rng);
-  if (opts.answers) questions = questions.map((q) => shuffleOptions(q, rng));
-  return questions;
+/**
+ * Every mode's settings: the given ones where there are any (carried over from the last lobby), else the defaults.
+ * They are taken as they are, except that a theme the server no longer knows becomes the mode's default theme.
+ */
+function initialSettings(given: InitialSettings = {}): ModeSettingsMap {
+  const read = <M extends GameMode>(mode: M): ModeSettingsMap[M] => {
+    const defaults = MODES[mode].defaultSettings;
+    return knownTheme({ ...defaults, ...given[mode] }, defaults);
+  };
+  return {
+    classic: read("classic"),
+    tower: read("tower"),
+    submarine: read("submarine"),
+    fight: read("fight"),
+    robot: read("robot"),
+    land: read("land"),
+    racer: read("racer"),
+    cup: read("cup"),
+    siege: read("siege"),
+    duel: read("duel"),
+    gift: read("gift"),
+  };
 }
 
-/** A lobby setter's theme: kept as it is when not given, refused when it isn't a known look. */
-function pickTheme(value: unknown, current: SeasonTheme, mode: string): SeasonTheme {
-  if (value === undefined) return current;
-  if (!isSeasonTheme(value)) throw new GameError(`Unknown ${mode} theme`);
-  return value;
+/** The settings with an unknown theme replaced by the default one; settings without a theme stay as they are. */
+function knownTheme<S extends object>(settings: S, defaults: S): S {
+  if (!("theme" in settings) || isSeasonTheme(settings.theme) || !("theme" in defaults)) return settings;
+  return { ...settings, theme: defaults.theme };
 }
+
+/** The number of teams a mode plays in with the lobby's settings; null in a solo mode. */
+function teamsIn<M extends GameMode>(mode: M, settings: ModeSettingsMap): number | null {
+  const entry: ModeEntry<M> = MODES[mode];
+  return entry.teams(settings[mode]);
+}
+
+type InitialSettings = { [M in GameMode]?: Partial<ModeSettingsMap[M]> };
 
 interface GameOptions {
   clock?: Clock;
@@ -106,14 +94,7 @@ interface GameOptions {
   onFinish?: (game: Game) => void;
   /** Initial lobby choices (e.g. carried over from the previous game). */
   mode?: GameMode;
-  racer?: RacerSettings;
-  tower?: TowerSettings;
-  fight?: FightSettings;
-  land?: LandSettings;
-  cup?: CupSettings;
-  siege?: SiegeSettings;
-  duel?: DuelSettings;
-  gift?: GiftSettings;
+  settings?: InitialSettings;
   protect?: boolean;
 }
 
@@ -134,15 +115,12 @@ export class Game {
   shuffle: ShuffleOptions;
   /** "Protect from abuse": Tallest Tower, Submarine Squad, Tower Fight, Robot Attack, Cup of Death, Kingdom Siege and Gift Grab slow down players who keep answering wrong. */
   protect: boolean;
+  /** The mode the host has chosen in the lobby, which starting the game hands the players to. */
   mode: GameMode;
-  racer: RacerSettings;
-  tower: TowerSettings;
-  fight: FightSettings;
-  land: LandSettings;
-  cup: CupSettings;
-  siege: SiegeSettings;
-  duel: DuelSettings;
-  gift: GiftSettings;
+  /** The mode this game runs: a Game plays Classic, also while it is the lobby for another mode. */
+  readonly runningMode = "classic" as const;
+  /** The lobby's mode settings for every game mode, so switching modes keeps each one's choices. */
+  settings: ModeSettingsMap;
   /** When the current phase's countdown ends (intro/open), for views. */
   phaseEndsAt = 0;
   openedAt = 0;
@@ -174,15 +152,8 @@ export class Game {
     this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
     this.mode = opts.mode ?? "classic";
-    // Carried-over settings may predate a mode's themes: every theme starts as a real one.
-    this.racer = { ...(opts.racer ?? DEFAULT_RACER), theme: racerTheme(opts.racer?.theme) };
-    this.tower = { ...(opts.tower ?? DEFAULT_TOWER), theme: towerTheme(opts.tower?.theme) };
-    this.fight = { ...(opts.fight ?? DEFAULT_FIGHT), theme: fightTheme(opts.fight?.theme) };
-    this.land = { ...(opts.land ?? DEFAULT_LAND), theme: landTheme(opts.land?.theme) };
-    this.cup = { ...(opts.cup ?? DEFAULT_CUP), theme: cupTheme(opts.cup?.theme) };
-    this.siege = { ...(opts.siege ?? DEFAULT_SIEGE), theme: siegeTheme(opts.siege?.theme) };
-    this.duel = { ...(opts.duel ?? DEFAULT_DUEL), theme: duelTheme(opts.duel?.theme) };
-    this.gift = { ...(opts.gift ?? DEFAULT_GIFT) };
+    // Carried-over settings may name a theme this server doesn't know: it quietly becomes the mode's default, unlike in setModeSettings.
+    this.settings = initialSettings(opts.settings);
     this.protect = opts.protect ?? true;
   }
 
@@ -277,84 +248,27 @@ export class Game {
 
   setMode(mode: GameMode): void {
     if (this.phase !== "lobby") throw new GameError("The game mode can only be changed before the game starts");
-    if (mode !== "classic" && mode !== "tower" && mode !== "submarine" && mode !== "fight" && mode !== "robot" && mode !== "land" && mode !== "racer" && mode !== "cup" && mode !== "siege" && mode !== "duel" && mode !== "gift") throw new GameError("Unknown game mode");
+    if (!Object.hasOwn(MODE_NAMES, mode)) throw new GameError("Unknown game mode");
     this.mode = mode;
     this.onChange();
   }
 
-  setRacer(settings: RacerSettings): void {
-    if (this.phase !== "lobby") throw new GameError("Racer settings can only be changed before the game starts");
-    this.racer = { theme: pickTheme(settings.theme, racerTheme(this.racer.theme), "racer") };
+  /** Change one mode's settings in the lobby; a partial change keeps the rest (and the theme) as they are. */
+  setModeSettings(mode: GameMode, raw: unknown): void {
+    if (!Object.hasOwn(MODES, mode)) throw new GameError("Unknown game mode");
+    this.applySettings(mode, raw && typeof raw === "object" ? (raw as RawSettings) : {});
+  }
+
+  private applySettings<M extends GameMode>(mode: M, raw: RawSettings): void {
+    const entry: ModeEntry<M> = MODES[mode];
+    if (this.phase !== "lobby") throw new GameError(`${entry.name} settings can only be changed before the game starts`);
+    this.settings[mode] = entry.readSettings(raw, this.settings[mode]);
     this.onChange();
   }
 
-  setTower(settings: Omit<TowerSettings, "monster"> & { monster?: boolean }): void {
-    if (this.phase !== "lobby") throw new GameError("Tower settings can only be changed before the game starts");
-    const teams = Math.trunc(Number(settings.teams));
-    const minutes = Number(settings.minutes);
-    if (!(teams >= 1 && teams <= MAX_TEAMS)) throw new GameError(`Teams must be between 1 and ${MAX_TEAMS}`);
-    if (!(TOWER_MINUTES as readonly number[]).includes(minutes)) throw new GameError("Unsupported game length");
-    const theme = pickTheme(settings.theme, towerTheme(this.tower.theme), "tower");
-    this.tower = { teams, minutes, monster: settings.monster === undefined ? this.tower.monster : !!settings.monster, theme };
-    this.onChange();
-  }
-
-  setFight(settings: Partial<FightSettings>): void {
-    if (this.phase !== "lobby") throw new GameError("Tower Fight settings can only be changed before the game starts");
-    if (settings.hill !== undefined && !HILL_SETTINGS.includes(settings.hill)) throw new GameError("Unknown hill height");
-    const theme = pickTheme(settings.theme, fightTheme(this.fight.theme), "fight");
-    this.fight = { ...this.fight, ...settings, hill: settings.hill ?? this.fight.hill, theme };
-    this.onChange();
-  }
-
-  setLand(settings: LandSettings): void {
-    if (this.phase !== "lobby") throw new GameError("Land Grab settings can only be changed before the game starts");
-    const teams = Math.trunc(Number(settings.teams));
-    const minutes = Number(settings.minutes);
-    if (!(teams >= LAND_MIN_TEAMS && teams <= MAX_TEAMS)) throw new GameError(`Teams must be between ${LAND_MIN_TEAMS} and ${MAX_TEAMS}`);
-    if (!(LAND_MINUTES as readonly number[]).includes(minutes)) throw new GameError("Unsupported game length");
-    this.land = { teams, minutes, theme: pickTheme(settings.theme, landTheme(this.land.theme), "Land Grab") };
-    this.onChange();
-  }
-
-  setCup(settings: CupSettings): void {
-    if (this.phase !== "lobby") throw new GameError("Cup of Death settings can only be changed before the game starts");
-    const cups = Number(settings.cups);
-    if (!(Number.isInteger(cups) && cups >= CUP_MIN_CUPS && cups <= CUP_MAX_CUPS)) throw new GameError(`Cups must be between ${CUP_MIN_CUPS} and ${CUP_MAX_CUPS}`);
-    this.cup = { cups, theme: pickTheme(settings.theme, cupTheme(this.cup.theme), "cup") };
-    this.onChange();
-  }
-
-  setSiege(settings: SiegeSettings): void {
-    if (this.phase !== "lobby") throw new GameError("Kingdom Siege settings can only be changed before the game starts");
-    const waves = settings.waves === "endless" ? "endless" : Number(settings.waves);
-    if (!(SIEGE_WAVE_CHOICES as readonly unknown[]).includes(waves)) throw new GameError("Unsupported number of waves");
-    this.siege = { waves: waves as SiegeWaves, theme: pickTheme(settings.theme, siegeTheme(this.siege.theme), "Kingdom Siege") };
-    this.onChange();
-  }
-
-  setDuel(settings: DuelSettings): void {
-    if (this.phase !== "lobby") throw new GameError("Showdown settings can only be changed before the game starts");
-    const rounds = Number(settings.rounds);
-    if (!(DUEL_ROUNDS as readonly number[]).includes(rounds)) throw new GameError("Unsupported number of rounds");
-    this.duel = { rounds, theme: pickTheme(settings.theme, duelTheme(this.duel.theme), "Showdown") };
-    this.onChange();
-  }
-
-  setGift(settings: GiftSettings): void {
-    if (this.phase !== "lobby") throw new GameError("Gift Grab settings can only be changed before the game starts");
-    const minutes = Number(settings.minutes);
-    if (!(GIFT_MINUTES as readonly number[]).includes(minutes)) throw new GameError("Unsupported game length");
-    this.gift = { minutes };
-    this.onChange();
-  }
-
-  /**
-   * Teams in the lobby preview: the Tallest Tower or Land Grab setting, or Red vs Blue for Tower Fight;
-   * null in solo modes.
-   */
+  /** Teams in the lobby preview, as the selected mode's entry gives them for its settings; null in solo modes. */
   teamCount(): number | null {
-    return this.mode === "tower" ? this.tower.teams : this.mode === "land" ? this.land.teams : this.mode === "fight" ? 2 : null;
+    return teamsIn(this.mode, this.settings);
   }
 
   /** Team index per player: round-robin by join order until the host moves someone, then the host's arrangement (newcomers join the smallest team). */
@@ -570,14 +484,7 @@ export class Game {
       kind: "classic",
       phase: this.phase,
       mode: this.mode,
-      racer: this.racer,
-      tower: this.tower,
-      fight: this.fight,
-      land: this.land,
-      cup: this.cup,
-      siege: this.siege,
-      duel: this.duel,
-      gift: this.gift,
+      settings: this.settings,
       teams,
       quiz: { id: this.quizId, title: this.title, questionCount: this.questions.length },
       pacing: this.pacing,
@@ -639,7 +546,7 @@ export class Game {
           : null,
       podium: this.phase === "podium" ? (this.batch ? (this.batch.podium ??= this.leaderboard(5)) : this.leaderboard(5)) : null,
       team: this.phase === "lobby" && this.teamCount() !== null ? teamInfo((this.batch ? (this.batch.teams ??= this.teamAssignment()) : this.teamAssignment()).get(p.id) ?? 0) : null,
-      ...(this.phase === "lobby" && this.mode === "siege" ? { siege: true as const } : {}),
+      ...(this.phase === "lobby" && MODES[this.mode].lobbyBanner ? { banner: this.mode } : {}),
     };
   }
 }

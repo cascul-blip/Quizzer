@@ -1,4 +1,4 @@
-import { landTheme } from "../../shared/land-theme.ts";
+import { landTheme, DEFAULT_LAND_THEME } from "../../shared/land-theme.ts";
 import type { AnswerValue } from "../../shared/answer-match.ts";
 import {
   LAND_EMPTY_MS,
@@ -14,6 +14,9 @@ import {
   type LandSettings,
   type LandState,
   type PlayerLandView,
+  LAND_MINUTES,
+  LAND_MIN_TEAMS,
+  MAX_TEAMS,
 } from "../../shared/protocol.ts";
 import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import { EMPTY, enclosedBy, landBoardSize, placementCost, startTiles, type LandStart } from "../../shared/land-board.ts";
@@ -22,6 +25,10 @@ import { GameError, realClock, teamInfo, type Clock } from "./common.ts";
 import type { Game } from "./game.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
 import { QuestionStream, newStreamPlayer, type StreamPlayer } from "./stream.ts";
+import { answerOf } from "../../shared/answer-match.ts";
+import { MODE_NAMES } from "../../shared/mode-names.ts";
+import { handoffOptions, pickTheme, unhandled, type ModeEntry } from "./mode-entry.ts";
+import { toCsv } from "./results.ts";
 
 export { FEEDBACK_MS } from "./stream.ts";
 
@@ -72,6 +79,7 @@ interface LandGameSettings extends LandSettings {
 
 /** Land Grab: teams answer at their own pace; every 3 answers, the correct ones become tiles on a shared hex board. */
 export class LandGame {
+  readonly runningMode = "land" as const;
   readonly quizId: string;
   readonly title: string;
   readonly questions: Question[];
@@ -116,7 +124,7 @@ export class LandGame {
 
   /** Take over a lobby's players (same ids and tokens), on the teams shown in the lobby. */
   static fromLobby(lobby: Game, opts: LandOptions = {}): LandGame {
-    const game = new LandGame(lobby.quiz, { ...lobby.land, shuffleAnswers: lobby.shuffle.answers }, opts);
+    const game = new LandGame(lobby.quiz, { ...lobby.settings.land, shuffleAnswers: lobby.shuffle.answers }, opts);
     const players = [...lobby.players.values()];
     const teams = lobby.teamAssignment();
     players.forEach((p) => {
@@ -499,3 +507,50 @@ export class LandGame {
     };
   }
 }
+
+/** Land Grab: one row per player, grouped by the team they started on, in final team order. */
+export function buildLandResultsCsv(game: LandGame): string {
+  const header = ["Team", "Team rank", "Team tiles", "Knocked out by", "Nickname", "Correct", "Wrong", "Accuracy %", "Tiles placed", "Tiles stolen", "Tiles surrounded"];
+  const rows: (string | number)[][] = [];
+  for (const t of game.rankedTeams()) {
+    const members = [...game.players.values()].filter((p) => p.firstTeam === t.index).sort((a, b) => b.placed - a.placed || b.correct - a.correct);
+    for (const p of members) {
+      const answered = p.correct + p.wrong;
+      const by = t.conqueredBy === null ? "" : game.teams[t.conqueredBy]!.name;
+      rows.push([t.name, t.rank, t.tiles, by, p.nickname, p.correct, p.wrong, answered ? Math.round((p.correct / answered) * 100) : "", p.placed, p.stolen, p.captured]);
+    }
+  }
+  return toCsv([header, ...rows]);
+}
+
+export const landMode: ModeEntry<"land"> = {
+  name: MODE_NAMES.land,
+  defaultSettings: { teams: 2, minutes: 5, theme: DEFAULT_LAND_THEME },
+  readSettings(raw, current) {
+    const teams = Math.trunc(Number(raw.teams));
+    const minutes = Number(raw.minutes);
+    if (!(teams >= LAND_MIN_TEAMS && teams <= MAX_TEAMS)) throw new GameError(`Teams must be between ${LAND_MIN_TEAMS} and ${MAX_TEAMS}`);
+    if (!(LAND_MINUTES as readonly number[]).includes(minutes)) throw new GameError("Unsupported game length");
+    return { teams, minutes, theme: pickTheme(raw.theme, landTheme(current.theme), "Land Grab") };
+  },
+  start(lobby, ctx) {
+    const game = LandGame.fromLobby(lobby, handoffOptions(ctx));
+    return { game, log: `${this.name} started: ${game.teams.length} teams, ${game.settings.minutes} min` };
+  },
+  pacing: null,
+  teams: (settings) => settings.teams,
+  lobbyBanner: false,
+  resultsCsv: buildLandResultsCsv,
+  handle(game, playerId, msg) {
+    switch (msg.type) {
+      case "land.answer":
+        return game.answer(playerId, Number(msg.seq), answerOf(msg)) ? undefined : "resend";
+      case "land.place":
+        return game.place(playerId, Number(msg.tile)) ? undefined : "resend";
+      case "land.done":
+        return game.done(playerId) ? undefined : "resend";
+      default:
+        return unhandled(msg);
+    }
+  },
+};

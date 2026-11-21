@@ -142,6 +142,32 @@ export type PlayerMsg =
   /** Kingdom Siege: the lane map opened or closed, so the server only sends its contents while it is open. */
   | { type: "siege.map"; open: boolean };
 
+/** A game mode without mode settings. */
+export type NoSettings = Record<string, never>;
+
+/** The mode settings of every game mode, as the lobby holds them. */
+export interface ModeSettingsMap {
+  classic: NoSettings;
+  tower: TowerSettings;
+  submarine: NoSettings;
+  fight: FightSettings;
+  robot: NoSettings;
+  land: LandSettings;
+  racer: RacerSettings;
+  cup: CupSettings;
+  siege: SiegeSettings;
+  duel: DuelSettings;
+  gift: GiftSettings;
+}
+
+/** What the host sends to change one mode's settings: Tower Fight takes any subset, Tallest Tower may leave out the monster. */
+export interface ModeSettingsInput extends Omit<ModeSettingsMap, "tower" | "fight"> {
+  tower: Omit<TowerSettings, "monster"> & { monster?: boolean };
+  fight: Partial<FightSettings>;
+}
+
+export type ModeSettingsMsg = { [M in GameMode]: { type: "host.setModeSettings"; mode: M; settings: ModeSettingsInput[M] } }[GameMode];
+
 export type HostMsg =
   | { type: "host.hello" }
   | { type: "host.open"; quizId: string }
@@ -150,14 +176,7 @@ export type HostMsg =
   | { type: "host.setShuffle"; questions: boolean; answers: boolean }
   | { type: "host.setProtect"; on: boolean }
   | { type: "host.setMode"; mode: GameMode }
-  | { type: "host.setRacer"; theme: RacerTheme }
-  | { type: "host.setTower"; teams: number; minutes: number; monster?: boolean; theme?: TowerTheme }
-  | { type: "host.setFight"; hill?: HillSetting; theme?: FightTheme }
-  | { type: "host.setLand"; teams: number; minutes: number; theme?: LandTheme }
-  | { type: "host.setCup"; cups: number; theme?: CupTheme }
-  | ({ type: "host.setSiege" } & SiegeSettings)
-  | ({ type: "host.setDuel" } & DuelSettings)
-  | ({ type: "host.setGift" } & GiftSettings)
+  | ModeSettingsMsg
   | { type: "host.next" }
   | { type: "host.skip" }
   | { type: "host.kick"; playerId: string }
@@ -243,8 +262,8 @@ export type PlayerView =
       podium: RankedEntry[] | null;
       /** In the lobby with a team mode selected: the team this player will be on. */
       team: TeamInfo | null;
-      /** In the lobby with Kingdom Siege selected (the phone shows the castle banner). */
-      siege?: true;
+      /** In the lobby of a mode whose phones show its banner: that mode (Kingdom Siege shows the castle banner). */
+      banner?: GameMode;
     }
   | PlayerTowerView
   | PlayerSubView
@@ -312,14 +331,8 @@ export interface HostGameState {
   phase: Phase;
   /** Lobby choice; anything but "classic" hands the players over to that mode's game on start. */
   mode: GameMode;
-  racer: RacerSettings;
-  tower: TowerSettings;
-  fight: FightSettings;
-  land: LandSettings;
-  cup: CupSettings;
-  siege: SiegeSettings;
-  duel: DuelSettings;
-  gift: GiftSettings;
+  /** Mode settings of every game mode, kept while the host switches between modes. */
+  settings: ModeSettingsMap;
   /** Team preview while the lobby is in a team mode (Tallest Tower, Tower Fight, Land Grab). */
   teams: (TeamInfo & { members: HostPlayer[] })[] | null;
   quiz: { id: string; title: string; questionCount: number };

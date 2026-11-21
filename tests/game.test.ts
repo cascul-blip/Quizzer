@@ -304,13 +304,13 @@ describe("lobby themes", () => {
   test("every themed mode's setter keeps the theme when none is given and refuses unknown ones the same way", () => {
     const { game } = setup();
     const setters: [string, (theme?: unknown) => void, () => unknown][] = [
-      ["racer", (theme) => game.setRacer({ theme } as never), () => game.racer.theme],
-      ["tower", (theme) => game.setTower({ teams: 2, minutes: 5, theme } as never), () => game.tower.theme],
-      ["fight", (theme) => game.setFight({ theme } as never), () => game.fight.theme],
-      ["Land Grab", (theme) => game.setLand({ teams: 2, minutes: 5, theme } as never), () => game.land.theme],
-      ["cup", (theme) => game.setCup({ cups: game.cup.cups, theme } as never), () => game.cup.theme],
-      ["Kingdom Siege", (theme) => game.setSiege({ waves: 5, theme } as never), () => game.siege.theme],
-      ["Showdown", (theme) => game.setDuel({ rounds: 15, theme } as never), () => game.duel.theme],
+      ["racer", (theme) => game.setModeSettings("racer", { theme }), () => game.settings.racer.theme],
+      ["tower", (theme) => game.setModeSettings("tower", { teams: 2, minutes: 5, theme }), () => game.settings.tower.theme],
+      ["fight", (theme) => game.setModeSettings("fight", { theme }), () => game.settings.fight.theme],
+      ["Land Grab", (theme) => game.setModeSettings("land", { teams: 2, minutes: 5, theme }), () => game.settings.land.theme],
+      ["cup", (theme) => game.setModeSettings("cup", { cups: game.settings.cup.cups, theme }), () => game.settings.cup.theme],
+      ["Kingdom Siege", (theme) => game.setModeSettings("siege", { waves: 5, theme }), () => game.settings.siege.theme],
+      ["Showdown", (theme) => game.setModeSettings("duel", { rounds: 15, theme }), () => game.settings.duel.theme],
     ];
     for (const [name, set, theme] of setters) {
       set("classic");
@@ -370,7 +370,7 @@ describe("lobby teams", () => {
   function teamLobby(names: string[], teams = 3) {
     const { game, clock } = setup();
     game.setMode("tower");
-    game.setTower({ teams, minutes: 5 });
+    game.setModeSettings("tower", { teams, minutes: 5 });
     const ids = names.map((n) => game.join(n).id);
     /** Nicknames per team, in join order. */
     const layout = () => {
@@ -389,7 +389,7 @@ describe("lobby teams", () => {
     expect(layout()).toEqual([["A", "D"], ["B", "E"], ["C"]]);
     game.kick([...game.players.keys()][0]!);
     expect(layout()).toEqual([["B", "E"], ["C"], ["D"]]);
-    game.setTower({ teams: 2, minutes: 5 });
+    game.setModeSettings("tower", { teams: 2, minutes: 5 });
     expect(layout()).toEqual([["B", "D"], ["C", "E"]]);
     expect(game.hostView().teams!.map((t) => t.members.map((m) => m.nickname))).toEqual(layout());
   });
@@ -421,9 +421,9 @@ describe("lobby teams", () => {
     const { game, ids, layout } = teamLobby(["A", "B", "C", "D", "E"]);
     game.setTeam(ids[3]!, 1);
     expect(layout()).toEqual([["A"], ["B", "D", "E"], ["C"]]);
-    game.setTower({ teams: 2, minutes: 5 });
+    game.setModeSettings("tower", { teams: 2, minutes: 5 });
     expect(layout()).toEqual([["A", "C"], ["B", "D", "E"]]);
-    game.setTower({ teams: 4, minutes: 5 });
+    game.setModeSettings("tower", { teams: 4, minutes: 5 });
     expect(layout()).toEqual([["A", "C"], ["B", "D", "E"], [], []]);
     // Another team mode keeps what fits (Tower Fight has 2 teams).
     game.setTeam(ids[4]!, 3);

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { Game } from "../src/server/game/game.ts";
 import { CONQUEST_MS, COUNTDOWN_MS, FEEDBACK_MS, LandGame, type LandPlayer } from "../src/server/game/land.ts";
-import { buildLandResultsCsv } from "../src/server/game/results.ts";
+import { buildLandResultsCsv } from "../src/server/game/land.ts";
 import { EMPTY, hexDistance, neighbors } from "../src/shared/land-board.ts";
 import { LAND_EMPTY_MS } from "../src/shared/protocol.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
@@ -25,7 +25,7 @@ function setup(names: string[], opts: { teams?: number; minutes?: number } = {})
   let finished = 0;
   const lobby = new Game(quiz(), { clock });
   lobby.setMode("land");
-  lobby.setLand({ teams: opts.teams ?? 2, minutes: opts.minutes ?? 5 });
+  lobby.setModeSettings("land", { teams: opts.teams ?? 2, minutes: opts.minutes ?? 5 });
   for (const n of names) lobby.join(n);
   const game = LandGame.fromLobby(lobby, { clock, onFinish: () => finished++ });
   return { clock, game, lobby, finished: () => finished };
@@ -65,24 +65,24 @@ describe("lobby → land", () => {
   test("settings are validated and teams are previewed", () => {
     const { lobby } = setup(["A", "B", "C"], { teams: 3 });
     expect(lobby.hostView().teams!.map((t) => t.members.map((m) => m.nickname))).toEqual([["A"], ["B"], ["C"]]);
-    expect(() => lobby.setLand({ teams: 1, minutes: 5 })).toThrow();
-    expect(() => lobby.setLand({ teams: 7, minutes: 5 })).toThrow();
-    expect(() => lobby.setLand({ teams: 2, minutes: 4 })).toThrow();
-    for (const minutes of [3, 5, 7, 10]) lobby.setLand({ teams: 2, minutes });
-    expect(lobby.hostView().land).toEqual({ teams: 2, minutes: 10, theme: "christmas" });
+    expect(() => lobby.setModeSettings("land", { teams: 1, minutes: 5 })).toThrow();
+    expect(() => lobby.setModeSettings("land", { teams: 7, minutes: 5 })).toThrow();
+    expect(() => lobby.setModeSettings("land", { teams: 2, minutes: 4 })).toThrow();
+    for (const minutes of [3, 5, 7, 10]) lobby.setModeSettings("land", { teams: 2, minutes });
+    expect(lobby.hostView().settings.land).toEqual({ teams: 2, minutes: 10, theme: "christmas" });
   });
 
   test("Christmas defaults, Classic persists across settings edits and reaches both screens", () => {
     const { lobby } = setup(["A", "B"]);
-    expect(lobby.land.theme).toBe("christmas");
-    lobby.setLand({ teams: 2, minutes: 5, theme: "classic" });
-    lobby.setLand({ teams: 3, minutes: 7 });
-    expect(lobby.land.theme).toBe("classic");
+    expect(lobby.settings.land.theme).toBe("christmas");
+    lobby.setModeSettings("land", { teams: 2, minutes: 5, theme: "classic" });
+    lobby.setModeSettings("land", { teams: 3, minutes: 7 });
+    expect(lobby.settings.land.theme).toBe("classic");
     const game = LandGame.fromLobby(lobby);
     expect(game.hostView().theme).toBe("classic");
     expect(game.playerView([...game.players.keys()][0]!)!.theme).toBe("classic");
-    expect(() => lobby.setLand({ teams: 3, minutes: 7, theme: "invalid" as "classic" })).toThrow("Unknown Land Grab theme");
-    lobby.setLand({ teams: 3, minutes: 7, theme: "christmas" });
+    expect(() => lobby.setModeSettings("land", { teams: 3, minutes: 7, theme: "invalid" as "classic" })).toThrow("Unknown Land Grab theme");
+    lobby.setModeSettings("land", { teams: 3, minutes: 7, theme: "christmas" });
     const winter = LandGame.fromLobby(lobby);
     expect(winter.hostView().theme).toBe("christmas");
     expect(winter.playerView([...winter.players.keys()][0]!)!.theme).toBe("christmas");

@@ -41,11 +41,11 @@ export function musicFor(view: HostView | null): MusicCue {
   if (!view || view.kind === "idle") return { track: null };
   switch (view.kind) {
     case "classic": {
-      if (view.phase === "lobby" && view.mode === "land") return { track: landTheme(view.land.theme) === "christmas" ? "land-christmas-lobby" : "land-lobby" };
-      if (view.phase === "lobby" && view.mode === "duel" && duelTheme(view.duel.theme) === "christmas") return { track: "tower-christmas-lobby" };
-      if (view.phase === "lobby" && view.mode === "siege") return { track: siegeTheme(view.siege.theme) === "christmas" ? "siege-christmas-lobby" : "siege-lobby" };
-      if (view.phase === "lobby" && view.mode === "racer") return { track: racerTheme(view.racer.theme) === "christmas" ? "racer-christmas-lobby" : "racer-lobby" };
-      if (view.phase === "lobby") return { track: (view.mode === "tower" && towerTheme(view.tower.theme) === "christmas") || (view.mode === "cup" && cupTheme(view.cup.theme) === "christmas") ? "tower-christmas-lobby" : LOBBY[view.mode] ?? "classic-lobby" };
+      if (view.phase === "lobby" && view.mode === "land") return { track: landTheme(view.settings.land.theme) === "christmas" ? "land-christmas-lobby" : "land-lobby" };
+      if (view.phase === "lobby" && view.mode === "duel" && duelTheme(view.settings.duel.theme) === "christmas") return { track: "tower-christmas-lobby" };
+      if (view.phase === "lobby" && view.mode === "siege") return { track: siegeTheme(view.settings.siege.theme) === "christmas" ? "siege-christmas-lobby" : "siege-lobby" };
+      if (view.phase === "lobby" && view.mode === "racer") return { track: racerTheme(view.settings.racer.theme) === "christmas" ? "racer-christmas-lobby" : "racer-lobby" };
+      if (view.phase === "lobby") return { track: (view.mode === "tower" && towerTheme(view.settings.tower.theme) === "christmas") || (view.mode === "cup" && cupTheme(view.settings.cup.theme) === "christmas") ? "tower-christmas-lobby" : LOBBY[view.mode] ?? "classic-lobby" };
       if (view.phase === "podium") return { track: "classic-results" };
       if (view.phase === "reveal" || view.phase === "leaderboard") return { track: "classic-leaderboard" };
       // Questions: tension builds over the time limit.

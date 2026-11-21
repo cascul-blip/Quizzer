@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { Game } from "../src/server/game/game.ts";
 import { GiftGame } from "../src/server/game/gift.ts";
-import { buildGiftResultsCsv } from "../src/server/game/results.ts";
+import { buildGiftResultsCsv } from "../src/server/game/gift.ts";
 import { FEEDBACK_MS } from "../src/server/game/stream.ts";
 import {
   GIFT_DUDS, GIFT_GOODS, GIFT_READY_MS, GIFT_ROUND_MS, GIFT_TAP_GRACE_MS, type GiftItem,
@@ -15,7 +15,7 @@ const dud = (kind: Kind) => (GIFT_DUDS as readonly Kind[]).includes(kind);
 
 function setup(count: number) {
   const clock = new FakeClock();
-  const lobby = new Game(sampleQuiz(), { clock, gift: { minutes: 3 }, protect: false });
+  const lobby = new Game(sampleQuiz(), { clock, settings: { gift: { minutes: 3 } }, protect: false });
   for (let i = 0; i < count; i++) lobby.join(`Player ${i + 1}`);
   const game = GiftGame.fromLobby(lobby, { clock, rng: () => 0.4 });
   const players = [...game.players.values()];

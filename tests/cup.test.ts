@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { COUNTDOWN_MS, CupGame, FEEDBACK_MS, type CupPlayer } from "../src/server/game/cup.ts";
 import { Game } from "../src/server/game/game.ts";
-import { buildCupResultsCsv } from "../src/server/game/results.ts";
+import { buildCupResultsCsv } from "../src/server/game/cup.ts";
 import { CUP_ALL_SAFE_MS, CUP_DEFAULT_CUPS, CUP_DRINK_MS, CUP_MAX_CUPS, CUP_MIN_CUPS, CUP_QUIZ_MIN_MS, CUP_ROLL_MS, CUP_SIP_MS, CUP_VERDICT_MS, cupQuizMs } from "../src/shared/protocol.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
 import { FakeClock, sampleQuiz } from "./helpers.ts";
@@ -36,7 +36,7 @@ function setup(names: string[], rng: () => number = seeded(), cups = CUP_DEFAULT
   let finished = 0;
   const lobby = new Game(quiz(), { clock });
   lobby.setMode("cup");
-  lobby.setCup({ cups, theme });
+  lobby.setModeSettings("cup", { cups, theme });
   for (const n of names) lobby.join(n);
   const game = CupGame.fromLobby(lobby, { clock, rng, onFinish: () => finished++ });
   game.start();
@@ -190,29 +190,29 @@ describe("Cup of Death", () => {
 
   test("the lobby sets the cups, 1 to 6, 3 by default", () => {
     const lobby = new Game(quiz(), { clock: new FakeClock() });
-    expect(lobby.cup.cups).toBe(CUP_DEFAULT_CUPS);
-    expect(lobby.hostView().cup).toEqual({ cups: CUP_DEFAULT_CUPS, theme: "christmas" });
-    for (const cups of [0, 7, 2.5, NaN]) expect(() => lobby.setCup({ cups })).toThrow();
-    for (let cups = CUP_MIN_CUPS; cups <= CUP_MAX_CUPS; cups++) lobby.setCup({ cups });
-    expect(lobby.cup.cups).toBe(CUP_MAX_CUPS);
+    expect(lobby.settings.cup.cups).toBe(CUP_DEFAULT_CUPS);
+    expect(lobby.hostView().settings.cup).toEqual({ cups: CUP_DEFAULT_CUPS, theme: "christmas" });
+    for (const cups of [0, 7, 2.5, NaN]) expect(() => lobby.setModeSettings("cup", { cups })).toThrow();
+    for (let cups = CUP_MIN_CUPS; cups <= CUP_MAX_CUPS; cups++) lobby.setModeSettings("cup", { cups });
+    expect(lobby.settings.cup.cups).toBe(CUP_MAX_CUPS);
   });
 
   test("cup themes reach both screens and changing cup count preserves the theme", () => {
     const lobby = new Game(quiz(), { clock: new FakeClock() });
     const player = lobby.join("Elf");
-    expect(lobby.cup.theme).toBe("christmas");
+    expect(lobby.settings.cup.theme).toBe("christmas");
     for (const theme of ["classic", "christmas"] as const) {
-      lobby.setCup({ cups: 4, theme });
-      lobby.setCup({ cups: 2 });
-      expect(lobby.cup).toEqual({ cups: 2, theme });
+      lobby.setModeSettings("cup", { cups: 4, theme });
+      lobby.setModeSettings("cup", { cups: 2 });
+      expect(lobby.settings.cup).toEqual({ cups: 2, theme });
       const game = CupGame.fromLobby(lobby);
       expect(game.hostView().theme).toBe(theme);
       expect(game.playerView(player.id)!.theme).toBe(theme);
       game.dispose();
     }
-    const before = { ...lobby.cup };
-    expect(() => lobby.setCup({ cups: 3, theme: "unknown" as never })).toThrow("Unknown cup theme");
-    expect(lobby.cup).toEqual(before);
+    const before = { ...lobby.settings.cup };
+    expect(() => lobby.setModeSettings("cup", { cups: 3, theme: "unknown" as never })).toThrow("Unknown cup theme");
+    expect(lobby.settings.cup).toEqual(before);
   });
 
   for (let cups = CUP_MIN_CUPS; cups <= CUP_MAX_CUPS; cups++) {

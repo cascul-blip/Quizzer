@@ -1,4 +1,4 @@
-import { racerTheme, type RacerTheme } from "../../shared/racer-theme.ts";
+import { racerTheme, type RacerTheme, DEFAULT_RACER_THEME } from "../../shared/racer-theme.ts";
 import type {
   HostRacerState,
   Pacing,
@@ -13,14 +13,17 @@ import type {
   ShuffleOptions,
 } from "../../shared/protocol.ts";
 import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
-import { MAX_TYPED_ANSWER, checkAnswer, type AnswerValue } from "../../shared/answer-match.ts";
+import { MAX_TYPED_ANSWER, checkAnswer, type AnswerValue, answerOf } from "../../shared/answer-match.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import { RACER_CONFIDENCE_LEVELS, applyRacerTurn, newRacerCar, type RacerCar, type RacerConfidence } from "../../shared/racer-rules.ts";
-import { GameError, realClock, shuffle, topErrors, type Clock } from "./common.ts";
-import { AUTO_REVEAL_MS, GRACE_MS, preparePlayOrder, type Game } from "./game.ts";
+import { GameError, realClock, shuffle, topErrors, type Clock, AUTO_REVEAL_MS, GRACE_MS, preparePlayOrder } from "./common.ts";
+import type { Game } from "./game.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
+import { MODE_NAMES } from "../../shared/mode-names.ts";
+import { handoffOptions, pickTheme, unhandled, type ModeEntry } from "./mode-entry.ts";
+import { toCsv } from "./results.ts";
 
-export { AUTO_REVEAL_MS, GRACE_MS } from "./game.ts";
+export { AUTO_REVEAL_MS, GRACE_MS } from "./common.ts";
 
 /** A turn without a driver shows the question this long before the options. */
 export const INTRO_MS = 3000;
@@ -72,6 +75,7 @@ interface RacerGameSettings {
  * Every question is asked once, then the podium.
  */
 export class RacerGame {
+  readonly runningMode = "racer" as const;
   readonly theme: RacerTheme;
   readonly quizId: string;
   readonly title: string;
@@ -122,7 +126,7 @@ export class RacerGame {
 
   /** Take over a lobby's players (same ids and tokens), its shuffle choices and its pacing. */
   static fromLobby(lobby: Game, opts: RacerOptions = {}): RacerGame {
-    const game = new RacerGame(lobby.quiz, { shuffle: lobby.shuffle, pacing: lobby.pacing, theme: lobby.racer.theme }, opts);
+    const game = new RacerGame(lobby.quiz, { shuffle: lobby.shuffle, pacing: lobby.pacing, theme: lobby.settings.racer.theme }, opts);
     for (const p of lobby.players.values()) {
       game.roster.adopt(game.newPlayer({ id: p.id, nickname: p.nickname, token: p.token, connected: p.connected, avatar: p.avatar }));
     }
@@ -520,3 +524,42 @@ export class RacerGame {
     };
   }
 }
+
+/** Racer: one row per player; the class's shared distance, top speed and crashes are in every row. */
+export function buildRacerResultsCsv(game: RacerGame): string {
+  const header = ["Nickname", "Correct", "Wrong", "Accuracy %", "Turns driven", "Mph gained", "Fail points as driver", "Class distance (miles)", "Top speed (mph)", "Crashes"];
+  const round = (v: number) => Math.round(v * 100) / 100;
+  const rows: (string | number)[][] = [...game.players.values()]
+    .sort((a, b) => b.correct - a.correct || b.mphGained - a.mphGained)
+    .map((p) => {
+      const answered = p.correct + p.wrong;
+      return [p.nickname, p.correct, p.wrong, answered ? Math.round((p.correct / answered) * 100) : "", p.turnsDriven, p.mphGained, p.failsAsDriver, round(game.car.distance), round(game.car.topSpeed), game.car.crashes];
+    });
+  return toCsv([header, ...rows]);
+}
+
+export const racerMode: ModeEntry<"racer"> = {
+  name: MODE_NAMES.racer,
+  defaultSettings: { theme: DEFAULT_RACER_THEME },
+  readSettings: (raw, current) => ({ theme: pickTheme(raw.theme, racerTheme(current.theme), "racer") }),
+  start(lobby, ctx) {
+    const game = RacerGame.fromLobby(lobby, handoffOptions(ctx));
+    return { game, log: `${this.name} started with ${game.players.size} player(s), ${game.questions.length} question(s)` };
+  },
+  pacing: (game) => game,
+  teams: () => null,
+  lobbyBanner: false,
+  resultsCsv: buildRacerResultsCsv,
+  handle(game, playerId, msg) {
+    switch (msg.type) {
+      case "racer.lever":
+        return game.setLever(playerId, msg.level) ? undefined : "resend";
+      case "racer.go":
+        return game.go(playerId) ? undefined : "resend";
+      case "racer.answer":
+        return game.answer(playerId, Number(msg.index), answerOf(msg)) ? undefined : "resend";
+      default:
+        return unhandled(msg);
+    }
+  },
+};

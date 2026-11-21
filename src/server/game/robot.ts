@@ -26,6 +26,10 @@ import { GameError, realClock, shuffle, type Clock } from "./common.ts";
 import type { Game } from "./game.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
 import { QuestionStream, newStreamPlayer, type StreamPlayer } from "./stream.ts";
+import { answerOf } from "../../shared/answer-match.ts";
+import { MODE_NAMES } from "../../shared/mode-names.ts";
+import { handoffOptions, unhandled, type ModeEntry } from "./mode-entry.ts";
+import { toCsv } from "./results.ts";
 
 export { FEEDBACK_MS } from "./stream.ts";
 
@@ -92,6 +96,7 @@ export function spreadTile(taken: { x: number; y: number }[], order: number[], a
 
 /** Robot Attack: answer questions for movement points, then dodge the robot's lasers. Last one standing wins. */
 export class RobotGame {
+  readonly runningMode = "robot" as const;
   readonly quizId: string;
   readonly title: string;
   readonly questions: Question[];
@@ -469,3 +474,39 @@ export class RobotGame {
     };
   }
 }
+
+/** Robot Attack: one row per player in final standing order. */
+export function buildRobotResultsCsv(game: RobotGame): string {
+  const header = ["Rank", "Nickname", "Status", "Lives left", "Rounds survived", "Correct", "Wrong", "Accuracy %", "Moves", "Laser hits"];
+  const rows: (string | number)[][] = game.standings().map((s) => {
+    const p = game.players.get(s.id)!;
+    const answered = p.correct + p.wrong;
+    const status = s.rank === 1 ? "Winner" : p.outRound === null ? "Survived" : `Out in round ${p.outRound}`;
+    return [s.rank, p.nickname, status, p.lives, p.outRound === null ? game.attacks : p.outRound - 1, p.correct, p.wrong, answered ? Math.round((p.correct / answered) * 100) : "", p.moves, p.hits];
+  });
+  return toCsv([header, ...rows]);
+}
+
+export const robotMode: ModeEntry<"robot"> = {
+  name: MODE_NAMES.robot,
+  defaultSettings: {},
+  readSettings: () => ({}),
+  start(lobby, ctx) {
+    const game = RobotGame.fromLobby(lobby, handoffOptions(ctx));
+    return { game, log: `${this.name} started with ${game.players.size} player(s)` };
+  },
+  pacing: null,
+  teams: () => null,
+  lobbyBanner: false,
+  resultsCsv: buildRobotResultsCsv,
+  handle(game, playerId, msg) {
+    switch (msg.type) {
+      case "robot.answer":
+        return game.answer(playerId, Number(msg.seq), answerOf(msg)) ? undefined : "resend";
+      case "robot.move":
+        return game.move(playerId, msg.dir) ? undefined : "resend";
+      default:
+        return unhandled(msg);
+    }
+  },
+};

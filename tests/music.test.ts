@@ -149,7 +149,7 @@ describe("Christmas Toybox Patapan music", () => {
   test("theme selects Patapan throughout the game and keeps the classic soundtrack selectable", () => {
     for (const theme of ["christmas", "classic", undefined] as const) {
       const prefix = theme === "classic" ? "siege" : "siege-christmas";
-      expect(musicFor({ kind: "classic", phase: "lobby", mode: "siege", siege: { waves: 5, theme } } as HostView).track).toBe(`${prefix}-lobby`);
+      expect(musicFor({ kind: "classic", phase: "lobby", mode: "siege", settings: { siege: { waves: 5, theme } } } as HostView).track).toBe(`${prefix}-lobby`);
       for (const phase of ["countdown", "build", "wave", "stands", "fallen", "podium"] as const) {
         const cue = musicFor({ kind: "siege", phase, settings: { waves: 5, theme }, wave: 3, hearts: 8, maxHearts: 10, monsterCount: 4, monsters: [], phaseRemainingMs: 5000, result: null } as unknown as HostView);
         expect(cue.track).toBe(`${prefix}-${["stands", "fallen", "podium"].includes(phase) ? "results" : "battle"}`);
@@ -178,7 +178,7 @@ describe("North Pole Tower Christmas music", () => {
   test("theme selects carols in the lobby, countdown, building and podium", () => {
     for (const theme of ["christmas", "classic", undefined] as const) {
       const prefix = theme === "classic" ? "tower" : "tower-christmas";
-      const lobby = { kind: "classic", phase: "lobby", mode: "tower", tower: { theme } } as HostView;
+      const lobby = { kind: "classic", phase: "lobby", mode: "tower", settings: { tower: { theme } } } as HostView;
       expect(musicFor(lobby).track).toBe(`${prefix}-lobby`);
       for (const phase of ["countdown", "playing", "podium"] as const) {
         const view = { kind: "tower", theme, phase, remainingMs: 150_000 } as HostView;
@@ -231,7 +231,7 @@ describe("Neon Noel Racer Christmas music", () => {
   test("theme selects the lobby, continuous drive, and results, including the default theme", () => {
     for (const theme of ["christmas", "classic", undefined] as const) {
       const prefix = theme === "classic" ? "racer" : "racer-christmas";
-      const lobby = { kind: "classic", phase: "lobby", mode: "racer", racer: { theme } } as HostView;
+      const lobby = { kind: "classic", phase: "lobby", mode: "racer", settings: { racer: { theme } } } as HostView;
       expect(musicFor(lobby)).toEqual({ track: `${prefix}-lobby` });
       for (const phase of ["intro", "confidence", "open", "reveal"] as const) {
         for (const [speed, crashed, intensity] of [[0, true, 0.03], [0, false, 0.1], [75, false, 0.5], [150, false, 1], [200, false, 1]] as const) {
@@ -270,7 +270,7 @@ describe("North Pole Land Grab Christmas music", () => {
   test("lobby, countdown, play, conquest and podium follow the selected theme", () => {
     for (const theme of ["christmas", "classic", undefined] as const) {
       const prefix = theme === "classic" ? "land" : "land-christmas";
-      expect(musicFor({ kind: "classic", phase: "lobby", mode: "land", land: { theme } } as HostView)).toEqual({ track: `${prefix}-lobby` });
+      expect(musicFor({ kind: "classic", phase: "lobby", mode: "land", settings: { land: { theme } } } as HostView)).toEqual({ track: `${prefix}-lobby` });
       expect(musicFor({ kind: "land", theme, phase: "countdown" } as HostView)).toEqual({ track: `${prefix}-play`, intensity: 0 });
       expect(musicFor({ kind: "land", theme, phase: "conquered" } as HostView)).toEqual({ track: `${prefix}-play`, intensity: 1 });
       expect(musicFor({ kind: "land", theme, phase: "podium" } as HostView)).toEqual({ track: `${prefix}-results` });

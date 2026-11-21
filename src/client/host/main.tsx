@@ -360,22 +360,22 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
             Game mode
             <select value={view.mode} onChange={(e) => send({ type: "host.setMode", mode: e.currentTarget.value as GameMode })}>
               <option value="classic">Classic</option>
-              <option value="tower">{towerWords(view.tower.theme).icon} {towerWords(view.tower.theme).name}</option>
+              <option value="tower">{towerWords(view.settings.tower.theme).icon} {towerWords(view.settings.tower.theme).name}</option>
               <option value="submarine">🛷 Sled Squad</option>
-              <option value="fight">{fightName(view.fight.theme)}</option>
+              <option value="fight">{fightName(view.settings.fight.theme)}</option>
               <option value="robot">🤖 Robot Attack</option>
               <option value="land">🚩 Land Grab</option>
-              <option value="racer">{racerName(view.racer?.theme)}</option>
+              <option value="racer">{racerName(view.settings.racer?.theme)}</option>
               <option value="gift">🎁 Gift Grab</option>
-              <option value="cup">{cupName(view.cup.theme)}</option>
-              <option value="siege">{siegeTheme(view.siege.theme) === "christmas" ? "🎄" : "🛡️"} {siegeName(view.siege.theme)}</option>
-              <option value="duel">{duelTheme(view.duel.theme) === "christmas" ? "❄️ Snowball Showdown" : "🤠 Showdown"}</option>
+              <option value="cup">{cupName(view.settings.cup.theme)}</option>
+              <option value="siege">{siegeTheme(view.settings.siege.theme) === "christmas" ? "🎄" : "🛡️"} {siegeName(view.settings.siege.theme)}</option>
+              <option value="duel">{duelTheme(view.settings.duel.theme) === "christmas" ? "❄️ Snowball Showdown" : "🤠 Showdown"}</option>
             </select>
           </label>
           {view.mode === "racer" && (
             <label class="opt">
               Theme
-              <select aria-label="Racer theme" value={racerTheme(view.racer?.theme)} onChange={(e) => send({ type: "host.setRacer", theme: e.currentTarget.value as RacerTheme })}>
+              <select aria-label="Racer theme" value={racerTheme(view.settings.racer?.theme)} onChange={(e) => send({ type: "host.setModeSettings", mode: "racer", settings: { theme: e.currentTarget.value as RacerTheme } })}>
                 <option value="christmas">🎄 Neon Noel</option>
                 <option value="classic">🏎 Normal</option>
               </select>
@@ -385,14 +385,14 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
             <>
               <label class="opt">
                 Theme
-                <select aria-label="Tower theme" value={towerTheme(view.tower.theme)} onChange={(e) => send({ type: "host.setTower", teams: view.tower.teams, minutes: view.tower.minutes, theme: e.currentTarget.value as TowerTheme })}>
+                <select aria-label="Tower theme" value={towerTheme(view.settings.tower.theme)} onChange={(e) => send({ type: "host.setModeSettings", mode: "tower", settings: { teams: view.settings.tower.teams, minutes: view.settings.tower.minutes, theme: e.currentTarget.value as TowerTheme } })}>
                   <option value="christmas">🎄 North Pole Workshop</option>
                   <option value="classic">🏗 Normal</option>
                 </select>
               </label>
               <label class="opt">
                 Teams
-                <select value={view.tower.teams} onChange={(e) => send({ type: "host.setTower", teams: Number(e.currentTarget.value), minutes: view.tower.minutes })}>
+                <select value={view.settings.tower.teams} onChange={(e) => send({ type: "host.setModeSettings", mode: "tower", settings: { teams: Number(e.currentTarget.value), minutes: view.settings.tower.minutes } })}>
                   {Array.from({ length: MAX_TEAMS }, (_, i) => (
                     <option key={i} value={i + 1}>
                       {i + 1}
@@ -402,7 +402,7 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
               </label>
               <label class="opt">
                 Time
-                <select value={view.tower.minutes} onChange={(e) => send({ type: "host.setTower", teams: view.tower.teams, minutes: Number(e.currentTarget.value) })}>
+                <select value={view.settings.tower.minutes} onChange={(e) => send({ type: "host.setModeSettings", mode: "tower", settings: { teams: view.settings.tower.teams, minutes: Number(e.currentTarget.value) } })}>
                   {TOWER_MINUTES.map((m) => (
                     <option key={m} value={m}>
                       {m} min
@@ -410,28 +410,28 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
                   ))}
                 </select>
               </label>
-              <label class="opt check" title={view.tower.teams < 2 ? "Needs 2 or more teams" : `${towerWords(view.tower.theme).item === "bell" ? "Bells" : "Monster eggs"} appear 4 times per game`}>
+              <label class="opt check" title={view.settings.tower.teams < 2 ? "Needs 2 or more teams" : `${towerWords(view.settings.tower.theme).item === "bell" ? "Bells" : "Monster eggs"} appear 4 times per game`}>
                 <input
                   type="checkbox"
-                  disabled={view.tower.teams < 2}
-                  checked={view.tower.monster && view.tower.teams >= 2}
-                  onChange={(e) => send({ type: "host.setTower", teams: view.tower.teams, minutes: view.tower.minutes, monster: e.currentTarget.checked })}
+                  disabled={view.settings.tower.teams < 2}
+                  checked={view.settings.tower.monster && view.settings.tower.teams >= 2}
+                  onChange={(e) => send({ type: "host.setModeSettings", mode: "tower", settings: { teams: view.settings.tower.teams, minutes: view.settings.tower.minutes, monster: e.currentTarget.checked } })}
                 />
-                {towerWords(view.tower.theme).creatureIcon} {towerTheme(view.tower.theme) === "christmas" ? "Yeti" : "Monster"}{view.tower.teams < 2 ? " (needs 2+ teams)" : ""}
+                {towerWords(view.settings.tower.theme).creatureIcon} {towerTheme(view.settings.tower.theme) === "christmas" ? "Yeti" : "Monster"}{view.settings.tower.teams < 2 ? " (needs 2+ teams)" : ""}
               </label>
             </>
           ) : view.mode === "fight" ? (
             <>
               <label class="opt">
                 Theme
-                <select aria-label="Tower Fight theme" value={fightTheme(view.fight.theme)} onChange={(e) => send({ type: "host.setFight", theme: e.currentTarget.value as FightTheme })}>
+                <select aria-label="Tower Fight theme" value={fightTheme(view.settings.fight.theme)} onChange={(e) => send({ type: "host.setModeSettings", mode: "fight", settings: { theme: e.currentTarget.value as FightTheme } })}>
                   <option value="classic">🏰 Normal</option>
                   <option value="christmas">🎄 Gingerbread Siege</option>
                 </select>
               </label>
               <label class="opt">
                 Hill
-                <select value={view.fight.hill} onChange={(e) => send({ type: "host.setFight", hill: e.currentTarget.value as HillSetting })}>
+                <select value={view.settings.fight.hill} onChange={(e) => send({ type: "host.setModeSettings", mode: "fight", settings: { hill: e.currentTarget.value as HillSetting } })}>
                   {HILL_SETTINGS.map((h) => (
                     <option key={h} value={h}>
                       {HILL_LABELS[h]}
@@ -445,14 +445,14 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
             <>
               <label class="opt">
                 Theme
-                <select aria-label="Land Grab theme" value={landTheme(view.land.theme)} onChange={(e) => send({ type: "host.setLand", teams: view.land.teams, minutes: view.land.minutes, theme: e.currentTarget.value as LandTheme })}>
+                <select aria-label="Land Grab theme" value={landTheme(view.settings.land.theme)} onChange={(e) => send({ type: "host.setModeSettings", mode: "land", settings: { teams: view.settings.land.teams, minutes: view.settings.land.minutes, theme: e.currentTarget.value as LandTheme } })}>
                   <option value="christmas">🎄 North Pole</option>
                   <option value="classic">🚩 Classic</option>
                 </select>
               </label>
               <label class="opt">
                 Teams
-                <select value={view.land.teams} onChange={(e) => send({ type: "host.setLand", teams: Number(e.currentTarget.value), minutes: view.land.minutes })}>
+                <select value={view.settings.land.teams} onChange={(e) => send({ type: "host.setModeSettings", mode: "land", settings: { teams: Number(e.currentTarget.value), minutes: view.settings.land.minutes } })}>
                   {Array.from({ length: MAX_TEAMS - LAND_MIN_TEAMS + 1 }, (_, i) => (
                     <option key={i} value={i + LAND_MIN_TEAMS}>
                       {i + LAND_MIN_TEAMS}
@@ -462,7 +462,7 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
               </label>
               <label class="opt">
                 Time
-                <select value={view.land.minutes} onChange={(e) => send({ type: "host.setLand", teams: view.land.teams, minutes: Number(e.currentTarget.value) })}>
+                <select value={view.settings.land.minutes} onChange={(e) => send({ type: "host.setModeSettings", mode: "land", settings: { teams: view.settings.land.teams, minutes: Number(e.currentTarget.value) } })}>
                   {LAND_MINUTES.map((m) => (
                     <option key={m} value={m}>
                       {m} min
@@ -478,7 +478,7 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
             <>
               <label class="opt">
                 Time
-                <select value={view.gift.minutes} onChange={(e) => send({ type: "host.setGift", minutes: Number(e.currentTarget.value) })}>
+                <select value={view.settings.gift.minutes} onChange={(e) => send({ type: "host.setModeSettings", mode: "gift", settings: { minutes: Number(e.currentTarget.value) } })}>
                   {GIFT_MINUTES.map((minutes) => <option key={minutes} value={minutes}>{minutes} min</option>)}
                 </select>
               </label>
@@ -488,14 +488,14 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
             <>
               <label class="opt">
                 Theme
-                <select aria-label="Cup theme" value={cupTheme(view.cup.theme)} onChange={(e) => send({ type: "host.setCup", cups: view.cup.cups, theme: e.currentTarget.value as CupTheme })}>
+                <select aria-label="Cup theme" value={cupTheme(view.settings.cup.theme)} onChange={(e) => send({ type: "host.setModeSettings", mode: "cup", settings: { cups: view.settings.cup.cups, theme: e.currentTarget.value as CupTheme } })}>
                   <option value="christmas">🎄 Santa's Workshop</option>
                   <option value="classic">☠️ Normal</option>
                 </select>
               </label>
               <label class="opt">
                 Cups
-                <select value={view.cup.cups} onChange={(e) => send({ type: "host.setCup", cups: Number(e.currentTarget.value) })}>
+                <select value={view.settings.cup.cups} onChange={(e) => send({ type: "host.setModeSettings", mode: "cup", settings: { cups: Number(e.currentTarget.value) } })}>
                   {Array.from({ length: CUP_MAX_CUPS - CUP_MIN_CUPS + 1 }, (_, i) => (
                     <option key={i} value={i + CUP_MIN_CUPS}>
                       {i + CUP_MIN_CUPS}
@@ -503,20 +503,20 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
                   ))}
                 </select>
               </label>
-              <span class="opt mode-hint">{cupTheme(view.cup.theme) === "christmas" ? "Roll the die, then answer that many questions before time runs out, or sip some cocoa. One cup is supercharged: shake, sparkle and blast off! Last one in the workshop wins." : "Roll the die, then answer that many questions before time runs out, or drink from a cup. One is poisoned. Last one standing wins."}</span>
+              <span class="opt mode-hint">{cupTheme(view.settings.cup.theme) === "christmas" ? "Roll the die, then answer that many questions before time runs out, or sip some cocoa. One cup is supercharged: shake, sparkle and blast off! Last one in the workshop wins." : "Roll the die, then answer that many questions before time runs out, or drink from a cup. One is poisoned. Last one standing wins."}</span>
             </>
           ) : view.mode === "siege" ? (
             <>
               <label class="opt">
                 Theme
-                <select aria-label="Kingdom Siege theme" value={siegeTheme(view.siege.theme)} onChange={(e) => send({ type: "host.setSiege", ...view.siege, theme: e.currentTarget.value as SiegeTheme })}>
+                <select aria-label="Kingdom Siege theme" value={siegeTheme(view.settings.siege.theme)} onChange={(e) => send({ type: "host.setModeSettings", mode: "siege", settings: { ...view.settings.siege, theme: e.currentTarget.value as SiegeTheme } })}>
                   <option value="classic">🛡️ Classic Kingdom Siege</option>
                   <option value="christmas">🎄 Christmas Toybox</option>
                 </select>
               </label>
               <label class="opt">
                 Waves
-                <select aria-label="Kingdom Siege waves" value={String(view.siege.waves)} onChange={(e) => send({ type: "host.setSiege", ...view.siege, waves: e.currentTarget.value === "endless" ? "endless" : (Number(e.currentTarget.value) as 5 | 10) })}>
+                <select aria-label="Kingdom Siege waves" value={String(view.settings.siege.waves)} onChange={(e) => send({ type: "host.setModeSettings", mode: "siege", settings: { ...view.settings.siege, waves: e.currentTarget.value === "endless" ? "endless" : (Number(e.currentTarget.value) as 5 | 10) } })}>
                   {SIEGE_WAVE_CHOICES.map((w) => (
                     <option key={w} value={String(w)}>
                       {w === "endless" ? "♾ Endless" : `${w} waves`}
@@ -524,7 +524,7 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
                   ))}
                 </select>
               </label>
-              <span class="opt mode-hint">The whole class defends one castle. Every right answer earns you gold to spend on {siegeTheme(view.siege.theme) === "christmas" ? "elf archers, nutcrackers and present barricades" : "archers, knights and stone walls"} before the monsters reach the wall.</span>
+              <span class="opt mode-hint">The whole class defends one castle. Every right answer earns you gold to spend on {siegeTheme(view.settings.siege.theme) === "christmas" ? "elf archers, nutcrackers and present barricades" : "archers, knights and stone walls"} before the monsters reach the wall.</span>
             </>
           ) : view.mode === "submarine" ? (
             <span class="opt mode-hint">Everyone works together to outrun the Christmas goblin. The game ends when it catches you.</span>
@@ -550,7 +550,7 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
                 <>
                   <label class="opt">
                     Rounds
-                    <select aria-label="Showdown rounds" value={view.duel.rounds} onChange={(e) => send({ type: "host.setDuel", ...view.duel, rounds: Number(e.currentTarget.value) })}>
+                    <select aria-label="Showdown rounds" value={view.settings.duel.rounds} onChange={(e) => send({ type: "host.setModeSettings", mode: "duel", settings: { ...view.settings.duel, rounds: Number(e.currentTarget.value) } })}>
                       {DUEL_ROUNDS.map((r) => (
                         <option key={r} value={r}>
                           {r} rounds
@@ -559,12 +559,12 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
                     </select>
                   </label>
                   <label class="opt">Theme
-                    <select aria-label="Showdown theme" value={duelTheme(view.duel.theme)} onChange={(e) => send({ type: "host.setDuel", ...view.duel, theme: e.currentTarget.value as DuelTheme })}>
+                    <select aria-label="Showdown theme" value={duelTheme(view.settings.duel.theme)} onChange={(e) => send({ type: "host.setModeSettings", mode: "duel", settings: { ...view.settings.duel, theme: e.currentTarget.value as DuelTheme } })}>
                       <option value="christmas">North Pole Snowball Showdown</option>
                       <option value="classic">Classic Showdown</option>
                     </select>
                   </label>
-                  <span class="opt mode-hint">{duelName(view.duel.theme)}: everyone duels at once. Win to climb toward {duelArenaName(1, view.duel.theme)}, lose and you drop an arena.</span>
+                  <span class="opt mode-hint">{duelName(view.settings.duel.theme)}: everyone duels at once. Win to climb toward {duelArenaName(1, view.settings.duel.theme)}, lose and you drop an arena.</span>
                 </>
               )}
             </>
@@ -584,8 +584,8 @@ function Lobby({ view, send }: { view: GameView; send: Send }) {
             </label>
           )}
         </div>
-        {view.mode === "siege" && <SiegeLobbyPreview theme={view.siege.theme} />}
-        {view.mode === "duel" && duelTheme(view.duel.theme) === "christmas" && <SnowballLobbyPreview />}
+        {view.mode === "siege" && <SiegeLobbyPreview theme={view.settings.siege.theme} />}
+        {view.mode === "duel" && duelTheme(view.settings.duel.theme) === "christmas" && <SnowballLobbyPreview />}
         {connected === 0 ? (
           <div class="waiting">Waiting for players…</div>
         ) : view.teams ? (
