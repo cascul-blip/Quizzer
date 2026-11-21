@@ -113,3 +113,10 @@ export interface PlayerFightView {
   shot: FightShot | null;
   result: { outcome: FightOutcome; awards: string[] } | null;
 }
+
+/** What a phone sends during Tower Fight games. */
+export type FightMsg =
+  | { type: "fight.answer"; seq: number; option: number; text?: string }
+  | { type: "fight.choose"; action: "attack" | "rebuild" }
+  /** The slingshot pull in field units (y up); the shot flies the opposite way. */
+  | { type: "fight.fire"; dx: number; dy: number };

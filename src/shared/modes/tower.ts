@@ -111,3 +111,6 @@ export interface HostTowerState {
   /** The questions answered wrongly most often (podium only). */
   errors: QuestionError[] | null;
 }
+
+/** What a phone sends during Tallest Tower games. */
+export type TowerMsg = { type: "tower.answer"; seq: number; option: number; text?: string } | { type: "tower.drop"; zone: number };

@@ -136,3 +136,9 @@ export interface PlayerCupView {
   alive: number;
   result: { rank: number; playerCount: number; won: boolean; outRound: number | null; awards: string[] } | null;
 }
+
+/** What a phone sends during Cup of Death games. */
+export type CupMsg =
+  | { type: "cup.answer"; seq: number; option: number; text?: string }
+  /** Cup of Death, drink phase, drinkers only: pick one of your remaining cups (0-based, left to right). Final once sent. */
+  | { type: "cup.pick"; cup: number };

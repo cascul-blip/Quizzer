@@ -116,3 +116,6 @@ export interface PlayerRobotView {
   lastAttack: { seq: number; hit: boolean; eliminated: boolean } | null;
   result: { rank: number; playerCount: number; won: boolean; outRound: number | null; awards: string[] } | null;
 }
+
+/** What a phone sends during Robot Attack games. */
+export type RobotMsg = { type: "robot.answer"; seq: number; option: number; text?: string } | { type: "robot.move"; dir: RobotDir };

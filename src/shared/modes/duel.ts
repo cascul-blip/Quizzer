@@ -152,3 +152,8 @@ export interface PlayerDuelView {
   /** Podium only. */
   result: { rank: number; playerCount: number; awards: string[] } | null;
 }
+
+/** What a phone sends during Showdown games. */
+export type DuelMsg =
+  /** Showdown, open phase: `index` is the question's index (QuestionView.index), as in racer.answer. One answer per player per round. */
+  { type: "duel.answer"; index: number; option: number; text?: string };

@@ -70,3 +70,6 @@ export interface PlayerSubView {
     | null;
   result: { depth: number; level: number; awards: string[] } | null;
 }
+
+/** What a phone sends during Submarine Squad games. */
+export type SubMsg = { type: "sub.answer"; seq: number; option: number; text?: string } | { type: "sub.boost" } | { type: "sub.tap"; symbol: string };

@@ -106,3 +106,10 @@ export interface PlayerLandView {
   conquered: { seq: number; from: string; by: string } | null;
   result: { teamRank: number; teamCount: number; tiles: number; won: boolean; awards: string[] } | null;
 }
+
+/** What a phone sends during Land Grab games. */
+export type LandMsg =
+  | { type: "land.answer"; seq: number; option: number; text?: string }
+  | { type: "land.place"; tile: number }
+  /** Leave the land early; unused claims are kept for next time. */
+  | { type: "land.done" };

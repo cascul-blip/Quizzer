@@ -56,3 +56,6 @@ export interface PlayerGiftView {
     power: GiftPower | null;
   } | null;
 }
+
+/** What a phone sends during Gift Grab games. */
+export type GiftMsg = { type: "gift.answer"; seq: number; option: number; text?: string } | { type: "gift.tap"; round: number; item: number };

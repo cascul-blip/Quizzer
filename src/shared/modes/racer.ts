@@ -149,3 +149,12 @@ export interface PlayerRacerView {
   /** Podium only: the shared result and the titles of the awards this player won. Their own numbers are in `me`. */
   result: (RacerResult & { awards: string[] }) | null;
 }
+
+/** What a phone sends during Racer games. */
+export type RacerMsg =
+  /** Racer, driver only, confidence phase only: move the lever (everyone sees it move). */
+  | { type: "racer.lever"; level: RacerConfidence }
+  /** Racer, driver only, confidence phase only: lock the lever where it is and open the question. */
+  | { type: "racer.go" }
+  /** Racer, open phase: `index` is the question's index (QuestionView.index), as `qIndex` in the classic "answer". One answer per player per question. */
+  | { type: "racer.answer"; index: number; option: number; text?: string };
