@@ -2,10 +2,11 @@ import type { Pacing } from "../shared/mode-views.ts";
 import type { ClientMsg } from "../shared/protocol.ts";
 import type { Quiz } from "../shared/quiz-schema.ts";
 import { GameError } from "./game/common.ts";
-import type { HandoffOptions, LobbyChoices } from "./game/lobby.ts";
 import { Lobby } from "./game/lobby.ts";
 import type { LiveGame } from "./game/mode-entry.ts";
 import { entryOf, MODES } from "./game/modes.ts";
+
+export type HandoffAction = { type: "start"; pacing?: Pacing } | { type: "next" | "end" };
 
 const PACINGS = new Set<Pacing>(["manual", "auto"]);
 
@@ -22,9 +23,9 @@ export interface HostCommandContext {
   setAddress(address: string): void;
   /** A player was removed: drop their phones. */
   kicked(player: { id: string; nickname: string }): void;
-  handoffOptions(): HandoffOptions;
-  /** Carry these choices over to the next lobby ("Play again"). */
-  rememberSetup(setup: Partial<LobbyChoices>): void;
+  handoff(lobby: Lobby, action: HandoffAction): void;
+  /** Carry in-game pacing over to the next lobby ("Play again"). */
+  rememberPacing(pacing: Pacing): void;
 }
 
 /** Applies one Host command to the lobby or the live game. Throws GameError when the command doesn't apply. */
@@ -55,16 +56,14 @@ export function applyHostCommand(msg: ClientMsg, ctx: HostCommandContext): void 
     }
     case "host.start": {
       const pacing = PACINGS.has(msg.pacing) ? msg.pacing : undefined;
-      const current = lobby("The game has already started");
-      current.start(pacing, ctx.handoffOptions());
-      return ctx.rememberSetup(current.choices);
+      return ctx.handoff(lobby("The game has already started"), { type: "start", pacing });
     }
     case "host.setPacing": {
       if (!PACINGS.has(msg.pacing)) throw new GameError("Unknown pacing");
       const current = game();
       if (current instanceof Lobby) return current.setPacing(msg.pacing);
       paced(current).setPacing(msg.pacing);
-      return ctx.rememberSetup({ pacing: msg.pacing });
+      return ctx.rememberPacing(msg.pacing);
     }
     case "host.setShuffle":
       return lobby("Shuffle can only be changed before the game starts").setShuffle({ questions: !!msg.questions, answers: !!msg.answers });
@@ -81,10 +80,7 @@ export function applyHostCommand(msg: ClientMsg, ctx: HostCommandContext): void 
     case "host.end": {
       const current = game();
       const action = msg.type === "host.next" ? "next" : "end";
-      if (current instanceof Lobby) {
-        current.advanceClassic(action, ctx.handoffOptions());
-        return ctx.rememberSetup(current.choices);
-      }
+      if (current instanceof Lobby) return ctx.handoff(current, { type: action });
       if (action === "next") paced(current).next();
       else current.end();
       return;

@@ -1,16 +1,17 @@
 import type { ServerWebSocket } from "bun";
 import { cleanAvatar } from "../shared/avatars.ts";
+import type { GameMode } from "../shared/mode-entries.ts";
 import type { ClientMsg, HostView, PlayerView, ServerMsg } from "../shared/protocol.ts";
 import { ValidationError } from "../shared/quiz-schema.ts";
 import type { Clock } from "./game/common.ts";
 import { GameError } from "./game/common.ts";
-import type { HandoffOptions, LobbyChoices } from "./game/lobby.ts";
+import type { LobbyChoices } from "./game/lobby.ts";
 import { Lobby } from "./game/lobby.ts";
-import type { LiveGame } from "./game/mode-entry.ts";
+import type { LiveGame, ModeGame, StartContext } from "./game/mode-entry.ts";
 import { isModeMsg, modeOfMsg } from "./game/mode-entry.ts";
-import { entryOf } from "./game/modes.ts";
+import { entryOf, MODES } from "./game/modes.ts";
 import { saveResults } from "./game/results.ts";
-import type { HostCommandContext } from "./host-commands.ts";
+import type { HandoffAction, HostCommandContext } from "./host-commands.ts";
 import { applyHostCommand } from "./host-commands.ts";
 import { JoinInformation } from "./join-info.ts";
 import type { LanAddress } from "./network.ts";
@@ -246,34 +247,49 @@ export class GameHub {
         for (const s of this.phoneAttachments.detachPlayer(p.id)) this.send(s, { type: "kicked" });
         this.log(`Player removed: ${p.nickname}`);
       },
-      handoffOptions: () => this.handoffOptions(),
-      rememberSetup: (setup) => {
-        this.lastSetup = { ...this.lastSetup, ...setup };
+      handoff: (lobby, action) => this.handoff(lobby, action),
+      rememberPacing: (pacing) => {
+        this.lastSetup.pacing = pacing;
       },
     };
   }
 
-  private handoffOptions(): HandoffOptions {
-    return {
+  private handoff(lobby: Lobby, action: HandoffAction): void {
+    if (action.type !== "end" && lobby.players.size === 0) throw new GameError("Wait for at least one player to join");
+
+    const context: StartContext = {
       clock: this.opts.clock,
       dataDir: this.store.dataDir,
       onChange: () => this.viewUpdates.scheduleBroadcast(),
-      onActivity: (id: string) => this.viewUpdates.onActivity(id),
+      onActivity: (id) => this.viewUpdates.onActivity(id),
       onTick: () => this.viewUpdates.pushHost(),
-      onFinish: (game: LiveGame) => this.onFinish(game),
-      install: (game: LiveGame, activate: () => void) => {
-        const lobby = this.game;
-        this.game = game;
-        try {
-          activate();
-        } catch (error) {
-          this.game = lobby;
-          game.dispose();
-          throw error;
-        }
-      },
-      log: this.log,
+      onFinish: (game) => this.onFinish(game),
     };
+    const choices = lobby.choices;
+
+    const install = <M extends GameMode>(mode: M, activate: (game: ModeGame[M]) => void) => {
+      const { game, log } = MODES[mode].start(lobby.handoffFacts(mode), context);
+      // Activation can publish a view synchronously.
+      this.game = game;
+      try {
+        activate(game);
+      } catch (error) {
+        this.game = lobby;
+        game.dispose();
+        throw error;
+      }
+      if (log) this.log(log);
+      return game;
+    };
+
+    if (action.type === "start") {
+      const game = install(choices.mode, (game) => game.start(action.pacing));
+      choices.pacing = entryOf(game).pacing?.(game).pacing ?? choices.pacing;
+    } else {
+      // The lobby's legacy Next and End commands always target Classic.
+      install("classic", (game) => game[action.type]());
+    }
+    this.lastSetup = choices;
   }
 
   closeGame(): void {

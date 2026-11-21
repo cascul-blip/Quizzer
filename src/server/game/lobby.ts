@@ -7,8 +7,8 @@ import type { Quiz } from "../../shared/quiz-schema.ts";
 import { isSeasonTheme } from "../../shared/themed-modes.ts";
 import { assignTeams, GameError, teamInfo } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
-import type { LiveGame, ModeEntry, ModeGame, RawSettings, StartContext } from "./mode-entry.ts";
-import { entryOf, MODES } from "./modes.ts";
+import type { ModeEntry, RawSettings } from "./mode-entry.ts";
+import { MODES } from "./modes.ts";
 import type { BasePlayer } from "./roster.ts";
 import { Roster } from "./roster.ts";
 
@@ -24,12 +24,7 @@ interface LobbyOptions extends Partial<LobbyChoices> {
   onChange?: () => void;
 }
 
-export interface HandoffOptions extends StartContext {
-  install: (game: LiveGame, activate: () => void) => void;
-  log: (message: string) => void;
-}
-
-/** Owns the waiting players, host choices, team previews and transition into a game. */
+/** Owns the waiting players, host choices and team previews. */
 export class Lobby {
   readonly phase = "lobby";
   readonly quizId: string;
@@ -198,27 +193,6 @@ export class Lobby {
       players: [...this.players.values()],
       teams: this.teamCount() === null ? new Map([...this.players.keys()].map((id) => [id, 0])) : new Map(this.teams),
     };
-  }
-
-  start(pacing: Pacing | undefined, opts: HandoffOptions): void {
-    if (this.players.size === 0) throw new GameError("Wait for at least one player to join");
-    const game = this.installGame(this.mode, (game) => game.start(pacing), opts);
-    this.pacing = entryOf(game).pacing?.(game).pacing ?? this.pacing;
-  }
-
-  /** The lobby's paced controls historically address Classic, even with another mode selected. */
-  advanceClassic(action: "next" | "end", opts: HandoffOptions): void {
-    if (action === "next" && this.players.size === 0) throw new GameError("Wait for at least one player to join");
-    this.installGame("classic", (game) => game[action](), opts);
-  }
-
-  private installGame<M extends GameMode>(mode: M, activate: (game: ModeGame[M]) => void, { install, log, ...ctx }: HandoffOptions) {
-    const entry: ModeEntry<M> = MODES[mode];
-    const { game, log: line } = entry.start(this.handoffFacts(mode), ctx);
-    // Starting a game can notify the hub immediately.
-    install(game, () => activate(game));
-    if (line) log(line);
-    return game;
   }
 
   hostView(): HostLobbyView {

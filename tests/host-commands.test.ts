@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { INTRO_MS } from "../src/server/game/classic.ts";
-import type { LobbyChoices } from "../src/server/game/lobby.ts";
 import { Lobby } from "../src/server/game/lobby.ts";
 import type { HostCommandContext } from "../src/server/host-commands.ts";
 import { applyHostCommand } from "../src/server/host-commands.ts";
@@ -22,7 +21,6 @@ describe("Host command", () => {
   /** A context that records what the command reached beyond the game. */
   function context(game: Lobby | null) {
     const calls: string[] = [];
-    let remembered: Partial<LobbyChoices> = {};
     const ctx: HostCommandContext = {
       game,
       becomeHost: () => calls.push("becomeHost"),
@@ -31,14 +29,14 @@ describe("Host command", () => {
       closeGame: () => calls.push("closeGame"),
       setAddress: (a) => calls.push(`setAddress ${a}`),
       kicked: (p) => calls.push(`kicked ${p.nickname}`),
-      handoffOptions: () => {
+      handoff: () => {
         throw new Error("not expected");
       },
-      rememberSetup: (s) => {
-        remembered = { ...remembered, ...s };
+      rememberPacing: () => {
+        throw new Error("not expected");
       },
     };
-    return { ctx, calls, remembered: () => remembered };
+    return { ctx, calls };
   }
 
   test("a lobby setting with no game open is refused", () => {
