@@ -194,7 +194,7 @@ export class GameHub {
       get game() {
         return hub.game;
       },
-      becomeHost: () => this.views.becomeHost(ws),
+      promoteAndSendHostSnapshot: () => this.views.promoteAndSendHostSnapshot(ws),
       loadQuiz: (quizId) => this.store.get(quizId),
       openLobby: (quiz) => {
         this.closeGame();

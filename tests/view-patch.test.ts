@@ -130,7 +130,6 @@ describe("View delivery", () => {
   test("a pending phone drain sends the current projector snapshot after promotion", () => {
     const hub = fakeHub(new QuizStore(t.dir), new FakeClock());
     const socket = new HubSocket(hub, { admin: true });
-    const projector = new HubSocket(hub, { role: "host" });
     expect(socket.raw.map((m) => m.type)).toEqual(["hello", "player.state"]);
     expect(socket.compression).toEqual([true, true]);
 
@@ -138,11 +137,12 @@ describe("View delivery", () => {
     hub.broadcast();
     expect(socket.raw).toHaveLength(2);
     socket.sendMsg({ type: "host.hello" });
-    expect(socket.raw[2]).toEqual(projector.raw[projector.raw.length - 1]!);
+    expect(socket.raw[2]).toMatchObject({ type: "host.state", view: { kind: "idle", join: { url: "http://127.0.0.1:4321/" } } });
+    hub.join.port = 4322;
 
     socket.bufferedAmount = 0;
     hub.onDrain(socket);
-    expect(socket.raw[3]).toEqual({ type: "host.state", view: hub.hostView() });
+    expect(socket.raw[3]).toMatchObject({ type: "host.state", view: { kind: "idle", join: { url: "http://127.0.0.1:4322/" } } });
     hub.onDrain(socket);
     expect(socket.raw).toHaveLength(4);
     expect(socket.compression).toEqual([true, true, false, false]);

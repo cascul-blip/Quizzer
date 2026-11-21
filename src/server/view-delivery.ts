@@ -96,16 +96,16 @@ export class ViewDelivery<S extends ViewSocket> {
   }
 
   send(socket: S, message: Exclude<ServerMsg, { type: "host.state" | "player.state" | "player.patch" }>): void {
-    this.sendOther(socket, JSON.stringify(message));
+    this.sendAndInvalidateComparison(socket, JSON.stringify(message));
   }
 
-  becomeHost(socket: S): void {
+  promoteAndSendHostSnapshot(socket: S): void {
     socket.data.role = "host";
     this.refresh(socket);
   }
 
   refresh(socket: S): void {
-    if (socket.data.role === "host") this.sendOther(socket, this.hostSnapshot());
+    if (socket.data.role === "host") this.sendAndInvalidateComparison(socket, this.hostSnapshot());
     else this.pushPhone(socket, true);
   }
 
@@ -125,8 +125,8 @@ export class ViewDelivery<S extends ViewSocket> {
     if (state) state.comparisonKey = null;
   }
 
-  private sendOther(socket: S, message: string): void {
-    // Other messages can change the page, so let the next phone update through.
+  private sendAndInvalidateComparison(socket: S, message: string): void {
+    // These messages can change the page, so let the next phone update through.
     this.invalidateComparison(socket);
     socket.send(message, socket.data.role === "player");
   }
@@ -140,7 +140,7 @@ export class ViewDelivery<S extends ViewSocket> {
     for (const socket of this.sockets) {
       if (socket.data.role === "host") {
         hostMessage ??= this.hostSnapshot();
-        this.sendOther(socket, hostMessage);
+        this.sendAndInvalidateComparison(socket, hostMessage);
       } else if (includePhones) {
         this.pushPhone(socket, false);
       }

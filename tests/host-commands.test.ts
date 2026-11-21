@@ -23,7 +23,7 @@ describe("Host command", () => {
     const calls: string[] = [];
     const ctx: HostCommandContext = {
       game,
-      becomeHost: () => calls.push("becomeHost"),
+      promoteAndSendHostSnapshot: () => calls.push("promoteAndSendHostSnapshot"),
       loadQuiz: () => ({ title: "Empty", questions: [] }) as unknown as Quiz,
       openLobby: () => calls.push("openLobby"),
       closeGame: () => calls.push("closeGame"),
