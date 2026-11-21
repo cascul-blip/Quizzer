@@ -5,6 +5,7 @@ Judgement calls the reviewer applies to a diff. `bun run typecheck` and `bun tes
 ## Tests
 
 - **Shared fixtures**: tests that need a temp directory or store create it in `beforeEach` and clean it up in `afterEach`, as `tests/mcp.test.ts` and `tests/store.test.ts` do, not with a `try/finally` in each test.
+- **Independent expectations**: a test's expected values are written by hand, such as a list of the modes that are paced. A test that reads its expectation from the code under test, such as `MODE_FLAGS[mode].paced`, passes whatever the code says.
 - **Domain names**: name `describe` blocks and tests with `GLOSSARY.md` terms for the behaviour under test ("Lobby handoff over WebSockets"). A test that covers shared behaviour goes in its own block, not under whichever game mode it happens to use.
 
 ## Game modes

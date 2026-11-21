@@ -1,14 +1,20 @@
-// Cross-compiles single-file executables for Linux and Windows into dist/.
+// Cross-compiles single-file executables for Linux and Windows into dist/ (or --outdir <dir>).
 // Only the executables are replaced: dist/data (quizzes, images, results) is kept.
+// Usage: bun scripts/build.ts [linux|windows] [--outdir <dir>]
 import { rmSync } from "node:fs";
+import { join } from "node:path";
 import pkg from "../package.json" with { type: "json" };
 
-const targets = [
-  { target: "bun-linux-x64", out: "dist/quizzer-linux-x64" },
-  { target: "bun-windows-x64", out: "dist/quizzer-windows-x64.exe" },
-] as const;
+const argv = process.argv.slice(2);
+const outdirAt = argv.indexOf("--outdir");
+const outdir = outdirAt >= 0 ? argv[outdirAt + 1] : "dist";
+if (!outdir) throw new Error("--outdir needs a directory");
+const only = argv.find((a, i) => !a.startsWith("--") && (outdirAt < 0 || i !== outdirAt + 1));
 
-const only = process.argv[2];
+const targets = [
+  { target: "bun-linux-x64", out: join(outdir, "quizzer-linux-x64") },
+  { target: "bun-windows-x64", out: join(outdir, "quizzer-windows-x64.exe") },
+] as const;
 
 for (const { target, out } of targets) {
   if (only && !target.includes(only)) continue;
