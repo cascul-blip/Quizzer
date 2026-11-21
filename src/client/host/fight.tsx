@@ -1,7 +1,8 @@
 import { fightName, fightTheme, type FightTheme } from "../../shared/fight-theme.ts";
 import { FightThemeProvider } from "../shared/fight-skin.tsx";
 import { useEffect, useRef, useState } from "preact/hooks";
-import { CORRECT_PER_DECISION, HILL_SETTINGS, TOWER_MAX_DAMAGE, type FightEvent, type FightShot, type HillSetting, type HostView } from "../../shared/protocol.ts";
+import { CORRECT_PER_DECISION, HILL_SETTINGS, TOWER_MAX_DAMAGE, type FightEvent, type FightShot, type HillSetting } from "../../shared/modes/fight.ts";
+import type { HostView } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { Battlefield, HealthBar, ShotLayer } from "../shared/fight-art.tsx";
 import { play } from "../shared/sounds.ts";

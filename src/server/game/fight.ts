@@ -16,7 +16,7 @@ import {
   type HostFightState,
   type PlayerFightView,
   HILL_SETTINGS,
-} from "../../shared/protocol.ts";
+} from "../../shared/modes/fight.ts";
 import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import { HILL_HEIGHTS, carve, launchVector, makeTerrain, simulate, type HillHeight, type ShotImpact } from "../../shared/fight-physics.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";

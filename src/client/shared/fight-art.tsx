@@ -22,7 +22,7 @@ import {
   shotPos,
   type ShotImpact,
 } from "../../shared/fight-physics.ts";
-import { TOWER_MAX_DAMAGE, type FightShot } from "../../shared/protocol.ts";
+import { TOWER_MAX_DAMAGE, type FightShot } from "../../shared/modes/fight.ts";
 import { ACCESSORY_ART, AVATAR_ART } from "./avatar-art.tsx";
 import castle0 from "./fight/castle-0.webp";
 import castle1 from "./fight/castle-1.webp";

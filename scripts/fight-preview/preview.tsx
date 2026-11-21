@@ -2,7 +2,8 @@ import { gingerbreadTerrain } from "../../src/shared/fight-ground.ts";
 /** Standalone visual QA for Tower Fight's actual host and phone components. */
 import { render } from "preact";
 import { useState } from "preact/hooks";
-import { TEAMS, type HostView, type PlayerFightView, type FightPhase, type FightState, type FightShot } from "../../src/shared/protocol.ts";
+import { TEAMS, type HostView } from "../../src/shared/protocol.ts";
+import type { PlayerFightView, FightPhase, FightState, FightShot } from "../../src/shared/modes/fight.ts";
 import type { FightTheme } from "../../src/shared/fight-theme.ts";
 import { FightStage } from "../../src/client/host/fight.tsx";
 import { FightPlayer } from "../../src/client/player/fight.tsx";
