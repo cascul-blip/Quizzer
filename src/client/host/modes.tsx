@@ -12,7 +12,7 @@ import { LOBBY_MODES, type LobbyModeEntry } from "./lobby-modes.tsx";
 import { RacerStage, racerCue } from "./racer.tsx";
 import { RobotStage, robotCue } from "./robot.tsx";
 import { SiegeStage, siegeCue } from "./siege.tsx";
-import { SubStage, subCue } from "./submarine.tsx";
+import { SubmarineStage, submarineCue } from "./submarine.tsx";
 import { TowerStage, towerCue } from "./tower.tsx";
 
 /** The projector's view of a game of the mode; its kind is the mode. Classic's also carries the lobby. */
@@ -32,7 +32,7 @@ export interface HostModeEntry<M extends GameMode> extends LobbyModeEntry<M> {
 export const HOST_MODES: { [M in GameMode]: HostModeEntry<M> } = {
   classic: { ...LOBBY_MODES.classic, Stage: ClassicStage, cue: classicCue },
   tower: { ...LOBBY_MODES.tower, Stage: TowerStage, cue: towerCue },
-  submarine: { ...LOBBY_MODES.submarine, Stage: SubStage, cue: subCue },
+  submarine: { ...LOBBY_MODES.submarine, Stage: SubmarineStage, cue: submarineCue },
   fight: { ...LOBBY_MODES.fight, Stage: FightStage, cue: fightCue },
   robot: { ...LOBBY_MODES.robot, Stage: RobotStage, cue: robotCue },
   land: { ...LOBBY_MODES.land, Stage: LandStage, cue: landCue },

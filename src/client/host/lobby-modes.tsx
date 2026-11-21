@@ -10,7 +10,7 @@ import { landLobby } from "./land.tsx";
 import { racerLobby } from "./racer.tsx";
 import { robotLobby } from "./robot.tsx";
 import { siegeLobby } from "./siege.tsx";
-import { subLobby } from "./submarine.tsx";
+import { submarineLobby } from "./submarine.tsx";
 import { towerLobby } from "./tower.tsx";
 
 export type LobbySettingsProps<M extends GameMode> = {
@@ -47,7 +47,7 @@ const classicLobby: LobbyModeEntry<"classic"> = {
 export const LOBBY_MODES: { [M in GameMode]: LobbyModeEntry<M> } = {
   classic: classicLobby,
   tower: towerLobby,
-  submarine: subLobby,
+  submarine: submarineLobby,
   fight: fightLobby,
   robot: robotLobby,
   land: landLobby,

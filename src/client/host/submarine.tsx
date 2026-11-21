@@ -104,7 +104,7 @@ function useSledRiders(players: SubView["players"], boost: SubView["lastBoost"])
   }, [players, offset, boost?.seq]);
 }
 
-export function SubStage({ view, send }: { view: SubView; send: Send }) {
+export function SubmarineStage({ view, send }: { view: SubView; send: Send }) {
   const gap = useLiveGap(view);
   const caught = view.phase === "caught";
   const closeness = caught ? 1 : Math.max(0, Math.min(1, 1 - gap / view.maxGap));
@@ -336,7 +336,7 @@ function SubSettings() {
 }
 
 /** The projector's music for Sled Squad. */
-export function subCue(view: SubView): MusicCue {
+export function submarineCue(view: SubView): MusicCue {
   if (view.phase === "podium") return { track: "submarine-results" };
   if (view.phase === "dive") return { track: "submarine-dive" };
   if (view.phase === "countdown") return { track: "submarine-lobby" };
@@ -345,7 +345,7 @@ export function subCue(view: SubView): MusicCue {
   return { track: "submarine-chase", intensity: Math.max(0, Math.min(1, 1 - view.gap / view.maxGap)) };
 }
 
-export const subLobby: LobbyModeEntry<"submarine"> = {
+export const submarineLobby: LobbyModeEntry<"submarine"> = {
   label: () => "🛷 Sled Squad",
   Settings: SubSettings,
   lobbyTrack: () => "submarine-lobby",
