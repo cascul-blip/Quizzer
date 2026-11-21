@@ -66,9 +66,18 @@ export function writeResultsFile(game: { quizId: string }, csv: string, resultsD
   return file;
 }
 
-/** Writes the game's results to the results folder and logs where; file is null when writing failed. */
+/**
+ * Writes the game's results to the results folder and logs where. Never throws, so the game still finishes:
+ * file is null when the sheet is malformed or writing failed, and csv then holds whatever rows could be written.
+ */
 export function saveResults(game: { quizId: string }, s: ResultsSheet, resultsDir: string, log: (msg: string) => void): { csv: string; file: string | null } {
-  const csv = resultsCsv(s);
+  let csv: string;
+  try {
+    csv = resultsCsv(s);
+  } catch (e) {
+    log(`Could not save results: ${(e as Error).message}`);
+    return { csv: toCsv([s.header, ...s.rows]), file: null };
+  }
   try {
     const file = writeResultsFile(game, csv, resultsDir);
     log(`Results saved to ${file}`);

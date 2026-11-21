@@ -1,8 +1,10 @@
-import { expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { buildClassicResults } from "../src/server/game/classic.ts";
 import { INTRO_MS } from "../src/server/game/game.ts";
-import { records, resultsCsv, sheet, toCsv } from "../src/server/game/results.ts";
-import { classicGame, FakeClock, sampleQuiz } from "./helpers.ts";
+import { records, resultsCsv, saveResults, sheet, toCsv } from "../src/server/game/results.ts";
+import { classicGame, FakeClock, sampleQuiz, tempDir } from "./helpers.ts";
 
 test("classic results have one row per player in rank order, with per-question columns", () => {
   const clock = new FakeClock();
@@ -44,4 +46,40 @@ test("a row narrower or wider than the header is refused", () => {
 test("the appendix follows the rows after a blank line", () => {
   const s = sheet([{ header: "N", value: (n: number) => n }], [1, 2], [["Log"], ["x", "y"]]);
   expect(resultsCsv(s).slice(1)).toBe("N\r\n1\r\n2\r\n\r\nLog\r\nx,y\r\n");
+});
+
+describe("saveResults", () => {
+  const good = { header: ["Nickname", "Score"], rows: [["Ann", 3]] };
+  let t: ReturnType<typeof tempDir>;
+  beforeEach(() => {
+    t = tempDir();
+  });
+  afterEach(() => t.cleanup());
+
+  test("writes the CSV to a file named for the quiz and logs where", () => {
+    const logs: string[] = [];
+    const { csv, file } = saveResults({ quizId: "quiz-a" }, good, t.dir, (m) => logs.push(m));
+    expect(csv.slice(1)).toBe("Nickname,Score\r\nAnn,3\r\n");
+    expect(file).toStartWith(t.dir);
+    expect(file).toEndWith("_quiz-a.csv");
+    expect(readFileSync(file!, "utf8")).toBe(csv);
+    expect(logs).toEqual([`Results saved to ${file}`]);
+  });
+
+  test("a folder it can't write to is logged, and the CSV is still returned", () => {
+    const logs: string[] = [];
+    const { csv, file } = saveResults({ quizId: "quiz-a" }, good, join(t.dir, "missing"), (m) => logs.push(m));
+    expect(file).toBeNull();
+    expect(csv.slice(1)).toBe("Nickname,Score\r\nAnn,3\r\n");
+    expect(logs).toHaveLength(1);
+    expect(logs[0]).toStartWith("Could not save results: ");
+  });
+
+  test("a malformed sheet is logged instead of thrown, and no file is written", () => {
+    const logs: string[] = [];
+    const { csv, file } = saveResults({ quizId: "quiz-a" }, { header: ["A", "B"], rows: [[1]] }, t.dir, (m) => logs.push(m));
+    expect(file).toBeNull();
+    expect(csv.slice(1)).toBe("A,B\r\n1\r\n");
+    expect(logs).toEqual(["Could not save results: Results row 1 has 1 cells for 2 columns"]);
+  });
 });

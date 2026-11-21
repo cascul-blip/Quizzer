@@ -330,7 +330,7 @@ describe("dive", () => {
   });
 });
 
-test("awards and results CSV", () => {
+test("awards and results sheet", () => {
   const { game, clock } = setup(["Ann", "Bob"]);
   boostOnce(game, clock, byName(game, "Ann"));
   answerRight(game, clock, byName(game, "Bob"));

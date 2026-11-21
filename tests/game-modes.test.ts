@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { PLAYER_MODES } from "../src/client/player/modes.tsx";
 import { Lobby } from "../src/server/game/lobby.ts";
 import type { ModeMsg } from "../src/server/game/mode-entry.ts";
-import { MODES } from "../src/server/game/modes.ts";
+import { entryOf, MODES } from "../src/server/game/modes.ts";
 import { QuizStore } from "../src/server/quiz/store.ts";
 import type { GameHub } from "../src/server/ws.ts";
 import { keysOf } from "../src/shared/keys-of.ts";
@@ -221,9 +221,10 @@ describe("Game modes", () => {
         expect(lines[0]).toContain("Nickname");
         expect(rows).toHaveLength(nicknames.length);
         for (const nickname of nicknames) expect(rows.some((row) => row.includes(nickname))).toBe(true);
-        // No cell in this quiz holds a comma or quote, so splitting on commas counts the columns.
-        const width = lines[0]!.split(",").length;
-        for (const row of rows) expect(row.split(",")).toHaveLength(width);
+        const game = hub.game;
+        if (!game || game instanceof Lobby) throw new Error("expected the finished game");
+        const sheet = entryOf(game).results(game);
+        for (const row of sheet.rows) expect(row).toHaveLength(sheet.header.length);
       });
 
       test("a phone message for a game mode that isn't running is ignored", async () => {
