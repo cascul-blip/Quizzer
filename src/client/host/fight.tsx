@@ -1,12 +1,13 @@
-import { fightName } from "../../shared/fight-theme.ts";
+import { fightName, fightTheme, type FightTheme } from "../../shared/fight-theme.ts";
 import { FightThemeProvider } from "../shared/fight-skin.tsx";
 import { useEffect, useRef, useState } from "preact/hooks";
-import { CORRECT_PER_DECISION, TOWER_MAX_DAMAGE, type FightEvent, type FightShot, type HostView } from "../../shared/protocol.ts";
+import { CORRECT_PER_DECISION, HILL_SETTINGS, TOWER_MAX_DAMAGE, type FightEvent, type FightShot, type HillSetting, type HostView } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { Battlefield, HealthBar, ShotLayer } from "../shared/fight-art.tsx";
 import { play } from "../shared/sounds.ts";
 import { teamInk, teamVars, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
+import type { LobbyModeEntry, LobbySettingsProps } from "./lobby-modes.tsx";
 import { Award } from "./tower.tsx";
 
 type FightView = Extract<HostView, { kind: "fight" }>;
@@ -192,3 +193,38 @@ function FightPodium({ view, send }: { view: FightView; send: Send }) {
     </main>
   );
 }
+
+// ---------- lobby ----------
+
+const HILL_LABELS: Record<HillSetting, string> = { random: "🎲 Random", low: "Low", medium: "Medium", high: "High" };
+
+/** Tower Fight's mode settings in the lobby. */
+function FightSettings({ settings, send }: LobbySettingsProps<"fight">) {
+  return (
+    <>
+      <label class="opt">
+        Theme
+        <select aria-label="Tower Fight theme" value={fightTheme(settings.theme)} onChange={(e) => send({ type: "host.setModeSettings", mode: "fight", settings: { theme: e.currentTarget.value as FightTheme } })}>
+          <option value="classic">🏰 Normal</option>
+          <option value="christmas">🎄 Gingerbread Siege</option>
+        </select>
+      </label>
+      <label class="opt">
+        Hill
+        <select value={settings.hill} onChange={(e) => send({ type: "host.setModeSettings", mode: "fight", settings: { hill: e.currentTarget.value as HillSetting } })}>
+          {HILL_SETTINGS.map((h) => (
+            <option key={h} value={h}>
+              {HILL_LABELS[h]}
+            </option>
+          ))}
+        </select>
+      </label>
+      <span class="opt mode-hint">Red vs Blue: knock down the other team's tower. The game runs until a tower falls or you end it.</span>
+    </>
+  );
+}
+
+export const fightLobby: LobbyModeEntry<"fight"> = {
+  label: (settings) => fightName(settings.theme),
+  Settings: FightSettings,
+};

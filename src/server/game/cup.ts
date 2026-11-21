@@ -128,8 +128,8 @@ export class CupGame {
   }
 
   /** Take over a lobby's players (same ids and tokens). */
-  static fromLobby(lobby: Game, opts: CupOptions = {}): CupGame {
-    const game = new CupGame(lobby.quiz, { cups: lobby.settings.cup.cups, theme: lobby.settings.cup.theme, shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
+  static fromLobby(lobby: Game, opts: CupOptions = {}, protect = lobby.protect): CupGame {
+    const game = new CupGame(lobby.quiz, { cups: lobby.settings.cup.cups, theme: lobby.settings.cup.theme, shuffleAnswers: lobby.shuffle.answers, protect }, opts);
     for (const p of lobby.players.values()) {
       game.roster.adopt(game.newPlayer({ id: p.id, nickname: p.nickname, token: p.token, connected: p.connected, avatar: p.avatar }));
     }
@@ -559,7 +559,7 @@ export const cupMode: ModeEntry<"cup"> = {
     return { cups, theme: pickTheme(raw.theme, cupTheme(current.theme), "cup") };
   },
   start(lobby, ctx) {
-    const game = CupGame.fromLobby(lobby, handoffOptions(ctx));
+    const game = CupGame.fromLobby(lobby, handoffOptions(ctx), ctx.protect);
     return { game, log: `${this.name} started with ${game.players.size} player(s)` };
   },
   pacing: null,

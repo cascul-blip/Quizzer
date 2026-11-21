@@ -20,8 +20,8 @@ const read = (path: string): Source => ({ path, lines: readFileSync(path, "utf8"
 
 const sources = tsFiles(SERVER).map(read);
 
-/** The client files that look a mode up in its entry (src/client/host/modes.tsx, src/client/player/modes.tsx) instead of asking which mode is running. */
-const CLIENT_FILES = ["src/client/host/main.tsx", "src/client/player/main.tsx"].map((path) => read(join(ROOT, path)));
+/** The client files that look a mode up in its entry (src/client/host/modes.tsx, src/client/host/lobby-modes.tsx, src/client/player/modes.tsx) or its flags (src/shared/mode-flags.ts) instead of asking which mode is running. */
+const CLIENT_FILES = ["src/client/host/main.tsx", "src/client/host/lobby.tsx", "src/client/player/main.tsx"].map((path) => read(join(ROOT, path)));
 
 /** Every line matching the pattern, as file:line and the line itself. */
 function offending(pattern: RegExp, files: Source[] = sources): string[] {

@@ -1,10 +1,10 @@
-import { duelArenaName, duelName, duelTheme } from "../../shared/duel-theme.ts";
+import { duelArenaName, duelName, duelTheme, type DuelTheme } from "../../shared/duel-theme.ts";
 import { revealCue } from "./reveal-cue.ts";
-import { SnowballScene, preloadSnowballArt, snowballBackground } from "../shared/duel-christmas.tsx";
+import { SnowballLobbyPreview, SnowballScene, preloadSnowballArt, snowballBackground } from "../shared/duel-christmas.tsx";
 import type { JSX } from "preact";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import type { AvatarChoice } from "../../shared/avatars.ts";
-import type { DuelArena, DuelArenaResult, DuelistResult, HostView } from "../../shared/protocol.ts";
+import { DUEL_ROUNDS, type DuelArena, type DuelArenaResult, type DuelistResult, type HostView } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import {
   BulletStreak,
@@ -30,6 +30,7 @@ import { PinBoard, PinNote } from "../shared/pin.tsx";
 import { play } from "../shared/sounds.ts";
 import { Shape, optionColor, ordinal, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
+import type { LobbyModeEntry, LobbySettingsProps } from "./lobby-modes.tsx";
 import { Award } from "./tower.tsx";
 import { Tex, visibleLength } from "../shared/tex.tsx";
 
@@ -635,3 +636,37 @@ function DuelPodium({ view, send }: { view: DuelView; send: Send }) {
     </main>
   );
 }
+
+// ---------- lobby ----------
+
+/** Showdown's mode settings in the lobby, after the shared rows it is given. */
+function DuelSettings({ settings, send, children }: LobbySettingsProps<"duel">) {
+  return (
+    <>
+      {children}
+      <label class="opt">
+        Rounds
+        <select aria-label="Showdown rounds" value={settings.rounds} onChange={(e) => send({ type: "host.setModeSettings", mode: "duel", settings: { ...settings, rounds: Number(e.currentTarget.value) } })}>
+          {DUEL_ROUNDS.map((r) => (
+            <option key={r} value={r}>
+              {r} rounds
+            </option>
+          ))}
+        </select>
+      </label>
+      <label class="opt">Theme
+        <select aria-label="Showdown theme" value={duelTheme(settings.theme)} onChange={(e) => send({ type: "host.setModeSettings", mode: "duel", settings: { ...settings, theme: e.currentTarget.value as DuelTheme } })}>
+          <option value="christmas">North Pole Snowball Showdown</option>
+          <option value="classic">Classic Showdown</option>
+        </select>
+      </label>
+      <span class="opt mode-hint">{duelName(settings.theme)}: everyone duels at once. Win to climb toward {duelArenaName(1, settings.theme)}, lose and you drop an arena.</span>
+    </>
+  );
+}
+
+export const duelLobby: LobbyModeEntry<"duel"> = {
+  label: (settings) => (duelTheme(settings.theme) === "christmas" ? "❄️ Snowball Showdown" : "🤠 Showdown"),
+  Settings: DuelSettings,
+  Preview: ({ settings }) => (duelTheme(settings.theme) === "christmas" ? <SnowballLobbyPreview /> : null),
+};

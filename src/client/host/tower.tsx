@@ -1,7 +1,7 @@
-import { towerWords } from "../../shared/tower-theme.ts";
+import { towerTheme, towerWords, type TowerTheme } from "../../shared/tower-theme.ts";
 import { TowerThemeProvider, useChristmasTower, ChristmasBackdrop } from "../shared/tower-skin.tsx";
 import { useEffect, useRef, useState } from "preact/hooks";
-import { EGG_LEVELS_ABOVE, MONSTER_DAMAGE, type HostTowerTeam, type HostView, type MonsterAttack, type MonsterEggs } from "../../shared/protocol.ts";
+import { EGG_LEVELS_ABOVE, MAX_TEAMS, MONSTER_DAMAGE, TOWER_MINUTES, type HostTowerTeam, type HostView, type MonsterAttack, type MonsterEggs } from "../../shared/protocol.ts";
 import { play } from "../shared/sounds.ts";
 import {
   BuildingBlock,
@@ -23,6 +23,7 @@ import {
 } from "../shared/tower-art.tsx";
 import { formatClock, ordinal, teamVars, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
+import type { LobbyModeEntry, LobbySettingsProps } from "./lobby-modes.tsx";
 
 type TowerView = Extract<HostView, { kind: "tower" }>;
 
@@ -377,3 +378,54 @@ export function Award({ icon, title, award, unit, valueText }: { icon: string; t
     </div>
   );
 }
+
+// ---------- lobby ----------
+
+/** Tallest Tower's mode settings in the lobby. */
+function TowerSettings({ settings, send }: LobbySettingsProps<"tower">) {
+  return (
+    <>
+      <label class="opt">
+        Theme
+        <select aria-label="Tower theme" value={towerTheme(settings.theme)} onChange={(e) => send({ type: "host.setModeSettings", mode: "tower", settings: { teams: settings.teams, minutes: settings.minutes, theme: e.currentTarget.value as TowerTheme } })}>
+          <option value="christmas">🎄 North Pole Workshop</option>
+          <option value="classic">🏗 Normal</option>
+        </select>
+      </label>
+      <label class="opt">
+        Teams
+        <select value={settings.teams} onChange={(e) => send({ type: "host.setModeSettings", mode: "tower", settings: { teams: Number(e.currentTarget.value), minutes: settings.minutes } })}>
+          {Array.from({ length: MAX_TEAMS }, (_, i) => (
+            <option key={i} value={i + 1}>
+              {i + 1}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label class="opt">
+        Time
+        <select value={settings.minutes} onChange={(e) => send({ type: "host.setModeSettings", mode: "tower", settings: { teams: settings.teams, minutes: Number(e.currentTarget.value) } })}>
+          {TOWER_MINUTES.map((m) => (
+            <option key={m} value={m}>
+              {m} min
+            </option>
+          ))}
+        </select>
+      </label>
+      <label class="opt check" title={settings.teams < 2 ? "Needs 2 or more teams" : `${towerWords(settings.theme).item === "bell" ? "Bells" : "Monster eggs"} appear 4 times per game`}>
+        <input
+          type="checkbox"
+          disabled={settings.teams < 2}
+          checked={settings.monster && settings.teams >= 2}
+          onChange={(e) => send({ type: "host.setModeSettings", mode: "tower", settings: { teams: settings.teams, minutes: settings.minutes, monster: e.currentTarget.checked } })}
+        />
+        {towerWords(settings.theme).creatureIcon} {towerTheme(settings.theme) === "christmas" ? "Yeti" : "Monster"}{settings.teams < 2 ? " (needs 2+ teams)" : ""}
+      </label>
+    </>
+  );
+}
+
+export const towerLobby: LobbyModeEntry<"tower"> = {
+  label: (settings) => `${towerWords(settings.theme).icon} ${towerWords(settings.theme).name}`,
+  Settings: TowerSettings,
+};

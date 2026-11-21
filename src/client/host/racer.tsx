@@ -1,4 +1,4 @@
-import { racerName } from "../../shared/racer-theme.ts";
+import { racerName, racerTheme, type RacerTheme } from "../../shared/racer-theme.ts";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { HostView, RacerTurn } from "../../shared/protocol.ts";
 import { RACER_CONFIDENCE, RACER_CONFIDENCE_LEVELS, RACER_REPAIR_MPH } from "../../shared/racer-rules.ts";
@@ -8,6 +8,7 @@ import { PinBoard, PinNote } from "../shared/pin.tsx";
 import { onMuteChange, play, startRev, type Rev } from "../shared/sounds.ts";
 import { Shape, optionColor, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
+import type { LobbyModeEntry, LobbySettingsProps } from "./lobby-modes.tsx";
 import { Award } from "./tower.tsx";
 import { Tex, visibleLength } from "../shared/tex.tsx";
 
@@ -397,3 +398,27 @@ function RacerPodium({ view, send }: { view: RacerView; send: Send }) {
     </main>
   );
 }
+
+// ---------- lobby ----------
+
+/** Racer's mode settings in the lobby, around the shared rows it is given. */
+function RacerSettings({ settings, send, children }: LobbySettingsProps<"racer">) {
+  return (
+    <>
+      <label class="opt">
+        Theme
+        <select aria-label="Racer theme" value={racerTheme(settings?.theme)} onChange={(e) => send({ type: "host.setModeSettings", mode: "racer", settings: { theme: e.currentTarget.value as RacerTheme } })}>
+          <option value="christmas">🎄 Neon Noel</option>
+          <option value="classic">🏎 Normal</option>
+        </select>
+      </label>
+      {children}
+      <span class="opt mode-hint">One car for the whole class. Each turn a driver bets on how well everyone will answer.</span>
+    </>
+  );
+}
+
+export const racerLobby: LobbyModeEntry<"racer"> = {
+  label: (settings) => racerName(settings?.theme),
+  Settings: RacerSettings,
+};

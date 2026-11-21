@@ -114,9 +114,9 @@ export class GiftGame {
     this.onFinish = opts.onFinish ?? (() => {});
   }
 
-  static fromLobby(lobby: Game, opts: GiftOptions = {}): GiftGame {
+  static fromLobby(lobby: Game, opts: GiftOptions = {}, protect = lobby.protect): GiftGame {
     if (!lobby.quiz.questions.length) throw new GameError("This quiz has no questions");
-    const game = new GiftGame(lobby.quiz, lobby.settings.gift.minutes, lobby.shuffle.answers, lobby.protect, opts);
+    const game = new GiftGame(lobby.quiz, lobby.settings.gift.minutes, lobby.shuffle.answers, protect, opts);
     for (const player of lobby.players.values()) {
       const { id, nickname, token, connected, avatar } = player;
       game.roster.adopt(newPlayer({ id, nickname, token, connected, avatar }));
@@ -337,7 +337,7 @@ export const giftMode: ModeEntry<"gift"> = {
     return { minutes };
   },
   start(lobby, ctx) {
-    const game = GiftGame.fromLobby(lobby, handoffOptions(ctx));
+    const game = GiftGame.fromLobby(lobby, handoffOptions(ctx), ctx.protect);
     return { game, log: `${this.name} started with ${game.players.size} player(s), ${game.minutes} min` };
   },
   pacing: null,

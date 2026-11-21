@@ -1,4 +1,5 @@
 import type { GameMode, ModeSettingsMap, Pacing, PlayerMsg } from "../../shared/protocol.ts";
+import { MODE_FLAGS } from "../../shared/mode-flags.ts";
 import { isSeasonTheme, type SeasonTheme } from "../../shared/season-theme.ts";
 import { GameError, type Clock } from "./common.ts";
 import type { CupGame } from "./cup.ts";
@@ -83,6 +84,8 @@ export interface StartContext {
   /** High-frequency projector refresh (Kingdom Siege). */
   onTick: () => void;
   onFinish: (game: LiveGame) => void;
+  /** "Protect from abuse" for the new game, decided by the handoff from MODE_FLAGS: the host's lobby setting in a mode whose flag is set, off in any other. A mode whose flag is set passes it to its game. */
+  protect: boolean;
 }
 
 /** A game played question by question: the host sets its pacing and moves it on. */
@@ -92,6 +95,15 @@ export interface PacedGame {
   next(): void;
   skip(): void;
 }
+
+type PacedFlag<M extends GameMode> = (typeof MODE_FLAGS)[M]["paced"];
+
+/** A ModeEntry's pacing: a function in a paced mode, null in any other, and either when M is not one mode. */
+type PacingOf<M extends GameMode> = [PacedFlag<M>] extends [true]
+  ? (game: ModeGame[M]) => PacedGame
+  : [PacedFlag<M>] extends [false]
+    ? null
+    : ((game: ModeGame[M]) => PacedGame) | null;
 
 export interface FinishContext {
   dataDir: string;
@@ -106,8 +118,8 @@ export interface ModeEntry<M extends GameMode> {
   readSettings(raw: RawSettings, current: ModeSettingsMap[M]): ModeSettingsMap[M];
   /** Build the mode's game from the lobby, not started yet, and the line to log once it starts. */
   start(lobby: Game, ctx: StartContext): { game: ModeGame[M]; log: string | null };
-  /** For a mode played question by question, its game as a PacedGame: next, skip and pacing work, and the pacing carries over to the next lobby. Null otherwise. */
-  pacing: ((game: ModeGame[M]) => PacedGame) | null;
+  /** For a paced mode (MODE_FLAGS), its game as a PacedGame: next, skip and pacing work, and the pacing carries over to the next lobby. Null otherwise; the compiler holds each entry to its flag. */
+  pacing: PacingOf<M>;
   /** How many teams the lobby previews and assigns players to with these settings; null in a solo mode. */
   teams(settings: ModeSettingsMap[M]): number | null;
   /** Phones in the lobby show the mode's banner instead of the plain waiting screen (Kingdom Siege's castle). */

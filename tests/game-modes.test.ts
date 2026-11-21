@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { PLAYER_MODES } from "../src/client/player/modes.tsx";
 import type { ModeMsg } from "../src/server/game/mode-entry.ts";
 import { Game } from "../src/server/game/game.ts";
 import { MODES } from "../src/server/game/modes.ts";
 import { QuizStore } from "../src/server/quiz/store.ts";
 import { GameHub, type SocketData } from "../src/server/ws.ts";
+import { MODE_FLAGS } from "../src/shared/mode-flags.ts";
 import { MODE_NAMES } from "../src/shared/mode-names.ts";
 import type { ClientMsg, GameMode, ModeSettingsInput, ServerMsg } from "../src/shared/protocol.ts";
 import type { SeasonTheme } from "../src/shared/season-theme.ts";
@@ -49,6 +51,12 @@ const TEAMS: { [M in GameMode]: number | null } = {
 
 /** Modes played question by question, whose pacing the host sets and the next lobby keeps. */
 const PACED = new Set<GameMode>(["classic", "racer", "duel"]);
+
+/** Modes whose phones show a banner in the lobby. */
+const BANNER = new Set<GameMode>(["siege"]);
+
+/** Modes where Protect from abuse applies and the lobby offers it. */
+const PROTECT = new Set<GameMode>(["tower", "submarine", "fight", "robot", "cup", "siege", "gift"]);
 
 /** One phone message of each game mode. */
 const PHONE_MSG: { [M in GameMode]: ModeMsg<M> } = {
@@ -166,9 +174,16 @@ describe("Game modes", () => {
         expect(phoneLobbyView(noel!.playerId).team !== null).toBe(TEAMS[mode] !== null);
       });
 
-      test(`phones in the lobby ${MODES[mode].lobbyBanner ? "show" : "don't show"} a mode banner`, () => {
+      test(`is declared ${PACED.has(mode) ? "paced" : "not paced"}, ${PROTECT.has(mode) ? "protected" : "not protected"}, ${BANNER.has(mode) ? "with" : "without"} a lobby banner`, () => {
+        expect(MODE_FLAGS[mode].paced).toBe(PACED.has(mode));
+        expect(MODE_FLAGS[mode].protect).toBe(PROTECT.has(mode));
+        expect(MODES[mode].lobbyBanner).toBe(BANNER.has(mode));
+        expect(PLAYER_MODES[mode].banner !== null).toBe(BANNER.has(mode));
+      });
+
+      test(`phones in the lobby ${BANNER.has(mode) ? "show" : "don't show"} a mode banner`, () => {
         const [noel] = openLobby(mode, ["Noel"]);
-        expect(phoneLobbyView(noel!.playerId).banner).toBe(MODES[mode].lobbyBanner ? mode : undefined);
+        expect(phoneLobbyView(noel!.playerId).banner).toBe(BANNER.has(mode) ? mode : undefined);
       });
 
       test(`pacing ${PACED.has(mode) ? "is set during the game and carries over" : "is not available and doesn't carry over"}`, async () => {

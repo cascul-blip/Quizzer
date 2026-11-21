@@ -126,8 +126,8 @@ export class SubGame {
     this.onFinish = opts.onFinish ?? (() => {});
   }
 
-  static fromLobby(lobby: Game, opts: SubOptions = {}): SubGame {
-    const game = new SubGame(lobby.quiz, { ...opts, shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect });
+  static fromLobby(lobby: Game, opts: SubOptions = {}, protect = lobby.protect): SubGame {
+    const game = new SubGame(lobby.quiz, { ...opts, shuffleAnswers: lobby.shuffle.answers, protect });
     for (const p of lobby.players.values()) {
       game.roster.adopt(game.newPlayer({ id: p.id, nickname: p.nickname, token: p.token, connected: p.connected, avatar: p.avatar }));
     }
@@ -564,7 +564,7 @@ export const subMode: ModeEntry<"submarine"> = {
   defaultSettings: {},
   readSettings: () => ({}),
   start(lobby, ctx) {
-    const game = SubGame.fromLobby(lobby, handoffOptions(ctx));
+    const game = SubGame.fromLobby(lobby, handoffOptions(ctx), ctx.protect);
     return { game, log: `${this.name} started with ${game.players.size} player(s)` };
   },
   pacing: null,

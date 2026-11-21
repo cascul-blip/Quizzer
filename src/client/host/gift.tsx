@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "preact/hooks";
+import { GIFT_MINUTES } from "../../shared/gift-rules.ts";
 import type { GiftStanding, HostView } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { formatClock, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
+import type { LobbyModeEntry, LobbySettingsProps } from "./lobby-modes.tsx";
 import { Award } from "./tower.tsx";
 import workshop from "../shared/gift/workshop-projector.webp";
 import present from "../shared/gift/present.webp";
@@ -110,3 +112,25 @@ export function GiftStage({ view, send }: { view: GiftView; send: Send }) {
     </div>
   );
 }
+
+// ---------- lobby ----------
+
+/** Gift Grab's mode settings in the lobby. */
+function GiftSettings({ settings, send }: LobbySettingsProps<"gift">) {
+  return (
+    <>
+      <label class="opt">
+        Time
+        <select value={settings.minutes} onChange={(e) => send({ type: "host.setModeSettings", mode: "gift", settings: { minutes: Number(e.currentTarget.value) } })}>
+          {GIFT_MINUTES.map((minutes) => <option key={minutes} value={minutes}>{minutes} min</option>)}
+        </select>
+      </label>
+      <span class="opt mode-hint">Every five correct answers earns 15 seconds to tap gifts and dodge duds. Later rounds are worth more.</span>
+    </>
+  );
+}
+
+export const giftLobby: LobbyModeEntry<"gift"> = {
+  label: () => "🎁 Gift Grab",
+  Settings: GiftSettings,
+};

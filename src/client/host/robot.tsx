@@ -10,6 +10,7 @@ import { play } from "../shared/sounds.ts";
 import { preloadVoice, say } from "../shared/voice.ts";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
+import type { LobbyModeEntry, LobbySettingsProps } from "./lobby-modes.tsx";
 import { Award } from "./tower.tsx";
 
 type RobotView = Extract<HostView, { kind: "robot" }>;
@@ -227,3 +228,15 @@ function RobotPodium({ view, send }: { view: RobotView; send: Send }) {
     </main>
   );
 }
+
+// ---------- lobby ----------
+
+/** Robot Attack has no mode settings; the lobby shows how it plays. */
+function RobotSettings() {
+  return <span class="opt mode-hint">Answer questions to earn moves, then dodge the robot's lasers. Last one standing wins.</span>;
+}
+
+export const robotLobby: LobbyModeEntry<"robot"> = {
+  label: () => "🤖 Robot Attack",
+  Settings: RobotSettings,
+};
