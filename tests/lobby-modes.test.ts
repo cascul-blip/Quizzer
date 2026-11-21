@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { h, type ComponentChildren, type FunctionComponent } from "preact";
-import { lobbyEntryOf, LOBBY_MODES, type LobbySettingsProps } from "../src/client/host/lobby-modes.tsx";
+import type { LobbySettingsProps } from "../src/client/host/lobby-modes.tsx";
+import { HOST_MODES, lobbyEntryOf } from "../src/client/host/modes.tsx";
 import { MODES } from "../src/server/game/modes.ts";
 import { MODE_FLAGS } from "../src/shared/mode-flags.ts";
 import { MODE_NAMES } from "../src/shared/mode-names.ts";
@@ -15,7 +16,11 @@ function holds(tree: ComponentChildren, node: unknown): boolean {
 }
 
 describe("Lobby mode entries", () => {
-  for (const mode of Object.keys(LOBBY_MODES) as GameMode[]) {
+  test("projector mode entries preserve the Game mode menu order", () => {
+    expect(Object.keys(HOST_MODES)).toEqual(["classic", "tower", "submarine", "fight", "robot", "land", "racer", "gift", "cup", "siege", "duel"]);
+  });
+
+  for (const mode of Object.keys(HOST_MODES) as GameMode[]) {
     // The lobby hands a paced mode's panel the shared Pacing and Shuffle question order rows to place.
     test.if(MODE_FLAGS[mode].paced)(`${MODE_NAMES[mode]}'s settings panel places the shared rows`, () => {
       const rows = h("span", { class: "shared-rows" });

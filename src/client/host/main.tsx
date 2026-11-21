@@ -2,11 +2,12 @@ import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { HostView, ServerMsg } from "../../shared/protocol.ts";
 import type { QuizSummary } from "../../shared/quiz-schema.ts";
-import { unlockAudio } from "../shared/sounds.ts";
+import { play, unlockAudio } from "../shared/sounds.ts";
 import { connect, type ConnStatus } from "../shared/ws.ts";
 import { ConnBanner, ErrorBoundary, Toast } from "../shared/ui.tsx";
 import { loadCustomMusic, useMusic } from "../shared/music/index.ts";
 import type { Send } from "./common.tsx";
+import { LobbyStage } from "./lobby.tsx";
 import { stageOf } from "./modes.tsx";
 import { musicFor } from "./music-cues.ts";
 
@@ -35,6 +36,15 @@ function App() {
   // Background music follows whatever screen the projector is showing.
   useEffect(() => void loadCustomMusic(), []);
   useMusic(musicFor(view));
+
+  // Keep the previous view across stage changes for lobby joins and gameplay entry.
+  const previousView = useRef<HostView | null>(null);
+  useEffect(() => {
+    const previous = previousView.current;
+    previousView.current = view;
+    if (previous?.phase !== "lobby" || !view) return;
+    if (view.phase === "lobby" && view.players.length > previous.players.length) play("join");
+  }, [view]);
 
   // Arriving from the admin page with ?quiz=… opens that quiz, unless a game is already running.
   useEffect(() => {
@@ -71,9 +81,11 @@ function App() {
     );
   } else if (view.kind === "idle") {
     body = <Idle onOpen={(quizId) => send({ type: "host.open", quizId })} />;
+  } else if (view.phase === "lobby") {
+    body = <LobbyStage view={view} send={send} />;
   } else {
     const Stage = stageOf(view);
-    body = <Stage view={view} send={send} />;
+    body = <Stage view={view} send={send} enteredFromLobby={previousView.current?.phase === "lobby"} />;
   }
 
   return (

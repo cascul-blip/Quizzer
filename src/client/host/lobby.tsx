@@ -1,20 +1,48 @@
-import { useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import { MODE_FLAGS } from "../../shared/mode-flags.ts";
 import type { GameMode, HostPlayer, HostView, Pacing } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
-import type { MusicCue } from "../shared/music/index.ts";
 import { teamVars } from "../shared/ui.tsx";
-import type { Send } from "./common.tsx";
-import { LOBBY_MODES, lobbyEntryOf } from "./lobby-modes.tsx";
+import { ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
+import { HOST_MODES, lobbyEntryOf } from "./modes.tsx";
 
-type GameView = Extract<HostView, { kind: "classic" }>;
+type LobbyView = Extract<HostView, { kind: "classic" }>;
 
-/** The Game mode menu, in the order LOBBY_MODES lists the modes. */
-const MENU = Object.keys(LOBBY_MODES) as GameMode[];
+/** The Game mode menu, in the order HOST_MODES lists the modes. */
+const MENU = Object.keys(HOST_MODES) as GameMode[];
 
-/** The lobby's music: the selected mode's lobby track (LOBBY_MODES), which its mode settings may choose. */
-export function lobbyCue(view: GameView): MusicCue {
-  return { track: lobbyEntryOf(view.mode).lobbyTrack(view.settings[view.mode]) };
+export function LobbyStage({ view, send }: { view: LobbyView; send: Send }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.target as HTMLElement)?.closest?.("input, select, textarea")) return;
+      if (e.key === " " || e.key === "ArrowRight") {
+        e.preventDefault();
+        if (view.players.length > 0) send({ type: "host.start", pacing: view.pacing });
+      } else if (e.key === "f" || e.key === "F") {
+        toggleFullscreen();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [view.players.length, view.pacing, send]);
+
+  return (
+    <div class="stage">
+      <header class="topbar">
+        <div class="title">{view.quiz.title}</div>
+        <div class="spacer" />
+        <div class="pill">
+          👥 {view.players.filter((p) => p.connected).length}
+          {view.players.some((p) => !p.connected) && <span class="dim"> / {view.players.length}</span>}
+        </div>
+        <ScreenControls />
+        <button class="btn ghost small" onClick={() => confirm("Close this lobby?") && send({ type: "host.close" })}>
+          Close
+        </button>
+      </header>
+      <Lobby view={view} send={send} />
+    </div>
+  );
 }
 
 function PlayerChip({ p, send, draggable }: { p: HostPlayer; send: Send; draggable?: boolean }) {
@@ -38,8 +66,7 @@ function PlayerChip({ p, send, draggable }: { p: HostPlayer; send: Send; draggab
   );
 }
 
-/** The lobby screen: how to join, the game mode and its mode settings, and the players. Classic's stage shows it, since the lobby is the first phase of Classic's view. The selected mode's lobby entry (LOBBY_MODES) gives its settings panel and preview, and its MODE_FLAGS the shared rows. */
-export function Lobby({ view, send }: { view: GameView; send: Send }) {
+function Lobby({ view, send }: { view: LobbyView; send: Send }) {
   const { join } = view;
   const connected = view.players.length;
   const { Settings, Preview } = lobbyEntryOf(view.mode);
