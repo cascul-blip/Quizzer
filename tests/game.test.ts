@@ -224,7 +224,7 @@ describe("views", () => {
     game.join("B");
     game.start();
     let v = game.playerView(a.id);
-    expect(v.kind === "player" && v.question?.options).toEqual([]); // intro hides options
+    expect(v.kind === "classic" && v.question?.options).toEqual([]); // intro hides options
     clock.advance(INTRO_MS);
     v = game.playerView(a.id);
     expect(JSON.stringify(v)).not.toContain('"correct"');
@@ -232,10 +232,10 @@ describe("views", () => {
     expect(game.hostView().answerAvatars).toBeNull();
     game.answer(a.id, 0, 2);
     v = game.playerView(a.id);
-    expect(v.kind === "player" && v.myChoice).toBe(2);
+    expect(v.kind === "classic" && v.myChoice).toBe(2);
     game.skip();
     v = game.playerView(a.id);
-    expect(v.kind === "player" && v.result).toEqual({ choice: 2, correct: [1], wasCorrect: false, points: 0 });
+    expect(v.kind === "classic" && v.result).toEqual({ choice: 2, correct: [1], wasCorrect: false, points: 0 });
   });
 
   test("a batch of views (one broadcast) ranks the class once and matches views built one by one", () => {
@@ -379,7 +379,7 @@ describe("lobby teams", () => {
     };
     const badge = (id: string) => {
       const v = game.playerView(id);
-      return v.kind === "player" ? v.team : null;
+      return v.kind === "classic" ? v.team : null;
     };
     return { game, clock, ids, layout, badge };
   }
@@ -479,7 +479,7 @@ describe("streaks", () => {
       bStreaks.push(b.streak);
       expect(game.leaderboard().find((e) => e.id === a.id)!.streak).toBe(a.streak);
       const v = game.playerView(a.id);
-      expect(v.kind === "player" && v.me.streak).toBe(a.streak);
+      expect(v.kind === "classic" && v.me.streak).toBe(a.streak);
       game.next(); // → leaderboard (or podium after the last)
       game.next(); // → next intro
     }

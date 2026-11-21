@@ -1,6 +1,7 @@
 import type { ComponentChildren, ComponentType } from "preact";
 import type { MusicTrackId } from "../../shared/music-tracks.ts";
 import type { GameMode, ModeSettingsMap } from "../../shared/protocol.ts";
+import { entryOf } from "../shared/entry-of.ts";
 import type { Send } from "./common.tsx";
 import { cupLobby } from "./cup.tsx";
 import { duelLobby } from "./duel.tsx";
@@ -60,6 +61,5 @@ export const LOBBY_MODES: { [M in GameMode]: LobbyModeEntry<M> } = {
 
 /** The lobby part of a mode, to render with that same mode's settings. */
 export function lobbyEntryOf(mode: GameMode): LobbyModeEntry<GameMode> {
-  // The one place the per-mode types meet: the caller passes the settings of the mode it looked the entry up with.
-  return LOBBY_MODES[mode] as LobbyModeEntry<GameMode>;
+  return entryOf<LobbyModeEntry<GameMode>>(LOBBY_MODES, mode);
 }

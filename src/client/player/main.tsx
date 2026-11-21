@@ -168,7 +168,8 @@ function App() {
         />
       );
     }
-  } else if (view.kind === "player" && view.phase === "lobby") {
+  } else if (view.phase === "lobby") {
+    // Only Classic's view has a lobby phase: the lobby belongs to no mode, so it is shown before looking up the entry.
     body = <LobbyScreen view={view} send={send} />;
   } else {
     const Screen = screenOf(view);

@@ -3,7 +3,7 @@ import { shownView } from "../src/client/player/resume.ts";
 import type { PlayerView } from "../src/shared/protocol.ts";
 
 const notJoined = { kind: "none", game: { title: "Quiz", phase: "open" } } as PlayerView;
-const playing = { kind: "player", phase: "open" } as PlayerView;
+const playing = { kind: "classic", phase: "open" } as PlayerView;
 
 test("a reconnecting phone keeps its game on screen until the resume is answered", () => {
   // Mid-game reconnect: the first snapshot is "not joined", but the game stays up.

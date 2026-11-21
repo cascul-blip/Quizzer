@@ -248,7 +248,7 @@ export type PlayerView =
   | { kind: "none"; game: null }
   | { kind: "none"; game: { title: string; phase: Phase | TowerPhase | SubPhase | FightPhase | RobotPhase | LandPhase | RacerPhase | CupPhase | SiegePhase | DuelPhase | GiftPhase } }
   | {
-      kind: "player";
+      kind: "classic";
       phase: Phase;
       title: string;
       me: { id: string; nickname: string; avatar: AvatarChoice; score: number; rank: number; streak: number };
