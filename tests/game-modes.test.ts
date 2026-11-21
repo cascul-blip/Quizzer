@@ -4,12 +4,13 @@ import type { ModeMsg } from "../src/server/game/mode-entry.ts";
 import { Game } from "../src/server/game/game.ts";
 import { MODES } from "../src/server/game/modes.ts";
 import { QuizStore } from "../src/server/quiz/store.ts";
-import { GameHub, type SocketData } from "../src/server/ws.ts";
+import { GameHub } from "../src/server/ws.ts";
 import { MODE_FLAGS } from "../src/shared/mode-flags.ts";
 import { MODE_NAMES } from "../src/shared/mode-names.ts";
 import type { ClientMsg, GameMode, ModeSettingsInput, ServerMsg } from "../src/shared/protocol.ts";
 import type { SeasonTheme } from "../src/shared/season-theme.ts";
 import { FakeClock, tempDir } from "./helpers.ts";
+import { HubSocket } from "./hub-harness.ts";
 
 const GAME_MODES = Object.keys(MODES) as GameMode[];
 
@@ -73,31 +74,17 @@ const PHONE_MSG: { [M in GameMode]: ModeMsg<M> } = {
   gift: { type: "gift.tap", round: 0, item: 0 },
 };
 
-/** Just enough of a Bun socket for the hub. */
-function fakeSocket(data: Partial<SocketData>) {
-  const sock = {
-    data: { admin: false, ip: "127.0.0.1", role: "player", playerId: null, ...data } as SocketData,
-    sent: [] as ServerMsg[],
-    send(m: string) {
-      sock.sent.push(JSON.parse(m));
-      return m.length;
-    },
-    getBufferedAmount: () => 0,
-  };
-  return sock;
-}
-type Socket = ReturnType<typeof fakeSocket>;
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
 let data: ReturnType<typeof tempDir>;
 let hub: GameHub;
-let host: Socket;
+let host: HubSocket;
 let quizId: string;
 let store: QuizStore;
 
-const send = (ws: Socket, msg: ClientMsg) => hub.onMessage(ws as never, JSON.stringify(msg));
-const errors = (ws: Socket) => ws.sent.filter((m) => m.type === "error");
+const send = (ws: HubSocket, msg: ClientMsg) => ws.sendMsg(msg);
+const errors = (ws: HubSocket) => ws.raw.filter((m) => m.type === "error");
 
 /** A phone's view in the lobby. */
 function phoneLobbyView(playerId: string) {
@@ -117,10 +104,9 @@ function openLobby(mode: GameMode, nicknames: string[]) {
   send(host, { type: "host.open", quizId });
   send(host, { type: "host.setMode", mode });
   return nicknames.map((nickname) => {
-    const phone = fakeSocket({});
-    hub.onOpen(phone as never);
+    const phone = new HubSocket(hub);
     send(phone, { type: "join", nickname });
-    const joined = phone.sent.find((m) => m.type === "joined");
+    const joined = phone.raw.find((m) => m.type === "joined");
     if (joined?.type !== "joined") throw new Error(`${nickname} did not join`);
     return { phone, playerId: joined.playerId, token: joined.token };
   });
@@ -139,8 +125,7 @@ beforeEach(async () => {
   });
   quizId = quiz.id;
   hub = new GameHub(store, { clock: new FakeClock() });
-  host = fakeSocket({ admin: true, role: "host" });
-  hub.onOpen(host as never);
+  host = new HubSocket(hub, { admin: true, role: "host" });
   send(host, { type: "host.hello" });
 });
 
@@ -237,10 +222,10 @@ describe("Game modes", () => {
         send(host, { type: "host.start", pacing: "manual" });
         await flush();
         for (const other of GAME_MODES.filter((m) => m !== mode)) {
-          noel!.phone.sent = [];
+          noel!.phone.raw = [];
           send(noel!.phone, PHONE_MSG[other]);
           await flush();
-          expect({ other, sent: noel!.phone.sent }).toEqual({ other, sent: [] });
+          expect({ other, sent: noel!.phone.raw }).toEqual({ other, sent: [] });
         }
       });
     });

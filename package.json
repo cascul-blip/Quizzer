@@ -9,7 +9,7 @@
     "mcp": "bun src/server/main.ts mcp",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "check": "tsc --noEmit && bun test",
+    "check": "tsc --noEmit && scripts/check-test-casts.sh && bun test",
     "build": "bun scripts/build.ts"
   },
   "dependencies": {

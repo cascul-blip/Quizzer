@@ -4,9 +4,10 @@ Judgement calls the reviewer applies to a diff. `bun run typecheck` and `bun tes
 
 ## Tests
 
-- **Shared fixtures**: tests that need a temp directory or store create it in `beforeEach` and clean it up in `afterEach`, as `tests/mcp.test.ts` and `tests/store.test.ts` do, not with a `try/finally` in each test.
+- **Shared fixtures**: a temp directory or store is made in a hook and cleaned up in its pair: `beforeEach`/`afterEach` when tests change it (`tests/store.test.ts`, `tests/hub.test.ts`), `beforeAll`/`afterAll` for an expensive fixture the tests only add to (`tests/mcp.test.ts`, the real server in `tests/server.test.ts`). `tests/standards.test.ts` flags cleanup in a test's own `finally`.
+- **Hub tests on fake sockets**: tests of hub behaviour (lobby, teams, answers, reveal, podium) drive a `HubSocket` from `tests/hub-harness.ts`. `tests/server.test.ts` keeps only what a real socket shows: HTTP routes, the upgrade, patches over the wire, resume after a reconnect.
 - **Independent expectations**: a test's expected values are written by hand, such as a list of the modes that are paced. A test that reads its expectation from the code under test, such as `MODE_FLAGS[mode].paced`, passes whatever the code says.
-- **Domain names**: name `describe` blocks and tests with `GLOSSARY.md` terms for the behaviour under test ("Lobby handoff over WebSockets"). A test that covers shared behaviour goes in its own block, not under whichever game mode it happens to use.
+- **Domain names**: name `describe` blocks and tests with `GLOSSARY.md` terms for the behaviour under test ("Lobby handoff"). A test that covers shared behaviour goes in its own block, not under whichever game mode it happens to use.
 
 ## Types
 

@@ -64,6 +64,30 @@ describe("Coding standards: mode entries", () => {
   });
 });
 
+/** A temp directory cleaned up in a test's own finally block instead of an afterEach. */
+const FINALLY_CLEANUP = /\bfinally\s*\{[^}]*\.cleanup\(\)/;
+
+const testFiles = readdirSync(join(ROOT, "tests"))
+  // This file is left out: its guard checks quote the pattern.
+  .filter((name) => /\.test\.tsx?$/.test(name) && name !== "standards.test.ts")
+  .map((name) => ({ path: `tests/${name}`, text: readFileSync(join(ROOT, "tests", name), "utf8") }));
+
+describe("Coding standards: tests", () => {
+  test("finds the test files", () => {
+    expect(testFiles.some(({ path }) => path === "tests/store.test.ts")).toBe(true);
+  });
+
+  test("shared fixtures are cleaned up in afterEach or afterAll, not in a test's finally block", () => {
+    expect(testFiles.filter(({ text }) => FINALLY_CLEANUP.test(text)).map(({ path }) => path)).toEqual([]);
+  });
+
+  test("the guard flags a finally block that cleans up a temp directory", () => {
+    expect(FINALLY_CLEANUP.test("    } finally {\n      t.cleanup();\n    }")).toBe(true);
+    expect(FINALLY_CLEANUP.test("    } finally {\n      host.close();\n    }")).toBe(false);
+    expect(FINALLY_CLEANUP.test("afterEach(() => t.cleanup());")).toBe(false);
+  });
+});
+
 describe("Coding standards: the mode-literal guards themselves", () => {
   // Written by hand: a guard that stops matching passes every file, so check it against lines it must and mustn't flag.
   test("the server guard flags a mode compared against a literal", () => {
