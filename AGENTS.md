@@ -19,4 +19,4 @@ See `docs/agents/domain.md` before exploring the codebase.
 
 ### Game modes
 
-Adding or removing a game mode: read `docs/agents/game-modes.md`.
+Game mode changes, lobby handoff, or host controls: read `docs/agents/game-modes.md`.

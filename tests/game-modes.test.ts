@@ -8,30 +8,25 @@ import { GameHub } from "../src/server/ws.ts";
 import { MODE_FLAGS } from "../src/shared/mode-flags.ts";
 import { MODE_NAMES } from "../src/shared/mode-names.ts";
 import type { ClientMsg, GameMode, ModeSettingsInput, ServerMsg } from "../src/shared/protocol.ts";
-import type { SeasonTheme } from "../src/shared/season-theme.ts";
 import { FakeClock, tempDir } from "./helpers.ts";
 import { HubSocket } from "./hub-harness.ts";
 
 const GAME_MODES = Object.keys(MODES) as GameMode[];
 
-/** The theme a mode doesn't start with, so a change is visible whatever the season. */
-function otherTheme(mode: GameMode): SeasonTheme {
-  const settings = MODES[mode].defaultSettings;
-  return "theme" in settings && settings.theme === "christmas" ? "classic" : "christmas";
-}
+const THEMED_MODES = ["tower", "fight", "land", "racer", "cup", "siege", "duel"] as const satisfies readonly GameMode[];
 
 /** A valid change to every setting of each game mode, away from its defaults. */
 const CHANGED: { [M in GameMode]: ModeSettingsInput[M] } = {
   classic: {},
-  tower: { teams: 3, minutes: 7, monster: false, theme: otherTheme("tower") },
+  tower: { teams: 3, minutes: 7, monster: false, theme: "classic" },
   submarine: {},
-  fight: { hill: "high", theme: otherTheme("fight") },
+  fight: { hill: "high", theme: "classic" },
   robot: {},
-  land: { teams: 3, minutes: 7, theme: otherTheme("land") },
-  racer: { theme: otherTheme("racer") },
-  cup: { cups: 5, theme: otherTheme("cup") },
-  siege: { waves: 10, theme: otherTheme("siege") },
-  duel: { rounds: 20, theme: otherTheme("duel") },
+  land: { teams: 3, minutes: 7, theme: "classic" },
+  racer: { theme: "classic" },
+  cup: { cups: 5, theme: "classic" },
+  siege: { waves: 10, theme: "classic" },
+  duel: { rounds: 20, theme: "classic" },
   gift: { minutes: 3 },
 };
 
@@ -134,6 +129,36 @@ afterEach(() => {
   data.cleanup();
 });
 
+describe("Lobby handoff", () => {
+  for (const mode of GAME_MODES) {
+    test(`each player can reconnect to ${MODE_NAMES[mode]} with the same id and token`, () => {
+      const players = openLobby(mode, ["Noel", "Holly"]);
+      send(host, { type: "host.start", pacing: "manual" });
+      expect(errors(host)).toEqual([]);
+      expect(hub.hostView().phase).not.toBe("lobby");
+      for (const { phone, playerId, token } of players) {
+        phone.close();
+        const reconnected = new HubSocket(hub);
+        send(reconnected, { type: "resume", token });
+        expect(reconnected.raw).toContainEqual({ type: "joined", playerId, token, images: [] });
+        expect(reconnected.view?.kind).toBe(mode);
+        reconnected.close();
+      }
+    });
+  }
+});
+
+describe("Mode settings carryover", () => {
+  for (const mode of THEMED_MODES) {
+    test(`${MODE_NAMES[mode]} restores the default theme when the carried-over theme is unknown`, () => {
+      const stale = { ...CHANGED[mode], theme: "halloween" };
+      const lobby = new Lobby(store.get(quizId), { mode, settings: { [mode]: stale } });
+      expect(lobby.settings[mode]).toEqual({ ...CHANGED[mode], theme: "christmas" });
+      expect(() => lobby.setModeSettings(mode, stale)).toThrow(/^Unknown .* theme$/);
+    });
+  }
+});
+
 describe("Game modes", () => {
   for (const mode of GAME_MODES) {
     describe(MODE_NAMES[mode], () => {
@@ -180,30 +205,6 @@ describe("Game modes", () => {
         await flush();
         send(host, { type: "host.open", quizId });
         expect(lobbyView().pacing).toBe(PACED.has(mode) ? "auto" : "manual");
-      });
-
-      test.if("theme" in MODES[mode].defaultSettings)("an unknown carried-over theme becomes the default, but the host can't choose it", () => {
-        const defaults = MODES[mode].defaultSettings;
-        const stale = { ...CHANGED[mode], theme: "halloween" };
-        const lobby = new Lobby(store.get(quizId), { mode, settings: { [mode]: stale } });
-        const expected: unknown = { ...defaults, ...CHANGED[mode], theme: "theme" in defaults ? defaults.theme : undefined };
-        expect<unknown>(lobby.settings[mode]).toEqual(expected);
-        expect(() => lobby.setModeSettings(mode, stale)).toThrow(/^Unknown .* theme$/);
-      });
-
-      test("the lobby handoff keeps each player's id and token", () => {
-        const players = openLobby(mode, ["Noel", "Holly"]);
-        send(host, { type: "host.start", pacing: "manual" });
-        expect(errors(host)).toEqual([]);
-        expect(hub.game!.phase).not.toBe("lobby");
-        for (const { phone, playerId, token } of players) {
-          phone.close();
-          const reconnected = new HubSocket(hub);
-          send(reconnected, { type: "resume", token });
-          expect(reconnected.raw).toContainEqual({ type: "joined", playerId, token, images: [] });
-          expect(reconnected.view?.kind).toBe(mode);
-          reconnected.close();
-        }
       });
 
       test("the results CSV has a header and one row per player", async () => {

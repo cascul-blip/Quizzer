@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { DuelGame } from "../src/server/game/duel.ts";
-import { Game, GameError } from "../src/server/game/game.ts";
+import { ClassicGame, GameError } from "../src/server/game/game.ts";
 import { Lobby } from "../src/server/game/lobby.ts";
 import { GiftGame } from "../src/server/game/gift.ts";
 import type { LiveGame } from "../src/server/game/mode-entry.ts";
@@ -89,7 +89,7 @@ describe("Lobby handoff", () => {
     lobby.start("manual", opts);
     expect(lobby.choices.pacing).toBe("manual");
     const game = installedGame();
-    expect(game).toBeInstanceOf(Game);
+    expect(game).toBeInstanceOf(ClassicGame);
     expect(game?.phase).toBe("intro");
     expect(game?.byToken(joined[0]!.token)?.id).toBe(joined[0]!.id);
     expect(events[0]).toBe("install");

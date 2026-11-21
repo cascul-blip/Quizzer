@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Game, type Clock } from "../src/server/game/game.ts";
+import { ClassicGame, type Clock } from "../src/server/game/game.ts";
 import { Lobby } from "../src/server/game/lobby.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
 
@@ -60,7 +60,7 @@ export function sampleQuiz(overrides: Partial<Quiz> = {}): Quiz {
 
 
 /** Construct Classic for gameplay tests with the same default projector fields as the lobby. */
-export function classicGame(quiz: Quiz, opts?: ConstructorParameters<typeof Game>[2]): Game {
+export function classicGame(quiz: Quiz, opts?: ConstructorParameters<typeof ClassicGame>[2]): ClassicGame {
   const { mode, settings, protect } = new Lobby(quiz).hostView();
-  return new Game(quiz, { mode, settings, protect }, opts);
+  return new ClassicGame(quiz, { mode, settings, protect }, opts);
 }

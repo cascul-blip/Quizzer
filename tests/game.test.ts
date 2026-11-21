@@ -1,5 +1,5 @@
 import { describe, expect, spyOn, test } from "bun:test";
-import { AUTO_LEADERBOARD_MS, AUTO_REVEAL_MS, GRACE_MS, type Game, GameError, INTRO_MS, preparePlayOrder } from "../src/server/game/game.ts";
+import { AUTO_LEADERBOARD_MS, AUTO_REVEAL_MS, GRACE_MS, type ClassicGame, GameError, INTRO_MS, preparePlayOrder } from "../src/server/game/game.ts";
 import { Lobby } from "../src/server/game/lobby.ts";
 import { FightGame } from "../src/server/game/fight.ts";
 import { LandGame } from "../src/server/game/land.ts";
@@ -13,7 +13,7 @@ function setup(opts: { pacing?: "manual" | "auto" } = {}) {
   return { clock, game, finished: () => finished };
 }
 
-function toOpen(game: Game, clock: FakeClock) {
+function toOpen(game: ClassicGame, clock: FakeClock) {
   expect(game.phase).toBe("intro");
   clock.advance(INTRO_MS);
   expect(game.phase).toBe("open");

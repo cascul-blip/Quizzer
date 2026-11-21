@@ -37,7 +37,7 @@ function offending(pattern: RegExp, files: Source[] = sources): string[] {
   );
 }
 
-/** The classes that run a game mode, read from the game files: Game (Classic) and every XGame. */
+/** The classes that run a game mode, read from the game files: ClassicGame and every other mode game. */
 const gameClasses = sources
   .filter(({ path }) => path.startsWith(join(SERVER, "game")))
   .flatMap(({ lines }) => lines.flatMap((line) => [...line.matchAll(/export class (\w*Game)\b/g)].map((m) => m[1]!)));
@@ -46,7 +46,7 @@ const gameClasses = sources
 // code outside it looks the entry up by game.runningMode instead of asking which mode is running.
 describe("Coding standards: mode entries", () => {
   test("finds the game classes", () => {
-    expect(gameClasses).toContain("Game");
+    expect(gameClasses).toContain("ClassicGame");
     expect(gameClasses).toContain("TowerGame");
   });
 

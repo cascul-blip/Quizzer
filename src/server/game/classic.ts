@@ -1,11 +1,11 @@
 import { answerOf } from "../../shared/answer-match.ts";
 import { MODE_NAMES } from "../../shared/mode-names.ts";
-import { Game } from "./game.ts";
+import { ClassicGame } from "./game.ts";
 import { handoffOptions, unhandled, type ModeEntry } from "./mode-entry.ts";
 import { toCsv } from "./results.ts";
 
 /** One row per player (by rank) with per-question answer, correctness, points and time. */
-export function buildResultsCsv(game: Game): string {
+export function buildResultsCsv(game: ClassicGame): string {
   const header: string[] = ["Rank", "Nickname", "Score", "Correct answers"];
   game.questions.forEach((q, i) => {
     const n = i + 1;
@@ -29,7 +29,7 @@ export const classicMode: ModeEntry<"classic"> = {
   defaultSettings: {},
   readSettings: () => ({}),
   start(lobby, ctx) {
-    const game = new Game(lobby.quiz, lobby.lobbyView, {
+    const game = new ClassicGame(lobby.quiz, lobby.lobbyView, {
       ...handoffOptions(ctx),
       pacing: lobby.pacing,
       shuffle: lobby.shuffle,

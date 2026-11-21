@@ -47,12 +47,12 @@ interface GameOptions {
   onChange?: () => void;
   /** A player answered: the hub updates that phone at once and everyone else a moment later. Defaults to onChange. */
   onActivity?: (playerId: string) => void;
-  onFinish?: (game: Game) => void;
+  onFinish?: (game: ClassicGame) => void;
   shuffle?: ShuffleOptions;
 }
 
 /** Classic gameplay, from the first question through the podium. */
-export class Game {
+export class ClassicGame {
   readonly quiz: Quiz;
   readonly quizId: string;
   readonly title: string;
@@ -74,7 +74,7 @@ export class Game {
   private timer: unknown = null;
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
-  private readonly onFinish: (game: Game) => void;
+  private readonly onFinish: (game: ClassicGame) => void;
   /** Set while views are built in a batch: what every phone's view shares, computed once. */
   private batch: { ranked?: (Player & { rank: number })[]; rankById?: Map<string, number>; podium?: RankedEntry[] } | null = null;
 

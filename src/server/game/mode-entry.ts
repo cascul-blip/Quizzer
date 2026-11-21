@@ -5,7 +5,7 @@ import { GameError, type Clock } from "./common.ts";
 import type { CupGame } from "./cup.ts";
 import type { DuelGame } from "./duel.ts";
 import type { FightGame } from "./fight.ts";
-import type { Game } from "./game.ts";
+import type { ClassicGame } from "./game.ts";
 import type { GiftGame } from "./gift.ts";
 import type { LandGame } from "./land.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
@@ -17,7 +17,7 @@ import type { TowerGame } from "./tower.ts";
 
 /** The game that runs each game mode. */
 export interface ModeGame {
-  classic: Game;
+  classic: ClassicGame;
   tower: TowerGame;
   submarine: SubGame;
   fight: FightGame;
