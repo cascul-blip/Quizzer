@@ -23,6 +23,13 @@ const sources = tsFiles(SERVER).map(read);
 /** The client files that look a mode up in its entry (src/client/host/modes.tsx, src/client/host/lobby-modes.tsx, src/client/player/modes.tsx) or its flags (src/shared/mode-flags.ts) instead of asking which mode is running. */
 const CLIENT_FILES = ["src/client/host/main.tsx", "src/client/host/lobby.tsx", "src/client/host/music-cues.ts", "src/client/player/main.tsx"].map((path) => read(join(ROOT, path)));
 
+const QUOTE = "[\"'`]";
+const MODE = `${QUOTE}(?:${Object.keys(MODE_NAMES).join("|")})${QUOTE}`;
+/** mode === "tower", game.runningMode !== "siege", "duel" === mode, and the same with ' or `. */
+const MODE_LITERAL = new RegExp(`\\b\\w*[mM]ode\\s*[!=]==?\\s*${QUOTE}|${QUOTE}\\w*${QUOTE}\\s*[!=]==?\\s*[\\w.]*[mM]ode\\b`);
+/** view.kind === "tower", view.mode !== "siege", view.banner === "siege", "duel" === view.kind, and case "racer":. */
+const CLIENT_MODE_LITERAL = new RegExp(`\\b\\w*(?:[mM]ode|[kK]ind|[bB]anner)\\s*[!=]==?\\s*${MODE}|${MODE}\\s*[!=]==?\\s*[\\w.]*(?:[mM]ode|[kK]ind|[bB]anner)\\b|\\bcase\\s+${MODE}\\s*:`);
+
 /** Every line matching the pattern, as file:line and the line itself. */
 function offending(pattern: RegExp, files: Source[] = sources): string[] {
   return files.flatMap(({ path, lines }) =>
@@ -44,22 +51,28 @@ describe("Coding standards: mode entries", () => {
   });
 
   test("no code compares a mode against a literal", () => {
-    // mode === "tower", game.runningMode !== "siege", "duel" === mode, and the same with ' or `.
-    const quote = "[\"'`]";
-    const pattern = new RegExp(`\\b\\w*[mM]ode\\s*[!=]==?\\s*${quote}|${quote}\\w*${quote}\\s*[!=]==?\\s*[\\w.]*[mM]ode\\b`);
-    expect(offending(pattern)).toEqual([]);
+    expect(offending(MODE_LITERAL)).toEqual([]);
   });
 
   test("no client file that uses the mode entries compares a view's kind, mode or banner against a game mode", () => {
-    // view.kind === "tower", view.mode !== "siege", view.banner === "siege", "duel" === view.kind, and case "racer":.
-    const quote = "[\"'`]";
-    const mode = `${quote}(?:${Object.keys(MODE_NAMES).join("|")})${quote}`;
-    const pattern = new RegExp(`\\b\\w*(?:[mM]ode|[kK]ind|[bB]anner)\\s*[!=]==?\\s*${mode}|${mode}\\s*[!=]==?\\s*[\\w.]*(?:[mM]ode|[kK]ind|[bB]anner)\\b|\\bcase\\s+${mode}\\s*:`);
-    expect(offending(pattern, CLIENT_FILES)).toEqual([]);
+    expect(offending(CLIENT_MODE_LITERAL, CLIENT_FILES)).toEqual([]);
   });
 
   test("no code asks which game class is running", () => {
     const pattern = new RegExp(`\\binstanceof\\s+(${gameClasses.join("|")})\\b`);
     expect(offending(pattern)).toEqual([]);
+  });
+});
+
+describe("Coding standards: the mode-literal guards themselves", () => {
+  // Written by hand: a guard that stops matching passes every file, so check it against lines it must and mustn't flag.
+  test("the server guard flags a mode compared against a literal", () => {
+    for (const line of [`if (mode === "tower")`, `game.runningMode !== 'siege'`, `"duel" === mode`]) expect(MODE_LITERAL.test(line)).toBe(true);
+    for (const line of [`const mode = "tower";`, `MODES[game.runningMode]`]) expect(MODE_LITERAL.test(line)).toBe(false);
+  });
+
+  test("the client guard flags a view's kind, mode or banner compared against a game mode", () => {
+    for (const line of [`view.kind === "classic"`, `view.mode !== "siege"`, `view.banner === "siege"`, `"duel" === view.kind`, `case "racer":`]) expect(CLIENT_MODE_LITERAL.test(line)).toBe(true);
+    for (const line of [`role: "player"`, `view.phase === "lobby"`, `view.kind === "none"`, `view.kind === "idle"`]) expect(CLIENT_MODE_LITERAL.test(line)).toBe(false);
   });
 });
