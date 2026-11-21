@@ -3,7 +3,6 @@ import QRCode from "qrcode";
 import type { ClientMsg, GameMode, HostView, JoinInfo, ModeSettingsMap, Pacing, PlayerView, ServerMsg } from "../shared/protocol.ts";
 import { cleanAvatar } from "../shared/avatars.ts";
 import { ValidationError } from "../shared/quiz-schema.ts";
-import { diffView } from "../shared/view-patch.ts";
 import { Game, GameError, type Clock } from "./game/game.ts";
 import { startLobbyGame, type LiveGame } from "./game/lobby-handoff.ts";
 import { MSG_MODE, isModeMsg } from "./game/mode-entry.ts";
@@ -11,6 +10,7 @@ import { entryOf } from "./game/modes.ts";
 import { writeResultsFile } from "./game/results.ts";
 import { MAX_JOINS_PER_ADDRESS, MAX_SOCKETS_PER_ADDRESS } from "./game/common.ts";
 import { isLoopbackAddress, lanAddresses, type LanAddress } from "./network.ts";
+import { PhoneViewDelivery } from "./phone-view-delivery.ts";
 import { NotFoundError, type QuizStore } from "./quiz/store.ts";
 
 export interface SocketData {
@@ -20,15 +20,9 @@ export interface SocketData {
   ip: string;
   role: "player" | "host";
   playerId: string | null;
-  /** Comparison key of the last player.state sent, so unchanged snapshots aren't resent. */
-  lastSent: string | null;
-  /** The view the phone holds now (plain JSON), which the next patch is made against. */
-  lastView: unknown;
-  /** A snapshot was held back because the socket hadn't sent the previous one yet. */
-  behind: boolean;
 }
 
-type WS = ServerWebSocket<SocketData>;
+type WS = Pick<ServerWebSocket<SocketData>, "data" | "send" | "getBufferedAmount">;
 
 interface HubOptions {
   /** Forced join address (--host). */
@@ -48,24 +42,6 @@ interface LastResults {
 const PACINGS = new Set<Pacing>(["manual", "auto"]);
 /** Answers can arrive from every phone at once: the acting player is updated at once, everyone else at most this often. */
 const ACTIVITY_THROTTLE_MS = 100;
-/** View fields holding "time left" (relative to when the message arrives). */
-const COUNTDOWN_KEYS = new Set(["remainingMs", "phaseRemainingMs", "gameRemainingMs", "decisionMs", "repairMs", "emptyMs", "lockedMs", "symbolRemainingMs", "nextMonsterMs", "protectedMs", "fuelMs"]);
-/** View fields holding "time since" something started; phones only read them to place the start. */
-const ELAPSED_KEYS = new Set(["revealElapsedMs", "elapsedMs"]);
-
-/**
- * A player view as JSON with each running countdown replaced by its deadline, and each running
- * count-up by its start (both to 100 ms), so two snapshots that differ only by time passing compare equal.
- */
-export function viewKey(view: PlayerView, now: number): string {
-  return JSON.stringify(view, (k, v) => {
-    if (typeof v !== "number" || v <= 0) return v;
-    if (COUNTDOWN_KEYS.has(k)) return Math.round((now + v) / 100);
-    if (ELAPSED_KEYS.has(k)) return Math.round((now - v) / 100);
-    return v;
-  });
-}
-
 /** Compress what goes to phones over Wi-Fi; the host screen is on this machine, so it isn't worth the CPU. */
 const compressFor = (ws: WS) => ws.data.role !== "host";
 
@@ -80,6 +56,7 @@ export class GameHub {
   readonly serverId = crypto.randomUUID();
 
   private readonly sockets = new Set<WS>();
+  private readonly phoneViews: PhoneViewDelivery;
   private selected: string | null;
   private addressCache: { at: number; list: LanAddress[] } | null = null;
   private qrCache = new Map<string, string>();
@@ -100,6 +77,7 @@ export class GameHub {
     private readonly store: QuizStore,
     private readonly opts: HubOptions = {},
   ) {
+    this.phoneViews = new PhoneViewDelivery(() => opts.clock?.now() ?? Date.now());
     this.selected = opts.address ?? null;
     this.log = opts.log ?? (() => {});
   }
@@ -164,41 +142,21 @@ export class GameHub {
 
   private send(ws: WS, msg: ServerMsg): void {
     // The page may change what it shows on any other message: make sure the next snapshot goes out.
-    if (msg.type !== "player.state") ws.data.lastSent = null;
+    if (msg.type !== "player.state") this.phoneViews.requestRefresh(ws);
     ws.send(JSON.stringify(msg), compressFor(ws));
   }
 
-  /**
-   * Push the socket's current view, as a patch when that is smaller. Unless forced, a player
-   * whose view hasn't changed is skipped. A phone that is still taking the previous message
-   * is skipped too, and gets the latest view once it drains instead of a backlog of stale ones.
-   */
   private sendState(ws: WS, force = true): void {
     if (ws.data.role === "host") return this.send(ws, { type: "host.state", view: this.hostView() });
-    if (ws.getBufferedAmount() > 0) {
-      ws.data.behind = true;
-      return;
-    }
-    const view = this.playerView(ws);
-    const key = viewKey(view, this.opts.clock?.now() ?? Date.now());
-    if (!force && key === ws.data.lastSent) return;
-    ws.data.lastSent = key;
-    const full = JSON.stringify({ type: "player.state", view } satisfies ServerMsg);
-    const plain: unknown = JSON.parse(full).view;
-    let out = full;
-    if (ws.data.lastView !== null) {
-      const patch = JSON.stringify({ type: "player.patch", ops: diffView(ws.data.lastView, plain) } satisfies ServerMsg);
-      if (patch.length < full.length) out = patch;
-    }
-    ws.data.lastView = plain;
-    ws.send(out, compressFor(ws));
+    this.phoneViews.push(ws, () => this.playerView(ws), force);
   }
 
-  /** The socket sent everything it had queued: catch up a phone whose snapshot was held back. */
   onDrain(ws: WS): void {
-    if (!ws.data.behind) return;
-    ws.data.behind = false;
-    this.sendState(ws);
+    if (ws.data.role === "host") {
+      if (this.phoneViews.takePendingDrain(ws)) this.sendState(ws);
+      return;
+    }
+    this.phoneViews.onDrain(ws, () => this.playerView(ws));
   }
 
   /** Coalesce bursts of changes (e.g. many answers) into one push per tick. */
@@ -438,7 +396,7 @@ export class GameHub {
     this.game = this.lobby = null;
     for (const s of this.sockets) {
       s.data.playerId = null;
-      s.data.lastSent = null;
+      this.phoneViews.requestRefresh(s);
     }
   }
 

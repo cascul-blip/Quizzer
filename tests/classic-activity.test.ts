@@ -9,7 +9,7 @@ import { FakeClock, tempDir } from "./helpers.ts";
 /** Just enough of a Bun socket for the hub. */
 function fakeSocket(data: Partial<SocketData>) {
   const sock = {
-    data: { admin: false, ip: "127.0.0.1", role: "player", playerId: null, lastSent: null, lastView: null, behind: false, ...data } as SocketData,
+    data: { admin: false, ip: "127.0.0.1", role: "player", playerId: null, ...data } as SocketData,
     sent: [] as ServerMsg[],
     send(m: string) {
       sock.sent.push(JSON.parse(m));
