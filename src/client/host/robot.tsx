@@ -11,7 +11,7 @@ import { preloadVoice, say } from "../shared/voice.ts";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
 import type { MusicCue } from "../shared/music/index.ts";
-import type { LobbyModeEntry, LobbySettingsProps } from "./lobby-modes.tsx";
+import type { LobbyModeEntry } from "./lobby-modes.tsx";
 import { Award } from "./tower.tsx";
 
 type RobotView = Extract<HostView, { kind: "robot" }>;

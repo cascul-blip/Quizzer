@@ -91,6 +91,9 @@ const testFiles = readdirSync(join(ROOT, "tests"))
   .filter((name) => /\.test\.tsx?$/.test(name) && name !== "standards.test.ts")
   .map((name) => ({ path: `tests/${name}`, text: readFileSync(join(ROOT, "tests", name), "utf8") }));
 
+/** Bun.sleep or a timer-based pause used as a wait in a test. */
+const SLEEP_WAIT = /\bBun\s*\.\s*sleep\s*\(/;
+
 describe("Coding standards: tests", () => {
   test("finds the test files", () => {
     expect(testFiles.some(({ path }) => path === "tests/store.test.ts")).toBe(true);
@@ -103,6 +106,15 @@ describe("Coding standards: tests", () => {
   test("the socket guard flags direct onOpen calls", () => {
     expect(DIRECT_SOCKET_OPEN.test("hub.onOpen(socket)")).toBe(true);
     expect(DIRECT_SOCKET_OPEN.test("new HubSocket(hub)")).toBe(false);
+  });
+
+  test("tests wait on an event or the controlled clock, not on Bun.sleep", () => {
+    expect(testFiles.filter(({ text }) => SLEEP_WAIT.test(text)).map(({ path }) => path)).toEqual([]);
+  });
+
+  test("the sleep guard flags Bun.sleep and accepts awaiting an event", () => {
+    expect(SLEEP_WAIT.test("await Bun.sleep(100);")).toBe(true);
+    expect(SLEEP_WAIT.test("await nextQr();")).toBe(false);
   });
 
   test("shared temp directories are created in setup hooks", () => {
