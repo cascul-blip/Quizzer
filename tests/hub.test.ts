@@ -593,11 +593,12 @@ describe("Game mode: Kingdom Siege", () => {
     await bob.playerState((v) => v.kind === "siege" && v.map === null);
     await expectInSync(bob);
 
-    // Wave 1 marches in; nobody defends lanes other than lane 3, so some goblins reach the wall. Then the break before wave 2.
     clock.advance(SIEGE_OPENING_MS);
     hub.broadcast();
     await host.hostState((v) => v.kind === "siege" && v.phase === "wave" && v.wave === 1);
     const siege = hub.game as SiegeGame;
+    // Guarantee a wall hit even if the knight stops every goblin in the random wave.
+    siege.spawn("goblin", 0, 1);
     for (let i = 0; i < 120 && !(siege.phase === "build" && siege.wave === 2); i++) clock.advance(500);
     hub.broadcast();
     const wave2 = await host.hostState((v) => v.kind === "siege" && v.phase === "build" && v.wave === 2);
