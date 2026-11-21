@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { Lobby } from "../src/server/game/lobby.ts";
 import type { TowerPlayer } from "../src/server/game/tower.ts";
 import {
-  buildTowerResultsCsv,
+  buildTowerResults,
   COUNTDOWN_MS,
   DROP_COOLDOWN_MS,
   FEEDBACK_MS,
@@ -312,10 +312,24 @@ describe("end of game", () => {
     answer(game, clock, ann, true);
     answer(game, clock, ann, false);
     game.end();
-    const lines = buildTowerResultsCsv(game).replace(/^﻿/, "").trim().split("\r\n");
-    expect(lines[0]).toBe("Team,Team rank,Team floors,Team blocks,Nickname,Correct,Wrong,Accuracy %,Blocks placed,Blocks missed,Monster hatched");
-    expect(lines[1]).toBe("Red,1,0,0,Ann,1,1,50,0,0,0");
-    expect(lines[2]).toBe("Red,1,0,0,'=Bob,0,0,,0,0,0");
+    const results = buildTowerResults(game);
+    expect(results.header).toEqual([
+      "Team",
+      "Team rank",
+      "Team floors",
+      "Team blocks",
+      "Nickname",
+      "Correct",
+      "Wrong",
+      "Accuracy %",
+      "Blocks placed",
+      "Blocks missed",
+      "Monster hatched",
+    ]);
+    expect(results.rows).toEqual([
+      ["Red", 1, 0, 0, "Ann", 1, 1, 50, 0, 0, 0],
+      ["Red", 1, 0, 0, "=Bob", 0, 0, "", 0, 0, 0],
+    ]);
   });
 });
 

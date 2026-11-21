@@ -24,7 +24,8 @@ import { GameError, realClock, shuffle } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
-import { toCsv } from "./results.ts";
+import type { Column, ResultsSheet } from "./results.ts";
+import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
 import { Roster } from "./roster.ts";
 import type { AnswerTotals } from "./stream.ts";
@@ -551,27 +552,27 @@ export class CupGame {
 }
 
 /** Cup of Death: one row per player in final standing order. */
-export function buildCupResultsCsv(game: CupGame): string {
-  const header = ["Rank", "Nickname", "Status", "Cups left", "Rounds survived", "Correct", "Wrong", "Accuracy %", "Drinks survived", "Rounds safe"];
-  const rows: (string | number)[][] = game.standings().map((s) => {
-    const p = game.players.get(s.id)!;
-    const answered = p.correct + p.wrong;
-    const status =
-      s.rank === 1 ? "Winner" : p.outRound === null ? "Survived" : `${game.theme === "christmas" ? "Blasted off" : "Poisoned"} in round ${p.outRound}`;
-    return [
-      s.rank,
-      p.nickname,
-      status,
-      p.cups,
-      p.outRound === null ? game.round : p.outRound - 1,
-      p.correct,
-      p.wrong,
-      answered ? Math.round((p.correct / answered) * 100) : "",
-      p.drinksSurvived,
-      p.safeRounds,
-    ];
-  });
-  return toCsv([header, ...rows]);
+function cupColumns(game: CupGame): Column<{ rank: number; p: CupPlayer }>[] {
+  const out = game.theme === "christmas" ? "Blasted off" : "Poisoned";
+  return [
+    { header: "Rank", value: (r) => r.rank },
+    { header: "Nickname", value: (r) => r.p.nickname },
+    { header: "Status", value: (r) => (r.rank === 1 ? "Winner" : r.p.outRound === null ? "Survived" : `${out} in round ${r.p.outRound}`) },
+    { header: "Cups left", value: (r) => r.p.cups },
+    { header: "Rounds survived", value: (r) => (r.p.outRound === null ? game.round : r.p.outRound - 1) },
+    { header: "Correct", value: (r) => r.p.correct },
+    { header: "Wrong", value: (r) => r.p.wrong },
+    { header: "Accuracy %", value: (r) => accuracy(r.p) },
+    { header: "Drinks survived", value: (r) => r.p.drinksSurvived },
+    { header: "Rounds safe", value: (r) => r.p.safeRounds },
+  ];
+}
+
+export function buildCupResults(game: CupGame): ResultsSheet {
+  return sheet(
+    cupColumns(game),
+    game.standings().map((s) => ({ rank: s.rank, p: game.players.get(s.id)! })),
+  );
 }
 
 export const cupMode: ModeEntry<"cup"> = {
@@ -589,7 +590,7 @@ export const cupMode: ModeEntry<"cup"> = {
   },
   pacing: null,
   teams: () => null,
-  resultsCsv: buildCupResultsCsv,
+  results: buildCupResults,
   handle(game, playerId, msg) {
     switch (msg.type) {
       case "cup.answer":

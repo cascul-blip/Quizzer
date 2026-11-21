@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { Lobby } from "../src/server/game/lobby.ts";
+import { records } from "../src/server/game/results.ts";
 import type { RobotPlayer } from "../src/server/game/robot.ts";
-import { buildRobotResultsCsv, COUNTDOWN_MS, FEEDBACK_MS, RobotGame, spreadTile } from "../src/server/game/robot.ts";
+import { buildRobotResults, COUNTDOWN_MS, FEEDBACK_MS, RobotGame, spreadTile } from "../src/server/game/robot.ts";
 import {
   ROBOT_ATTACK_MS,
   ROBOT_BOARD,
@@ -443,10 +444,21 @@ describe("Robot Attack", () => {
     const { game, clock } = setup(["A", "B"]);
     answer(game, clock, byName(game, "A"), true);
     for (let i = 0; i < ROBOT_LIVES; i++) round(game, clock, ["B"]);
-    const csv = buildRobotResultsCsv(game);
-    const lines = csv.trim().split("\r\n");
-    expect(lines[0]).toContain("Rank,Nickname,Status,Lives left,Rounds survived");
-    expect(lines[1]).toBe("1,A,Winner,3,3,1,0,100,0,0");
-    expect(lines[2]).toBe("2,B,Out in round 3,0,2,0,0,,0,3");
+    const rows = records(buildRobotResults(game));
+    expect(rows).toEqual([
+      { Rank: 1, Nickname: "A", Status: "Winner", "Lives left": 3, "Rounds survived": 3, Correct: 1, Wrong: 0, "Accuracy %": 100, Moves: 0, "Laser hits": 0 },
+      {
+        Rank: 2,
+        Nickname: "B",
+        Status: "Out in round 3",
+        "Lives left": 0,
+        "Rounds survived": 2,
+        Correct: 0,
+        Wrong: 0,
+        "Accuracy %": "",
+        Moves: 0,
+        "Laser hits": 3,
+      },
+    ]);
   });
 });

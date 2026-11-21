@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { LandPlayer } from "../src/server/game/land.ts";
-import { buildLandResultsCsv, CONQUEST_MS, COUNTDOWN_MS, FEEDBACK_MS, LandGame } from "../src/server/game/land.ts";
+import { buildLandResults, CONQUEST_MS, COUNTDOWN_MS, FEEDBACK_MS, LandGame } from "../src/server/game/land.ts";
 import { Lobby } from "../src/server/game/lobby.ts";
 import { EMPTY, hexDistance, neighbors } from "../src/shared/land-board.ts";
 import { LAND_EMPTY_MS } from "../src/shared/modes/land.ts";
@@ -378,10 +378,24 @@ describe("results", () => {
     fund(a);
     for (const t of ringAround(game, game.teams[1]!.start, 2)) game.place(a.id, t);
     clock.advance(CONQUEST_MS);
-    const rows = buildLandResultsCsv(game).replace("﻿", "").trim().split("\r\n");
-    expect(rows[0]).toBe("Team,Team rank,Team tiles,Knocked out by,Nickname,Correct,Wrong,Accuracy %,Tiles placed,Tiles stolen,Tiles surrounded");
-    expect(rows[1]).toBe("Red,1,21,,A,2,1,67,13,0,7");
-    expect(rows[2]).toBe("Blue,2,0,Red,B,0,0,,0,0,0");
+    const results = buildLandResults(game);
+    expect(results.header).toEqual([
+      "Team",
+      "Team rank",
+      "Team tiles",
+      "Knocked out by",
+      "Nickname",
+      "Correct",
+      "Wrong",
+      "Accuracy %",
+      "Tiles placed",
+      "Tiles stolen",
+      "Tiles surrounded",
+    ]);
+    expect(results.rows).toEqual([
+      ["Red", 1, 21, "", "A", 2, 1, 67, 13, 0, 7],
+      ["Blue", 2, 0, "Red", "B", 0, 0, "", 0, 0, 0],
+    ]);
   });
 
   test("kicking a player on the message screen cancels their timer", () => {

@@ -16,7 +16,8 @@ import { AUTO_REVEAL_MS, GameError, GRACE_MS, preparePlayOrder, realClock, shuff
 import type { LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
-import { toCsv } from "./results.ts";
+import type { Column, ResultsSheet } from "./results.ts";
+import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
 import { Roster } from "./roster.ts";
 
@@ -528,38 +529,27 @@ export class RacerGame {
 }
 
 /** Racer: one row per player; the class's shared distance, top speed and crashes are in every row. */
-export function buildRacerResultsCsv(game: RacerGame): string {
-  const header = [
-    "Nickname",
-    "Correct",
-    "Wrong",
-    "Accuracy %",
-    "Turns driven",
-    "Mph gained",
-    "Fail points as driver",
-    "Class distance (miles)",
-    "Top speed (mph)",
-    "Crashes",
-  ];
+function racerColumns(game: RacerGame): Column<RacerPlayer>[] {
   const round = (v: number) => Math.round(v * 100) / 100;
-  const rows: (string | number)[][] = [...game.players.values()]
-    .sort((a, b) => b.correct - a.correct || b.mphGained - a.mphGained)
-    .map((p) => {
-      const answered = p.correct + p.wrong;
-      return [
-        p.nickname,
-        p.correct,
-        p.wrong,
-        answered ? Math.round((p.correct / answered) * 100) : "",
-        p.turnsDriven,
-        p.mphGained,
-        p.failsAsDriver,
-        round(game.car.distance),
-        round(game.car.topSpeed),
-        game.car.crashes,
-      ];
-    });
-  return toCsv([header, ...rows]);
+  return [
+    { header: "Nickname", value: (p) => p.nickname },
+    { header: "Correct", value: (p) => p.correct },
+    { header: "Wrong", value: (p) => p.wrong },
+    { header: "Accuracy %", value: (p) => accuracy(p) },
+    { header: "Turns driven", value: (p) => p.turnsDriven },
+    { header: "Mph gained", value: (p) => p.mphGained },
+    { header: "Fail points as driver", value: (p) => p.failsAsDriver },
+    { header: "Class distance (miles)", value: () => round(game.car.distance) },
+    { header: "Top speed (mph)", value: () => round(game.car.topSpeed) },
+    { header: "Crashes", value: () => game.car.crashes },
+  ];
+}
+
+export function buildRacerResults(game: RacerGame): ResultsSheet {
+  return sheet(
+    racerColumns(game),
+    [...game.players.values()].sort((a, b) => b.correct - a.correct || b.mphGained - a.mphGained),
+  );
 }
 
 export const racerMode: ModeEntry<"racer"> = {
@@ -572,7 +562,7 @@ export const racerMode: ModeEntry<"racer"> = {
   },
   pacing: (game) => game,
   teams: () => null,
-  resultsCsv: buildRacerResultsCsv,
+  results: buildRacerResults,
   handle(game, playerId, msg) {
     switch (msg.type) {
       case "racer.lever":

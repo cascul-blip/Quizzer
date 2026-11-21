@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import type { FightPlayer } from "../src/server/game/fight.ts";
-import { buildFightResultsCsv, COLLAPSE_MS, COUNTDOWN_MS, DECISION_GRACE_MS, FEEDBACK_MS, FightGame, RESULT_MS } from "../src/server/game/fight.ts";
+import { buildFightResults, COLLAPSE_MS, COUNTDOWN_MS, DECISION_GRACE_MS, FEEDBACK_MS, FightGame, RESULT_MS } from "../src/server/game/fight.ts";
 import { Lobby } from "../src/server/game/lobby.ts";
+import { records } from "../src/server/game/results.ts";
 import { viewKey } from "../src/server/phone-view-delivery.ts";
 import { launchVector, MAX_PULL, simulate } from "../src/shared/fight-physics.ts";
 import { CORRECT_PER_DECISION, DECISION_MS, FIGHT_MAX_DAMAGE, REPAIR_MS } from "../src/shared/modes/fight.ts";
@@ -351,10 +352,9 @@ describe("end of game", () => {
     const { game, clock } = setup(["A", "B"]);
     shoot(game, clock, byName(game, "B"), 0);
     game.end();
-    const lines = buildFightResultsCsv(game).trim().split("\r\n");
-    expect(lines[0]).toContain("Enemy hits");
-    expect(lines[1]!.startsWith("Blue,Won,0,B,")).toBe(true);
-    expect(lines[2]!.startsWith("Red,Lost,1,A,")).toBe(true);
+    const rows = records(buildFightResults(game));
+    expect(rows[0]).toMatchObject({ Team: "Blue", Result: "Won", "Tower damage": 0, Nickname: "B", "Enemy hits": 1 });
+    expect(rows[1]).toMatchObject({ Team: "Red", Result: "Lost", "Tower damage": 1, Nickname: "A" });
   });
 });
 

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { PLAYER_MODES } from "../src/client/player/modes.tsx";
 import { Lobby } from "../src/server/game/lobby.ts";
 import type { ModeMsg } from "../src/server/game/mode-entry.ts";
-import { MODES } from "../src/server/game/modes.ts";
+import { entryOf, MODES } from "../src/server/game/modes.ts";
 import { QuizStore } from "../src/server/quiz/store.ts";
 import type { GameHub } from "../src/server/ws.ts";
 import { keysOf } from "../src/shared/keys-of.ts";
@@ -207,19 +207,24 @@ describe("Game modes", () => {
         expect(lobbyView().pacing).toBe(PACED.has(mode) ? "auto" : "manual");
       });
 
-      test("the results CSV has a header and one row per player", async () => {
+      test("the results CSV has a BOM, a header, and one row per player as wide as the header", async () => {
         const nicknames = ["Noel", "Holly", "Ivy"];
         openLobby(mode, nicknames);
         send(host, { type: "host.start", pacing: "manual" });
         send(host, { type: "host.end" });
         await flush();
-        // The CSV starts with a byte order mark, which trimStart drops.
-        const lines = (hub.lastResults?.csv ?? "").trimStart().split("\r\n");
+        const csv = hub.lastResults?.csv ?? "";
+        expect(csv.codePointAt(0)).toBe(0xfeff);
+        const lines = csv.slice(1).split("\r\n");
         // Kingdom Siege adds a wave log after a blank line; the player rows come first in every mode.
         const rows = lines.slice(1, lines.indexOf(""));
         expect(lines[0]).toContain("Nickname");
         expect(rows).toHaveLength(nicknames.length);
         for (const nickname of nicknames) expect(rows.some((row) => row.includes(nickname))).toBe(true);
+        const game = hub.game;
+        if (!game || game instanceof Lobby) throw new Error("expected the finished game");
+        const sheet = entryOf(game).results(game);
+        for (const row of sheet.rows) expect(row).toHaveLength(sheet.header.length);
       });
 
       test("a phone message for a game mode that isn't running is ignored", async () => {

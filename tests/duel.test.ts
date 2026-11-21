@@ -5,7 +5,7 @@ import {
   AWARD_BIGGEST_CLIMB,
   AWARD_LONGEST_REIGN,
   AWARD_MOST_WINS,
-  buildDuelResultsCsv,
+  buildDuelResults,
   DuelGame,
   GRACE_MS,
   INTRO_MS,
@@ -589,15 +589,34 @@ describe("Showdown", () => {
     expect(game.playerView(byName(game, "D").id)!.result!.awards).toEqual([AWARD_LONGEST_REIGN, AWARD_MOST_WINS]);
     expect(game.playerView(byName(game, "C").id)!.result).toEqual({ rank: 6, playerCount: 6, awards: [] });
 
-    const csv = buildDuelResultsCsv(game);
-    const lines = csv.replace(/^﻿/, "").trim().split("\r\n");
-    expect(lines).toHaveLength(7);
-    expect(lines[0]).toBe(
-      "Rank,Nickname,Points,Final arena,Start arena,Wins,Losses,Draws,Rounds won in Arena 1,Correct,Wrong,R1 answer (Question 0),R1 correct,R1 time (s),R2 answer (Question 1),R2 correct,R2 time (s)",
-    );
-    expect(lines[1]).toBe("1,D,5,1,2,2,0,0,1,2,0,yes,yes,0.20,yes,yes,0.10");
-    expect(lines[3]).toBe("3,A,3,2,1,1,1,0,1,1,1,yes,yes,0.10,no,no,0.40");
-    expect(lines[6]).toBe("6,C,0,3,2,0,2,0,0,0,2,no,no,0.50,no,no,0.60");
+    const results = buildDuelResults(game);
+    expect(results.header).toEqual([
+      "Rank",
+      "Nickname",
+      "Points",
+      "Final arena",
+      "Start arena",
+      "Wins",
+      "Losses",
+      "Draws",
+      "Rounds won in Arena 1",
+      "Correct",
+      "Wrong",
+      "R1 answer (Question 0)",
+      "R1 correct",
+      "R1 time (s)",
+      "R2 answer (Question 1)",
+      "R2 correct",
+      "R2 time (s)",
+    ]);
+    expect(results.rows).toEqual([
+      [1, "D", 5, 1, 2, 2, 0, 0, 1, 2, 0, "yes", "yes", "0.20", "yes", "yes", "0.10"],
+      expect.anything(),
+      [3, "A", 3, 2, 1, 1, 1, 0, 1, 1, 1, "yes", "yes", "0.10", "no", "no", "0.40"],
+      expect.anything(),
+      expect.anything(),
+      [6, "C", 0, 3, 2, 0, 2, 0, 0, 0, 2, "no", "no", "0.50", "no", "no", "0.60"],
+    ]);
   });
 
   test("points decide the ranking, not the ladder; the round's arena count sets the value", () => {

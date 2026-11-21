@@ -9,7 +9,7 @@ import { Lobby } from "./game/lobby.ts";
 import type { LiveGame } from "./game/mode-entry.ts";
 import { isModeMsg, modeOfMsg } from "./game/mode-entry.ts";
 import { entryOf } from "./game/modes.ts";
-import { writeResultsFile } from "./game/results.ts";
+import { saveResults } from "./game/results.ts";
 import type { HostCommandContext } from "./host-commands.ts";
 import { applyHostCommand } from "./host-commands.ts";
 import { JoinInformation } from "./join-info.ts";
@@ -288,14 +288,7 @@ export class GameHub {
 
   private onFinish(game: LiveGame): void {
     const entry = entryOf(game);
-    const csv = entry.resultsCsv(game);
-    let file: string | null = null;
-    try {
-      file = writeResultsFile(game, csv, this.store.resultsDir);
-      this.log(`Results saved to ${file}`);
-    } catch (e) {
-      this.log(`Could not save results: ${(e as Error).message}`);
-    }
+    const { csv, file } = saveResults(game, entry.results(game), this.store.resultsDir, this.log);
     this.lastResults = { quizId: game.quizId, title: game.title, csv, file };
     entry.finished?.(game, { dataDir: this.store.dataDir, log: this.log });
   }

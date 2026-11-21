@@ -15,6 +15,7 @@ import type { GiftGame } from "./gift.ts";
 import type { LandGame } from "./land.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
 import type { RacerGame } from "./racer.ts";
+import type { ResultsSheet } from "./results.ts";
 import type { RobotGame } from "./robot.ts";
 import type { SiegeGame } from "./siege.ts";
 import type { SubGame } from "./submarine.ts";
@@ -113,7 +114,8 @@ interface ServerModeEntry<M extends GameMode> {
   pacing: PacingOf<M>;
   /** How many teams the lobby previews and assigns players to with these settings; null in a solo mode. */
   teams(settings: ModeSettingsMap[M]): number | null;
-  resultsCsv(game: ModeGame[M]): string;
+  /** The results to save when the game finishes. */
+  results(game: ModeGame[M]): ResultsSheet;
   /** After the results are saved. */
   finished?(game: ModeGame[M], ctx: FinishContext): void;
   /** One of the mode's phone messages; "resend" when the phone should get its view again. Throws GameError to report an error; the default case calls unhandled. */

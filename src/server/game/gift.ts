@@ -23,7 +23,8 @@ import { GameError, realClock, shuffle } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, unhandled } from "./mode-entry.ts";
-import { toCsv } from "./results.ts";
+import type { Column, ResultsSheet } from "./results.ts";
+import { sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
 import { Roster } from "./roster.ts";
 import type { AnswerTotals } from "./stream.ts";
@@ -327,15 +328,23 @@ export class GiftGame {
   }
 }
 
-export function buildGiftResultsCsv(game: GiftGame): string {
-  const header = ["Rank", "Nickname", "Score", "Correct", "Wrong", "Bonus rounds earned", "Gift taps", "Dud taps", "Power-ups collected"];
-  return toCsv([
-    header,
-    ...game.standings().map(({ id, rank }) => {
-      const player = game.players.get(id)!;
-      return [rank, player.nickname, player.score, player.correct, player.wrong, player.rounds, player.goodTaps, player.dudTaps, player.powerups];
-    }),
-  ]);
+const GIFT_COLUMNS: Column<{ rank: number; p: GiftPlayer }>[] = [
+  { header: "Rank", value: (r) => r.rank },
+  { header: "Nickname", value: (r) => r.p.nickname },
+  { header: "Score", value: (r) => r.p.score },
+  { header: "Correct", value: (r) => r.p.correct },
+  { header: "Wrong", value: (r) => r.p.wrong },
+  { header: "Bonus rounds earned", value: (r) => r.p.rounds },
+  { header: "Gift taps", value: (r) => r.p.goodTaps },
+  { header: "Dud taps", value: (r) => r.p.dudTaps },
+  { header: "Power-ups collected", value: (r) => r.p.powerups },
+];
+
+export function buildGiftResults(game: GiftGame): ResultsSheet {
+  return sheet(
+    GIFT_COLUMNS,
+    game.standings().map(({ id, rank }) => ({ rank, p: game.players.get(id)! })),
+  );
 }
 
 export const giftMode: ModeEntry<"gift"> = {
@@ -352,7 +361,7 @@ export const giftMode: ModeEntry<"gift"> = {
   },
   pacing: null,
   teams: () => null,
-  resultsCsv: buildGiftResultsCsv,
+  results: buildGiftResults,
   handle(game, playerId, msg) {
     switch (msg.type) {
       case "gift.answer":

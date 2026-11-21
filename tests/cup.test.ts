@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import type { CupPlayer } from "../src/server/game/cup.ts";
-import { buildCupResultsCsv, COUNTDOWN_MS, CupGame, FEEDBACK_MS } from "../src/server/game/cup.ts";
+import { buildCupResults, COUNTDOWN_MS, CupGame, FEEDBACK_MS } from "../src/server/game/cup.ts";
 import { Lobby } from "../src/server/game/lobby.ts";
+import { records } from "../src/server/game/results.ts";
 import {
   CUP_ALL_SAFE_MS,
   CUP_DEFAULT_CUPS,
@@ -198,7 +199,9 @@ describe("Cup of Death", () => {
       expect(b.target).toBe(0);
       expect(game.playerView(b.id)!.me.out).toBe(true);
       game.end();
-      expect(buildCupResultsCsv(game)).toContain(`${theme === "christmas" ? "Blasted off" : "Poisoned"} in round 1`);
+      expect(records(buildCupResults(game)).find((r) => r.Nickname === b.nickname)?.Status).toBe(
+        `${theme === "christmas" ? "Blasted off" : "Poisoned"} in round 1`,
+      );
     });
 
   test("the lobby sets the cups, 1 to 6, 3 by default", () => {
@@ -358,7 +361,12 @@ describe("Cup of Death", () => {
         .sort(),
     ).toEqual(["A", "B"]);
     expect(s.find((x) => x.nickname === "C")!.rank).toBe(3);
-    expect(buildCupResultsCsv(game)).toContain("Winner");
+    expect(
+      records(buildCupResults(game))
+        .filter((r) => r.Status === "Winner")
+        .map((r) => r.Nickname)
+        .sort(),
+    ).toEqual(["A", "B"]);
   });
 
   test("a solo game runs until its player is poisoned", () => {
