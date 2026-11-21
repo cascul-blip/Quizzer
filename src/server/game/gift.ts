@@ -15,7 +15,7 @@ import {
   GIFT_DEFAULT_MINUTES,
   GIFT_MINUTES,
 } from "../../shared/gift-rules.ts";
-import type { GiftHit, GiftPhase, GiftStanding, HostGiftState, PlayerGiftView } from "../../shared/protocol.ts";
+import type { GiftHit, GiftPhase, GiftStanding, HostGiftState, PlayerGiftView } from "../../shared/modes/gift.ts";
 import type { Quiz } from "../../shared/quiz-schema.ts";
 import { GameError, realClock, shuffle, type Clock } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";

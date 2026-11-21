@@ -23,7 +23,8 @@ Two facts about a mode are shared by the server and the projector, declared once
 
 Work outside the entries, by hand. "Compiler" marks the places where `bun run typecheck` reports a mode that is missing. The others fail silently:
 
-- [ ] `src/shared/protocol.ts`: `GameMode`, the mode's settings in `ModeSettingsMap` (and `ModeSettingsInput` if the host's input differs), its phone messages in `PlayerMsg`, its phase in the `PlayerView` "none" union, and its host and player views in `HostView` and `PlayerView`, with the mode as their `kind`.
+- [ ] `src/shared/modes/<mode>.ts`: the mode's own protocol types (phase, settings, views, constants). It imports no other mode file and nothing from `protocol.ts`; view pieces several modes share live in `src/shared/mode-views.ts`. Add the file to `MIGRATED_MODES` in `tests/import-graph.test.ts`.
+- [ ] `src/shared/protocol.ts`, importing the mode file's types directly (no re-exports): `GameMode`, the mode's settings in `ModeSettingsMap` (and `ModeSettingsInput` if the host's input differs), its phone messages in `PlayerMsg`, its phase in the `PlayerView` "none" union, and its host and player views in `HostView` and `PlayerView`, with the mode as their `kind`.
 - [ ] `src/shared/mode-names.ts`: the one plain name (compiler). Also add it to `GLOSSARY.md` if the glossary lists it.
 - [ ] `MODE_FLAGS` in `src/shared/mode-flags.ts`: whether the mode is paced and whether Protect from abuse applies (compiler). A protected mode's `start` passes the handoff’s `protect` value on to its game.
 - [ ] `MSG_MODE` in `src/server/game/mode-entry.ts`: each phone message mapped to its mode (compiler). `ModeGame` in the same file: the mode's game class (compiler).
