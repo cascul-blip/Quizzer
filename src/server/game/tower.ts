@@ -6,7 +6,7 @@ import type { HostTowerState, MonsterAttack, MonsterEggs, PlayerTowerView, Tower
 import { BLOCKS_PER_BUILD, DROP_ZONES, EGG_LEVELS_ABOVE, MONSTER_DAMAGE, TOWER_MINUTES, towerShared } from "../../shared/modes/tower.ts";
 import { MAX_TEAMS } from "../../shared/protocol.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
-import { DEFAULT_TOWER_THEME, towerTheme } from "../../shared/tower-theme.ts";
+import { modeTheme, THEMED_MODES } from "../../shared/themed-modes.ts";
 import type { Clock } from "./common.ts";
 import { GameError, realClock, teamInfo } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
@@ -347,7 +347,7 @@ export class TowerGame {
     const players = [...this.players.values()];
     return {
       kind: "tower",
-      theme: towerTheme(this.settings.theme),
+      theme: modeTheme("tower", this.settings.theme),
       phase: this.phase,
       quiz: { id: this.quizId, title: this.title, questionCount: this.questions.length },
       remainingMs: this.remainingMs(),
@@ -414,7 +414,7 @@ export class TowerGame {
     }
     return {
       kind: "tower",
-      theme: towerTheme(this.settings.theme),
+      theme: modeTheme("tower", this.settings.theme),
       phase: this.phase,
       title: this.title,
       remainingMs: this.remainingMs(),
@@ -472,13 +472,13 @@ export function buildTowerResultsCsv(game: TowerGame): string {
 
 export const towerMode: ModeEntry<"tower"> = {
   ...towerShared,
-  defaultSettings: { teams: 2, minutes: 5, monster: true, theme: DEFAULT_TOWER_THEME },
+  defaultSettings: { teams: 2, minutes: 5, monster: true, theme: THEMED_MODES.tower.default },
   readSettings(raw, current) {
     const teams = Math.trunc(Number(raw.teams));
     const minutes = Number(raw.minutes);
     if (!(teams >= 1 && teams <= MAX_TEAMS)) throw new GameError(`Teams must be between 1 and ${MAX_TEAMS}`);
     if (!(TOWER_MINUTES as readonly number[]).includes(minutes)) throw new GameError("Unsupported game length");
-    const theme = pickTheme(raw.theme, towerTheme(current.theme), "tower");
+    const theme = pickTheme(raw.theme, modeTheme("tower", current.theme), "tower");
     return { teams, minutes, monster: raw.monster === undefined ? current.monster : !!raw.monster, theme };
   },
   start(lobby, ctx) {

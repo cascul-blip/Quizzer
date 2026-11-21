@@ -17,7 +17,7 @@ Selected Christmas art direction: option 2, North Pole Workshop.
 
 Crane generation prompts and the remaining-art inventory are in [crane-and-artwork-audit.md](crane-and-artwork-audit.md).
 
-The artwork is integrated into the host and phone tower screens. Choose **Theme → North Pole Workshop** or **Normal** in the Tallest Tower lobby. New lobbies default to North Pole; the host's selection is preserved when playing again. To change the application default, edit `DEFAULT_TOWER_THEME` in `src/shared/tower-theme.ts`.
+The artwork is integrated into the host and phone tower screens. Choose **Theme → North Pole Workshop** or **Normal** in the Tallest Tower lobby. New lobbies default to North Pole; the host's selection is preserved when playing again. To change the application default, edit the tower entry's `default` in `THEMED_MODES` (`src/shared/themed-modes.ts`).
 
 Run `python3 scripts/tower-christmas-art.py` to rebuild the optimized WebPs and team-tint overlays in `src/client/shared/tower/christmas/` (Pillow and numpy required). The six building tiles and crane recolor their painted structural trim; snow, brass, window glass and decorations keep their source colors. Both full-size and phone copies are exported. Normal artwork is separate and preserved.
 

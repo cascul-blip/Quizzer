@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { PlayerSiegeView } from "../../shared/modes/siege.ts";
+import { siegeDefenderLabel, siegeDefenderPhrase, siegeWords } from "../../shared/modes/siege.ts";
 import type { ClientMsg } from "../../shared/protocol.ts";
 import type { SiegeDefenderType } from "../../shared/siege-rules.ts";
 import {
@@ -14,7 +15,6 @@ import {
   SIEGE_SQUARES,
   siegeUpgradeCost,
 } from "../../shared/siege-rules.ts";
-import { siegeDefenderLabel, siegeDefenderPhrase, siegeWords } from "../../shared/siege-theme.ts";
 import { DEFENDER_EMOJI, SiegeIcon } from "../shared/siege-art.tsx";
 import { SiegeThemeProvider, useChristmasSiege, useSiegeTheme } from "../shared/siege-skin.tsx";
 import { useCountdown } from "../shared/ui.tsx";

@@ -5,6 +5,7 @@ import type { SiegeMonster, SiegePlayer } from "../src/server/game/siege.ts";
 import { buildSiegeResultsCsv, FEEDBACK_MS, SIEGE_NO_GOLD, SiegeGame } from "../src/server/game/siege.ts";
 import { siegeRecordsPath } from "../src/server/paths.ts";
 import { loadSiegeRecord, saveSiegeRecord } from "../src/server/siege-records.ts";
+import { siegeWords } from "../src/shared/modes/siege.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
 import type { SiegeWaves } from "../src/shared/siege-rules.ts";
 import {
@@ -34,8 +35,7 @@ import {
   siegeWaveBudget,
   siegeWaveStrength,
 } from "../src/shared/siege-rules.ts";
-import type { SiegeTheme } from "../src/shared/siege-theme.ts";
-import { siegeWords } from "../src/shared/siege-theme.ts";
+import type { SeasonTheme } from "../src/shared/themed-modes.ts";
 import { FakeClock, sampleQuiz, tempDir } from "./helpers.ts";
 
 function quiz(count = 5): Quiz {
@@ -58,7 +58,7 @@ function seeded(seed = 42) {
 
 const NAMES = ["Ana", "Ben", "Cal", "Dee", "Eve", "Fay"];
 
-function setup({ players = 3, waves = 5 as SiegeWaves, protect = false, seed = 42, theme = "classic" as SiegeTheme } = {}) {
+function setup({ players = 3, waves = 5 as SiegeWaves, protect = false, seed = 42, theme = "classic" as SeasonTheme } = {}) {
   const clock = new FakeClock();
   let finished = 0;
   const lobby = new Lobby(quiz(), { protect });

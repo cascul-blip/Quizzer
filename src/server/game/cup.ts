@@ -2,8 +2,6 @@ import type { AnswerValue } from "../../shared/answer-match.ts";
 import { answerOf } from "../../shared/answer-match.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { randomAvatar } from "../../shared/avatars.ts";
-import type { CupTheme } from "../../shared/cup-theme.ts";
-import { cupTheme, DEFAULT_CUP_THEME } from "../../shared/cup-theme.ts";
 import type { CupAwards, CupPhase, CupRevealView, CupStanding, HostCupState, PlayerCupView } from "../../shared/modes/cup.ts";
 import {
   CUP_ALL_SAFE_MS,
@@ -19,6 +17,8 @@ import {
   cupShared,
 } from "../../shared/modes/cup.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
+import type { SeasonTheme } from "../../shared/themed-modes.ts";
+import { modeTheme, THEMED_MODES } from "../../shared/themed-modes.ts";
 import type { Clock } from "./common.ts";
 import { GameError, realClock, shuffle } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
@@ -77,7 +77,7 @@ interface CupOptions {
 }
 
 interface CupGameSettings {
-  theme?: CupTheme;
+  theme?: SeasonTheme;
   /** Cups in front of each player at the start (default CUP_DEFAULT_CUPS). */
   cups?: number;
   shuffleAnswers: boolean;
@@ -88,7 +88,7 @@ interface CupGameSettings {
 /** Cup of Death: roll a die, answer that many questions in time, or drink one of your cups. One is poisoned. Last one standing wins. */
 export class CupGame {
   readonly runningMode = "cup" as const;
-  readonly theme: CupTheme;
+  readonly theme: SeasonTheme;
   readonly quizId: string;
   readonly title: string;
   readonly questions: Question[];
@@ -119,7 +119,7 @@ export class CupGame {
     this.title = quiz.title;
     this.questions = quiz.questions;
     this.startCups = settings.cups ?? CUP_DEFAULT_CUPS;
-    this.theme = cupTheme(settings.theme);
+    this.theme = modeTheme("cup", settings.theme);
     this.clock = opts.clock ?? realClock;
     this.rng = opts.rng ?? Math.random;
     this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock, settings.protect);
@@ -576,12 +576,12 @@ export function buildCupResultsCsv(game: CupGame): string {
 
 export const cupMode: ModeEntry<"cup"> = {
   ...cupShared,
-  defaultSettings: { cups: CUP_DEFAULT_CUPS, theme: DEFAULT_CUP_THEME },
+  defaultSettings: { cups: CUP_DEFAULT_CUPS, theme: THEMED_MODES.cup.default },
   readSettings(raw, current) {
     const cups = Number(raw.cups);
     if (!(Number.isInteger(cups) && cups >= CUP_MIN_CUPS && cups <= CUP_MAX_CUPS))
       throw new GameError(`Cups must be between ${CUP_MIN_CUPS} and ${CUP_MAX_CUPS}`);
-    return { cups, theme: pickTheme(raw.theme, cupTheme(current.theme), "cup") };
+    return { cups, theme: pickTheme(raw.theme, modeTheme("cup", current.theme), "cup") };
   },
   start(lobby, ctx) {
     const game = CupGame.fromLobby(lobby, handoffOptions(ctx));

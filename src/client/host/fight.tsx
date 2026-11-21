@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import type { FightTheme } from "../../shared/fight-theme.ts";
-import { fightName, fightTheme } from "../../shared/fight-theme.ts";
 import type { FightEvent, FightShot, HillSetting } from "../../shared/modes/fight.ts";
 import { CORRECT_PER_DECISION, FIGHT_MAX_DAMAGE, HILL_SETTINGS } from "../../shared/modes/fight.ts";
 import type { HostView } from "../../shared/protocol.ts";
+import type { SeasonTheme } from "../../shared/themed-modes.ts";
+import { modeTheme, themedLabel, themedTrack } from "../../shared/themed-modes.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { Battlefield, HealthBar, ShotLayer } from "../shared/fight-art.tsx";
 import { FightThemeProvider } from "../shared/fight-skin.tsx";
@@ -65,7 +65,7 @@ function FightStageContent({ view, send }: { view: FightView; send: Send }) {
     <div class="stage fight-stage" data-theme={view.theme ?? "classic"}>
       <header class="topbar">
         <div class="title">{view.quiz.title}</div>
-        <div class="pill">{fightName(view.theme)}</div>
+        <div class="pill">{themedLabel("fight", view.theme)}</div>
         <div class="pill">⛰ {HILL_NAME[view.hill]}</div>
         <div class="spacer" />
         <div class="pill">👥 {view.playerCount}</div>
@@ -230,8 +230,9 @@ function FightSettings({ settings, send }: LobbySettingsProps<"fight">) {
         Theme
         <select
           aria-label="Tower Fight theme"
-          value={fightTheme(settings.theme)}
-          onChange={(e) => send({ type: "host.setModeSettings", mode: "fight", settings: { theme: e.currentTarget.value as FightTheme } })}
+          value={modeTheme("fight", settings.theme)}
+          // checked: the select only offers the season themes, and the server refuses any other (pickTheme)
+          onChange={(e) => send({ type: "host.setModeSettings", mode: "fight", settings: { theme: e.currentTarget.value as SeasonTheme } })}
         >
           <option value="classic">🏰 Normal</option>
           <option value="christmas">🎄 Gingerbread Siege</option>
@@ -257,13 +258,13 @@ function FightSettings({ settings, send }: LobbySettingsProps<"fight">) {
 
 /** The projector's music for Tower Fight. */
 export function fightCue(view: FightView): MusicCue {
-  if (view.phase === "podium") return { track: "fight-results" };
+  if (view.phase === "podium") return { track: themedTrack("fight", view.theme, "results") };
   const worst = Math.max(0, ...view.teams.map((t) => t.damage)) / FIGHT_MAX_DAMAGE;
-  return { track: "fight-play", intensity: Math.max(0, Math.min(1, 0.15 + worst * 0.85)) };
+  return { track: themedTrack("fight", view.theme, "play"), intensity: Math.max(0, Math.min(1, 0.15 + worst * 0.85)) };
 }
 
 export const fightLobby: LobbyModeEntry<"fight"> = {
-  label: (settings) => fightName(settings.theme),
+  label: (settings) => themedLabel("fight", settings.theme),
   Settings: FightSettings,
-  lobbyTrack: () => "fight-lobby",
+  lobbyTrack: (settings) => themedTrack("fight", settings.theme, "lobby"),
 };

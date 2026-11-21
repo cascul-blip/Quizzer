@@ -1,7 +1,8 @@
 import type { AvatarChoice } from "../avatars.ts";
-import type { DuelTheme } from "../duel-theme.ts";
 import type { PacedAnswerMsg, Pacing, QuestionError, QuestionView, SubAward } from "../mode-views.ts";
 import { sharedModeEntry } from "../shared-mode-entry.ts";
+import type { SeasonTheme } from "../themed-modes.ts";
+import { modeTheme } from "../themed-modes.ts";
 
 // Showdown protocol types.
 //
@@ -24,7 +25,7 @@ export const DUEL_ROUNDS = [10, 15, 20] as const;
 export const DUEL_DEFAULT_ROUNDS = 15;
 
 export interface DuelSettings {
-  theme?: DuelTheme;
+  theme?: SeasonTheme;
   /** Rounds to play; questions repeat in a fresh order once they run out. */
   rounds: number;
 }
@@ -99,7 +100,7 @@ export interface HostDuelPlayer extends DuelPlayerRef {
 export interface HostDuelState {
   /** Time since reveal started, for reconnect-safe animation. */
   revealElapsedMs?: number;
-  theme?: DuelTheme;
+  theme?: SeasonTheme;
   kind: "duel";
   phase: DuelPhase;
   quiz: { id: string; title: string; questionCount: number };
@@ -128,7 +129,7 @@ export interface HostDuelState {
 
 export interface PlayerDuelView {
   revealElapsedMs?: number;
-  theme?: DuelTheme;
+  theme?: SeasonTheme;
   kind: "duel";
   phase: DuelPhase;
   title: string;
@@ -166,3 +167,7 @@ export const duelShared = sharedModeEntry<DuelMsg>()({
   lobbyBanner: false,
   msgTypes: ["duel.answer"],
 });
+
+/** An arena's name; arena 1 has its own in each theme. */
+export const duelArenaName = (arena: number, theme?: SeasonTheme) =>
+  arena === 1 ? (modeTheme("duel", theme) === "christmas" ? "North Pole Plaza" : "High Noon") : `Arena ${arena}`;

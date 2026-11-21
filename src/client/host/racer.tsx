@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import type { RacerTurn } from "../../shared/modes/racer.ts";
 import type { HostView } from "../../shared/protocol.ts";
 import { RACER_CONFIDENCE, RACER_CONFIDENCE_LEVELS, RACER_REPAIR_MPH } from "../../shared/racer-rules.ts";
-import type { RacerTheme } from "../../shared/racer-theme.ts";
-import { racerName, racerTheme } from "../../shared/racer-theme.ts";
+import type { SeasonTheme } from "../../shared/themed-modes.ts";
+import { modeTheme, themedLabel, themedTrack } from "../../shared/themed-modes.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import type { MusicCue } from "../shared/music/index.ts";
 import { PinBoard, PinNote } from "../shared/pin.tsx";
@@ -86,7 +86,7 @@ export function RacerStage({ view, send }: { view: RacerView; send: Send }) {
     <div class="stage racer-stage">
       <header class="topbar">
         <div class="title">{view.quiz.title}</div>
-        <div class="pill">{racerName(view.theme)}</div>
+        <div class="pill">{themedLabel("racer", view.theme)}</div>
         {q && !podium && (
           <div class="pill">
             Question {q.index + 1} / {q.total}
@@ -422,8 +422,9 @@ function RacerSettings({ settings, send, children }: LobbySettingsProps<"racer">
         Theme
         <select
           aria-label="Racer theme"
-          value={racerTheme(settings?.theme)}
-          onChange={(e) => send({ type: "host.setModeSettings", mode: "racer", settings: { theme: e.currentTarget.value as RacerTheme } })}
+          value={modeTheme("racer", settings?.theme)}
+          // checked: the select only offers the season themes, and the server refuses any other (pickTheme)
+          onChange={(e) => send({ type: "host.setModeSettings", mode: "racer", settings: { theme: e.currentTarget.value as SeasonTheme } })}
         >
           <option value="christmas">🎄 Neon Noel</option>
           <option value="classic">🏎 Normal</option>
@@ -437,16 +438,15 @@ function RacerSettings({ settings, send, children }: LobbySettingsProps<"racer">
 
 /** The projector's music for the racer. */
 export function racerCue(view: RacerView): MusicCue {
-  const christmas = racerTheme(view.theme) === "christmas";
-  if (view.phase === "podium") return { track: christmas ? "racer-christmas-results" : "racer-results" };
+  if (view.phase === "podium") return { track: themedTrack("racer", view.theme, "results") };
   // One continuous drive: tempo and layers follow the car's speed. No key, so the
   // music never restarts between questions; useMusic glides to each new intensity.
   const { speed, crashed } = view.car;
-  return { track: christmas ? "racer-christmas-drive" : "racer-drive", intensity: crashed ? 0.03 : Math.max(0.1, Math.min(1, speed / 150)) };
+  return { track: themedTrack("racer", view.theme, "play"), intensity: crashed ? 0.03 : Math.max(0.1, Math.min(1, speed / 150)) };
 }
 
 export const racerLobby: LobbyModeEntry<"racer"> = {
-  label: (settings) => racerName(settings?.theme),
+  label: (settings) => themedLabel("racer", settings?.theme),
   Settings: RacerSettings,
-  lobbyTrack: (settings) => (racerTheme(settings.theme) === "christmas" ? "racer-christmas-lobby" : "racer-lobby"),
+  lobbyTrack: (settings) => themedTrack("racer", settings.theme, "lobby"),
 };

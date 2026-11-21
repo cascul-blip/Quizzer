@@ -4,15 +4,15 @@ import { DuelStage } from "../../src/client/host/duel.tsx";
 import { DuelPlayer } from "../../src/client/player/duel.tsx";
 import { SnowballLobbyPreview } from "../../src/client/shared/duel-christmas.tsx";
 import { setPhoneArt } from "../../src/client/shared/phone-art.ts";
-import type { DuelTheme } from "../../src/shared/duel-theme.ts";
 import type { DuelPhase, HostDuelState, PlayerDuelView } from "../../src/shared/modes/duel.ts";
 import type { HostView } from "../../src/shared/protocol.ts";
+import type { SeasonTheme } from "../../src/shared/themed-modes.ts";
 
 type Fixture = Record<DuelPhase, { host: HostDuelState; phone: PlayerDuelView }>;
 function Review({ fixture, phone }: { fixture: Fixture; phone: boolean }) {
   const query = new URLSearchParams(location.search);
   const [phase, setPhase] = useState<DuelPhase>((query.get("phase") as DuelPhase) || "reveal");
-  const [theme, setTheme] = useState<DuelTheme>(query.get("theme") === "classic" ? "classic" : "christmas");
+  const [theme, setTheme] = useState<SeasonTheme>(query.get("theme") === "classic" ? "classic" : "christmas");
   const [draw, setDraw] = useState(false);
   const [swap, setSwap] = useState(false);
   const [seq, setSeq] = useState(0);
@@ -56,7 +56,7 @@ function Review({ fixture, phone }: { fixture: Fixture; phone: boolean }) {
       >
         <label>
           Theme{" "}
-          <select aria-label="Theme" value={theme} onChange={(e) => setTheme(e.currentTarget.value as DuelTheme)}>
+          <select aria-label="Theme" value={theme} onChange={(e) => setTheme(e.currentTarget.value as SeasonTheme)}>
             <option value="christmas">Christmas</option>
             <option value="classic">Classic</option>
           </select>

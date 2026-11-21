@@ -1,7 +1,7 @@
 import type { AvatarChoice } from "../avatars.ts";
-import type { CupTheme } from "../cup-theme.ts";
 import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward } from "../mode-views.ts";
 import { sharedModeEntry } from "../shared-mode-entry.ts";
+import type { SeasonTheme } from "../themed-modes.ts";
 
 // Cup of Death protocol types.
 
@@ -13,7 +13,7 @@ export const CUP_DEFAULT_CUPS = 3;
 
 export interface CupSettings {
   cups: number;
-  theme?: CupTheme;
+  theme?: SeasonTheme;
 }
 export const CUP_DIE_SIDES = 6;
 /** The dice tumble this long before the quiz timer starts. */
@@ -97,7 +97,7 @@ export interface CupStanding {
 
 export interface HostCupState {
   kind: "cup";
-  theme?: CupTheme;
+  theme?: SeasonTheme;
   phase: CupPhase;
   quiz: { id: string; title: string; questionCount: number };
   round: number;
@@ -117,7 +117,7 @@ export interface HostCupState {
 
 export interface PlayerCupView {
   kind: "cup";
-  theme?: CupTheme;
+  theme?: SeasonTheme;
   phase: CupPhase;
   title: string;
   round: number;

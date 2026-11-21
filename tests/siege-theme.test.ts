@@ -3,7 +3,8 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { Lobby } from "../src/server/game/lobby.ts";
 import { SiegeGame } from "../src/server/game/siege.ts";
-import { DEFAULT_SIEGE_THEME, siegeDefenderPhrase, siegeTheme } from "../src/shared/siege-theme.ts";
+import { siegeDefenderPhrase } from "../src/shared/modes/siege.ts";
+import { modeTheme, THEMED_MODES } from "../src/shared/themed-modes.ts";
 import { FakeClock, sampleQuiz } from "./helpers.ts";
 
 describe("Kingdom Siege themes", () => {
@@ -19,8 +20,8 @@ describe("Kingdom Siege themes", () => {
   test("Christmas is the default and both clients receive the selected look", () => {
     const lobby = new Lobby(sampleQuiz());
     lobby.setMode("siege");
-    expect(lobby.settings.siege.theme).toBe(DEFAULT_SIEGE_THEME);
-    expect(siegeTheme()).toBe("christmas");
+    expect(lobby.settings.siege.theme).toBe(THEMED_MODES.siege.default);
+    expect(modeTheme("siege")).toBe("christmas");
     const player = lobby.join("Holly");
     for (const theme of ["classic", "christmas"] as const) {
       lobby.setModeSettings("siege", { waves: 10, theme });

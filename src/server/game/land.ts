@@ -4,7 +4,6 @@ import type { AvatarChoice } from "../../shared/avatars.ts";
 import { randomAvatar } from "../../shared/avatars.ts";
 import type { LandStart } from "../../shared/land-board.ts";
 import { EMPTY, enclosedBy, landBoardSize, placementCost, startTiles } from "../../shared/land-board.ts";
-import { DEFAULT_LAND_THEME, landTheme } from "../../shared/land-theme.ts";
 import type {
   HostLandState,
   LandAwards,
@@ -27,6 +26,7 @@ import {
 } from "../../shared/modes/land.ts";
 import { MAX_TEAMS } from "../../shared/protocol.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
+import { modeTheme, THEMED_MODES } from "../../shared/themed-modes.ts";
 import type { Clock } from "./common.ts";
 import { GameError, realClock, teamInfo } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
@@ -437,7 +437,7 @@ export class LandGame {
     const playing = this.phase === "playing";
     return {
       kind: "land",
-      theme: landTheme(this.settings.theme),
+      theme: modeTheme("land", this.settings.theme),
       phase: this.phase,
       quiz: { id: this.quizId, title: this.title, questionCount: this.questions.length },
       remainingMs: this.remainingMs(),
@@ -490,7 +490,7 @@ export class LandGame {
     }
     return {
       kind: "land",
-      theme: landTheme(this.settings.theme),
+      theme: modeTheme("land", this.settings.theme),
       phase: this.phase,
       title: this.title,
       remainingMs: this.remainingMs(),
@@ -551,13 +551,13 @@ export function buildLandResultsCsv(game: LandGame): string {
 
 export const landMode: ModeEntry<"land"> = {
   ...landShared,
-  defaultSettings: { teams: 2, minutes: 5, theme: DEFAULT_LAND_THEME },
+  defaultSettings: { teams: 2, minutes: 5, theme: THEMED_MODES.land.default },
   readSettings(raw, current) {
     const teams = Math.trunc(Number(raw.teams));
     const minutes = Number(raw.minutes);
     if (!(teams >= LAND_MIN_TEAMS && teams <= MAX_TEAMS)) throw new GameError(`Teams must be between ${LAND_MIN_TEAMS} and ${MAX_TEAMS}`);
     if (!(LAND_MINUTES as readonly number[]).includes(minutes)) throw new GameError("Unsupported game length");
-    return { teams, minutes, theme: pickTheme(raw.theme, landTheme(current.theme), "Land Grab") };
+    return { teams, minutes, theme: pickTheme(raw.theme, modeTheme("land", current.theme), "Land Grab") };
   },
   start(lobby, ctx) {
     const game = LandGame.fromLobby(lobby, handoffOptions(ctx));

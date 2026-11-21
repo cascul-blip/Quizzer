@@ -5,13 +5,13 @@ import { LandStage } from "../../src/client/host/land.tsx";
 import { LandPlayer } from "../../src/client/player/land.tsx";
 import { setPhoneArt } from "../../src/client/shared/phone-art.ts";
 import { hexDistance, landBoardSize, startTiles } from "../../src/shared/land-board.ts";
-import type { LandTheme } from "../../src/shared/land-theme.ts";
 import type { LandPhase, PlayerLandView } from "../../src/shared/modes/land.ts";
 import type { HostView } from "../../src/shared/protocol.ts";
 import { TEAMS } from "../../src/shared/protocol.ts";
+import type { SeasonTheme } from "../../src/shared/themed-modes.ts";
 
 function Preview({ phone }: { phone: boolean }) {
-  const [theme, setTheme] = useState<LandTheme>("christmas");
+  const [theme, setTheme] = useState<SeasonTheme>("christmas");
   const [count, setCount] = useState(6);
   const [phase, setPhase] = useState<LandPhase>("playing");
   const [claimed, setClaimed] = useState(false);
@@ -80,7 +80,7 @@ function Preview({ phone }: { phone: boolean }) {
   return (
     <div style={{ height: "100dvh", display: "flex", flexDirection: "column" }}>
       <nav style={{ display: "flex", flexWrap: "wrap", gap: 6, padding: 6, background: "#30271e", fontSize: 12 }}>
-        <select aria-label="Theme" value={theme} onChange={(e) => setTheme(e.currentTarget.value as LandTheme)}>
+        <select aria-label="Theme" value={theme} onChange={(e) => setTheme(e.currentTarget.value as SeasonTheme)}>
           <option value="christmas">North Pole</option>
           <option value="classic">Classic</option>
         </select>

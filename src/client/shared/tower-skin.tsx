@@ -1,4 +1,3 @@
-import { towerTheme } from "../../shared/tower-theme.ts";
 import { isPhoneArt, pickArt } from "./phone-art.ts";
 import { createSkin } from "./season-skin.tsx";
 import art10 from "./tower/christmas/background.webp";
@@ -24,7 +23,7 @@ import phone9 from "./tower/christmas/phone/yeti.webp";
 import art5 from "./tower/christmas/shop.webp";
 import art9 from "./tower/christmas/yeti.webp";
 
-const skin = createSkin(towerTheme);
+const skin = createSkin("tower");
 export const TowerThemeProvider = skin.Provider;
 export const useTowerTheme = skin.useTheme;
 export const useChristmasTower = skin.useChristmas;

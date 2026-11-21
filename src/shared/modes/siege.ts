@@ -2,7 +2,8 @@ import type { AvatarChoice } from "../avatars.ts";
 import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward } from "../mode-views.ts";
 import { sharedModeEntry } from "../shared-mode-entry.ts";
 import type { SiegeDefenderType, SiegeMonsterType, SiegeWaves } from "../siege-rules.ts";
-import type { SiegeTheme } from "../siege-theme.ts";
+import type { SeasonTheme } from "../themed-modes.ts";
+import { modeTheme } from "../themed-modes.ts";
 
 // Kingdom Siege protocol types.
 
@@ -13,7 +14,7 @@ import type { SiegeTheme } from "../siege-theme.ts";
 export type SiegePhase = "countdown" | "build" | "wave" | "stands" | "fallen" | "podium";
 
 export interface SiegeSettings {
-  theme?: SiegeTheme;
+  theme?: SeasonTheme;
   /** 5, 10 or "endless". */
   waves: SiegeWaves;
 }
@@ -156,7 +157,7 @@ export interface SiegeMapView {
 
 export interface PlayerSiegeView {
   kind: "siege";
-  theme?: SiegeTheme;
+  theme?: SeasonTheme;
   phase: SiegePhase;
   title: string;
   phaseRemainingMs: number;
@@ -205,3 +206,29 @@ export const siegeShared = sharedModeEntry<SiegeMsg>()({
   lobbyBanner: true,
   msgTypes: ["siege.answer", "siege.place", "siege.upgrade", "siege.map"],
 });
+
+/** Each defender's name in each theme. */
+const DEFENDER_LABELS: Record<SeasonTheme, Record<SiegeDefenderType, string>> = {
+  christmas: { archer: "Elf archer", knight: "Nutcracker", wall: "Present barricade" },
+  classic: { archer: "Archer", knight: "Knight", wall: "Stone wall" },
+};
+
+export function siegeDefenderLabel(type: SiegeDefenderType, theme?: SeasonTheme) {
+  return DEFENDER_LABELS[modeTheme("siege", theme)][type];
+}
+
+/** The defender in a sentence, with its article: "an archer", "a present barricade". */
+export function siegeDefenderPhrase(type: SiegeDefenderType, theme?: SeasonTheme) {
+  const label = siegeDefenderLabel(type, theme).toLowerCase();
+  return `${/^[aeiou]/.test(label) ? "an" : "a"} ${label}`;
+}
+
+/** What the class defends ("the kingdom stands", "the castle fell") and the award names, for the lobby, the endings and the podium. */
+const SIEGE_WORDS = {
+  christmas: { home: "toybox", fallen: "toybox", topArcher: "Top Elf Captain", archers: "elf archers", masterMason: "Master Wrapper", wall: "barricade" },
+  classic: { home: "kingdom", fallen: "castle", topArcher: "Top Archer Captain", archers: "archers", masterMason: "Master Mason", wall: "wall" },
+} satisfies Record<SeasonTheme, Record<string, string>>;
+
+export function siegeWords(theme?: SeasonTheme) {
+  return SIEGE_WORDS[modeTheme("siege", theme)];
+}

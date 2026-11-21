@@ -1,11 +1,11 @@
 import type { JSX } from "preact";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import type { AvatarChoice } from "../../shared/avatars.ts";
-import type { DuelTheme } from "../../shared/duel-theme.ts";
-import { duelArenaName, duelName, duelTheme } from "../../shared/duel-theme.ts";
 import type { DuelArena, DuelArenaResult, DuelistResult } from "../../shared/modes/duel.ts";
-import { DUEL_ROUNDS } from "../../shared/modes/duel.ts";
+import { DUEL_ROUNDS, duelArenaName } from "../../shared/modes/duel.ts";
 import type { HostView } from "../../shared/protocol.ts";
+import type { ScreenOf, SeasonTheme } from "../../shared/themed-modes.ts";
+import { modeTheme, themedLabel, themedName, themedTrack } from "../../shared/themed-modes.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import type { DuelHat, DuelPose } from "../shared/duel-art.tsx";
 import {
@@ -83,7 +83,7 @@ export function DuelStage({ view, send }: { view: DuelView; send: Send }) {
   const step = useRevealStep(round?.round ?? null, view.revealElapsedMs ?? 0);
 
   // Every pose and clip decoded before the first reveal, so swapping one in never blinks.
-  const christmas = duelTheme(view.theme) === "christmas";
+  const christmas = modeTheme("duel", view.theme) === "christmas";
   useEffect(() => (christmas ? preloadSnowballArt(false) : preloadDuelArt()), [christmas]);
 
   // Sound cues on transitions.
@@ -149,7 +149,7 @@ export function DuelStage({ view, send }: { view: DuelView; send: Send }) {
       <header class="topbar">
         <div class="title">{view.quiz.title}</div>
         <div class="pill">
-          {christmas ? "❄️" : "🤠"} {duelName(view.theme)}
+          {christmas ? "❄️" : "🤠"} {themedName("duel", view.theme)}
         </div>
         {!podium && (
           <div class="pill">
@@ -236,7 +236,7 @@ function Question({ view, send, secs }: { view: DuelView; send: Send; secs: numb
         )}
       </div>
       <TimerBar view={view} secs={secs} />
-      {view.phase === "intro" && <p class="duel-intro">{duelTheme(view.theme) === "christmas" ? "Snowballs ready…" : "Hands off your holsters…"}</p>}
+      {view.phase === "intro" && <p class="duel-intro">{modeTheme("duel", view.theme) === "christmas" ? "Snowballs ready…" : "Hands off your holsters…"}</p>}
       {open && q.type === "text" && <p class="typing-note">Type your answer on your phone</p>}
       {(open || reveal) && pin && <PinNote open={!reveal} labels={[...correct].map((i) => q.options[i]!)} />}
       {(open || reveal) && !pin && (q.type !== "text" || reveal) && (
@@ -342,7 +342,7 @@ function Arenas({ view, step }: { view: DuelView; step: number }) {
   // When the movers set off, measure where each one stands and where its new arena is.
   useLayoutEffect(() => {
     if (!reveal || step !== STEP_MOVE || !wrap.current) return;
-    const delay = duelTheme(view.theme) === "christmas" ? Math.max(0, (view.revealElapsedMs ?? 0) - STEP_AT_MS[3]!) : 0;
+    const delay = modeTheme("duel", view.theme) === "christmas" ? Math.max(0, (view.revealElapsedMs ?? 0) - STEP_AT_MS[3]!) : 0;
     if (delay >= TOKEN_MS) return;
     const base = wrap.current.getBoundingClientRect();
     const list: Token[] = [];
@@ -455,7 +455,7 @@ function ArenaPanel({
   step: number;
   panelRef: (el: HTMLElement | null) => void;
 }) {
-  if (duelTheme(view.theme) === "christmas") return <ChristmasArenaPanel arena={arena} result={result} view={view} step={step} panelRef={panelRef} />;
+  if (modeTheme("duel", view.theme) === "christmas") return <ChristmasArenaPanel arena={arena} result={result} view={view} step={step} panelRef={panelRef} />;
   const throne = arena.arena === 1;
   // On the reveal the panel shows the round as it was played; otherwise the live arena.
   const people = result ? result.duelists : arena.duelists;
@@ -708,7 +708,7 @@ function hash(s: string): number {
 function DuelPodium({ view, send }: { view: DuelView; send: Send }) {
   const [showErrors, setShowErrors] = useState(false);
   const a = view.awards;
-  const christmas = duelTheme(view.theme) === "christmas";
+  const christmas = modeTheme("duel", view.theme) === "christmas";
   const ranked = [...view.players].sort((x, y) => x.rank - y.rank);
   // Second, first, third, like the classic podium.
   const top = [ranked[1], ranked[0], ranked[2]];
@@ -802,15 +802,16 @@ function DuelSettings({ settings, send, children }: LobbySettingsProps<"duel">) 
         Theme
         <select
           aria-label="Showdown theme"
-          value={duelTheme(settings.theme)}
-          onChange={(e) => send({ type: "host.setModeSettings", mode: "duel", settings: { ...settings, theme: e.currentTarget.value as DuelTheme } })}
+          value={modeTheme("duel", settings.theme)}
+          // checked: the select only offers the season themes, and the server refuses any other (pickTheme)
+          onChange={(e) => send({ type: "host.setModeSettings", mode: "duel", settings: { ...settings, theme: e.currentTarget.value as SeasonTheme } })}
         >
           <option value="christmas">North Pole Snowball Showdown</option>
           <option value="classic">Classic Showdown</option>
         </select>
       </label>
       <span class="opt mode-hint">
-        {duelName(settings.theme)}: everyone duels at once. Win to climb toward {duelArenaName(1, settings.theme)}, lose and you drop an arena.
+        {themedName("duel", settings.theme)}: everyone duels at once. Win to climb toward {duelArenaName(1, settings.theme)}, lose and you drop an arena.
       </span>
     </>
   );
@@ -818,25 +819,26 @@ function DuelSettings({ settings, send, children }: LobbySettingsProps<"duel">) 
 
 /** The projector's music for Showdown. */
 export function duelCue(view: DuelView): MusicCue {
-  if (duelTheme(view.theme) === "christmas")
-    return { track: view.phase === "podium" ? "tower-christmas-results" : "tower-christmas-play", intensity: view.phase === "open" ? 0.6 : 0.25 };
-  if (view.phase === "podium") return { track: "showdown-results" };
+  const track = (screen: ScreenOf<"duel">) => themedTrack("duel", view.theme, screen);
+  if (modeTheme("duel", view.theme) === "christmas")
+    return { track: track(view.phase === "podium" ? "results" : "play"), intensity: view.phase === "open" ? 0.6 : 0.25 };
+  if (view.phase === "podium") return { track: track("results") };
   // Rounds are quick, so the build starts in the intro (the whistle is already on the tune)
   // and reaches full gallop halfway through the question's time.
-  if (view.phase === "intro") return { track: "showdown", intensity: 0.3, rampTo: 0.5, rampMs: view.phaseRemainingMs, key: `duel-r${view.round}-intro` };
+  if (view.phase === "intro") return { track: track("play"), intensity: 0.3, rampTo: 0.5, rampMs: view.phaseRemainingMs, key: `duel-r${view.round}-intro` };
   if (view.phase === "open") {
     const full = view.phaseDurationMs / 2;
     const elapsed = Math.max(0, view.phaseDurationMs - view.phaseRemainingMs);
     const start = Math.min(1, elapsed / Math.max(1, full));
-    return { track: "showdown", intensity: 0.5 + start * 0.5, rampTo: 1, rampMs: Math.max(0, full - elapsed), key: `duel-r${view.round}-open` };
+    return { track: track("play"), intensity: 0.5 + start * 0.5, rampTo: 1, rampMs: Math.max(0, full - elapsed), key: `duel-r${view.round}-open` };
   }
   // The reveal eases back to the riding beat (no silence between quick rounds); the draw sting (DuelStage) plays over it.
-  return { track: "showdown", intensity: 0.3, key: `duel-r${view.round}-${view.phase}` };
+  return { track: track("play"), intensity: 0.3, key: `duel-r${view.round}-${view.phase}` };
 }
 
 export const duelLobby: LobbyModeEntry<"duel"> = {
-  label: (settings) => (duelTheme(settings.theme) === "christmas" ? "❄️ Snowball Showdown" : "🤠 Showdown"),
+  label: (settings) => themedLabel("duel", settings.theme),
   Settings: DuelSettings,
-  Preview: ({ settings }) => (duelTheme(settings.theme) === "christmas" ? <SnowballLobbyPreview /> : null),
-  lobbyTrack: (settings) => (duelTheme(settings.theme) === "christmas" ? "tower-christmas-lobby" : "showdown-lobby"),
+  Preview: ({ settings }) => (modeTheme("duel", settings.theme) === "christmas" ? <SnowballLobbyPreview /> : null),
+  lobbyTrack: (settings) => themedTrack("duel", settings.theme, "lobby"),
 };

@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { HostTowerTeam, MonsterAttack, MonsterEggs } from "../../shared/modes/tower.ts";
-import { EGG_LEVELS_ABOVE, MONSTER_DAMAGE, TOWER_MINUTES } from "../../shared/modes/tower.ts";
+import { EGG_LEVELS_ABOVE, MONSTER_DAMAGE, TOWER_MINUTES, towerWords } from "../../shared/modes/tower.ts";
 import type { HostView } from "../../shared/protocol.ts";
 import { MAX_TEAMS } from "../../shared/protocol.ts";
-import type { TowerTheme } from "../../shared/tower-theme.ts";
-import { towerTheme, towerWords } from "../../shared/tower-theme.ts";
+import type { SeasonTheme } from "../../shared/themed-modes.ts";
+import { modeTheme, themedLabel, themedTrack } from "../../shared/themed-modes.ts";
 import type { MusicCue } from "../shared/music/index.ts";
 import { play } from "../shared/sounds.ts";
 import {
@@ -428,12 +428,13 @@ function TowerSettings({ settings, send }: LobbySettingsProps<"tower">) {
         Theme
         <select
           aria-label="Tower theme"
-          value={towerTheme(settings.theme)}
+          value={modeTheme("tower", settings.theme)}
           onChange={(e) =>
             send({
               type: "host.setModeSettings",
               mode: "tower",
-              settings: { teams: settings.teams, minutes: settings.minutes, theme: e.currentTarget.value as TowerTheme },
+              // checked: the select only offers the season themes, and the server refuses any other (pickTheme)
+              settings: { teams: settings.teams, minutes: settings.minutes, theme: e.currentTarget.value as SeasonTheme },
             })
           }
         >
@@ -485,7 +486,7 @@ function TowerSettings({ settings, send }: LobbySettingsProps<"tower">) {
             })
           }
         />
-        {towerWords(settings.theme).creatureIcon} {towerTheme(settings.theme) === "christmas" ? "Yeti" : "Monster"}
+        {towerWords(settings.theme).creatureIcon} {modeTheme("tower", settings.theme) === "christmas" ? "Yeti" : "Monster"}
         {settings.teams < 2 ? " (needs 2+ teams)" : ""}
       </label>
     </>
@@ -494,9 +495,8 @@ function TowerSettings({ settings, send }: LobbySettingsProps<"tower">) {
 
 /** The projector's music for Tallest Tower. */
 export function towerCue(view: TowerView): MusicCue {
-  const christmas = towerTheme(view.theme) === "christmas";
-  const playTrack = christmas ? "tower-christmas-medley" : "tower-play";
-  if (view.phase === "podium") return { track: christmas ? "tower-christmas-results" : "tower-results" };
+  const playTrack = themedTrack("tower", view.theme, "play");
+  if (view.phase === "podium") return { track: themedTrack("tower", view.theme, "results") };
   // Builds over the last few minutes of the timer.
   const start = Math.max(0, Math.min(1, 1 - view.remainingMs / 300_000));
   return view.phase === "playing"
@@ -505,7 +505,7 @@ export function towerCue(view: TowerView): MusicCue {
 }
 
 export const towerLobby: LobbyModeEntry<"tower"> = {
-  label: (settings) => `${towerWords(settings.theme).icon} ${towerWords(settings.theme).name}`,
+  label: (settings) => themedLabel("tower", settings.theme),
   Settings: TowerSettings,
-  lobbyTrack: (settings) => (towerTheme(settings.theme) === "christmas" ? "tower-christmas-lobby" : "tower-lobby"),
+  lobbyTrack: (settings) => themedTrack("tower", settings.theme, "lobby"),
 };

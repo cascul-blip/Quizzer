@@ -7,11 +7,11 @@ import { setPhoneArt } from "../../src/client/shared/phone-art.ts";
 import type { PlayerTowerView, TowerPhase } from "../../src/shared/modes/tower.ts";
 import type { HostView } from "../../src/shared/protocol.ts";
 import { TEAMS } from "../../src/shared/protocol.ts";
-import type { TowerTheme } from "../../src/shared/tower-theme.ts";
+import type { SeasonTheme } from "../../src/shared/themed-modes.ts";
 
 function Preview({ phone }: { phone: boolean }) {
   const query = new URLSearchParams(location.search);
-  const [theme, setTheme] = useState<TowerTheme>(query.get("theme") === "classic" ? "classic" : "christmas");
+  const [theme, setTheme] = useState<SeasonTheme>(query.get("theme") === "classic" ? "classic" : "christmas");
   const [phase, setPhase] = useState<TowerPhase>((query.get("phase") || "playing") as TowerPhase);
   const [seq, setSeq] = useState(0);
   const [teamIndex, setTeamIndex] = useState(0);
@@ -77,7 +77,7 @@ function Preview({ phone }: { phone: boolean }) {
   return (
     <div style={{ height: "100dvh", display: "flex", flexDirection: "column" }}>
       <nav style={{ display: "flex", flexWrap: "wrap", gap: 6, padding: 6, background: "#142333", zIndex: 10, fontSize: 12 }}>
-        <select aria-label="Theme" value={theme} onChange={(e) => setTheme(e.currentTarget.value as TowerTheme)}>
+        <select aria-label="Theme" value={theme} onChange={(e) => setTheme(e.currentTarget.value as SeasonTheme)}>
           <option value="christmas">North Pole</option>
           <option value="classic">Normal</option>
         </select>

@@ -3,8 +3,6 @@ import { answerOf, checkAnswer, MAX_TYPED_ANSWER } from "../../shared/answer-mat
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { randomAvatar } from "../../shared/avatars.ts";
 import { arenaOf, arenaPoints, climbLadder, duelOutcome, pairArenas, standings } from "../../shared/duel-rules.ts";
-import type { DuelTheme } from "../../shared/duel-theme.ts";
-import { DEFAULT_DUEL_THEME, duelTheme } from "../../shared/duel-theme.ts";
 import type { Pacing, QuestionError, QuestionView, SubAward } from "../../shared/mode-views.ts";
 import type {
   DuelArena,
@@ -20,6 +18,8 @@ import type {
 import { DUEL_DEFAULT_ROUNDS, DUEL_ROUNDS, duelShared } from "../../shared/modes/duel.ts";
 import type { ShuffleOptions } from "../../shared/protocol.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
+import type { SeasonTheme } from "../../shared/themed-modes.ts";
+import { modeTheme, THEMED_MODES } from "../../shared/themed-modes.ts";
 import type { Clock } from "./common.ts";
 import { AUTO_REVEAL_MS, GameError, GRACE_MS, preparePlayOrder, realClock, shuffle, topErrors } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
@@ -75,7 +75,7 @@ interface DuelOptions {
 }
 
 interface DuelGameSettings {
-  theme?: DuelTheme;
+  theme?: SeasonTheme;
   shuffle: ShuffleOptions;
   rounds?: number;
   pacing?: Pacing;
@@ -90,7 +90,7 @@ export class DuelGame {
   readonly quizId: string;
   readonly title: string;
   readonly rounds: number;
-  readonly theme: DuelTheme;
+  readonly theme: SeasonTheme;
   /** One question per round slot: the quiz's play order, repeated in fresh cycles. */
   readonly questions: Question[];
   readonly roster = new Roster<DuelPlayer>();
@@ -131,7 +131,7 @@ export class DuelGame {
 
   constructor(quiz: Quiz, settings: DuelGameSettings, opts: DuelOptions = {}) {
     if (quiz.questions.length === 0) throw new GameError("This quiz has no questions");
-    this.theme = duelTheme(settings.theme);
+    this.theme = modeTheme("duel", settings.theme);
     this.quizId = quiz.id;
     this.title = quiz.title;
     this.clock = opts.clock ?? realClock;
@@ -643,11 +643,11 @@ export function buildDuelResultsCsv(game: DuelGame): string {
 
 export const duelMode: ModeEntry<"duel"> = {
   ...duelShared,
-  defaultSettings: { rounds: DUEL_DEFAULT_ROUNDS, theme: DEFAULT_DUEL_THEME },
+  defaultSettings: { rounds: DUEL_DEFAULT_ROUNDS, theme: THEMED_MODES.duel.default },
   readSettings(raw, current) {
     const rounds = Number(raw.rounds);
     if (!(DUEL_ROUNDS as readonly number[]).includes(rounds)) throw new GameError("Unsupported number of rounds");
-    return { rounds, theme: pickTheme(raw.theme, duelTheme(current.theme), "Showdown") };
+    return { rounds, theme: pickTheme(raw.theme, modeTheme("duel", current.theme), "Showdown") };
   },
   start(lobby, ctx) {
     const game = DuelGame.fromLobby(lobby, handoffOptions(ctx));
