@@ -5,13 +5,13 @@ import { CupStage } from "../../src/client/host/cup.tsx";
 import { CupPlayer } from "../../src/client/player/cup.tsx";
 import { setPhoneArt } from "../../src/client/shared/phone-art.ts";
 import type { AvatarId } from "../../src/shared/avatars.ts";
-import type { CupTheme } from "../../src/shared/cup-theme.ts";
 import type { CupPhase, PlayerCupView } from "../../src/shared/modes/cup.ts";
 import type { HostView } from "../../src/shared/protocol.ts";
+import type { SeasonTheme } from "../../src/shared/themed-modes.ts";
 
 function Preview({ phone }: { phone: boolean }) {
   const query = new URLSearchParams(location.search);
-  const [theme, setTheme] = useState<CupTheme>(query.get("theme") === "classic" ? "classic" : "christmas");
+  const [theme, setTheme] = useState<SeasonTheme>(query.get("theme") === "classic" ? "classic" : "christmas");
   const [scene, setScene] = useState("quiz");
   const [count, setCount] = useState(6);
   const [cups, setCups] = useState(3);
@@ -78,7 +78,7 @@ function Preview({ phone }: { phone: boolean }) {
   return (
     <div style={{ height: "100dvh", display: "flex", flexDirection: "column" }}>
       <nav style={{ display: "flex", flexWrap: "wrap", gap: 6, padding: 6, background: "#142e26", zIndex: 10, fontSize: 12 }}>
-        <select aria-label="Theme" value={theme} onChange={(e) => setTheme(e.currentTarget.value as CupTheme)}>
+        <select aria-label="Theme" value={theme} onChange={(e) => setTheme(e.currentTarget.value as SeasonTheme)}>
           <option value="christmas">Santa's Workshop</option>
           <option value="classic">Normal</option>
         </select>

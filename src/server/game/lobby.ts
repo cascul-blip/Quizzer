@@ -4,7 +4,7 @@ import type { GameMode } from "../../shared/mode-entries.ts";
 import type { Pacing } from "../../shared/mode-views.ts";
 import type { HostGameState, ModeSettingsMap, PlayerView, ShuffleOptions } from "../../shared/protocol.ts";
 import type { Quiz } from "../../shared/quiz-schema.ts";
-import { isSeasonTheme } from "../../shared/season-theme.ts";
+import { isSeasonTheme } from "../../shared/themed-modes.ts";
 import { assignTeams, GameError, teamInfo } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
 import type { LiveGame, ModeEntry, ModeGame, RawSettings, StartContext } from "./mode-entry.ts";

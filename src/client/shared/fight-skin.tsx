@@ -1,4 +1,3 @@
-import { fightTheme } from "../../shared/fight-theme.ts";
 import castle0 from "./fight/christmas/castle-0.webp";
 import castle1 from "./fight/christmas/castle-1.webp";
 import castle2 from "./fight/christmas/castle-2.webp";
@@ -30,7 +29,7 @@ import sky from "./fight/christmas/sky.webp";
 import { isPhoneArt } from "./phone-art.ts";
 import { createSkin } from "./season-skin.tsx";
 
-const skin = createSkin(fightTheme);
+const skin = createSkin("fight");
 export const FightThemeProvider = skin.Provider;
 export const useGingerbread = skin.useChristmas;
 export const gingerbreadArt = {

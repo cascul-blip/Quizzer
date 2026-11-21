@@ -1,8 +1,8 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { LandStart } from "../land-board.ts";
-import type { LandTheme } from "../land-theme.ts";
 import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward, TeamInfo } from "../mode-views.ts";
 import { sharedModeEntry } from "../shared-mode-entry.ts";
+import type { SeasonTheme } from "../themed-modes.ts";
 
 // Land Grab protocol types.
 
@@ -19,7 +19,7 @@ export const LAND_GUARD_COST = 2;
 export const LAND_EMPTY_MS = 4000;
 
 export interface LandSettings {
-  theme?: LandTheme;
+  theme?: SeasonTheme;
   teams: number;
   minutes: number;
 }
@@ -68,7 +68,7 @@ export interface HostLandTeam extends TeamInfo {
 }
 
 export interface HostLandState {
-  theme?: LandTheme;
+  theme?: SeasonTheme;
   kind: "land";
   phase: LandPhase;
   quiz: { id: string; title: string; questionCount: number };
@@ -84,7 +84,7 @@ export interface HostLandState {
 }
 
 export interface PlayerLandView {
-  theme?: LandTheme;
+  theme?: SeasonTheme;
   kind: "land";
   phase: LandPhase;
   title: string;

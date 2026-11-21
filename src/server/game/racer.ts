@@ -9,8 +9,8 @@ import type { ShuffleOptions } from "../../shared/protocol.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import type { RacerCar, RacerConfidence } from "../../shared/racer-rules.ts";
 import { applyRacerTurn, newRacerCar, RACER_CONFIDENCE_LEVELS } from "../../shared/racer-rules.ts";
-import type { RacerTheme } from "../../shared/racer-theme.ts";
-import { DEFAULT_RACER_THEME, racerTheme } from "../../shared/racer-theme.ts";
+import type { SeasonTheme } from "../../shared/themed-modes.ts";
+import { modeTheme, THEMED_MODES } from "../../shared/themed-modes.ts";
 import type { Clock } from "./common.ts";
 import { AUTO_REVEAL_MS, GameError, GRACE_MS, preparePlayOrder, realClock, shuffle, topErrors } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
@@ -61,7 +61,7 @@ interface RacerOptions {
 }
 
 interface RacerGameSettings {
-  theme?: RacerTheme;
+  theme?: SeasonTheme;
   shuffle: ShuffleOptions;
   pacing?: Pacing;
 }
@@ -73,7 +73,7 @@ interface RacerGameSettings {
  */
 export class RacerGame {
   readonly runningMode = "racer" as const;
-  readonly theme: RacerTheme;
+  readonly theme: SeasonTheme;
   readonly quizId: string;
   readonly title: string;
   /** Play order, shuffled if the lobby asked for it. */
@@ -109,7 +109,7 @@ export class RacerGame {
 
   constructor(quiz: Quiz, settings: RacerGameSettings, opts: RacerOptions = {}) {
     if (quiz.questions.length === 0) throw new GameError("This quiz has no questions");
-    this.theme = racerTheme(settings.theme);
+    this.theme = modeTheme("racer", settings.theme);
     this.quizId = quiz.id;
     this.title = quiz.title;
     this.clock = opts.clock ?? realClock;
@@ -564,8 +564,8 @@ export function buildRacerResultsCsv(game: RacerGame): string {
 
 export const racerMode: ModeEntry<"racer"> = {
   ...racerShared,
-  defaultSettings: { theme: DEFAULT_RACER_THEME },
-  readSettings: (raw, current) => ({ theme: pickTheme(raw.theme, racerTheme(current.theme), "racer") }),
+  defaultSettings: { theme: THEMED_MODES.racer.default },
+  readSettings: (raw, current) => ({ theme: pickTheme(raw.theme, modeTheme("racer", current.theme), "racer") }),
   start(lobby, ctx) {
     const game = RacerGame.fromLobby(lobby, handoffOptions(ctx));
     return { game, log: `${this.name} started with ${game.players.size} player(s), ${game.questions.length} question(s)` };

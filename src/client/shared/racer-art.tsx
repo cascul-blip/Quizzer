@@ -1,3 +1,5 @@
+import type { SeasonTheme } from "../../shared/themed-modes.ts";
+import { modeTheme } from "../../shared/themed-modes.ts";
 /**
  * Racer's scene: a side scroller in retro pixel art. The car faces left and stays put; the
  * world (skyline, palms, road markings) scrolls past it to the right, faster the faster it
@@ -9,8 +11,6 @@
 
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { AvatarChoice } from "../../shared/avatars.ts";
-import type { RacerTheme } from "../../shared/racer-theme.ts";
-import { racerTheme } from "../../shared/racer-theme.ts";
 import { Avatar } from "./avatar-art.tsx";
 import carImg from "./racer/car.webp";
 import carCrashedImg from "./racer/car-crashed.webp";
@@ -92,7 +92,7 @@ function newStar(x: number): Star {
 }
 
 interface RacerSceneProps {
-  theme?: RacerTheme;
+  theme?: SeasonTheme;
   /** Miles per hour. The scene eases toward it, so it may jump. */
   speed: number;
   /** Wrecked: the car smokes and the scene coasts to a stop, whatever the speed. */
@@ -113,7 +113,7 @@ interface Ejection {
 
 /** Fills its container; everything is sized from the container's height. */
 export function RacerScene({ speed, crashed, onLand, ejected, theme, class: cls }: RacerSceneProps) {
-  const christmas = racerTheme(theme) === "christmas";
+  const christmas = modeTheme("racer", theme) === "christmas";
   const target = crashed ? 0 : Math.max(0, speed);
   const root = useRef<HTMLDivElement>(null);
   const skyline = useRef<HTMLDivElement>(null);
@@ -337,7 +337,7 @@ export function RacerScene({ speed, crashed, onLand, ejected, theme, class: cls 
     <img key={left} class="racer-scene-palm" src={christmas ? christmasTree : palmImg} alt="" style={{ left: `${left}%` }} />
   ));
   return (
-    <div ref={root} class={`racer-scene ${crashed ? "crashed" : ""} ${cls ?? ""}`} data-theme={racerTheme(theme)} aria-hidden="true">
+    <div ref={root} class={`racer-scene ${crashed ? "crashed" : ""} ${cls ?? ""}`} data-theme={modeTheme("racer", theme)} aria-hidden="true">
       <canvas ref={stars} class="racer-scene-stars" />
       {/* Everything but the car: it slides down out of view while the car is in space. */}
       <div class="racer-scene-world">

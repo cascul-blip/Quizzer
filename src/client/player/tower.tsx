@@ -1,8 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import type { MonsterEgg, PlayerTowerView } from "../../shared/modes/tower.ts";
-import { BLOCKS_PER_BUILD, DROP_ZONES, MONSTER_DAMAGE } from "../../shared/modes/tower.ts";
+import { BLOCKS_PER_BUILD, DROP_ZONES, MONSTER_DAMAGE, towerWords } from "../../shared/modes/tower.ts";
 import type { ClientMsg } from "../../shared/protocol.ts";
-import { towerWords } from "../../shared/tower-theme.ts";
 import {
   BuildingBlock,
   COLUMN_NAMES,

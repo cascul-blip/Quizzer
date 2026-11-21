@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { captureThreat } from "../../shared/land-board.ts";
-import type { LandTheme } from "../../shared/land-theme.ts";
-import { landTheme } from "../../shared/land-theme.ts";
 import type { HostLandTeam, LandBoard } from "../../shared/modes/land.ts";
 import { LAND_GUARD_COST, LAND_MIN_TEAMS, LAND_MINUTES, LAND_STEAL_COST } from "../../shared/modes/land.ts";
 import type { HostView } from "../../shared/protocol.ts";
 import { MAX_TEAMS } from "../../shared/protocol.ts";
+import type { SeasonTheme } from "../../shared/themed-modes.ts";
+import { modeTheme, themedTrack } from "../../shared/themed-modes.ts";
 import { BANNER_CAPTURE, BANNER_KNOCKOUT, HexBoard, LandShape, landArt, Plinth, useBanner, useTeamCard } from "../shared/land-art.tsx";
 import { LandThemeProvider, northPoleArt, useNorthPole } from "../shared/land-skin.tsx";
 import type { MusicCue } from "../shared/music/index.ts";
@@ -233,12 +233,13 @@ function LandSettings({ settings, send }: LobbySettingsProps<"land">) {
         Theme
         <select
           aria-label="Land Grab theme"
-          value={landTheme(settings.theme)}
+          value={modeTheme("land", settings.theme)}
           onChange={(e) =>
             send({
               type: "host.setModeSettings",
               mode: "land",
-              settings: { teams: settings.teams, minutes: settings.minutes, theme: e.currentTarget.value as LandTheme },
+              // checked: the select only offers the season themes, and the server refuses any other (pickTheme)
+              settings: { teams: settings.teams, minutes: settings.minutes, theme: e.currentTarget.value as SeasonTheme },
             })
           }
         >
@@ -294,9 +295,8 @@ function landThreat(board: LandBoard): number {
 
 /** The projector's music for Land Grab. */
 export function landCue(view: LandView): MusicCue {
-  const christmas = landTheme(view.theme) === "christmas";
-  const playTrack = christmas ? "land-christmas-play" : "land-play";
-  if (view.phase === "podium") return { track: christmas ? "land-christmas-results" : "land-results" };
+  const playTrack = themedTrack("land", view.theme, "play");
+  if (view.phase === "podium") return { track: themedTrack("land", view.theme, "results") };
   if (view.phase === "conquered") return { track: playTrack, intensity: 1 };
   // Calm until a team gets close to closing a ring. No key, so the music glides
   // up as the ring grows and back down if it is broken.
@@ -306,5 +306,5 @@ export function landCue(view: LandView): MusicCue {
 export const landLobby: LobbyModeEntry<"land"> = {
   label: () => "🚩 Land Grab",
   Settings: LandSettings,
-  lobbyTrack: (settings) => (landTheme(settings.theme) === "christmas" ? "land-christmas-lobby" : "land-lobby"),
+  lobbyTrack: (settings) => themedTrack("land", settings.theme, "lobby"),
 };

@@ -1,7 +1,8 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, TeamInfo } from "../mode-views.ts";
 import { sharedModeEntry } from "../shared-mode-entry.ts";
-import type { TowerTheme } from "../tower-theme.ts";
+import type { SeasonTheme } from "../themed-modes.ts";
+import { modeTheme, themedIcon, themedName } from "../themed-modes.ts";
 
 // Tallest Tower protocol types.
 
@@ -15,7 +16,7 @@ export const DROP_ZONES = 5;
 
 export interface TowerSettings {
   /** Optional for older callers; defaults to the seasonal look. */
-  theme?: TowerTheme;
+  theme?: SeasonTheme;
   teams: number;
   minutes: number;
   /** Monster eggs 4 times per game, evenly spaced (needs 2+ teams). */
@@ -59,7 +60,7 @@ export interface TowerAwards {
 
 export interface PlayerTowerView {
   kind: "tower";
-  theme?: TowerTheme;
+  theme?: SeasonTheme;
   phase: TowerPhase;
   title: string;
   /** Countdown to play (countdown phase) or to the end of the game (playing). */
@@ -95,7 +96,7 @@ export interface HostTowerTeam extends TeamInfo {
 
 export interface HostTowerState {
   kind: "tower";
-  theme?: TowerTheme;
+  theme?: SeasonTheme;
   phase: TowerPhase;
   quiz: { id: string; title: string; questionCount: number };
   remainingMs: number;
@@ -123,3 +124,11 @@ export const towerShared = sharedModeEntry<TowerMsg>()({
   lobbyBanner: false,
   msgTypes: ["tower.answer", "tower.drop"],
 });
+
+/** Tallest Tower's words in each theme: its icon and name (THEMED_MODES), the creature, the item that summons it, and what that does. */
+export function towerWords(theme?: SeasonTheme) {
+  const shown = { icon: themedIcon("tower", theme), name: themedName("tower", theme) };
+  return modeTheme("tower", theme) === "christmas"
+    ? { ...shown, creature: "yeti", creatureIcon: "❄️", item: "bell", itemIcon: "🔔", action: "rang the bell and summoned the yeti" }
+    : { ...shown, creature: "monster", creatureIcon: "👾", item: "egg", itemIcon: "🥚", action: "hatched the monster" };
+}

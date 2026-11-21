@@ -1,8 +1,8 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { PacedAnswerMsg, Pacing, QuestionError, QuestionView, SubAward } from "../mode-views.ts";
 import type { RacerCar, RacerConfidence, RacerTurnResult } from "../racer-rules.ts";
-import type { RacerTheme } from "../racer-theme.ts";
 import { sharedModeEntry } from "../shared-mode-entry.ts";
+import type { SeasonTheme } from "../themed-modes.ts";
 
 // Racer protocol types.
 //
@@ -14,7 +14,7 @@ import { sharedModeEntry } from "../shared-mode-entry.ts";
 // Racer has no lobby phase. The lobby uses HostGameState with mode "racer".
 
 export interface RacerSettings {
-  theme: RacerTheme;
+  theme: SeasonTheme;
 }
 
 /**
@@ -80,7 +80,7 @@ export interface HostRacerPlayer {
 
 export interface HostRacerState {
   kind: "racer";
-  theme?: RacerTheme;
+  theme?: SeasonTheme;
   phase: RacerPhase;
   quiz: { id: string; title: string; questionCount: number };
   /** Manual waits for host.next on the reveal; auto moves on after 5 s. host.setPacing works mid-game. */
@@ -121,7 +121,7 @@ export interface HostRacerState {
 /** A phone's complete snapshot: enough to redraw from scratch after a reconnect in any phase. */
 export interface PlayerRacerView {
   kind: "racer";
-  theme?: RacerTheme;
+  theme?: SeasonTheme;
   phase: RacerPhase;
   title: string;
   /** Totals over the questions closed so far (they don't move while a question is open). */

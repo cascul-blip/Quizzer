@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { GIFT_MINUTES } from "../../shared/gift-rules.ts";
 import type { GiftStanding } from "../../shared/modes/gift.ts";
 import type { HostView } from "../../shared/protocol.ts";
+import { themedLabel, themedTrack } from "../../shared/themed-modes.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import chestFull from "../shared/gift/chest-projector-full.webp";
 import chestMaximum from "../shared/gift/chest-projector-maximum.webp";
@@ -158,11 +159,13 @@ function GiftSettings({ settings, send }: LobbySettingsProps<"gift">) {
 
 /** The projector's music for Gift Grab. */
 export function giftCue(view: GiftView): MusicCue {
-  return view.phase === "podium" ? { track: "tower-christmas-results" } : { track: "tower-christmas-play", intensity: view.phase === "finishing" ? 1 : 0.4 };
+  return view.phase === "podium"
+    ? { track: themedTrack("gift", undefined, "results") }
+    : { track: themedTrack("gift", undefined, "play"), intensity: view.phase === "finishing" ? 1 : 0.4 };
 }
 
 export const giftLobby: LobbyModeEntry<"gift"> = {
-  label: () => "🎁 Gift Grab",
+  label: () => themedLabel("gift"),
   Settings: GiftSettings,
-  lobbyTrack: () => "tower-christmas-lobby",
+  lobbyTrack: () => themedTrack("gift", undefined, "lobby"),
 };

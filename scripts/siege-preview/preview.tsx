@@ -6,10 +6,10 @@ import { SiegePlayer } from "../../src/client/player/siege.tsx";
 import { setPhoneArt } from "../../src/client/shared/phone-art.ts";
 import type { HostSiegeDefender, HostSiegeMonster, HostSiegeState, PlayerSiegeView, SiegePhase } from "../../src/shared/modes/siege.ts";
 import type { HostView } from "../../src/shared/protocol.ts";
-import type { SiegeTheme } from "../../src/shared/siege-theme.ts";
+import type { SeasonTheme } from "../../src/shared/themed-modes.ts";
 
 function Preview({ phone, fixture }: { phone: boolean; fixture: { host: HostSiegeState; phone: PlayerSiegeView } }) {
-  const [theme, setTheme] = useState<SiegeTheme>(new URLSearchParams(location.search).get("theme") === "classic" ? "classic" : "christmas");
+  const [theme, setTheme] = useState<SeasonTheme>(new URLSearchParams(location.search).get("theme") === "classic" ? "classic" : "christmas");
   const [scene, setScene] = useState("wave");
   const [seq, setSeq] = useState(0);
   const [built, setBuilt] = useState<HostSiegeDefender[]>([]);
@@ -76,7 +76,7 @@ function Preview({ phone, fixture }: { phone: boolean; fixture: { host: HostSieg
   return (
     <div style={{ height: "100dvh", display: "flex", flexDirection: "column" }}>
       <nav style={{ display: "flex", gap: 8, flexWrap: "wrap", padding: 6, background: "#173b30", zIndex: 100, fontSize: 12 }}>
-        <select aria-label="Theme" value={theme} onChange={(e) => setTheme(e.currentTarget.value as SiegeTheme)}>
+        <select aria-label="Theme" value={theme} onChange={(e) => setTheme(e.currentTarget.value as SeasonTheme)}>
           <option value="christmas">Christmas Toybox</option>
           <option value="classic">Classic</option>
         </select>

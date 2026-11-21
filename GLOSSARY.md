@@ -24,6 +24,10 @@ _Avoid_: mode config, mode registration
 The part of a game mode's mode entry that the server, the projector and the phone all read: its one plain name, whether it is paced, whether Protect from abuse applies, whether phones show a lobby banner, and which phone messages belong to it. Each game mode declares it once, and the three mode entries build on it.
 _Avoid_: mode descriptor, mode metadata
 
+**Themed mode**:
+A game mode that can be shown in a seasonal theme (classic or Christmas). Its default theme, the name and icon it shows in each theme, and the music track each of its screens plays in each theme are declared together in one table. Several themed modes may share a track; the table is the one place that says so.
+_Avoid_: skinned mode, seasonal mode
+
 **Battlefield**:
 Kingdom Siege's lanes and squares, with the defenders players place on them, the monsters marching down them, and the castle's hearts. The battlefield decides who hits whom and what may stand where; the projector and the phone's lane map both show it.
 _Avoid_: board, map (the phone's lane map is only a view of it)

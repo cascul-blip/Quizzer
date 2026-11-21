@@ -7,14 +7,14 @@ import { setPhoneArt } from "../../src/client/shared/phone-art.ts";
 import { gingerbreadTerrain } from "../../src/shared/fight-ground.ts";
 import type { HillHeight } from "../../src/shared/fight-physics.ts";
 import { carve, launchVector, makeTerrain, simulate } from "../../src/shared/fight-physics.ts";
-import type { FightTheme } from "../../src/shared/fight-theme.ts";
 import type { FightPhase, FightShot, FightState, PlayerFightView } from "../../src/shared/modes/fight.ts";
 import type { HostView } from "../../src/shared/protocol.ts";
 import { TEAMS } from "../../src/shared/protocol.ts";
+import type { SeasonTheme } from "../../src/shared/themed-modes.ts";
 
 function Preview({ phone }: { phone: boolean }) {
   const q = new URLSearchParams(location.search);
-  const [theme, setTheme] = useState<FightTheme>(q.get("theme") === "classic" ? "classic" : "christmas");
+  const [theme, setTheme] = useState<SeasonTheme>(q.get("theme") === "classic" ? "classic" : "christmas");
   const [phase, setPhase] = useState<FightPhase>("playing");
   const [state, setState] = useState<FightState>((q.get("state") || "decide") as FightState);
   const [damage, setDamage] = useState(Number(q.get("damage")) || 0);
@@ -81,7 +81,7 @@ function Preview({ phone }: { phone: boolean }) {
   return (
     <div style={{ height: "100dvh", display: "flex", flexDirection: "column" }}>
       <nav style={{ display: "flex", flexWrap: "wrap", gap: 5, padding: 5, background: "#352238", zIndex: 10, fontSize: 12 }}>
-        <select aria-label="Theme" value={theme} onChange={(e) => setTheme(e.currentTarget.value as FightTheme)}>
+        <select aria-label="Theme" value={theme} onChange={(e) => setTheme(e.currentTarget.value as SeasonTheme)}>
           <option value="christmas">Gingerbread Siege</option>
           <option value="classic">Normal</option>
         </select>

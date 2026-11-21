@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { SiegeSettings } from "../../shared/modes/siege.ts";
-import type { MusicTrackId } from "../../shared/music-tracks.ts";
+import { siegeWords } from "../../shared/modes/siege.ts";
 import type { HostView } from "../../shared/protocol.ts";
 import { SIEGE_HEARTS, SIEGE_WAVE_CHOICES } from "../../shared/siege-rules.ts";
-import type { SiegeTheme } from "../../shared/siege-theme.ts";
-import { siegeName, siegeTheme, siegeWords } from "../../shared/siege-theme.ts";
+import type { SeasonTheme } from "../../shared/themed-modes.ts";
+import { modeTheme, themedLabel, themedName, themedTrack } from "../../shared/themed-modes.ts";
 import type { MusicCue } from "../shared/music/index.ts";
 import {
   ArrowShot,
@@ -65,7 +65,7 @@ function SiegeStageContent({ view, send }: { view: SiegeView; send: Send }) {
       <header class="topbar">
         <div class="title">{view.quiz.title}</div>
         <div class="pill">
-          {christmas ? "🎄" : "🛡️"} {siegeName(view.settings.theme)}
+          {christmas ? "🎄" : "🛡️"} {themedName("siege", view.settings.theme)}
         </div>
         {view.wave > 0 && battle && <div class="pill">{waveLabel(view.wave, view.settings.waves)}</div>}
         <div class="spacer" />
@@ -346,7 +346,7 @@ function Fallen({ view }: { view: SiegeView }) {
 // ---------- lobby ----------
 
 /** The empty diorama board with the castle wall, under the lobby's settings. */
-export function SiegeLobbyPreview({ theme }: { theme?: SiegeTheme }) {
+export function SiegeLobbyPreview({ theme }: { theme?: SeasonTheme }) {
   return (
     <SiegeThemeProvider theme={theme}>
       <div class="siege-lobby-preview" aria-hidden="true">
@@ -424,8 +424,9 @@ function SiegeSettings({ settings, send }: LobbySettingsProps<"siege">) {
         Theme
         <select
           aria-label="Kingdom Siege theme"
-          value={siegeTheme(settings.theme)}
-          onChange={(e) => send({ type: "host.setModeSettings", mode: "siege", settings: { ...settings, theme: e.currentTarget.value as SiegeTheme } })}
+          value={modeTheme("siege", settings.theme)}
+          // checked: the select only offers the season themes, and the server refuses any other (pickTheme)
+          onChange={(e) => send({ type: "host.setModeSettings", mode: "siege", settings: { ...settings, theme: e.currentTarget.value as SeasonTheme } })}
         >
           <option value="classic">🛡️ Classic Kingdom Siege</option>
           <option value="christmas">🎄 Christmas Toybox</option>
@@ -453,7 +454,7 @@ function SiegeSettings({ settings, send }: LobbySettingsProps<"siege">) {
       </label>
       <span class="opt mode-hint">
         The whole class defends one castle. Every right answer earns you gold to spend on{" "}
-        {siegeTheme(settings.theme) === "christmas" ? "elf archers, nutcrackers and present barricades" : "archers, knights and stone walls"} before the
+        {modeTheme("siege", settings.theme) === "christmas" ? "elf archers, nutcrackers and present barricades" : "archers, knights and stone walls"} before the
         monsters reach the wall.
       </span>
     </>
@@ -463,11 +464,10 @@ function SiegeSettings({ settings, send }: LobbySettingsProps<"siege">) {
 /** The projector's music for Kingdom Siege. */
 export function siegeCue(view: SiegeView): MusicCue {
   const outcome = view.result?.outcome;
-  const christmas = siegeTheme(view.settings.theme) === "christmas";
-  const battle: MusicTrackId = christmas ? "siege-christmas-battle" : "siege-battle";
+  const battle = themedTrack("siege", view.settings.theme, "play");
   // Bells and a fanfare when the kingdom stands; the low lament when the castle falls (or the host ends it).
   if (view.phase === "stands" || view.phase === "fallen" || view.phase === "podium") {
-    return { track: christmas ? "siege-christmas-results" : "siege-results", intensity: outcome === "stands" ? 0.9 : 0.12, key: `siege-end-${outcome}` };
+    return { track: themedTrack("siege", view.settings.theme, "results"), intensity: outcome === "stands" ? 0.9 : 0.12, key: `siege-end-${outcome}` };
   }
   if (view.phase === "countdown") return { track: battle, intensity: 0.05, key: "siege-count" };
   // Build break: drums and a held chord, rising into a drum roll before the next wave.
@@ -481,8 +481,8 @@ export function siegeCue(view: SiegeView): MusicCue {
 }
 
 export const siegeLobby: LobbyModeEntry<"siege"> = {
-  label: (settings) => `${siegeTheme(settings.theme) === "christmas" ? "🎄" : "🛡️"} ${siegeName(settings.theme)}`,
+  label: (settings) => themedLabel("siege", settings.theme),
   Settings: SiegeSettings,
   Preview: ({ settings }) => <SiegeLobbyPreview theme={settings.theme} />,
-  lobbyTrack: (settings) => (siegeTheme(settings.theme) === "christmas" ? "siege-christmas-lobby" : "siege-lobby"),
+  lobbyTrack: (settings) => themedTrack("siege", settings.theme, "lobby"),
 };

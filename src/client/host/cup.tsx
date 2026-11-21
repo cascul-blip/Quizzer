@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import type { CupTheme } from "../../shared/cup-theme.ts";
-import { cupName, cupTheme } from "../../shared/cup-theme.ts";
 import { CUP_MAX_CUPS, CUP_MIN_CUPS } from "../../shared/modes/cup.ts";
 import type { HostView } from "../../shared/protocol.ts";
+import type { ScreenOf, SeasonTheme } from "../../shared/themed-modes.ts";
+import { modeTheme, themedLabel, themedTrack } from "../../shared/themed-modes.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import type { SaloonMode } from "../shared/cup-art.tsx";
 import { SaloonScene, TABLE_CENTER } from "../shared/cup-art.tsx";
@@ -84,7 +84,7 @@ function CupStageContent({ view, send }: { view: CupView; send: Send }) {
     <div class={`stage cup-stage ${christmas ? "cup-christmas" : ""}`}>
       <header class="topbar">
         <div class="title">{view.quiz.title}</div>
-        <div class="pill">{cupName(view.theme)}</div>
+        <div class="pill">{themedLabel("cup", view.theme)}</div>
         {view.round > 0 && <div class="pill">Round {view.round}</div>}
         <div class="spacer" />
         <div class="pill">
@@ -306,8 +306,9 @@ function CupSettings({ settings, send }: LobbySettingsProps<"cup">) {
         Theme
         <select
           aria-label="Cup theme"
-          value={cupTheme(settings.theme)}
-          onChange={(e) => send({ type: "host.setModeSettings", mode: "cup", settings: { cups: settings.cups, theme: e.currentTarget.value as CupTheme } })}
+          value={modeTheme("cup", settings.theme)}
+          // checked: the select only offers the season themes, and the server refuses any other (pickTheme)
+          onChange={(e) => send({ type: "host.setModeSettings", mode: "cup", settings: { cups: settings.cups, theme: e.currentTarget.value as SeasonTheme } })}
         >
           <option value="christmas">🎄 Santa's Workshop</option>
           <option value="classic">☠️ Normal</option>
@@ -324,7 +325,7 @@ function CupSettings({ settings, send }: LobbySettingsProps<"cup">) {
         </select>
       </label>
       <span class="opt mode-hint">
-        {cupTheme(settings.theme) === "christmas"
+        {modeTheme("cup", settings.theme) === "christmas"
           ? "Roll the die, then answer that many questions before time runs out, or sip some cocoa. One cup is supercharged: shake, sparkle and blast off! Last one in the workshop wins."
           : "Roll the die, then answer that many questions before time runs out, or drink from a cup. One is poisoned. Last one standing wins."}
       </span>
@@ -334,22 +335,23 @@ function CupSettings({ settings, send }: LobbySettingsProps<"cup">) {
 
 /** The projector's music for Cup Roulette. */
 export function cupCue(view: CupView): MusicCue {
-  if (cupTheme(view.theme) === "christmas")
-    return { track: view.phase === "podium" ? "tower-christmas-results" : "tower-christmas-play", intensity: view.phase === "reveal" ? 0.8 : 0.35 };
-  if (view.phase === "podium") return { track: "cup-results" };
+  const track = (screen: ScreenOf<"cup">) => themedTrack("cup", view.theme, screen);
+  if (modeTheme("cup", view.theme) === "christmas")
+    return { track: track(view.phase === "podium" ? "results" : "quiz"), intensity: view.phase === "reveal" ? 0.8 : 0.35 };
+  if (view.phase === "podium") return { track: track("results") };
   // Holding your breath: tenser while the cups are drunk than while they're picked.
   if (view.phase === "drink" || (view.phase === "reveal" && (view.reveal?.drinks.length ?? 0) > 0))
-    return { track: "cup-drink", intensity: view.phase === "reveal" ? 0.7 : 0.3 };
+    return { track: track("drink"), intensity: view.phase === "reveal" ? 0.7 : 0.3 };
   if (view.phase === "quiz") {
     // The less time left to answer, the faster the gallop.
     const start = Math.max(0, Math.min(1, 1 - view.phaseRemainingMs / Math.max(1, view.phaseDurationMs)));
-    return { track: "cup-quiz", intensity: 0.15 + start * 0.85, rampTo: 1, rampMs: view.phaseRemainingMs, key: `cup-q${view.round}` };
+    return { track: track("quiz"), intensity: 0.15 + start * 0.85, rampTo: 1, rampMs: view.phaseRemainingMs, key: `cup-q${view.round}` };
   }
-  return { track: "cup-quiz", intensity: 0, key: `cup-${view.phase}-${view.round}` };
+  return { track: track("quiz"), intensity: 0, key: `cup-${view.phase}-${view.round}` };
 }
 
 export const cupLobby: LobbyModeEntry<"cup"> = {
-  label: (settings) => cupName(settings.theme),
+  label: (settings) => themedLabel("cup", settings.theme),
   Settings: CupSettings,
-  lobbyTrack: (settings) => (cupTheme(settings.theme) === "christmas" ? "tower-christmas-lobby" : "cup-lobby"),
+  lobbyTrack: (settings) => themedTrack("cup", settings.theme, "lobby"),
 };

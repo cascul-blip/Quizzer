@@ -5,8 +5,6 @@ import { randomAvatar } from "../../shared/avatars.ts";
 import { gingerbreadTerrain } from "../../shared/fight-ground.ts";
 import type { HillHeight, ShotImpact } from "../../shared/fight-physics.ts";
 import { carve, HILL_HEIGHTS, launchVector, makeTerrain, simulate } from "../../shared/fight-physics.ts";
-import type { FightTheme } from "../../shared/fight-theme.ts";
-import { DEFAULT_FIGHT_THEME, fightTheme } from "../../shared/fight-theme.ts";
 import { keysOf } from "../../shared/keys-of.ts";
 import type {
   FightAwards,
@@ -21,6 +19,8 @@ import type {
 } from "../../shared/modes/fight.ts";
 import { CORRECT_PER_DECISION, DECISION_MS, FIGHT_MAX_DAMAGE, fightShared, HILL_SETTINGS, REPAIR_MS } from "../../shared/modes/fight.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
+import type { SeasonTheme } from "../../shared/themed-modes.ts";
+import { modeTheme, THEMED_MODES } from "../../shared/themed-modes.ts";
 import type { Clock } from "./common.ts";
 import { GameError, realClock, teamInfo } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
@@ -97,7 +97,7 @@ export class FightGame {
   readonly questions: Question[];
   readonly teams: FightTeam[];
   readonly hill: HillHeight;
-  readonly theme: FightTheme;
+  readonly theme: SeasonTheme;
   readonly roster = new Roster<FightPlayer>();
   phase: FightPhase = "countdown";
   phaseEndsAt = 0;
@@ -122,7 +122,7 @@ export class FightGame {
     if (quiz.questions.length === 0) throw new GameError("This quiz has no questions");
     this.quizId = quiz.id;
     this.title = quiz.title;
-    this.theme = fightTheme(settings.theme);
+    this.theme = modeTheme("fight", settings.theme);
     this.questions = quiz.questions;
     this.teams = Array.from({ length: TEAM_COUNT }, (_, i) => ({ ...teamInfo(i), damage: 0 }));
     this.clock = opts.clock ?? realClock;
@@ -572,11 +572,11 @@ export function buildFightResultsCsv(game: FightGame): string {
 
 export const fightMode: ModeEntry<"fight"> = {
   ...fightShared,
-  defaultSettings: { hill: "random", theme: DEFAULT_FIGHT_THEME },
+  defaultSettings: { hill: "random", theme: THEMED_MODES.fight.default },
   readSettings(raw, current) {
     const hill = raw.hill as FightSettings["hill"] | undefined;
     if (hill !== undefined && !HILL_SETTINGS.includes(hill)) throw new GameError("Unknown hill height");
-    const theme = pickTheme(raw.theme, fightTheme(current.theme), "fight");
+    const theme = pickTheme(raw.theme, modeTheme("fight", current.theme), "fight");
     return { ...current, hill: hill ?? current.hill, theme };
   },
   start(lobby, ctx) {

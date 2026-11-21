@@ -12,7 +12,7 @@ import type {
   SiegeResult,
   SiegeSettings,
 } from "../../shared/modes/siege.ts";
-import { siegeShared } from "../../shared/modes/siege.ts";
+import { siegeDefenderPhrase, siegeShared, siegeWords } from "../../shared/modes/siege.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import type { SiegeDefenderType, SiegeWaves } from "../../shared/siege-rules.ts";
 import {
@@ -33,7 +33,7 @@ import {
   siegeWaveBudget,
   siegeWaveStrength,
 } from "../../shared/siege-rules.ts";
-import { DEFAULT_SIEGE_THEME, siegeDefenderPhrase, siegeTheme, siegeWords } from "../../shared/siege-theme.ts";
+import { modeTheme, THEMED_MODES } from "../../shared/themed-modes.ts";
 import { loadSiegeRecord, saveSiegeRecord } from "../siege-records.ts";
 import type { Clock } from "./common.ts";
 import { GameError, realClock } from "./common.ts";
@@ -590,7 +590,7 @@ export class SiegeGame {
       kind: "siege",
       phase: this.phase,
       quiz: { id: this.quizId, title: this.title, questionCount: this.questions.length },
-      settings: { waves: this.settings.waves, theme: siegeTheme(this.settings.theme) },
+      settings: { waves: this.settings.waves, theme: modeTheme("siege", this.settings.theme) },
       wave: this.wave,
       gold: players.reduce((sum, p) => sum + p.gold, 0),
       hearts: this.hearts,
@@ -640,7 +640,7 @@ export class SiegeGame {
       phase: this.phase,
       title: this.title,
       phaseRemainingMs: this.phase === "wave" || podium ? 0 : this.remaining(this.phaseEndsAt),
-      theme: siegeTheme(this.settings.theme),
+      theme: modeTheme("siege", this.settings.theme),
       phaseDurationMs: this.phaseDurationMs,
       wave: this.wave,
       waves: this.settings.waves,
@@ -725,11 +725,12 @@ export function buildSiegeResultsCsv(game: SiegeGame): string {
 
 export const siegeMode: ModeEntry<"siege"> = {
   ...siegeShared,
-  defaultSettings: { waves: 5, theme: DEFAULT_SIEGE_THEME },
+  defaultSettings: { waves: 5, theme: THEMED_MODES.siege.default },
   readSettings(raw, current) {
     const waves = raw.waves === "endless" ? "endless" : Number(raw.waves);
     if (!(SIEGE_WAVE_CHOICES as readonly unknown[]).includes(waves)) throw new GameError("Unsupported number of waves");
-    return { waves: waves as SiegeWaves, theme: pickTheme(raw.theme, siegeTheme(current.theme), "Kingdom Siege") };
+    // checked: the line above refuses waves that are not one of SIEGE_WAVE_CHOICES
+    return { waves: waves as SiegeWaves, theme: pickTheme(raw.theme, modeTheme("siege", current.theme), "Kingdom Siege") };
   },
   start(lobby, ctx) {
     const game = SiegeGame.fromLobby(lobby, {

@@ -1,8 +1,8 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { HillHeight, ShotImpact } from "../fight-physics.ts";
-import type { FightTheme } from "../fight-theme.ts";
 import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward, TeamInfo } from "../mode-views.ts";
 import { sharedModeEntry } from "../shared-mode-entry.ts";
+import type { SeasonTheme } from "../themed-modes.ts";
 
 // Tower Fight protocol types.
 
@@ -19,7 +19,7 @@ export const DECISION_MS = 10_000;
 export const REPAIR_MS = 4000;
 
 export interface FightSettings {
-  theme?: FightTheme;
+  theme?: SeasonTheme;
   hill: HillSetting;
 }
 
@@ -68,7 +68,7 @@ export interface HostFightTeam extends TeamInfo {
 
 export interface HostFightState {
   kind: "fight";
-  theme?: FightTheme;
+  theme?: SeasonTheme;
   phase: FightPhase;
   quiz: { id: string; title: string; questionCount: number };
   phaseRemainingMs: number;
@@ -89,7 +89,7 @@ export interface HostFightState {
 export interface PlayerFightView {
   kind: "fight";
   hill?: HillHeight;
-  theme?: FightTheme;
+  theme?: SeasonTheme;
   phase: FightPhase;
   title: string;
   phaseRemainingMs: number;

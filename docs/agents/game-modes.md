@@ -31,8 +31,9 @@ Work outside the entries, by hand. "Compiler" marks the places where `bun run ty
 - [ ] `initialSettings` in `src/server/game/lobby.ts` (compiler).
 - [ ] `HOST_MODES` in `src/client/host/modes.tsx`: the mode's stage, gameplay cue and lobby part (compiler), in Game mode menu order. Put the stage, cue (as `<mode>Cue`) and lobby part (as `<mode>Lobby`) in `src/client/host/<mode>.tsx`. A paced mode's settings panel places the shared rows passed as `children`.
 - [ ] `PLAYER_MODES` in `src/client/player/modes.tsx`: the mode's phone screen (compiler), and its `banner` if its shared mode entry sets `lobbyBanner` (null otherwise). Put the screen and banner in `src/client/player/<mode>.tsx`.
-- [ ] Music tracks: a new track id goes in `MUSIC_TRACKS` (`src/shared/music-tracks.ts`) and its track in `TRACKS` (`src/client/shared/music/tracks.ts`, compiler once the id exists).
-- [ ] Art and themes, by convention per mode: `src/shared/<mode>-theme.ts` and `<mode>-rules.ts`, and `src/client/shared/<mode>-art.tsx`, `<mode>-skin.tsx` and `<mode>/` (assets).
+- [ ] Music tracks: a new track id goes in `THEMED_MODES` for a themed mode's screen, else in `OTHER_TRACKS` (`src/shared/music-tracks.ts`), and its track in `TRACKS` (`src/client/shared/music/tracks.ts`, compiler once the id exists).
+- [ ] Themes: a themed mode's entry in `THEMED_MODES` (`src/shared/themed-modes.ts`): its default theme, its screens, and for each theme its name, icon and the track each screen plays. The cue and lobby track read tracks with `themedTrack` and choose only intensity; `MUSIC_TRACKS` builds the mode's rows from the table, and `tests/themed-modes.test.ts` pins every theme × screen → track (fails until updated). Theme words beyond the name (Kingdom Siege's defenders, say) go in the mode file.
+- [ ] Art, by convention per mode: `src/shared/<mode>-rules.ts`, and `src/client/shared/<mode>-art.tsx`, `<mode>-skin.tsx` (`createSkin("<mode>")`) and `<mode>/` (assets).
 - [ ] Tests: in `tests/game-modes.test.ts`, the `CHANGED`, `TEAMS` and `PHONE_MSG` tables (compiler). Put the mode's own rules in `tests/<mode>.test.ts`.
 - [ ] `README.md`: the mode's section, and the list of modes under "Protect from abuse".
 
