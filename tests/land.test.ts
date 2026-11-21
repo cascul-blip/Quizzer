@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { Game } from "../src/server/game/game.ts";
+import { Lobby } from "../src/server/game/lobby.ts";
 import { CONQUEST_MS, COUNTDOWN_MS, FEEDBACK_MS, LandGame, type LandPlayer } from "../src/server/game/land.ts";
 import { buildLandResultsCsv } from "../src/server/game/land.ts";
 import { EMPTY, hexDistance, neighbors } from "../src/shared/land-board.ts";
@@ -23,11 +23,11 @@ function quiz(): Quiz {
 function setup(names: string[], opts: { teams?: number; minutes?: number } = {}) {
   const clock = new FakeClock();
   let finished = 0;
-  const lobby = new Game(quiz(), { clock });
+  const lobby = new Lobby(quiz());
   lobby.setMode("land");
   lobby.setModeSettings("land", { teams: opts.teams ?? 2, minutes: opts.minutes ?? 5 });
   for (const n of names) lobby.join(n);
-  const game = LandGame.fromLobby(lobby, { clock, onFinish: () => finished++ });
+  const game = LandGame.fromLobby(lobby.handoffFacts("land"), { clock, onFinish: () => finished++ });
   return { clock, game, lobby, finished: () => finished };
 }
 
@@ -78,12 +78,12 @@ describe("lobby → land", () => {
     lobby.setModeSettings("land", { teams: 2, minutes: 5, theme: "classic" });
     lobby.setModeSettings("land", { teams: 3, minutes: 7 });
     expect(lobby.settings.land.theme).toBe("classic");
-    const game = LandGame.fromLobby(lobby);
+    const game = LandGame.fromLobby(lobby.handoffFacts("land"));
     expect(game.hostView().theme).toBe("classic");
     expect(game.playerView([...game.players.keys()][0]!)!.theme).toBe("classic");
     expect(() => lobby.setModeSettings("land", { teams: 3, minutes: 7, theme: "invalid" as "classic" })).toThrow("Unknown Land Grab theme");
     lobby.setModeSettings("land", { teams: 3, minutes: 7, theme: "christmas" });
-    const winter = LandGame.fromLobby(lobby);
+    const winter = LandGame.fromLobby(lobby.handoffFacts("land"));
     expect(winter.hostView().theme).toBe("christmas");
     expect(winter.playerView([...winter.players.keys()][0]!)!.theme).toBe("christmas");
   });

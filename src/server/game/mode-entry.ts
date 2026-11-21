@@ -5,18 +5,19 @@ import { GameError, type Clock } from "./common.ts";
 import type { CupGame } from "./cup.ts";
 import type { DuelGame } from "./duel.ts";
 import type { FightGame } from "./fight.ts";
-import type { Game } from "./game.ts";
+import type { ClassicGame } from "./game.ts";
 import type { GiftGame } from "./gift.ts";
 import type { LandGame } from "./land.ts";
+import type { LobbyFacts } from "./lobby-facts.ts";
 import type { RacerGame } from "./racer.ts";
 import type { RobotGame } from "./robot.ts";
 import type { SiegeGame } from "./siege.ts";
 import type { SubGame } from "./submarine.ts";
 import type { TowerGame } from "./tower.ts";
 
-/** The game that runs each game mode. Classic runs in the lobby's own Game. */
+/** The game that runs each game mode. */
 export interface ModeGame {
-  classic: Game;
+  classic: ClassicGame;
   tower: TowerGame;
   submarine: SubGame;
   fight: FightGame;
@@ -84,8 +85,6 @@ export interface StartContext {
   /** High-frequency projector refresh (Kingdom Siege). */
   onTick: () => void;
   onFinish: (game: LiveGame) => void;
-  /** "Protect from abuse" for the new game, decided by the handoff from MODE_FLAGS: the host's lobby setting in a mode whose flag is set, off in any other. A mode whose flag is set passes it to its game. */
-  protect: boolean;
 }
 
 /** A game played question by question: the host sets its pacing and moves it on. */
@@ -113,11 +112,13 @@ export interface FinishContext {
 /** Everything the server knows about one game mode; the hub, lobby and handoff look it up in MODES instead of branching on the mode. */
 export interface ModeEntry<M extends GameMode> {
   name: string;
+  /** Error text for a lobby control received after this game starts. */
+  lobbyControlError?(message: string): string;
   defaultSettings: ModeSettingsMap[M];
   /** The host's change applied to the current settings; throws GameError when it isn't valid. */
   readSettings(raw: RawSettings, current: ModeSettingsMap[M]): ModeSettingsMap[M];
   /** Build the mode's game from the lobby, not started yet, and the line to log once it starts. */
-  start(lobby: Game, ctx: StartContext): { game: ModeGame[M]; log: string | null };
+  start(lobby: LobbyFacts<M>, ctx: StartContext): { game: ModeGame[M]; log: string | null };
   /** For a paced mode (MODE_FLAGS), its game as a PacedGame: next, skip and pacing work, and the pacing carries over to the next lobby. Null otherwise; the compiler holds each entry to its flag. */
   pacing: PacingOf<M>;
   /** How many teams the lobby previews and assigns players to with these settings; null in a solo mode. */

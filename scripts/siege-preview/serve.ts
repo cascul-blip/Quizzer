@@ -1,11 +1,11 @@
-import { Game } from "../../src/server/game/game.ts";
+import { Lobby } from "../../src/server/game/lobby.ts";
 import { SiegeGame } from "../../src/server/game/siege.ts";
 import { FakeClock, sampleQuiz } from "../../tests/helpers.ts";
 const clock = new FakeClock();
-const lobby = new Game(sampleQuiz({ title: "Christmas Toybox" }), { clock });
+const lobby = new Lobby(sampleQuiz({ title: "Christmas Toybox" }));
 lobby.setMode("siege");
 const player = lobby.join("Holly");
-const game = SiegeGame.fromLobby(lobby, { clock });
+const game = SiegeGame.fromLobby(lobby.handoffFacts("siege"), { clock });
 game.start(); clock.advance(3000);
 const fixture = { host: game.hostView(), phone: game.playerView(player.id) };
 /** bun scripts/siege-preview/serve.ts — standalone host/phone artwork preview. */

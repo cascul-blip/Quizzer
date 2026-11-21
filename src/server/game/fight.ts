@@ -21,7 +21,7 @@ import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import { HILL_HEIGHTS, carve, launchVector, makeTerrain, simulate, type HillHeight, type ShotImpact } from "../../shared/fight-physics.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import { GameError, realClock, teamInfo, type Clock } from "./common.ts";
-import type { Game } from "./game.ts";
+import type { LobbyFacts } from "./lobby-facts.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
 import { QuestionStream, newStreamPlayer, type StreamPlayer } from "./stream.ts";
 import { answerOf } from "../../shared/answer-match.ts";
@@ -134,10 +134,10 @@ export class FightGame {
   }
 
   /** Take over a lobby's players (same ids and tokens), split Red/Blue as shown in the lobby. */
-  static fromLobby(lobby: Game, opts: FightOptions = {}, protect = lobby.protect): FightGame {
-    const game = new FightGame(lobby.quiz, { ...lobby.settings.fight, shuffleAnswers: lobby.shuffle.answers, protect }, opts);
-    const players = [...lobby.players.values()];
-    const teams = lobby.teamAssignment();
+  static fromLobby(lobby: LobbyFacts<"fight">, opts: FightOptions = {}): FightGame {
+    const game = new FightGame(lobby.quiz, { ...lobby.settings, shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
+    const players = [...lobby.players];
+    const teams = lobby.teams;
     game.roster.adoptFrom(players, (base) => game.newPlayer(base, teams.get(base.id) ?? 0));
     return game;
   }
@@ -566,7 +566,7 @@ export const fightMode: ModeEntry<"fight"> = {
     return { ...current, hill: hill ?? current.hill, theme };
   },
   start(lobby, ctx) {
-    const game = FightGame.fromLobby(lobby, handoffOptions(ctx), ctx.protect);
+    const game = FightGame.fromLobby(lobby, handoffOptions(ctx));
     return { game, log: `${this.name} started with ${game.players.size} player(s), ${game.hill} hill` };
   },
   pacing: null,

@@ -1,13 +1,13 @@
 import { expect, test } from "bun:test";
-import { Game, INTRO_MS } from "../src/server/game/game.ts";
+import { INTRO_MS } from "../src/server/game/game.ts";
 import { buildResultsCsv } from "../src/server/game/classic.ts";
-import { FakeClock, sampleQuiz } from "./helpers.ts";
+import { classicGame, FakeClock, sampleQuiz } from "./helpers.ts";
 
 test("results CSV has one row per player in rank order", () => {
   const clock = new FakeClock();
   const quiz = sampleQuiz();
   quiz.questions[0]!.text = 'Say "hi", ok?';
-  const game = new Game(quiz, { clock });
+  const game = classicGame(quiz, { clock });
   const a = game.join("Alice");
   const b = game.join("=cmd");
   game.start();

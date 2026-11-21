@@ -921,7 +921,7 @@ export interface PlayerLandView {
 //
 // A turn is "confidence" → "open" → "reveal" when the car is running (a driver sets the lever, then everyone answers),
 // or "intro" → "open" → "reveal" when there is no driver (the car is crashed, or nobody is connected).
-// There is no lobby phase: the lobby is the classic game (HostGameState with mode "racer").
+// Racer has no lobby phase. The lobby uses HostGameState with mode "racer".
 
 /**
  * intro: 3 s look at the question on a turn without a driver; options hidden.

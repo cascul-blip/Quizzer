@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { Game } from "../src/server/game/game.ts";
+import { Lobby } from "../src/server/game/lobby.ts";
 import { buildTowerResultsCsv } from "../src/server/game/tower.ts";
 import { WRONG_PENALTY_2_MS, WRONG_PENALTY_3_MS } from "../src/server/game/stream.ts";
 import {
@@ -34,13 +34,13 @@ function quiz(): Quiz {
 function setup(names: string[], opts: { teams?: number; minutes?: number; shuffleAnswers?: boolean; monster?: boolean; protect?: boolean; rng?: () => number } = {}) {
   const clock = new FakeClock();
   let finished = 0;
-  const lobby = new Game(quiz(), { clock });
+  const lobby = new Lobby(quiz());
   lobby.setMode("tower");
   lobby.setModeSettings("tower", { teams: opts.teams ?? 2, minutes: opts.minutes ?? 5, monster: opts.monster ?? false });
   if (opts.shuffleAnswers) lobby.setShuffle({ questions: false, answers: true });
   if (opts.protect !== undefined) lobby.setProtect(opts.protect);
   for (const n of names) lobby.join(n);
-  const game = TowerGame.fromLobby(lobby, { clock, rng: opts.rng, onFinish: () => finished++ });
+  const game = TowerGame.fromLobby(lobby.handoffFacts("tower"), { clock, rng: opts.rng, onFinish: () => finished++ });
   return { clock, game, lobby, finished: () => finished };
 }
 
@@ -65,7 +65,7 @@ function answer(game: TowerGame, clock: FakeClock, p: TowerPlayer, right: boolea
 describe("lobby → tower", () => {
   test("themes survive lobby edits and are shared by host and players", () => {
     const clock = new FakeClock();
-    const lobby = new Game(quiz(), { clock });
+    const lobby = new Lobby(quiz());
     lobby.setMode("tower");
     const player = lobby.join("Builder");
     expect(lobby.settings.tower.theme).toBe("christmas");
@@ -73,7 +73,7 @@ describe("lobby → tower", () => {
       lobby.setModeSettings("tower", { teams: 2, minutes: 5, theme });
       lobby.setModeSettings("tower", { teams: 3, minutes: 3 });
       expect(lobby.settings.tower.theme).toBe(theme);
-      const game = TowerGame.fromLobby(lobby, { clock });
+      const game = TowerGame.fromLobby(lobby.handoffFacts("tower"), { clock });
       expect(game.hostView().theme).toBe(theme);
       expect(game.playerView(player.id)?.theme).toBe(theme);
       game.start();

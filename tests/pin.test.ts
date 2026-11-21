@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { Game, INTRO_MS, preparePlayOrder } from "../src/server/game/game.ts";
+import { INTRO_MS, preparePlayOrder } from "../src/server/game/game.ts";
 import { QuestionStream, newStreamPlayer } from "../src/server/game/stream.ts";
 import { QuizStore } from "../src/server/quiz/store.ts";
 import { SERVER_INSTRUCTIONS } from "../src/server/mcp/tools.ts";
 import { ValidationError, normalizeQuestion, type Question } from "../src/shared/quiz-schema.ts";
-import { FakeClock, sampleQuiz, tempDir } from "./helpers.ts";
+import { classicGame, FakeClock, sampleQuiz, tempDir } from "./helpers.ts";
 
 const IMAGE = "media/abc123.png";
 const SPOTS = [
@@ -85,7 +85,7 @@ describe("pin in the store", () => {
 describe("pin in a game", () => {
   function setup() {
     const clock = new FakeClock();
-    const game = new Game(sampleQuiz({ questions: [pinQuestion()] }), { clock });
+    const game = classicGame(sampleQuiz({ questions: [pinQuestion()] }), { clock });
     return { clock, game };
   }
 

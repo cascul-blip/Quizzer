@@ -1,18 +1,19 @@
 import { describe, expect, spyOn, test } from "bun:test";
-import { AUTO_LEADERBOARD_MS, AUTO_REVEAL_MS, GRACE_MS, Game, GameError, INTRO_MS, preparePlayOrder } from "../src/server/game/game.ts";
+import { AUTO_LEADERBOARD_MS, AUTO_REVEAL_MS, GRACE_MS, type ClassicGame, GameError, INTRO_MS, preparePlayOrder } from "../src/server/game/game.ts";
+import { Lobby } from "../src/server/game/lobby.ts";
 import { FightGame } from "../src/server/game/fight.ts";
 import { LandGame } from "../src/server/game/land.ts";
 import { TowerGame } from "../src/server/game/tower.ts";
-import { FakeClock, sampleQuiz } from "./helpers.ts";
+import { classicGame, FakeClock, sampleQuiz } from "./helpers.ts";
 
 function setup(opts: { pacing?: "manual" | "auto" } = {}) {
   const clock = new FakeClock();
   let finished = 0;
-  const game = new Game(sampleQuiz(), { clock, pacing: opts.pacing, onFinish: () => finished++ });
+  const game = classicGame(sampleQuiz(), { clock, pacing: opts.pacing, onFinish: () => finished++ });
   return { clock, game, finished: () => finished };
 }
 
-function toOpen(game: Game, clock: FakeClock) {
+function toOpen(game: ClassicGame, clock: FakeClock) {
   expect(game.phase).toBe("intro");
   clock.advance(INTRO_MS);
   expect(game.phase).toBe("open");
@@ -302,7 +303,7 @@ describe("preparePlayOrder", () => {
 
 describe("lobby themes", () => {
   test("every themed mode's setter keeps the theme when none is given and refuses unknown ones the same way", () => {
-    const { game } = setup();
+    const game = new Lobby(sampleQuiz());
     const setters: [string, (theme?: unknown) => void, () => unknown][] = [
       ["racer", (theme) => game.setModeSettings("racer", { theme }), () => game.settings.racer.theme],
       ["tower", (theme) => game.setModeSettings("tower", { teams: 2, minutes: 5, theme }), () => game.settings.tower.theme],
@@ -327,7 +328,7 @@ describe("lobby shuffle options", () => {
   test("default to the quiz settings and apply when the game starts", () => {
     const clock = new FakeClock();
     const quiz = sampleQuiz({ settings: { shuffleQuestions: true, shuffleAnswers: false } });
-    const game = new Game(quiz, { clock, rng: () => 0 });
+    const game = classicGame(quiz, { clock, rng: () => 0 });
     expect(game.hostView().shuffle).toEqual({ questions: true, answers: false });
     // Lobby keeps the authored order until Start.
     expect(game.questions.map((q) => q.id)).toEqual(["q1", "q2", "q3"]);
@@ -338,7 +339,7 @@ describe("lobby shuffle options", () => {
   });
 
   test("the host can change them in the lobby only", () => {
-    const game = new Game(sampleQuiz(), { clock: new FakeClock(), rng: () => 0 });
+    const game = classicGame(sampleQuiz(), { clock: new FakeClock(), rng: () => 0 });
     game.setShuffle({ questions: false, answers: true });
     expect(game.hostView().shuffle).toEqual({ questions: false, answers: true });
     game.join("A");
@@ -351,24 +352,22 @@ describe("lobby shuffle options", () => {
 });
 
 describe("lobby Protect from abuse option", () => {
-  test("is on by default and the host can change it in the lobby only", () => {
-    const game = new Game(sampleQuiz(), { clock: new FakeClock() });
+  test("is on by default and the host can change it", () => {
+    const game = new Lobby(sampleQuiz());
     expect(game.hostView().protect).toBe(true);
     game.setProtect(false);
     expect(game.hostView().protect).toBe(false);
-    game.join("A");
-    game.start();
-    expect(() => game.setProtect(true)).toThrow(GameError);
   });
 
   test("carries over from the previous lobby", () => {
-    expect(new Game(sampleQuiz(), { clock: new FakeClock(), protect: false }).hostView().protect).toBe(false);
+    expect(new Lobby(sampleQuiz(), { protect: false }).hostView().protect).toBe(false);
   });
 });
 
 describe("lobby teams", () => {
   function teamLobby(names: string[], teams = 3) {
-    const { game, clock } = setup();
+    const game = new Lobby(sampleQuiz());
+    const clock = new FakeClock();
     game.setMode("tower");
     game.setModeSettings("tower", { teams, minutes: 5 });
     const ids = names.map((n) => game.join(n).id);
@@ -431,7 +430,7 @@ describe("lobby teams", () => {
     expect(layout()).toEqual([["A", "C", "E"], ["B", "D"]]);
   });
 
-  test("setTeam is rejected outside a team-mode lobby and for bad arguments", () => {
+  test("setTeam is rejects solo modes and bad arguments", () => {
     const { game, ids, layout, badge } = teamLobby(["A", "B"], 2);
     expect(() => game.setTeam(ids[0]!, 2)).toThrow(GameError);
     expect(() => game.setTeam(ids[0]!, -1)).toThrow(GameError);
@@ -442,18 +441,16 @@ describe("lobby teams", () => {
     game.setMode("classic");
     expect(() => game.setTeam(ids[0]!, 1)).toThrow(/no teams/);
     expect(badge(ids[0]!)).toBeNull();
-    game.start();
-    expect(() => game.setTeam(ids[0]!, 1)).toThrow(/before the game starts/);
   });
 
   test("the team games start with the host's arrangement", () => {
     const { game, clock, ids } = teamLobby(["A", "B", "C"], 2);
     game.setTeam(ids[2]!, 1);
-    expect([...TowerGame.fromLobby(game, { clock }).players.values()].map((p) => p.team)).toEqual([0, 1, 1]);
+    expect([...TowerGame.fromLobby(game.handoffFacts("tower"), { clock }).players.values()].map((p) => p.team)).toEqual([0, 1, 1]);
     game.setMode("fight");
-    expect([...FightGame.fromLobby(game, { clock }).players.values()].map((p) => p.team)).toEqual([0, 1, 1]);
+    expect([...FightGame.fromLobby(game.handoffFacts("fight"), { clock }).players.values()].map((p) => p.team)).toEqual([0, 1, 1]);
     game.setMode("land");
-    expect([...LandGame.fromLobby(game, { clock }).players.values()].map((p) => p.team)).toEqual([0, 1, 1]);
+    expect([...LandGame.fromLobby(game.handoffFacts("land"), { clock }).players.values()].map((p) => p.team)).toEqual([0, 1, 1]);
   });
 });
 
@@ -461,7 +458,7 @@ describe("streaks", () => {
   test("count consecutive correct answers and reset on a wrong or missing answer", () => {
     const clock = new FakeClock();
     const q = (i: number) => ({ id: `q${i}`, type: "true_false" as const, text: `Q${i}`, timeLimitSec: 10, options: ["True", "False"], correct: [0] });
-    const game = new Game(sampleQuiz({ questions: [1, 2, 3, 4, 5, 6].map(q) }), { clock });
+    const game = classicGame(sampleQuiz({ questions: [1, 2, 3, 4, 5, 6].map(q) }), { clock });
     const a = game.join("A");
     const b = game.join("B");
     game.start();
@@ -490,7 +487,7 @@ describe("streaks", () => {
 
 test("answer avatars list pickers in answer order and match the counts", () => {
   const clock = new FakeClock();
-  const game = new Game(sampleQuiz(), { clock });
+  const game = classicGame(sampleQuiz(), { clock });
   const ps = ["P1", "P2", "P3", "P4"].map((n) => game.join(n));
   game.start();
   clock.advance(INTRO_MS);

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { Game } from "../src/server/game/game.ts";
+import { Lobby } from "../src/server/game/lobby.ts";
 import { SiegeGame } from "../src/server/game/siege.ts";
 import { DEFAULT_SIEGE_THEME, siegeDefenderPhrase, siegeTheme } from "../src/shared/siege-theme.ts";
 import { FakeClock, sampleQuiz } from "./helpers.ts";
@@ -13,7 +13,7 @@ describe("Kingdom Siege themes", () => {
   });
 
   test("Christmas is the default and both clients receive the selected look", () => {
-    const lobby = new Game(sampleQuiz(), { clock: new FakeClock() });
+    const lobby = new Lobby(sampleQuiz());
     lobby.setMode("siege");
     expect(lobby.settings.siege.theme).toBe(DEFAULT_SIEGE_THEME);
     expect(siegeTheme()).toBe("christmas");
@@ -23,14 +23,14 @@ describe("Kingdom Siege themes", () => {
       // Older clients updating only waves must preserve an explicit theme choice.
       lobby.setModeSettings("siege", { waves: 5 });
       expect(lobby.settings.siege.theme).toBe(theme);
-      const game = SiegeGame.fromLobby(lobby, { clock: new FakeClock() });
+      const game = SiegeGame.fromLobby(lobby.handoffFacts("siege"), { clock: new FakeClock() });
       expect(game.hostView().settings).toEqual({ waves: 5, theme });
       expect(game.playerView(player.id)?.theme).toBe(theme);
     }
   });
 
   test("invalid theme is rejected without altering the current settings", () => {
-    const lobby = new Game(sampleQuiz());
+    const lobby = new Lobby(sampleQuiz());
     lobby.setModeSettings("siege", { waves: 10, theme: "classic" });
     expect(() => lobby.setModeSettings("siege", { waves: 5, theme: "halloween" as never })).toThrow("theme");
     expect(lobby.settings.siege).toEqual({ waves: 10, theme: "classic" });

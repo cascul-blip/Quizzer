@@ -22,7 +22,7 @@ import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import { EMPTY, enclosedBy, landBoardSize, placementCost, startTiles, type LandStart } from "../../shared/land-board.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import { GameError, realClock, teamInfo, type Clock } from "./common.ts";
-import type { Game } from "./game.ts";
+import type { LobbyFacts } from "./lobby-facts.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
 import { QuestionStream, newStreamPlayer, type StreamPlayer } from "./stream.ts";
 import { answerOf } from "../../shared/answer-match.ts";
@@ -123,10 +123,10 @@ export class LandGame {
   }
 
   /** Take over a lobby's players (same ids and tokens), on the teams shown in the lobby. */
-  static fromLobby(lobby: Game, opts: LandOptions = {}): LandGame {
-    const game = new LandGame(lobby.quiz, { ...lobby.settings.land, shuffleAnswers: lobby.shuffle.answers }, opts);
-    const players = [...lobby.players.values()];
-    const teams = lobby.teamAssignment();
+  static fromLobby(lobby: LobbyFacts<"land">, opts: LandOptions = {}): LandGame {
+    const game = new LandGame(lobby.quiz, { ...lobby.settings, shuffleAnswers: lobby.shuffle.answers }, opts);
+    const players = [...lobby.players];
+    const teams = lobby.teams;
     game.roster.adoptFrom(players, (base) => game.newPlayer(base, teams.get(base.id) ?? 0));
     return game;
   }

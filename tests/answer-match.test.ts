@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { checkAnswer, matchesAnswer } from "../src/shared/answer-match.ts";
 import { normalizeQuestion } from "../src/shared/quiz-schema.ts";
-import { FakeClock, sampleQuiz } from "./helpers.ts";
-import { Game, INTRO_MS } from "../src/server/game/game.ts";
+import { classicGame, FakeClock, sampleQuiz } from "./helpers.ts";
+import { INTRO_MS } from "../src/server/game/game.ts";
 
 describe("matchesAnswer", () => {
   test("ignores case, spacing and punctuation", () => {
@@ -82,7 +82,7 @@ describe("text questions", () => {
   test("a classic game scores a typed answer and hides the accepted answers until the reveal", () => {
     const clock = new FakeClock();
     const q = normalizeQuestion({ type: "text", text: "Flies?", options: ["Airplane"] });
-    const game = new Game(sampleQuiz({ questions: [q] }), { clock });
+    const game = classicGame(sampleQuiz({ questions: [q] }), { clock });
     const a = game.join("A");
     const b = game.join("B");
     game.start();

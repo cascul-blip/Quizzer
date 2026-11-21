@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { Game } from "../src/server/game/game.ts";
+import { Lobby } from "../src/server/game/lobby.ts";
 import { GiftGame } from "../src/server/game/gift.ts";
 import { buildGiftResultsCsv } from "../src/server/game/gift.ts";
 import { FEEDBACK_MS } from "../src/server/game/stream.ts";
@@ -15,9 +15,9 @@ const dud = (kind: Kind) => (GIFT_DUDS as readonly Kind[]).includes(kind);
 
 function setup(count: number) {
   const clock = new FakeClock();
-  const lobby = new Game(sampleQuiz(), { clock, settings: { gift: { minutes: 3 } }, protect: false });
+  const lobby = new Lobby(sampleQuiz(), { settings: { gift: { minutes: 3 } }, protect: false });
   for (let i = 0; i < count; i++) lobby.join(`Player ${i + 1}`);
-  const game = GiftGame.fromLobby(lobby, { clock, rng: () => 0.4 });
+  const game = GiftGame.fromLobby(lobby.handoffFacts("gift"), { clock, rng: () => 0.4 });
   const players = [...game.players.values()];
   game.start();
   clock.advance(3_000);
@@ -81,9 +81,9 @@ describe("Gift Grab", () => {
       { type: "text", text: "Who brings the gifts?", options: ["Santa Claus"] },
       { type: "pin", text: "Which marker is the North Pole?", image: "media/map.png", spots: [{ x: 0.5, y: 0.1 }, { x: 0.5, y: 0.9 }], correct: [0] },
     ]);
-    const lobby = new Game(sampleQuiz({ questions }), { clock });
+    const lobby = new Lobby(sampleQuiz({ questions }));
     const { id } = lobby.join("Noel");
-    const game = GiftGame.fromLobby(lobby, { clock });
+    const game = GiftGame.fromLobby(lobby.handoffFacts("gift"), { clock });
     game.start();
     clock.advance(3_000);
     for (let i = 0; i < 5; i++) {

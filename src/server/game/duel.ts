@@ -21,7 +21,7 @@ import { MAX_TYPED_ANSWER, checkAnswer, type AnswerValue, answerOf } from "../..
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import { arenaOf, arenaPoints, climbLadder, duelOutcome, pairArenas, standings } from "../../shared/duel-rules.ts";
 import { GameError, realClock, shuffle, topErrors, type Clock, AUTO_REVEAL_MS, GRACE_MS, preparePlayOrder } from "./common.ts";
-import type { Game } from "./game.ts";
+import type { LobbyFacts } from "./lobby-facts.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
 import { MODE_NAMES } from "../../shared/mode-names.ts";
 import { handoffOptions, pickTheme, unhandled, type ModeEntry } from "./mode-entry.ts";
@@ -148,9 +148,9 @@ export class DuelGame {
   }
 
   /** Take over a lobby's players (same ids and tokens), its rounds, shuffle choices and pacing. */
-  static fromLobby(lobby: Game, opts: DuelOptions = {}): DuelGame {
-    const game = new DuelGame(lobby.quiz, { shuffle: lobby.shuffle, rounds: lobby.settings.duel.rounds, theme: lobby.settings.duel.theme, pacing: lobby.pacing }, opts);
-    game.roster.adoptFrom(lobby.players.values(), (base) => game.newPlayer(base));
+  static fromLobby(lobby: LobbyFacts<"duel">, opts: DuelOptions = {}): DuelGame {
+    const game = new DuelGame(lobby.quiz, { shuffle: lobby.shuffle, rounds: lobby.settings.rounds, theme: lobby.settings.theme, pacing: lobby.pacing }, opts);
+    game.roster.adoptFrom(lobby.players, (base) => game.newPlayer(base));
     return game;
   }
 

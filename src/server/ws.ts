@@ -1,14 +1,13 @@
 import type { ServerWebSocket } from "bun";
 import QRCode from "qrcode";
-import type { ClientMsg, GameMode, HostView, JoinInfo, ModeSettingsMap, Pacing, PlayerView, ServerMsg } from "../shared/protocol.ts";
+import type { ClientMsg, HostView, JoinInfo, Pacing, PlayerView, ServerMsg } from "../shared/protocol.ts";
 import { cleanAvatar } from "../shared/avatars.ts";
 import { ValidationError } from "../shared/quiz-schema.ts";
-import { Game, GameError, type Clock } from "./game/game.ts";
-import { startLobbyGame, type LiveGame } from "./game/lobby-handoff.ts";
-import { MSG_MODE, isModeMsg } from "./game/mode-entry.ts";
-import { entryOf } from "./game/modes.ts";
+import { Lobby, type LobbyChoices } from "./game/lobby.ts";
+import { MSG_MODE, isModeMsg, type LiveGame } from "./game/mode-entry.ts";
+import { entryOf, MODES } from "./game/modes.ts";
 import { writeResultsFile } from "./game/results.ts";
-import { MAX_JOINS_PER_ADDRESS, MAX_SOCKETS_PER_ADDRESS } from "./game/common.ts";
+import { GameError, type Clock, MAX_JOINS_PER_ADDRESS, MAX_SOCKETS_PER_ADDRESS } from "./game/common.ts";
 import { isLoopbackAddress, lanAddresses, type LanAddress } from "./network.ts";
 import { PhoneViewDelivery } from "./phone-view-delivery.ts";
 import { NotFoundError, type QuizStore } from "./quiz/store.ts";
@@ -47,9 +46,7 @@ const compressFor = (ws: WS) => ws.data.role !== "host";
 
 /** Owns the single live game and every connected socket; pushes each phone its view (or a patch of it) on every change. */
 export class GameHub {
-  game: LiveGame | null = null;
-  /** The Game the host opened, while it is still the live game: Classic and the lobby's controls work on it until another mode takes its players. */
-  private lobby: Game | null = null;
+  game: Lobby | LiveGame | null = null;
   lastResults: LastResults | null = null;
   port = 0;
   /** Changes on every server start; pages that reconnect to a different one reload to pick up new code. */
@@ -65,12 +62,7 @@ export class GameHub {
   private broadcastQueued = false;
   private activityTimer: ReturnType<typeof setTimeout> | null = null;
   /** Mode, mode settings and pacing carry over to the next lobby ("Play again"). */
-  private lastSetup: { mode: GameMode; settings: Partial<ModeSettingsMap>; protect: boolean; pacing: Pacing } = {
-    mode: "classic",
-    settings: {},
-    protect: true,
-    pacing: "manual",
-  };
+  private lastSetup: Partial<LobbyChoices> = {};
   private readonly log: (msg: string) => void;
 
   constructor(
@@ -277,7 +269,12 @@ export class GameHub {
         const game = this.game;
         const playerId = ws.data.playerId;
         // A message for a mode that isn't running (say, a late tap from the last game) is ignored.
-        if (!game || !playerId || game.runningMode !== MSG_MODE[msg.type]) return;
+        if (!game || !playerId) return;
+        if (game instanceof Lobby) {
+          if (msg.type === "setAvatar") game.setAvatar(playerId, msg.avatar, msg.accessory);
+          return;
+        }
+        if (game.runningMode !== MSG_MODE[msg.type]) return;
         if (entryOf(game).handle(game, playerId, msg) === "resend") this.sendState(ws);
         return;
       }
@@ -289,14 +286,14 @@ export class GameHub {
       if (!this.game) throw new GameError("No game is open");
       return this.game;
     };
-    const classic = () => {
-      const g = game();
-      if (g !== this.lobby) throw new GameError(`Not available in ${entryOf(g).name}`);
-      return this.lobby;
+    const lobby = (closedMessage: string | (() => string)) => {
+      const current = game();
+      if (current instanceof Lobby) return current;
+      const entry = entryOf(current);
+      throw new GameError(entry.lobbyControlError?.(typeof closedMessage === "string" ? closedMessage : closedMessage()) ?? `Not available in ${entry.name}`);
     };
-    /** Paced modes (Classic, Racer, Showdown) go question by question: next, skip and pacing work in each. */
-    const paced = () => {
-      const g = game();
+    /** Paced games go question by question. */
+    const paced = (g: LiveGame) => {
       const entry = entryOf(g);
       if (!entry.pacing) throw new GameError(`Not available in ${entry.name}`);
       return entry.pacing(g);
@@ -310,61 +307,57 @@ export class GameHub {
         if (quiz.questions.length === 0) throw new GameError("This quiz has no questions yet");
         this.closeGame();
         this.images = [...new Set(quiz.questions.flatMap((q) => (q.image ? [q.image] : [])))];
-        this.game = this.lobby = new Game(quiz, {
-          clock: this.opts.clock,
-          onChange: () => this.scheduleBroadcast(),
-          onActivity: (pid) => this.onActivity(pid),
-          onFinish: (g) => this.onFinish(g),
-          ...this.lastSetup,
-        });
+        this.game = new Lobby(quiz, { ...this.lastSetup, onChange: () => this.scheduleBroadcast() });
         this.log(`Game opened: ${quiz.title}. Players join at ${this.joinUrl()}`);
         this.scheduleBroadcast();
         return;
       }
       case "host.start": {
         const pacing = PACINGS.has(msg.pacing) ? msg.pacing : undefined;
-        const startedPacing = startLobbyGame(classic(), pacing, {
-          clock: this.opts.clock,
-          dataDir: this.store.dataDir,
-          onChange: () => this.scheduleBroadcast(),
-          onActivity: (id) => this.onActivity(id),
-          onTick: () => this.pushHost(),
-          onFinish: (game) => this.onFinish(game),
-          install: (game) => { this.game = game; },
-          log: this.log,
-        });
-        if (startedPacing !== undefined) this.lastSetup.pacing = startedPacing;
+        const current = lobby("The game has already started");
+        current.start(pacing, this.handoffOptions());
+        this.lastSetup = current.choices;
         return;
       }
-      case "host.setPacing":
+      case "host.setPacing": {
         if (!PACINGS.has(msg.pacing)) throw new GameError("Unknown pacing");
-        paced().setPacing(msg.pacing);
-        this.lastSetup.pacing = msg.pacing;
-        return;
-      case "host.setShuffle":
-        return classic().setShuffle({ questions: !!msg.questions, answers: !!msg.answers });
-      case "host.setProtect":
-        classic().setProtect(!!msg.on);
-        this.lastSetup.protect = classic().protect;
-        return;
-      case "host.setMode":
-        classic().setMode(msg.mode);
-        this.lastSetup.mode = classic().mode;
-        return;
-      case "host.setModeSettings": {
-        const lobby = classic();
-        lobby.setModeSettings(msg.mode, msg.settings);
-        this.lastSetup.settings = { ...lobby.settings };
+        const current = game();
+        if (current instanceof Lobby) current.setPacing(msg.pacing);
+        else {
+          paced(current).setPacing(msg.pacing);
+          this.lastSetup.pacing = msg.pacing;
+        }
         return;
       }
+      case "host.setShuffle":
+        return lobby("Shuffle can only be changed before the game starts").setShuffle({ questions: !!msg.questions, answers: !!msg.answers });
+      case "host.setProtect":
+        return lobby("Protect from abuse can only be changed before the game starts").setProtect(!!msg.on);
+      case "host.setMode":
+        return lobby("The game mode can only be changed before the game starts").setMode(msg.mode);
+      case "host.setModeSettings":
+        return lobby(() => {
+          if (!Object.hasOwn(MODES, msg.mode)) return "Unknown game mode";
+          return `${MODES[msg.mode].name} settings can only be changed before the game starts`;
+        }).setModeSettings(msg.mode, msg.settings);
       case "host.next":
-        return paced().next();
-      case "host.skip":
-        return paced().skip();
-      case "host.end":
-        return game().end();
+      case "host.end": {
+        const current = game();
+        const action = msg.type === "host.next" ? "next" : "end";
+        if (current instanceof Lobby) {
+          current.advanceClassic(action, this.handoffOptions());
+          this.lastSetup = current.choices;
+        } else if (action === "next") paced(current).next();
+        else current.end();
+        return;
+      }
+      case "host.skip": {
+        const current = game();
+        if (!(current instanceof Lobby)) paced(current).skip();
+        return;
+      }
       case "host.setTeam":
-        return classic().setTeam(String(msg.playerId), Number(msg.team));
+        return lobby("Teams can only be changed before the game starts").setTeam(String(msg.playerId), Number(msg.team));
       case "host.kick": {
         const p = game().kick(String(msg.playerId));
         if (!p) return;
@@ -388,12 +381,36 @@ export class GameHub {
     }
   }
 
-  private closeGame(): void {
+  private handoffOptions() {
+    return {
+      clock: this.opts.clock,
+      dataDir: this.store.dataDir,
+      onChange: () => this.scheduleBroadcast(),
+      onActivity: (id: string) => this.onActivity(id),
+      onTick: () => this.pushHost(),
+      onFinish: (game: LiveGame) => this.onFinish(game),
+      install: (game: LiveGame, activate: () => void) => {
+        const lobby = this.game;
+        this.game = game;
+        try {
+          activate();
+        } catch (error) {
+          this.game = lobby;
+          game.dispose();
+          throw error;
+        }
+      },
+      log: this.log,
+    };
+  }
+
+  closeGame(): void {
     if (this.activityTimer) clearTimeout(this.activityTimer);
     this.activityTimer = null;
     if (!this.game) return;
-    this.game.dispose();
-    this.game = this.lobby = null;
+    if (this.game instanceof Lobby) this.lastSetup = this.game.choices;
+    else this.game.dispose();
+    this.game = null;
     for (const s of this.sockets) {
       s.data.playerId = null;
       this.phoneViews.requestRefresh(s);

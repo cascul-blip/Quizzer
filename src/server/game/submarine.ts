@@ -11,7 +11,7 @@ import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import type { Quiz } from "../../shared/quiz-schema.ts";
 import { CHRISTMAS_GLYPHS, glyphId, parseGlyph, variantsOf } from "../../shared/glyphs.ts";
 import { GameError, realClock, shuffle, type Clock } from "./common.ts";
-import type { Game } from "./game.ts";
+import type { LobbyFacts } from "./lobby-facts.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
 import { FEEDBACK_MS, QuestionStream, newStreamPlayer, type StreamPlayer } from "./stream.ts";
 import { answerOf } from "../../shared/answer-match.ts";
@@ -126,9 +126,9 @@ export class SubGame {
     this.onFinish = opts.onFinish ?? (() => {});
   }
 
-  static fromLobby(lobby: Game, opts: SubOptions = {}, protect = lobby.protect): SubGame {
-    const game = new SubGame(lobby.quiz, { ...opts, shuffleAnswers: lobby.shuffle.answers, protect });
-    game.roster.adoptFrom(lobby.players.values(), (base) => game.newPlayer(base));
+  static fromLobby(lobby: LobbyFacts<"submarine">, opts: SubOptions = {}): SubGame {
+    const game = new SubGame(lobby.quiz, { ...opts, shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect });
+    game.roster.adoptFrom(lobby.players, (base) => game.newPlayer(base));
     return game;
   }
 
@@ -562,7 +562,7 @@ export const subMode: ModeEntry<"submarine"> = {
   defaultSettings: {},
   readSettings: () => ({}),
   start(lobby, ctx) {
-    const game = SubGame.fromLobby(lobby, handoffOptions(ctx), ctx.protect);
+    const game = SubGame.fromLobby(lobby, handoffOptions(ctx));
     return { game, log: `${this.name} started with ${game.players.size} player(s)` };
   },
   pacing: null,

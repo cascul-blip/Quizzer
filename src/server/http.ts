@@ -193,7 +193,7 @@ export function startServer(opts: ServerOptions): RunningServer {
     hub,
     port: server.port!,
     async stop() {
-      hub.game?.dispose();
+      hub.closeGame();
       await server.stop(true);
     },
   };

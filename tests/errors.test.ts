@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { topErrors } from "../src/server/game/common.ts";
 import { COUNTDOWN_MS as FIGHT_COUNTDOWN_MS, FightGame } from "../src/server/game/fight.ts";
-import { Game, INTRO_MS } from "../src/server/game/game.ts";
+import { INTRO_MS } from "../src/server/game/game.ts";
+import { Lobby } from "../src/server/game/lobby.ts";
 import { COUNTDOWN_MS as LAND_COUNTDOWN_MS, LandGame } from "../src/server/game/land.ts";
 import { COUNTDOWN_MS as ROBOT_COUNTDOWN_MS, RobotGame } from "../src/server/game/robot.ts";
 import { FEEDBACK_MS, type StreamPlayer } from "../src/server/game/stream.ts";
@@ -9,7 +10,7 @@ import { COUNTDOWN_MS as SUB_COUNTDOWN_MS, SubGame } from "../src/server/game/su
 import { COUNTDOWN_MS as TOWER_COUNTDOWN_MS, TowerGame } from "../src/server/game/tower.ts";
 import { ERRORS_SHOWN, type GameMode, type QuestionError } from "../src/shared/protocol.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
-import { FakeClock, sampleQuiz } from "./helpers.ts";
+import { classicGame, FakeClock, sampleQuiz } from "./helpers.ts";
 
 /** `count` questions; question i's correct answer is "yes i" (and "also i" for the last one). */
 function quiz(count: number): Quiz {
@@ -48,7 +49,7 @@ describe("topErrors", () => {
 describe("Classic", () => {
   function play(shuffleAnswers = false) {
     const clock = new FakeClock();
-    const game = new Game(quiz(3), { clock });
+    const game = classicGame(quiz(3), { clock });
     if (shuffleAnswers) game.setShuffle({ questions: false, answers: true });
     const [a, b, c] = ["A", "B", "C"].map((n) => game.join(n));
     game.start();
@@ -93,18 +94,18 @@ describe("Classic", () => {
 
 describe("own-pace modes", () => {
   type Live = TowerGame | SubGame | FightGame | RobotGame | LandGame;
-  const modes: [GameMode, number, (lobby: Game, clock: FakeClock) => Live][] = [
-    ["tower", TOWER_COUNTDOWN_MS, (l, clock) => TowerGame.fromLobby(l, { clock })],
-    ["submarine", SUB_COUNTDOWN_MS, (l, clock) => SubGame.fromLobby(l, { clock })],
-    ["fight", FIGHT_COUNTDOWN_MS, (l, clock) => FightGame.fromLobby(l, { clock })],
-    ["robot", ROBOT_COUNTDOWN_MS, (l, clock) => RobotGame.fromLobby(l, { clock })],
-    ["land", LAND_COUNTDOWN_MS, (l, clock) => LandGame.fromLobby(l, { clock })],
+  const modes: [GameMode, number, (lobby: Lobby, clock: FakeClock) => Live][] = [
+    ["tower", TOWER_COUNTDOWN_MS, (l, clock) => TowerGame.fromLobby(l.handoffFacts("tower"), { clock })],
+    ["submarine", SUB_COUNTDOWN_MS, (l, clock) => SubGame.fromLobby(l.handoffFacts("submarine"), { clock })],
+    ["fight", FIGHT_COUNTDOWN_MS, (l, clock) => FightGame.fromLobby(l.handoffFacts("fight"), { clock })],
+    ["robot", ROBOT_COUNTDOWN_MS, (l, clock) => RobotGame.fromLobby(l.handoffFacts("robot"), { clock })],
+    ["land", LAND_COUNTDOWN_MS, (l, clock) => LandGame.fromLobby(l.handoffFacts("land"), { clock })],
   ];
 
   for (const [mode, countdown, make] of modes) {
     test(`${mode}: every wrong answer counts, repeats included, and shows at the podium only`, () => {
       const clock = new FakeClock();
-      const lobby = new Game(quiz(2), { clock });
+      const lobby = new Lobby(quiz(2));
       lobby.setMode(mode);
       lobby.join("A");
       lobby.join("B");

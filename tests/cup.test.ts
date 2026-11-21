@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { COUNTDOWN_MS, CupGame, FEEDBACK_MS, type CupPlayer } from "../src/server/game/cup.ts";
-import { Game } from "../src/server/game/game.ts";
+import { Lobby } from "../src/server/game/lobby.ts";
 import { buildCupResultsCsv } from "../src/server/game/cup.ts";
 import { CUP_ALL_SAFE_MS, CUP_DEFAULT_CUPS, CUP_DRINK_MS, CUP_MAX_CUPS, CUP_MIN_CUPS, CUP_QUIZ_MIN_MS, CUP_ROLL_MS, CUP_SIP_MS, CUP_VERDICT_MS, cupQuizMs } from "../src/shared/protocol.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
@@ -34,11 +34,11 @@ function scripted(values: number[]) {
 function setup(names: string[], rng: () => number = seeded(), cups = CUP_DEFAULT_CUPS, theme: "classic" | "christmas" = "classic") {
   const clock = new FakeClock();
   let finished = 0;
-  const lobby = new Game(quiz(), { clock });
+  const lobby = new Lobby(quiz());
   lobby.setMode("cup");
   lobby.setModeSettings("cup", { cups, theme });
   for (const n of names) lobby.join(n);
-  const game = CupGame.fromLobby(lobby, { clock, rng, onFinish: () => finished++ });
+  const game = CupGame.fromLobby(lobby.handoffFacts("cup"), { clock, rng, onFinish: () => finished++ });
   game.start();
   clock.advance(COUNTDOWN_MS);
   expect(game.phase).toBe("roll");
@@ -189,7 +189,7 @@ describe("Cup of Death", () => {
   });
 
   test("the lobby sets the cups, 1 to 6, 3 by default", () => {
-    const lobby = new Game(quiz(), { clock: new FakeClock() });
+    const lobby = new Lobby(quiz());
     expect(lobby.settings.cup.cups).toBe(CUP_DEFAULT_CUPS);
     expect(lobby.hostView().settings.cup).toEqual({ cups: CUP_DEFAULT_CUPS, theme: "christmas" });
     for (const cups of [0, 7, 2.5, NaN]) expect(() => lobby.setModeSettings("cup", { cups })).toThrow();
@@ -198,14 +198,14 @@ describe("Cup of Death", () => {
   });
 
   test("cup themes reach both screens and changing cup count preserves the theme", () => {
-    const lobby = new Game(quiz(), { clock: new FakeClock() });
+    const lobby = new Lobby(quiz());
     const player = lobby.join("Elf");
     expect(lobby.settings.cup.theme).toBe("christmas");
     for (const theme of ["classic", "christmas"] as const) {
       lobby.setModeSettings("cup", { cups: 4, theme });
       lobby.setModeSettings("cup", { cups: 2 });
       expect(lobby.settings.cup).toEqual({ cups: 2, theme });
-      const game = CupGame.fromLobby(lobby);
+      const game = CupGame.fromLobby(lobby.handoffFacts("cup"));
       expect(game.hostView().theme).toBe(theme);
       expect(game.playerView(player.id)!.theme).toBe(theme);
       game.dispose();

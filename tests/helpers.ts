@@ -1,7 +1,8 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { Clock } from "../src/server/game/game.ts";
+import { ClassicGame, type Clock } from "../src/server/game/game.ts";
+import { Lobby } from "../src/server/game/lobby.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
 
 /** Deterministic clock: timers only fire when advance() is called. */
@@ -55,4 +56,11 @@ export function sampleQuiz(overrides: Partial<Quiz> = {}): Quiz {
     ],
     ...overrides,
   };
+}
+
+
+/** Construct Classic for gameplay tests with the same default projector fields as the lobby. */
+export function classicGame(quiz: Quiz, opts?: ConstructorParameters<typeof ClassicGame>[2]): ClassicGame {
+  const { mode, settings, protect } = new Lobby(quiz).hostView();
+  return new ClassicGame(quiz, { mode, settings, protect }, opts);
 }
