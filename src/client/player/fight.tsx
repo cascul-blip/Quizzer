@@ -1,7 +1,8 @@
 import { FightThemeProvider, useGingerbread, fightChristmasArt } from "../shared/fight-skin.tsx";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { CATAPULT_X, LAUNCH_Y, MAX_PULL, launchVector, shotPos, simulate } from "../../shared/fight-physics.ts";
-import { CORRECT_PER_DECISION, REPAIR_MS, TOWER_MAX_DAMAGE, type ClientMsg, type FightShot, type PlayerFightView } from "../../shared/protocol.ts";
+import { CORRECT_PER_DECISION, REPAIR_MS, TOWER_MAX_DAMAGE, type FightShot, type PlayerFightView } from "../../shared/modes/fight.ts";
+import type { ClientMsg } from "../../shared/protocol.ts";
 import { AvatarSprite, Battlefield, FIGHT_PHONE_UI, HealthBar, ShotLayer, sy } from "../shared/fight-art.tsx";
 import { teamInk, teamVars, useCountdown } from "../shared/ui.tsx";
 import { Feedback, StreamQuestion } from "./stream-question.tsx";
