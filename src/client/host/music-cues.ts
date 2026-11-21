@@ -1,9 +1,10 @@
 import type { HostView } from "../../shared/protocol.ts";
 import type { MusicCue } from "../shared/music/index.ts";
-import { cueOf } from "./modes.tsx";
+import { cueOf, lobbyEntryOf } from "./modes.tsx";
 
-/** Which track the projector should play for this screen, and how intense: the cue of the mode's entry (HOST_MODES). */
+/** The selected mode's lobby track or the active mode's gameplay cue. */
 export function musicFor(view: HostView | null): MusicCue {
   if (!view || view.kind === "idle") return { track: null };
+  if (view.phase === "lobby") return { track: lobbyEntryOf(view.mode).lobbyTrack(view.settings[view.mode]) };
   return cueOf(view);
 }

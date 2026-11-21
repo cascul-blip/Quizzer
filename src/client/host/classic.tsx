@@ -8,14 +8,12 @@ import { Tex } from "../shared/tex.tsx";
 import { Shape, StreakBadge, optionColor, ordinal, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
 import type { MusicCue } from "../shared/music/index.ts";
-import { Lobby, lobbyCue } from "./lobby.tsx";
 import { everyoneAnswered, revealCue } from "./reveal-cue.ts";
 
 type GameView = Extract<HostView, { kind: "classic" }>;
 
-/** The projector's music for Classic, and in the lobby the selected mode's lobby track. */
+/** The projector's music during Classic gameplay. */
 export function classicCue(view: GameView): MusicCue {
-  if (view.phase === "lobby") return lobbyCue(view);
   if (view.phase === "podium") return { track: "classic-results" };
   if (view.phase === "reveal" || view.phase === "leaderboard") return { track: "classic-leaderboard" };
   // Questions: tension builds over the time limit.
@@ -26,22 +24,21 @@ export function classicCue(view: GameView): MusicCue {
   return { track: "classic-question", intensity: 0.1, key: `q${q?.index ?? 0}-intro` };
 }
 
-/** Projector screen for Classic, and for the lobby of every mode: Classic's view carries the lobby as its first phase, and the top bar, keys and sound cues span both. */
-export function ClassicStage({ view, send }: { view: GameView; send: Send }) {
+/** Projector screen during Classic gameplay. */
+export function ClassicStage({ view, send, enteredFromLobby }: { view: GameView; send: Send; enteredFromLobby: boolean }) {
   const prev = useRef<GameView | null>(null);
 
   // Sound cues on transitions.
   useEffect(() => {
     const p = prev.current;
     prev.current = view;
+    if (view.phase === "intro" && (p ? p.phase !== "intro" : enteredFromLobby)) play("start");
     if (!p) return;
-    if (view.phase === "lobby" && view.players.length > p.players.length) play("join");
     if (view.phase !== p.phase) {
-      if (view.phase === "intro") play("start");
       if (view.phase === "reveal") play(revealCue(p.phase === "open", view.answeredCount, view.players));
       if (view.phase === "podium") play("fanfare");
     }
-  }, [view]);
+  }, [view, enteredFromLobby]);
 
   // Keyboard: Space / → = next, S = skip.
   useEffect(() => {
@@ -49,9 +46,7 @@ export function ClassicStage({ view, send }: { view: GameView; send: Send }) {
       if ((e.target as HTMLElement)?.closest?.("input, select, textarea")) return;
       if (e.key === " " || e.key === "ArrowRight") {
         e.preventDefault();
-        if (view.phase === "lobby") {
-          if (view.players.length > 0) send({ type: "host.start", pacing: view.pacing });
-        } else if (view.phase !== "podium") send({ type: "host.next" });
+        if (view.phase !== "podium") send({ type: "host.next" });
       } else if (e.key === "s" || e.key === "S") {
         if (view.phase === "open" || view.phase === "intro") send({ type: "host.skip" });
       } else if (e.key === "f" || e.key === "F") {
@@ -60,9 +55,9 @@ export function ClassicStage({ view, send }: { view: GameView; send: Send }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [view.phase, view.players.length, view.pacing, view.mode]);
+  }, [view.phase, send]);
 
-  const inGame = view.phase !== "lobby" && view.phase !== "podium";
+  const inGame = view.phase !== "podium";
 
   return (
     <div class="stage">
@@ -88,17 +83,13 @@ export function ClassicStage({ view, send }: { view: GameView; send: Send }) {
           👥 {view.players.filter((p) => p.connected).length}
           {view.players.some((p) => !p.connected) && <span class="dim"> / {view.players.length}</span>}
         </div>
-        <ScreenControls join={view.phase === "lobby" ? undefined : view.join} />
+        <ScreenControls join={view.join} />
         {view.phase !== "podium" && (
           <button
             class="btn ghost small"
-            onClick={() => {
-              if (view.phase === "lobby") {
-                if (confirm("Close this lobby?")) send({ type: "host.close" });
-              } else if (confirm("End the game now and show the final results?")) send({ type: "host.end" });
-            }}
+            onClick={() => confirm("End the game now and show the final results?") && send({ type: "host.end" })}
           >
-            {view.phase === "lobby" ? "Close" : "End game"}
+            End game
           </button>
         )}
       </header>
@@ -109,8 +100,6 @@ export function ClassicStage({ view, send }: { view: GameView; send: Send }) {
 
 function PhaseView({ view, send }: { view: GameView; send: Send }) {
   switch (view.phase) {
-    case "lobby":
-      return <Lobby view={view} send={send} />;
     case "intro":
       return <Intro view={view} send={send} />;
     case "open":

@@ -20,7 +20,7 @@ const read = (path: string): Source => ({ path, lines: readFileSync(path, "utf8"
 
 const sources = tsFiles(SERVER).map(read);
 
-/** The client files that look a mode up in its entry (src/client/host/modes.tsx, src/client/host/lobby-modes.tsx, src/client/player/modes.tsx) or its flags (src/shared/mode-flags.ts) instead of asking which mode is running. */
+/** The client files that look a mode up in its entry (src/client/host/modes.tsx or src/client/player/modes.tsx) or its flags (src/shared/mode-flags.ts) instead of asking which mode is running. */
 const CLIENT_FILES = ["src/client/host/main.tsx", "src/client/host/lobby.tsx", "src/client/host/music-cues.ts", "src/client/player/main.tsx"].map((path) => read(join(ROOT, path)));
 
 const QUOTE = "[\"'`]";
