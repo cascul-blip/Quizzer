@@ -31,8 +31,8 @@ function Preview() {
   const [gap, setGap] = useState(9);
   const [seq, setSeq] = useState(0);
   const avatars = ["polarbear", "fox", "bunny"] as const;
-  const view: Extract<HostView, { kind: "sub" }> = {
-    kind: "sub", phase, quiz: { id: "art", title: "The Christmas countryside", questionCount: 10 },
+  const view: Extract<HostView, { kind: "submarine" }> = {
+    kind: "submarine", phase, quiz: { id: "art", title: "The Christmas countryside", questionCount: 10 },
     level: 1, depth: 240, phaseRemainingMs: 10000, gap, maxGap: 20, speed: new URLSearchParams(location.search).has("live") ? .2 : 0,
     boosts: 3, required: 8, lastBoost: seq ? { seq, nickname: "Holly", avatar: { avatar: "fox", accessory: "scarf" } } : null,
     dive: { instructors: [{ nickname: "Holly", index: 2, total: 5, found: 2, groupSize: 3, done: false }] },

@@ -400,7 +400,7 @@ export interface SubAwards {
 }
 
 export interface HostSubState {
-  kind: "sub";
+  kind: "submarine";
   phase: SubPhase;
   quiz: { id: string; title: string; questionCount: number };
   level: number;
@@ -427,7 +427,7 @@ export interface HostSubState {
 }
 
 export interface PlayerSubView {
-  kind: "sub";
+  kind: "submarine";
   phase: SubPhase;
   title: string;
   level: number;

@@ -17,12 +17,19 @@ import {
 } from "../../shared/siege-rules.ts";
 import { DEFENDER_EMOJI, SiegeIcon } from "../shared/siege-art.tsx";
 import { useCountdown } from "../shared/ui.tsx";
+import type { PhoneBanner } from "./common.tsx";
 import { Feedback, StreamQuestion } from "./tower.tsx";
 
 type Send = (m: ClientMsg) => void;
 
 const ALERT_MS = 2500;
 const ALERT_TEXT = { giant: "⚠️ A giant approaches!", wall: "💥 The wall was hit!" } as const;
+
+/** The castle banner on the phone's lobby screen. */
+export const siegeBanner: PhoneBanner = {
+  avatarClass: "siege-banner-avatar",
+  Line: () => <p class="siege-lobby-line">🛡️ Defend the kingdom! Watch the projector.</p>,
+};
 
 /** Phone screen for Kingdom Siege: answer questions for gold, and tap Build to place or upgrade defenders on the lane map. */
 export function SiegePlayer({ view, send }: { view: PlayerSiegeView; send: Send }) {

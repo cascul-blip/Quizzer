@@ -65,7 +65,7 @@ export function musicFor(view: HostView | null): MusicCue {
         ? { track: play, intensity: start, rampTo: 1, rampMs: view.remainingMs, key: "tower-playing" }
         : { track: play, intensity: 0, key: "tower-countdown" };
     }
-    case "sub": {
+    case "submarine": {
       if (view.phase === "podium") return { track: "submarine-results" };
       if (view.phase === "dive") return { track: "submarine-dive" };
       if (view.phase === "countdown") return { track: "submarine-lobby" };

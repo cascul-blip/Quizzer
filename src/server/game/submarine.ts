@@ -458,7 +458,7 @@ export class SubGame {
 
   hostView(): HostSubState {
     return {
-      kind: "sub",
+      kind: "submarine",
       phase: this.phase,
       quiz: { id: this.quizId, title: this.title, questionCount: this.questionCount },
       level: this.level,
@@ -533,7 +533,7 @@ export class SubGame {
       };
     }
     return {
-      kind: "sub",
+      kind: "submarine",
       phase: this.phase,
       title: this.title,
       level: this.level,

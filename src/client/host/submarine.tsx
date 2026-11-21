@@ -8,7 +8,7 @@ import { useEventFlash } from "../shared/tower-art.tsx";
 import { useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
 
-type SubView = Extract<HostView, { kind: "sub" }>;
+type SubView = Extract<HostView, { kind: "submarine" }>;
 
 /** Distance to the goblin, animated locally between server updates. */
 function useLiveGap(view: SubView): number {
