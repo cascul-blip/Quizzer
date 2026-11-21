@@ -24,7 +24,7 @@ export interface PlayerResult {
   points: number;
 }
 
-export interface PlayerClassicView {
+export interface ClassicView {
   kind: "classic";
   phase: ClassicPhase;
   title: string;
@@ -62,7 +62,7 @@ export interface HostClassicState {
 export type ClassicMsg = { type: "setAvatar"; avatar: string; accessory: string } | { type: "answer"; qIndex: number; option: number; text?: string };
 
 /** Classic's shared mode entry. */
-export const classicShared = sharedModeEntry<ModeProtocol<ClassicMsg, NoSettings, HostClassicState, PlayerClassicView>>()({
+export const classicShared = sharedModeEntry<ModeProtocol<ClassicMsg, NoSettings, HostClassicState, ClassicView>>()({
   name: "Classic",
   flags: { paced: true, protect: false },
   lobbyBanner: false,

@@ -11,7 +11,7 @@ import { submarineShared } from "./modes/submarine.ts";
 import { towerShared } from "./modes/tower.ts";
 import type { EntryProtocol, SharedModeEntry, WithModeProtocol } from "./shared-mode-entry.ts";
 
-/** Every game mode's shared mode entry: its name, flags, lobby banner and phone messages, declared in the mode's own file in modes/. */
+/** Collects the shared mode entries declared in modes/. */
 export const SHARED_MODES = {
   classic: classicShared,
   tower: towerShared,
