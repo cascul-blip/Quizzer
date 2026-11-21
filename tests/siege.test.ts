@@ -76,7 +76,7 @@ function quietWave(opts: Parameters<typeof setup>[0] = {}) {
   const s = setup(opts);
   s.clock.advance(SIEGE_OPENING_MS);
   expect(s.game.phase).toBe("wave");
-  s.game.pending = [];
+  s.game.battlefield.pending = [];
   return s;
 }
 
@@ -212,7 +212,7 @@ describe("gold and building", () => {
     expect(ben.gold).toBe(50);
     for (let i = 0; i < 2; i++) answer(game, clock, ben, true);
     expect(ben.gold).toBe(100);
-    const knight = game.defenderAt(2, 3)!;
+    const knight = game.battlefield.defenderAt(2, 3)!;
     knight.health = 4;
     expect(game.upgrade(ben.id, 2, 3)).toBeNull();
     expect(knight.level).toBe(2);
@@ -244,7 +244,7 @@ describe("gold and building", () => {
     expect(game.upgrade(ben.id, 0, 1)).toBe(SIEGE_NO_GOLD);
     expect(ana.gold).toBe(950);
     expect(ben.gold).toBe(40);
-    expect(game.defenders).toHaveLength(1);
+    expect(game.battlefield.defenders).toHaveLength(1);
   });
 
   test("taken squares, monster squares, the entry square and bad input are refused", () => {
@@ -258,7 +258,7 @@ describe("gold and building", () => {
     expect(game.place(ana, "archer", 5, 1)).toBe("You can't build on that square.");
     expect(game.place(ana, "archer", 1.5, 1)).toBe("You can't build on that square.");
     expect(game.place(ana, "catapult", 1, 1)).toBe("Unknown defender.");
-    game.spawn("goblin", 3, 6);
+    game.battlefield.spawn("goblin", 3, 6);
     expect(game.place(ana, "wall", 3, 6)).toBe("A monster is standing there.");
     expect(game.place(ana, "wall", 3, 5)).toBeNull();
     expect(game.upgrade(ana, 4, 4)).toBe("That defender is gone.");
@@ -278,10 +278,10 @@ describe("the battle", () => {
     game.start();
     clock.advance(SIEGE_COUNTDOWN_MS + SIEGE_OPENING_MS);
     expect(game.phase).toBe("wave");
-    game.pending = [];
+    game.battlefield.pending = [];
     fund(game);
     game.place(byName(game, "Ana").id, "archer", 1, 1);
-    sturdy(game.spawn("goblin", 1, 9));
+    sturdy(game.battlefield.spawn("goblin", 1, 9));
     const [c0, t0] = [changes, ticks];
     // The archer shoots and the goblin walks: projector news only.
     clock.advance(3000);
@@ -289,7 +289,7 @@ describe("the battle", () => {
     expect(changes - c0).toBe(0);
     // A goblin reaching the wall costs a heart, which every phone shows.
     const hearts = game.hearts;
-    game.spawn("goblin", 3, 0.6);
+    game.battlefield.spawn("goblin", 3, 0.6);
     for (let i = 0; i < 100 && game.hearts === hearts; i++) clock.advance(SIEGE_TICK_MS);
     expect(game.hearts).toBeLessThan(hearts);
     expect(changes - c0).toBeGreaterThan(0);
@@ -298,8 +298,8 @@ describe("the battle", () => {
   test("a monster stops at the first defender in its way, attacks it, and walks on once it is destroyed", () => {
     const { game, clock } = quietWave();
     game.place(byName(game, "Ana").id, "wall", 0, 5);
-    const wall = game.defenderAt(0, 5)!;
-    const goblin = game.spawn("goblin", 0);
+    const wall = game.battlefield.defenderAt(0, 5)!;
+    const goblin = game.battlefield.spawn("goblin", 0);
     // Two squares at 2 s each, then 1 damage a second.
     clock.advance(4000);
     expect(goblin.x).toBeCloseTo(6, 5);
@@ -307,7 +307,7 @@ describe("the battle", () => {
     clock.advance(3000);
     expect(wall.health).toBe(12);
     clock.advance(12_000);
-    expect(game.defenderAt(0, 5)).toBeUndefined();
+    expect(game.battlefield.defenderAt(0, 5)).toBeUndefined();
     clock.advance(SIEGE_TICK_MS * 2);
     expect(goblin.state).toBe("walk");
     expect(goblin.x).toBeLessThan(6);
@@ -318,8 +318,8 @@ describe("the battle", () => {
     const ana = byName(game, "Ana");
     fund(game);
     game.place(ana.id, "archer", 1, 1);
-    const far = sturdy(game.spawn("goblin", 1, 8));
-    const near = sturdy(game.spawn("goblin", 1, 6));
+    const far = sturdy(game.battlefield.spawn("goblin", 1, 8));
+    const near = sturdy(game.battlefield.spawn("goblin", 1, 6));
     clock.advance(SIEGE_TICK_MS);
     expect(near.health).toBe(11);
     expect(far.health).toBe(12);
@@ -335,7 +335,7 @@ describe("the battle", () => {
     game.upgrade(ana.id, 1, 1);
     clock.advance(1000);
     expect(near.health).toBe(6);
-    expect(game.shots.length).toBeGreaterThanOrEqual(5);
+    expect(game.battlefield.shots.length).toBeGreaterThanOrEqual(5);
   });
 
   test("an archer's second arrow goes to the next monster when the first one falls", () => {
@@ -345,11 +345,11 @@ describe("the battle", () => {
     game.place(ana.id, "archer", 1, 1);
     game.upgrade(ana.id, 1, 1);
     game.upgrade(ana.id, 1, 1);
-    const near = game.spawn("wolf", 1, 7);
+    const near = game.battlefield.spawn("wolf", 1, 7);
     near.health = 1;
-    const far = sturdy(game.spawn("goblin", 1, 8));
+    const far = sturdy(game.battlefield.spawn("goblin", 1, 8));
     clock.advance(SIEGE_TICK_MS);
-    expect(game.monsters).not.toContain(near);
+    expect(game.battlefield.monsters).not.toContain(near);
     expect(far.health).toBe(11);
     expect(ana.defeated).toBe(1);
     expect(ana.archerKills).toBe(1);
@@ -361,8 +361,8 @@ describe("the battle", () => {
     fund(game);
     game.place(ana.id, "archer", 0, 1);
     game.place(ana.id, "knight", 1, 3);
-    const shot = game.spawn("troll", 0, 8);
-    const struck = game.spawn("troll", 1, 4);
+    const shot = game.battlefield.spawn("troll", 0, 8);
+    const struck = game.battlefield.spawn("troll", 1, 4);
     clock.advance(SIEGE_TICK_MS);
     expect(shot.health).toBe(11.5);
     expect(struck.health).toBe(10);
@@ -370,11 +370,11 @@ describe("the battle", () => {
 
   test("monsters that come on in later waves are tougher", () => {
     const { game, clock } = quietWave();
-    game.spawn("troll", 4);
+    game.battlefield.spawn("troll", 4);
     clock.advance(SIEGE_TICK_MS);
     game.wave = 4;
-    expect(game.spawn("goblin", 0).maxHealth).toBe(4);
-    expect(game.spawn("troll", 1).maxHealth).toBe(16);
+    expect(game.battlefield.spawn("goblin", 0).maxHealth).toBe(4);
+    expect(game.battlefield.spawn("troll", 1).maxHealth).toBe(16);
   });
 
   test("knights strike the monster in front of them; Lv 3 hits harder", () => {
@@ -382,7 +382,7 @@ describe("the battle", () => {
     const ana = byName(game, "Ana");
     fund(game);
     game.place(ana.id, "knight", 2, 3);
-    const troll = game.spawn("troll", 2, 4);
+    const troll = game.battlefield.spawn("troll", 2, 4);
     clock.advance(SIEGE_TICK_MS);
     expect(troll.health).toBe(10);
     clock.advance(1000);
@@ -400,14 +400,14 @@ describe("the battle", () => {
     game.place(ana.id, "wall", 0, 3);
     game.upgrade(ana.id, 0, 3);
     game.upgrade(ana.id, 0, 3);
-    const wall = game.defenderAt(0, 3)!;
+    const wall = game.battlefield.defenderAt(0, 3)!;
     expect(wall.maxHealth).toBe(25);
-    const goblin = game.spawn("goblin", 0, 4);
+    const goblin = game.battlefield.spawn("goblin", 0, 4);
     clock.advance(1000 + SIEGE_TICK_MS);
     expect(wall.health).toBe(24);
     expect(goblin.health).toBe(2);
     clock.advance(2000);
-    expect(game.monsters).not.toContain(goblin);
+    expect(game.battlefield.monsters).not.toContain(goblin);
     expect(ana.defeated).toBe(1);
     expect(ana.archerKills).toBe(0);
   });
@@ -418,7 +418,7 @@ describe("the battle", () => {
     fund(game);
     game.place(ana.id, "wall", 4, 6);
     game.place(ana.id, "wall", 4, 3);
-    const wolf = game.spawn("wolf", 4);
+    const wolf = game.battlefield.spawn("wolf", 4);
     clock.advance(1000);
     expect(wolf.state).toBe("leap");
     clock.advance(1000);
@@ -427,29 +427,29 @@ describe("the battle", () => {
     clock.advance(2000);
     expect(wolf.x).toBeCloseTo(4, 5);
     expect(wolf.state).toBe("attack");
-    expect(game.defenderAt(4, 6)!.health).toBe(15);
-    expect(game.defenderAt(4, 3)!.health).toBe(14);
+    expect(game.battlefield.defenderAt(4, 6)!.health).toBe(15);
+    expect(game.battlefield.defenderAt(4, 3)!.health).toBe(14);
     clock.advance(1000);
-    expect(game.defenderAt(4, 3)!.health).toBe(13);
+    expect(game.battlefield.defenderAt(4, 3)!.health).toBe(13);
   });
 
   test("the wolf doesn't leap a knight, and takes two strikes to fall", () => {
     const { game, clock } = quietWave();
     fund(game);
     game.place(byName(game, "Ana").id, "knight", 4, 6);
-    const wolf = game.spawn("wolf", 4);
+    const wolf = game.battlefield.spawn("wolf", 4);
     clock.advance(1100);
     expect(wolf.state).toBe("attack");
     expect(wolf.x).toBeCloseTo(7, 5);
     expect(wolf.health).toBe(1);
     clock.advance(500);
-    expect(game.monsters).not.toContain(wolf);
+    expect(game.battlefield.monsters).not.toContain(wolf);
   });
 
   test("a wolf leaping the wall next to the castle lands on the castle wall", () => {
     const { game, clock } = quietWave();
     game.place(byName(game, "Ana").id, "wall", 2, 1);
-    game.spawn("wolf", 2, 2);
+    game.battlefield.spawn("wolf", 2, 2);
     clock.advance(SIEGE_TICK_MS * 12);
     expect(game.hearts).toBe(SIEGE_HEARTS - 1);
   });
@@ -460,11 +460,11 @@ describe("the battle", () => {
     const ana = byName(game, "Ana").id;
     game.place(ana, "wall", 0, 4);
     game.place(ana, "knight", 1, 4);
-    game.spawn("troll", 0, 5);
-    game.spawn("troll", 1, 5);
+    game.battlefield.spawn("troll", 0, 5);
+    game.battlefield.spawn("troll", 1, 5);
     clock.advance(1000 + SIEGE_TICK_MS);
-    expect(game.defenderAt(0, 4)!.health).toBe(15 - 6);
-    expect(game.defenderAt(1, 4)!.health).toBe(10 - 2);
+    expect(game.battlefield.defenderAt(0, 4)!.health).toBe(15 - 6);
+    expect(game.battlefield.defenderAt(1, 4)!.health).toBe(10 - 2);
   });
 
   test("the giant waits 3 s with a horn, then stomps: 6 to the defender in front, 2 to the squares above and below", () => {
@@ -475,11 +475,11 @@ describe("the battle", () => {
     game.place(ana, "knight", 1, 6);
     game.place(ana, "archer", 3, 6);
     game.place(ana, "archer", 4, 6);
-    const seq = game.giantSeq;
-    const giant = game.spawn("giant", 2, 7);
+    const seq = game.battlefield.giantSeq;
+    const giant = game.battlefield.spawn("giant", 2, 7);
     expect(giant.maxHealth).toBe(40 + 5 * 4);
-    expect(game.giantSeq).toBe(seq + 1);
-    expect(game.alert?.kind).toBe("giant");
+    expect(game.battlefield.giantSeq).toBe(seq + 1);
+    expect(game.battlefield.alert?.kind).toBe("giant");
     expect(game.hostView().giant).toEqual({ lane: 2, ms: SIEGE_GIANT_WAIT_MS });
     clock.advance(SIEGE_GIANT_WAIT_MS - SIEGE_TICK_MS);
     expect(giant.state).toBe("wait");
@@ -487,34 +487,34 @@ describe("the battle", () => {
     clock.advance(SIEGE_TICK_MS * 2);
     expect(giant.state).toBe("attack");
     clock.advance(3000);
-    expect(game.defenderAt(2, 6)!.health).toBe(15 - 6);
-    expect(game.defenderAt(1, 6)!.health).toBe(10 - 2);
-    expect(game.defenderAt(3, 6)!.health).toBe(4 - 2);
-    expect(game.defenderAt(4, 6)!.health).toBe(4);
+    expect(game.battlefield.defenderAt(2, 6)!.health).toBe(15 - 6);
+    expect(game.battlefield.defenderAt(1, 6)!.health).toBe(10 - 2);
+    expect(game.battlefield.defenderAt(3, 6)!.health).toBe(4 - 2);
+    expect(game.battlefield.defenderAt(4, 6)!.health).toBe(4);
   });
 
   test("monsters that reach the wall take hearts and are gone: goblin and wolf 1, troll 2, giant 5", () => {
     const { game, clock } = quietWave();
-    const before = game.wallHitSeq;
-    game.spawn("goblin", 0, 1);
-    game.spawn("wolf", 1, 1);
-    game.spawn("troll", 2, 1);
-    game.spawn("giant", 3, 1).waitUntil = 0;
+    const before = game.battlefield.wallHitSeq;
+    game.battlefield.spawn("goblin", 0, 1);
+    game.battlefield.spawn("wolf", 1, 1);
+    game.battlefield.spawn("troll", 2, 1);
+    game.battlefield.spawn("giant", 3, 1).waitUntil = 0;
     clock.advance(2500);
-    expect(game.monsters).toHaveLength(0);
+    expect(game.battlefield.monsters).toHaveLength(0);
     expect(game.hearts).toBe(SIEGE_HEARTS - 9);
-    expect(game.wallHitSeq).toBe(before + 4);
-    expect(game.fallen.filter((f) => f.reachedWall)).toHaveLength(4);
+    expect(game.battlefield.wallHitSeq).toBe(before + 4);
+    expect(game.battlefield.fallen.filter((f) => f.reachedWall)).toHaveLength(4);
     expect(game.waveLog[0]!.heartsLost).toBe(9);
   });
 
   test("a lane is in danger while a monster is within 2 squares of the wall", () => {
     const { game, clock } = quietWave();
-    game.spawn("troll", 3, 3);
+    game.battlefield.spawn("troll", 3, 3);
     clock.advance(SIEGE_TICK_MS);
-    expect(game.danger).toEqual([]);
+    expect(game.battlefield.danger).toEqual([]);
     clock.advance(2000);
-    expect(game.danger).toEqual([3]);
+    expect(game.battlefield.danger).toEqual([3]);
     expect(game.hostView().danger).toEqual([3]);
     expect(game.playerView(byName(game, "Ana").id)!.danger).toEqual([3]);
   });
@@ -523,10 +523,10 @@ describe("the battle", () => {
 describe("waves", () => {
   test("a giant at double pace walks a square in half the time and swings twice as often", () => {
     const { game, clock } = quietWave();
-    game.giantPace = 2;
+    game.battlefield.giantPace = 2;
     fund(game);
     game.place(byName(game, "Ana").id, "wall", 0, 5);
-    const g = game.spawn("giant", 0, 7);
+    const g = game.battlefield.spawn("giant", 0, 7);
     clock.advance(SIEGE_GIANT_WAIT_MS);
     clock.advance(SIEGE_MONSTERS.giant.squareMs / 2);
     expect(g.x).toBeCloseTo(6, 1);
@@ -543,22 +543,22 @@ describe("waves", () => {
     expect(first.defense).toBe(3000);
     expect(first.boost).toBe(1.35);
     expect(first.budget).toBe(siegeWaveStrength(siegeWaveBudget(1, 3, 100), 3000).budget);
-    expect(game.spawn("goblin", 0).health).toBe(Math.round(siegeMonsterHealth("goblin", 1, 3) * first.toughness));
-    const giant = game.spawn("giant", 1);
+    expect(game.battlefield.spawn("goblin", 0).health).toBe(Math.round(siegeMonsterHealth("goblin", 1, 3) * first.toughness));
+    const giant = game.battlefield.spawn("giant", 1);
     expect(giant.health).toBe(siegeMonsterHealth("giant", 1, 3));
     expect(giant.pace).toBe(siegeGiantPace(1.35));
-    expect(game.spawn("troll", 2).pace).toBe(1);
+    expect(game.battlefield.spawn("troll", 2).pace).toBe(1);
     // A goblin gets through: the next wave's boost stays put.
-    game.pending = [];
-    game.monsters = [];
-    game.spawn("goblin", 0, 1);
+    game.battlefield.pending = [];
+    game.battlefield.monsters = [];
+    game.battlefield.spawn("goblin", 0, 1);
     for (let i = 0; i < 100 && game.phase === "wave"; i++) clock.advance(SIEGE_TICK_MS);
     expect(first.heartsLost).toBe(1);
     clock.advance(SIEGE_BREAK_MS);
     expect(game.waveLog[1]!.boost).toBe(1.35);
     // A clean wave lets it climb.
-    game.pending = [];
-    game.monsters = [];
+    game.battlefield.pending = [];
+    game.battlefield.monsters = [];
     clock.advance(SIEGE_TICK_MS);
     clock.advance(SIEGE_BREAK_MS);
     expect(game.waveLog[2]!.boost).toBe(1.7);
@@ -568,27 +568,27 @@ describe("waves", () => {
     const { game, clock } = setup({ players: 6 });
     clock.advance(SIEGE_OPENING_MS);
     expect(game.wave).toBe(1);
-    expect(game.pending.every((s) => s.type === "goblin")).toBe(true);
-    const first = game.pending[0]!;
+    expect(game.battlefield.pending.every((s) => s.type === "goblin")).toBe(true);
+    const first = game.battlefield.pending[0]!;
     expect(first.at - clock.now()).toBeGreaterThanOrEqual(SIEGE_WARNING_MS);
     clock.advance(first.at - clock.now() - SIEGE_WARNING_MS + SIEGE_TICK_MS);
     const warning = game.hostView().warnings;
     expect(warning.length).toBeGreaterThan(0);
     expect(warning[0]!.ms).toBeLessThanOrEqual(SIEGE_WARNING_MS);
     clock.advance(SIEGE_WARNING_MS);
-    expect(game.monsters.length).toBeGreaterThan(0);
+    expect(game.battlefield.monsters.length).toBeGreaterThan(0);
   });
 
   test("the wave make-up: wolves from wave 2, trolls from wave 3, a giant on top of the budget in wave 5", () => {
     const { game } = setup();
     for (let i = 0; i < 20; i++) {
-      expect(game.planWave(1, 20).every((s) => s.type === "goblin")).toBe(true);
-      expect(game.planWave(2, 20).some((s) => s.type === "troll" || s.type === "giant")).toBe(false);
-      expect(game.planWave(4, 20).some((s) => s.type === "giant")).toBe(false);
+      expect(game.battlefield.planWave(1, 20).every((s) => s.type === "goblin")).toBe(true);
+      expect(game.battlefield.planWave(2, 20).some((s) => s.type === "troll" || s.type === "giant")).toBe(false);
+      expect(game.battlefield.planWave(4, 20).some((s) => s.type === "giant")).toBe(false);
     }
-    expect(Array.from({ length: 20 }, () => game.planWave(2, 20)).flat().some((s) => s.type === "wolf")).toBe(true);
-    expect(Array.from({ length: 20 }, () => game.planWave(3, 20)).flat().some((s) => s.type === "troll")).toBe(true);
-    const five = game.planWave(5, 3);
+    expect(Array.from({ length: 20 }, () => game.battlefield.planWave(2, 20)).flat().some((s) => s.type === "wolf")).toBe(true);
+    expect(Array.from({ length: 20 }, () => game.battlefield.planWave(3, 20)).flat().some((s) => s.type === "troll")).toBe(true);
+    const five = game.battlefield.planWave(5, 3);
     expect(five.filter((s) => s.type === "giant")).toHaveLength(1);
     expect(five[five.length - 1]!.type).toBe("giant");
     expect(five.filter((s) => s.type !== "giant").length).toBeGreaterThan(0);
@@ -597,7 +597,7 @@ describe("waves", () => {
   test("the plan spends the budget at the monster costs and keeps goblin groups at 2–3", () => {
     const { game } = setup();
     for (let i = 0; i < 20; i++) {
-      const plan = game.planWave(4, 17);
+      const plan = game.battlefield.planWave(4, 17);
       const cost = { goblin: 1, wolf: 2, troll: 4, giant: 0 };
       expect(plan.reduce((n, s) => n + cost[s.type], 0)).toBe(17);
       const groups = new Map<number, number>();
@@ -608,13 +608,13 @@ describe("waves", () => {
 
   test("Endless brings 2 giants in different lanes from wave 15 on", () => {
     const { game, clock } = setup({ waves: "endless" });
-    expect(game.planWave(10, 5).filter((s) => s.type === "giant")).toHaveLength(1);
-    const plan = game.planWave(15, 5);
+    expect(game.battlefield.planWave(10, 5).filter((s) => s.type === "giant")).toHaveLength(1);
+    const plan = game.battlefield.planWave(15, 5);
     expect(plan.filter((s) => s.type === "giant")).toHaveLength(2);
     clock.advance(SIEGE_OPENING_MS);
-    game.pending = plan.filter((s) => s.type === "giant");
+    game.battlefield.pending = plan.filter((s) => s.type === "giant");
     clock.advance(siegeSpawnWindowMs(15) + 500);
-    const giants = game.monsters.filter((m) => m.type === "giant");
+    const giants = game.battlefield.monsters.filter((m) => m.type === "giant");
     expect(giants).toHaveLength(2);
     expect(giants[0]!.lane).not.toBe(giants[1]!.lane);
   });
@@ -628,11 +628,11 @@ describe("waves", () => {
       clock.advance(SIEGE_OPENING_MS);
       game.wave = wave;
       const now = clock.now();
-      game.pending = Array.from({ length: 20 }, (_, i) => ({ at: now + SIEGE_WARNING_MS + i * 50, type: "goblin" as const, group: 1000 + i, lane: -1 }));
+      game.battlefield.pending = Array.from({ length: 20 }, (_, i) => ({ at: now + SIEGE_WARNING_MS + i * 50, type: "goblin" as const, group: 1000 + i, lane: -1 }));
       let most = 0;
       for (let t = 0; t < 8000; t += SIEGE_TICK_MS) {
         clock.advance(SIEGE_TICK_MS);
-        for (let lane = 0; lane < 5; lane++) most = Math.max(most, game.monsters.filter((m) => m.lane === lane && m.x > 6.5).length);
+        for (let lane = 0; lane < 5; lane++) most = Math.max(most, game.battlefield.monsters.filter((m) => m.lane === lane && m.x > 6.5).length);
       }
       expect(most).toBe(cap);
     });
@@ -641,14 +641,14 @@ describe("waves", () => {
   test("the budget uses the class size factor at the start of the wave and the scale from the last wave's accuracy", () => {
     const { game, clock } = quietWave({ players: 3 });
     // Keeps the wave going while the class answers.
-    game.spawn("troll", 0);
+    game.battlefield.spawn("troll", 0);
     const log1 = game.waveLog[0]!;
     expect(log1.scale).toBe(100);
     expect(log1.budget).toBe(siegeWaveBudget(1, 3, 100));
     // Everyone answers right during wave 1: the scale goes up by the 20-point step.
     const players = [...game.players.values()];
     for (let i = 0; i < 4; i++) for (const p of players) answer(game, clock, p, true);
-    game.monsters = [];
+    game.battlefield.monsters = [];
     clock.advance(SIEGE_TICK_MS);
     expect(game.phase).toBe("build");
     expect(game.wave).toBe(2);
@@ -679,8 +679,8 @@ describe("endings", () => {
     clock.advance(SIEGE_OPENING_MS);
     for (let w = 1; w <= 5; w++) {
       expect(game.wave).toBe(w);
-      game.pending = [];
-      game.monsters = [];
+      game.battlefield.pending = [];
+      game.battlefield.monsters = [];
       clock.advance(SIEGE_TICK_MS);
       if (w < 5) {
         expect(game.phase).toBe("build");
@@ -700,8 +700,8 @@ describe("endings", () => {
 
   test("the castle falls at 0 hearts", () => {
     const { game, clock, finished } = quietWave();
-    game.hearts = 2;
-    game.spawn("troll", 0, 1);
+    game.battlefield.hearts = 2;
+    game.battlefield.spawn("troll", 0, 1);
     clock.advance(4000);
     expect(game.phase).toBe("fallen");
     expect(game.hearts).toBe(0);
@@ -714,8 +714,8 @@ describe("endings", () => {
 
   test("End game goes straight to the podium", () => {
     const { game, clock, finished } = quietWave();
-    game.hearts = 6;
-    game.spawn("goblin", 0);
+    game.battlefield.hearts = 6;
+    game.battlefield.spawn("goblin", 0);
     game.end();
     expect(game.phase).toBe("podium");
     expect(finished()).toBe(1);
@@ -737,15 +737,15 @@ describe("endings", () => {
     game.start();
     clock.advance(SIEGE_COUNTDOWN_MS + SIEGE_OPENING_MS);
     for (let w = 1; w <= 3; w++) {
-      game.pending = [];
-      game.monsters = [];
+      game.battlefield.pending = [];
+      game.battlefield.monsters = [];
       clock.advance(SIEGE_TICK_MS);
       clock.advance(SIEGE_BREAK_MS);
     }
     expect(game.wave).toBe(4);
-    game.pending = [];
-    game.hearts = 1;
-    game.spawn("goblin", 0, 1);
+    game.battlefield.pending = [];
+    game.battlefield.hearts = 1;
+    game.battlefield.spawn("goblin", 0, 1);
     clock.advance(1000);
     expect(game.phase).toBe("fallen");
     const r = game.result();
@@ -811,8 +811,8 @@ describe("players", () => {
 
   test("a player who joins during the ending waits for the podium", () => {
     const { game, clock } = quietWave();
-    game.hearts = 1;
-    game.spawn("goblin", 0, 1);
+    game.battlefield.hearts = 1;
+    game.battlefield.spawn("goblin", 0, 1);
     clock.advance(1000);
     expect(game.phase).toBe("fallen");
     const late = game.join("Late");
@@ -825,7 +825,7 @@ describe("players", () => {
     game.place(ana.id, "archer", 0, 2);
     game.kick(ana.id);
     expect(game.players.has(ana.id)).toBe(false);
-    expect(game.defenderAt(0, 2)?.owner).toBe(ana);
+    expect(game.battlefield.defenderAt(0, 2)?.owner).toBe(ana);
     expect(game.everyone).toContain(ana);
     expect(game.hostView().gold).toBe(2 * SIEGE_START_GOLD);
   });
@@ -833,7 +833,7 @@ describe("players", () => {
   test("if every phone disconnects, the monsters keep marching", () => {
     const { game, clock } = quietWave();
     for (const p of game.players.values()) game.setConnected(p.id, false);
-    const goblin = game.spawn("goblin", 0);
+    const goblin = game.battlefield.spawn("goblin", 0);
     clock.advance(2000);
     expect(goblin.x).toBeCloseTo(7, 5);
   });
@@ -865,7 +865,7 @@ describe("views", () => {
     const { game, clock } = quietWave();
     const ana = byName(game, "Ana");
     game.place(ana.id, "archer", 0, 1);
-    game.spawn("troll", 2, 6);
+    game.battlefield.spawn("troll", 2, 6);
     clock.advance(SIEGE_TICK_MS);
     const closed = game.playerView(ana.id)!;
     expect(closed.map).toBeNull();
@@ -896,7 +896,7 @@ describe("views", () => {
   test("the projector gets each monster's position, target and time to get there", () => {
     const { game } = quietWave();
     game.place(byName(game, "Ana").id, "wall", 1, 3);
-    game.spawn("goblin", 1, 8);
+    game.battlefield.spawn("goblin", 1, 8);
     const m = game.hostView().monsters[0]!;
     expect(m.x).toBe(8);
     expect(m.toX).toBe(4);
@@ -919,8 +919,8 @@ describe("views", () => {
   });
   test("a Christmas Toybox game ends with toybox headlines and Christmas award names", () => {
     const { game, clock } = quietWave({ theme: "christmas" });
-    game.hearts = 2;
-    game.spawn("troll", 0, 1);
+    game.battlefield.hearts = 2;
+    game.battlefield.spawn("troll", 0, 1);
     clock.advance(4000);
     expect(game.result().headline).toBe("The toybox fell on wave 1 of 5.");
     clock.advance(SIEGE_ENDING_MS);
@@ -938,13 +938,13 @@ describe("views", () => {
 describe("results", () => {
   test("the CSV has a row per player (kicked players too) with the class result, then the wave log", () => {
     const { game, clock } = quietWave();
-    game.spawn("troll", 4);
+    game.battlefield.spawn("troll", 4);
     const ana = byName(game, "Ana");
     answer(game, clock, ana, true);
     answer(game, clock, ana, false);
     game.place(ana.id, "archer", 0, 1);
     game.kick(byName(game, "Cal").id);
-    game.hearts = 7;
+    game.battlefield.hearts = 7;
     game.end();
     const csv = buildSiegeResultsCsv(game);
     const lines = csv.replace("\ufeff", "").trim().split("\r\n");

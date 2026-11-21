@@ -5,52 +5,28 @@ import {
   type PlayerSiegeView,
   type SiegeAwards,
   type SiegeEvent,
-  type SiegeFallen,
-  type SiegeMapView,
   type SiegePhase,
   type SiegeRecord,
   type SiegeResult,
   type SiegeSettings,
-  type SiegeShot,
 } from "../../shared/protocol.ts";
 import {
   SIEGE_BREAK_MS,
-  SIEGE_BUILD_SQUARES,
   SIEGE_COUNTDOWN_MS,
-  SIEGE_DANGER_SQUARES,
   SIEGE_DEFENDERS,
-  SIEGE_DEFENDER_TYPES,
   SIEGE_ENDING_MS,
   SIEGE_EVENTS_SHOWN,
-  SIEGE_FALLEN_SHOWN,
-  SIEGE_GIANT_WAIT_MS,
   SIEGE_GOLD_PER_CORRECT,
-  SIEGE_GROUP_GAP_MS,
   SIEGE_HEARTS,
-  SIEGE_LANES,
-  SIEGE_LEAP_MS,
-  SIEGE_MAP_DOTS_MS,
-  SIEGE_MONSTERS,
-  SIEGE_MONSTER_ODDS,
   SIEGE_OPENING_MS,
-  SIEGE_SHOTS_SHOWN,
-  SIEGE_SQUARES,
   SIEGE_START_GOLD,
-  SIEGE_STOMP_SPLASH,
   SIEGE_TICK_MS,
-  SIEGE_WARNING_MS,
-  siegeGiants,
   siegeNextScale,
-  siegeMaxEntering,
-  siegeMonsterHealth,
-  siegeSpawnWindowMs,
   siegeUpgradeCost,
   siegeWaveBudget,
   siegeWaveStrength,
   siegeGiantPace,
-  siegeDefenderGold,
   type SiegeDefenderType,
-  type SiegeMonsterType,
   SIEGE_WAVE_CHOICES,
   type SiegeWaves,
 } from "../../shared/siege-rules.ts";
@@ -65,17 +41,14 @@ import { answerOf } from "../../shared/answer-match.ts";
 import { MODE_NAMES } from "../../shared/mode-names.ts";
 import { handoffOptions, pickTheme, unhandled, type ModeEntry } from "./mode-entry.ts";
 import { toCsv } from "./results.ts";
+import { SiegeBattlefield } from "./siege-battlefield.ts";
+
+export type { SiegeMonster } from "./siege-battlefield.ts";
 
 export { FEEDBACK_MS } from "./stream.ts";
 
 /** The message a phone shows when the player's purse can't pay. */
 export const SIEGE_NO_GOLD = "Not enough gold.";
-
-/** Where a monster that reaches this position has hit the castle wall (the wall face, in squares). */
-const WALL_X = 0.5;
-/** A monster is coming onto its lane while it is on squares 7–8. */
-const ENTERING_X = SIEGE_SQUARES - 1.5;
-const EPS = 1e-6;
 
 export interface SiegePlayer extends BasePlayer, AnswerTotals {
   /** This player's own purse: only they earn it and only they can spend it. */
@@ -91,56 +64,6 @@ export interface SiegePlayer extends BasePlayer, AnswerTotals {
   archerKills: number;
   lastPlaced: SiegeDefenderType | null;
   mapOpen: boolean;
-}
-
-interface SiegeDefender {
-  id: number;
-  type: SiegeDefenderType;
-  lane: number;
-  square: number;
-  level: number;
-  health: number;
-  maxHealth: number;
-  /** The player who placed it (kept after a kick, for the results). */
-  owner: SiegePlayer;
-  /** Ms until it can attack again. */
-  cooldown: number;
-  hitSeq: number;
-  attackSeq: number;
-}
-
-export interface SiegeMonster {
-  id: number;
-  type: SiegeMonsterType;
-  lane: number;
-  /** Square k's centre is k; the wall face is 0.5. */
-  x: number;
-  state: "wait" | "walk" | "attack" | "leap";
-  health: number;
-  maxHealth: number;
-  /** Ms until its next hit, while attacking. */
-  cooldown: number;
-  /** The giant waits on the entry square until then. */
-  waitUntil: number;
-  /** Walk and attack speed multiplier (the giant's goes up with the wave's boost). */
-  pace: number;
-  /** Wolves leap only the first stone wall in their way. */
-  leapt: boolean;
-  leapFrom: number;
-  leapTo: number;
-  leapEndsAt: number;
-  hitSeq: number;
-  attackSeq: number;
-}
-
-/** A monster still to come in the current wave. */
-interface SiegeSpawn {
-  at: number;
-  type: SiegeMonsterType;
-  /** Goblins that come in together share a group (and a lane). */
-  group: number;
-  /** Chosen when its warning arrow shows; -1 until then. */
-  lane: number;
 }
 
 interface SiegeWaveLog {
@@ -199,39 +122,20 @@ export class SiegeGame {
   phaseEndsAt = 0;
   phaseDurationMs = SIEGE_COUNTDOWN_MS;
 
-  hearts = SIEGE_HEARTS;
   /** The wave being fought, or the next one during a build break. */
   wave = 0;
   /** Difficulty scale for the current wave, in %. */
   scale = 100;
-  /** The current wave's monster health multiplier for a strong board (not for giants, which already scale with the class). */
-  toughness = 1;
-  /** The current wave's giant pace: a strong board meets a faster giant instead of a tougher one. */
-  giantPace = 1;
   outcome: SiegeResult["outcome"] | null = null;
   readonly waveLog: SiegeWaveLog[] = [];
-  defenders: SiegeDefender[] = [];
-  monsters: SiegeMonster[] = [];
-  /** The current wave's monsters still to come, soonest first. */
-  pending: SiegeSpawn[] = [];
-  shots: SiegeShot[] = [];
-  fallen: SiegeFallen[] = [];
   events: SiegeEvent[] = [];
-  danger: number[] = [];
-  giantSeq = 0;
-  wallHitSeq = 0;
-  alert: { seq: number; kind: "giant" | "wall" } | null = null;
+  /** The lanes, defenders, monsters and hearts. */
+  readonly battlefield: SiegeBattlefield<SiegePlayer>;
   readonly previousRecord: SiegeRecord | null;
 
-  /** The lane each goblin group came in on. */
-  private readonly groupLanes = new Map<number, number>();
-  private mapDots: SiegeMapView["monsters"] = [];
-  private mapDotsAt = -Infinity;
   private periodCorrect = 0;
   private periodAnswered = 0;
-  private ids = 0;
   private seq = 0;
-  private alertSeq = 0;
   private finishedResult: SiegeResult | null = null;
 
   private readonly clock: Clock;
@@ -262,6 +166,21 @@ export class SiegeGame {
     this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onTick = opts.onTick ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
+    this.battlefield = new SiegeBattlefield<SiegePlayer>({
+      clock: this.clock,
+      rng: this.rng,
+      endless: settings.waves === "endless",
+      wave: () => this.wave,
+      classSize: () => this.connectedCount(),
+      onDefeat: (owner, by) => {
+        owner.defeated++;
+        if (by === "archer") owner.archerKills++;
+      },
+    });
+  }
+
+  get hearts(): number {
+    return this.battlefield.hearts;
   }
 
   /** Take over a lobby's players (same ids and tokens). */
@@ -339,6 +258,7 @@ export class SiegeGame {
 
   private beginWave(wave: number): void {
     // The wave just gone (and the break after it) sets this wave's difficulty.
+    this.recordBattle();
     const prev = this.waveLog[this.waveLog.length - 1];
     if (prev) {
       prev.correct = this.periodCorrect;
@@ -351,9 +271,7 @@ export class SiegeGame {
     const defense = Math.round(this.defenseGold());
     // A board stronger than par makes the wave stronger; the boost only climbs after a wave that cost no hearts.
     const { boost, budget, toughness } = siegeWaveStrength(siegeWaveBudget(wave, this.connectedCount(), this.scale), defense, prev?.boost ?? 1, !prev || prev.heartsLost === 0);
-    this.toughness = toughness;
-    this.giantPace = siegeGiantPace(boost);
-    this.pending = this.planWave(wave, budget);
+    this.battlefield.beginWave({ wave, budget, toughness, giantPace: siegeGiantPace(boost) });
     this.waveLog.push({ wave, scale: this.scale, defense, boost, budget, toughness, sent: 0, correct: 0, answered: 0, heartsLost: 0 });
     if (this.timer !== null) this.clock.clearTimeout(this.timer);
     this.timer = null;
@@ -365,50 +283,7 @@ export class SiegeGame {
 
   /** What the board is worth: the defenders (by health left) plus the gold the players haven't spent yet. */
   defenseGold(): number {
-    const board = this.defenders.reduce((sum, d) => sum + siegeDefenderGold(d.type, d.level, d.health, d.maxHealth), 0);
-    return board + [...this.players.values()].reduce((sum, p) => sum + p.gold, 0);
-  }
-
-  /**
-   * Buy the wave's monsters from its budget (goblins in groups of 2–3), spread them over the
-   * spawn window, and put the giant(s) at the end, on top of the budget.
-   */
-  planWave(wave: number, budget: number): SiegeSpawn[] {
-    const allowed = (["goblin", "wolf", "troll"] as const).filter((t) => SIEGE_MONSTERS[t].fromWave <= wave);
-    const groups: SiegeMonsterType[][] = [];
-    let left = budget;
-    while (left >= 1) {
-      const options = allowed.filter((t) => SIEGE_MONSTERS[t].cost <= left);
-      const total = options.reduce((n, t) => n + SIEGE_MONSTER_ODDS[t], 0);
-      let r = this.rng() * total;
-      let type = options[options.length - 1]!;
-      for (const t of options) {
-        r -= SIEGE_MONSTER_ODDS[t];
-        if (r < 0) {
-          type = t;
-          break;
-        }
-      }
-      if (type === "goblin") {
-        const size = Math.min(left, 2 + Math.floor(this.rng() * 2));
-        groups.push(Array(size).fill("goblin"));
-        left -= size;
-      } else {
-        groups.push([type]);
-        left -= SIEGE_MONSTERS[type].cost;
-      }
-    }
-    const now = this.clock.now();
-    const window = siegeSpawnWindowMs(wave);
-    const spread = window - SIEGE_WARNING_MS;
-    const out: SiegeSpawn[] = [];
-    groups.forEach((members, i) => {
-      const at = now + SIEGE_WARNING_MS + Math.round((spread * (i + this.rng() * 0.6)) / Math.max(1, groups.length));
-      const group = ++this.ids;
-      members.forEach((type, k) => out.push({ at: at + k * SIEGE_GROUP_GAP_MS, type, group, lane: -1 }));
-    });
-    for (let g = 0; g < siegeGiants(wave, this.endless); g++) out.push({ at: now + window + g * 100, type: "giant", group: ++this.ids, lane: -1 });
-    return out.sort((a, b) => a.at - b.at);
+    return this.battlefield.boardGold() + [...this.players.values()].reduce((sum, p) => sum + p.gold, 0);
   }
 
   private scheduleTick(): void {
@@ -423,297 +298,27 @@ export class SiegeGame {
 
   private tick(): void {
     if (!this.playing) return;
-    const now = this.clock.now();
-    const before = { hearts: this.hearts, alert: this.alert?.seq, defenders: this.defenders.length };
-    const mapOpen = () => [...this.players.values()].some((p) => p.mapOpen);
-    let changed = this.spawnStep(now);
-    changed = this.monsterStep(now) || changed;
-    changed = this.defenderStep() || changed;
+    const { changed, phones, map } = this.battlefield.tick(this.clock.now());
+    this.recordBattle();
     if (this.hearts <= 0) return this.fall();
-    const danger = this.dangerLanes();
-    // What phones show: hearts, danger lanes, alerts, and the map (monster dots and defenders) while it's open.
-    let phones = this.hearts !== before.hearts || this.alert?.seq !== before.alert;
-    if (danger.join() !== this.danger.join()) {
-      this.danger = danger;
-      phones = true;
-    }
-    if (now - this.mapDotsAt >= SIEGE_MAP_DOTS_MS) {
-      this.mapDotsAt = now;
-      const dots = this.monsters.map((m) => ({ lane: m.lane, square: Math.max(1, Math.min(SIEGE_SQUARES, Math.round(m.x))) }));
-      if (JSON.stringify(dots) !== JSON.stringify(this.mapDots)) {
-        this.mapDots = dots;
-        if (mapOpen()) phones = true;
-      }
-    }
-    if (this.defenders.length !== before.defenders && mapOpen()) phones = true;
-    if (this.phase === "wave" && this.pending.length === 0 && this.monsters.length === 0) return this.endWave();
+    if (this.phase === "wave" && this.battlefield.waveCleared) return this.endWave();
     this.scheduleTick();
     // Shots, monster moves and defender hits are only on the projector: don't rebuild every phone's view for them.
-    if (phones) this.onChange();
+    if (phones || (map && [...this.players.values()].some((p) => p.mapOpen))) this.onChange();
     else if (changed) this.onTick();
   }
 
-  /** Show warning arrows (choosing the lane) and bring on the monsters whose time has come. */
-  private spawnStep(now: number): boolean {
-    let changed = false;
-    for (const s of this.pending) {
-      if (s.lane >= 0 || s.at - SIEGE_WARNING_MS > now) continue;
-      const lane = this.pickLane(s);
-      if (lane < 0) {
-        s.at += 1000;
-        continue;
-      }
-      s.lane = lane;
-      this.groupLanes.set(s.group, lane);
-      changed = true;
-    }
-    const due = this.pending.filter((s) => s.lane >= 0 && s.at <= now);
-    if (due.length) {
-      this.pending = this.pending.filter((s) => !due.includes(s));
-      for (const s of due) this.spawn(s.type, s.lane);
-      changed = true;
-    }
-    this.pending.sort((a, b) => a.at - b.at);
-    return changed;
-  }
-
-  /** A lane with room on its last two squares; a goblin group keeps its lane, giants take different lanes. */
-  private pickLane(s: SiegeSpawn): number {
-    const busy = (lane: number) =>
-      this.monsters.filter((m) => m.lane === lane && m.x > ENTERING_X).length + this.pending.filter((p) => p !== s && p.lane === lane).length;
-    const mate = this.groupLanes.get(s.group);
-    const cap = siegeMaxEntering(this.wave);
-    if (mate !== undefined) return busy(mate) < cap ? mate : -1;
-    const giantLanes = s.type === "giant" ? new Set([...this.monsters, ...this.pending].filter((m) => m.type === "giant" && m.lane >= 0).map((m) => m.lane)) : new Set<number>();
-    const open = Array.from({ length: SIEGE_LANES }, (_, i) => i).filter((l) => busy(l) < cap && !giantLanes.has(l));
-    if (open.length === 0) return -1;
-    const least = Math.min(...open.map(busy));
-    const best = open.filter((l) => busy(l) === least);
-    return best[Math.min(best.length - 1, Math.floor(this.rng() * best.length))]!;
-  }
-
-  /** Put a monster on the entry square of a lane (also used by tests). */
-  spawn(type: SiegeMonsterType, lane: number, x: number = SIEGE_SQUARES): SiegeMonster {
-    const stats = SIEGE_MONSTERS[type];
-    const health = Math.max(1, Math.round(siegeMonsterHealth(type, this.wave, this.connectedCount()) * (type === "giant" ? 1 : this.toughness)));
-    const pace = type === "giant" ? this.giantPace : 1;
-    const now = this.clock.now();
-    const m: SiegeMonster = {
-      id: ++this.ids,
-      type,
-      lane,
-      x,
-      state: type === "giant" ? "wait" : "walk",
-      health,
-      maxHealth: health,
-      cooldown: stats.attackMs / pace,
-      waitUntil: type === "giant" ? now + SIEGE_GIANT_WAIT_MS : 0,
-      pace,
-      leapt: false,
-      leapFrom: x,
-      leapTo: x,
-      leapEndsAt: 0,
-      hitSeq: 0,
-      attackSeq: 0,
-    };
-    this.monsters.push(m);
+  /** Copy the wave's monsters sent and hearts lost into its log. */
+  private recordBattle(): void {
     const log = this.waveLog[this.waveLog.length - 1];
-    if (log && this.phase === "wave") log.sent++;
-    if (type === "giant") {
-      this.giantSeq++;
-      this.setAlert("giant");
-    }
-    return m;
-  }
-
-  private setAlert(kind: "giant" | "wall"): void {
-    this.alert = { seq: ++this.alertSeq, kind };
-  }
-
-  defenderAt(lane: number, square: number): SiegeDefender | undefined {
-    return this.defenders.find((d) => d.lane === lane && d.square === square);
-  }
-
-  /** The nearest defender to the left of the monster's square, the one it walks into next. */
-  private blocker(m: SiegeMonster): SiegeDefender | undefined {
-    let best: SiegeDefender | undefined;
-    for (const d of this.defenders) if (d.lane === m.lane && d.square < m.x - 0.5 + EPS && (!best || d.square > best.square)) best = d;
-    return best;
-  }
-
-  private monsterStep(now: number): boolean {
-    let changed = false;
-    for (const m of [...this.monsters]) {
-      if (!this.monsters.includes(m)) continue;
-      const stats = SIEGE_MONSTERS[m.type];
-      if (m.state === "wait") {
-        if (now < m.waitUntil) continue;
-        m.state = "walk";
-        changed = true;
-      }
-      if (m.state === "leap") {
-        if (now < m.leapEndsAt) continue;
-        m.x = m.leapTo;
-        m.state = "walk";
-        changed = true;
-        if (m.x <= WALL_X + EPS) {
-          this.reachWall(m);
-          continue;
-        }
-      }
-      const target = this.blocker(m);
-      if (m.state === "attack") {
-        if (!target || target.square + 1 < m.x - 0.5 - EPS) {
-          m.state = "walk";
-          changed = true;
-        } else {
-          m.cooldown -= SIEGE_TICK_MS;
-          if (m.cooldown <= EPS) {
-            m.cooldown += stats.attackMs / m.pace;
-            this.strike(m, target);
-            changed = true;
-          }
-          continue;
-        }
-      }
-      // Walking.
-      const stopAt = target ? Math.min(m.x, target.square + 1) : WALL_X;
-      const next = m.x - (SIEGE_TICK_MS * m.pace) / stats.squareMs;
-      if (next > stopAt + EPS) {
-        m.x = next;
-        continue;
-      }
-      m.x = stopAt;
-      changed = true;
-      if (!target) {
-        this.reachWall(m);
-      } else if (m.type === "wolf" && !m.leapt && target.type === "wall") {
-        m.leapt = true;
-        const landing = target.square - 1;
-        if (landing >= 1 && this.defenderAt(m.lane, landing)) {
-          // Nowhere to land: it attacks the wall instead.
-          this.startAttack(m);
-        } else {
-          m.state = "leap";
-          m.leapFrom = m.x;
-          m.leapTo = Math.max(WALL_X, landing);
-          m.leapEndsAt = now + SIEGE_LEAP_MS;
-        }
-      } else {
-        this.startAttack(m);
-      }
-    }
-    return changed;
-  }
-
-  private startAttack(m: SiegeMonster): void {
-    m.state = "attack";
-    m.cooldown = SIEGE_MONSTERS[m.type].attackMs / m.pace;
-  }
-
-  /** One hit from a monster: the giant's stomp also hits the squares just above and below. */
-  private strike(m: SiegeMonster, target: SiegeDefender): void {
-    const stats = SIEGE_MONSTERS[m.type];
-    m.attackSeq++;
-    this.damageDefender(target, stats.damage * (target.type === "wall" ? stats.wallFactor : 1), m);
-    if (m.type === "giant") {
-      for (const lane of [target.lane - 1, target.lane + 1]) {
-        const d = this.defenderAt(lane, target.square);
-        if (d) this.damageDefender(d, SIEGE_STOMP_SPLASH, m);
-      }
-    }
-  }
-
-  private damageDefender(d: SiegeDefender, amount: number, by: SiegeMonster): void {
-    if (!this.defenders.includes(d)) return;
-    d.health -= amount;
-    d.hitSeq++;
-    // Spikes hurt whatever hits the wall.
-    const thorns = SIEGE_DEFENDERS[d.type].thorns[d.level - 1]!;
-    if (thorns > 0 && this.monsters.includes(by)) this.damageMonster(by, thorns, d);
-    if (d.health <= 0) this.defenders = this.defenders.filter((x) => x !== d);
-  }
-
-  private damageMonster(m: SiegeMonster, amount: number, by: SiegeDefender): void {
-    m.health -= amount;
-    m.hitSeq++;
-    if (m.health > 0) return;
-    this.removeMonster(m, false);
-    by.owner.defeated++;
-    if (by.type === "archer") by.owner.archerKills++;
-  }
-
-  private removeMonster(m: SiegeMonster, reachedWall: boolean): void {
-    this.monsters = this.monsters.filter((x) => x !== m);
-    this.fallen.push({ seq: ++this.seq, id: m.id, type: m.type, lane: m.lane, x: m.x, reachedWall });
-    if (this.fallen.length > SIEGE_FALLEN_SHOWN) this.fallen.splice(0, this.fallen.length - SIEGE_FALLEN_SHOWN);
-  }
-
-  private reachWall(m: SiegeMonster): void {
-    const lost = Math.min(this.hearts, SIEGE_MONSTERS[m.type].hearts);
-    this.hearts -= lost;
-    const log = this.waveLog[this.waveLog.length - 1];
-    if (log) log.heartsLost += lost;
-    this.wallHitSeq++;
-    this.setAlert("wall");
-    this.removeMonster(m, true);
-  }
-
-  private defenderStep(): boolean {
-    let changed = false;
-    for (const d of [...this.defenders]) {
-      if (!this.defenders.includes(d)) continue;
-      const stats = SIEGE_DEFENDERS[d.type];
-      const attackMs = stats.attackMs[d.level - 1]!;
-      if (attackMs <= 0) continue;
-      d.cooldown = Math.max(0, d.cooldown - SIEGE_TICK_MS);
-      if (d.cooldown > EPS) continue;
-      if (d.type === "archer") {
-        if (!this.archerTarget(d)) continue;
-        for (let i = 0; i < stats.arrows[d.level - 1]!; i++) {
-          const t = this.archerTarget(d);
-          if (!t) break;
-          this.shots.push({ seq: ++this.seq, lane: d.lane, square: d.square, toX: t.x });
-          // Armored monsters (trolls) take only part of each arrow.
-          this.damageMonster(t, stats.damage[d.level - 1]! * SIEGE_MONSTERS[t.type].arrowFactor, d);
-        }
-        if (this.shots.length > SIEGE_SHOTS_SHOWN) this.shots.splice(0, this.shots.length - SIEGE_SHOTS_SHOWN);
-      } else {
-        // The knight strikes the monster on the square in front of it.
-        const t = this.monsters
-          .filter((m) => m.lane === d.lane && m.state !== "leap" && m.x > d.square + EPS && m.x < d.square + 1.5 + EPS)
-          .sort((a, b) => a.x - b.x)[0];
-        if (!t) continue;
-        this.damageMonster(t, stats.damage[d.level - 1]!, d);
-      }
-      d.attackSeq++;
-      d.cooldown = attackMs;
-      changed = true;
-    }
-    return changed;
-  }
-
-  /** The nearest monster ahead of an archer in its lane, the entry square included. */
-  private archerTarget(d: SiegeDefender): SiegeMonster | undefined {
-    let best: SiegeMonster | undefined;
-    for (const m of this.monsters) if (m.lane === d.lane && this.monsterX(m) > d.square + EPS && (!best || this.monsterX(m) < this.monsterX(best))) best = m;
-    return best;
-  }
-
-  /** A monster's position now (a leaping wolf is partway through the air). */
-  private monsterX(m: SiegeMonster): number {
-    if (m.state !== "leap") return m.x;
-    const left = Math.max(0, m.leapEndsAt - this.clock.now());
-    return m.leapTo + (m.leapFrom - m.leapTo) * (left / SIEGE_LEAP_MS);
-  }
-
-  private dangerLanes(): number[] {
-    const lanes = new Set(this.monsters.filter((m) => this.monsterX(m) <= SIEGE_DANGER_SQUARES + 0.5 + EPS).map((m) => m.lane));
-    return [...lanes].sort((a, b) => a - b);
+    if (!log) return;
+    log.sent = this.battlefield.sent;
+    log.heartsLost = this.battlefield.heartsLost;
   }
 
   private endWave(): void {
     if (this.settings.waves !== "endless" && this.wave >= this.settings.waves) return this.stand();
+    this.battlefield.endWave();
     const next = this.wave + 1;
     this.wave = next;
     this.setPhase("build", SIEGE_BREAK_MS, () => this.beginWave(next));
@@ -728,21 +333,16 @@ export class SiegeGame {
     const p = this.players.get(playerId);
     if (!p) return "You're not in this game.";
     if (!this.playing) return "You can't build right now.";
-    if (typeof type !== "string" || !(SIEGE_DEFENDER_TYPES as readonly string[]).includes(type)) return "Unknown defender.";
+    const err = this.battlefield.placementError(type, lane, square);
+    if (err) return err;
     const t = type as SiegeDefenderType;
-    const l = Number(lane);
-    const s = Number(square);
-    if (!Number.isInteger(l) || l < 0 || l >= SIEGE_LANES || !Number.isInteger(s) || s < 1 || s > SIEGE_BUILD_SQUARES) return "You can't build on that square.";
-    if (this.defenderAt(l, s)) return "That square is taken.";
-    if (this.monsters.some((m) => m.lane === l && Math.round(this.monsterX(m)) === s)) return "A monster is standing there.";
     const cost = SIEGE_DEFENDERS[t].cost[0];
     if (p.gold < cost) return SIEGE_NO_GOLD;
     p.gold -= cost;
     p.goldSpent += cost;
     p.placed[t]++;
     p.lastPlaced = t;
-    const health = SIEGE_DEFENDERS[t].health[0];
-    this.defenders.push({ id: ++this.ids, type: t, lane: l, square: s, level: 1, health, maxHealth: health, owner: p, cooldown: 0, hitSeq: 0, attackSeq: 0 });
+    this.battlefield.place(t, Number(lane), Number(square), p);
     this.addEvent(p, `placed ${this.defenderName(t)}`);
     this.onChange();
     return null;
@@ -753,7 +353,7 @@ export class SiegeGame {
     const p = this.players.get(playerId);
     if (!p) return "You're not in this game.";
     if (!this.playing) return "You can't build right now.";
-    const d = this.defenderAt(Number(lane), Number(square));
+    const d = this.battlefield.defenderAt(Number(lane), Number(square));
     if (!d) return "That defender is gone.";
     const cost = siegeUpgradeCost(d.type, d.level);
     if (cost === null) return "Already at max level.";
@@ -763,11 +363,7 @@ export class SiegeGame {
     p.upgrades++;
     if (d.type === "archer") p.archerUpgrades++;
     if (d.type === "wall") p.wallUpgrades++;
-    const stats = SIEGE_DEFENDERS[d.type];
-    d.level++;
-    const maxHealth = stats.health[d.level - 1]!;
-    d.health += maxHealth - d.maxHealth;
-    d.maxHealth = maxHealth;
+    this.battlefield.upgrade(d);
     this.addEvent(p, `upgraded ${this.defenderName(d.type)} to Lv ${d.level}`);
     this.onChange();
     return null;
@@ -815,6 +411,7 @@ export class SiegeGame {
   }
 
   private closePeriod(): void {
+    this.recordBattle();
     const log = this.waveLog[this.waveLog.length - 1];
     if (log && this.outcome === null) {
       log.correct = this.periodCorrect;
@@ -825,7 +422,7 @@ export class SiegeGame {
   private stopBattle(): void {
     if (this.tickTimer !== null) this.clock.clearTimeout(this.tickTimer);
     this.tickTimer = null;
-    this.pending = [];
+    this.battlefield.stop();
     for (const p of this.players.values()) p.mapOpen = false;
   }
 
@@ -965,11 +562,9 @@ export class SiegeGame {
   }
 
   hostView(): HostSiegeState {
-    const now = this.clock.now();
     const podium = this.phase === "podium";
     const players = [...this.players.values()];
     const ending = this.phase === "stands" || this.phase === "fallen" || podium;
-    const giant = this.monsters.find((m) => m.type === "giant" && m.state === "wait");
     return {
       kind: "siege",
       phase: this.phase,
@@ -981,43 +576,14 @@ export class SiegeGame {
       maxHearts: SIEGE_HEARTS,
       phaseRemainingMs: this.phase === "wave" || podium ? 0 : this.remaining(this.phaseEndsAt),
       phaseDurationMs: this.phaseDurationMs,
-      defenders: this.defenders.map((d) => ({ id: d.id, type: d.type, lane: d.lane, square: d.square, level: d.level, health: d.health, maxHealth: d.maxHealth, hitSeq: d.hitSeq, attackSeq: d.attackSeq })),
-      monsters: this.monsters.map((m) => {
-        const x = this.monsterX(m);
-        let toX = x;
-        let moveMs = 0;
-        if (this.playing && m.state === "walk") {
-          const target = this.blocker(m);
-          toX = target ? Math.min(x, target.square + 1) : WALL_X;
-          moveMs = Math.round(((x - toX) * SIEGE_MONSTERS[m.type].squareMs) / m.pace);
-        } else if (this.playing && m.state === "leap") {
-          toX = m.leapTo;
-          moveMs = Math.max(0, m.leapEndsAt - now);
-        }
-        return { id: m.id, type: m.type, lane: m.lane, x, toX, moveMs, state: m.state, health: m.health, maxHealth: m.maxHealth, hitSeq: m.hitSeq, attackSeq: m.attackSeq };
-      }),
-      shots: this.shots,
-      fallen: this.fallen,
+      ...this.battlefield.hostBoard(this.playing, ending),
       events: this.events,
-      warnings: ending ? [] : this.pending.filter((s) => s.lane >= 0).map((s) => ({ lane: s.lane, ms: Math.max(0, s.at - now) })),
-      danger: ending ? [] : this.danger,
-      giant: giant && this.playing ? { lane: giant.lane, ms: Math.max(0, giant.waitUntil - now) } : null,
-      giantSeq: this.giantSeq,
-      wallHitSeq: this.wallHitSeq,
-      monsterCount: this.monsters.length,
       players: players.map((p) => ({ id: p.id, nickname: p.nickname, avatar: p.avatar, connected: p.connected })),
       playerCount: players.length,
       connectedCount: players.filter((p) => p.connected).length,
       result: ending && this.outcome ? this.result() : null,
       awards: podium ? this.awards() : null,
       errors: podium ? this.stream.errors() : null,
-    };
-  }
-
-  private mapView(): SiegeMapView {
-    return {
-      defenders: this.defenders.map((d) => ({ lane: d.lane, square: d.square, type: d.type, level: d.level })),
-      monsters: this.mapDots,
     };
   }
 
@@ -1053,13 +619,13 @@ export class SiegeGame {
       waves: this.settings.waves,
       hearts: this.hearts,
       gold: p.gold,
-      danger: this.playing ? this.danger : [],
+      danger: this.playing ? this.battlefield.danger : [],
       me: { id: p.id, nickname: p.nickname, avatar: p.avatar, correct: p.correct, goldEarned: p.goldEarned },
       question: this.playing ? this.stream.questionView(p) : null,
       feedback: this.playing ? this.stream.feedbackView(p) : null,
       lastPlaced: p.lastPlaced,
-      alert: this.playing ? this.alert : null,
-      map: p.mapOpen && this.playing ? this.mapView() : null,
+      alert: this.playing ? this.battlefield.alert : null,
+      map: p.mapOpen && this.playing ? this.battlefield.mapView() : null,
       result,
     };
   }
