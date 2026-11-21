@@ -35,3 +35,9 @@ export interface SubAward {
   value: number;
   nicknames: string[];
 }
+
+export interface TeamInfo {
+  index: number;
+  name: string;
+  color: string;
+}

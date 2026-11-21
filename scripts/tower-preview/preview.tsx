@@ -1,7 +1,8 @@
 /** Interactive review fixture for both themes, all team colors and gameplay phases. */
 import { render } from "preact";
 import { useState } from "preact/hooks";
-import { TEAMS, type HostView, type PlayerTowerView, type TowerPhase } from "../../src/shared/protocol.ts";
+import { TEAMS, type HostView } from "../../src/shared/protocol.ts";
+import type { PlayerTowerView, TowerPhase } from "../../src/shared/modes/tower.ts";
 import type { TowerTheme } from "../../src/shared/tower-theme.ts";
 import { TowerStage } from "../../src/client/host/tower.tsx";
 import { TowerPlayer } from "../../src/client/player/tower.tsx";
