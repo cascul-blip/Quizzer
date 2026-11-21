@@ -10,7 +10,7 @@ import { gingerbreadGround } from "../../shared/fight-ground.ts";
 import type { HillHeight, ShotImpact } from "../../shared/fight-physics.ts";
 import { CATAPULT_X, COL_W, FIELD_H, FIELD_W, GROUND, LAUNCH_Y, SHOT_R, shotPos, TOWER_H, TOWER_X } from "../../shared/fight-physics.ts";
 import type { FightShot } from "../../shared/modes/fight.ts";
-import { TOWER_MAX_DAMAGE } from "../../shared/modes/fight.ts";
+import { FIGHT_MAX_DAMAGE } from "../../shared/modes/fight.ts";
 import { ACCESSORY_ART, AVATAR_ART } from "./avatar-art.tsx";
 import castle0 from "./fight/castle-0.webp";
 import castle1 from "./fight/castle-1.webp";
@@ -223,7 +223,7 @@ const PHONE_CLOTH_STAGES = [phoneCastleCloth0, phoneCastleCloth1, phoneCastleClo
 
 /**
  * A stone castle tower (painted images from the art build) whose flag and
- * banners take the team color; it looks worse with every hit, and is rubble at TOWER_MAX_DAMAGE.
+ * banners take the team color; it looks worse with every hit, and is rubble at FIGHT_MAX_DAMAGE.
  */
 function CastleTower({
   team,
@@ -246,7 +246,7 @@ function CastleTower({
   const img = christmas
     ? { x: cx - 46, y: top - 3, width: 92, height: TOWER_H + 14 }
     : { x: cx - CASTLE_W / 2, y: BASE - CASTLE_H, width: CASTLE_W, height: CASTLE_H };
-  const destroyed = damage >= TOWER_MAX_DAMAGE;
+  const destroyed = damage >= FIGHT_MAX_DAMAGE;
   const body = (
     <g class="castle-body" transform={damage >= 4 ? `rotate(${team === 0 ? -2.5 : 2.5} ${cx} ${BASE})` : undefined}>
       {/* The right-hand tower is mirrored, so both banners hang on the outer side. */}
@@ -662,10 +662,10 @@ export function ShotLayer({ shots, onLand, spriteR }: { shots: FightShot[]; onLa
 
 /** Five health pips for a tower. */
 export function HealthBar({ damage, color, label }: { damage: number; color: string; label?: string }) {
-  const left = TOWER_MAX_DAMAGE - damage;
+  const left = FIGHT_MAX_DAMAGE - damage;
   return (
-    <span class="health" style={{ "--team": color }} role="img" aria-label={label ?? `${left} of ${TOWER_MAX_DAMAGE} health left`}>
-      {Array.from({ length: TOWER_MAX_DAMAGE }, (_, i) => (
+    <span class="health" style={{ "--team": color }} role="img" aria-label={label ?? `${left} of ${FIGHT_MAX_DAMAGE} health left`}>
+      {Array.from({ length: FIGHT_MAX_DAMAGE }, (_, i) => (
         <i key={i} class={i < left ? "full" : ""} />
       ))}
     </span>

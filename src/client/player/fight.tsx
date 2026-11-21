@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { CATAPULT_X, LAUNCH_Y, launchVector, MAX_PULL, shotPos, simulate } from "../../shared/fight-physics.ts";
 import type { FightShot, PlayerFightView } from "../../shared/modes/fight.ts";
-import { CORRECT_PER_DECISION, REPAIR_MS, TOWER_MAX_DAMAGE } from "../../shared/modes/fight.ts";
+import { CORRECT_PER_DECISION, FIGHT_MAX_DAMAGE, REPAIR_MS } from "../../shared/modes/fight.ts";
 import type { ClientMsg } from "../../shared/protocol.ts";
 import { AvatarSprite, Battlefield, FIGHT_PHONE_UI, HealthBar, ShotLayer, sy } from "../shared/fight-art.tsx";
 import { FightThemeProvider, fightChristmasArt, useGingerbread } from "../shared/fight-skin.tsx";
@@ -72,7 +72,7 @@ function FightPlayerContent({ view, send }: { view: PlayerFightView; send: Send 
       </main>
     );
   } else if (view.phase === "collapse") {
-    const fallen = view.damage.findIndex((d) => d >= TOWER_MAX_DAMAGE);
+    const fallen = view.damage.findIndex((d) => d >= FIGHT_MAX_DAMAGE);
     body = (
       <main class="fight-screen" style={BACKDROP}>
         <Battlefield
