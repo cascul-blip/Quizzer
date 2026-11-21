@@ -3,6 +3,7 @@ import { musicFor } from "../src/client/host/music-cues.ts";
 import { DRUMS, layerActive, noteFreq, stepSeconds, stepsPerBar, tokens, usesSamples } from "../src/client/shared/music/engine.ts";
 import { robotTracksForSkin, TRACKS } from "../src/client/shared/music/tracks.ts";
 import { ROBOT_SKIN } from "../src/client/shared/robot-skin.ts";
+import { keysOf } from "../src/shared/keys-of.ts";
 import { hexDistance, startTiles } from "../src/shared/land-board.ts";
 import type { SubPhase } from "../src/shared/modes/submarine.ts";
 import { MUSIC_TRACKS, musicTrackForFile } from "../src/shared/music-tracks.ts";
@@ -91,7 +92,7 @@ describe("seasonal Robot Attack music", () => {
     const original = robotTracksForSkin("robot");
     const seasonal = robotTracksForSkin("snowman");
     expect(Object.keys(original).sort()).toEqual(Object.keys(seasonal).sort());
-    for (const id of Object.keys(original) as (keyof typeof original)[]) {
+    for (const id of keysOf(original)) {
       expect(original[id].id).toBe(id);
       expect(seasonal[id].id).toBe(id);
       expect(seasonal[id]).not.toBe(original[id]);
@@ -109,7 +110,7 @@ describe("seasonal Robot Attack music", () => {
       "robot-move": ["strings", "E4"],
       "robot-results": ["brass", "D5"],
     } as const;
-    for (const id of Object.keys(melodies) as (keyof typeof melodies)[]) {
+    for (const id of keysOf(melodies)) {
       const track = seasonal[id];
       const [instrument, opening] = melodies[id];
       const melody = track.layers.find((l) => l.inst === instrument)!;

@@ -5,13 +5,14 @@ import type { ModeMsg } from "../src/server/game/mode-entry.ts";
 import { MODES } from "../src/server/game/modes.ts";
 import { QuizStore } from "../src/server/quiz/store.ts";
 import type { GameHub } from "../src/server/ws.ts";
+import { keysOf } from "../src/shared/keys-of.ts";
 import { MODE_FLAGS } from "../src/shared/mode-flags.ts";
 import { MODE_NAMES } from "../src/shared/mode-names.ts";
 import type { ClientMsg, GameMode, ModeSettingsInput } from "../src/shared/protocol.ts";
 import { FakeClock, tempDir } from "./helpers.ts";
 import { fakeHub, HubSocket } from "./hub-harness.ts";
 
-const GAME_MODES = Object.keys(MODES) as GameMode[];
+const GAME_MODES = keysOf(MODES);
 
 const THEMED_MODES = ["tower", "fight", "land", "racer", "cup", "siege", "duel"] as const satisfies readonly GameMode[];
 

@@ -1,3 +1,4 @@
+import { keysOf } from "./keys-of.ts";
 /** Christmas picture symbols shared by the Sled Squad server and phones. */
 export const GLYPH_FAMILIES = {
   tree: ["star-baubles", "bow-baubles", "star-garland", "bells", "snow", "star-bow"],
@@ -9,7 +10,7 @@ export const GLYPH_FAMILIES = {
 export type GlyphFamily = keyof typeof GLYPH_FAMILIES;
 export type Glyph = { [F in GlyphFamily]: { family: F; design: (typeof GLYPH_FAMILIES)[F][number] } }[GlyphFamily];
 
-export const CHRISTMAS_GLYPHS: readonly Glyph[] = (Object.keys(GLYPH_FAMILIES) as GlyphFamily[]).flatMap((family) =>
+export const CHRISTMAS_GLYPHS: readonly Glyph[] = keysOf(GLYPH_FAMILIES).flatMap((family) =>
   GLYPH_FAMILIES[family].map((design) => ({ family, design }) as Glyph),
 );
 
