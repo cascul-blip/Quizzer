@@ -4,7 +4,8 @@ import { useState } from "preact/hooks";
 import { LandStage } from "../../src/client/host/land.tsx";
 import { LandPlayer } from "../../src/client/player/land.tsx";
 import { setPhoneArt } from "../../src/client/shared/phone-art.ts";
-import { TEAMS, type HostView, type PlayerLandView, type LandPhase } from "../../src/shared/protocol.ts";
+import { TEAMS, type HostView } from "../../src/shared/protocol.ts";
+import type { PlayerLandView, LandPhase } from "../../src/shared/modes/land.ts";
 import { landBoardSize, startTiles, hexDistance } from "../../src/shared/land-board.ts";
 import type { LandTheme } from "../../src/shared/land-theme.ts";
 function Preview({ phone }: { phone: boolean }) {
