@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
+import { MODE_NAMES } from "../src/shared/mode-names.ts";
+import type { GameMode } from "../src/shared/protocol.ts";
 
 const ROOT = resolve(import.meta.dir, "..");
 const DIRS = ["src/server", "src/shared"].map((d) => join(ROOT, d));
@@ -61,9 +63,16 @@ describe("Server import graph", () => {
 });
 
 // Each mode's protocol types live in src/shared/modes/<mode>.ts, imported directly (no re-exports from protocol.ts).
-// When a mode migrates, add its file here; its exports must not come back to protocol.ts.
+// The list comes from MODE_NAMES, which the compiler keeps complete over GameMode. Classic is the one mode whose types stay in protocol.ts.
 const MODES_DIR = join(ROOT, "src/shared/modes");
-const MIGRATED_MODES = ["submarine.ts", "tower.ts", "fight.ts", "robot.ts", "cup.ts", "land.ts", "racer.ts", "duel.ts", "siege.ts", "gift.ts"];
+const PROTOCOL_ONLY_MODES: readonly GameMode[] = ["classic"];
+/** The modes MODE_NAMES lists, narrowed by a runtime check instead of a cast. */
+function gameModes(): GameMode[] {
+  return Object.keys(MODE_NAMES).filter((key): key is GameMode => Object.hasOwn(MODE_NAMES, key));
+}
+const MODE_FILES = gameModes()
+  .filter((m) => !PROTOCOL_ONLY_MODES.includes(m))
+  .map((m) => `${m}.ts`);
 
 /** Every relative import path in a file, type-only ones included. */
 function allImports(file: string): string[] {
@@ -80,7 +89,7 @@ describe("Mode protocol files", () => {
   const modeFiles = tsFiles(MODES_DIR);
 
   test("every migrated mode has a file", () => {
-    expect(MIGRATED_MODES.filter((m) => !modeFiles.includes(join(MODES_DIR, m)))).toEqual([]);
+    expect(MODE_FILES.filter((m) => !modeFiles.includes(join(MODES_DIR, m)))).toEqual([]);
   });
 
   test("no mode file imports another mode file", () => {
@@ -96,7 +105,7 @@ describe("Mode protocol files", () => {
     const protocol = readFileSync(join(ROOT, "src/shared/protocol.ts"), "utf8");
     const declared = new Set(exportedNames(protocol));
     const reexports = /^export\s[^;]*?\bfrom\s+["']\.\/modes\//m.test(protocol);
-    const leaked = MIGRATED_MODES.flatMap((m) =>
+    const leaked = MODE_FILES.flatMap((m) =>
       exportedNames(readFileSync(join(MODES_DIR, m), "utf8"))
         .filter((name) => declared.has(name))
         .map((name) => `${m}: ${name}`),
