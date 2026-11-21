@@ -12,6 +12,10 @@ _Avoid_: game type, variant
 The options the host chooses in the lobby for one game mode, such as Gift Grab's minutes or Kingdom Siege's waves. They carry over to the next lobby.
 _Avoid_: mode options, setup
 
+**Protect from abuse**:
+A lobby switch, on by default, for the game modes it applies to: a player who answers wrong several times in a row waits longer before their next question. Like mode settings, it carries over to the next lobby.
+_Avoid_: anti-spam, abuse mode
+
 **Mode entry**:
 Everything one game mode brings to Quizzer, declared together: how its game runs, what the projector and phones show, its mode settings in the lobby, and its music. The server, the projector and the phone each have one mode entry per game mode.
 _Avoid_: mode config, mode registration

@@ -1,5 +1,5 @@
 import { GIFT_GOODS, GIFT_READY_MS } from "../src/shared/gift-rules.ts";
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { AUTO_REVEAL_MS, INTRO_MS } from "../src/server/game/game.ts";
 import { RacerGame } from "../src/server/game/racer.ts";
 import type { SiegeGame } from "../src/server/game/siege.ts";
@@ -15,21 +15,22 @@ import type { GameHub } from "../src/server/ws.ts";
 import { CUP_ROLL_MS, CUP_SIP_MS, ROBOT_MOVE_MS, cupQuizMs, robotQuizMs } from "../src/shared/protocol.ts";
 import { FakeClock, tempDir } from "./helpers.ts";
 import { OFFERED_ACCESSORIES, OFFERED_AVATARS } from "../src/shared/avatars.ts";
-import { HubSocket, fakeHub, withoutCountdowns } from "./hub-harness.ts";
+import { HubSocket, fakeHub, pastThrottle, withoutTimers } from "./hub-harness.ts";
 
 // The hub's game logic, end to end, on fake sockets; tests/server.test.ts keeps what only a real socket can show.
 
 let t: ReturnType<typeof tempDir>;
 let store: QuizStore;
 let hub: GameHub;
-const clock = new FakeClock();
+let clock: FakeClock;
 
-beforeAll(() => {
+beforeEach(() => {
   t = tempDir();
   store = new QuizStore(t.dir);
+  clock = new FakeClock();
   hub = fakeHub(store, clock);
 });
-afterAll(() => {
+afterEach(() => {
   hub.game?.dispose();
   t.cleanup();
 });
@@ -42,12 +43,12 @@ async function resultsCsv() {
 
 /** The view a phone built from patches matches a fresh snapshot of the same player. */
 async function expectInSync(s: HubSocket) {
-  await new Promise((r) => setTimeout(r, 150)); // past the activity throttle
+  await pastThrottle();
   const fresh = new HubSocket(hub);
   fresh.sendMsg({ type: "resume", token: s.token! });
   const st = await fresh.playerState((v) => v.kind !== "none");
   expect(s.raw.some((m) => m.type === "player.patch")).toBe(true);
-  expect(withoutCountdowns(s.view)).toEqual(withoutCountdowns(st.view));
+  expect(withoutTimers(s.view)).toEqual(withoutTimers(st.view));
   fresh.close();
 }
 
@@ -60,7 +61,7 @@ describe("Game mode: Classic", () => {
         { type: "true_false", text: "Fire is cold", correct: [1], timeLimitSec: 10 },
       ],
     });
-    const host = new HubSocket(hub);
+    const host = new HubSocket(hub, { admin: true });
     host.sendMsg({ type: "host.hello" });
     await host.hostState((v) => v.phase === "idle");
     host.sendMsg({ type: "host.open", quizId: quiz.id });
@@ -74,7 +75,8 @@ describe("Game mode: Classic", () => {
       await p.playerState((v) => v.kind === "none" && !!v.game);
       p.sendMsg({ type: "join", nickname: name });
       const joined = await p.waitFor((m) => m.type === "joined");
-      tokens.push((joined as { token: string }).token);
+      if (joined.type !== "joined") throw new Error("expected joined");
+      tokens.push(joined.token);
     }
     // Duplicate nickname → error.
     const dup = new HubSocket(hub);
@@ -156,7 +158,7 @@ describe("Game mode: Tallest Tower", () => {
       title: "Tower E2E",
       questions: [1, 2, 3].map((n) => ({ type: "multiple_choice", text: `Q${n}`, options: ["right", "wrong"], correct: [0] })),
     });
-    const host = new HubSocket(hub);
+    const host = new HubSocket(hub, { admin: true });
     host.sendMsg({ type: "host.hello" });
     await host.hostState((v) => v.kind === "idle");
     host.sendMsg({ type: "host.open", quizId: quiz.id });
@@ -241,61 +243,13 @@ describe("Game mode: Tallest Tower", () => {
   });
 });
 
-describe("Lobby handoff: teams", () => {
-  test("the host moves a player to another team; the phone follows and the game starts with it", async () => {
-    const quiz = await store.create({
-      title: "Teams E2E",
-      questions: [{ type: "multiple_choice", text: "Q1", options: ["right", "wrong"], correct: [0] }],
-    });
-    const host = new HubSocket(hub);
-    host.sendMsg({ type: "host.hello" });
-    await host.hostState((v) => v.kind === "idle");
-    host.sendMsg({ type: "host.open", quizId: quiz.id });
-    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
-    host.sendMsg({ type: "host.setMode", mode: "tower" });
-    host.sendMsg({ type: "host.setModeSettings", mode: "tower", settings: { teams: 2, minutes: 2 } });
-    await host.hostState((v) => v.kind === "classic" && v.mode === "tower" && v.settings.tower.minutes === 2);
-
-    const names = ["Ann", "Bob", "Cy"];
-    const players = names.map(() => new HubSocket(hub));
-    for (const [i, p] of players.entries()) {
-      await p.playerState((v) => v.kind === "none" && !!v.game);
-      p.sendMsg({ type: "join", nickname: names[i]! });
-      await p.waitFor((m) => m.type === "joined");
-    }
-    const lobby = await host.hostState((v) => v.kind === "classic" && !!v.teams && v.players.length === 3);
-    const ann = lobby.view.kind === "classic" ? lobby.view.players.find((p) => p.nickname === "Ann")! : null;
-    await players[0]!.playerState((v) => v.kind === "classic" && v.team?.name === "Red");
-
-    host.sendMsg({ type: "host.setTeam", playerId: ann!.id, team: 1 });
-    const moved = await host.hostState((v) => v.kind === "classic" && !!v.teams && v.teams[1]!.members.length === 2);
-    expect(moved.view.kind === "classic" && moved.view.teams!.map((t) => t.members.map((m) => m.nickname))).toEqual([["Cy"], ["Ann", "Bob"]]);
-    const annLobby = await players[0]!.playerState((v) => v.kind === "classic" && v.team?.name === "Blue");
-    expect(annLobby.view.kind === "classic" && annLobby.view.team?.index).toBe(1);
-
-    host.sendMsg({ type: "host.setTeam", playerId: ann!.id, team: 2 });
-    expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: "Unknown team" });
-
-    host.sendMsg({ type: "host.start", pacing: "manual" });
-    const tower = await host.hostState((v) => v.kind === "tower" && v.phase === "countdown");
-    expect(tower.view.kind === "tower" && tower.view.teams.map((t) => t.members.map((m) => m.nickname))).toEqual([["Cy"], ["Ann", "Bob"]]);
-    const annTower = await players[0]!.playerState((v) => v.kind === "tower");
-    expect(annTower.view.kind === "tower" && annTower.view.team.name).toBe("Blue");
-
-    host.sendMsg({ type: "host.end" });
-    await host.hostState((v) => v.kind === "tower" && v.phase === "podium");
-    host.sendMsg({ type: "host.close" });
-    [host, ...players].forEach((s) => s.close());
-  });
-});
-
 describe("Game mode: Submarine Squad", () => {
   test("lobby → chase → answer → boost → host sees it → end → results", async () => {
     const quiz = await store.create({
       title: "Sub E2E",
       questions: [1, 2].map((n) => ({ type: "multiple_choice", text: `Q${n}`, options: ["right", "wrong"], correct: [0] })),
     });
-    const host = new HubSocket(hub);
+    const host = new HubSocket(hub, { admin: true });
     host.sendMsg({ type: "host.hello" });
     await host.hostState((v) => v.kind === "idle");
     host.sendMsg({ type: "host.open", quizId: quiz.id });
@@ -352,7 +306,7 @@ describe("Game mode: Tower Fight", () => {
       title: "Fight E2E",
       questions: [1, 2].map((n) => ({ type: "multiple_choice", text: `Q${n}`, options: ["right", "wrong"], correct: [0] })),
     });
-    const host = new HubSocket(hub);
+    const host = new HubSocket(hub, { admin: true });
     host.sendMsg({ type: "host.hello" });
     await host.hostState((v) => v.kind === "idle");
     host.sendMsg({ type: "host.open", quizId: quiz.id });
@@ -426,7 +380,7 @@ describe("Game mode: Robot Attack", () => {
       title: "Robot E2E",
       questions: [1, 2].map((n) => ({ type: "multiple_choice", text: `Q${n}`, options: ["right", "wrong"], correct: [0] })),
     });
-    const host = new HubSocket(hub);
+    const host = new HubSocket(hub, { admin: true });
     host.sendMsg({ type: "host.hello" });
     await host.hostState((v) => v.kind === "idle");
     host.sendMsg({ type: "host.open", quizId: quiz.id });
@@ -503,7 +457,7 @@ describe("Game mode: Cup of Death", () => {
       title: "Cup E2E",
       questions: [1, 2].map((n) => ({ type: "multiple_choice", text: `Q${n}`, options: ["right", "wrong"], correct: [0] })),
     });
-    const host = new HubSocket(hub);
+    const host = new HubSocket(hub, { admin: true });
     host.sendMsg({ type: "host.hello" });
     await host.hostState((v) => v.kind === "idle");
     host.sendMsg({ type: "host.open", quizId: quiz.id });
@@ -584,7 +538,7 @@ describe("Game mode: Kingdom Siege", () => {
       title: "Siege E2E",
       questions: [1, 2, 3].map((n) => ({ type: "multiple_choice", text: `Q${n}`, options: ["right", "wrong"], correct: [0] })),
     });
-    const host = new HubSocket(hub);
+    const host = new HubSocket(hub, { admin: true });
     host.sendMsg({ type: "host.hello" });
     await host.hostState((v) => v.kind === "idle");
     host.sendMsg({ type: "host.open", quizId: quiz.id });
@@ -687,7 +641,7 @@ describe("Game mode: Land Grab", () => {
       title: "Land E2E",
       questions: [1, 2, 3].map((n) => ({ type: "multiple_choice", text: `Q${n}`, options: ["right", "wrong"], correct: [0] })),
     });
-    const host = new HubSocket(hub);
+    const host = new HubSocket(hub, { admin: true });
     host.sendMsg({ type: "host.hello" });
     await host.hostState((v) => v.kind === "idle");
     host.sendMsg({ type: "host.open", quizId: quiz.id });
@@ -771,7 +725,7 @@ describe("Game mode: Racer", () => {
       title: "Racer E2E",
       questions: [1, 2, 3].map((n) => ({ type: "multiple_choice", text: `Q${n}`, options: ["right", "wrong"], correct: [0], timeLimitSec: 10 })),
     });
-    const host = new HubSocket(hub);
+    const host = new HubSocket(hub, { admin: true });
     host.sendMsg({ type: "host.hello" });
     await host.hostState((v) => v.kind === "idle");
     host.sendMsg({ type: "host.open", quizId: quiz.id });
@@ -896,7 +850,7 @@ describe("Game mode: Showdown", () => {
       title: "Showdown E2E",
       questions: [1, 2].map((n) => ({ type: "multiple_choice", text: `Q${n}`, options: ["right", "wrong"], correct: [0], timeLimitSec: 10 })),
     });
-    const host = new HubSocket(hub);
+    const host = new HubSocket(hub, { admin: true });
     host.sendMsg({ type: "host.hello" });
     await host.hostState((v) => v.kind === "idle");
     host.sendMsg({ type: "host.open", quizId: quiz.id });
@@ -959,9 +913,63 @@ describe("Game mode: Showdown", () => {
 });
 
 describe("Lobby handoff", () => {
+  test("the host moves a player to another team; the phone follows and the game starts with it", async () => {
+    const quiz = await store.create({
+      title: "Teams E2E",
+      questions: [{ type: "multiple_choice", text: "Q1", options: ["right", "wrong"], correct: [0] }],
+    });
+    const host = new HubSocket(hub, { admin: true });
+    host.sendMsg({ type: "host.hello" });
+    await host.hostState((v) => v.kind === "idle");
+    host.sendMsg({ type: "host.open", quizId: quiz.id });
+    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
+    host.sendMsg({ type: "host.setMode", mode: "tower" });
+    host.sendMsg({ type: "host.setModeSettings", mode: "tower", settings: { teams: 2, minutes: 2 } });
+    await host.hostState((v) => v.kind === "classic" && v.mode === "tower" && v.settings.tower.minutes === 2);
+
+    const names = ["Ann", "Bob", "Cy"];
+    const players = names.map(() => new HubSocket(hub));
+    for (const [i, p] of players.entries()) {
+      await p.playerState((v) => v.kind === "none" && !!v.game);
+      p.sendMsg({ type: "join", nickname: names[i]! });
+      await p.waitFor((m) => m.type === "joined");
+    }
+    const lobby = await host.hostState((v) => v.kind === "classic" && !!v.teams && v.players.length === 3);
+    const ann = lobby.view.kind === "classic" ? lobby.view.players.find((p) => p.nickname === "Ann")! : null;
+    await players[0]!.playerState((v) => v.kind === "classic" && v.team?.name === "Red");
+
+    host.sendMsg({ type: "host.setTeam", playerId: ann!.id, team: 1 });
+    const moved = await host.hostState((v) => v.kind === "classic" && !!v.teams && v.teams[1]!.members.length === 2);
+    expect(moved.view.kind === "classic" && moved.view.teams!.map((t) => t.members.map((m) => m.nickname))).toEqual([["Cy"], ["Ann", "Bob"]]);
+    const annLobby = await players[0]!.playerState((v) => v.kind === "classic" && v.team?.name === "Blue");
+    expect(annLobby.view.kind === "classic" && annLobby.view.team?.index).toBe(1);
+
+    host.sendMsg({ type: "host.setTeam", playerId: ann!.id, team: 2 });
+    expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: "Unknown team" });
+
+    host.sendMsg({ type: "host.start", pacing: "manual" });
+    const tower = await host.hostState((v) => v.kind === "tower" && v.phase === "countdown");
+    expect(tower.view.kind === "tower" && tower.view.teams.map((t) => t.members.map((m) => m.nickname))).toEqual([["Cy"], ["Ann", "Bob"]]);
+    const annTower = await players[0]!.playerState((v) => v.kind === "tower");
+    expect(annTower.view.kind === "tower" && annTower.view.team.name).toBe("Blue");
+
+    host.sendMsg({ type: "host.end" });
+    await host.hostState((v) => v.kind === "tower" && v.phase === "podium");
+    host.sendMsg({ type: "host.close" });
+    [host, ...players].forEach((s) => s.close());
+  });
+
+  test("resume with an unknown token fails cleanly", async () => {
+    const s = new HubSocket(hub);
+    s.sendMsg({ type: "resume", token: "nope" });
+    await s.waitFor((m) => m.type === "resumeFailed");
+    s.close();
+  });
+
+
   test("an empty lobby can retry Start after a player joins", async () => {
     const quiz = await store.create({ title: "Retry Start", questions: [{ type: "true_false", text: "True?", correct: [0] }] });
-    const host = new HubSocket(hub);
+    const host = new HubSocket(hub, { admin: true });
     const phone = new HubSocket(hub);
     try {
       host.sendMsg({ type: "host.hello" });
@@ -993,7 +1001,7 @@ describe("Game mode: Gift Grab", () => {
       title: "Gift Grab E2E",
       questions: [{ type: "true_false", text: "True?", correct: [0] }],
     });
-    const host = new HubSocket(hub);
+    const host = new HubSocket(hub, { admin: true });
     const player = new HubSocket(hub);
     let resumed: HubSocket | undefined;
     try {
@@ -1050,10 +1058,10 @@ describe("Game mode: Gift Grab", () => {
   });
 });
 
-describe("Mode settings", () => {
+describe("Protect from abuse", () => {
   test("Protect from abuse is on by default, toggles in the lobby and carries over to the next lobby", async () => {
     const quiz = await store.create({ title: "Protect", questions: [{ type: "true_false", text: "Fire is cold", correct: [1] }] });
-    const host = new HubSocket(hub);
+    const host = new HubSocket(hub, { admin: true });
     host.sendMsg({ type: "host.hello" });
     await host.hostState((v) => v.kind === "idle");
     host.sendMsg({ type: "host.open", quizId: quiz.id });
@@ -1070,14 +1078,4 @@ describe("Mode settings", () => {
     await host.hostState((v) => v.kind === "idle");
     host.close();
   });
-});
-
-describe("Lobby handoff: reconnect", () => {
-  test("resume with an unknown token fails cleanly", async () => {
-    const s = new HubSocket(hub);
-    s.sendMsg({ type: "resume", token: "nope" });
-    await s.waitFor((m) => m.type === "resumeFailed");
-    s.close();
-  });
-
 });

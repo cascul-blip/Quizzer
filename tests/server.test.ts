@@ -3,34 +3,19 @@ import { COUNTDOWN_MS } from "../src/server/game/tower.ts";
 import { startServer, type RunningServer } from "../src/server/http.ts";
 import { isAdminRequest } from "../src/server/network.ts";
 import { QuizStore } from "../src/server/quiz/store.ts";
-import type { ClientMsg, HostView, PlayerView, ServerMsg } from "../src/shared/protocol.ts";
-import { applyPatch } from "../src/shared/view-patch.ts";
-import { withoutCountdowns } from "./hub-harness.ts";
+import type { ClientMsg } from "../src/shared/protocol.ts";
+import { MessageLog, pastThrottle, withoutTimers } from "./hub-harness.ts";
 import { FakeClock, tempDir } from "./helpers.ts";
 
 // Only what a real socket can show lives here: HTTP routes, the WebSocket upgrade, patches over the wire and
 // resume after a reconnect. Hub logic runs on fake sockets in tests/hub.test.ts and tests/game-modes.test.ts.
 
 
-class TestSocket {
-  msgs: ServerMsg[] = [];
-  /** Raw messages as received, before patches are turned back into player.state. */
-  raw: ServerMsg[] = [];
-  /** The player's view as the phone holds it, built from snapshots and patches. */
-  view: PlayerView | null = null;
-  token: string | null = null;
-  private waiters: (() => void)[] = [];
+/** A phone or projector on a real WebSocket to the running server. */
+class TestSocket extends MessageLog {
   private constructor(readonly ws: WebSocket) {
-    ws.onmessage = (e) => {
-      const msg: ServerMsg = JSON.parse(e.data);
-      this.raw.push(msg);
-      if (msg.type === "player.state") this.view = msg.view;
-      if (msg.type === "joined") this.token = msg.token;
-      // Tests read whole views, as the phone ends up with them.
-      if (msg.type === "player.patch") this.view = applyPatch(this.view!, msg.ops);
-      this.msgs.push(msg.type === "player.patch" ? { type: "player.state", view: this.view! } : msg);
-      this.waiters.splice(0).forEach((w) => w());
-    };
+    super(2_000);
+    ws.onmessage = (e) => this.receive(JSON.parse(e.data));
   }
   static async open(url: string): Promise<TestSocket> {
     const ws = new WebSocket(url);
@@ -41,29 +26,8 @@ class TestSocket {
     });
     return s;
   }
-  send(m: ClientMsg) {
+  sendMsg(m: ClientMsg) {
     this.ws.send(JSON.stringify(m));
-  }
-  /** Wait for (and consume up to) the first queued or future message matching the predicate. */
-  async waitFor<T extends ServerMsg>(pred: (m: ServerMsg) => m is T, timeout?: number): Promise<T>;
-  async waitFor(pred: (m: ServerMsg) => boolean, timeout?: number): Promise<ServerMsg>;
-  async waitFor(pred: (m: ServerMsg) => boolean, timeout = 2000): Promise<ServerMsg> {
-    const deadline = Date.now() + timeout;
-    for (;;) {
-      const i = this.msgs.findIndex(pred);
-      if (i >= 0) return this.msgs.splice(0, i + 1).pop()!;
-      if (Date.now() > deadline) throw new Error(`timeout; got ${JSON.stringify(this.msgs.slice(-3))}`);
-      await new Promise<void>((r) => {
-        this.waiters.push(r);
-        setTimeout(r, 50);
-      });
-    }
-  }
-  hostState(pred: (v: HostView) => boolean) {
-    return this.waitFor((m) => m.type === "host.state" && pred(m.view)) as Promise<Extract<ServerMsg, { type: "host.state" }>>;
-  }
-  playerState(pred: (v: PlayerView) => boolean) {
-    return this.waitFor((m) => m.type === "player.state" && pred(m.view)) as Promise<Extract<ServerMsg, { type: "player.state" }>>;
   }
   close() {
     this.ws.close();
@@ -74,12 +38,12 @@ class TestSocket {
 
 /** The view a phone built from patches matches a fresh snapshot of the same player. */
 async function expectInSync(s: TestSocket, wsUrl: string) {
-  await new Promise((r) => setTimeout(r, 150)); // past the activity throttle
+  await pastThrottle();
   const fresh = await TestSocket.open(wsUrl);
-  fresh.send({ type: "resume", token: s.token! });
+  fresh.sendMsg({ type: "resume", token: s.token! });
   const st = await fresh.playerState((v) => v.kind !== "none");
   expect(s.raw.some((m) => m.type === "player.patch")).toBe(true);
-  expect(withoutCountdowns(s.view)).toEqual(withoutCountdowns(st.view));
+  expect(withoutTimers(s.view)).toEqual(withoutTimers(st.view));
   fresh.close();
 }
 
@@ -195,6 +159,18 @@ describe("REST API", () => {
     expect((await fetch(`${base}/api/quizzes/%E0%A4%A`)).status).toBe(404);
   });
 
+  test("the latest results CSV is served as a download once a game has finished", async () => {
+    const url = `${base}/api/results/latest.csv`;
+    srv.hub.lastResults = null;
+    expect((await fetch(url)).status).toBe(404);
+    srv.hub.lastResults = { quizId: "q-1", title: "Q", csv: "Rank,Nickname\r\n1,Ann\r\n", file: "/results/q-2026.csv" };
+    const r = await fetch(url);
+    expect(r.headers.get("content-type")).toBe("text/csv; charset=utf-8");
+    expect(r.headers.get("content-disposition")).toBe('attachment; filename="q-2026.csv"');
+    expect(await r.text()).toBe("Rank,Nickname\r\n1,Ann\r\n");
+    srv.hub.lastResults = null;
+  });
+
   test("admin guard rejects cross-site requests", async () => {
     const r = await fetch(`${base}/api/quizzes`, { method: "POST", headers: { origin: "http://evil.example" }, body: "{}" });
     expect(r.status).toBe(403);
@@ -221,7 +197,6 @@ describe("WebSocket transport", () => {
     s.close();
   });
 
-  const settle = () => new Promise((r) => setTimeout(r, 250)); // longer than the 100 ms activity throttle
   const states = (s: TestSocket) => s.msgs.filter((m) => m.type === "player.state").length;
 
   test("only changed views are pushed as patches, and a reconnecting phone resumes the same view", async () => {
@@ -232,49 +207,49 @@ describe("WebSocket transport", () => {
     });
     const wsUrl = `ws://localhost:${srv.port}/ws`;
     const host = await TestSocket.open(wsUrl);
-    host.send({ type: "host.hello" });
-    host.send({ type: "host.open", quizId: quiz.id });
-    host.send({ type: "host.setMode", mode: "tower" });
-    host.send({ type: "host.setModeSettings", mode: "tower", settings: { teams: 2, minutes: 2 } });
+    host.sendMsg({ type: "host.hello" });
+    host.sendMsg({ type: "host.open", quizId: quiz.id });
+    host.sendMsg({ type: "host.setMode", mode: "tower" });
+    host.sendMsg({ type: "host.setModeSettings", mode: "tower", settings: { teams: 2, minutes: 2 } });
     await host.hostState((v) => v.kind === "classic" && v.mode === "tower" && v.settings.tower.teams === 2);
 
     const [ann, bob] = await Promise.all([TestSocket.open(wsUrl), TestSocket.open(wsUrl)]);
     for (const [p, nickname] of [[ann!, "Ann"], [bob!, "Bob"]] as const) {
-      p.send({ type: "join", nickname });
+      p.sendMsg({ type: "join", nickname });
       expect(await p.waitFor((m) => m.type === "joined")).toMatchObject({ images: [image] });
     }
-    host.send({ type: "host.start", pacing: "manual" });
+    host.sendMsg({ type: "host.start", pacing: "manual" });
     await host.hostState((v) => v.kind === "tower" && v.phase === "countdown");
     clock.advance(COUNTDOWN_MS);
     srv.hub.broadcast();
     const annQ = await ann!.playerState((v) => v.kind === "tower" && v.phase === "playing" && !!v.question);
     await bob!.playerState((v) => v.kind === "tower" && v.phase === "playing" && !!v.question);
-    await settle();
+    await pastThrottle();
     ann!.msgs = [];
     bob!.msgs = [];
 
     // Only the clock moved: countdowns run on the phone, so nothing is sent.
     clock.advance(500);
     srv.hub.broadcast();
-    await settle();
+    await pastThrottle();
     expect([states(ann!), states(bob!)]).toEqual([0, 0]);
 
     // Ann answers: she hears back, Bob's screen is unchanged so he gets nothing.
     const q = annQ.view.kind === "tower" ? annQ.view.question! : null;
-    ann!.send({ type: "tower.answer", seq: q!.seq, option: 0 });
+    ann!.sendMsg({ type: "tower.answer", seq: q!.seq, option: 0 });
     await ann!.playerState((v) => v.kind === "tower" && v.feedback?.seq === q!.seq);
-    await settle();
+    await pastThrottle();
     expect(states(bob!)).toBe(0);
     await host.hostState((v) => v.kind === "tower");
 
     // A rejected action (dropping without blocks) always resyncs the phone.
-    bob!.send({ type: "tower.drop", zone: 2 });
+    bob!.sendMsg({ type: "tower.drop", zone: 2 });
     await bob!.playerState((v) => v.kind === "tower" && v.state === "question");
 
     // The view Ann built from patches over the wire matches what a phone reconnecting with her token gets.
     await expectInSync(ann!, wsUrl);
 
-    host.send({ type: "host.close" });
+    host.sendMsg({ type: "host.close" });
     await host.hostState((v) => v.kind === "idle");
     [host, ann!, bob!].forEach((s) => s.close());
   });
