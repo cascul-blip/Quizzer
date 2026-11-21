@@ -6,7 +6,7 @@ import { LAND_GUARD_COST, LAND_QUESTIONS_PER_ROUND, LAND_STEAL_COST, type Client
 import { HexBoard, LandShape, landArt } from "../shared/land-art.tsx";
 import { useEventFlash } from "../shared/tower-art.tsx";
 import { formatClock, ordinal, teamInk, teamVars, useCountdown } from "../shared/ui.tsx";
-import { Feedback, StreamQuestion } from "./tower.tsx";
+import { Feedback, StreamQuestion } from "./stream-question.tsx";
 
 type Send = (m: ClientMsg) => void;
 

@@ -18,7 +18,7 @@ import {
 import { DEFENDER_EMOJI, SiegeIcon } from "../shared/siege-art.tsx";
 import { useCountdown } from "../shared/ui.tsx";
 import type { PhoneBanner } from "./common.tsx";
-import { Feedback, StreamQuestion } from "./tower.tsx";
+import { Feedback, StreamQuestion } from "./stream-question.tsx";
 
 type Send = (m: ClientMsg) => void;
 
