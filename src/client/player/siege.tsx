@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { siegeDefenderLabel, siegeDefenderPhrase, siegeWords } from "../../shared/siege-theme.ts";
 import { SiegeThemeProvider, useChristmasSiege, useSiegeTheme } from "../shared/siege-skin.tsx";
-import type { ClientMsg, PlayerSiegeView } from "../../shared/protocol.ts";
+import type { ClientMsg } from "../../shared/protocol.ts";
+import type { PlayerSiegeView } from "../../shared/modes/siege.ts";
 import {
   SIEGE_BUILD_SQUARES,
   SIEGE_CHEAPEST,

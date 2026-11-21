@@ -52,7 +52,7 @@ import christmasWolfRunImg from "./siege/christmas/wolf-run.webp";
  * them there first. Phones only load the defender icons, the coin and the heart.
  */
 import type { ComponentChildren, JSX } from "preact";
-import type { HostSiegeDefender, HostSiegeMonster } from "../../shared/protocol.ts";
+import type { HostSiegeDefender, HostSiegeMonster } from "../../shared/modes/siege.ts";
 import { SIEGE_CRACKED_HEARTS, type SiegeDefenderType, type SiegeMonsterType } from "../../shared/siege-rules.ts";
 import archerDrawImg from "./siege/archer-draw.webp";
 import archerReadyImg from "./siege/archer-ready.webp";

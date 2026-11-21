@@ -1,15 +1,15 @@
 import { siegeDefenderPhrase, siegeTheme, siegeWords, DEFAULT_SIEGE_THEME } from "../../shared/siege-theme.ts";
 import type { AnswerValue } from "../../shared/answer-match.ts";
-import {
-  type HostSiegeState,
-  type PlayerSiegeView,
-  type SiegeAwards,
-  type SiegeEvent,
-  type SiegePhase,
-  type SiegeRecord,
-  type SiegeResult,
-  type SiegeSettings,
-} from "../../shared/protocol.ts";
+import type {
+  HostSiegeState,
+  PlayerSiegeView,
+  SiegeAwards,
+  SiegeEvent,
+  SiegePhase,
+  SiegeRecord,
+  SiegeResult,
+  SiegeSettings,
+} from "../../shared/modes/siege.ts";
 import {
   SIEGE_BREAK_MS,
   SIEGE_COUNTDOWN_MS,

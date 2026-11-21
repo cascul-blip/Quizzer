@@ -1,7 +1,8 @@
 /** Review production screens, pose swaps, articulated attacks, endings and phone building. */
 import { render } from "preact";
 import { useState } from "preact/hooks";
-import type { HostSiegeState, HostView, PlayerSiegeView, SiegePhase, HostSiegeDefender, HostSiegeMonster } from "../../src/shared/protocol.ts";
+import type { HostSiegeState, PlayerSiegeView, SiegePhase, HostSiegeDefender, HostSiegeMonster } from "../../src/shared/modes/siege.ts";
+import type { HostView } from "../../src/shared/protocol.ts";
 import type { SiegeTheme } from "../../src/shared/siege-theme.ts";
 import { SiegeStage, SiegeLobbyPreview } from "../../src/client/host/siege.tsx";
 import { SiegePlayer } from "../../src/client/player/siege.tsx";
