@@ -17,7 +17,7 @@ import { MAX_TYPED_ANSWER, checkAnswer, type AnswerValue, answerOf } from "../..
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import { RACER_CONFIDENCE_LEVELS, applyRacerTurn, newRacerCar, type RacerCar, type RacerConfidence } from "../../shared/racer-rules.ts";
 import { GameError, realClock, shuffle, topErrors, type Clock, AUTO_REVEAL_MS, GRACE_MS, preparePlayOrder } from "./common.ts";
-import type { Game } from "./game.ts";
+import type { LobbyFacts } from "./lobby-facts.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
 import { MODE_NAMES } from "../../shared/mode-names.ts";
 import { handoffOptions, pickTheme, unhandled, type ModeEntry } from "./mode-entry.ts";
@@ -125,9 +125,9 @@ export class RacerGame {
   }
 
   /** Take over a lobby's players (same ids and tokens), its shuffle choices and its pacing. */
-  static fromLobby(lobby: Game, opts: RacerOptions = {}): RacerGame {
-    const game = new RacerGame(lobby.quiz, { shuffle: lobby.shuffle, pacing: lobby.pacing, theme: lobby.settings.racer.theme }, opts);
-    game.roster.adoptFrom(lobby.players.values(), (base) => game.newPlayer(base));
+  static fromLobby(lobby: LobbyFacts<"racer">, opts: RacerOptions = {}): RacerGame {
+    const game = new RacerGame(lobby.quiz, { shuffle: lobby.shuffle, pacing: lobby.pacing, theme: lobby.settings.theme }, opts);
+    game.roster.adoptFrom(lobby.players, (base) => game.newPlayer(base));
     return game;
   }
 

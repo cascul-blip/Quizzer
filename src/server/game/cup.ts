@@ -21,7 +21,7 @@ import {
 import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import { GameError, realClock, shuffle, type Clock } from "./common.ts";
-import type { Game } from "./game.ts";
+import type { LobbyFacts } from "./lobby-facts.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
 import { QuestionStream, newStreamPlayer, type StreamPlayer } from "./stream.ts";
 import { answerOf } from "../../shared/answer-match.ts";
@@ -128,9 +128,9 @@ export class CupGame {
   }
 
   /** Take over a lobby's players (same ids and tokens). */
-  static fromLobby(lobby: Game, opts: CupOptions = {}, protect = lobby.protect): CupGame {
-    const game = new CupGame(lobby.quiz, { cups: lobby.settings.cup.cups, theme: lobby.settings.cup.theme, shuffleAnswers: lobby.shuffle.answers, protect }, opts);
-    game.roster.adoptFrom(lobby.players.values(), (base) => game.newPlayer(base));
+  static fromLobby(lobby: LobbyFacts<"cup">, opts: CupOptions = {}): CupGame {
+    const game = new CupGame(lobby.quiz, { cups: lobby.settings.cups, theme: lobby.settings.theme, shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
+    game.roster.adoptFrom(lobby.players, (base) => game.newPlayer(base));
     return game;
   }
 
@@ -557,7 +557,7 @@ export const cupMode: ModeEntry<"cup"> = {
     return { cups, theme: pickTheme(raw.theme, cupTheme(current.theme), "cup") };
   },
   start(lobby, ctx) {
-    const game = CupGame.fromLobby(lobby, handoffOptions(ctx), ctx.protect);
+    const game = CupGame.fromLobby(lobby, handoffOptions(ctx));
     return { game, log: `${this.name} started with ${game.players.size} player(s)` };
   },
   pacing: null,

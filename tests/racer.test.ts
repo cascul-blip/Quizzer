@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { Game } from "../src/server/game/game.ts";
+import { Lobby } from "../src/server/game/lobby.ts";
 import { AUTO_REVEAL_MS, AWARD_BEST_DRIVER, AWARD_MOST_CORRECT, CONFIDENCE_MS, GRACE_MS, INTRO_MS, RacerGame, type RacerPlayer } from "../src/server/game/racer.ts";
 import { buildRacerResultsCsv } from "../src/server/game/racer.ts";
 import type { Pacing, ShuffleOptions } from "../src/shared/protocol.ts";
@@ -29,11 +29,11 @@ function seeded(seed = 42) {
 function setup(names: string[], opts: { questions?: number; pacing?: Pacing; shuffle?: ShuffleOptions; seed?: number } = {}) {
   const clock = new FakeClock();
   let finished = 0;
-  const lobby = new Game(quiz(opts.questions), { clock, pacing: opts.pacing });
+  const lobby = new Lobby(quiz(opts.questions), { pacing: opts.pacing });
   lobby.setMode("racer");
   if (opts.shuffle) lobby.setShuffle(opts.shuffle);
   for (const n of names) lobby.join(n);
-  const game = RacerGame.fromLobby(lobby, { clock, rng: seeded(opts.seed), onFinish: () => finished++ });
+  const game = RacerGame.fromLobby(lobby.handoffFacts("racer"), { clock, rng: seeded(opts.seed), onFinish: () => finished++ });
   game.start();
   return { clock, game, lobby, finished: () => finished };
 }
@@ -93,7 +93,7 @@ describe("Racer", () => {
 
   test("a game needs players and questions", () => {
     const clock = new FakeClock();
-    const empty = RacerGame.fromLobby(new Game(quiz(), { clock }), { clock });
+    const empty = RacerGame.fromLobby(new Lobby(quiz()).handoffFacts("racer"), { clock });
     expect(() => empty.start()).toThrow("at least one player");
     expect(() => new RacerGame(quiz(0), { shuffle: { questions: false, answers: false } })).toThrow("no questions");
   });
@@ -495,9 +495,9 @@ describe("Racer", () => {
 
   test("start(pacing) overrides the lobby's pacing", () => {
     const clock = new FakeClock();
-    const lobby = new Game(quiz(), { clock });
+    const lobby = new Lobby(quiz());
     lobby.join("A");
-    const game = RacerGame.fromLobby(lobby, { clock, rng: seeded() });
+    const game = RacerGame.fromLobby(lobby.handoffFacts("racer"), { clock, rng: seeded() });
     game.start("auto");
     expect(game.pacing).toBe("auto");
   });
@@ -686,14 +686,14 @@ describe("Racer", () => {
 
 describe("Racer themes", () => {
   test("lobby switches looks and both game views retain the chosen theme", () => {
-    const lobby = new Game(quiz(), { clock: new FakeClock() });
+    const lobby = new Lobby(quiz());
     expect(lobby.hostView().settings.racer.theme).toBe("christmas");
     lobby.setMode("racer");
     const p = lobby.join("Ann");
     for (const theme of ["classic", "christmas"] as const) {
       lobby.setModeSettings("racer", { theme });
       expect(lobby.hostView().settings.racer.theme).toBe(theme);
-      const game = RacerGame.fromLobby(lobby, { clock: new FakeClock() });
+      const game = RacerGame.fromLobby(lobby.handoffFacts("racer"), { clock: new FakeClock() });
       game.start();
       expect(game.hostView().theme).toBe(theme);
       expect(game.playerView(p.id)!.theme).toBe(theme);
@@ -704,12 +704,8 @@ describe("Racer themes", () => {
     }
   });
 
-  test("invalid or mid-game theme changes are rejected", () => {
-    const lobby = new Game(quiz(), { clock: new FakeClock() });
+  test("invalid lobby theme changes are rejected", () => {
+    const lobby = new Lobby(quiz());
     expect(() => lobby.setModeSettings("racer", { theme: "bad" as never })).toThrow("Unknown racer theme");
-    lobby.join("Ann");
-    lobby.start();
-    expect(() => lobby.setModeSettings("racer", { theme: "christmas" })).toThrow("before the game starts");
-    lobby.dispose();
   });
 });

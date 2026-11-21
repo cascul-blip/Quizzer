@@ -18,7 +18,7 @@ import {
 import type { GiftHit, GiftPhase, GiftStanding, HostGiftState, PlayerGiftView } from "../../shared/protocol.ts";
 import type { Quiz } from "../../shared/quiz-schema.ts";
 import { GameError, realClock, shuffle, type Clock } from "./common.ts";
-import type { Game } from "./game.ts";
+import type { LobbyFacts } from "./lobby-facts.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
 import { newStreamPlayer, QuestionStream, type StreamPlayer } from "./stream.ts";
 import { answerOf } from "../../shared/answer-match.ts";
@@ -114,10 +114,10 @@ export class GiftGame {
     this.onFinish = opts.onFinish ?? (() => {});
   }
 
-  static fromLobby(lobby: Game, opts: GiftOptions = {}, protect = lobby.protect): GiftGame {
+  static fromLobby(lobby: LobbyFacts<"gift">, opts: GiftOptions = {}): GiftGame {
     if (!lobby.quiz.questions.length) throw new GameError("This quiz has no questions");
-    const game = new GiftGame(lobby.quiz, lobby.settings.gift.minutes, lobby.shuffle.answers, protect, opts);
-    game.roster.adoptFrom(lobby.players.values(), newPlayer);
+    const game = new GiftGame(lobby.quiz, lobby.settings.minutes, lobby.shuffle.answers, lobby.protect, opts);
+    game.roster.adoptFrom(lobby.players, newPlayer);
     return game;
   }
 
@@ -331,7 +331,7 @@ export const giftMode: ModeEntry<"gift"> = {
     return { minutes };
   },
   start(lobby, ctx) {
-    const game = GiftGame.fromLobby(lobby, handoffOptions(ctx), ctx.protect);
+    const game = GiftGame.fromLobby(lobby, handoffOptions(ctx));
     return { game, log: `${this.name} started with ${game.players.size} player(s), ${game.minutes} min` };
   },
   pacing: null,

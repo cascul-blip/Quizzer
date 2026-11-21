@@ -31,7 +31,7 @@ beforeEach(() => {
   hub = fakeHub(store, clock);
 });
 afterEach(() => {
-  hub.game?.dispose();
+  hub.closeGame();
   t.cleanup();
 });
 

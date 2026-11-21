@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { Game } from "../src/server/game/game.ts";
+import { Lobby } from "../src/server/game/lobby.ts";
 import { buildSubResultsCsv } from "../src/server/game/submarine.ts";
 import {
   BOOST_MIN_HOLD_MS,
@@ -27,10 +27,10 @@ import { FakeClock, sampleQuiz } from "./helpers.ts";
 function setup(names: string[], rng?: () => number) {
   const clock = new FakeClock();
   let finished = 0;
-  const lobby = new Game(sampleQuiz(), { clock });
+  const lobby = new Lobby(sampleQuiz());
   lobby.setMode("submarine");
   for (const n of names) lobby.join(n);
-  const game = SubGame.fromLobby(lobby, { clock, rng, onFinish: () => finished++ });
+  const game = SubGame.fromLobby(lobby.handoffFacts("submarine"), { clock, rng, onFinish: () => finished++ });
   game.start();
   clock.advance(COUNTDOWN_MS);
   return { clock, game, finished: () => finished };

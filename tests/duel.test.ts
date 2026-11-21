@@ -1,5 +1,5 @@
 import { describe, expect, spyOn, test } from "bun:test";
-import { Game } from "../src/server/game/game.ts";
+import { Lobby } from "../src/server/game/lobby.ts";
 import { AUTO_REVEAL_MS, AWARD_BIGGEST_CLIMB, AWARD_LONGEST_REIGN, AWARD_MOST_WINS, DuelGame, GRACE_MS, INTRO_MS, type DuelPlayer } from "../src/server/game/duel.ts";
 import { buildDuelResultsCsv } from "../src/server/game/duel.ts";
 import { DUEL_DEFAULT_ROUNDS, type Pacing, type ShuffleOptions } from "../src/shared/protocol.ts";
@@ -31,12 +31,12 @@ function seeded(seed = 42) {
 function setup(names: string[], opts: { questions?: number; rounds?: number; pacing?: Pacing; shuffle?: ShuffleOptions; rng?: () => number } = {}) {
   const clock = new FakeClock();
   let finished = 0;
-  const lobby = new Game(quiz(opts.questions), { clock, pacing: opts.pacing });
+  const lobby = new Lobby(quiz(opts.questions), { pacing: opts.pacing });
   lobby.setMode("duel");
   if (opts.rounds) lobby.setModeSettings("duel", { rounds: opts.rounds });
   if (opts.shuffle) lobby.setShuffle(opts.shuffle);
   for (const n of names) lobby.join(n);
-  const game = DuelGame.fromLobby(lobby, { clock, rng: opts.rng ?? keepOrder, onFinish: () => finished++ });
+  const game = DuelGame.fromLobby(lobby.handoffFacts("duel"), { clock, rng: opts.rng ?? keepOrder, onFinish: () => finished++ });
   game.start();
   return { clock, game, lobby, finished: () => finished };
 }
@@ -90,7 +90,7 @@ describe("Showdown", () => {
   });
 
   test("lobby setting: rounds 10/15/20, default 15", () => {
-    const lobby = new Game(quiz());
+    const lobby = new Lobby(quiz());
     expect(lobby.settings.duel).toEqual({ rounds: DUEL_DEFAULT_ROUNDS, theme: "christmas" });
     expect(lobby.hostView().settings.duel).toEqual({ rounds: 15, theme: "christmas" });
     lobby.setMode("duel");
@@ -99,7 +99,7 @@ describe("Showdown", () => {
     expect(() => lobby.setModeSettings("duel", { rounds: 12 })).toThrow("Unsupported number of rounds");
     expect(() => lobby.setModeSettings("duel", { rounds: "10" as unknown as number })).not.toThrow();
     expect(lobby.settings.duel.rounds).toBe(10);
-    expect(new Game(quiz(), { settings: { duel: { rounds: 20 } } }).settings.duel.rounds).toBe(20);
+    expect(new Lobby(quiz(), { settings: { duel: { rounds: 20 } } }).settings.duel.rounds).toBe(20);
   });
 
   test("theme defaults, lobby validation, game views and reveal elapsed survive pacing changes", () => {
@@ -110,7 +110,7 @@ describe("Showdown", () => {
     lobby.setModeSettings("duel", { rounds: 10, theme: "classic" });
     lobby.setModeSettings("duel", { rounds: 20 });
     expect(lobby.settings.duel).toEqual({ rounds: 20, theme: "classic" });
-    const classic = DuelGame.fromLobby(lobby, { clock });
+    const classic = DuelGame.fromLobby(lobby.handoffFacts("duel"), { clock });
     expect(classic.theme).toBe("classic");
     expect(() => lobby.setModeSettings("duel", { rounds: 10, theme: "bogus" as never })).toThrow("Unknown Showdown theme");
     round(game, clock, [["A", true], ["B", false]]);
@@ -170,7 +170,7 @@ describe("Showdown", () => {
 
   test("a game needs players and questions", () => {
     const clock = new FakeClock();
-    const empty = DuelGame.fromLobby(new Game(quiz(), { clock }), { clock });
+    const empty = DuelGame.fromLobby(new Lobby(quiz()).handoffFacts("duel"), { clock });
     expect(() => empty.start()).toThrow("at least one player");
     expect(() => new DuelGame(quiz(0), { shuffle: { questions: false, answers: false } })).toThrow("no questions");
   });

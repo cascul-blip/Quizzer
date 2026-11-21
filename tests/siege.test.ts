@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { siegeWords, type SiegeTheme } from "../src/shared/siege-theme.ts";
 import { FEEDBACK_MS, SIEGE_NO_GOLD, SiegeGame, type SiegeMonster, type SiegePlayer } from "../src/server/game/siege.ts";
-import { Game } from "../src/server/game/game.ts";
+import { Lobby } from "../src/server/game/lobby.ts";
 import { WRONG_PENALTY_2_MS } from "../src/server/game/stream.ts";
 import { buildSiegeResultsCsv } from "../src/server/game/siege.ts";
 import { loadSiegeRecord, saveSiegeRecord } from "../src/server/siege-records.ts";
@@ -61,11 +61,11 @@ const NAMES = ["Ana", "Ben", "Cal", "Dee", "Eve", "Fay"];
 function setup({ players = 3, waves = 5 as SiegeWaves, protect = false, seed = 42, theme = "classic" as SiegeTheme } = {}) {
   const clock = new FakeClock();
   let finished = 0;
-  const lobby = new Game(quiz(), { clock, protect });
+  const lobby = new Lobby(quiz(), { protect });
   lobby.setMode("siege");
   lobby.setModeSettings("siege", { waves, theme });
   for (const n of NAMES.slice(0, players)) lobby.join(n);
-  const game = SiegeGame.fromLobby(lobby, { clock, rng: seeded(seed), onFinish: () => finished++ });
+  const game = SiegeGame.fromLobby(lobby.handoffFacts("siege"), { clock, rng: seeded(seed), onFinish: () => finished++ });
   game.start();
   clock.advance(SIEGE_COUNTDOWN_MS);
   expect(game.phase).toBe("build");
@@ -191,10 +191,10 @@ describe("gold and building", () => {
 
   test("answers are only taken while playing, not during the countdown", () => {
     const clock = new FakeClock();
-    const lobby = new Game(quiz(), { clock });
+    const lobby = new Lobby(quiz());
     lobby.setMode("siege");
     lobby.join("Ana");
-    const game = SiegeGame.fromLobby(lobby, { clock, rng: seeded() });
+    const game = SiegeGame.fromLobby(lobby.handoffFacts("siege"), { clock, rng: seeded() });
     game.start();
     const ana = byName(game, "Ana");
     expect(ana.current).toBeNull();
@@ -271,11 +271,11 @@ describe("the battle", () => {
     const clock = new FakeClock();
     let changes = 0;
     let ticks = 0;
-    const lobby = new Game(quiz(), { clock });
+    const lobby = new Lobby(quiz());
     lobby.setMode("siege");
     lobby.setModeSettings("siege", { waves: 5, theme: "classic" });
     for (const n of NAMES.slice(0, 3)) lobby.join(n);
-    const game = SiegeGame.fromLobby(lobby, { clock, rng: seeded(), onChange: () => changes++, onTick: () => ticks++ });
+    const game = SiegeGame.fromLobby(lobby.handoffFacts("siege"), { clock, rng: seeded(), onChange: () => changes++, onTick: () => ticks++ });
     game.start();
     clock.advance(SIEGE_COUNTDOWN_MS + SIEGE_OPENING_MS);
     expect(game.phase).toBe("wave");
@@ -730,11 +730,11 @@ describe("endings", () => {
 
   test("Endless: waves survived, average difficulty and the record", () => {
     const clock = new FakeClock();
-    const lobby = new Game(quiz(), { clock });
+    const lobby = new Lobby(quiz());
     lobby.setMode("siege");
     lobby.setModeSettings("siege", { waves: "endless" });
     lobby.join("Ana");
-    const game = SiegeGame.fromLobby(lobby, { clock, rng: seeded(), record: { waves: 2, avgScale: 90, date: "2026-01-01" } });
+    const game = SiegeGame.fromLobby(lobby.handoffFacts("siege"), { clock, rng: seeded(), record: { waves: 2, avgScale: 90, date: "2026-01-01" } });
     game.start();
     clock.advance(SIEGE_COUNTDOWN_MS + SIEGE_OPENING_MS);
     for (let w = 1; w <= 3; w++) {
@@ -759,12 +759,12 @@ describe("endings", () => {
 
   test("Endless: a shorter run doesn't beat the record", () => {
     const clock = new FakeClock();
-    const lobby = new Game(quiz(), { clock });
+    const lobby = new Lobby(quiz());
     lobby.setMode("siege");
     lobby.setModeSettings("siege", { waves: "endless" });
     lobby.join("Ana");
     const record = { waves: 12, avgScale: 108, date: "2026-01-01" };
-    const game = SiegeGame.fromLobby(lobby, { clock, rng: seeded(), record });
+    const game = SiegeGame.fromLobby(lobby.handoffFacts("siege"), { clock, rng: seeded(), record });
     game.start();
     clock.advance(SIEGE_COUNTDOWN_MS + SIEGE_OPENING_MS);
     game.end();

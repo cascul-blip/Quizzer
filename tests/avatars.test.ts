@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import type { AccessoryId, AvatarId } from "../src/shared/avatars.ts";
 import { ACCESSORY_ART, AVATAR_ART } from "../src/client/shared/avatar-art.tsx";
-import { Game, GameError } from "../src/server/game/game.ts";
+import { GameError } from "../src/server/game/game.ts";
+import { Lobby } from "../src/server/game/lobby.ts";
 import { SubGame } from "../src/server/game/submarine.ts";
 import { TowerGame } from "../src/server/game/tower.ts";
 import { ACCESSORIES, AVATARS, AVATAR_SET, cleanAvatar, OFFERED_ACCESSORIES, OFFERED_AVATARS, randomAvatar } from "../src/shared/avatars.ts";
@@ -9,7 +10,7 @@ import { ACCESSORIES, AVATARS, AVATAR_SET, cleanAvatar, OFFERED_ACCESSORIES, OFF
 // Ids from whichever set is offered, so these tests pass with either AVATAR_SET.
 const [A1, A2, A3] = OFFERED_AVATARS.map((a) => a.id) as [AvatarId, AvatarId, AvatarId];
 const [, X1, X2, X3] = OFFERED_ACCESSORIES.map((a) => a.id) as [AccessoryId, AccessoryId, AccessoryId, AccessoryId];
-import { FakeClock, sampleQuiz } from "./helpers.ts";
+import { classicGame, FakeClock, sampleQuiz } from "./helpers.ts";
 
 describe("catalog", () => {
   test("a wide choice of unique ids, each with art", () => {
@@ -55,7 +56,7 @@ describe("catalog", () => {
 
 describe("in the lobby", () => {
   test("joining assigns a random avatar, or keeps the one the phone remembered", () => {
-    const game = new Game(sampleQuiz(), { clock: new FakeClock(), rng: () => 0 });
+    const game = classicGame(sampleQuiz(), { clock: new FakeClock(), rng: () => 0 });
     const a = game.join("A");
     expect(a.avatar).toEqual({ avatar: OFFERED_AVATARS[0]!.id, accessory: "none" });
     const b = game.join("B", { avatar: A1, accessory: X1 });
@@ -64,7 +65,7 @@ describe("in the lobby", () => {
 
   test("players can change their look until the game starts", () => {
     let changes = 0;
-    const game = new Game(sampleQuiz(), { clock: new FakeClock(), onChange: () => changes++ });
+    const game = classicGame(sampleQuiz(), { clock: new FakeClock(), onChange: () => changes++ });
     const p = game.join("A");
     const before = changes;
     game.setAvatar(p.id, A2, X2);
@@ -81,15 +82,14 @@ describe("in the lobby", () => {
   });
 
   test("the avatar carries over into Tallest Tower and Submarine Squad", () => {
-    for (const make of [(g: Game) => TowerGame.fromLobby(g, { clock: new FakeClock() }), (g: Game) => SubGame.fromLobby(g, { clock: new FakeClock() })]) {
-      const lobby = new Game(sampleQuiz(), { clock: new FakeClock() });
+    for (const make of [(g: Lobby) => TowerGame.fromLobby(g.handoffFacts("tower"), { clock: new FakeClock() }), (g: Lobby) => SubGame.fromLobby(g.handoffFacts("submarine"), { clock: new FakeClock() })]) {
+      const lobby = new Lobby(sampleQuiz());
       const p = lobby.join("A");
       lobby.setAvatar(p.id, A3, X3);
       const game = make(lobby);
       expect(game.players.get(p.id)!.avatar).toEqual({ avatar: A3, accessory: X3 });
       const view = game.playerView(p.id);
       expect(view && "me" in view && view.me.avatar).toEqual({ avatar: A3, accessory: X3 });
-      lobby.dispose();
       game.dispose();
     }
   });

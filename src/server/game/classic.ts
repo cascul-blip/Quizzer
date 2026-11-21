@@ -1,7 +1,7 @@
 import { answerOf } from "../../shared/answer-match.ts";
 import { MODE_NAMES } from "../../shared/mode-names.ts";
-import type { Game } from "./game.ts";
-import { unhandled, type ModeEntry } from "./mode-entry.ts";
+import { Game } from "./game.ts";
+import { handoffOptions, unhandled, type ModeEntry } from "./mode-entry.ts";
 import { toCsv } from "./results.ts";
 
 /** One row per player (by rank) with per-question answer, correctness, points and time. */
@@ -23,12 +23,20 @@ export function buildResultsCsv(game: Game): string {
   return toCsv([header, ...rows]);
 }
 
-/** Classic runs in the lobby's own Game: starting it starts the lobby in place. */
 export const classicMode: ModeEntry<"classic"> = {
   name: MODE_NAMES.classic,
+  lobbyControlError: (message) => message,
   defaultSettings: {},
   readSettings: () => ({}),
-  start: (lobby) => ({ game: lobby, log: null }),
+  start(lobby, ctx) {
+    const game = new Game(lobby.quiz, lobby.lobbyView, {
+      ...handoffOptions(ctx),
+      pacing: lobby.pacing,
+      shuffle: lobby.shuffle,
+    });
+    game.adoptPlayers(lobby.players);
+    return { game, log: null };
+  },
   pacing: (game) => game,
   teams: () => null,
   lobbyBanner: false,

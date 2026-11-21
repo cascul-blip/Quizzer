@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { PLAYER_MODES } from "../src/client/player/modes.tsx";
 import type { ModeMsg } from "../src/server/game/mode-entry.ts";
-import { Game } from "../src/server/game/game.ts";
+import { Lobby } from "../src/server/game/lobby.ts";
 import { MODES } from "../src/server/game/modes.ts";
 import { QuizStore } from "../src/server/quiz/store.ts";
 import { GameHub } from "../src/server/ws.ts";
@@ -185,7 +185,7 @@ describe("Game modes", () => {
       test.if("theme" in MODES[mode].defaultSettings)("an unknown carried-over theme becomes the default, but the host can't choose it", () => {
         const defaults = MODES[mode].defaultSettings;
         const stale = { ...CHANGED[mode], theme: "halloween" };
-        const lobby = new Game(store.get(quizId), { mode, settings: { [mode]: stale } as never });
+        const lobby = new Lobby(store.get(quizId), { mode, settings: { [mode]: stale } });
         const expected: unknown = { ...defaults, ...CHANGED[mode], theme: "theme" in defaults ? defaults.theme : undefined };
         expect<unknown>(lobby.settings[mode]).toEqual(expected);
         expect(() => lobby.setModeSettings(mode, stale)).toThrow(/^Unknown .* theme$/);
@@ -196,9 +196,13 @@ describe("Game modes", () => {
         send(host, { type: "host.start", pacing: "manual" });
         expect(errors(host)).toEqual([]);
         expect(hub.game!.phase).not.toBe("lobby");
-        for (const { playerId, token } of players) {
-          expect(hub.game!.players.has(playerId)).toBe(true);
-          expect(hub.game!.byToken(token)?.id).toBe(playerId);
+        for (const { phone, playerId, token } of players) {
+          phone.close();
+          const reconnected = new HubSocket(hub);
+          send(reconnected, { type: "resume", token });
+          expect(reconnected.raw).toContainEqual({ type: "joined", playerId, token, images: [] });
+          expect(reconnected.view?.kind).toBe(mode);
+          reconnected.close();
         }
       });
 

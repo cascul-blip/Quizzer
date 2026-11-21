@@ -37,7 +37,7 @@ function offending(pattern: RegExp, files: Source[] = sources): string[] {
   );
 }
 
-/** The classes that run a game mode, read from the game files: Game (Classic and the lobby) and every XGame. */
+/** The classes that run a game mode, read from the game files: Game (Classic) and every XGame. */
 const gameClasses = sources
   .filter(({ path }) => path.startsWith(join(SERVER, "game")))
   .flatMap(({ lines }) => lines.flatMap((line) => [...line.matchAll(/export class (\w*Game)\b/g)].map((m) => m[1]!)));
@@ -143,25 +143,13 @@ function srcFiles(dir: string): string[] {
 }
 
 /**
- * The server's mode entries and Game import each other: each XGame extends Game, and Game looks its mode up in MODES.
+ * The mode entries and their shared types import one another.
  * These cycles predate the check; remove a line when a refactor breaks its cycle. Add none.
  */
 const KNOWN_CYCLES = [
-  "src/server/game/classic.ts -> src/server/game/game.ts -> src/server/game/modes.ts -> src/server/game/classic.ts",
-  "src/server/game/cup.ts -> src/server/game/game.ts -> src/server/game/mode-entry.ts -> src/server/game/cup.ts",
   "src/server/game/cup.ts -> src/server/game/mode-entry.ts -> src/server/game/cup.ts",
-  "src/server/game/duel.ts -> src/server/game/game.ts -> src/server/game/mode-entry.ts -> src/server/game/duel.ts",
   "src/server/game/duel.ts -> src/server/game/mode-entry.ts -> src/server/game/duel.ts",
-  "src/server/game/fight.ts -> src/server/game/game.ts -> src/server/game/mode-entry.ts -> src/server/game/fight.ts",
   "src/server/game/fight.ts -> src/server/game/mode-entry.ts -> src/server/game/fight.ts",
-  "src/server/game/game.ts -> src/server/game/mode-entry.ts -> src/server/game/game.ts",
-  "src/server/game/game.ts -> src/server/game/mode-entry.ts -> src/server/game/gift.ts -> src/server/game/game.ts",
-  "src/server/game/game.ts -> src/server/game/mode-entry.ts -> src/server/game/land.ts -> src/server/game/game.ts",
-  "src/server/game/game.ts -> src/server/game/mode-entry.ts -> src/server/game/racer.ts -> src/server/game/game.ts",
-  "src/server/game/game.ts -> src/server/game/mode-entry.ts -> src/server/game/robot.ts -> src/server/game/game.ts",
-  "src/server/game/game.ts -> src/server/game/mode-entry.ts -> src/server/game/siege.ts -> src/server/game/game.ts",
-  "src/server/game/game.ts -> src/server/game/mode-entry.ts -> src/server/game/submarine.ts -> src/server/game/game.ts",
-  "src/server/game/game.ts -> src/server/game/mode-entry.ts -> src/server/game/tower.ts -> src/server/game/game.ts",
   "src/server/game/gift.ts -> src/server/game/mode-entry.ts -> src/server/game/gift.ts",
   "src/server/game/land.ts -> src/server/game/mode-entry.ts -> src/server/game/land.ts",
   "src/server/game/mode-entry.ts -> src/server/game/racer.ts -> src/server/game/mode-entry.ts",

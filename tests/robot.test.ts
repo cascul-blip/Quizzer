@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { Game } from "../src/server/game/game.ts";
+import { Lobby } from "../src/server/game/lobby.ts";
 import { buildRobotResultsCsv } from "../src/server/game/robot.ts";
 import { COUNTDOWN_MS, FEEDBACK_MS, RobotGame, spreadTile, type RobotPlayer } from "../src/server/game/robot.ts";
 import { ROBOT_ATTACK_MS, ROBOT_BOARD, ROBOT_LIVES, ROBOT_MOVE_MS, ROBOT_QUIZ_MIN_MS, ROBOT_WARN_MS, robotInBounds, robotQuizMs, robotRing } from "../src/shared/protocol.ts";
@@ -28,10 +28,10 @@ function seeded(seed = 42) {
 function setup(names: string[]) {
   const clock = new FakeClock();
   let finished = 0;
-  const lobby = new Game(quiz(), { clock });
+  const lobby = new Lobby(quiz());
   lobby.setMode("robot");
   for (const n of names) lobby.join(n);
-  const game = RobotGame.fromLobby(lobby, { clock, rng: seeded(), onFinish: () => finished++ });
+  const game = RobotGame.fromLobby(lobby.handoffFacts("robot"), { clock, rng: seeded(), onFinish: () => finished++ });
   game.start();
   clock.advance(COUNTDOWN_MS);
   expect(game.phase).toBe("quiz");

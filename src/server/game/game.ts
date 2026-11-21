@@ -1,8 +1,5 @@
-import { MODE_NAMES } from "../../shared/mode-names.ts";
 import {
-  type GameMode,
   type HostGameState,
-  type ModeSettingsMap,
   type Pacing,
   type Phase,
   type PlayerView,
@@ -11,14 +8,11 @@ import {
   type RankedEntry,
   type ShuffleOptions,
 } from "../../shared/protocol.ts";
-import { isSeasonTheme } from "../../shared/season-theme.ts";
 import { cleanAvatar, randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import { MAX_TYPED_ANSWER, checkAnswer, type AnswerValue } from "../../shared/answer-match.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
-import { AUTO_REVEAL_MS, GRACE_MS, GameError, assignTeams, preparePlayOrder, realClock, teamInfo, topErrors, type Clock } from "./common.ts";
+import { AUTO_REVEAL_MS, GRACE_MS, GameError, preparePlayOrder, realClock, topErrors, type Clock } from "./common.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
-import type { ModeEntry, RawSettings } from "./mode-entry.ts";
-import { MODES } from "./modes.ts";
 import { rankScores, scoreAnswer } from "./scoring.ts";
 
 export { AUTO_REVEAL_MS, GRACE_MS, GameError, preparePlayOrder, type Clock } from "./common.ts";
@@ -46,44 +40,6 @@ interface Player extends BasePlayer {
   answers: (Answer | undefined)[];
 }
 
-/**
- * Every mode's settings: the given ones where there are any (carried over from the last lobby), else the defaults.
- * They are taken as they are, except that a theme the server no longer knows becomes the mode's default theme.
- */
-function initialSettings(given: InitialSettings = {}): ModeSettingsMap {
-  const read = <M extends GameMode>(mode: M): ModeSettingsMap[M] => {
-    const defaults = MODES[mode].defaultSettings;
-    return knownTheme({ ...defaults, ...given[mode] }, defaults);
-  };
-  return {
-    classic: read("classic"),
-    tower: read("tower"),
-    submarine: read("submarine"),
-    fight: read("fight"),
-    robot: read("robot"),
-    land: read("land"),
-    racer: read("racer"),
-    cup: read("cup"),
-    siege: read("siege"),
-    duel: read("duel"),
-    gift: read("gift"),
-  };
-}
-
-/** The settings with an unknown theme replaced by the default one; settings without a theme stay as they are. */
-function knownTheme<S extends object>(settings: S, defaults: S): S {
-  if (!("theme" in settings) || isSeasonTheme(settings.theme) || !("theme" in defaults)) return settings;
-  return { ...settings, theme: defaults.theme };
-}
-
-/** The number of teams a mode plays in with the lobby's settings; null in a solo mode. */
-function teamsIn<M extends GameMode>(mode: M, settings: ModeSettingsMap): number | null {
-  const entry: ModeEntry<M> = MODES[mode];
-  return entry.teams(settings[mode]);
-}
-
-type InitialSettings = { [M in GameMode]?: Partial<ModeSettingsMap[M]> };
-
 interface GameOptions {
   clock?: Clock;
   rng?: () => number;
@@ -92,17 +48,10 @@ interface GameOptions {
   /** A player answered: the hub updates that phone at once and everyone else a moment later. Defaults to onChange. */
   onActivity?: (playerId: string) => void;
   onFinish?: (game: Game) => void;
-  /** Initial lobby choices (e.g. carried over from the previous game). */
-  mode?: GameMode;
-  settings?: InitialSettings;
-  protect?: boolean;
+  shuffle?: ShuffleOptions;
 }
 
-/**
- * A Classic game: lobby → (intro → open → reveal → leaderboard)* → podium.
- * It also serves as the lobby for every mode; in the other modes the hub
- * hands its players to that mode's game (TowerGame, SubGame, FightGame, RobotGame, LandGame, RacerGame, CupGame, SiegeGame, DuelGame, GiftGame) on start.
- */
+/** Classic gameplay, from the first question through the podium. */
 export class Game {
   readonly quiz: Quiz;
   readonly quizId: string;
@@ -113,14 +62,7 @@ export class Game {
   qIndex = -1;
   pacing: Pacing;
   shuffle: ShuffleOptions;
-  /** "Protect from abuse": Tallest Tower, Submarine Squad, Tower Fight, Robot Attack, Cup of Death, Kingdom Siege and Gift Grab slow down players who keep answering wrong. */
-  protect: boolean;
-  /** The mode the host has chosen in the lobby, which starting the game hands the players to. */
-  mode: GameMode;
-  /** The mode this game runs: a Game plays Classic, also while it is the lobby for another mode. */
   readonly runningMode = "classic" as const;
-  /** The lobby's mode settings for every game mode, so switching modes keeps each one's choices. */
-  settings: ModeSettingsMap;
   /** When the current phase's countdown ends (intro/open), for views. */
   phaseEndsAt = 0;
   openedAt = 0;
@@ -130,31 +72,29 @@ export class Game {
   private readonly rng: () => number;
   private readonly source: Question[];
   private timer: unknown = null;
-  /** Team per player id once the host has dragged someone in the lobby; null = round-robin by join order. */
-  private manualTeams: Map<string, number> | null = null;
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: Game) => void;
   /** Set while views are built in a batch: what every phone's view shares, computed once. */
-  private batch: { ranked?: (Player & { rank: number })[]; rankById?: Map<string, number>; podium?: RankedEntry[]; teams?: Map<string, number> } | null = null;
+  private batch: { ranked?: (Player & { rank: number })[]; rankById?: Map<string, number>; podium?: RankedEntry[] } | null = null;
 
-  constructor(quiz: Quiz, opts: GameOptions = {}) {
+  constructor(
+    quiz: Quiz,
+    private readonly lobbyChoices: Pick<HostGameState, "mode" | "settings" | "protect">,
+    opts: GameOptions = {},
+  ) {
     this.quiz = quiz;
     this.quizId = quiz.id;
     this.title = quiz.title;
     this.source = quiz.questions;
     this.questions = preparePlayOrder(quiz.questions, { questions: false, answers: false });
-    this.shuffle = { questions: quiz.settings.shuffleQuestions, answers: quiz.settings.shuffleAnswers };
+    this.shuffle = opts.shuffle ?? { questions: quiz.settings.shuffleQuestions, answers: quiz.settings.shuffleAnswers };
     this.rng = opts.rng ?? Math.random;
     this.clock = opts.clock ?? realClock;
     this.pacing = opts.pacing ?? "manual";
     this.onChange = opts.onChange ?? (() => {});
     this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
-    this.mode = opts.mode ?? "classic";
-    // Carried-over settings may name a theme this server doesn't know: it quietly becomes the mode's default, unlike in setModeSettings.
-    this.settings = initialSettings(opts.settings);
-    this.protect = opts.protect ?? true;
   }
 
   get players(): Map<string, Player> {
@@ -170,9 +110,13 @@ export class Game {
   /** `avatar` is the player's previous pick (if any); otherwise they get a random one to change in the lobby. */
   join(rawNickname: unknown, avatar?: AvatarChoice | null): Player {
     if (this.phase === "podium") throw new GameError("This game has finished");
-    const player = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), (base) => ({ ...base, score: 0, lastDelta: 0, streak: 0, answers: [] }));
+    const player = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), newPlayer);
     this.onChange();
     return player;
+  }
+
+  adoptPlayers(players: Iterable<BasePlayer>): void {
+    this.roster.adoptFrom(players, newPlayer);
   }
 
   byToken(token: unknown): Player | null {
@@ -235,73 +179,6 @@ export class Game {
   setShuffle(opts: ShuffleOptions): void {
     if (this.phase !== "lobby") throw new GameError("Shuffle can only be changed before the game starts");
     this.shuffle = { questions: !!opts.questions, answers: !!opts.answers };
-    this.onChange();
-  }
-
-  setProtect(on: boolean): void {
-    if (this.phase !== "lobby") throw new GameError("Protect from abuse can only be changed before the game starts");
-    this.protect = !!on;
-    this.onChange();
-  }
-
-  setMode(mode: GameMode): void {
-    if (this.phase !== "lobby") throw new GameError("The game mode can only be changed before the game starts");
-    if (!Object.hasOwn(MODE_NAMES, mode)) throw new GameError("Unknown game mode");
-    this.mode = mode;
-    this.onChange();
-  }
-
-  /** Change one mode's settings in the lobby; a partial change keeps the rest (and the theme) as they are. */
-  setModeSettings(mode: GameMode, raw: unknown): void {
-    if (!Object.hasOwn(MODES, mode)) throw new GameError("Unknown game mode");
-    this.applySettings(mode, raw && typeof raw === "object" ? (raw as RawSettings) : {});
-  }
-
-  private applySettings<M extends GameMode>(mode: M, raw: RawSettings): void {
-    const entry: ModeEntry<M> = MODES[mode];
-    if (this.phase !== "lobby") throw new GameError(`${entry.name} settings can only be changed before the game starts`);
-    this.settings[mode] = entry.readSettings(raw, this.settings[mode]);
-    this.onChange();
-  }
-
-  /** Teams in the lobby preview, as the selected mode's entry gives them for its settings; null in solo modes. */
-  teamCount(): number | null {
-    return teamsIn(this.mode, this.settings);
-  }
-
-  /** Team index per player: round-robin by join order until the host moves someone, then the host's arrangement (newcomers join the smallest team). */
-  teamAssignment(): Map<string, number> {
-    const ids = [...this.players.keys()];
-    const count = this.teamCount() ?? 1;
-    const manual = this.manualTeams;
-    if (!manual) {
-      const teams = assignTeams(ids.length, count);
-      return new Map(ids.map((id, i) => [id, teams[i]!]));
-    }
-    // Solo modes have no teams: leave the arrangement alone for when a team mode comes back.
-    if (this.teamCount() === null) return new Map(ids.map((id) => [id, 0]));
-    for (const id of [...manual.keys()]) if (!this.players.has(id)) manual.delete(id);
-    const fits = (id: string) => (manual.get(id) ?? count) < count;
-    const sizes = Array<number>(count).fill(0);
-    for (const id of ids) if (fits(id)) sizes[manual.get(id)!]!++;
-    for (const id of ids) {
-      if (fits(id)) continue;
-      const team = sizes.indexOf(Math.min(...sizes));
-      sizes[team]!++;
-      manual.set(id, team);
-    }
-    return new Map(ids.map((id) => [id, manual.get(id)!]));
-  }
-
-  /** Move one player to another team in the lobby; everyone else stays where they are shown. */
-  setTeam(playerId: string, team: number): void {
-    if (this.phase !== "lobby") throw new GameError("Teams can only be changed before the game starts");
-    const count = this.teamCount();
-    if (count === null) throw new GameError("This game mode has no teams");
-    if (!Number.isInteger(team) || team < 0 || team >= count) throw new GameError("Unknown team");
-    if (!this.players.has(playerId)) throw new GameError("Unknown player");
-    this.manualTeams ??= this.teamAssignment();
-    this.manualTeams.set(playerId, team);
     this.onChange();
   }
 
@@ -469,25 +346,14 @@ export class Game {
     const q = this.currentQuestion;
     const answered = [...this.players.values()].map((p) => p.answers[this.qIndex]).filter((a): a is Answer => !!a);
     const hostPlayer = (p: Player) => ({ id: p.id, nickname: p.nickname, avatar: p.avatar, score: p.score, connected: p.connected });
-    let teams: HostGameState["teams"] = null;
-    const teamCount = this.teamCount();
-    if (this.phase === "lobby" && teamCount !== null) {
-      const preview = this.teamAssignment();
-      teams = Array.from({ length: teamCount }, (_, i) => ({
-        ...teamInfo(i),
-        members: [...this.players.values()].filter((p) => preview.get(p.id) === i).map(hostPlayer),
-      }));
-    }
     return {
       kind: "classic",
       phase: this.phase,
-      mode: this.mode,
-      settings: this.settings,
-      teams,
+      ...this.lobbyChoices,
+      teams: null,
       quiz: { id: this.quizId, title: this.title, questionCount: this.questions.length },
       pacing: this.pacing,
       shuffle: this.shuffle,
-      protect: this.protect,
       players: [...this.players.values()].map(hostPlayer),
       question: this.questionView(),
       correct: this.revealed && q ? q.correct : null,
@@ -501,7 +367,7 @@ export class Game {
 
   /**
    * Build many views in one go (a broadcast). Nothing changes in between, so the ranking,
-   * the podium and the team map are worked out once instead of once per phone.
+   * and the podium are worked out once instead of once per phone.
    */
   viewBatch<T>(build: () => T): T {
     if (this.batch) return build();
@@ -543,8 +409,11 @@ export class Game {
           ? { choice: ans && ans.option >= 0 ? ans.option : null, correct: q.correct, wasCorrect: !!ans?.correct, points: ans?.points ?? 0 }
           : null,
       podium: this.phase === "podium" ? (this.batch ? (this.batch.podium ??= this.leaderboard(5)) : this.leaderboard(5)) : null,
-      team: this.phase === "lobby" && this.teamCount() !== null ? teamInfo((this.batch ? (this.batch.teams ??= this.teamAssignment()) : this.teamAssignment()).get(p.id) ?? 0) : null,
-      ...(this.phase === "lobby" && MODES[this.mode].lobbyBanner ? { banner: this.mode } : {}),
+      team: null,
     };
   }
+}
+
+function newPlayer(base: BasePlayer): Player {
+  return { ...base, score: 0, lastDelta: 0, streak: 0, answers: [] };
 }

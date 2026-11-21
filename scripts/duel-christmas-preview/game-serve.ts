@@ -1,15 +1,15 @@
 import { resolve } from "node:path";
-import { Game } from "../../src/server/game/game.ts";
+import { Lobby } from "../../src/server/game/lobby.ts";
 import { DuelGame, INTRO_MS } from "../../src/server/game/duel.ts";
 import { FakeClock, sampleQuiz } from "../../tests/helpers.ts";
 const clock = new FakeClock();
-const lobby = new Game(sampleQuiz({ title: "North Pole Snowball Showdown" }), { clock });
+const lobby = new Lobby(sampleQuiz({ title: "North Pole Snowball Showdown" }));
 lobby.setMode("duel");
 const avatars = ["penguin", "polarbear", "cat", "reindeer", "snowman", "robot", "fox", "bear", "kid1"] as const;
 for (const [i, name] of ["Holly", "Noel", "Ivy", "Nicholas", "Robin", "Carol", "Frost", "Rudolph", "Snowdrop"].entries()) {
   const p = lobby.join(name); p.avatar = { avatar: avatars[i]!, accessory: "none" };
 }
-const game = DuelGame.fromLobby(lobby, { clock, rng: () => .99999 });
+const game = DuelGame.fromLobby(lobby.handoffFacts("duel"), { clock, rng: () => .99999 });
 game.start();
 const phoneId = [...game.players.keys()][1]!;
 const fixture: Record<string, unknown> = {};

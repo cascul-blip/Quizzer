@@ -57,7 +57,7 @@ import {
 import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import { GameError, realClock, type Clock } from "./common.ts";
-import type { Game } from "./game.ts";
+import type { LobbyFacts } from "./lobby-facts.ts";
 import { Roster, type BasePlayer } from "./roster.ts";
 import { QuestionStream, newStreamPlayer, type StreamPlayer } from "./stream.ts";
 import { loadSiegeRecord, saveSiegeRecord } from "../siege-records.ts";
@@ -265,9 +265,9 @@ export class SiegeGame {
   }
 
   /** Take over a lobby's players (same ids and tokens). */
-  static fromLobby(lobby: Game, opts: SiegeOptions = {}, protect = lobby.protect): SiegeGame {
-    const game = new SiegeGame(lobby.quiz, { ...lobby.settings.siege, shuffleAnswers: lobby.shuffle.answers, protect }, opts);
-    game.roster.adoptFrom(lobby.players.values(), (base) => game.newPlayer(base));
+  static fromLobby(lobby: LobbyFacts<"siege">, opts: SiegeOptions = {}): SiegeGame {
+    const game = new SiegeGame(lobby.quiz, { ...lobby.settings, shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
+    game.roster.adoptFrom(lobby.players, (base) => game.newPlayer(base));
     return game;
   }
 
@@ -1133,8 +1133,8 @@ export const siegeMode: ModeEntry<"siege"> = {
     const game = SiegeGame.fromLobby(lobby, {
       ...handoffOptions(ctx),
       onTick: ctx.onTick,
-      record: lobby.settings.siege.waves === "endless" ? loadSiegeRecord(ctx.dataDir, lobby.quizId) : null,
-    }, ctx.protect);
+      record: lobby.settings.waves === "endless" ? loadSiegeRecord(ctx.dataDir, lobby.quiz.id) : null,
+    });
     const waves = game.settings.waves;
     return { game, log: `${this.name} started with ${game.players.size} player(s), ${waves === "endless" ? "Endless" : `${waves} waves`}` };
   },
