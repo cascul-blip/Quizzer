@@ -1,4 +1,5 @@
-import type { ClientMsg, Pacing } from "../shared/protocol.ts";
+import type { ClientMsg } from "../shared/protocol.ts";
+import type { Pacing } from "../shared/mode-views.ts";
 import type { Quiz } from "../shared/quiz-schema.ts";
 import { GameError } from "./game/common.ts";
 import { Lobby, type HandoffOptions, type LobbyChoices } from "./game/lobby.ts";

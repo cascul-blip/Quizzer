@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import type { ClientMsg, PlayerRacerView, RacerConfidence, RacerTurn } from "../../shared/protocol.ts";
+import type { ClientMsg } from "../../shared/protocol.ts";
+import type { PlayerRacerView, RacerTurn } from "../../shared/modes/racer.ts";
+import type { RacerConfidence } from "../../shared/racer-rules.ts";
 import { RACER_CONFIDENCE, RACER_CONFIDENCE_LEVELS } from "../../shared/racer-rules.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { RacerScene } from "../shared/racer-art.tsx";

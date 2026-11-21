@@ -1,6 +1,7 @@
 import { useEffect, useState } from "preact/hooks";
 import { MODE_FLAGS } from "../../shared/mode-flags.ts";
-import type { GameMode, HostPlayer, HostView, Pacing } from "../../shared/protocol.ts";
+import type { GameMode, HostPlayer, HostView } from "../../shared/protocol.ts";
+import type { Pacing } from "../../shared/mode-views.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { teamVars } from "../shared/ui.tsx";
 import { ScreenControls, toggleFullscreen, type Send } from "./common.tsx";

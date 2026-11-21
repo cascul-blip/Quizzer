@@ -1,6 +1,7 @@
 import { racerName, racerTheme, type RacerTheme } from "../../shared/racer-theme.ts";
 import { useEffect, useRef, useState } from "preact/hooks";
-import type { HostView, RacerTurn } from "../../shared/protocol.ts";
+import type { HostView } from "../../shared/protocol.ts";
+import type { RacerTurn } from "../../shared/modes/racer.ts";
 import { RACER_CONFIDENCE, RACER_CONFIDENCE_LEVELS, RACER_REPAIR_MPH } from "../../shared/racer-rules.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { RacerScene } from "../shared/racer-art.tsx";

@@ -1,13 +1,11 @@
-import {
-  type HostGameState,
-  type Pacing,
-  type Phase,
-  type PlayerView,
-  type QuestionView,
-  type RankedEntry,
-  type ShuffleOptions,
+import type {
+  HostGameState,
+  Phase,
+  PlayerView,
+  RankedEntry,
+  ShuffleOptions,
 } from "../../shared/protocol.ts";
-import type { QuestionError } from "../../shared/mode-views.ts";
+import type { Pacing, QuestionView, QuestionError } from "../../shared/mode-views.ts";
 import { cleanAvatar, randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import { MAX_TYPED_ANSWER, checkAnswer, type AnswerValue } from "../../shared/answer-match.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
