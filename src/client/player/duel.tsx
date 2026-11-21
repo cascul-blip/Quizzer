@@ -1,7 +1,8 @@
 import { duelArenaName, duelTheme, type DuelTheme } from "../../shared/duel-theme.ts";
 import { SnowballScene, preloadSnowballArt } from "../shared/duel-christmas.tsx";
 import { useEffect, useState } from "preact/hooks";
-import type { ClientMsg, DuelArenaResult, DuelistResult, DuelPlayerRef, PlayerDuelView } from "../../shared/protocol.ts";
+import type { ClientMsg } from "../../shared/protocol.ts";
+import type { DuelArenaResult, DuelistResult, DuelPlayerRef, PlayerDuelView } from "../../shared/modes/duel.ts";
 import { DuelStreet, Duelist, DustPuff, GunSmoke, MuzzleFlash, WantedPoster } from "../shared/duel-art.tsx";
 import { PinBoard, PinDragger } from "../shared/pin.tsx";
 import { LockedChoice, Shape, TextAnswer, optionColor, ordinal, useCountdown } from "../shared/ui.tsx";

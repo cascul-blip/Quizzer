@@ -4,7 +4,8 @@ import { SnowballLobbyPreview, SnowballScene, preloadSnowballArt, snowballBackgr
 import type { JSX } from "preact";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import type { AvatarChoice } from "../../shared/avatars.ts";
-import { DUEL_ROUNDS, type DuelArena, type DuelArenaResult, type DuelistResult, type HostView } from "../../shared/protocol.ts";
+import { DUEL_ROUNDS, type DuelArena, type DuelArenaResult, type DuelistResult } from "../../shared/modes/duel.ts";
+import type { HostView } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import {
   BulletStreak,

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { AvatarChoice } from "../../shared/avatars.ts";
-import type { DuelArenaResult, DuelPlayerRef } from "../../shared/protocol.ts";
+import type { DuelArenaResult, DuelPlayerRef } from "../../shared/modes/duel.ts";
 import { SNOW_END_MS, SNOW_IMPACT_MS, SNOW_PUFF_MS, SNOW_RELEASE_MS, snowballFrame, snowballShots } from "../../shared/duel-snowball.ts";
 import { Avatar } from "./avatar-art.tsx";
 import { isPhoneArt } from "./phone-art.ts";

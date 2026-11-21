@@ -9,10 +9,10 @@ import type {
   HostDuelPlayer,
   HostDuelState,
   PlayerDuelView,
-  ShuffleOptions,
-} from "../../shared/protocol.ts";
+} from "../../shared/modes/duel.ts";
+import type { ShuffleOptions } from "../../shared/protocol.ts";
 import type { Pacing, QuestionView, QuestionError, SubAward } from "../../shared/mode-views.ts";
-import { DUEL_DEFAULT_ROUNDS, DUEL_ROUNDS } from "../../shared/protocol.ts";
+import { DUEL_DEFAULT_ROUNDS, DUEL_ROUNDS } from "../../shared/modes/duel.ts";
 import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import { MAX_TYPED_ANSWER, checkAnswer, type AnswerValue, answerOf } from "../../shared/answer-match.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";

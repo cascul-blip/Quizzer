@@ -1,6 +1,7 @@
 import { render } from "preact";
 import { useState } from "preact/hooks";
-import type { HostDuelState, HostView, PlayerDuelView, DuelPhase } from "../../src/shared/protocol.ts";
+import type { HostDuelState, PlayerDuelView, DuelPhase } from "../../src/shared/modes/duel.ts";
+import type { HostView } from "../../src/shared/protocol.ts";
 import type { DuelTheme } from "../../src/shared/duel-theme.ts";
 import { DuelStage } from "../../src/client/host/duel.tsx";
 import { DuelPlayer } from "../../src/client/player/duel.tsx";
