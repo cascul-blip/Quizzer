@@ -16,8 +16,8 @@ import {
   type PlayerLandView,
   LAND_MINUTES,
   LAND_MIN_TEAMS,
-  MAX_TEAMS,
-} from "../../shared/protocol.ts";
+} from "../../shared/modes/land.ts";
+import { MAX_TEAMS } from "../../shared/protocol.ts";
 import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import { EMPTY, enclosedBy, landBoardSize, placementCost, startTiles, type LandStart } from "../../shared/land-board.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";

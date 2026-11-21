@@ -3,7 +3,7 @@ import { Lobby } from "../src/server/game/lobby.ts";
 import { CONQUEST_MS, COUNTDOWN_MS, FEEDBACK_MS, LandGame, type LandPlayer } from "../src/server/game/land.ts";
 import { buildLandResultsCsv } from "../src/server/game/land.ts";
 import { EMPTY, hexDistance, neighbors } from "../src/shared/land-board.ts";
-import { LAND_EMPTY_MS } from "../src/shared/protocol.ts";
+import { LAND_EMPTY_MS } from "../src/shared/modes/land.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
 import { FakeClock, sampleQuiz } from "./helpers.ts";
 

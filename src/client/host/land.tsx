@@ -1,6 +1,7 @@
 import { LandThemeProvider, useNorthPole, northPoleArt } from "../shared/land-skin.tsx";
 import { useEffect, useRef, useState } from "preact/hooks";
-import { LAND_GUARD_COST, LAND_MINUTES, LAND_MIN_TEAMS, LAND_STEAL_COST, MAX_TEAMS, type HostLandTeam, type HostView, type LandBoard } from "../../shared/protocol.ts";
+import { LAND_GUARD_COST, LAND_MINUTES, LAND_MIN_TEAMS, LAND_STEAL_COST, type HostLandTeam, type LandBoard } from "../../shared/modes/land.ts";
+import { MAX_TEAMS, type HostView } from "../../shared/protocol.ts";
 import { captureThreat } from "../../shared/land-board.ts";
 import { landTheme, type LandTheme } from "../../shared/land-theme.ts";
 import { BANNER_CAPTURE, BANNER_KNOCKOUT, HexBoard, LandShape, Plinth, landArt, useBanner, useTeamCard } from "../shared/land-art.tsx";
