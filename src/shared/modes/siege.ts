@@ -1,5 +1,5 @@
 import type { AvatarChoice } from "../avatars.ts";
-import type { QuestionError, StreamFeedbackView, StreamQuestionView, SubAward } from "../mode-views.ts";
+import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward } from "../mode-views.ts";
 import type { SiegeDefenderType, SiegeMonsterType, SiegeWaves } from "../siege-rules.ts";
 import type { SiegeTheme } from "../siege-theme.ts";
 
@@ -186,3 +186,13 @@ export interface PlayerSiegeView {
     awards: string[];
   } | null;
 }
+
+/** What a phone sends during Kingdom Siege games. */
+export type SiegeMsg =
+  | StreamAnswerMsg<"siege">
+  /** Place a defender. lane 0–4 (top first), square 1–7 (1 = next to the castle wall). */
+  | { type: "siege.place"; defender: SiegeDefenderType; lane: number; square: number }
+  /** Upgrade the defender on that square one level. */
+  | { type: "siege.upgrade"; lane: number; square: number }
+  /** The lane map opened or closed, so the server only sends its contents while it is open. */
+  | { type: "siege.map"; open: boolean };

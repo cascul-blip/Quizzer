@@ -1,5 +1,5 @@
 import type { AvatarChoice } from "../avatars.ts";
-import type { QuestionError, StreamFeedbackView, StreamQuestionView, SubAward } from "../mode-views.ts";
+import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward } from "../mode-views.ts";
 
 // Robot Attack protocol types.
 
@@ -116,3 +116,6 @@ export interface PlayerRobotView {
   lastAttack: { seq: number; hit: boolean; eliminated: boolean } | null;
   result: { rank: number; playerCount: number; won: boolean; outRound: number | null; awards: string[] } | null;
 }
+
+/** What a phone sends during Robot Attack games. */
+export type RobotMsg = StreamAnswerMsg<"robot"> | { type: "robot.move"; dir: RobotDir };

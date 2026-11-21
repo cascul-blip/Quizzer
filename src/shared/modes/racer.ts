@@ -1,5 +1,5 @@
 import type { AvatarChoice } from "../avatars.ts";
-import type { Pacing, QuestionError, QuestionView, SubAward } from "../mode-views.ts";
+import type { PacedAnswerMsg, Pacing, QuestionError, QuestionView, SubAward } from "../mode-views.ts";
 import type { RacerCar, RacerConfidence, RacerTurnResult } from "../racer-rules.ts";
 import type { RacerTheme } from "../racer-theme.ts";
 
@@ -149,3 +149,12 @@ export interface PlayerRacerView {
   /** Podium only: the shared result and the titles of the awards this player won. Their own numbers are in `me`. */
   result: (RacerResult & { awards: string[] }) | null;
 }
+
+/** What a phone sends during Racer games. */
+export type RacerMsg =
+  /** Driver only, confidence phase only: move the lever (everyone sees it move). */
+  | { type: "racer.lever"; level: RacerConfidence }
+  /** Driver only, confidence phase only: lock the lever where it is and open the question. */
+  | { type: "racer.go" }
+  /** Open phase only. One answer per player per question. */
+  | PacedAnswerMsg<"racer">;

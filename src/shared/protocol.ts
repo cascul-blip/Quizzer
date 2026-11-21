@@ -1,17 +1,15 @@
 import type { AvatarChoice } from "./avatars.ts";
 import type { Pacing, QuestionError, QuestionView, TeamInfo } from "./mode-views.ts";
-import type { CupPhase, CupSettings, HostCupState, PlayerCupView } from "./modes/cup.ts";
-import type { DuelPhase, DuelSettings, HostDuelState, PlayerDuelView } from "./modes/duel.ts";
-import type { FightPhase, FightSettings, HostFightState, PlayerFightView } from "./modes/fight.ts";
-import type { GiftPhase, GiftSettings, HostGiftState, PlayerGiftView } from "./modes/gift.ts";
-import type { HostLandState, LandPhase, LandSettings, PlayerLandView } from "./modes/land.ts";
-import type { HostRacerState, PlayerRacerView, RacerPhase, RacerSettings } from "./modes/racer.ts";
-import type { HostRobotState, PlayerRobotView, RobotDir, RobotPhase } from "./modes/robot.ts";
-import type { HostSiegeState, PlayerSiegeView, SiegePhase, SiegeSettings } from "./modes/siege.ts";
-import type { HostSubState, PlayerSubView, SubPhase } from "./modes/submarine.ts";
-import type { HostTowerState, PlayerTowerView, TowerPhase, TowerSettings } from "./modes/tower.ts";
-import type { RacerConfidence } from "./racer-rules.ts";
-import type { SiegeDefenderType } from "./siege-rules.ts";
+import type { CupMsg, CupPhase, CupSettings, HostCupState, PlayerCupView } from "./modes/cup.ts";
+import type { DuelMsg, DuelPhase, DuelSettings, HostDuelState, PlayerDuelView } from "./modes/duel.ts";
+import type { FightMsg, FightPhase, FightSettings, HostFightState, PlayerFightView } from "./modes/fight.ts";
+import type { GiftMsg, GiftPhase, GiftSettings, HostGiftState, PlayerGiftView } from "./modes/gift.ts";
+import type { HostLandState, LandMsg, LandPhase, LandSettings, PlayerLandView } from "./modes/land.ts";
+import type { HostRacerState, PlayerRacerView, RacerMsg, RacerPhase, RacerSettings } from "./modes/racer.ts";
+import type { HostRobotState, PlayerRobotView, RobotMsg, RobotPhase } from "./modes/robot.ts";
+import type { HostSiegeState, PlayerSiegeView, SiegeMsg, SiegePhase, SiegeSettings } from "./modes/siege.ts";
+import type { HostSubState, PlayerSubView, SubMsg, SubPhase } from "./modes/submarine.ts";
+import type { HostTowerState, PlayerTowerView, TowerMsg, TowerPhase, TowerSettings } from "./modes/tower.ts";
 import type { PatchOp } from "./view-patch.ts";
 
 export type Phase = "lobby" | "intro" | "open" | "reveal" | "leaderboard" | "podium";
@@ -50,41 +48,16 @@ export type PlayerMsg =
   | { type: "resume"; token: string }
   /** Typed questions send `text` (the typed answer) and ignore `option`. */
   | { type: "answer"; qIndex: number; option: number; text?: string }
-  | { type: "tower.answer"; seq: number; option: number; text?: string }
-  | { type: "tower.drop"; zone: number }
-  | { type: "sub.answer"; seq: number; option: number; text?: string }
-  | { type: "sub.boost" }
-  | { type: "sub.tap"; symbol: string }
-  | { type: "fight.answer"; seq: number; option: number; text?: string }
-  | { type: "fight.choose"; action: "attack" | "rebuild" }
-  /** The slingshot pull in field units (y up); the shot flies the opposite way. */
-  | { type: "fight.fire"; dx: number; dy: number }
-  | { type: "robot.answer"; seq: number; option: number; text?: string }
-  | { type: "robot.move"; dir: RobotDir }
-  | { type: "gift.answer"; seq: number; option: number; text?: string }
-  | { type: "gift.tap"; round: number; item: number }
-  | { type: "land.answer"; seq: number; option: number; text?: string }
-  | { type: "land.place"; tile: number }
-  /** Leave the land early; unused claims are kept for next time. */
-  | { type: "land.done" }
-  /** Racer, driver only, confidence phase only: move the lever (everyone sees it move). */
-  | { type: "racer.lever"; level: RacerConfidence }
-  /** Racer, driver only, confidence phase only: lock the lever where it is and open the question. */
-  | { type: "racer.go" }
-  /** Racer, open phase: `index` is the question's index (QuestionView.index), as `qIndex` in the classic "answer". One answer per player per question. */
-  | { type: "racer.answer"; index: number; option: number; text?: string }
-  /** Showdown, open phase: `index` is the question's index (QuestionView.index), as in racer.answer. One answer per player per round. */
-  | { type: "duel.answer"; index: number; option: number; text?: string }
-  | { type: "cup.answer"; seq: number; option: number; text?: string }
-  /** Cup of Death, drink phase, drinkers only: pick one of your remaining cups (0-based, left to right). Final once sent. */
-  | { type: "cup.pick"; cup: number }
-  | { type: "siege.answer"; seq: number; option: number; text?: string }
-  /** Kingdom Siege: place a defender. lane 0–4 (top first), square 1–7 (1 = next to the castle wall). */
-  | { type: "siege.place"; defender: SiegeDefenderType; lane: number; square: number }
-  /** Kingdom Siege: upgrade the defender on that square one level. */
-  | { type: "siege.upgrade"; lane: number; square: number }
-  /** Kingdom Siege: the lane map opened or closed, so the server only sends its contents while it is open. */
-  | { type: "siege.map"; open: boolean };
+  | TowerMsg
+  | SubMsg
+  | FightMsg
+  | RobotMsg
+  | GiftMsg
+  | LandMsg
+  | RacerMsg
+  | DuelMsg
+  | CupMsg
+  | SiegeMsg;
 
 /** A game mode without mode settings. */
 export type NoSettings = Record<string, never>;

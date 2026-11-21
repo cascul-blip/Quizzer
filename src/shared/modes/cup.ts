@@ -1,6 +1,6 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { CupTheme } from "../cup-theme.ts";
-import type { QuestionError, StreamFeedbackView, StreamQuestionView, SubAward } from "../mode-views.ts";
+import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward } from "../mode-views.ts";
 
 // Cup of Death protocol types.
 
@@ -136,3 +136,9 @@ export interface PlayerCupView {
   alive: number;
   result: { rank: number; playerCount: number; won: boolean; outRound: number | null; awards: string[] } | null;
 }
+
+/** What a phone sends during Cup of Death games. */
+export type CupMsg =
+  | StreamAnswerMsg<"cup">
+  /** Drink phase, drinkers only: pick one of your remaining cups (0-based, left to right). Final once sent. */
+  | { type: "cup.pick"; cup: number };

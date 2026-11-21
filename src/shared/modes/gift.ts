@@ -1,6 +1,6 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { GiftItem, GiftPower } from "../gift-rules.ts";
-import type { QuestionError, StreamFeedbackView, StreamQuestionView } from "../mode-views.ts";
+import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView } from "../mode-views.ts";
 
 // Gift Grab protocol types.
 
@@ -56,3 +56,6 @@ export interface PlayerGiftView {
     power: GiftPower | null;
   } | null;
 }
+
+/** What a phone sends during Gift Grab games. */
+export type GiftMsg = StreamAnswerMsg<"gift"> | { type: "gift.tap"; round: number; item: number };

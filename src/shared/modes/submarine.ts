@@ -1,5 +1,5 @@
 import type { AvatarChoice } from "../avatars.ts";
-import type { QuestionError, StreamFeedbackView, StreamQuestionView, SubAward } from "../mode-views.ts";
+import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward } from "../mode-views.ts";
 
 // Submarine Squad protocol types.
 
@@ -70,3 +70,6 @@ export interface PlayerSubView {
     | null;
   result: { depth: number; level: number; awards: string[] } | null;
 }
+
+/** What a phone sends during Submarine Squad games. */
+export type SubMsg = StreamAnswerMsg<"sub"> | { type: "sub.boost" } | { type: "sub.tap"; symbol: string };

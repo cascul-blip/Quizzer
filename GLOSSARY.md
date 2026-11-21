@@ -24,6 +24,14 @@ _Avoid_: mode config, mode registration
 Kingdom Siege's lanes and squares, with the defenders players place on them, the monsters marching down them, and the castle's hearts. The battlefield decides who hits whom and what may stand where; the projector and the phone's lane map both show it.
 _Avoid_: board, map (the phone's lane map is only a view of it)
 
+**Streamed question**:
+A question one player gets on their own phone in a self-paced game mode, such as Tallest Tower or Kingdom Siege. Each player moves through questions at their own speed, and an answer names the question by its sequence number.
+_Avoid_: self-paced question, stream question
+
+**Paced question**:
+A question the whole game answers together, opened and closed for everyone at once, as in Classic, Racer and Showdown. An answer names the question by its index in the quiz.
+_Avoid_: shared question, round question
+
 **Lobby handoff** is the transition that carries the players who joined the lobby into the selected game when the host presses Start. Each player keeps their identity and can reconnect to the game from their phone.
 
 **Join information** is where players join: the address the host selected, the join URL built from it and the port, and the QR code for that URL. The projector, the host's `/api/info` and the startup output show the same join information.
