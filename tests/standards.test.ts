@@ -88,6 +88,20 @@ function describeTempDirs(text: string): number[] {
   return matches;
 }
 
+/** The multi-word _Avoid_ phrases in GLOSSARY.md, such as "results CSV". Single words like "board" have legitimate other uses, so the reviewer judges those. */
+const AVOIDED_PHRASES = [...readFileSync(join(ROOT, "GLOSSARY.md"), "utf8").matchAll(/^_Avoid_: (.*)$/gm)].flatMap((m) =>
+  m[1]!
+    .replace(/\(.*?\)/g, "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.includes(" ")),
+);
+
+/** The titles of every test and describe block in the file. */
+function titles(text: string): string[] {
+  return [...text.matchAll(/\b(?:test|describe)\((["'`])(.*?)\1/g)].map((m) => m[2]!);
+}
+
 const testFiles = readdirSync(join(ROOT, "tests"))
   // This file is left out: its guard checks quote the pattern.
   .filter((name) => /\.test\.tsx?$/.test(name) && name !== "standards.test.ts")
@@ -128,6 +142,20 @@ describe("Coding standards: tests", () => {
     expect(describeTempDirs('  describe("hub", () => {\n    let t;\n    t = tempDir();\n  });')).toEqual([3]);
     expect(describeTempDirs('describe("hub", () => {\n  beforeEach(() => {\n    t = tempDir();\n  });\n});')).toEqual([]);
     expect(describeTempDirs('describe("hub", () => {\n  beforeAll(() => { t = tempDir(); });\n});')).toEqual([]);
+  });
+
+  test("test and describe titles use glossary terms, not the phrases GLOSSARY.md says to avoid", () => {
+    expect(AVOIDED_PHRASES).toContain("results CSV");
+    const found = testFiles.flatMap(({ path, text }) =>
+      titles(text).flatMap((title) =>
+        AVOIDED_PHRASES.filter((p) => title.toLowerCase().includes(p.toLowerCase())).map((p) => `${path}: "${title}" uses "${p}"`),
+      ),
+    );
+    expect(found).toEqual([]);
+  });
+
+  test("the title guard reads test and describe titles", () => {
+    expect(titles("describe(\"Lobby handoff\", () => {\n  test('the results CSV', () => {});")).toEqual(["Lobby handoff", "the results CSV"]);
   });
 
   test("shared fixtures are cleaned up in afterEach or afterAll, not in a test's finally block", () => {

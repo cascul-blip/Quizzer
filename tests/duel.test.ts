@@ -524,7 +524,7 @@ describe("Showdown", () => {
     expect(errors[0]!.text).toBe("Question 0");
   });
 
-  test("a full game: podium, final ranking, awards, results CSV", () => {
+  test("a full game: podium, final ranking, awards, results sheet", () => {
     const { game, clock, finished } = setup(["A", "B", "C", "D", "E", "F"], { rounds: 10 });
     // Round 1: everyone in a lower arena wins: D, F climb; A holds the Throne.
     round(game, clock, [

@@ -9,12 +9,16 @@ Judgement calls the reviewer applies to a diff. `bun run typecheck` and `bun tes
 - **Independent expectations**: a test's expected values are written by hand, such as a list of the modes that are paced. A test that reads its expectation from the code under test, such as `MODE_FLAGS[mode].paced`, passes whatever the code says.
 - **Gameplay deadlines**: when changing which module owns a deadline, use a controlled clock at each affected game mode’s normal entry point. Check that the action is blocked one tick before the expected deadline and succeeds at the deadline. Derive the deadline from the expected gameplay durations.
 - **Public surface**: a module extracted from the hub or a game mode gets at least one test through the public surface (the host view, a phone view, an HTTP route, the startup output), not only through its own class. Callers reach it that way, and the wiring between them is the part a direct test misses. A test may set up its scenario through the module when it asserts through the surface.
-- **Domain names**: name `describe` blocks and tests with `GLOSSARY.md` terms for the behaviour under test ("Lobby handoff"). A test that covers shared behaviour goes in its own block, not under whichever game mode it happens to use.
+- **Domain names**: name `describe` blocks and tests with `GLOSSARY.md` terms for the behaviour under test ("Lobby handoff"). `tests/standards.test.ts` rejects a title containing a multi-word _Avoid_ phrase from the glossary; single-word ones ("board", "map") are left to the reviewer. A test that covers shared behaviour goes in its own block, not under whichever game mode it happens to use.
 
 ## Extractions
 
 - **Single owner**: after an extraction, each piece of state has one owner; the other side reads it through a getter or callback. A copy kept in step by hand (a sync method, a guard comparing the two) is a finding. Check every state the extracted module reads at a phase boundary (a build break, before the first round) against the original.
 - **Direct coverage**: each rule the extracted module owns has a test against its own interface. Existing tests redirected through a new field don't count.
+
+## Game end
+
+- **End-of-game steps**: work that runs as a game finishes (`onFinish`, a mode entry's `finished`, saving results) logs a failure and carries on, so the steps after it still run and the host still reaches the podium and the results download. `saveResults` (`src/server/game/results.ts`) is the model.
 
 ## Types
 
@@ -23,6 +27,6 @@ Judgement calls the reviewer applies to a diff. `bun run typecheck` and `bun tes
 
 ## Game modes
 
-- **One table per fact**: anything that varies by game mode (its display name, whether it carries pacing, how it starts, its results CSV) lives in one exhaustive `switch` ending in `satisfies never`, or in a `Record<GameMode, …>`, so adding or removing a mode is a compile error at every site. Flag new `instanceof` chains or hand-written lists of mode strings.
-- **Mode entries**: a game mode's server knowledge (its settings, how it starts, pacing, results CSV, phone messages) lives in its mode entry, exported from the mode's own file and collected in `MODES` (`src/server/game/modes.ts`). The hub, lobby and lobby handoff look the entry up and don't branch on the mode.
+- **One table per fact**: anything that varies by game mode (its display name, whether it carries pacing, how it starts, its results sheet) lives in one exhaustive `switch` ending in `satisfies never`, or in a `Record<GameMode, …>`, so adding or removing a mode is a compile error at every site. Flag new `instanceof` chains or hand-written lists of mode strings.
+- **Mode entries**: a game mode's server knowledge (its settings, how it starts, pacing, results sheet, phone messages) lives in its mode entry, exported from the mode's own file and collected in `MODES` (`src/server/game/modes.ts`). The hub, lobby and lobby handoff look the entry up and don't branch on the mode.
 - **Enforced by `tests/standards.test.ts`**: server code does not compare a mode against a literal, no client file that uses the mode entries compares a view's kind, mode or banner against a game mode, and server code does not use `instanceof` on a game class. Tests may use `instanceof` to narrow a game fixture. A suggested fix must pass these too.

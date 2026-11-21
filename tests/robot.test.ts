@@ -440,7 +440,7 @@ describe("Robot Attack", () => {
     expect(game.players.size).toBe(1);
   });
 
-  test("results CSV lists standings", () => {
+  test("results sheet lists standings", () => {
     const { game, clock } = setup(["A", "B"]);
     answer(game, clock, byName(game, "A"), true);
     for (let i = 0; i < ROBOT_LIVES; i++) round(game, clock, ["B"]);

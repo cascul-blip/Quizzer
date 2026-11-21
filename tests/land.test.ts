@@ -370,7 +370,7 @@ describe("results", () => {
     ]);
   });
 
-  test("the results CSV lists players under the team they started on", () => {
+  test("the results sheet lists players under the team they started on", () => {
     const { game, clock } = play(["A", "B"]);
     const a = byName(game, "A");
     round(game, clock, a, 2);

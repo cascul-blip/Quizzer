@@ -3,6 +3,9 @@ import { join } from "node:path";
 
 export type Cell = string | number;
 
+/** Byte order mark the results CSV starts with, so Excel opens UTF-8 correctly. */
+export const BOM = "\ufeff";
+
 /** One results column: its header and how to read its cell from a row. */
 export interface Column<Row> {
   header: string;
@@ -42,8 +45,7 @@ function csvCell(v: Cell): string {
 
 /** Rows as a CSV file for spreadsheets: cells quoted where needed, UTF-8 with a BOM. */
 export function toCsv(rows: Cell[][]): string {
-  // BOM so Excel opens UTF-8 correctly.
-  return "\ufeff" + rows.map((r) => r.map(csvCell).join(",")).join("\r\n") + "\r\n";
+  return BOM + rows.map((r) => r.map(csvCell).join(",")).join("\r\n") + "\r\n";
 }
 
 /** The sheet as a CSV; throws when a row's length differs from the header's. */

@@ -3,6 +3,7 @@ import { PLAYER_MODES } from "../src/client/player/modes.tsx";
 import { Lobby } from "../src/server/game/lobby.ts";
 import type { ModeMsg } from "../src/server/game/mode-entry.ts";
 import { entryOf, MODES } from "../src/server/game/modes.ts";
+import { BOM } from "../src/server/game/results.ts";
 import { QuizStore } from "../src/server/quiz/store.ts";
 import type { GameHub } from "../src/server/ws.ts";
 import { keysOf } from "../src/shared/keys-of.ts";
@@ -207,14 +208,14 @@ describe("Game modes", () => {
         expect(lobbyView().pacing).toBe(PACED.has(mode) ? "auto" : "manual");
       });
 
-      test("the results CSV has a BOM, a header, and one row per player as wide as the header", async () => {
+      test("the results sheet is saved as a CSV with a BOM, a header, and one row per player as wide as the header", async () => {
         const nicknames = ["Noel", "Holly", "Ivy"];
         openLobby(mode, nicknames);
         send(host, { type: "host.start", pacing: "manual" });
         send(host, { type: "host.end" });
         await flush();
         const csv = hub.lastResults?.csv ?? "";
-        expect(csv.codePointAt(0)).toBe(0xfeff);
+        expect(csv).toStartWith(BOM);
         const lines = csv.slice(1).split("\r\n");
         // Kingdom Siege adds a wave log after a blank line; the player rows come first in every mode.
         const rows = lines.slice(1, lines.indexOf(""));
