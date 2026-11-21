@@ -1,6 +1,7 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { GiftItem, GiftPower } from "../gift-rules.ts";
 import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView } from "../mode-views.ts";
+import type { ModeProtocol } from "../shared-mode-entry.ts";
 import { sharedModeEntry } from "../shared-mode-entry.ts";
 
 // Gift Grab protocol types.
@@ -62,7 +63,7 @@ export interface PlayerGiftView {
 export type GiftMsg = StreamAnswerMsg<"gift"> | { type: "gift.tap"; round: number; item: number };
 
 /** Gift Grab's shared mode entry. */
-export const giftShared = sharedModeEntry<GiftMsg>()({
+export const giftShared = sharedModeEntry<ModeProtocol<GiftMsg, GiftSettings, HostGiftState, PlayerGiftView>>()({
   name: "Gift Grab",
   flags: { paced: false, protect: true },
   lobbyBanner: false,

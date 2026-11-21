@@ -85,10 +85,11 @@ describe("Mode protocol files", () => {
     expect(MODE_FILES.filter((m) => !modeFiles.includes(join(MODES_DIR, m)))).toEqual([]);
   });
 
-  test("no mode file imports another mode file", () => {
+  test("mode files import neither other mode files nor protocol.ts", () => {
+    const protocol = join(ROOT, "src/shared/protocol.ts");
     const crossings = modeFiles.flatMap((file) =>
       allImports(file)
-        .filter((dep) => dep !== file && dirname(dep) === MODES_DIR)
+        .filter((dep) => dep === protocol || (dep !== file && dirname(dep) === MODES_DIR))
         .map((dep) => `${relative(ROOT, file)} → ${relative(ROOT, dep)}`),
     );
     expect(crossings).toEqual([]);

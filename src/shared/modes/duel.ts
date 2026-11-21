@@ -1,5 +1,6 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { PacedAnswerMsg, Pacing, QuestionError, QuestionView, SubAward } from "../mode-views.ts";
+import type { ModeProtocol } from "../shared-mode-entry.ts";
 import { sharedModeEntry } from "../shared-mode-entry.ts";
 import type { SeasonTheme } from "../themed-modes.ts";
 import { modeTheme } from "../themed-modes.ts";
@@ -161,7 +162,7 @@ export type DuelMsg =
   PacedAnswerMsg<"duel">;
 
 /** Showdown's shared mode entry. */
-export const duelShared = sharedModeEntry<DuelMsg>()({
+export const duelShared = sharedModeEntry<ModeProtocol<DuelMsg, DuelSettings, HostDuelState, PlayerDuelView>>()({
   name: "Showdown",
   flags: { paced: true, protect: false },
   lobbyBanner: false,

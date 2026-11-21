@@ -1,3 +1,4 @@
+import type { AvatarChoice } from "./avatars.ts";
 import type { PinSpot, QuestionType } from "./quiz-schema.ts";
 
 // View pieces several game modes share. Both protocol.ts and the mode files in modes/ import these,
@@ -64,3 +65,11 @@ export type StreamAnswerMsg<Prefix extends string> = { type: `${Prefix}.answer`;
 
 /** A phone's answer to a paced question (see GLOSSARY.md): `index` is QuestionView.index, as `qIndex` in the classic "answer". Typed questions send `text` and ignore `option`. */
 export type PacedAnswerMsg<Prefix extends string> = { type: `${Prefix}.answer`; index: number; option: number; text?: string };
+
+export interface HostPlayer {
+  id: string;
+  nickname: string;
+  avatar: AvatarChoice;
+  score: number;
+  connected: boolean;
+}

@@ -9,9 +9,9 @@ import { robotShared } from "./modes/robot.ts";
 import { siegeShared } from "./modes/siege.ts";
 import { submarineShared } from "./modes/submarine.ts";
 import { towerShared } from "./modes/tower.ts";
-import type { SharedModeEntry } from "./shared-mode-entry.ts";
+import type { EntryProtocol, SharedModeEntry, WithModeProtocol } from "./shared-mode-entry.ts";
 
-/** Every game mode's shared mode entry: its name, flags, lobby banner and phone messages, declared in the mode's own file in modes/. */
+/** Collects the shared mode entries declared in modes/. */
 export const SHARED_MODES = {
   classic: classicShared,
   tower: towerShared,
@@ -24,9 +24,24 @@ export const SHARED_MODES = {
   siege: siegeShared,
   duel: duelShared,
   gift: giftShared,
-} satisfies Record<string, SharedModeEntry>;
+} satisfies Record<string, SharedModeEntry & WithModeProtocol>;
 
 export type GameMode = keyof typeof SHARED_MODES;
 
 /** One game mode's shared mode entry, with its literal types. */
 export type SharedOf<M extends GameMode> = (typeof SHARED_MODES)[M];
+
+export type ProtocolOf<M extends GameMode> = EntryProtocol<SharedOf<M>>;
+
+type AssertTrue<T extends true> = T;
+
+/** Each mode supplies a host and phone view discriminated by its registry key. */
+export type GameplayViewKindsMatchModes = AssertTrue<
+  {
+    [M in GameMode]: [ProtocolOf<M>["hostView"]["kind"] | ProtocolOf<M>["playerView"]["kind"]] extends [M]
+      ? [M] extends [ProtocolOf<M>["hostView"]["kind"] & ProtocolOf<M>["playerView"]["kind"]]
+        ? true
+        : false
+      : false;
+  }[GameMode]
+>;

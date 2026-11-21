@@ -21,7 +21,7 @@ Everything one game mode brings to Quizzer, declared together: how its game runs
 _Avoid_: mode config, mode registration
 
 **Shared mode entry**:
-The part of a game mode's mode entry that the server, the projector and the phone all read: its one plain name, whether it is paced, whether Protect from abuse applies, whether phones show a lobby banner, and which phone messages belong to it. Each game mode declares it once, and the three mode entries build on it.
+The part of a game mode's mode entry that the server, the projector and the phone all read: its one plain name, whether it is paced, whether Protect from abuse applies, whether phones show a lobby banner, which phone messages belong to it, and the shapes of its mode settings and gameplay views. Each game mode declares it once, and the three mode entries build on it.
 _Avoid_: mode descriptor, mode metadata
 
 **Themed mode**:

@@ -1,5 +1,6 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward } from "../mode-views.ts";
+import type { ModeProtocol, NoSettings } from "../shared-mode-entry.ts";
 import { sharedModeEntry } from "../shared-mode-entry.ts";
 
 // Submarine Squad protocol types.
@@ -76,7 +77,7 @@ export interface PlayerSubView {
 export type SubMsg = StreamAnswerMsg<"sub"> | { type: "sub.boost" } | { type: "sub.tap"; symbol: string };
 
 /** Sled Squad's shared mode entry. */
-export const submarineShared = sharedModeEntry<SubMsg>()({
+export const submarineShared = sharedModeEntry<ModeProtocol<SubMsg, NoSettings, HostSubState, PlayerSubView>>()({
   name: "Sled Squad",
   flags: { paced: false, protect: true },
   lobbyBanner: false,
