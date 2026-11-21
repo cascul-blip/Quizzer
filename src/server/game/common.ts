@@ -1,4 +1,5 @@
-import { ERRORS_SHOWN, TEAMS, type QuestionError, type ShuffleOptions, type TeamInfo } from "../../shared/protocol.ts";
+import { ERRORS_SHOWN, TEAMS, type ShuffleOptions, type TeamInfo } from "../../shared/protocol.ts";
+import type { QuestionError } from "../../shared/mode-views.ts";
 import type { Question } from "../../shared/quiz-schema.ts";
 
 // Building blocks shared by every game mode.

@@ -3,11 +3,11 @@ import {
   type Pacing,
   type Phase,
   type PlayerView,
-  type QuestionError,
   type QuestionView,
   type RankedEntry,
   type ShuffleOptions,
 } from "../../shared/protocol.ts";
+import type { QuestionError } from "../../shared/mode-views.ts";
 import { cleanAvatar, randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import { MAX_TYPED_ANSWER, checkAnswer, type AnswerValue } from "../../shared/answer-match.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";

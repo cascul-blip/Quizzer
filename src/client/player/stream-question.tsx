@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import type { StreamFeedbackView, StreamQuestionView } from "../../shared/protocol.ts";
+import type { StreamFeedbackView, StreamQuestionView } from "../../shared/mode-views.ts";
 import { PinDragger } from "../shared/pin.tsx";
 import { Shape, TextAnswer, optionColor, useCountdown } from "../shared/ui.tsx";
 import { Tex, TexList } from "../shared/tex.tsx";

@@ -1,6 +1,7 @@
 import type { RefObject } from "preact";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
-import type { HostView, SubAward } from "../../shared/protocol.ts";
+import type { HostView } from "../../shared/protocol.ts";
+import type { SubAward } from "../../shared/mode-views.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { ChristmasGoblin, DogSled, WinterBackdrop, winterGradient, type SledRider } from "../shared/winter-art.tsx";
 import { play } from "../shared/sounds.ts";

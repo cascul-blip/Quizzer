@@ -3,7 +3,7 @@ import { Window } from "happy-dom";
 import { render } from "preact";
 import { act } from "preact/test-utils";
 import { Feedback, StreamQuestion } from "../src/client/player/stream-question.tsx";
-import type { StreamQuestionView } from "../src/shared/protocol.ts";
+import type { StreamQuestionView } from "../src/shared/mode-views.ts";
 
 const question: StreamQuestionView = { seq: 1, type: "multiple_choice", text: "First question", options: ["One", "Two"] };
 const window = new Window();

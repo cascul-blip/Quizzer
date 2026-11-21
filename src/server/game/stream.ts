@@ -1,6 +1,6 @@
 import { checkAnswer, type AnswerValue } from "../../shared/answer-match.ts";
 import type { Question } from "../../shared/quiz-schema.ts";
-import type { QuestionError, StreamQuestionView } from "../../shared/protocol.ts";
+import type { QuestionError, StreamQuestionView } from "../../shared/mode-views.ts";
 import { shuffle, shuffleOptions, topErrors, type Clock } from "./common.ts";
 
 /** How long the ✓/✗ flash shows before the next question can be answered. */

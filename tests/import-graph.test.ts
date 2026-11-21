@@ -59,3 +59,48 @@ describe("Server import graph", () => {
     expect(cycles).toEqual([]);
   });
 });
+
+// Each mode's protocol types live in src/shared/modes/<mode>.ts, imported directly (no re-exports from protocol.ts).
+// When a mode migrates, add its file here; its exports must not come back to protocol.ts.
+const MODES_DIR = join(ROOT, "src/shared/modes");
+const MIGRATED_MODES = ["submarine.ts"];
+
+/** Every relative import path in a file, type-only ones included. */
+function allImports(file: string): string[] {
+  const source = readFileSync(file, "utf8");
+  return [...source.matchAll(/(?:import|export)\s[^;]*?\bfrom\s+["'](\.[^"']+)["']/g)].map((m) => resolve(dirname(file), m[1]!));
+}
+
+/** Names a file declares with `export type|interface|const|function|enum|class`. */
+function exportedNames(source: string): string[] {
+  return [...source.matchAll(/^export\s+(?:declare\s+)?(?:type|interface|const|let|function|enum|class)\s+([A-Za-z_$][\w$]*)/gm)].map((m) => m[1]!);
+}
+
+describe("Mode protocol files", () => {
+  const modeFiles = tsFiles(MODES_DIR);
+
+  test("every migrated mode has a file", () => {
+    expect(MIGRATED_MODES.filter((m) => !modeFiles.includes(join(MODES_DIR, m)))).toEqual([]);
+  });
+
+  test("no mode file imports another mode file", () => {
+    const crossings = modeFiles.flatMap((file) =>
+      allImports(file)
+        .filter((dep) => dep !== file && dirname(dep) === MODES_DIR)
+        .map((dep) => `${relative(ROOT, file)} → ${relative(ROOT, dep)}`),
+    );
+    expect(crossings).toEqual([]);
+  });
+
+  test("migrated modes' types are not declared or re-exported in protocol.ts", () => {
+    const protocol = readFileSync(join(ROOT, "src/shared/protocol.ts"), "utf8");
+    const declared = new Set(exportedNames(protocol));
+    const reexports = /^export\s[^;]*?\bfrom\s+["']\.\/modes\//m.test(protocol);
+    const leaked = MIGRATED_MODES.flatMap((m) =>
+      exportedNames(readFileSync(join(MODES_DIR, m), "utf8"))
+        .filter((name) => declared.has(name))
+        .map((name) => `${m}: ${name}`),
+    );
+    expect({ leaked, reexports }).toEqual({ leaked: [], reexports: false });
+  });
+});

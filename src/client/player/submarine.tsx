@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import { CORRECT_PER_BOOST, type ClientMsg, type PlayerSubView } from "../../shared/protocol.ts";
+import type { ClientMsg } from "../../shared/protocol.ts";
+import { CORRECT_PER_BOOST, type PlayerSubView } from "../../shared/modes/submarine.ts";
 import { GlyphSymbol } from "../shared/glyph-symbol.tsx";
 import { winterGradient } from "../shared/winter-gradient.ts";
 import { play, startRev, type Rev } from "../shared/sounds.ts";
