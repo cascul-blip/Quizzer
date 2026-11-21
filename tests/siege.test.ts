@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { siegeWords, type SiegeTheme } from "../src/shared/siege-theme.ts";
 import { FEEDBACK_MS, SIEGE_NO_GOLD, SiegeGame, type SiegeMonster, type SiegePlayer } from "../src/server/game/siege.ts";
 import { Game } from "../src/server/game/game.ts";
@@ -956,19 +956,22 @@ describe("results", () => {
     expect(lines).toContain("Wave,Difficulty scale %,Defense gold,Strength boost,Monster budget,Monster health ×,Monsters sent,Class accuracy %,Hearts lost");
     expect(lines[lines.length - 1]).toBe(`1,100,${game.waveLog[0]!.defense},1,${siegeWaveBudget(1, 3, 100)},1,1,50,0`);
   });
+});
 
-  test("Endless records are kept per quiz; a missing or broken file means no record", () => {
-    const t = tempDir();
-    try {
-      expect(loadSiegeRecord(t.dir, "quiz-a")).toBeNull();
-      saveSiegeRecord(t.dir, "quiz-a", { waves: 7, avgScale: 104, date: "2026-10-19T00:00:00.000Z" });
-      saveSiegeRecord(t.dir, "quiz-b", { waves: 3, avgScale: 90, date: "2026-10-19T00:00:00.000Z" });
-      expect(loadSiegeRecord(t.dir, "quiz-a")).toEqual({ waves: 7, avgScale: 104, date: "2026-10-19T00:00:00.000Z" });
-      expect(loadSiegeRecord(t.dir, "quiz-b")?.waves).toBe(3);
-      writeFileSync(siegeRecordsPath(t.dir), "{ not json");
-      expect(loadSiegeRecord(t.dir, "quiz-a")).toBeNull();
-    } finally {
-      t.cleanup();
-    }
+describe("Endless records", () => {
+  let t: ReturnType<typeof tempDir>;
+  beforeEach(() => {
+    t = tempDir();
+  });
+  afterEach(() => t.cleanup());
+
+  test("are kept per quiz; a missing or broken file means no record", () => {
+    expect(loadSiegeRecord(t.dir, "quiz-a")).toBeNull();
+    saveSiegeRecord(t.dir, "quiz-a", { waves: 7, avgScale: 104, date: "2026-10-19T00:00:00.000Z" });
+    saveSiegeRecord(t.dir, "quiz-b", { waves: 3, avgScale: 90, date: "2026-10-19T00:00:00.000Z" });
+    expect(loadSiegeRecord(t.dir, "quiz-a")).toEqual({ waves: 7, avgScale: 104, date: "2026-10-19T00:00:00.000Z" });
+    expect(loadSiegeRecord(t.dir, "quiz-b")?.waves).toBe(3);
+    writeFileSync(siegeRecordsPath(t.dir), "{ not json");
+    expect(loadSiegeRecord(t.dir, "quiz-a")).toBeNull();
   });
 });

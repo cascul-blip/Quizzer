@@ -268,16 +268,10 @@ describe("shrinkImage", () => {
   });
 
   test("saveMedia stores the shrunk image, and the same upload maps to the same ref", async () => {
-    const t = tempDir();
-    try {
-      const s = new QuizStore(t.dir);
-      const jpeg = await make(3000, 2000, (i) => i.jpeg({ quality: 95 }));
-      const ref = await s.saveMedia(jpeg);
-      expect(ref).toMatch(/^media\/[0-9a-f]{20}\.webp$/);
-      expect(sniffImageType(readFileSync(s.mediaFile(ref)!))).toBe("image/webp");
-      expect(await s.saveMedia(jpeg)).toBe(ref);
-    } finally {
-      t.cleanup();
-    }
+    const jpeg = await make(3000, 2000, (i) => i.jpeg({ quality: 95 }));
+    const ref = await store.saveMedia(jpeg);
+    expect(ref).toMatch(/^media\/[0-9a-f]{20}\.webp$/);
+    expect(sniffImageType(readFileSync(store.mediaFile(ref)!))).toBe("image/webp");
+    expect(await store.saveMedia(jpeg)).toBe(ref);
   });
 });

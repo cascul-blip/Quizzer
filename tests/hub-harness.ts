@@ -8,6 +8,13 @@ import type { FakeClock } from "./helpers.ts";
 type HostState = Extract<ServerMsg, { type: "host.state" }>;
 type PlayerState = Extract<ServerMsg, { type: "player.state" }>;
 
+/** One message as type, view kind and phase ("host.state tower/podium"), so a timeout reads in a line. */
+function summary(m: ServerMsg): string {
+  if (m.type !== "host.state" && m.type !== "player.state") return m.type === "error" ? `error "${m.message}"` : m.type;
+  const v: { kind: string; phase?: string } = m.view;
+  return `${m.type} ${v.kind}${v.phase ? `/${v.phase}` : ""}`;
+}
+
 /** Messages a phone or projector received, read the way the client reads them. Shared by real and fake sockets. */
 export abstract class MessageLog {
   msgs: ServerMsg[] = [];
@@ -37,7 +44,7 @@ export abstract class MessageLog {
     for (;;) {
       const i = this.msgs.findIndex(pred);
       if (i >= 0) return this.msgs.splice(0, i + 1).pop()!;
-      if (Date.now() > deadline) throw new Error(`timeout; got ${JSON.stringify(this.msgs.slice(-3))}`);
+      if (Date.now() > deadline) throw new Error(`timeout; last got ${this.msgs.slice(-3).map(summary).join(", ") || "nothing"}`);
       await new Promise<void>((r) => {
         this.waiters.push(r);
         setTimeout(r, 50);

@@ -15,30 +15,7 @@ jobs:
       - name: Check new test casts
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
-        shell: bash
-        run: |
-          if [[ "$BASE_SHA" == 0000000000000000000000000000000000000000 ]]; then
-            BASE_SHA=$(git hash-object -t tree /dev/null)
-          fi
-          git -c core.quotePath=false diff --no-ext-diff --no-color --unified=0 "$BASE_SHA" HEAD -- 'tests/*.ts' 'tests/*.tsx' |
-            awk '
-              /^diff --git / { in_hunk = 0 }
-              /^\+\+\+ b\// { file = substr($0, 7) }
-              /^@@ / {
-                split($3, range, ",")
-                line = substr(range[1], 2)
-                in_hunk = 1
-                next
-              }
-              in_hunk && /^\+/ {
-                if ($0 ~ /(^|[^[:alnum:]_$])as[[:blank:]]+never([^[:alnum:]_$]|$)/) {
-                  printf "%s:%d: use a type-checked test input in place of as never\n", file, line
-                  failed = 1
-                }
-                line++
-              }
-              END { exit failed }
-            '
+        run: scripts/check-test-casts.sh
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.4.2"
