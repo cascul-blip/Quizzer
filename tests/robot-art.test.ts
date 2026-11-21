@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { ROBOT_BOARD } from "../src/shared/protocol.ts";
+import { ROBOT_BOARD } from "../src/shared/modes/robot.ts";
 import { tileBox } from "../src/client/shared/robot-art.tsx";
 import { TILE_ART } from "../src/client/shared/robot/tiles.ts";
 import { TILE_ART as SNOW_TILE_ART } from "../src/client/shared/snowman/tiles.ts";

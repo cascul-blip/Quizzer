@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "preact/hooks";
-import { ROBOT_BOARD, ROBOT_LIVES, robotInBounds, type ClientMsg, type PlayerRobotView, type RobotDir } from "../../shared/protocol.ts";
+import { ROBOT_BOARD, ROBOT_LIVES, robotInBounds, type PlayerRobotView, type RobotDir } from "../../shared/modes/robot.ts";
+import type { ClientMsg } from "../../shared/protocol.ts";
 import { MiniBoard } from "../shared/robot-art.tsx";
 import { SKIN_TEXT } from "../shared/robot-skin.ts";
 import { ordinal, useCountdown } from "../shared/ui.tsx";

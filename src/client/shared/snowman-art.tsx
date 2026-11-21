@@ -7,7 +7,7 @@
  * rendered the reference video; scripts/snowman-art/manifest.md has the full spec.
  */
 import { useEffect, useRef, useState } from "preact/hooks";
-import { ROBOT_BOARD, robotRing } from "../../shared/protocol.ts";
+import { ROBOT_BOARD, robotRing } from "../../shared/modes/robot.ts";
 import { ARENA_H, ARENA_W, BACKDROP, EDGE, Pieces, TILE, prefersStill, project, quad, tileBox, type ArenaPlayer } from "./robot-art.tsx";
 import elbowImg from "./snowman/arm-elbow.webp";
 import foreImg from "./snowman/arm-fore.webp";

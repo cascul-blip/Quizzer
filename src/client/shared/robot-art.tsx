@@ -5,7 +5,7 @@
  */
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { AvatarChoice } from "../../shared/avatars.ts";
-import { ROBOT_BOARD, robotRing } from "../../shared/protocol.ts";
+import { ROBOT_BOARD, robotRing } from "../../shared/modes/robot.ts";
 import { ACCESSORY_ART, AVATAR_ART } from "./avatar-art.tsx";
 import connImg from "./robot/arm-connector.webp";
 import segImg from "./robot/arm-segment.webp";
