@@ -1,8 +1,8 @@
 import type { ComponentType } from "preact";
-import type { GameMode, PlayerView } from "../../shared/protocol.ts";
+import type { GameMode } from "../../shared/protocol.ts";
 import { entryOf } from "../shared/entry-of.ts";
 import { ClassicPlayer } from "./classic.tsx";
-import type { PhoneBanner, Send } from "./common.tsx";
+import type { PhoneBanner, PhoneModeView, PhoneView, Send } from "./common.tsx";
 import { CupPlayer } from "./cup.tsx";
 import { DuelPlayer } from "./duel.tsx";
 import { FightPlayer } from "./fight.tsx";
@@ -13,12 +13,6 @@ import { RobotPlayer } from "./robot.tsx";
 import { siegeBanner, SiegePlayer } from "./siege.tsx";
 import { SubmarinePlayer } from "./submarine.tsx";
 import { TowerPlayer } from "./tower.tsx";
-
-/** A joined phone's view. */
-export type PhoneView = Exclude<PlayerView, { kind: "none" }>;
-
-/** A phone's view of a game of the mode; its kind is the mode. Classic's also carries the lobby, which main.tsx shows itself. */
-export type PhoneModeView<M extends GameMode> = Extract<PhoneView, { kind: M }>;
 
 type ScreenProps<M extends GameMode> = { view: PhoneModeView<M>; send: Send };
 

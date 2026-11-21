@@ -1,11 +1,20 @@
 import type { ComponentChildren, ComponentType } from "preact";
-import type { ClientMsg, PlayerView } from "../../shared/protocol.ts";
+import type { ClientMsg, GameMode, PlayerView } from "../../shared/protocol.ts";
 import { StreakBadge } from "../shared/ui.tsx";
 
 export type Send = (m: ClientMsg) => void;
 
-/** A joined phone's view in the lobby and in Classic. */
-export type Joined = Extract<PlayerView, { kind: "classic" }>;
+/** A joined phone's view. */
+export type PhoneView = Exclude<PlayerView, { kind: "none" }>;
+
+/** A phone's view of a game of the mode; its kind is the mode. Classic's also carries the lobby, which main.tsx shows itself. */
+export type PhoneModeView<M extends GameMode> = Extract<PhoneView, { kind: M }>;
+
+/**
+ * Classic's phone view. The lobby shares it because the server sends the lobby as Classic's "lobby" phase,
+ * so the lobby screen, the shared Bar and Classic's own screens all read the same view.
+ */
+export type ClassicView = PhoneModeView<"classic">;
 
 /** What a mode's banner adds to the phone's lobby screen (Kingdom Siege's castle). */
 export interface PhoneBanner {
@@ -20,7 +29,7 @@ export function Center({ children }: { children: ComponentChildren }) {
 }
 
 /** The top bar of the lobby and Classic: the nickname and streak, then the question number and score once the game is on. */
-export function Bar({ view }: { view: Joined }) {
+export function Bar({ view }: { view: ClassicView }) {
   return (
     <header class="bar">
       <span class="name">
