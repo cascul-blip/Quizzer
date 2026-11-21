@@ -8,8 +8,8 @@ import { GameError } from "./game/common.ts";
 import type { LobbyChoices } from "./game/lobby.ts";
 import { Lobby } from "./game/lobby.ts";
 import type { LiveGame, ModeGame, StartContext } from "./game/mode-entry.ts";
-import { isModeMsg, modeOfMsg } from "./game/mode-entry.ts";
 import { entryOf, MODES } from "./game/modes.ts";
+import { dispatchPhoneMessage } from "./game/phone-message-dispatch.ts";
 import { saveResults } from "./game/results.ts";
 import type { HandoffAction, HostCommandContext } from "./host-commands.ts";
 import { applyHostCommand } from "./host-commands.ts";
@@ -202,20 +202,8 @@ export class GameHub {
         this.send(ws, { type: "joined", token: p.token, playerId: p.id, images: this.images });
         return this.sendState(ws);
       }
-      default: {
-        if (!isModeMsg(msg)) throw new GameError(`Unknown message ${(msg as { type: string }).type}`);
-        const game = this.game;
-        const playerId = this.phoneAttachments.playerId(ws);
-        // A message for a mode that isn't running (say, a late tap from the last game) is ignored.
-        if (!game || !playerId) return;
-        if (game instanceof Lobby) {
-          if (msg.type === "setAvatar") game.setAvatar(playerId, msg.avatar, msg.accessory);
-          return;
-        }
-        if (game.runningMode !== modeOfMsg(msg.type)) return;
-        if (entryOf(game).handle(game, playerId, msg) === "resend") this.sendState(ws);
-        return;
-      }
+      default:
+        if (dispatchPhoneMessage(this.game, this.phoneAttachments.playerId(ws), msg) === "resend") this.sendState(ws);
     }
   }
 

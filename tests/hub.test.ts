@@ -96,6 +96,8 @@ describe("Game mode: Classic", () => {
     expect(await players[1]!.waitFor((m) => m.type === "error")).toMatchObject({ message: "Unknown avatar" });
     host.sendMsg({ type: "host.start", pacing: "manual" });
     await host.hostState((v) => v.phase === "intro");
+    players[0]!.sendMsg({ type: "setAvatar", ...look });
+    expect(await players[0]!.waitFor((m) => m.type === "error")).toMatchObject({ message: "The game has already started" });
     clock.advance(INTRO_MS);
     await hub.broadcast();
     await players[0]!.playerState((v) => v.kind === "classic" && v.phase === "open");
