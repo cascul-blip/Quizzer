@@ -1,5 +1,6 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward } from "../mode-views.ts";
+import type { ModeProtocol } from "../shared-mode-entry.ts";
 import { sharedModeEntry } from "../shared-mode-entry.ts";
 import type { SiegeDefenderType, SiegeMonsterType, SiegeWaves } from "../siege-rules.ts";
 import type { SeasonTheme } from "../themed-modes.ts";
@@ -200,7 +201,7 @@ export type SiegeMsg =
   | { type: "siege.map"; open: boolean };
 
 /** Kingdom Siege's shared mode entry. */
-export const siegeShared = sharedModeEntry<SiegeMsg>()({
+export const siegeShared = sharedModeEntry<ModeProtocol<SiegeMsg, SiegeSettings, HostSiegeState, PlayerSiegeView>>()({
   name: "Kingdom Siege",
   flags: { paced: false, protect: true },
   lobbyBanner: true,

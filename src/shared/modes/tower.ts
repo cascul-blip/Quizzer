@@ -1,5 +1,6 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, TeamInfo } from "../mode-views.ts";
+import type { ModeProtocol } from "../shared-mode-entry.ts";
 import { sharedModeEntry } from "../shared-mode-entry.ts";
 import type { SeasonTheme } from "../themed-modes.ts";
 import { modeTheme, themedIcon, themedName } from "../themed-modes.ts";
@@ -118,7 +119,9 @@ export interface HostTowerState {
 export type TowerMsg = StreamAnswerMsg<"tower"> | { type: "tower.drop"; zone: number };
 
 /** Tallest Tower's shared mode entry. */
-export const towerShared = sharedModeEntry<TowerMsg>()({
+export const towerShared = sharedModeEntry<
+  ModeProtocol<TowerMsg, TowerSettings, HostTowerState, PlayerTowerView, Omit<TowerSettings, "monster"> & { monster?: boolean }>
+>()({
   name: "Tallest Tower",
   flags: { paced: false, protect: true },
   lobbyBanner: false,

@@ -1,6 +1,7 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { HillHeight, ShotImpact } from "../fight-physics.ts";
 import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward, TeamInfo } from "../mode-views.ts";
+import type { ModeProtocol } from "../shared-mode-entry.ts";
 import { sharedModeEntry } from "../shared-mode-entry.ts";
 import type { SeasonTheme } from "../themed-modes.ts";
 
@@ -123,7 +124,7 @@ export type FightMsg =
   | { type: "fight.fire"; dx: number; dy: number };
 
 /** Tower Fight's shared mode entry. */
-export const fightShared = sharedModeEntry<FightMsg>()({
+export const fightShared = sharedModeEntry<ModeProtocol<FightMsg, FightSettings, HostFightState, PlayerFightView, Partial<FightSettings>>>()({
   name: "Tower Fight",
   flags: { paced: false, protect: true },
   lobbyBanner: false,

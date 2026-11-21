@@ -1,5 +1,6 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward } from "../mode-views.ts";
+import type { ModeProtocol, NoSettings } from "../shared-mode-entry.ts";
 import { sharedModeEntry } from "../shared-mode-entry.ts";
 
 // Robot Attack protocol types.
@@ -122,7 +123,7 @@ export interface PlayerRobotView {
 export type RobotMsg = StreamAnswerMsg<"robot"> | { type: "robot.move"; dir: RobotDir };
 
 /** Robot Attack's shared mode entry. */
-export const robotShared = sharedModeEntry<RobotMsg>()({
+export const robotShared = sharedModeEntry<ModeProtocol<RobotMsg, NoSettings, HostRobotState, PlayerRobotView>>()({
   name: "Robot Attack",
   flags: { paced: false, protect: true },
   lobbyBanner: false,

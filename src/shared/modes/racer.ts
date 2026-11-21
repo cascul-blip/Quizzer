@@ -1,6 +1,7 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { PacedAnswerMsg, Pacing, QuestionError, QuestionView, SubAward } from "../mode-views.ts";
 import type { RacerCar, RacerConfidence, RacerTurnResult } from "../racer-rules.ts";
+import type { ModeProtocol } from "../shared-mode-entry.ts";
 import { sharedModeEntry } from "../shared-mode-entry.ts";
 import type { SeasonTheme } from "../themed-modes.ts";
 
@@ -160,7 +161,7 @@ export type RacerMsg =
   | PacedAnswerMsg<"racer">;
 
 /** Racer's shared mode entry. */
-export const racerShared = sharedModeEntry<RacerMsg>()({
+export const racerShared = sharedModeEntry<ModeProtocol<RacerMsg, RacerSettings, HostRacerState, PlayerRacerView>>()({
   name: "Racer",
   flags: { paced: true, protect: false },
   lobbyBanner: false,

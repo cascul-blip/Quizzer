@@ -1,5 +1,6 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward } from "../mode-views.ts";
+import type { ModeProtocol } from "../shared-mode-entry.ts";
 import { sharedModeEntry } from "../shared-mode-entry.ts";
 import type { SeasonTheme } from "../themed-modes.ts";
 
@@ -145,7 +146,7 @@ export type CupMsg =
   | { type: "cup.pick"; cup: number };
 
 /** Cup of Death's shared mode entry. */
-export const cupShared = sharedModeEntry<CupMsg>()({
+export const cupShared = sharedModeEntry<ModeProtocol<CupMsg, CupSettings, HostCupState, PlayerCupView>>()({
   name: "Cup of Death",
   flags: { paced: false, protect: true },
   lobbyBanner: false,

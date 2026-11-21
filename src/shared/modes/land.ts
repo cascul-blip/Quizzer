@@ -1,6 +1,7 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { LandStart } from "../land-board.ts";
 import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward, TeamInfo } from "../mode-views.ts";
+import type { ModeProtocol } from "../shared-mode-entry.ts";
 import { sharedModeEntry } from "../shared-mode-entry.ts";
 import type { SeasonTheme } from "../themed-modes.ts";
 
@@ -116,7 +117,7 @@ export type LandMsg =
   | { type: "land.done" };
 
 /** Land Grab's shared mode entry. */
-export const landShared = sharedModeEntry<LandMsg>()({
+export const landShared = sharedModeEntry<ModeProtocol<LandMsg, LandSettings, HostLandState, PlayerLandView>>()({
   name: "Land Grab",
   flags: { paced: false, protect: false },
   lobbyBanner: false,

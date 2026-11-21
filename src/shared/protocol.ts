@@ -1,20 +1,7 @@
 import type { AvatarChoice } from "./avatars.ts";
-import type { GameMode } from "./mode-entries.ts";
-import type { Pacing, QuestionError, QuestionView, TeamInfo } from "./mode-views.ts";
-import type { ClassicMsg } from "./modes/classic.ts";
-import type { CupMsg, CupPhase, CupSettings, HostCupState, PlayerCupView } from "./modes/cup.ts";
-import type { DuelMsg, DuelPhase, DuelSettings, HostDuelState, PlayerDuelView } from "./modes/duel.ts";
-import type { FightMsg, FightPhase, FightSettings, HostFightState, PlayerFightView } from "./modes/fight.ts";
-import type { GiftMsg, GiftPhase, GiftSettings, HostGiftState, PlayerGiftView } from "./modes/gift.ts";
-import type { HostLandState, LandMsg, LandPhase, LandSettings, PlayerLandView } from "./modes/land.ts";
-import type { HostRacerState, PlayerRacerView, RacerMsg, RacerPhase, RacerSettings } from "./modes/racer.ts";
-import type { HostRobotState, PlayerRobotView, RobotMsg, RobotPhase } from "./modes/robot.ts";
-import type { HostSiegeState, PlayerSiegeView, SiegeMsg, SiegePhase, SiegeSettings } from "./modes/siege.ts";
-import type { HostSubState, PlayerSubView, SubMsg, SubPhase } from "./modes/submarine.ts";
-import type { HostTowerState, PlayerTowerView, TowerMsg, TowerPhase, TowerSettings } from "./modes/tower.ts";
+import type { GameMode, ProtocolOf } from "./mode-entries.ts";
+import type { HostPlayer, Pacing, TeamInfo } from "./mode-views.ts";
 import type { PatchOp } from "./view-patch.ts";
-
-export type ClassicPhase = "intro" | "open" | "reveal" | "leaderboard" | "podium";
 
 /** Consecutive correct answers needed before a 🔥 streak badge shows. */
 export const STREAK_MIN = 4;
@@ -43,43 +30,13 @@ export const MAX_TEAMS = TEAMS.length;
 
 export type PlayerMsg =
   /** avatar/accessory: the player's last pick, remembered on the phone (optional). */
-  | { type: "join"; nickname: string; avatar?: string; accessory?: string }
-  | { type: "resume"; token: string }
-  | ClassicMsg
-  | TowerMsg
-  | SubMsg
-  | FightMsg
-  | RobotMsg
-  | GiftMsg
-  | LandMsg
-  | RacerMsg
-  | DuelMsg
-  | CupMsg
-  | SiegeMsg;
-
-/** A game mode without mode settings. */
-export type NoSettings = Record<string, never>;
+  { type: "join"; nickname: string; avatar?: string; accessory?: string } | { type: "resume"; token: string } | ProtocolOf<GameMode>["msg"];
 
 /** The mode settings of every game mode, as the lobby holds them. */
-export interface ModeSettingsMap {
-  classic: NoSettings;
-  tower: TowerSettings;
-  submarine: NoSettings;
-  fight: FightSettings;
-  robot: NoSettings;
-  land: LandSettings;
-  racer: RacerSettings;
-  cup: CupSettings;
-  siege: SiegeSettings;
-  duel: DuelSettings;
-  gift: GiftSettings;
-}
+export type ModeSettingsMap = { [M in GameMode]: ProtocolOf<M>["settings"] };
 
-/** What the host sends to change one mode's settings: Tower Fight takes any subset, Tallest Tower may leave out the monster. */
-export interface ModeSettingsInput extends Omit<ModeSettingsMap, "tower" | "fight"> {
-  tower: Omit<TowerSettings, "monster"> & { monster?: boolean };
-  fight: Partial<FightSettings>;
-}
+/** The settings the host can send for each game mode. */
+export type ModeSettingsInput = { [M in GameMode]: ProtocolOf<M>["settingsInput"] };
 
 export type ModeSettingsMsg = { [M in GameMode]: { type: "host.setModeSettings"; mode: M; settings: ModeSettingsInput[M] } }[GameMode];
 
@@ -107,25 +64,6 @@ export type ClientMsg = PlayerMsg | HostMsg;
 /** How many errors the final screen's "Show errors" table lists (rows are QuestionError, in mode-views.ts). */
 export const ERRORS_SHOWN = 10;
 
-export interface RankedEntry {
-  id: string;
-  nickname: string;
-  avatar: AvatarChoice;
-  score: number;
-  rank: number;
-  /** Points gained on the most recent question. */
-  delta: number;
-  /** Current run of consecutive correct answers. */
-  streak: number;
-}
-
-export interface PlayerResult {
-  choice: number | null;
-  correct: number[];
-  wasCorrect: boolean;
-  points: number;
-}
-
 export interface PlayerLobbyView {
   kind: "lobby";
   phase: "lobby";
@@ -136,60 +74,15 @@ export interface PlayerLobbyView {
   team: TeamInfo | null;
 }
 
+type GameplayHostView = ProtocolOf<GameMode>["hostView"];
+type GameplayPlayerView = ProtocolOf<GameMode>["playerView"];
+type GameplayPhase = (GameplayHostView | GameplayPlayerView)["phase"];
+
 export type PlayerView =
   | { kind: "none"; game: null }
-  | {
-      kind: "none";
-      game: {
-        title: string;
-        phase:
-          | "lobby"
-          | ClassicPhase
-          | TowerPhase
-          | SubPhase
-          | FightPhase
-          | RobotPhase
-          | LandPhase
-          | RacerPhase
-          | CupPhase
-          | SiegePhase
-          | DuelPhase
-          | GiftPhase;
-      };
-    }
-  | {
-      kind: "classic";
-      phase: ClassicPhase;
-      title: string;
-      me: { id: string; nickname: string; avatar: AvatarChoice; score: number; rank: number; streak: number };
-      playerCount: number;
-      question: QuestionView | null;
-      /** The option chosen for the current question, if any. */
-      myChoice: number | null;
-      /** What was typed for the current question, if it is a typed one and answered. */
-      myText: string | null;
-      result: PlayerResult | null;
-      podium: RankedEntry[] | null;
-    }
+  | { kind: "none"; game: { title: string; phase: "lobby" | GameplayPhase } }
   | PlayerLobbyView
-  | PlayerTowerView
-  | PlayerSubView
-  | PlayerFightView
-  | PlayerRobotView
-  | PlayerLandView
-  | PlayerRacerView
-  | PlayerCupView
-  | PlayerSiegeView
-  | PlayerDuelView
-  | PlayerGiftView;
-
-export interface HostPlayer {
-  id: string;
-  nickname: string;
-  avatar: AvatarChoice;
-  score: number;
-  connected: boolean;
-}
+  | GameplayPlayerView;
 
 export interface JoinInfo {
   url: string;
@@ -213,44 +106,10 @@ export interface HostLobbyView {
   players: HostPlayer[];
 }
 
-/** Everything the projector needs about a live Classic game, except join info. */
-export interface HostClassicState {
-  kind: "classic";
-  phase: ClassicPhase;
-  quiz: { id: string; title: string; questionCount: number };
-  pacing: Pacing;
-  players: HostPlayer[];
-  question: QuestionView | null;
-  /** Revealed only once answering has closed. */
-  correct: number[] | null;
-  answeredCount: number;
-  answerCounts: number[] | null;
-  /** Revealed only: per option, the avatars of the players who picked it, fastest first. */
-  answerAvatars: AvatarChoice[][] | null;
-  leaderboard: RankedEntry[];
-  /** The questions answered wrongly most often (podium only). */
-  errors: QuestionError[] | null;
-}
-
-export type HostView =
-  | { kind: "idle"; phase: "idle"; join: JoinInfo }
-  | (HostLobbyView & { join: JoinInfo })
-  | (HostClassicState & { join: JoinInfo })
-  | (HostTowerState & { join: JoinInfo })
-  | (HostSubState & { join: JoinInfo })
-  | (HostFightState & { join: JoinInfo })
-  | (HostRobotState & { join: JoinInfo })
-  | (HostLandState & { join: JoinInfo })
-  | (HostRacerState & { join: JoinInfo })
-  | (HostCupState & { join: JoinInfo })
-  | (HostSiegeState & { join: JoinInfo })
-  | (HostDuelState & { join: JoinInfo })
-  | (HostGiftState & { join: JoinInfo });
-
-type GameplayView = Extract<HostView | PlayerView, { kind: GameMode }>;
+export type HostView = { kind: "idle"; phase: "idle"; join: JoinInfo } | ((HostLobbyView | GameplayHostView) & { join: JoinInfo });
 
 /** A gameplay view cannot publish the lobby phase. */
-export type GameplayPhasesExcludeLobby = AssertTrue<"lobby" extends GameplayView["phase"] ? false : true>;
+export type GameplayPhasesExcludeLobby = AssertTrue<"lobby" extends GameplayPhase ? false : true>;
 
 type AssertTrue<T extends true> = T;
 
