@@ -51,7 +51,8 @@ describe("Host command", () => {
 
   test("an unknown pacing is refused", () => {
     const lobby = new Lobby(sampleQuiz());
-    expect(() => applyHostCommand({ type: "host.setPacing", pacing: "warp" as never }, context(lobby).ctx)).toThrow("Unknown pacing");
+    // @ts-expect-error: a pacing the protocol does not allow, as a bad client could send
+    expect(() => applyHostCommand({ type: "host.setPacing", pacing: "warp" }, context(lobby).ctx)).toThrow("Unknown pacing");
   });
 
   test("lobby settings apply to the lobby", () => {
@@ -73,7 +74,8 @@ describe("Host command", () => {
   });
 
   test("an unknown host message is refused", () => {
-    expect(() => applyHostCommand({ type: "host.dance" } as never, context(null).ctx)).toThrow("Unknown message host.dance");
+    // @ts-expect-error: a message type the protocol does not allow, as a bad client could send
+    expect(() => applyHostCommand({ type: "host.dance" }, context(null).ctx)).toThrow("Unknown message host.dance");
   });
 });
 
