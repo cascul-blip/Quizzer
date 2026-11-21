@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import type { FightTheme } from "../../shared/fight-theme.ts";
 import { fightName, fightTheme } from "../../shared/fight-theme.ts";
 import type { FightEvent, FightShot, HillSetting } from "../../shared/modes/fight.ts";
-import { CORRECT_PER_DECISION, HILL_SETTINGS, TOWER_MAX_DAMAGE } from "../../shared/modes/fight.ts";
+import { CORRECT_PER_DECISION, FIGHT_MAX_DAMAGE, HILL_SETTINGS } from "../../shared/modes/fight.ts";
 import type { HostView } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { Battlefield, HealthBar, ShotLayer } from "../shared/fight-art.tsx";
@@ -57,7 +57,7 @@ function FightStageContent({ view, send }: { view: FightView; send: Send }) {
   }, []);
 
   const onLand = (s: FightShot) => play(s.impact.kind === "tower" ? "roar" : s.impact.kind === "ground" ? "thud" : "bubble");
-  const destroyed = view.teams.find((t) => t.damage >= TOWER_MAX_DAMAGE)?.index ?? null;
+  const destroyed = view.teams.find((t) => t.damage >= FIGHT_MAX_DAMAGE)?.index ?? null;
   // The first player aiming on each team sits in that team's catapult.
   const loaded = view.teams.map((t) => t.members.find((m) => m.state === "aim")?.avatar ?? null);
 
@@ -258,7 +258,7 @@ function FightSettings({ settings, send }: LobbySettingsProps<"fight">) {
 /** The projector's music for Tower Fight. */
 export function fightCue(view: FightView): MusicCue {
   if (view.phase === "podium") return { track: "fight-results" };
-  const worst = Math.max(0, ...view.teams.map((t) => t.damage)) / TOWER_MAX_DAMAGE;
+  const worst = Math.max(0, ...view.teams.map((t) => t.damage)) / FIGHT_MAX_DAMAGE;
   return { track: "fight-play", intensity: Math.max(0, Math.min(1, 0.15 + worst * 0.85)) };
 }
 

@@ -20,7 +20,7 @@ import type {
   HostFightState,
   PlayerFightView,
 } from "../../shared/modes/fight.ts";
-import { CORRECT_PER_DECISION, DECISION_MS, HILL_SETTINGS, REPAIR_MS, TOWER_MAX_DAMAGE } from "../../shared/modes/fight.ts";
+import { CORRECT_PER_DECISION, DECISION_MS, FIGHT_MAX_DAMAGE, HILL_SETTINGS, REPAIR_MS } from "../../shared/modes/fight.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import type { Clock } from "./common.ts";
 import { GameError, realClock, teamInfo } from "./common.ts";
@@ -227,7 +227,7 @@ export class FightGame {
   /** Least damage wins; equal damage goes to the team with more correct answers; otherwise a draw. */
   judge(): FightOutcome {
     const [a, b] = this.teams as [FightTeam, FightTeam];
-    const destroyed = this.teams.find((t) => t.damage >= TOWER_MAX_DAMAGE);
+    const destroyed = this.teams.find((t) => t.damage >= FIGHT_MAX_DAMAGE);
     if (destroyed) return { winner: this.teams.find((t) => t !== destroyed)!.index, reason: "destroyed" };
     if (a.damage !== b.damage) return { winner: a.damage < b.damage ? a.index : b.index, reason: "damage" };
     const ca = this.teamCorrect(a.index);
@@ -406,13 +406,13 @@ export class FightGame {
     let destroyed: number | null = null;
     if (impact.kind === "tower") {
       const target = this.teams[impact.team]!;
-      target.damage = Math.min(TOWER_MAX_DAMAGE, target.damage + 1);
+      target.damage = Math.min(FIGHT_MAX_DAMAGE, target.damage + 1);
       if (p) {
         if (impact.team === shot.team) p.friendlyHits++;
         else p.hits++;
       }
       this.log(impact.team === shot.team ? "friendly" : "hit", p ?? shot);
-      if (target.damage >= TOWER_MAX_DAMAGE) destroyed = target.index;
+      if (target.damage >= FIGHT_MAX_DAMAGE) destroyed = target.index;
     } else {
       if (impact.kind === "ground") this.terrain = carve(this.terrain, impact.x);
       this.log("miss", p ?? shot);

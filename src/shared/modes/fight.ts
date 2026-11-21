@@ -11,7 +11,7 @@ export const HILL_SETTINGS: readonly HillSetting[] = ["random", "low", "medium",
 /** Correct answers needed to earn one attack-or-rebuild decision. */
 export const CORRECT_PER_DECISION = 4;
 /** Hits a tower can take; the last one brings it down. */
-export const TOWER_MAX_DAMAGE = 5;
+export const FIGHT_MAX_DAMAGE = 5;
 /** Time to choose attack or rebuild before the move is forfeited (aiming has no time limit). */
 export const DECISION_MS = 10_000;
 /** How long a rebuild takes; the tower is repaired when it finishes. */

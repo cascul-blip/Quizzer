@@ -4,7 +4,7 @@ import { buildFightResultsCsv, COLLAPSE_MS, COUNTDOWN_MS, DECISION_GRACE_MS, FEE
 import { Lobby } from "../src/server/game/lobby.ts";
 import { viewKey } from "../src/server/phone-view-delivery.ts";
 import { launchVector, MAX_PULL, simulate } from "../src/shared/fight-physics.ts";
-import { CORRECT_PER_DECISION, DECISION_MS, REPAIR_MS, TOWER_MAX_DAMAGE } from "../src/shared/modes/fight.ts";
+import { CORRECT_PER_DECISION, DECISION_MS, FIGHT_MAX_DAMAGE, REPAIR_MS } from "../src/shared/modes/fight.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
 import { FakeClock, sampleQuiz } from "./helpers.ts";
 
@@ -170,7 +170,7 @@ describe("decisions", () => {
     const { game, clock } = setup(["A", "B"]);
     const a = byName(game, "A");
     const b = byName(game, "B");
-    for (let i = 0; i < TOWER_MAX_DAMAGE - 1; i++) shoot(game, clock, b, 0);
+    for (let i = 0; i < FIGHT_MAX_DAMAGE - 1; i++) shoot(game, clock, b, 0);
     earnDecision(game, clock, a);
     earnDecision(game, clock, b);
     expect(game.choose(a.id, "rebuild")).toBe(true);
@@ -180,7 +180,7 @@ describe("decisions", () => {
     clock.advance(durationMs);
     expect(game.phase).toBe("collapse");
     clock.advance(REPAIR_MS);
-    expect(game.teams[0]!.damage).toBe(TOWER_MAX_DAMAGE);
+    expect(game.teams[0]!.damage).toBe(FIGHT_MAX_DAMAGE);
     expect(a.rebuilds).toBe(0);
   });
 
@@ -293,7 +293,7 @@ describe("end of game", () => {
   test("the 5th hit collapses the tower, then the podium: the other team wins", () => {
     const { game, clock, finished } = setup(["A", "B"]);
     const a = byName(game, "A");
-    for (let i = 0; i < TOWER_MAX_DAMAGE - 1; i++) shoot(game, clock, a, 1);
+    for (let i = 0; i < FIGHT_MAX_DAMAGE - 1; i++) shoot(game, clock, a, 1);
     expect(game.phase).toBe("playing");
     earnDecision(game, clock, a);
     const { dx, dy, durationMs } = pullFor(game, 0, 1);
@@ -332,7 +332,7 @@ describe("end of game", () => {
     const { game, clock } = setup(["A", "B", "C"]);
     const a = byName(game, "A");
     const c = byName(game, "C");
-    for (let i = 0; i < TOWER_MAX_DAMAGE - 1; i++) shoot(game, clock, a, 1);
+    for (let i = 0; i < FIGHT_MAX_DAMAGE - 1; i++) shoot(game, clock, a, 1);
     earnDecision(game, clock, a);
     earnDecision(game, clock, c);
     game.choose(c.id, "attack");
@@ -343,7 +343,7 @@ describe("end of game", () => {
     clock.advance(pa.durationMs);
     expect(game.phase).toBe("collapse");
     clock.advance(5000);
-    expect(game.teams[1]!.damage).toBe(TOWER_MAX_DAMAGE);
+    expect(game.teams[1]!.damage).toBe(FIGHT_MAX_DAMAGE);
     expect(c.hits).toBe(0);
   });
 
