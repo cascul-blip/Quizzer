@@ -126,9 +126,7 @@ export class TowerGame {
     const game = new TowerGame(lobby.quiz, { ...lobby.settings.tower, shuffleAnswers: lobby.shuffle.answers, protect }, opts);
     const players = [...lobby.players.values()];
     const teams = lobby.teamAssignment();
-    players.forEach((p) => {
-      game.roster.adopt(game.newPlayer({ id: p.id, nickname: p.nickname, token: p.token, connected: p.connected, avatar: p.avatar }, teams.get(p.id) ?? 0));
-    });
+    game.roster.adoptFrom(players, (base) => game.newPlayer(base, teams.get(base.id) ?? 0));
     return game;
   }
 
@@ -273,10 +271,7 @@ export class TowerGame {
   }
 
   setConnected(playerId: string, connected: boolean): void {
-    const p = this.players.get(playerId);
-    if (!p || p.connected === connected) return;
-    p.connected = connected;
-    this.onChange();
+    if (this.roster.setConnected(playerId, connected)) this.onChange();
   }
 
   kick(playerId: string): TowerPlayer | null {

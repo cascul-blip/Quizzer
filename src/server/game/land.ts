@@ -127,9 +127,7 @@ export class LandGame {
     const game = new LandGame(lobby.quiz, { ...lobby.settings.land, shuffleAnswers: lobby.shuffle.answers }, opts);
     const players = [...lobby.players.values()];
     const teams = lobby.teamAssignment();
-    players.forEach((p) => {
-      game.roster.adopt(game.newPlayer({ id: p.id, nickname: p.nickname, token: p.token, connected: p.connected, avatar: p.avatar }, teams.get(p.id) ?? 0));
-    });
+    game.roster.adoptFrom(players, (base) => game.newPlayer(base, teams.get(base.id) ?? 0));
     return game;
   }
 
@@ -237,10 +235,7 @@ export class LandGame {
   }
 
   setConnected(playerId: string, connected: boolean): void {
-    const p = this.players.get(playerId);
-    if (!p || p.connected === connected) return;
-    p.connected = connected;
-    this.onChange();
+    if (this.roster.setConnected(playerId, connected)) this.onChange();
   }
 
   kick(playerId: string): LandPlayer | null {

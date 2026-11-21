@@ -117,10 +117,7 @@ export class GiftGame {
   static fromLobby(lobby: Game, opts: GiftOptions = {}, protect = lobby.protect): GiftGame {
     if (!lobby.quiz.questions.length) throw new GameError("This quiz has no questions");
     const game = new GiftGame(lobby.quiz, lobby.settings.gift.minutes, lobby.shuffle.answers, protect, opts);
-    for (const player of lobby.players.values()) {
-      const { id, nickname, token, connected, avatar } = player;
-      game.roster.adopt(newPlayer({ id, nickname, token, connected, avatar }));
-    }
+    game.roster.adoptFrom(lobby.players.values(), newPlayer);
     return game;
   }
 
@@ -183,10 +180,7 @@ export class GiftGame {
   }
 
   setConnected(id: string, connected: boolean): void {
-    const player = this.players.get(id);
-    if (!player || player.connected === connected) return;
-    player.connected = connected;
-    this.onChange();
+    if (this.roster.setConnected(id, connected)) this.onChange();
   }
 
   kick(id: string): GiftPlayer | null {
