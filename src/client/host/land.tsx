@@ -1,12 +1,14 @@
 import { LandThemeProvider, useNorthPole, northPoleArt } from "../shared/land-skin.tsx";
 import { useEffect, useRef, useState } from "preact/hooks";
-import { LAND_MINUTES, LAND_MIN_TEAMS, MAX_TEAMS, type HostLandTeam, type HostView } from "../../shared/protocol.ts";
+import { LAND_GUARD_COST, LAND_MINUTES, LAND_MIN_TEAMS, LAND_STEAL_COST, MAX_TEAMS, type HostLandTeam, type HostView, type LandBoard } from "../../shared/protocol.ts";
+import { captureThreat } from "../../shared/land-board.ts";
 import { landTheme, type LandTheme } from "../../shared/land-theme.ts";
 import { BANNER_CAPTURE, BANNER_KNOCKOUT, HexBoard, LandShape, Plinth, landArt, useBanner, useTeamCard } from "../shared/land-art.tsx";
 import { play } from "../shared/sounds.ts";
 import { useEventFlash } from "../shared/tower-art.tsx";
 import { formatClock, ordinal, teamInk, teamVars, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
+import type { MusicCue } from "../shared/music/index.ts";
 import type { LobbyModeEntry, LobbySettingsProps } from "./lobby-modes.tsx";
 import { Award } from "./tower.tsx";
 
@@ -246,7 +248,32 @@ function LandSettings({ settings, send }: LobbySettingsProps<"land">) {
   );
 }
 
+let landKey = "";
+let landValue = 0;
+
+/** captureThreat for this board, worked out again only when a tile or a start changes. */
+function landThreat(board: LandBoard): number {
+  const key = `${board.owners.join()}|${board.starts.map((s) => (s.out ? 1 : 0)).join("")}`;
+  if (key !== landKey) {
+    landKey = key;
+    landValue = captureThreat(board.owners, board.size, board.starts, LAND_STEAL_COST, LAND_GUARD_COST);
+  }
+  return landValue;
+}
+
+/** The projector's music for Land Grab. */
+export function landCue(view: LandView): MusicCue {
+  const christmas = landTheme(view.theme) === "christmas";
+  const playTrack = christmas ? "land-christmas-play" : "land-play";
+  if (view.phase === "podium") return { track: christmas ? "land-christmas-results" : "land-results" };
+  if (view.phase === "conquered") return { track: playTrack, intensity: 1 };
+  // Calm until a team gets close to closing a ring. No key, so the music glides
+  // up as the ring grows and back down if it is broken.
+  return { track: playTrack, intensity: view.phase === "playing" ? landThreat(view.board) : 0 };
+}
+
 export const landLobby: LobbyModeEntry<"land"> = {
   label: () => "🚩 Land Grab",
   Settings: LandSettings,
+  lobbyTrack: (settings) => (landTheme(settings.theme) === "christmas" ? "land-christmas-lobby" : "land-lobby"),
 };

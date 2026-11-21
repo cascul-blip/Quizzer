@@ -6,6 +6,7 @@ import { SaloonScene, TABLE_CENTER, type SaloonMode } from "../shared/cup-art.ts
 import { play } from "../shared/sounds.ts";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
+import type { MusicCue } from "../shared/music/index.ts";
 import type { LobbyModeEntry, LobbySettingsProps } from "./lobby-modes.tsx";
 import { Award } from "./tower.tsx";
 import { cupName, cupTheme, type CupTheme } from "../../shared/cup-theme.ts";
@@ -290,7 +291,22 @@ function CupSettings({ settings, send }: LobbySettingsProps<"cup">) {
   );
 }
 
+/** The projector's music for Cup Roulette. */
+export function cupCue(view: CupView): MusicCue {
+  if (cupTheme(view.theme) === "christmas") return { track: view.phase === "podium" ? "tower-christmas-results" : "tower-christmas-play", intensity: view.phase === "reveal" ? 0.8 : 0.35 };
+  if (view.phase === "podium") return { track: "cup-results" };
+  // Holding your breath: tenser while the cups are drunk than while they're picked.
+  if (view.phase === "drink" || (view.phase === "reveal" && (view.reveal?.drinks.length ?? 0) > 0)) return { track: "cup-drink", intensity: view.phase === "reveal" ? 0.7 : 0.3 };
+  if (view.phase === "quiz") {
+    // The less time left to answer, the faster the gallop.
+    const start = Math.max(0, Math.min(1, 1 - view.phaseRemainingMs / Math.max(1, view.phaseDurationMs)));
+    return { track: "cup-quiz", intensity: 0.15 + start * 0.85, rampTo: 1, rampMs: view.phaseRemainingMs, key: `cup-q${view.round}` };
+  }
+  return { track: "cup-quiz", intensity: 0, key: `cup-${view.phase}-${view.round}` };
+}
+
 export const cupLobby: LobbyModeEntry<"cup"> = {
   label: (settings) => cupName(settings.theme),
   Settings: CupSettings,
+  lobbyTrack: (settings) => (cupTheme(settings.theme) === "christmas" ? "tower-christmas-lobby" : "cup-lobby"),
 };

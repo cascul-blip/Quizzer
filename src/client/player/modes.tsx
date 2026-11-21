@@ -10,7 +10,7 @@ import { LandPlayer } from "./land.tsx";
 import { RacerPlayer } from "./racer.tsx";
 import { RobotPlayer } from "./robot.tsx";
 import { siegeBanner, SiegePlayer } from "./siege.tsx";
-import { SubPlayer } from "./submarine.tsx";
+import { SubmarinePlayer } from "./submarine.tsx";
 import { TowerPlayer } from "./tower.tsx";
 
 /** A joined phone's view. */
@@ -36,7 +36,7 @@ export interface PlayerModeEntry<M extends GameMode> {
 export const PLAYER_MODES: { [M in GameMode]: PlayerModeEntry<M> } = {
   classic: { Screen: ClassicPlayer, banner: null },
   tower: { Screen: TowerPlayer, banner: null },
-  submarine: { Screen: SubPlayer, banner: null },
+  submarine: { Screen: SubmarinePlayer, banner: null },
   fight: { Screen: FightPlayer, banner: null },
   robot: { Screen: RobotPlayer, banner: null },
   land: { Screen: LandPlayer, banner: null },

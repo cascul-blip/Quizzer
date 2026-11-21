@@ -16,7 +16,7 @@ const DRAIN_MS = 4000;
 const AFTER_BOOST_MS = 1200;
 
 /** Phone screen for Submarine Squad. */
-export function SubPlayer({ view, send }: { view: PlayerSubView; send: Send }) {
+export function SubmarinePlayer({ view, send }: { view: PlayerSubView; send: Send }) {
   const secs = useCountdown(view.phaseRemainingMs, `${view.phase}:${view.level}`);
   const [afterBoost, setAfterBoost] = useState(false);
   const afterTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);

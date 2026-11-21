@@ -3,6 +3,7 @@ import { useDelayedCues } from "./delayed-cues.ts";
 import { siegeName, siegeTheme, siegeWords, type SiegeTheme } from "../../shared/siege-theme.ts";
 import { SiegeThemeProvider, useChristmasSiege } from "../shared/siege-skin.tsx";
 import type { HostView, SiegeSettings } from "../../shared/protocol.ts";
+import type { MusicTrackId } from "../../shared/music-tracks.ts";
 import { SIEGE_HEARTS, SIEGE_WAVE_CHOICES } from "../../shared/siege-rules.ts";
 import {
   ArrowShot,
@@ -20,6 +21,7 @@ import {
 import { play } from "../shared/sounds.ts";
 import { useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
+import type { MusicCue } from "../shared/music/index.ts";
 import type { LobbyModeEntry, LobbySettingsProps } from "./lobby-modes.tsx";
 import { Award } from "./tower.tsx";
 
@@ -401,8 +403,29 @@ function SiegeSettings({ settings, send }: LobbySettingsProps<"siege">) {
   );
 }
 
+/** The projector's music for Kingdom Siege. */
+export function siegeCue(view: SiegeView): MusicCue {
+  const outcome = view.result?.outcome;
+  const christmas = siegeTheme(view.settings.theme) === "christmas";
+  const battle: MusicTrackId = christmas ? "siege-christmas-battle" : "siege-battle";
+  // Bells and a fanfare when the kingdom stands; the low lament when the castle falls (or the host ends it).
+  if (view.phase === "stands" || view.phase === "fallen" || view.phase === "podium") {
+    return { track: christmas ? "siege-christmas-results" : "siege-results", intensity: outcome === "stands" ? 0.9 : 0.12, key: `siege-end-${outcome}` };
+  }
+  if (view.phase === "countdown") return { track: battle, intensity: 0.05, key: "siege-count" };
+  // Build break: drums and a held chord, rising into a drum roll before the next wave.
+  if (view.phase === "build") return { track: battle, intensity: 0.05, rampTo: 0.14, rampMs: view.phaseRemainingMs, key: `siege-break-${view.wave}` };
+  // A wave: more layers as monsters fill the board and as hearts are lost; a giant brings low brass and timpani.
+  const lost = 1 - view.hearts / Math.max(1, view.maxHearts);
+  const giant = view.monsters.some((m) => m.type === "giant");
+  const busy = Math.min(1, view.monsterCount / 10);
+  const intensity = Math.max(0.2, Math.min(giant ? 1 : 0.84, 0.2 + busy * 0.35 + lost * 0.45), giant ? 0.85 : 0);
+  return { track: battle, intensity, key: `siege-wave-${view.wave}` };
+}
+
 export const siegeLobby: LobbyModeEntry<"siege"> = {
   label: (settings) => `${siegeTheme(settings.theme) === "christmas" ? "🎄" : "🛡️"} ${siegeName(settings.theme)}`,
   Settings: SiegeSettings,
   Preview: ({ settings }) => <SiegeLobbyPreview theme={settings.theme} />,
+  lobbyTrack: (settings) => (siegeTheme(settings.theme) === "christmas" ? "siege-christmas-lobby" : "siege-lobby"),
 };

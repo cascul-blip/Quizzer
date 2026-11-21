@@ -10,6 +10,7 @@ import { play } from "../shared/sounds.ts";
 import { preloadVoice, say } from "../shared/voice.ts";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
+import type { MusicCue } from "../shared/music/index.ts";
 import type { LobbyModeEntry, LobbySettingsProps } from "./lobby-modes.tsx";
 import { Award } from "./tower.tsx";
 
@@ -236,7 +237,20 @@ function RobotSettings() {
   return <span class="opt mode-hint">Answer questions to earn moves, then dodge the robot's lasers. Last one standing wins.</span>;
 }
 
+/** The projector's music for Robot Attack. */
+export function robotCue(view: RobotView): MusicCue {
+  if (view.phase === "podium") return { track: "robot-results" };
+  if (view.phase === "move" || view.phase === "attack") return { track: "robot-move" };
+  if (view.phase === "quiz") {
+    // The less time left to answer, the more intense.
+    const start = Math.max(0, Math.min(1, 1 - view.phaseRemainingMs / Math.max(1, view.phaseDurationMs)));
+    return { track: "robot-quiz", intensity: 0.2 + start * 0.8, rampTo: 1, rampMs: view.phaseRemainingMs, key: `robot-q${view.round}` };
+  }
+  return { track: "robot-quiz", intensity: 0, key: "robot-countdown" };
+}
+
 export const robotLobby: LobbyModeEntry<"robot"> = {
   label: () => "🤖 Robot Attack",
   Settings: RobotSettings,
+  lobbyTrack: () => "robot-lobby",
 };

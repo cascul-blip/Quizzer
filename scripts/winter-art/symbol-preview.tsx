@@ -1,7 +1,7 @@
 /** Actual phone UI with deterministic Christmas pictures; serve.ts --symbols. */
 import { render } from "preact";
 import { useState } from "preact/hooks";
-import { SubPlayer } from "../../src/client/player/submarine.tsx";
+import { SubmarinePlayer } from "../../src/client/player/submarine.tsx";
 import { CHRISTMAS_GLYPHS, glyphId } from "../../src/shared/glyphs.ts";
 import type { PlayerSubView } from "../../src/shared/protocol.ts";
 import "../../src/client/shared/theme.css";
@@ -26,7 +26,7 @@ function Preview() {
       ? { role: "instructor", symbol: target, found: 1, groupSize: 3, ...timer }
       : { role: "diver", grid, done, lockedMs: locked ? 1000 : 0, hint: query.has("solo") ? target : null, ...timer },
   };
-  return <SubPlayer view={view} send={(message) => {
+  return <SubmarinePlayer view={view} send={(message) => {
     if (message.type !== "sub.tap") return;
     if (message.symbol === target) setDone(true);
     else { setLocked(true); setTimeout(() => setLocked(false), 1000); }

@@ -23,6 +23,7 @@ import {
 } from "../shared/tower-art.tsx";
 import { formatClock, ordinal, teamVars, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
+import type { MusicCue } from "../shared/music/index.ts";
 import type { LobbyModeEntry, LobbySettingsProps } from "./lobby-modes.tsx";
 
 type TowerView = Extract<HostView, { kind: "tower" }>;
@@ -425,7 +426,20 @@ function TowerSettings({ settings, send }: LobbySettingsProps<"tower">) {
   );
 }
 
+/** The projector's music for Tallest Tower. */
+export function towerCue(view: TowerView): MusicCue {
+  const christmas = towerTheme(view.theme) === "christmas";
+  const playTrack = christmas ? "tower-christmas-medley" : "tower-play";
+  if (view.phase === "podium") return { track: christmas ? "tower-christmas-results" : "tower-results" };
+  // Builds over the last few minutes of the timer.
+  const start = Math.max(0, Math.min(1, 1 - view.remainingMs / 300_000));
+  return view.phase === "playing"
+    ? { track: playTrack, intensity: start, rampTo: 1, rampMs: view.remainingMs, key: "tower-playing" }
+    : { track: playTrack, intensity: 0, key: "tower-countdown" };
+}
+
 export const towerLobby: LobbyModeEntry<"tower"> = {
   label: (settings) => `${towerWords(settings.theme).icon} ${towerWords(settings.theme).name}`,
   Settings: TowerSettings,
+  lobbyTrack: (settings) => (towerTheme(settings.theme) === "christmas" ? "tower-christmas-lobby" : "tower-lobby"),
 };

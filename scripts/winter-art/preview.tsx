@@ -3,7 +3,7 @@ import { render } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import type { HostView, SubPhase } from "../../src/shared/protocol.ts";
 import { ChristmasGoblin, DogSled, WinterBackdrop } from "../../src/client/shared/winter-art.tsx";
-import { SubStage } from "../../src/client/host/submarine.tsx";
+import { SubmarineStage } from "../../src/client/host/submarine.tsx";
 import "../../src/client/shared/theme.css";
 import "../../src/client/host/host.css";
 
@@ -40,7 +40,7 @@ function Preview() {
     playerCount: 3, awards: null, errors: null,
     join: { url: "http://localhost:8080", qrSvg: "", address: "localhost", addresses: [], port: 8080 },
   };
-  return <><SubStage view={view} send={() => {}} /><nav style={{ position: "fixed", bottom: 8, left: 12, zIndex: 50, display: "flex", gap: 8 }}>
+  return <><SubmarineStage view={view} send={() => {}} /><nav style={{ position: "fixed", bottom: 8, left: 12, zIndex: 50, display: "flex", gap: 8 }}>
     {(["chase", "countdown", "dive", "caught", "escaped", "podium"] as const).map(p => <button onClick={() => setPhase(p)}>{p}</button>)}
     <button onClick={() => setSeq(seq + 1)}>Boost</button>
     <label>Goblin distance <input aria-label="Goblin distance" type="range" min="0" max="20" value={gap} onInput={e => setGap(Number(e.currentTarget.value))} /></label>

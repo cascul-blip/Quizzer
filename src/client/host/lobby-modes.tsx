@@ -1,4 +1,5 @@
 import type { ComponentChildren, ComponentType } from "preact";
+import type { MusicTrackId } from "../../shared/music-tracks.ts";
 import type { GameMode, ModeSettingsMap } from "../../shared/protocol.ts";
 import type { Send } from "./common.tsx";
 import { cupLobby } from "./cup.tsx";
@@ -9,7 +10,7 @@ import { landLobby } from "./land.tsx";
 import { racerLobby } from "./racer.tsx";
 import { robotLobby } from "./robot.tsx";
 import { siegeLobby } from "./siege.tsx";
-import { subLobby } from "./submarine.tsx";
+import { submarineLobby } from "./submarine.tsx";
 import { towerLobby } from "./tower.tsx";
 
 export type LobbySettingsProps<M extends GameMode> = {
@@ -27,12 +28,15 @@ export interface LobbyModeEntry<M extends GameMode> {
   Settings: ComponentType<LobbySettingsProps<M>>;
   /** A picture of the game below the mode settings. */
   Preview?: ComponentType<{ settings: ModeSettingsMap[M] }>;
+  /** The music the lobby plays while the mode is selected, which a seasonal theme may choose. */
+  lobbyTrack(settings: ModeSettingsMap[M]): MusicTrackId;
 }
 
 /** Classic has no mode settings of its own: its panel is the shared rows. */
 const classicLobby: LobbyModeEntry<"classic"> = {
   label: () => "Classic",
   Settings: ({ children }) => <>{children}</>,
+  lobbyTrack: () => "classic-lobby",
 };
 
 /**
@@ -43,7 +47,7 @@ const classicLobby: LobbyModeEntry<"classic"> = {
 export const LOBBY_MODES: { [M in GameMode]: LobbyModeEntry<M> } = {
   classic: classicLobby,
   tower: towerLobby,
-  submarine: subLobby,
+  submarine: submarineLobby,
   fight: fightLobby,
   robot: robotLobby,
   land: landLobby,

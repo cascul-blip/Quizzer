@@ -7,10 +7,24 @@ import { play } from "../shared/sounds.ts";
 import { Tex } from "../shared/tex.tsx";
 import { Shape, StreakBadge, optionColor, ordinal, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
-import { Lobby } from "./lobby.tsx";
+import type { MusicCue } from "../shared/music/index.ts";
+import { Lobby, lobbyCue } from "./lobby.tsx";
 import { everyoneAnswered, revealCue } from "./reveal-cue.ts";
 
 type GameView = Extract<HostView, { kind: "classic" }>;
+
+/** The projector's music for Classic, and in the lobby the selected mode's lobby track. */
+export function classicCue(view: GameView): MusicCue {
+  if (view.phase === "lobby") return lobbyCue(view);
+  if (view.phase === "podium") return { track: "classic-results" };
+  if (view.phase === "reveal" || view.phase === "leaderboard") return { track: "classic-leaderboard" };
+  // Questions: tension builds over the time limit.
+  const q = view.question;
+  if (view.phase === "open" && q) {
+    return { track: "classic-question", intensity: 0.2, rampTo: 1, rampMs: q.remainingMs, key: `q${q.index}-open` };
+  }
+  return { track: "classic-question", intensity: 0.1, key: `q${q?.index ?? 0}-intro` };
+}
 
 /** Projector screen for Classic, and for the lobby of every mode: Classic's view carries the lobby as its first phase, and the top bar, keys and sound cues span both. */
 export function ClassicStage({ view, send }: { view: GameView; send: Send }) {

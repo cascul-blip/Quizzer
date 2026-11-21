@@ -2,6 +2,7 @@ import { useState } from "preact/hooks";
 import { MODE_FLAGS } from "../../shared/mode-flags.ts";
 import type { GameMode, HostPlayer, HostView, Pacing } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
+import type { MusicCue } from "../shared/music/index.ts";
 import { teamVars } from "../shared/ui.tsx";
 import type { Send } from "./common.tsx";
 import { LOBBY_MODES, lobbyEntryOf } from "./lobby-modes.tsx";
@@ -10,6 +11,11 @@ type GameView = Extract<HostView, { kind: "classic" }>;
 
 /** The Game mode menu, in the order LOBBY_MODES lists the modes. */
 const MENU = Object.keys(LOBBY_MODES) as GameMode[];
+
+/** The lobby's music: the selected mode's lobby track (LOBBY_MODES), which its mode settings may choose. */
+export function lobbyCue(view: GameView): MusicCue {
+  return { track: lobbyEntryOf(view.mode).lobbyTrack(view.settings[view.mode]) };
+}
 
 function PlayerChip({ p, send, draggable }: { p: HostPlayer; send: Send; draggable?: boolean }) {
   return (

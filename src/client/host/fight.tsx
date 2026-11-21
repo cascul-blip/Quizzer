@@ -7,6 +7,7 @@ import { Battlefield, HealthBar, ShotLayer } from "../shared/fight-art.tsx";
 import { play } from "../shared/sounds.ts";
 import { teamInk, teamVars, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
+import type { MusicCue } from "../shared/music/index.ts";
 import type { LobbyModeEntry, LobbySettingsProps } from "./lobby-modes.tsx";
 import { Award } from "./tower.tsx";
 
@@ -224,7 +225,15 @@ function FightSettings({ settings, send }: LobbySettingsProps<"fight">) {
   );
 }
 
+/** The projector's music for Tower Fight. */
+export function fightCue(view: FightView): MusicCue {
+  if (view.phase === "podium") return { track: "fight-results" };
+  const worst = Math.max(0, ...view.teams.map((t) => t.damage)) / TOWER_MAX_DAMAGE;
+  return { track: "fight-play", intensity: Math.max(0, Math.min(1, 0.15 + worst * 0.85)) };
+}
+
 export const fightLobby: LobbyModeEntry<"fight"> = {
   label: (settings) => fightName(settings.theme),
   Settings: FightSettings,
+  lobbyTrack: () => "fight-lobby",
 };
