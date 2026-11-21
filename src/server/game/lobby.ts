@@ -34,10 +34,10 @@ export class Lobby {
   private readonly roster = new Roster<BasePlayer>();
   private readonly rng: () => number;
   private readonly onChange: () => void;
-  private manualTeams: Map<string, number> | null = null;
-  private batch: { teams?: Map<string, number> } | null = null;
-  mode: GameMode;
-  settings: ModeSettingsMap;
+  private readonly teams = new Map<string, number>();
+  private hasManualTeams = false;
+  private mode: GameMode;
+  private readonly modeSettings: ModeSettingsMap;
   pacing: Pacing;
   shuffle: ShuffleOptions;
   protect: boolean;
@@ -48,7 +48,7 @@ export class Lobby {
     this.rng = opts.rng ?? Math.random;
     this.onChange = opts.onChange ?? (() => {});
     this.mode = opts.mode ?? "classic";
-    this.settings = initialSettings(opts.settings);
+    this.modeSettings = initialSettings(opts.settings);
     this.pacing = opts.pacing ?? "manual";
     this.protect = opts.protect ?? true;
     this.shuffle = { questions: quiz.settings.shuffleQuestions, answers: quiz.settings.shuffleAnswers };
@@ -58,8 +58,13 @@ export class Lobby {
     return this.roster.players;
   }
 
+  get settings(): { readonly [M in GameMode]: Readonly<ModeSettingsMap[M]> } {
+    return this.modeSettings;
+  }
+
   join(nickname: unknown, avatar?: AvatarChoice | null): BasePlayer {
     const player = this.roster.add(nickname, avatar ?? randomAvatar(this.rng), (base) => base);
+    this.reconcileTeams();
     this.onChange();
     return player;
   }
@@ -74,7 +79,11 @@ export class Lobby {
 
   kick(playerId: string): BasePlayer | null {
     const player = this.roster.remove(playerId);
-    if (player) this.onChange();
+    if (player) {
+      this.teams.delete(playerId);
+      this.reconcileTeams();
+      this.onChange();
+    }
     return player;
   }
 
@@ -101,6 +110,7 @@ export class Lobby {
   setMode(mode: GameMode): void {
     if (!Object.hasOwn(MODES, mode)) throw new GameError("Unknown game mode");
     this.mode = mode;
+    this.reconcileTeams();
     this.onChange();
   }
 
@@ -112,7 +122,8 @@ export class Lobby {
 
   private applySettings<M extends GameMode>(mode: M, raw: RawSettings): void {
     const entry: ModeEntry<M> = MODES[mode];
-    this.settings[mode] = entry.readSettings(raw, this.settings[mode]);
+    this.modeSettings[mode] = entry.readSettings(raw, this.modeSettings[mode]);
+    if (mode === this.mode) this.reconcileTeams();
     this.onChange();
   }
 
@@ -121,29 +132,29 @@ export class Lobby {
     return this.teamsIn(this.mode);
   }
 
-  /** Team index per player: round-robin by join order until the host moves someone, then the host's arrangement (newcomers join the smallest team). */
-  teamAssignment(): Map<string, number> {
+  /** Round-robin until the first manual move; then keep every assignment that still fits. */
+  private reconcileTeams(): void {
+    const count = this.teamCount();
+    // Solo modes hide the arrangement without changing it.
+    if (count === null) return;
     const ids = [...this.players.keys()];
-    const teamCount = this.teamCount();
-    const count = teamCount ?? 1;
-    const manual = this.manualTeams;
-    if (!manual) {
-      const teams = assignTeams(ids.length, count);
-      return new Map(ids.map((id, i) => [id, teams[i]!]));
+    if (!this.hasManualTeams) {
+      const indices = assignTeams(ids.length, count);
+      ids.forEach((id, i) => this.teams.set(id, indices[i]!));
+      return;
     }
-    // Solo modes have no teams: leave the arrangement alone for when a team mode comes back.
-    if (teamCount === null) return new Map(ids.map((id) => [id, 0]));
-    for (const id of [...manual.keys()]) if (!this.players.has(id)) manual.delete(id);
-    const fits = (id: string) => (manual.get(id) ?? count) < count;
     const sizes = Array<number>(count).fill(0);
-    for (const id of ids) if (fits(id)) sizes[manual.get(id)!]!++;
+    const unassigned: string[] = [];
     for (const id of ids) {
-      if (fits(id)) continue;
+      const team = this.teams.get(id);
+      if (team === undefined || team >= count) unassigned.push(id);
+      else sizes[team]!++;
+    }
+    for (const id of unassigned) {
       const team = sizes.indexOf(Math.min(...sizes));
       sizes[team]!++;
-      manual.set(id, team);
+      this.teams.set(id, team);
     }
-    return new Map(ids.map((id) => [id, manual.get(id)!]));
   }
 
   /** Move one player to another team in the lobby; everyone else stays where they are shown. */
@@ -152,14 +163,14 @@ export class Lobby {
     if (count === null) throw new GameError("This game mode has no teams");
     if (!Number.isInteger(team) || team < 0 || team >= count) throw new GameError("Unknown team");
     if (!this.players.has(playerId)) throw new GameError("Unknown player");
-    this.manualTeams ??= this.teamAssignment();
-    this.manualTeams.set(playerId, team);
+    this.hasManualTeams = true;
+    this.teams.set(playerId, team);
     this.onChange();
   }
 
   private teamsIn<M extends GameMode>(mode: M): number | null {
     const entry: ModeEntry<M> = MODES[mode];
-    return entry.teams(this.settings[mode]);
+    return entry.teams(this.modeSettings[mode]);
   }
 
   setPacing(pacing: Pacing): void {
@@ -174,13 +185,15 @@ export class Lobby {
   handoffFacts<M extends GameMode>(mode: M): LobbyFacts<M> {
     return {
       quiz: this.quiz,
-      settings: this.settings[mode],
+      settings: this.modeSettings[mode],
       lobbyView: { mode: this.mode, settings: { ...this.settings }, protect: this.protect },
       shuffle: { ...this.shuffle },
       protect: MODE_FLAGS[mode].protect && this.protect,
       pacing: this.pacing,
       players: [...this.players.values()],
-      teams: this.teamAssignment(),
+      teams: this.teamCount() === null
+        ? new Map([...this.players.keys()].map((id) => [id, 0]))
+        : new Map(this.teams),
     };
   }
 
@@ -208,7 +221,6 @@ export class Lobby {
   hostView(): HostGameState {
     const players = [...this.players.values()].map(({ id, nickname, avatar, connected }) => ({ id, nickname, avatar, score: 0, connected }));
     const count = this.teamCount();
-    const assignment = count === null ? null : this.teamsNow();
     return {
       kind: "classic",
       phase: this.phase,
@@ -216,7 +228,7 @@ export class Lobby {
       settings: this.settings,
       teams: count === null ? null : Array.from({ length: count }, (_, i) => ({
         ...teamInfo(i),
-        members: players.filter((player) => assignment?.get(player.id) === i),
+        members: players.filter((player) => this.teams.get(player.id) === i),
       })),
       quiz: { id: this.quizId, title: this.title, questionCount: this.quiz.questions.length },
       pacing: this.pacing,
@@ -248,23 +260,9 @@ export class Lobby {
       myText: null,
       result: null,
       podium: null,
-      team: this.teamCount() === null ? null : teamInfo(this.teamsNow().get(id) ?? 0),
+      team: this.teamCount() === null ? null : teamInfo(this.teams.get(id) ?? 0),
       ...(MODES[this.mode].lobbyBanner ? { banner: this.mode } : {}),
     };
-  }
-
-  viewBatch<T>(build: () => T): T {
-    if (this.batch) return build();
-    this.batch = {};
-    try {
-      return build();
-    } finally {
-      this.batch = null;
-    }
-  }
-
-  private teamsNow(): Map<string, number> {
-    return this.batch ? (this.batch.teams ??= this.teamAssignment()) : this.teamAssignment();
   }
 }
 
