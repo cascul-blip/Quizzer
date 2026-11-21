@@ -372,10 +372,7 @@ describe("lobby teams", () => {
     game.setModeSettings("tower", { teams, minutes: 5 });
     const ids = names.map((n) => game.join(n).id);
     /** Nicknames per team, in join order. */
-    const layout = () => {
-      const a = game.teamAssignment();
-      return Array.from({ length: game.hostView().teams!.length }, (_, i) => [...game.players.values()].filter((p) => a.get(p.id) === i).map((p) => p.nickname));
-    };
+    const layout = () => game.hostView().teams!.map((t) => t.members.map((p) => p.nickname));
     const badge = (id: string) => {
       const v = game.playerView(id);
       return v.kind === "classic" ? v.team : null;
@@ -390,7 +387,6 @@ describe("lobby teams", () => {
     expect(layout()).toEqual([["B", "E"], ["C"], ["D"]]);
     game.setModeSettings("tower", { teams: 2, minutes: 5 });
     expect(layout()).toEqual([["B", "D"], ["C", "E"]]);
-    expect(game.hostView().teams!.map((t) => t.members.map((m) => m.nickname))).toEqual(layout());
   });
 
   test("setTeam moves only that player; the phone badge follows", () => {
@@ -400,7 +396,6 @@ describe("lobby teams", () => {
     expect(layout()).toEqual([["D"], ["B", "E"], ["A", "C"]]);
     expect(badge(ids[0]!)).toMatchObject({ index: 2, name: "Yellow" });
     expect(badge(ids[3]!)?.index).toBe(0);
-    expect(game.hostView().teams!.map((t) => t.members.map((m) => m.nickname))).toEqual([["D"], ["B", "E"], ["A", "C"]]);
   });
 
   test("after a manual move, joiners go to the smallest team and a kick leaves the rest in place", () => {
@@ -428,6 +423,18 @@ describe("lobby teams", () => {
     game.setTeam(ids[4]!, 3);
     game.setMode("fight");
     expect(layout()).toEqual([["A", "C", "E"], ["B", "D"]]);
+  });
+
+  test("a solo mode hides but does not reset manual team assignments", () => {
+    const { game, ids, layout, badge } = teamLobby(["A", "B", "C"]);
+    game.setTeam(ids[0]!, 2);
+    game.setMode("classic");
+    expect(game.hostView().teams).toBeNull();
+    expect(badge(ids[0]!)).toBeNull();
+    game.join("D");
+    game.setMode("tower");
+    expect(layout()).toEqual([["D"], ["B"], ["A", "C"]]);
+    expect(badge(ids[0]!)?.index).toBe(2);
   });
 
   test("setTeam is rejects solo modes and bad arguments", () => {

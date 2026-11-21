@@ -55,6 +55,32 @@ describe("Lobby handoff", () => {
     expect(events[0]).toBe("install");
   });
 
+  test.each(["no view", "projector view", "phone view"])("team assignments survive shrinking and growing with %s read between edits", (read) => {
+    const { lobby, joined, opts, installedGame } = setup("tower", ["A", "B", "C", "D", "E"]);
+    lobby.setModeSettings("tower", { teams: 3, minutes: 5 });
+    lobby.setTeam(joined[3]!.id, 1);
+    lobby.setModeSettings("tower", { teams: 2, minutes: 5 });
+    if (read === "projector view") {
+      expect(lobby.hostView().teams?.[0]?.members.map((p) => p.nickname)).toEqual(["A", "C"]);
+    } else if (read === "phone view") {
+      expect(lobby.playerView(joined[2]!.id)).toMatchObject({ team: { index: 0 } });
+    }
+    lobby.setModeSettings("tower", { teams: 4, minutes: 5 });
+
+    lobby.start(undefined, opts);
+    const game = installedGame();
+    const expectedTeams = [0, 1, 0, 1, 1];
+    expect(joined.map(({ id }) => {
+      const view = game?.playerView(id);
+      return view?.kind === "tower" ? view.team.index : null;
+    })).toEqual(expectedTeams);
+    expect(lobby.hostView().teams?.map((t) => t.members.map((p) => p.nickname))).toEqual([["A", "C"], ["B", "D", "E"], [], []]);
+    expect(joined.map(({ id }) => {
+      const view = lobby.playerView(id);
+      return view.kind === "classic" ? view.team?.index : null;
+    })).toEqual(expectedTeams);
+  });
+
   test("Racer and Showdown carry the chosen pacing forward to the next lobby", () => {
     for (const [mode, kind] of [["racer", RacerGame], ["duel", DuelGame]] as const) {
       const { lobby, opts, installedGame } = setup(mode, ["Noel", "Holly"]);
