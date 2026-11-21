@@ -104,7 +104,7 @@ export function startServer(opts: ServerOptions): RunningServer {
         dataDir: store.dataDir,
         musicDir: store.musicDir,
         port: server.port,
-        joinUrl: hub.joinUrl(),
+        joinUrl: hub.join.url(),
         mcp: { httpUrl: `http://localhost:${server.port}/mcp`, stdioCommand: [process.execPath, ...(isCompiled() ? [] : [Bun.main]), "mcp", "--data-dir", store.dataDir] },
       });
     }
@@ -186,7 +186,7 @@ export function startServer(opts: ServerOptions): RunningServer {
     },
   });
 
-  hub.port = server.port!;
+  hub.join.port = server.port!;
 
   return {
     server,

@@ -1,6 +1,5 @@
 import type { ServerWebSocket } from "bun";
-import QRCode from "qrcode";
-import type { ClientMsg, HostView, JoinInfo, Pacing, PlayerView, ServerMsg } from "../shared/protocol.ts";
+import type { ClientMsg, HostView, Pacing, PlayerView, ServerMsg } from "../shared/protocol.ts";
 import { cleanAvatar } from "../shared/avatars.ts";
 import { ValidationError } from "../shared/quiz-schema.ts";
 import { Lobby, type LobbyChoices } from "./game/lobby.ts";
@@ -8,7 +7,8 @@ import { MSG_MODE, isModeMsg, type LiveGame } from "./game/mode-entry.ts";
 import { entryOf, MODES } from "./game/modes.ts";
 import { writeResultsFile } from "./game/results.ts";
 import { GameError, type Clock } from "./game/common.ts";
-import { lanAddresses, type LanAddress } from "./network.ts";
+import { JoinInformation } from "./join-info.ts";
+import type { LanAddress } from "./network.ts";
 import { PhoneAttachments } from "./phone-attachments.ts";
 import { PhoneViewDelivery } from "./phone-view-delivery.ts";
 import { ViewUpdateScheduler } from "./view-update-scheduler.ts";
@@ -48,15 +48,13 @@ const compressFor = (ws: WS) => ws.data.role !== "host";
 export class GameHub {
   game: Lobby | LiveGame | null = null;
   lastResults: LastResults | null = null;
-  port = 0;
   /** Changes on every server start; pages that reconnect to a different one reload to pick up new code. */
   readonly serverId = crypto.randomUUID();
 
   private readonly phoneAttachments = new PhoneAttachments<WS>((id, connected) => this.game?.setConnected(id, connected));
   private readonly phoneViews: PhoneViewDelivery;
-  private selected: string | null;
-  private addressCache: { at: number; list: LanAddress[] } | null = null;
-  private qrCache = new Map<string, string>();
+  /** Where players join: address, URL and QR code. */
+  readonly join: JoinInformation;
   /** Image refs of the open quiz, sent to phones on join so they can preload them. */
   private images: string[] = [];
   private readonly viewUpdates = new ViewUpdateScheduler(
@@ -79,61 +77,27 @@ export class GameHub {
     private readonly opts: HubOptions = {},
   ) {
     this.phoneViews = new PhoneViewDelivery(() => opts.clock?.now() ?? Date.now());
-    this.selected = opts.address ?? null;
+    this.join = new JoinInformation({
+      address: opts.address,
+      discoverAddresses: opts.discoverAddresses,
+      now: opts.clock ? () => opts.clock!.now() : undefined,
+      log: opts.log,
+      onQrReady: () => this.viewUpdates.scheduleBroadcast(),
+    });
     this.log = opts.log ?? (() => {});
   }
 
   // ---------- join info ----------
 
-  addresses(): LanAddress[] {
-    const now = Date.now();
-    if (!this.addressCache || now - this.addressCache.at > 5000) {
-      const discover = this.opts.discoverAddresses ?? lanAddresses;
-      this.addressCache = { at: now, list: discover() };
-    }
-    return this.addressCache.list;
-  }
-
-  get address(): string {
-    const list = this.addresses();
-    if (this.selected && (this.opts.address === this.selected || list.some((a) => a.address === this.selected))) return this.selected;
-    return list[0]?.address ?? "localhost";
-  }
-
   setAddress(address: string): void {
-    if (!this.addresses().some((a) => a.address === address) && address !== this.opts.address) {
-      throw new GameError(`${address} is not an address of this computer`);
-    }
-    this.selected = address;
+    if (!this.join.select(address)) throw new GameError(`${address} is not an address of this computer`);
     this.viewUpdates.scheduleBroadcast();
-  }
-
-  joinUrl(): string {
-    return `http://${this.address}:${this.port}/`;
-  }
-
-  joinInfo(): JoinInfo {
-    const url = this.joinUrl();
-    let qrSvg = this.qrCache.get(url);
-    if (qrSvg === undefined) {
-      this.qrCache.set(url, "");
-      QRCode.toString(url, { type: "svg", margin: 1, errorCorrectionLevel: "M" })
-        .then((svg) => {
-          this.qrCache.set(url, svg);
-          this.viewUpdates.scheduleBroadcast();
-        })
-        .catch((e) => this.log(`QR code generation failed: ${e}`));
-      qrSvg = "";
-    }
-    const addresses = this.addresses().map(({ address, iface }) => ({ address, iface }));
-    if (this.opts.address && !addresses.some((a) => a.address === this.opts.address)) addresses.unshift({ address: this.opts.address, iface: "--host" });
-    return { url, qrSvg, address: this.address, addresses, port: this.port };
   }
 
   // ---------- views ----------
 
   hostView(): HostView {
-    const join = this.joinInfo();
+    const join = this.join.info();
     return this.game ? { ...this.game.hostView(), join } : { kind: "idle", phase: "idle", join };
   }
 
@@ -276,7 +240,7 @@ export class GameHub {
         this.closeGame();
         this.images = [...new Set(quiz.questions.flatMap((q) => (q.image ? [q.image] : [])))];
         this.game = new Lobby(quiz, { ...this.lastSetup, onChange: () => this.viewUpdates.scheduleBroadcast() });
-        this.log(`Game opened: ${quiz.title}. Players join at ${this.joinUrl()}`);
+        this.log(`Game opened: ${quiz.title}. Players join at ${this.join.url()}`);
         this.viewUpdates.scheduleBroadcast();
         return;
       }
