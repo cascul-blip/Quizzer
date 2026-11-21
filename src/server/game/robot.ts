@@ -139,9 +139,7 @@ export class RobotGame {
   /** Take over a lobby's players (same ids and tokens), spread out across the board. */
   static fromLobby(lobby: Game, opts: RobotOptions = {}, protect = lobby.protect): RobotGame {
     const game = new RobotGame(lobby.quiz, { shuffleAnswers: lobby.shuffle.answers, protect }, opts);
-    for (const p of lobby.players.values()) {
-      game.roster.adopt(game.newPlayer({ id: p.id, nickname: p.nickname, token: p.token, connected: p.connected, avatar: p.avatar }));
-    }
+    game.roster.adoptFrom(lobby.players.values(), (base) => game.newPlayer(base));
     return game;
   }
 
@@ -322,10 +320,7 @@ export class RobotGame {
   }
 
   setConnected(playerId: string, connected: boolean): void {
-    const p = this.players.get(playerId);
-    if (!p || p.connected === connected) return;
-    p.connected = connected;
-    this.onChange();
+    if (this.roster.setConnected(playerId, connected)) this.onChange();
   }
 
   kick(playerId: string): RobotPlayer | null {

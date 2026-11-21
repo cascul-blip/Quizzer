@@ -34,6 +34,21 @@ export class Roster<P extends BasePlayer> {
     return player;
   }
 
+  /** Insert a copy of each player (keeping id and token), shaped by `make`: how a lobby hands its players to another mode. */
+  adoptFrom(source: Iterable<BasePlayer>, make: (base: BasePlayer) => P): void {
+    for (const { id, nickname, token, connected, avatar } of source) {
+      this.adopt(make({ id, nickname, token, connected, avatar }));
+    }
+  }
+
+  /** Flip a player's connection flag. Returns the player only when the flag changed, so callers react to real changes. */
+  setConnected(playerId: string, connected: boolean): P | null {
+    const p = this.players.get(playerId);
+    if (!p || p.connected === connected) return null;
+    p.connected = connected;
+    return p;
+  }
+
   byToken(token: unknown): P | null {
     if (typeof token !== "string") return null;
     const id = this.tokens.get(token);

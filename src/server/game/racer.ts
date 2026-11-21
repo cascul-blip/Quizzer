@@ -127,9 +127,7 @@ export class RacerGame {
   /** Take over a lobby's players (same ids and tokens), its shuffle choices and its pacing. */
   static fromLobby(lobby: Game, opts: RacerOptions = {}): RacerGame {
     const game = new RacerGame(lobby.quiz, { shuffle: lobby.shuffle, pacing: lobby.pacing, theme: lobby.settings.racer.theme }, opts);
-    for (const p of lobby.players.values()) {
-      game.roster.adopt(game.newPlayer({ id: p.id, nickname: p.nickname, token: p.token, connected: p.connected, avatar: p.avatar }));
-    }
+    game.roster.adoptFrom(lobby.players.values(), (base) => game.newPlayer(base));
     return game;
   }
 
@@ -161,9 +159,7 @@ export class RacerGame {
   }
 
   setConnected(playerId: string, connected: boolean): void {
-    const p = this.players.get(playerId);
-    if (!p || p.connected === connected) return;
-    p.connected = connected;
+    if (!this.roster.setConnected(playerId, connected)) return;
     this.onChange();
     if (!connected) this.afterPlayerLeft(playerId);
   }

@@ -128,9 +128,7 @@ export class SubGame {
 
   static fromLobby(lobby: Game, opts: SubOptions = {}, protect = lobby.protect): SubGame {
     const game = new SubGame(lobby.quiz, { ...opts, shuffleAnswers: lobby.shuffle.answers, protect });
-    for (const p of lobby.players.values()) {
-      game.roster.adopt(game.newPlayer({ id: p.id, nickname: p.nickname, token: p.token, connected: p.connected, avatar: p.avatar }));
-    }
+    game.roster.adoptFrom(lobby.players.values(), (base) => game.newPlayer(base));
     return game;
   }
 

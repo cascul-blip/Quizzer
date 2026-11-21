@@ -191,9 +191,7 @@ export class Game {
   }
 
   setConnected(playerId: string, connected: boolean): void {
-    const p = this.players.get(playerId);
-    if (!p || p.connected === connected) return;
-    p.connected = connected;
+    if (!this.roster.setConnected(playerId, connected)) return;
     this.onChange();
     if (!connected) this.maybeCloseEarly();
   }
