@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { GIFT_MINUTES } from "../../shared/gift-rules.ts";
-import type { GiftStanding, HostView } from "../../shared/protocol.ts";
+import type { GiftStanding } from "../../shared/modes/gift.ts";
+import type { HostView } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { formatClock, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";

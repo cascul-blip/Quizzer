@@ -2,7 +2,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import {
   GIFT_CORRECT_TO_PLAY, GIFT_DUDS, GIFT_READY_MS, GIFT_ROUND_MS, type GiftItem, type GiftItemKind,
 } from "../../shared/gift-rules.ts";
-import type { ClientMsg, GiftHit, PlayerGiftView } from "../../shared/protocol.ts";
+import type { ClientMsg } from "../../shared/protocol.ts";
+import type { GiftHit, PlayerGiftView } from "../../shared/modes/gift.ts";
 import { formatClock, ordinal, useCountdown } from "../shared/ui.tsx";
 import { Feedback, StreamQuestion } from "./stream-question.tsx";
 import workshop from "../shared/gift/workshop.webp";
