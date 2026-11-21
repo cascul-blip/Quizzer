@@ -50,9 +50,6 @@ const TEAMS: { [M in GameMode]: number | null } = {
 /** Modes played question by question, whose pacing the host sets and the next lobby keeps. */
 const PACED = new Set<GameMode>(["classic", "racer", "duel"]);
 
-/** Modes whose phones show a banner in the lobby. */
-const BANNER = new Set<GameMode>(["siege"]);
-
 /** One phone message of each game mode. */
 const PHONE_MSG: { [M in GameMode]: ModeMsg<M> } = {
   classic: { type: "answer", qIndex: 0, option: 0 },
@@ -169,9 +166,9 @@ describe("Game modes", () => {
         expect(phoneLobbyView(noel!.playerId).team !== null).toBe(TEAMS[mode] !== null);
       });
 
-      test(`phones in the lobby ${BANNER.has(mode) ? "show" : "don't show"} a mode banner`, () => {
+      test(`phones in the lobby ${MODES[mode].lobbyBanner ? "show" : "don't show"} a mode banner`, () => {
         const [noel] = openLobby(mode, ["Noel"]);
-        expect(phoneLobbyView(noel!.playerId).banner).toBe(BANNER.has(mode) ? mode : undefined);
+        expect(phoneLobbyView(noel!.playerId).banner).toBe(MODES[mode].lobbyBanner ? mode : undefined);
       });
 
       test(`pacing ${PACED.has(mode) ? "is set during the game and carries over" : "is not available and doesn't carry over"}`, async () => {

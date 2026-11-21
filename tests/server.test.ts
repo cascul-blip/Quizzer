@@ -517,34 +517,34 @@ describe("Submarine Squad over WebSockets", () => {
       await p.waitFor((m) => m.type === "joined");
     }
     host.send({ type: "host.start", pacing: "manual" });
-    await host.hostState((v) => v.kind === "sub" && v.phase === "countdown");
+    await host.hostState((v) => v.kind === "submarine" && v.phase === "countdown");
     clock.advance(SUB_COUNTDOWN_MS);
     srv.hub.broadcast();
-    const chase = await host.hostState((v) => v.kind === "sub" && v.phase === "chase");
-    expect(chase.view.kind === "sub" && chase.view.required).toBe(5);
+    const chase = await host.hostState((v) => v.kind === "submarine" && v.phase === "chase");
+    expect(chase.view.kind === "submarine" && chase.view.required).toBe(5);
 
     const sam = players[0]!;
     for (let i = 0; i < 4; i++) {
-      const st = await sam.playerState((v) => v.kind === "sub" && !!v.question && !v.feedback);
-      const q = st.view.kind === "sub" ? st.view.question! : null;
+      const st = await sam.playerState((v) => v.kind === "submarine" && !!v.question && !v.feedback);
+      const q = st.view.kind === "submarine" ? st.view.question! : null;
       sam.send({ type: "sub.answer", seq: q!.seq, option: 0 });
-      await sam.playerState((v) => v.kind === "sub" && v.feedback?.seq === q!.seq);
+      await sam.playerState((v) => v.kind === "submarine" && v.feedback?.seq === q!.seq);
       clock.advance(FEEDBACK_MS);
       srv.hub.broadcast();
     }
-    await sam.playerState((v) => v.kind === "sub" && v.state === "boost");
+    await sam.playerState((v) => v.kind === "submarine" && v.state === "boost");
     clock.advance(BOOST_MIN_HOLD_MS);
     sam.send({ type: "sub.boost" });
-    const boosted = await host.hostState((v) => v.kind === "sub" && v.boosts === 1);
-    expect(boosted.view.kind === "sub" && boosted.view.lastBoost?.nickname).toBe("Sam");
+    const boosted = await host.hostState((v) => v.kind === "submarine" && v.boosts === 1);
+    expect(boosted.view.kind === "submarine" && boosted.view.lastBoost?.nickname).toBe("Sam");
     // The boost carries Sam's avatar so the projector can show who boosted.
-    if (boosted.view.kind === "sub") {
+    if (boosted.view.kind === "submarine") {
       const samAvatar = boosted.view.players.find((p) => p.nickname === "Sam")!.avatar;
       expect(boosted.view.lastBoost?.avatar).toEqual(samAvatar);
     }
 
     host.send({ type: "host.end" });
-    await host.hostState((v) => v.kind === "sub" && v.phase === "podium");
+    await host.hostState((v) => v.kind === "submarine" && v.phase === "podium");
     const csv = await (await fetch(`${base}/api/results/latest.csv`)).text();
     expect(csv).toContain("Nickname,Correct,Wrong,Boosts");
     expect(csv).toContain("Sam,4,0,1,");

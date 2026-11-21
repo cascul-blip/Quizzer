@@ -138,7 +138,7 @@ describe("Sled Squad Christmas music", () => {
 
 
 test("Sled Squad routes the intro, chase, trail challenge, and score screen to their arrangements", () => {
-  const view = (phase: SubPhase) => ({ kind: "sub", phase, gap: 10, maxGap: 20 } as Extract<HostView, { kind: "sub" }>);
+  const view = (phase: SubPhase) => ({ kind: "submarine", phase, gap: 10, maxGap: 20 } as Extract<HostView, { kind: "submarine" }>);
   expect(musicFor(view("countdown")).track).toBe("submarine-lobby");
   expect(musicFor(view("chase"))).toEqual({ track: "submarine-chase", intensity: .5 });
   expect(musicFor(view("dive")).track).toBe("submarine-dive");

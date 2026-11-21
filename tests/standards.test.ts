@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
+import { MODE_NAMES } from "../src/shared/mode-names.ts";
 
 const ROOT = resolve(import.meta.dir, "..");
 const SERVER = join(ROOT, "src/server");
@@ -13,11 +14,18 @@ function tsFiles(dir: string): string[] {
   });
 }
 
-const sources = tsFiles(SERVER).map((path) => ({ path, lines: readFileSync(path, "utf8").split("\n") }));
+type Source = { path: string; lines: string[] };
+
+const read = (path: string): Source => ({ path, lines: readFileSync(path, "utf8").split("\n") });
+
+const sources = tsFiles(SERVER).map(read);
+
+/** The client files that look a mode up in its entry (src/client/host/modes.tsx, src/client/player/modes.tsx) instead of asking which mode is running. */
+const CLIENT_FILES = ["src/client/host/main.tsx", "src/client/player/main.tsx"].map((path) => read(join(ROOT, path)));
 
 /** Every line matching the pattern, as file:line and the line itself. */
-function offending(pattern: RegExp): string[] {
-  return sources.flatMap(({ path, lines }) =>
+function offending(pattern: RegExp, files: Source[] = sources): string[] {
+  return files.flatMap(({ path, lines }) =>
     lines.flatMap((line, i) => (pattern.test(line) ? [`${relative(ROOT, path)}:${i + 1}: ${line.trim()}`] : [])),
   );
 }
@@ -40,6 +48,14 @@ describe("Coding standards: mode entries", () => {
     const quote = "[\"'`]";
     const pattern = new RegExp(`\\b\\w*[mM]ode\\s*[!=]==?\\s*${quote}|${quote}\\w*${quote}\\s*[!=]==?\\s*[\\w.]*[mM]ode\\b`);
     expect(offending(pattern)).toEqual([]);
+  });
+
+  test("no client file that uses the mode entries compares a view's kind, mode or banner against a game mode", () => {
+    // view.kind === "tower", view.mode !== "siege", view.banner === "siege", "duel" === view.kind, and case "racer":.
+    const quote = "[\"'`]";
+    const mode = `${quote}(?:${Object.keys(MODE_NAMES).join("|")})${quote}`;
+    const pattern = new RegExp(`\\b\\w*(?:[mM]ode|[kK]ind|[bB]anner)\\s*[!=]==?\\s*${mode}|${mode}\\s*[!=]==?\\s*[\\w.]*(?:[mM]ode|[kK]ind|[bB]anner)\\b|\\bcase\\s+${mode}\\s*:`);
+    expect(offending(pattern, CLIENT_FILES)).toEqual([]);
   });
 
   test("no code asks which game class is running", () => {
