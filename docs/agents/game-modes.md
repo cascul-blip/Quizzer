@@ -11,11 +11,23 @@ Design notes for the app and individual modes live in `docs/modes/`:
 
 Put a new mode's doc in `docs/modes/` and link it here.
 
+# Lobby handoff
+
+GameHub gives the mode entry the quiz, choices, player identities and team assignments, then installs the game before activation. It remembers the lobby choices after activation succeeds. If activation fails, GameHub restores the lobby and disposes of the new game.
+
+Before moving ownership or migrating handoff tests, match each case to existing hub coverage in [hub.test.ts](../../tests/hub.test.ts), [host-commands.test.ts](../../tests/host-commands.test.ts), and [lobby-handoff.test.ts](../../tests/lobby-handoff.test.ts). Add tests for gaps and keep one test for each identical scenario.
+
+| Host command in the lobby | Empty lobby | At least one player |
+| --- | --- | --- |
+| Start (`host.start`) | Refuse and keep the lobby open for retry. | Launch the selected game mode. |
+| Next (`host.next`) | Refuse and keep the lobby open for retry. | Start Classic even when another mode is selected. |
+| End (`host.end`) | Go straight to the Classic podium even when another mode is selected. | Go straight to the Classic podium even when another mode is selected. |
+
 # Adding or removing a game mode
 
 A mode's server knowledge lives in its entry: a `ModeEntry` (`src/server/game/mode-entry.ts`) exported from the mode's own file in `src/server/game/`, collected in `MODES` (`src/server/game/modes.ts`). `MODES` is typed over `GameMode`, so a mode without an entry is a compile error. The hub, lobby and handoff look the entry up by `game.runningMode` and never branch on the mode; `tests/standards.test.ts` enforces that.
 
-The projector and the phone have a mode entry each, collected the same way: `HOST_MODES` (`src/client/host/modes.tsx`) holds the mode's stage, its music cue and its lobby part, and `PLAYER_MODES` (`src/client/player/modes.tsx`) its phone screen and lobby banner. Both are typed over `GameMode`. Each `main.tsx` looks the entry up by `view.kind`, which is the mode, and never branches on the mode, and neither does `src/client/host/music-cues.ts`, which plays the entry's cue; `tests/standards.test.ts` enforces that for all three files. The server sends dedicated projector and joined-phone lobby views with `kind: "lobby"`. The projector, phone and music handler use that kind to select the lobby and use its selected mode for settings, banners and lobby music. Classic’s server class lives in `src/server/game/classic.ts` and its mode entry lives in `src/server/game/classic-entry.ts`. On Start, it hands the selected mode entry the quiz, choices, player identities and team assignments. Classic receives the handoff just like the other modes. For compatibility, `host.next` and `host.end` received while the lobby is open target Classic regardless of the selected mode. `host.next` starts Classic and `host.end` takes it straight to the podium. The projector’s Start control uses `host.start` to launch the selected mode.
+The projector and the phone have a mode entry each, collected the same way: `HOST_MODES` (`src/client/host/modes.tsx`) holds the mode's stage, its music cue and its lobby part, and `PLAYER_MODES` (`src/client/player/modes.tsx`) its phone screen and lobby banner. Both are typed over `GameMode`. Each `main.tsx` looks the entry up by `view.kind`, which is the mode, and never branches on the mode, and neither does `src/client/host/music-cues.ts`, which plays the entry's cue; `tests/standards.test.ts` enforces that for all three files. The server sends dedicated projector and joined-phone lobby views with `kind: "lobby"`. The projector, phone and music handler use that kind to select the lobby and use its selected mode for settings, banners and lobby music. Classic’s server class lives in `src/server/game/classic.ts` and its mode entry lives in `src/server/game/classic-entry.ts`.
 
 The lobby part of a projector entry (`LobbyModeEntry`) is the mode's line in the Game mode menu, its settings panel with its hint text, an optional preview below the settings, and its lobby track, the music the lobby plays while the mode is selected. The projector lobby and its music selection both look up the selected mode in `HOST_MODES`.
 
