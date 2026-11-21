@@ -7,6 +7,7 @@ import { DuelStage } from "./duel.tsx";
 import { FightStage } from "./fight.tsx";
 import { GiftStage } from "./gift.tsx";
 import { LandStage } from "./land.tsx";
+import { LOBBY_MODES, type LobbyModeEntry } from "./lobby-modes.tsx";
 import { RacerStage } from "./racer.tsx";
 import { RobotStage } from "./robot.tsx";
 import { SiegeStage } from "./siege.tsx";
@@ -18,25 +19,25 @@ export type HostModeView<M extends GameMode> = Extract<HostView, { kind: M }>;
 
 type StageProps<M extends GameMode> = { view: HostModeView<M>; send: Send };
 
-/** Everything the projector knows about one game mode; main.tsx looks it up in HOST_MODES instead of branching on the mode. */
-export interface HostModeEntry<M extends GameMode> {
+/** Everything the projector knows about one game mode; main.tsx looks it up in HOST_MODES instead of branching on the mode. Its lobby part comes from LOBBY_MODES. */
+export interface HostModeEntry<M extends GameMode> extends LobbyModeEntry<M> {
   /** The projector screen while the mode's view is shown. */
   Stage: ComponentType<StageProps<M>>;
 }
 
-/** Every game mode's projector entry, with its stage in src/client/host/<mode>.tsx. */
+/** Every game mode's projector entry, with its stage and lobby part in src/client/host/<mode>.tsx (Classic's lobby part in lobby-modes.tsx). */
 export const HOST_MODES: { [M in GameMode]: HostModeEntry<M> } = {
-  classic: { Stage: ClassicStage },
-  tower: { Stage: TowerStage },
-  submarine: { Stage: SubStage },
-  fight: { Stage: FightStage },
-  robot: { Stage: RobotStage },
-  land: { Stage: LandStage },
-  racer: { Stage: RacerStage },
-  cup: { Stage: CupStage },
-  siege: { Stage: SiegeStage },
-  duel: { Stage: DuelStage },
-  gift: { Stage: GiftStage },
+  classic: { ...LOBBY_MODES.classic, Stage: ClassicStage },
+  tower: { ...LOBBY_MODES.tower, Stage: TowerStage },
+  submarine: { ...LOBBY_MODES.submarine, Stage: SubStage },
+  fight: { ...LOBBY_MODES.fight, Stage: FightStage },
+  robot: { ...LOBBY_MODES.robot, Stage: RobotStage },
+  land: { ...LOBBY_MODES.land, Stage: LandStage },
+  racer: { ...LOBBY_MODES.racer, Stage: RacerStage },
+  gift: { ...LOBBY_MODES.gift, Stage: GiftStage },
+  cup: { ...LOBBY_MODES.cup, Stage: CupStage },
+  siege: { ...LOBBY_MODES.siege, Stage: SiegeStage },
+  duel: { ...LOBBY_MODES.duel, Stage: DuelStage },
 };
 
 /** The stage of the mode a view belongs to, to render with that same view. */

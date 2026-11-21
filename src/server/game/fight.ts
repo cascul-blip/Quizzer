@@ -26,7 +26,7 @@ import { Roster, type BasePlayer } from "./roster.ts";
 import { QuestionStream, newStreamPlayer, type StreamPlayer } from "./stream.ts";
 import { answerOf } from "../../shared/answer-match.ts";
 import { MODE_NAMES } from "../../shared/mode-names.ts";
-import { handoffOptions, pickTheme, unhandled, type ModeEntry } from "./mode-entry.ts";
+import { handoffOptions, lobbyProtect, pickTheme, unhandled, type ModeEntry } from "./mode-entry.ts";
 import { toCsv } from "./results.ts";
 
 export { FEEDBACK_MS } from "./stream.ts";
@@ -135,7 +135,7 @@ export class FightGame {
 
   /** Take over a lobby's players (same ids and tokens), split Red/Blue as shown in the lobby. */
   static fromLobby(lobby: Game, opts: FightOptions = {}): FightGame {
-    const game = new FightGame(lobby.quiz, { ...lobby.settings.fight, shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
+    const game = new FightGame(lobby.quiz, { ...lobby.settings.fight, shuffleAnswers: lobby.shuffle.answers, protect: lobbyProtect(lobby, "fight") }, opts);
     const players = [...lobby.players.values()];
     const teams = lobby.teamAssignment();
     players.forEach((p) => {

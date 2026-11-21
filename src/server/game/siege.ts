@@ -63,7 +63,7 @@ import { QuestionStream, newStreamPlayer, type StreamPlayer } from "./stream.ts"
 import { loadSiegeRecord, saveSiegeRecord } from "../siege-records.ts";
 import { answerOf } from "../../shared/answer-match.ts";
 import { MODE_NAMES } from "../../shared/mode-names.ts";
-import { handoffOptions, pickTheme, unhandled, type ModeEntry } from "./mode-entry.ts";
+import { handoffOptions, lobbyProtect, pickTheme, unhandled, type ModeEntry } from "./mode-entry.ts";
 import { toCsv } from "./results.ts";
 
 export { FEEDBACK_MS } from "./stream.ts";
@@ -266,7 +266,7 @@ export class SiegeGame {
 
   /** Take over a lobby's players (same ids and tokens). */
   static fromLobby(lobby: Game, opts: SiegeOptions = {}): SiegeGame {
-    const game = new SiegeGame(lobby.quiz, { ...lobby.settings.siege, shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
+    const game = new SiegeGame(lobby.quiz, { ...lobby.settings.siege, shuffleAnswers: lobby.shuffle.answers, protect: lobbyProtect(lobby, "siege") }, opts);
     for (const p of lobby.players.values()) {
       game.roster.adopt(game.newPlayer({ id: p.id, nickname: p.nickname, token: p.token, connected: p.connected, avatar: p.avatar }));
     }

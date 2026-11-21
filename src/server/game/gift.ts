@@ -23,7 +23,7 @@ import { Roster, type BasePlayer } from "./roster.ts";
 import { newStreamPlayer, QuestionStream, type StreamPlayer } from "./stream.ts";
 import { answerOf } from "../../shared/answer-match.ts";
 import { MODE_NAMES } from "../../shared/mode-names.ts";
-import { handoffOptions, unhandled, type ModeEntry } from "./mode-entry.ts";
+import { handoffOptions, lobbyProtect, unhandled, type ModeEntry } from "./mode-entry.ts";
 import { toCsv } from "./results.ts";
 
 const COUNTDOWN_MS = 3_000;
@@ -116,7 +116,7 @@ export class GiftGame {
 
   static fromLobby(lobby: Game, opts: GiftOptions = {}): GiftGame {
     if (!lobby.quiz.questions.length) throw new GameError("This quiz has no questions");
-    const game = new GiftGame(lobby.quiz, lobby.settings.gift.minutes, lobby.shuffle.answers, lobby.protect, opts);
+    const game = new GiftGame(lobby.quiz, lobby.settings.gift.minutes, lobby.shuffle.answers, lobbyProtect(lobby, "gift"), opts);
     for (const player of lobby.players.values()) {
       const { id, nickname, token, connected, avatar } = player;
       game.roster.adopt(newPlayer({ id, nickname, token, connected, avatar }));

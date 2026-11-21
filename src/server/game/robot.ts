@@ -28,7 +28,7 @@ import { Roster, type BasePlayer } from "./roster.ts";
 import { QuestionStream, newStreamPlayer, type StreamPlayer } from "./stream.ts";
 import { answerOf } from "../../shared/answer-match.ts";
 import { MODE_NAMES } from "../../shared/mode-names.ts";
-import { handoffOptions, unhandled, type ModeEntry } from "./mode-entry.ts";
+import { handoffOptions, lobbyProtect, unhandled, type ModeEntry } from "./mode-entry.ts";
 import { toCsv } from "./results.ts";
 
 export { FEEDBACK_MS } from "./stream.ts";
@@ -138,7 +138,7 @@ export class RobotGame {
 
   /** Take over a lobby's players (same ids and tokens), spread out across the board. */
   static fromLobby(lobby: Game, opts: RobotOptions = {}): RobotGame {
-    const game = new RobotGame(lobby.quiz, { shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
+    const game = new RobotGame(lobby.quiz, { shuffleAnswers: lobby.shuffle.answers, protect: lobbyProtect(lobby, "robot") }, opts);
     for (const p of lobby.players.values()) {
       game.roster.adopt(game.newPlayer({ id: p.id, nickname: p.nickname, token: p.token, connected: p.connected, avatar: p.avatar }));
     }

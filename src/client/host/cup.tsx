@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { useDelayedCues } from "./delayed-cues.ts";
-import { type HostView } from "../../shared/protocol.ts";
+import { CUP_MAX_CUPS, CUP_MIN_CUPS, type HostView } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { SaloonScene, TABLE_CENTER, type SaloonMode } from "../shared/cup-art.tsx";
 import { play } from "../shared/sounds.ts";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
+import type { LobbyModeEntry, LobbySettingsProps } from "./lobby-modes.tsx";
 import { Award } from "./tower.tsx";
-import { cupName } from "../../shared/cup-theme.ts";
+import { cupName, cupTheme, type CupTheme } from "../../shared/cup-theme.ts";
 import { CupThemeProvider, useChristmasCup } from "../shared/cup-skin.tsx";
 
 type CupView = Extract<HostView, { kind: "cup" }>;
@@ -260,3 +261,36 @@ function CupPodium({ view, send }: { view: CupView; send: Send }) {
     </main>
   );
 }
+
+// ---------- lobby ----------
+
+/** Cup of Death's mode settings in the lobby. */
+function CupSettings({ settings, send }: LobbySettingsProps<"cup">) {
+  return (
+    <>
+      <label class="opt">
+        Theme
+        <select aria-label="Cup theme" value={cupTheme(settings.theme)} onChange={(e) => send({ type: "host.setModeSettings", mode: "cup", settings: { cups: settings.cups, theme: e.currentTarget.value as CupTheme } })}>
+          <option value="christmas">🎄 Santa's Workshop</option>
+          <option value="classic">☠️ Normal</option>
+        </select>
+      </label>
+      <label class="opt">
+        Cups
+        <select value={settings.cups} onChange={(e) => send({ type: "host.setModeSettings", mode: "cup", settings: { cups: Number(e.currentTarget.value) } })}>
+          {Array.from({ length: CUP_MAX_CUPS - CUP_MIN_CUPS + 1 }, (_, i) => (
+            <option key={i} value={i + CUP_MIN_CUPS}>
+              {i + CUP_MIN_CUPS}
+            </option>
+          ))}
+        </select>
+      </label>
+      <span class="opt mode-hint">{cupTheme(settings.theme) === "christmas" ? "Roll the die, then answer that many questions before time runs out, or sip some cocoa. One cup is supercharged: shake, sparkle and blast off! Last one in the workshop wins." : "Roll the die, then answer that many questions before time runs out, or drink from a cup. One is poisoned. Last one standing wins."}</span>
+    </>
+  );
+}
+
+export const cupLobby: LobbyModeEntry<"cup"> = {
+  label: (settings) => cupName(settings.theme),
+  Settings: CupSettings,
+};

@@ -7,6 +7,7 @@ import { play } from "../shared/sounds.ts";
 import { useEventFlash } from "../shared/tower-art.tsx";
 import { useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
+import type { LobbyModeEntry, LobbySettingsProps } from "./lobby-modes.tsx";
 
 type SubView = Extract<HostView, { kind: "submarine" }>;
 
@@ -325,3 +326,15 @@ function Award({ icon, title, award, unit }: { icon: string; title: string; awar
     </div>
   );
 }
+
+// ---------- lobby ----------
+
+/** Sled Squad has no mode settings; the lobby shows how it plays. */
+function SubSettings() {
+  return <span class="opt mode-hint">Everyone works together to outrun the Christmas goblin. The game ends when it catches you.</span>;
+}
+
+export const subLobby: LobbyModeEntry<"submarine"> = {
+  label: () => "🛷 Sled Squad",
+  Settings: SubSettings,
+};

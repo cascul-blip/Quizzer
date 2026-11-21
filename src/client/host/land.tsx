@@ -1,11 +1,13 @@
 import { LandThemeProvider, useNorthPole, northPoleArt } from "../shared/land-skin.tsx";
 import { useEffect, useRef, useState } from "preact/hooks";
-import type { HostLandTeam, HostView } from "../../shared/protocol.ts";
+import { LAND_MINUTES, LAND_MIN_TEAMS, MAX_TEAMS, type HostLandTeam, type HostView } from "../../shared/protocol.ts";
+import { landTheme, type LandTheme } from "../../shared/land-theme.ts";
 import { BANNER_CAPTURE, BANNER_KNOCKOUT, HexBoard, LandShape, Plinth, landArt, useBanner, useTeamCard } from "../shared/land-art.tsx";
 import { play } from "../shared/sounds.ts";
 import { useEventFlash } from "../shared/tower-art.tsx";
 import { formatClock, ordinal, teamInk, teamVars, useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
+import type { LobbyModeEntry, LobbySettingsProps } from "./lobby-modes.tsx";
 import { Award } from "./tower.tsx";
 
 type LandView = Extract<HostView, { kind: "land" }>;
@@ -205,3 +207,46 @@ function LandPodium({ view, send }: { view: LandView; send: Send }) {
     </main>
   );
 }
+
+// ---------- lobby ----------
+
+/** Land Grab's mode settings in the lobby. */
+function LandSettings({ settings, send }: LobbySettingsProps<"land">) {
+  return (
+    <>
+      <label class="opt">
+        Theme
+        <select aria-label="Land Grab theme" value={landTheme(settings.theme)} onChange={(e) => send({ type: "host.setModeSettings", mode: "land", settings: { teams: settings.teams, minutes: settings.minutes, theme: e.currentTarget.value as LandTheme } })}>
+          <option value="christmas">🎄 North Pole</option>
+          <option value="classic">🚩 Classic</option>
+        </select>
+      </label>
+      <label class="opt">
+        Teams
+        <select value={settings.teams} onChange={(e) => send({ type: "host.setModeSettings", mode: "land", settings: { teams: Number(e.currentTarget.value), minutes: settings.minutes } })}>
+          {Array.from({ length: MAX_TEAMS - LAND_MIN_TEAMS + 1 }, (_, i) => (
+            <option key={i} value={i + LAND_MIN_TEAMS}>
+              {i + LAND_MIN_TEAMS}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label class="opt">
+        Time
+        <select value={settings.minutes} onChange={(e) => send({ type: "host.setModeSettings", mode: "land", settings: { teams: settings.teams, minutes: Number(e.currentTarget.value) } })}>
+          {LAND_MINUTES.map((m) => (
+            <option key={m} value={m}>
+              {m} min
+            </option>
+          ))}
+        </select>
+      </label>
+      <span class="opt mode-hint">Every 3 questions, correct answers become tiles. Surround land to capture it, and another team's starting point to knock them out.</span>
+    </>
+  );
+}
+
+export const landLobby: LobbyModeEntry<"land"> = {
+  label: () => "🚩 Land Grab",
+  Settings: LandSettings,
+};

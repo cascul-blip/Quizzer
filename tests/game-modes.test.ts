@@ -4,6 +4,7 @@ import { Game } from "../src/server/game/game.ts";
 import { MODES } from "../src/server/game/modes.ts";
 import { QuizStore } from "../src/server/quiz/store.ts";
 import { GameHub, type SocketData } from "../src/server/ws.ts";
+import { MODE_FLAGS } from "../src/shared/mode-flags.ts";
 import { MODE_NAMES } from "../src/shared/mode-names.ts";
 import type { ClientMsg, GameMode, ModeSettingsInput, ServerMsg } from "../src/shared/protocol.ts";
 import type { SeasonTheme } from "../src/shared/season-theme.ts";
@@ -46,9 +47,6 @@ const TEAMS: { [M in GameMode]: number | null } = {
   duel: null,
   gift: null,
 };
-
-/** Modes played question by question, whose pacing the host sets and the next lobby keeps. */
-const PACED = new Set<GameMode>(["classic", "racer", "duel"]);
 
 /** One phone message of each game mode. */
 const PHONE_MSG: { [M in GameMode]: ModeMsg<M> } = {
@@ -171,15 +169,15 @@ describe("Game modes", () => {
         expect(phoneLobbyView(noel!.playerId).banner).toBe(MODES[mode].lobbyBanner ? mode : undefined);
       });
 
-      test(`pacing ${PACED.has(mode) ? "is set during the game and carries over" : "is not available and doesn't carry over"}`, async () => {
+      test(`pacing ${MODE_FLAGS[mode].paced ? "is set during the game and carries over" : "is not available and doesn't carry over"}`, async () => {
         openLobby(mode, ["Noel"]);
         send(host, { type: "host.start", pacing: "auto" });
         send(host, { type: "host.setPacing", pacing: "auto" });
-        expect(errors(host).map((e) => e.type === "error" && e.message)).toEqual(PACED.has(mode) ? [] : [`Not available in ${MODES[mode].name}`]);
+        expect(errors(host).map((e) => e.type === "error" && e.message)).toEqual(MODE_FLAGS[mode].paced ? [] : [`Not available in ${MODES[mode].name}`]);
         send(host, { type: "host.end" });
         await flush();
         send(host, { type: "host.open", quizId });
-        expect(lobbyView().pacing).toBe(PACED.has(mode) ? "auto" : "manual");
+        expect(lobbyView().pacing).toBe(MODE_FLAGS[mode].paced ? "auto" : "manual");
       });
 
       test.if("theme" in MODES[mode].defaultSettings)("an unknown carried-over theme becomes the default, but the host can't choose it", () => {

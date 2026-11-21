@@ -1,4 +1,5 @@
 import type { GameMode, ModeSettingsMap, Pacing, PlayerMsg } from "../../shared/protocol.ts";
+import { MODE_FLAGS } from "../../shared/mode-flags.ts";
 import { isSeasonTheme, type SeasonTheme } from "../../shared/season-theme.ts";
 import { GameError, type Clock } from "./common.ts";
 import type { CupGame } from "./cup.ts";
@@ -93,6 +94,15 @@ export interface PacedGame {
   skip(): void;
 }
 
+type PacedFlag<M extends GameMode> = (typeof MODE_FLAGS)[M]["paced"];
+
+/** A ModeEntry's pacing: a function in a paced mode, null in any other, and either when M is not one mode. */
+type PacingOf<M extends GameMode> = [PacedFlag<M>] extends [true]
+  ? (game: ModeGame[M]) => PacedGame
+  : [PacedFlag<M>] extends [false]
+    ? null
+    : ((game: ModeGame[M]) => PacedGame) | null;
+
 export interface FinishContext {
   dataDir: string;
   log: (message: string) => void;
@@ -106,8 +116,8 @@ export interface ModeEntry<M extends GameMode> {
   readSettings(raw: RawSettings, current: ModeSettingsMap[M]): ModeSettingsMap[M];
   /** Build the mode's game from the lobby, not started yet, and the line to log once it starts. */
   start(lobby: Game, ctx: StartContext): { game: ModeGame[M]; log: string | null };
-  /** For a mode played question by question, its game as a PacedGame: next, skip and pacing work, and the pacing carries over to the next lobby. Null otherwise. */
-  pacing: ((game: ModeGame[M]) => PacedGame) | null;
+  /** For a paced mode (MODE_FLAGS), its game as a PacedGame: next, skip and pacing work, and the pacing carries over to the next lobby. Null otherwise; the compiler holds each entry to its flag. */
+  pacing: PacingOf<M>;
   /** How many teams the lobby previews and assigns players to with these settings; null in a solo mode. */
   teams(settings: ModeSettingsMap[M]): number | null;
   /** Phones in the lobby show the mode's banner instead of the plain waiting screen (Kingdom Siege's castle). */
@@ -122,6 +132,11 @@ export interface ModeEntry<M extends GameMode> {
 /** The default case of a mode's handle: the compiler checks every message is handled, and one that still gets here is a server bug. */
 export function unhandled(msg: never): never {
   throw new Error(`No handler for phone message ${(msg as { type: string }).type}`);
+}
+
+/** "Protect from abuse" for the game of the mode the lobby hands its players to: the host's choice, in a mode whose MODE_FLAGS protect. */
+export function lobbyProtect(lobby: Game, mode: GameMode): boolean {
+  return MODE_FLAGS[mode].protect && lobby.protect;
 }
 
 /** The options every mode's fromLobby takes from the hub. */

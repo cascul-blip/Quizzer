@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { useDelayedCues } from "./delayed-cues.ts";
-import { siegeName, siegeWords, type SiegeTheme } from "../../shared/siege-theme.ts";
+import { siegeName, siegeTheme, siegeWords, type SiegeTheme } from "../../shared/siege-theme.ts";
 import { SiegeThemeProvider, useChristmasSiege } from "../shared/siege-skin.tsx";
 import type { HostView, SiegeSettings } from "../../shared/protocol.ts";
-import { SIEGE_HEARTS } from "../../shared/siege-rules.ts";
+import { SIEGE_HEARTS, SIEGE_WAVE_CHOICES } from "../../shared/siege-rules.ts";
 import {
   ArrowShot,
   Confetti,
@@ -20,6 +20,7 @@ import {
 import { play } from "../shared/sounds.ts";
 import { useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
+import type { LobbyModeEntry, LobbySettingsProps } from "./lobby-modes.tsx";
 import { Award } from "./tower.tsx";
 
 type SiegeView = Extract<HostView, { kind: "siege" }>;
@@ -371,3 +372,37 @@ function SiegePodium({ view, send }: { view: SiegeView; send: Send }) {
     </main>
   );
 }
+
+// ---------- lobby ----------
+
+/** Kingdom Siege's mode settings in the lobby. */
+function SiegeSettings({ settings, send }: LobbySettingsProps<"siege">) {
+  return (
+    <>
+      <label class="opt">
+        Theme
+        <select aria-label="Kingdom Siege theme" value={siegeTheme(settings.theme)} onChange={(e) => send({ type: "host.setModeSettings", mode: "siege", settings: { ...settings, theme: e.currentTarget.value as SiegeTheme } })}>
+          <option value="classic">🛡️ Classic Kingdom Siege</option>
+          <option value="christmas">🎄 Christmas Toybox</option>
+        </select>
+      </label>
+      <label class="opt">
+        Waves
+        <select aria-label="Kingdom Siege waves" value={String(settings.waves)} onChange={(e) => send({ type: "host.setModeSettings", mode: "siege", settings: { ...settings, waves: e.currentTarget.value === "endless" ? "endless" : (Number(e.currentTarget.value) as 5 | 10) } })}>
+          {SIEGE_WAVE_CHOICES.map((w) => (
+            <option key={w} value={String(w)}>
+              {w === "endless" ? "♾ Endless" : `${w} waves`}
+            </option>
+          ))}
+        </select>
+      </label>
+      <span class="opt mode-hint">The whole class defends one castle. Every right answer earns you gold to spend on {siegeTheme(settings.theme) === "christmas" ? "elf archers, nutcrackers and present barricades" : "archers, knights and stone walls"} before the monsters reach the wall.</span>
+    </>
+  );
+}
+
+export const siegeLobby: LobbyModeEntry<"siege"> = {
+  label: (settings) => `${siegeTheme(settings.theme) === "christmas" ? "🎄" : "🛡️"} ${siegeName(settings.theme)}`,
+  Settings: SiegeSettings,
+  Preview: ({ settings }) => <SiegeLobbyPreview theme={settings.theme} />,
+};
