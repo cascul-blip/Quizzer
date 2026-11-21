@@ -597,7 +597,7 @@ describe("Game mode: Kingdom Siege", () => {
     hub.broadcast();
     await host.hostState((v) => v.kind === "siege" && v.phase === "wave" && v.wave === 1);
     const siege = hub.game as SiegeGame;
-    // Guarantee a wall hit even if the knight stops every goblin in the random wave.
+    // Spawn a goblin near the wall in an undefended lane to guarantee a wall hit.
     siege.spawn("goblin", 0, 1);
     for (let i = 0; i < 120 && !(siege.phase === "build" && siege.wave === 2); i++) clock.advance(500);
     hub.broadcast();
