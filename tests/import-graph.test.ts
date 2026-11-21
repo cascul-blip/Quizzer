@@ -62,7 +62,7 @@ describe("Server import graph", () => {
   });
 });
 
-// Each mode's protocol types live in src/shared/modes/<mode>.ts, imported directly (no re-exports from protocol.ts).
+// Each mode's protocol types live in src/shared/modes/<mode>.ts, imported directly. protocol.ts re-exports nothing, so every type has one import path.
 // The list comes from SHARED_MODES, whose entries the mode files themselves declare.
 const MODES_DIR = join(ROOT, "src/shared/modes");
 const MODE_FILES = keysOf(SHARED_MODES).map((m) => `${m}.ts`);
@@ -94,10 +94,10 @@ describe("Mode protocol files", () => {
     expect(crossings).toEqual([]);
   });
 
-  test("migrated modes' types are not declared or re-exported in protocol.ts", () => {
+  test("mode types are not declared in protocol.ts, and protocol.ts re-exports nothing", () => {
     const protocol = readFileSync(join(ROOT, "src/shared/protocol.ts"), "utf8");
     const declared = new Set(exportedNames(protocol));
-    const reexports = /^export\s[^;]*?\bfrom\s+["']\.\/modes\//m.test(protocol);
+    const reexports = /^export\s[^;]*?\bfrom\s+["']/m.test(protocol);
     const leaked = MODE_FILES.flatMap((m) =>
       exportedNames(readFileSync(join(MODES_DIR, m), "utf8"))
         .filter((name) => declared.has(name))
