@@ -1,6 +1,7 @@
 import type { ComponentChildren, ComponentType } from "preact";
+import type { GameMode } from "../../shared/mode-entries.ts";
 import type { MusicTrackId } from "../../shared/music-tracks.ts";
-import type { GameMode, ModeSettingsMap } from "../../shared/protocol.ts";
+import type { ModeSettingsMap } from "../../shared/protocol.ts";
 import type { Send } from "./common.tsx";
 
 export type LobbySettingsProps<M extends GameMode> = {

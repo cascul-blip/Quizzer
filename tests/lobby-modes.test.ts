@@ -5,8 +5,8 @@ import type { LobbySettingsProps } from "../src/client/host/lobby-modes.tsx";
 import { HOST_MODES, lobbyEntryOf } from "../src/client/host/modes.tsx";
 import { MODES } from "../src/server/game/modes.ts";
 import { keysOf } from "../src/shared/keys-of.ts";
+import type { GameMode } from "../src/shared/mode-entries.ts";
 import { SHARED_MODES } from "../src/shared/mode-entries.ts";
-import type { GameMode } from "../src/shared/protocol.ts";
 
 /** Whether the rendered tree holds the node, looking through elements' children (not into components). */
 function holds(tree: ComponentChildren, node: unknown): boolean {

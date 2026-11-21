@@ -1,8 +1,8 @@
 import { keysOf } from "../../shared/keys-of.ts";
-import type { SharedOf } from "../../shared/mode-entries.ts";
+import type { GameMode, SharedOf } from "../../shared/mode-entries.ts";
 import { SHARED_MODES } from "../../shared/mode-entries.ts";
 import type { Pacing } from "../../shared/mode-views.ts";
-import type { GameMode, ModeSettingsMap, PlayerMsg } from "../../shared/protocol.ts";
+import type { ModeSettingsMap, PlayerMsg } from "../../shared/protocol.ts";
 import type { SeasonTheme } from "../../shared/season-theme.ts";
 import { isSeasonTheme } from "../../shared/season-theme.ts";
 import type { Clock } from "./common.ts";
@@ -43,23 +43,22 @@ type MsgTypeOf<M extends GameMode> = SharedOf<M>["msgTypes"][number];
 /** Each phone message type, mapped to the mode whose shared mode entry lists it. */
 type MsgModeMap = { [T in MsgTypeOf<GameMode>]: { [M in GameMode]: T extends MsgTypeOf<M> ? M : never }[GameMode] };
 
-function msgModes(): MsgModeMap {
-  const map: Record<string, GameMode> = {};
-  for (const mode of keysOf(SHARED_MODES)) for (const type of SHARED_MODES[mode].msgTypes) map[type] = mode;
-  // Built from the same msgTypes tuples MsgModeMap is computed from.
-  return map as MsgModeMap;
+/** The mode whose shared mode entry lists this phone message type; undefined for join, resume and anything unknown. tests/mode-entries.test.ts checks that no two modes list the same type. */
+export function modeOfMsg(type: string): GameMode | undefined {
+  const lists = (mode: GameMode): readonly string[] => SHARED_MODES[mode].msgTypes;
+  return keysOf(SHARED_MODES).find((mode) => lists(mode).includes(type));
 }
 
-/** The game mode each phone message belongs to, from the shared mode entries; join and resume belong to every mode and stay with the hub. */
-export const MSG_MODE = msgModes() satisfies Record<Exclude<PlayerMsg["type"], "join" | "resume">, GameMode>;
+type ModeMsgType = keyof MsgModeMap;
 
-type ModeMsgType = keyof typeof MSG_MODE;
+/** Holds every phone message but join and resume to a mode: the compiler reports a PlayerMsg type no shared mode entry lists. */
+export const EVERY_MSG_HAS_A_MODE: [Exclude<PlayerMsg["type"], "join" | "resume">] extends [ModeMsgType] ? true : never = true;
 
 /** The phone messages of one game mode (of any mode, for GameMode). */
-export type ModeMsg<M extends GameMode> = Extract<PlayerMsg, { type: { [T in ModeMsgType]: (typeof MSG_MODE)[T] extends M ? T : never }[ModeMsgType] }>;
+export type ModeMsg<M extends GameMode> = Extract<PlayerMsg, { type: { [T in ModeMsgType]: MsgModeMap[T] extends M ? T : never }[ModeMsgType] }>;
 
 export function isModeMsg(msg: { type: string }): msg is ModeMsg<GameMode> {
-  return Object.hasOwn(MSG_MODE, msg.type);
+  return modeOfMsg(msg.type) !== undefined;
 }
 
 /** Raw mode settings from the host, read by the mode's readSettings. */

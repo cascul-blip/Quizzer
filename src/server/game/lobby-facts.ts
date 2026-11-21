@@ -1,5 +1,6 @@
+import type { GameMode } from "../../shared/mode-entries.ts";
 import type { Pacing } from "../../shared/mode-views.ts";
-import type { GameMode, HostGameState, ModeSettingsMap, ShuffleOptions } from "../../shared/protocol.ts";
+import type { HostGameState, ModeSettingsMap, ShuffleOptions } from "../../shared/protocol.ts";
 import type { Quiz } from "../../shared/quiz-schema.ts";
 import type { BasePlayer } from "./roster.ts";
 

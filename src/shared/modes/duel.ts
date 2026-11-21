@@ -1,7 +1,7 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { DuelTheme } from "../duel-theme.ts";
 import type { PacedAnswerMsg, Pacing, QuestionError, QuestionView, SubAward } from "../mode-views.ts";
-import { sharedModeEntry } from "../mode-views.ts";
+import { sharedModeEntry } from "../shared-mode-entry.ts";
 
 // Showdown protocol types.
 //

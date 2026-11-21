@@ -1,6 +1,5 @@
 import type { ComponentType } from "preact";
-import type { SharedOf } from "../../shared/mode-entries.ts";
-import type { GameMode } from "../../shared/protocol.ts";
+import type { GameMode, SharedOf } from "../../shared/mode-entries.ts";
 import { entryOf } from "../shared/entry-of.ts";
 import { ClassicPlayer } from "./classic.tsx";
 import type { PhoneBanner, PhoneModeView, PhoneView, Send } from "./common.tsx";

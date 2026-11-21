@@ -2,7 +2,7 @@ import type { AvatarChoice } from "../avatars.ts";
 import type { HillHeight, ShotImpact } from "../fight-physics.ts";
 import type { FightTheme } from "../fight-theme.ts";
 import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward, TeamInfo } from "../mode-views.ts";
-import { sharedModeEntry } from "../mode-views.ts";
+import { sharedModeEntry } from "../shared-mode-entry.ts";
 
 // Tower Fight protocol types.
 

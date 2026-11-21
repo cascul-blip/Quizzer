@@ -1,4 +1,4 @@
-import type { GameMode } from "../../shared/protocol.ts";
+import type { GameMode } from "../../shared/mode-entries.ts";
 
 /**
  * A mode's entry from a table typed over GameMode, widened to the entry for any mode.

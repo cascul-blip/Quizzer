@@ -1,8 +1,8 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { PacedAnswerMsg, Pacing, QuestionError, QuestionView, SubAward } from "../mode-views.ts";
-import { sharedModeEntry } from "../mode-views.ts";
 import type { RacerCar, RacerConfidence, RacerTurnResult } from "../racer-rules.ts";
 import type { RacerTheme } from "../racer-theme.ts";
+import { sharedModeEntry } from "../shared-mode-entry.ts";
 
 // Racer protocol types.
 //

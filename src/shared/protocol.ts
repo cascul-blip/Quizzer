@@ -26,8 +26,6 @@ export interface ShuffleOptions {
 
 // ---------- Game modes and team colours ----------
 
-export type { GameMode } from "./mode-entries.ts";
-
 /** Each team also has a shape, so teams can be told apart without relying on colour. */
 type TeamShape = "circle" | "square" | "triangle" | "diamond" | "star" | "heart";
 

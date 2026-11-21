@@ -6,7 +6,7 @@ import { Lobby } from "../src/server/game/lobby.ts";
 import type { LiveGame } from "../src/server/game/mode-entry.ts";
 import { MODES } from "../src/server/game/modes.ts";
 import { RacerGame } from "../src/server/game/racer.ts";
-import type { GameMode } from "../src/shared/protocol.ts";
+import type { GameMode } from "../src/shared/mode-entries.ts";
 import { FakeClock, sampleQuiz, tempDir } from "./helpers.ts";
 
 let data: ReturnType<typeof tempDir>;

@@ -1,7 +1,7 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { GiftItem, GiftPower } from "../gift-rules.ts";
 import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView } from "../mode-views.ts";
-import { sharedModeEntry } from "../mode-views.ts";
+import { sharedModeEntry } from "../shared-mode-entry.ts";
 
 // Gift Grab protocol types.
 

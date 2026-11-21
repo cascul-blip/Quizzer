@@ -1,7 +1,7 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { CupTheme } from "../cup-theme.ts";
 import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward } from "../mode-views.ts";
-import { sharedModeEntry } from "../mode-views.ts";
+import { sharedModeEntry } from "../shared-mode-entry.ts";
 
 // Cup of Death protocol types.
 

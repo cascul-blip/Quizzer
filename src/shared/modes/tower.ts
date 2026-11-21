@@ -1,6 +1,6 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, TeamInfo } from "../mode-views.ts";
-import { sharedModeEntry } from "../mode-views.ts";
+import { sharedModeEntry } from "../shared-mode-entry.ts";
 import type { TowerTheme } from "../tower-theme.ts";
 
 // Tallest Tower protocol types.

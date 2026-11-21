@@ -1,6 +1,6 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward } from "../mode-views.ts";
-import { sharedModeEntry } from "../mode-views.ts";
+import { sharedModeEntry } from "../shared-mode-entry.ts";
 import type { SiegeDefenderType, SiegeMonsterType, SiegeWaves } from "../siege-rules.ts";
 import type { SiegeTheme } from "../siege-theme.ts";
 

@@ -2,7 +2,7 @@ import type { AvatarChoice } from "../avatars.ts";
 import type { LandStart } from "../land-board.ts";
 import type { LandTheme } from "../land-theme.ts";
 import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward, TeamInfo } from "../mode-views.ts";
-import { sharedModeEntry } from "../mode-views.ts";
+import { sharedModeEntry } from "../shared-mode-entry.ts";
 
 // Land Grab protocol types.
 

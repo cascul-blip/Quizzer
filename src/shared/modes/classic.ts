@@ -1,4 +1,4 @@
-import { sharedModeEntry } from "../mode-views.ts";
+import { sharedModeEntry } from "../shared-mode-entry.ts";
 
 // Classic protocol types.
 
