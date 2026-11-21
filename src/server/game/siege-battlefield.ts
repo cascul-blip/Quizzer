@@ -1,4 +1,4 @@
-import type { HostSiegeState, SiegeFallen, SiegeMapView, SiegeShot } from "../../shared/protocol.ts";
+import type { HostSiegeState, SiegeFallen, SiegeMapView, SiegeShot } from "../../shared/modes/siege.ts";
 import {
   SIEGE_DANGER_SQUARES,
   SIEGE_DEFENDERS,

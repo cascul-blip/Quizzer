@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { useDelayedCues } from "./delayed-cues.ts";
 import { siegeName, siegeTheme, siegeWords, type SiegeTheme } from "../../shared/siege-theme.ts";
 import { SiegeThemeProvider, useChristmasSiege } from "../shared/siege-skin.tsx";
-import type { HostView, SiegeSettings } from "../../shared/protocol.ts";
+import type { HostView } from "../../shared/protocol.ts";
+import type { SiegeSettings } from "../../shared/modes/siege.ts";
 import type { MusicTrackId } from "../../shared/music-tracks.ts";
 import { SIEGE_HEARTS, SIEGE_WAVE_CHOICES } from "../../shared/siege-rules.ts";
 import {

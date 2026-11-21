@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
-import type { SiegeRecord } from "../shared/protocol.ts";
+import type { SiegeRecord } from "../shared/modes/siege.ts";
 import { siegeRecordsPath } from "./paths.ts";
 
 type Records = Record<string, SiegeRecord>;
