@@ -3,7 +3,7 @@ import type { FightPlayer } from "../src/server/game/fight.ts";
 import { buildFightResults, COLLAPSE_MS, COUNTDOWN_MS, DECISION_GRACE_MS, FEEDBACK_MS, FightGame, RESULT_MS } from "../src/server/game/fight.ts";
 import { Lobby } from "../src/server/game/lobby.ts";
 import { records } from "../src/server/game/results.ts";
-import { viewKey } from "../src/server/phone-view-delivery.ts";
+import { viewKey } from "../src/server/view-delivery.ts";
 import { launchVector, MAX_PULL, simulate } from "../src/shared/fight-physics.ts";
 import { CORRECT_PER_DECISION, DECISION_MS, FIGHT_MAX_DAMAGE, REPAIR_MS } from "../src/shared/modes/fight.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";

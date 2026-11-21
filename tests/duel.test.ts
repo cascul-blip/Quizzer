@@ -11,7 +11,7 @@ import {
   INTRO_MS,
 } from "../src/server/game/duel.ts";
 import { Lobby } from "../src/server/game/lobby.ts";
-import { viewKey } from "../src/server/phone-view-delivery.ts";
+import { viewKey } from "../src/server/view-delivery.ts";
 import type { Pacing } from "../src/shared/mode-views.ts";
 import { DUEL_DEFAULT_ROUNDS } from "../src/shared/modes/duel.ts";
 import type { ShuffleOptions } from "../src/shared/protocol.ts";

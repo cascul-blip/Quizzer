@@ -14,8 +14,8 @@ const PACINGS = new Set<Pacing>(["manual", "auto"]);
 export interface HostCommandContext {
   /** The open lobby or live game, if any. */
   readonly game: Lobby | LiveGame | null;
-  /** The sending socket becomes the projector. */
-  becomeHost(): void;
+  /** Promote the sending socket and send its first projector snapshot. */
+  promoteAndSendHostSnapshot(): void;
   loadQuiz(quizId: string): Quiz;
   /** Close the current game and open a lobby for this quiz. */
   openLobby(quiz: Quiz): void;
@@ -48,7 +48,7 @@ export function applyHostCommand(msg: ClientMsg, ctx: HostCommandContext): void 
   };
   switch (msg.type) {
     case "host.hello":
-      return ctx.becomeHost();
+      return ctx.promoteAndSendHostSnapshot();
     case "host.open": {
       const quiz = ctx.loadQuiz(String(msg.quizId));
       if (quiz.questions.length === 0) throw new GameError("This quiz has no questions yet");

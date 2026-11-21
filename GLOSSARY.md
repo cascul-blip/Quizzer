@@ -53,3 +53,5 @@ _Avoid_: shared question, round question
 **Phone attachment** is the association of an open phone connection with a player identity. A player can have multiple attached connections and becomes disconnected when the last one closes or switches to another player. Attachments carry over through the Lobby handoff.
 
 **Host command** is an instruction the host sends, in the lobby or during a game, such as Start, changing mode settings, or ending the game.
+
+**View delivery** is how the server sends projector snapshots and phone views. A phone can receive a patch based on its last view and catch up from the latest view when its socket drains.
