@@ -543,8 +543,8 @@ describe("Game mode: Kingdom Siege", () => {
     host.sendMsg({ type: "host.start", pacing: "manual" });
     clock.advance(SIEGE_COUNTDOWN_MS);
     await host.hostState((v) => v.kind === "siege" && v.phase === "build");
-    if (!hub.game || !("spawn" in hub.game)) throw new Error("Expected Kingdom Siege to be running");
-    hub.game.spawn("giant", 0);
+    if (!hub.game || !("battlefield" in hub.game)) throw new Error("Expected Kingdom Siege to be running");
+    hub.game.battlefield.spawn("giant", 0);
     const phoneView = spyOn(hub, "playerView");
     host.raw = [];
     phone.raw = [];
@@ -622,7 +622,7 @@ describe("Game mode: Kingdom Siege", () => {
     await host.hostState((v) => v.kind === "siege" && v.phase === "wave" && v.wave === 1);
     const siege = hub.game as SiegeGame;
     // Spawn a goblin near the wall in an undefended lane to guarantee a wall hit.
-    siege.spawn("goblin", 0, 1);
+    siege.battlefield.spawn("goblin", 0, 1);
     for (let i = 0; i < 120 && !(siege.phase === "build" && siege.wave === 2); i++) clock.advance(500);
     hub.broadcast();
     const wave2 = await host.hostState((v) => v.kind === "siege" && v.phase === "build" && v.wave === 2);

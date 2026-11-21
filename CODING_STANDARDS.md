@@ -8,8 +8,13 @@ Judgement calls the reviewer applies to a diff. `bun run typecheck` and `bun tes
 - **Hub tests on fake sockets**: tests of hub behaviour (lobby, teams, answers, reveal, podium) drive a `HubSocket` from `tests/hub-harness.ts`. `tests/standards.test.ts` flags direct socket-open calls in test files. `tests/server.test.ts` keeps only what a real socket shows: HTTP routes, the upgrade, patches over the wire, resume after a reconnect.
 - **Independent expectations**: a test's expected values are written by hand, such as a list of the modes that are paced. A test that reads its expectation from the code under test, such as `MODE_FLAGS[mode].paced`, passes whatever the code says.
 - **Gameplay deadlines**: when changing which module owns a deadline, use a controlled clock at each affected game mode’s normal entry point. Check that the action is blocked one tick before the expected deadline and succeeds at the deadline. Derive the deadline from the expected gameplay durations.
-- **Public surface**: a module extracted from the hub gets at least one test through the hub's public surface (the host view, an HTTP route, the startup output), not only through its own class. Callers reach it that way, and the wiring between them is the part a direct test misses.
+- **Public surface**: a module extracted from the hub or a game mode gets at least one test through the public surface (the host view, a phone view, an HTTP route, the startup output), not only through its own class. Callers reach it that way, and the wiring between them is the part a direct test misses. A test may set up its scenario through the module when it asserts through the surface.
 - **Domain names**: name `describe` blocks and tests with `GLOSSARY.md` terms for the behaviour under test ("Lobby handoff"). A test that covers shared behaviour goes in its own block, not under whichever game mode it happens to use.
+
+## Extractions
+
+- **Single owner**: after an extraction, each piece of state has one owner; the other side reads it through a getter or callback. A copy kept in step by hand (a sync method, a guard comparing the two) is a finding. Check every state the extracted module reads at a phase boundary (a build break, before the first round) against the original.
+- **Direct coverage**: each rule the extracted module owns has a test against its own interface. Existing tests redirected through a new field don't count.
 
 ## Types
 
