@@ -1,4 +1,5 @@
 import { useEffect, useState } from "preact/hooks";
+import { keysOf } from "../../shared/keys-of.ts";
 import { MODE_FLAGS } from "../../shared/mode-flags.ts";
 import type { Pacing } from "../../shared/mode-views.ts";
 import type { GameMode, HostPlayer, HostView } from "../../shared/protocol.ts";
@@ -11,7 +12,7 @@ import { HOST_MODES, lobbyEntryOf } from "./modes.tsx";
 type LobbyView = Extract<HostView, { kind: "classic" }>;
 
 /** The Game mode menu, in the order HOST_MODES lists the modes. */
-const MENU = Object.keys(HOST_MODES) as GameMode[];
+const MENU = keysOf(HOST_MODES);
 
 export function LobbyStage({ view, send }: { view: LobbyView; send: Send }) {
   useEffect(() => {

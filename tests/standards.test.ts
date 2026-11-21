@@ -229,3 +229,22 @@ describe("Coding standards: import graph", () => {
     expect(KNOWN_CYCLES.filter((c) => !importCycles().includes(c))).toEqual([]);
   });
 });
+
+/** A cast of Object.keys to a key type, which claims the type without checking it. */
+const KEYS_CAST = /\bObject\.keys\([^)]*\)\s*as\b/;
+
+function codeFiles(dir: string): string[] {
+  return readdirSync(dir).flatMap((name) => {
+    const path = join(dir, name);
+    if (statSync(path).isDirectory()) return codeFiles(path);
+    return /\.tsx?$/.test(name) ? [path] : [];
+  });
+}
+
+// A table's keys come from keysOf (src/shared/keys-of.ts), which checks each key against the table.
+describe("Coding standards: checked casts", () => {
+  test("no code casts Object.keys", () => {
+    const files = ["src", "tests"].flatMap((d) => codeFiles(join(ROOT, d))).map(read);
+    expect(offending(KEYS_CAST, files)).toEqual([]);
+  });
+});

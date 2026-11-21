@@ -16,6 +16,7 @@ import {
   simulate,
   TOWER_X,
 } from "../src/shared/fight-physics.ts";
+import { keysOf } from "../src/shared/keys-of.ts";
 
 /** Seeded RNG so terrain is reproducible. */
 function seeded(seed: number) {
@@ -40,7 +41,7 @@ function sweep(terrain: number[], team: number) {
 
 describe("terrain", () => {
   test("the hill is in the middle and the towers stand on flat ground", () => {
-    for (const hill of Object.keys(HILL_HEIGHTS) as HillHeight[]) {
+    for (const hill of keysOf(HILL_HEIGHTS)) {
       const t = makeTerrain(hill, seeded(7));
       expect(t).toHaveLength(COLS + 1);
       const peak = Math.max(...t);
@@ -112,7 +113,7 @@ describe("flight", () => {
     expect(high.durationMs).toBeGreaterThan(low.durationMs);
   });
 
-  for (const hill of Object.keys(HILL_HEIGHTS) as HillHeight[]) {
+  for (const hill of keysOf(HILL_HEIGHTS)) {
     test(`both teams can lob over a ${hill} hill onto the enemy tower`, () => {
       const t = makeTerrain(hill, seeded(11));
       for (const team of [0, 1]) {

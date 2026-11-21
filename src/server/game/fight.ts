@@ -7,6 +7,7 @@ import type { HillHeight, ShotImpact } from "../../shared/fight-physics.ts";
 import { carve, HILL_HEIGHTS, launchVector, makeTerrain, simulate } from "../../shared/fight-physics.ts";
 import type { FightTheme } from "../../shared/fight-theme.ts";
 import { DEFAULT_FIGHT_THEME, fightTheme } from "../../shared/fight-theme.ts";
+import { keysOf } from "../../shared/keys-of.ts";
 import { MODE_NAMES } from "../../shared/mode-names.ts";
 import type {
   FightAwards,
@@ -127,7 +128,7 @@ export class FightGame {
     this.teams = Array.from({ length: TEAM_COUNT }, (_, i) => ({ ...teamInfo(i), damage: 0 }));
     this.clock = opts.clock ?? realClock;
     this.rng = opts.rng ?? Math.random;
-    const heights = Object.keys(HILL_HEIGHTS) as HillHeight[];
+    const heights = keysOf(HILL_HEIGHTS);
     this.hill = settings.hill === "random" ? heights[Math.min(heights.length - 1, Math.floor(this.rng() * heights.length))]! : settings.hill;
     this.terrain = this.theme === "christmas" ? gingerbreadTerrain(this.hill) : makeTerrain(this.hill, this.rng);
     this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock, settings.protect);
