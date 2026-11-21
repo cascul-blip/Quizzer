@@ -267,7 +267,7 @@ export class GameHub {
     };
     const choices = lobby.choices;
 
-    const install = <M extends GameMode>(mode: M, activate: (game: ModeGame[M]) => void) => {
+    const installAndActivate = <M extends GameMode>(mode: M, activate: (game: ModeGame[M]) => void) => {
       const { game, log } = MODES[mode].start(lobby.handoffFacts(mode), context);
       // Activation can publish a view synchronously.
       this.game = game;
@@ -283,11 +283,11 @@ export class GameHub {
     };
 
     if (action.type === "start") {
-      const game = install(choices.mode, (game) => game.start(action.pacing));
+      const game = installAndActivate(choices.mode, (game) => game.start(action.pacing));
       choices.pacing = entryOf(game).pacing?.(game).pacing ?? choices.pacing;
     } else {
       // The lobby's legacy Next and End commands always target Classic.
-      install("classic", (game) => game[action.type]());
+      installAndActivate("classic", (game) => game[action.type]());
     }
     this.lastSetup = choices;
   }

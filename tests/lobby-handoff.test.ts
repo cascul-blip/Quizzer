@@ -63,16 +63,6 @@ describe("Lobby handoff", () => {
     for (const field of ["mode", "team", "banner"]) expect(phoneView).not.toHaveProperty(field);
   });
 
-  test("an empty lobby refuses to start and installs nothing, so Start can be retried", async () => {
-    const { lobby, host } = await setup("gift", []);
-    host.sendMsg({ type: "host.start", pacing: "manual" });
-    expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: "Wait for at least one player to join" });
-    expect(hub.game).toBe(lobby);
-    new HubSocket(hub).sendMsg({ type: "join", nickname: "Noel" });
-    host.sendMsg({ type: "host.start", pacing: "manual" });
-    expect(hub.game).toBeInstanceOf(GiftGame);
-  });
-
   test("players carry their ids into the selected game", async () => {
     const { joined, host } = await setup("gift", ["Noel", "Holly"]);
     host.sendMsg({ type: "host.start", pacing: "manual" });

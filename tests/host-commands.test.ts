@@ -96,17 +96,22 @@ describe("Host command through the hub", () => {
     t.cleanup();
   });
 
-  async function openLobby() {
+  async function openEmptyLobby() {
     const quiz = await store.create(QUIZ);
     const host = new HubSocket(hub, { admin: true });
     host.sendMsg({ type: "host.hello" });
     await host.hostState((v) => v.phase === "idle");
     host.sendMsg({ type: "host.open", quizId: quiz.id });
     await host.hostState((v) => v.kind === "lobby");
+    return { host, quizId: quiz.id };
+  }
+
+  async function openLobby() {
+    const { host, quizId } = await openEmptyLobby();
     const phone = new HubSocket(hub);
     phone.sendMsg({ type: "join", nickname: "Ann" });
     await phone.waitFor((m) => m.type === "joined");
-    return { host, phone, quizId: quiz.id };
+    return { host, phone, quizId };
   }
 
   test.each([
@@ -119,6 +124,23 @@ describe("Host command through the hub", () => {
     host.sendMsg({ type });
     await host.hostState((v) => v.kind === "classic" && v.phase === phase);
     await phone.playerState((v) => v.kind === "classic" && v.phase === phase);
+  });
+
+  test("legacy Next refuses an empty lobby", async () => {
+    const { host } = await openEmptyLobby();
+    host.sendMsg({ type: "host.setMode", mode: "tower" });
+    const lobby = hub.game;
+    host.sendMsg({ type: "host.next" });
+    expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: "Wait for at least one player to join" });
+    expect(hub.game).toBe(lobby);
+  });
+
+  test("legacy End takes an empty lobby to the Classic podium", async () => {
+    const { host } = await openEmptyLobby();
+    host.sendMsg({ type: "host.setMode", mode: "tower" });
+    host.sendMsg({ type: "host.end" });
+    const { view } = await host.hostState((v) => v.kind === "classic" && v.phase === "podium");
+    expect(view).toMatchObject({ players: [] });
   });
 
   test("pacing changed during the game carries over to the next lobby (Play again)", async () => {
