@@ -1,8 +1,9 @@
 import { useEffect, useState } from "preact/hooks";
 import { keysOf } from "../../shared/keys-of.ts";
-import { MODE_FLAGS } from "../../shared/mode-flags.ts";
+import type { GameMode } from "../../shared/mode-entries.ts";
+import { SHARED_MODES } from "../../shared/mode-entries.ts";
 import type { Pacing } from "../../shared/mode-views.ts";
-import type { GameMode, HostPlayer, HostView } from "../../shared/protocol.ts";
+import type { HostPlayer, HostView } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import { teamVars } from "../shared/ui.tsx";
 import type { Send } from "./common.tsx";
@@ -73,7 +74,7 @@ function Lobby({ view, send }: { view: LobbyView; send: Send }) {
   const { join } = view;
   const connected = view.players.length;
   const { Settings, Preview } = lobbyEntryOf(view.mode);
-  const flags = MODE_FLAGS[view.mode];
+  const flags = SHARED_MODES[view.mode].flags;
   const [dragOver, setDragOver] = useState<number | null>(null);
   const canDrag = (view.teams?.length ?? 0) > 1;
   return (

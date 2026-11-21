@@ -8,7 +8,6 @@ import { carve, HILL_HEIGHTS, launchVector, makeTerrain, simulate } from "../../
 import type { FightTheme } from "../../shared/fight-theme.ts";
 import { DEFAULT_FIGHT_THEME, fightTheme } from "../../shared/fight-theme.ts";
 import { keysOf } from "../../shared/keys-of.ts";
-import { MODE_NAMES } from "../../shared/mode-names.ts";
 import type {
   FightAwards,
   FightEvent,
@@ -20,7 +19,7 @@ import type {
   HostFightState,
   PlayerFightView,
 } from "../../shared/modes/fight.ts";
-import { CORRECT_PER_DECISION, DECISION_MS, FIGHT_MAX_DAMAGE, HILL_SETTINGS, REPAIR_MS } from "../../shared/modes/fight.ts";
+import { CORRECT_PER_DECISION, DECISION_MS, FIGHT_MAX_DAMAGE, fightShared, HILL_SETTINGS, REPAIR_MS } from "../../shared/modes/fight.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import type { Clock } from "./common.ts";
 import { GameError, realClock, teamInfo } from "./common.ts";
@@ -572,7 +571,7 @@ export function buildFightResultsCsv(game: FightGame): string {
 }
 
 export const fightMode: ModeEntry<"fight"> = {
-  name: MODE_NAMES.fight,
+  ...fightShared,
   defaultSettings: { hill: "random", theme: DEFAULT_FIGHT_THEME },
   readSettings(raw, current) {
     const hill = raw.hill as FightSettings["hill"] | undefined;
@@ -586,7 +585,6 @@ export const fightMode: ModeEntry<"fight"> = {
   },
   pacing: null,
   teams: () => 2,
-  lobbyBanner: false,
   resultsCsv: buildFightResultsCsv,
   handle(game, playerId, msg) {
     switch (msg.type) {

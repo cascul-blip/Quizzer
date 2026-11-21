@@ -2,9 +2,8 @@ import type { AnswerValue } from "../../shared/answer-match.ts";
 import { answerOf } from "../../shared/answer-match.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { randomAvatar } from "../../shared/avatars.ts";
-import { MODE_NAMES } from "../../shared/mode-names.ts";
 import type { HostTowerState, MonsterAttack, MonsterEggs, PlayerTowerView, TowerAwards, TowerPhase, TowerSettings } from "../../shared/modes/tower.ts";
-import { BLOCKS_PER_BUILD, DROP_ZONES, EGG_LEVELS_ABOVE, MONSTER_DAMAGE, TOWER_MINUTES } from "../../shared/modes/tower.ts";
+import { BLOCKS_PER_BUILD, DROP_ZONES, EGG_LEVELS_ABOVE, MONSTER_DAMAGE, TOWER_MINUTES, towerShared } from "../../shared/modes/tower.ts";
 import { MAX_TEAMS } from "../../shared/protocol.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import { DEFAULT_TOWER_THEME, towerTheme } from "../../shared/tower-theme.ts";
@@ -472,7 +471,7 @@ export function buildTowerResultsCsv(game: TowerGame): string {
 }
 
 export const towerMode: ModeEntry<"tower"> = {
-  name: MODE_NAMES.tower,
+  ...towerShared,
   defaultSettings: { teams: 2, minutes: 5, monster: true, theme: DEFAULT_TOWER_THEME },
   readSettings(raw, current) {
     const teams = Math.trunc(Number(raw.teams));
@@ -488,7 +487,6 @@ export const towerMode: ModeEntry<"tower"> = {
   },
   pacing: null,
   teams: (settings) => settings.teams,
-  lobbyBanner: false,
   resultsCsv: buildTowerResultsCsv,
   handle(game, playerId, msg) {
     switch (msg.type) {

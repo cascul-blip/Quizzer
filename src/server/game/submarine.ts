@@ -3,10 +3,9 @@ import { answerOf } from "../../shared/answer-match.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { randomAvatar } from "../../shared/avatars.ts";
 import { CHRISTMAS_GLYPHS, glyphId, parseGlyph, variantsOf } from "../../shared/glyphs.ts";
-import { MODE_NAMES } from "../../shared/mode-names.ts";
 import type { SubAward } from "../../shared/mode-views.ts";
 import type { HostSubState, PlayerSubView, SubAwards, SubPhase } from "../../shared/modes/submarine.ts";
-import { CORRECT_PER_BOOST } from "../../shared/modes/submarine.ts";
+import { CORRECT_PER_BOOST, submarineShared } from "../../shared/modes/submarine.ts";
 import type { Quiz } from "../../shared/quiz-schema.ts";
 import type { Clock } from "./common.ts";
 import { GameError, realClock, shuffle } from "./common.ts";
@@ -571,7 +570,7 @@ export function buildSubResultsCsv(game: SubGame): string {
 }
 
 export const subMode: ModeEntry<"submarine"> = {
-  name: MODE_NAMES.submarine,
+  ...submarineShared,
   defaultSettings: {},
   readSettings: () => ({}),
   start(lobby, ctx) {
@@ -580,7 +579,6 @@ export const subMode: ModeEntry<"submarine"> = {
   },
   pacing: null,
   teams: () => null,
-  lobbyBanner: false,
   resultsCsv: buildSubResultsCsv,
   handle(game, playerId, msg) {
     switch (msg.type) {

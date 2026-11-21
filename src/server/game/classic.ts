@@ -1,5 +1,5 @@
 import { answerOf } from "../../shared/answer-match.ts";
-import { MODE_NAMES } from "../../shared/mode-names.ts";
+import { classicShared } from "../../shared/modes/classic.ts";
 import { ClassicGame } from "./game.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, unhandled } from "./mode-entry.ts";
@@ -25,7 +25,7 @@ export function buildResultsCsv(game: ClassicGame): string {
 }
 
 export const classicMode: ModeEntry<"classic"> = {
-  name: MODE_NAMES.classic,
+  ...classicShared,
   lobbyControlError: (message) => message,
   defaultSettings: {},
   readSettings: () => ({}),
@@ -40,7 +40,6 @@ export const classicMode: ModeEntry<"classic"> = {
   },
   pacing: (game) => game,
   teams: () => null,
-  lobbyBanner: false,
   resultsCsv: buildResultsCsv,
   handle(game, playerId, msg) {
     switch (msg.type) {

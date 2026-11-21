@@ -1,5 +1,6 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, TeamInfo } from "../mode-views.ts";
+import { sharedModeEntry } from "../shared-mode-entry.ts";
 import type { TowerTheme } from "../tower-theme.ts";
 
 // Tallest Tower protocol types.
@@ -114,3 +115,11 @@ export interface HostTowerState {
 
 /** What a phone sends during Tallest Tower games. */
 export type TowerMsg = StreamAnswerMsg<"tower"> | { type: "tower.drop"; zone: number };
+
+/** Tallest Tower's shared mode entry. */
+export const towerShared = sharedModeEntry<TowerMsg>()({
+  name: "Tallest Tower",
+  flags: { paced: false, protect: true },
+  lobbyBanner: false,
+  msgTypes: ["tower.answer", "tower.drop"],
+});

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
-import { MODE_NAMES } from "../src/shared/mode-names.ts";
+import { SHARED_MODES } from "../src/shared/mode-entries.ts";
 
 const ROOT = resolve(import.meta.dir, "..");
 const SERVER = join(ROOT, "src/server");
@@ -20,13 +20,13 @@ const read = (path: string): Source => ({ path, lines: readFileSync(path, "utf8"
 
 const sources = tsFiles(SERVER).map(read);
 
-/** The client files that look a mode up in its entry (src/client/host/modes.tsx or src/client/player/modes.tsx) or its flags (src/shared/mode-flags.ts) instead of asking which mode is running. */
+/** The client files that look a mode up in its entry (src/client/host/modes.tsx or src/client/player/modes.tsx) or its shared mode entry (src/shared/mode-entries.ts) instead of asking which mode is running. */
 const CLIENT_FILES = ["src/client/host/main.tsx", "src/client/host/lobby.tsx", "src/client/host/music-cues.ts", "src/client/player/main.tsx"].map((path) =>
   read(join(ROOT, path)),
 );
 
 const QUOTE = "[\"'`]";
-const MODE = `${QUOTE}(?:${Object.keys(MODE_NAMES).join("|")})${QUOTE}`;
+const MODE = `${QUOTE}(?:${Object.keys(SHARED_MODES).join("|")})${QUOTE}`;
 /** mode === "tower", game.runningMode !== "siege", "duel" === mode, and the same with ' or `. */
 const MODE_LITERAL = new RegExp(`\\b\\w*[mM]ode\\s*[!=]==?\\s*${QUOTE}|${QUOTE}\\w*${QUOTE}\\s*[!=]==?\\s*[\\w.]*[mM]ode\\b`);
 /** view.kind === "tower", view.mode !== "siege", view.banner === "siege", "duel" === view.kind, and case "racer":. */

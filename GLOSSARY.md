@@ -20,6 +20,10 @@ _Avoid_: anti-spam, abuse mode
 Everything one game mode brings to Quizzer, declared together: how its game runs, what the projector and phones show, its mode settings in the lobby, and its music. The server, the projector and the phone each have one mode entry per game mode.
 _Avoid_: mode config, mode registration
 
+**Shared mode entry**:
+The part of a game mode's mode entry that the server, the projector and the phone all read: its one plain name, whether it is paced, whether Protect from abuse applies, whether phones show a lobby banner, and which phone messages belong to it. Each game mode declares it once, and the three mode entries build on it.
+_Avoid_: mode descriptor, mode metadata
+
 **Battlefield**:
 Kingdom Siege's lanes and squares, with the defenders players place on them, the monsters marching down them, and the castle's hearts. The battlefield decides who hits whom and what may stand where; the projector and the phone's lane map both show it.
 _Avoid_: board, map (the phone's lane map is only a view of it)

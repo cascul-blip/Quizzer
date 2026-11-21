@@ -1,6 +1,7 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { CupTheme } from "../cup-theme.ts";
 import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward } from "../mode-views.ts";
+import { sharedModeEntry } from "../shared-mode-entry.ts";
 
 // Cup of Death protocol types.
 
@@ -142,3 +143,11 @@ export type CupMsg =
   | StreamAnswerMsg<"cup">
   /** Drink phase, drinkers only: pick one of your remaining cups (0-based, left to right). Final once sent. */
   | { type: "cup.pick"; cup: number };
+
+/** Cup of Death's shared mode entry. */
+export const cupShared = sharedModeEntry<CupMsg>()({
+  name: "Cup of Death",
+  flags: { paced: false, protect: true },
+  lobbyBanner: false,
+  msgTypes: ["cup.answer", "cup.pick"],
+});

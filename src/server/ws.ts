@@ -7,7 +7,7 @@ import { GameError } from "./game/common.ts";
 import type { HandoffOptions, LobbyChoices } from "./game/lobby.ts";
 import { Lobby } from "./game/lobby.ts";
 import type { LiveGame } from "./game/mode-entry.ts";
-import { isModeMsg, MSG_MODE } from "./game/mode-entry.ts";
+import { isModeMsg, modeOfMsg } from "./game/mode-entry.ts";
 import { entryOf } from "./game/modes.ts";
 import { writeResultsFile } from "./game/results.ts";
 import type { HostCommandContext } from "./host-commands.ts";
@@ -211,7 +211,7 @@ export class GameHub {
           if (msg.type === "setAvatar") game.setAvatar(playerId, msg.avatar, msg.accessory);
           return;
         }
-        if (game.runningMode !== MSG_MODE[msg.type]) return;
+        if (game.runningMode !== modeOfMsg(msg.type)) return;
         if (entryOf(game).handle(game, playerId, msg) === "resend") this.sendState(ws);
         return;
       }

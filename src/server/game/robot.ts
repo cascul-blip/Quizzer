@@ -2,7 +2,6 @@ import type { AnswerValue } from "../../shared/answer-match.ts";
 import { answerOf } from "../../shared/answer-match.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { randomAvatar } from "../../shared/avatars.ts";
-import { MODE_NAMES } from "../../shared/mode-names.ts";
 import type { HostRobotState, PlayerRobotView, RobotAttack, RobotAwards, RobotDir, RobotPhase, RobotStanding } from "../../shared/modes/robot.ts";
 import {
   ROBOT_ATTACK_MS,
@@ -17,6 +16,7 @@ import {
   robotInBounds,
   robotQuizMs,
   robotRing,
+  robotShared,
 } from "../../shared/modes/robot.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import type { Clock } from "./common.ts";
@@ -493,7 +493,7 @@ export function buildRobotResultsCsv(game: RobotGame): string {
 }
 
 export const robotMode: ModeEntry<"robot"> = {
-  name: MODE_NAMES.robot,
+  ...robotShared,
   defaultSettings: {},
   readSettings: () => ({}),
   start(lobby, ctx) {
@@ -502,7 +502,6 @@ export const robotMode: ModeEntry<"robot"> = {
   },
   pacing: null,
   teams: () => null,
-  lobbyBanner: false,
   resultsCsv: buildRobotResultsCsv,
   handle(game, playerId, msg) {
     switch (msg.type) {

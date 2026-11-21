@@ -1,5 +1,7 @@
 import type { AvatarChoice } from "./avatars.ts";
+import type { GameMode } from "./mode-entries.ts";
 import type { Pacing, QuestionError, QuestionView, TeamInfo } from "./mode-views.ts";
+import type { ClassicMsg } from "./modes/classic.ts";
 import type { CupMsg, CupPhase, CupSettings, HostCupState, PlayerCupView } from "./modes/cup.ts";
 import type { DuelMsg, DuelPhase, DuelSettings, HostDuelState, PlayerDuelView } from "./modes/duel.ts";
 import type { FightMsg, FightPhase, FightSettings, HostFightState, PlayerFightView } from "./modes/fight.ts";
@@ -24,8 +26,6 @@ export interface ShuffleOptions {
 
 // ---------- Game modes and team colours ----------
 
-export type GameMode = "classic" | "tower" | "submarine" | "fight" | "robot" | "land" | "racer" | "cup" | "siege" | "duel" | "gift";
-
 /** Each team also has a shape, so teams can be told apart without relying on colour. */
 type TeamShape = "circle" | "square" | "triangle" | "diamond" | "star" | "heart";
 
@@ -44,10 +44,8 @@ export const MAX_TEAMS = TEAMS.length;
 export type PlayerMsg =
   /** avatar/accessory: the player's last pick, remembered on the phone (optional). */
   | { type: "join"; nickname: string; avatar?: string; accessory?: string }
-  | { type: "setAvatar"; avatar: string; accessory: string }
   | { type: "resume"; token: string }
-  /** Typed questions send `text` (the typed answer) and ignore `option`. */
-  | { type: "answer"; qIndex: number; option: number; text?: string }
+  | ClassicMsg
   | TowerMsg
   | SubMsg
   | FightMsg

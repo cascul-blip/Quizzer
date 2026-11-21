@@ -1,5 +1,6 @@
 import type { ComponentType } from "preact";
-import type { GameMode, HostView } from "../../shared/protocol.ts";
+import type { GameMode } from "../../shared/mode-entries.ts";
+import type { HostView } from "../../shared/protocol.ts";
 import { entryOf } from "../shared/entry-of.ts";
 import type { MusicCue } from "../shared/music/index.ts";
 import { ClassicStage, classicCue } from "./classic.tsx";

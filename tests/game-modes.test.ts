@@ -6,9 +6,9 @@ import { MODES } from "../src/server/game/modes.ts";
 import { QuizStore } from "../src/server/quiz/store.ts";
 import type { GameHub } from "../src/server/ws.ts";
 import { keysOf } from "../src/shared/keys-of.ts";
-import { MODE_FLAGS } from "../src/shared/mode-flags.ts";
-import { MODE_NAMES } from "../src/shared/mode-names.ts";
-import type { ClientMsg, GameMode, ModeSettingsInput } from "../src/shared/protocol.ts";
+import type { GameMode } from "../src/shared/mode-entries.ts";
+import { SHARED_MODES } from "../src/shared/mode-entries.ts";
+import type { ClientMsg, ModeSettingsInput } from "../src/shared/protocol.ts";
 import { FakeClock, tempDir } from "./helpers.ts";
 import { fakeHub, HubSocket } from "./hub-harness.ts";
 
@@ -131,7 +131,7 @@ afterEach(() => {
 
 describe("Lobby handoff", () => {
   for (const mode of GAME_MODES) {
-    test(`each player can reconnect to ${MODE_NAMES[mode]} with the same id and token`, () => {
+    test(`each player can reconnect to ${SHARED_MODES[mode].name} with the same id and token`, () => {
       const players = openLobby(mode, ["Noel", "Holly"]);
       send(host, { type: "host.start", pacing: "manual" });
       expect(errors(host)).toEqual([]);
@@ -150,7 +150,7 @@ describe("Lobby handoff", () => {
 
 describe("Mode settings carryover", () => {
   for (const mode of THEMED_MODES) {
-    test(`${MODE_NAMES[mode]} restores the default theme when the carried-over theme is unknown`, () => {
+    test(`${SHARED_MODES[mode].name} restores the default theme when the carried-over theme is unknown`, () => {
       const stale = { ...CHANGED[mode], theme: "halloween" };
       const lobby = new Lobby(store.get(quizId), { mode, settings: { [mode]: stale } });
       expect(lobby.settings[mode]).toEqual({ ...CHANGED[mode], theme: "christmas" });
@@ -161,7 +161,7 @@ describe("Mode settings carryover", () => {
 
 describe("Game modes", () => {
   for (const mode of GAME_MODES) {
-    describe(MODE_NAMES[mode], () => {
+    describe(SHARED_MODES[mode].name, () => {
       test("mode settings round-trip and carry over to the next lobby", async () => {
         openLobby(mode, ["Noel"]);
         send(host, { type: "host.setModeSettings", mode, settings: CHANGED[mode] } as ClientMsg);
@@ -185,8 +185,8 @@ describe("Game modes", () => {
       });
 
       test(`is declared ${PACED.has(mode) ? "paced" : "not paced"}, ${PROTECT.has(mode) ? "protected" : "not protected"}, ${BANNER.has(mode) ? "with" : "without"} a lobby banner`, () => {
-        expect(MODE_FLAGS[mode].paced).toBe(PACED.has(mode));
-        expect(MODE_FLAGS[mode].protect).toBe(PROTECT.has(mode));
+        expect(SHARED_MODES[mode].flags.paced).toBe(PACED.has(mode));
+        expect(SHARED_MODES[mode].flags.protect).toBe(PROTECT.has(mode));
         expect(MODES[mode].lobbyBanner).toBe(BANNER.has(mode));
         expect(PLAYER_MODES[mode].banner !== null).toBe(BANNER.has(mode));
       });

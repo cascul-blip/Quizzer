@@ -1,4 +1,4 @@
-import type { GameMode } from "../../shared/protocol.ts";
+import type { GameMode } from "../../shared/mode-entries.ts";
 import { classicMode } from "./classic.ts";
 import { cupMode } from "./cup.ts";
 import { duelMode } from "./duel.ts";

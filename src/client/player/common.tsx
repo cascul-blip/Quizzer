@@ -1,5 +1,6 @@
 import type { ComponentChildren, ComponentType } from "preact";
-import type { ClientMsg, GameMode, PlayerView } from "../../shared/protocol.ts";
+import type { GameMode } from "../../shared/mode-entries.ts";
+import type { ClientMsg, PlayerView } from "../../shared/protocol.ts";
 import { StreakBadge } from "../shared/ui.tsx";
 
 export type Send = (m: ClientMsg) => void;
