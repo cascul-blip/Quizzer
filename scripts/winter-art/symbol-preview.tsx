@@ -3,7 +3,7 @@ import { render } from "preact";
 import { useState } from "preact/hooks";
 import { SubmarinePlayer } from "../../src/client/player/submarine.tsx";
 import { CHRISTMAS_GLYPHS, glyphId } from "../../src/shared/glyphs.ts";
-import type { PlayerSubView } from "../../src/shared/protocol.ts";
+import type { PlayerSubView } from "../../src/shared/modes/submarine.ts";
 import "../../src/client/shared/theme.css";
 import "../../src/client/player/player.css";
 

@@ -1,12 +1,6 @@
 import type { AnswerValue } from "../../shared/answer-match.ts";
-import {
-  CORRECT_PER_BOOST,
-  type HostSubState,
-  type PlayerSubView,
-  type SubAward,
-  type SubAwards,
-  type SubPhase,
-} from "../../shared/protocol.ts";
+import type { SubAward } from "../../shared/mode-views.ts";
+import { CORRECT_PER_BOOST, type HostSubState, type PlayerSubView, type SubAwards, type SubPhase } from "../../shared/modes/submarine.ts";
 import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import type { Quiz } from "../../shared/quiz-schema.ts";
 import { CHRISTMAS_GLYPHS, glyphId, parseGlyph, variantsOf } from "../../shared/glyphs.ts";

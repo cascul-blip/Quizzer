@@ -13,6 +13,8 @@ import type { PinSpot, QuestionType } from "./quiz-schema.ts";
 import type { RacerCar, RacerConfidence, RacerTurnResult } from "./racer-rules.ts";
 import type { SiegeDefenderType, SiegeMonsterType, SiegeWaves } from "./siege-rules.ts";
 import type { PatchOp } from "./view-patch.ts";
+import type { HostSubState, PlayerSubView, SubPhase } from "./modes/submarine.ts";
+import type { QuestionError, StreamFeedbackView, StreamQuestionView, SubAward } from "./mode-views.ts";
 
 export type Phase = "lobby" | "intro" | "open" | "reveal" | "leaderboard" | "podium";
 export type Pacing = "manual" | "auto";
@@ -204,35 +206,8 @@ export interface QuestionView {
   remainingMs: number;
 }
 
-/** A self-paced mode's current question for one player. */
-export interface StreamQuestionView {
-  seq: number;
-  type: QuestionType;
-  text: string;
-  image?: string;
-  options: string[];
-  spots?: PinSpot[];
-}
-
-/** Feedback for an answer in a self-paced mode. */
-export interface StreamFeedbackView {
-  seq: number;
-  correct: boolean;
-  remainingMs: number;
-  answers: string[];
-  penaltyMs: number;
-}
-
-/** How many errors the final screen's "Show errors" table lists. */
+/** How many errors the final screen's "Show errors" table lists (rows are QuestionError, in mode-views.ts). */
 export const ERRORS_SHOWN = 10;
-
-/** One row of that table. */
-export interface QuestionError {
-  wrong: number;
-  text: string;
-  /** Text of the correct option(s). */
-  answers: string[];
-}
 
 export interface RankedEntry {
   id: string;
@@ -389,72 +364,6 @@ export interface HostTowerState {
   awards: TowerAwards | null;
   /** The questions answered wrongly most often (podium only). */
   errors: QuestionError[] | null;
-}
-
-// ---------- Submarine Squad ----------
-
-export type SubPhase = "countdown" | "chase" | "escaped" | "dive" | "caught" | "podium";
-/** Correct answers needed to earn one boost. */
-export const CORRECT_PER_BOOST = 4;
-
-export interface SubAward {
-  value: number;
-  nicknames: string[];
-}
-
-export interface SubAwards {
-  topBooster: SubAward | null;
-  sharpestEyes: SubAward | null;
-  mostCorrect: SubAward | null;
-}
-
-export interface HostSubState {
-  kind: "submarine";
-  phase: SubPhase;
-  quiz: { id: string; title: string; questionCount: number };
-  level: number;
-  /** Meters below the surface; the final score. */
-  depth: number;
-  /** Time left in the countdown / cut-scene / dive. */
-  phaseRemainingMs: number;
-  /** Distance to the fish in seconds of fish travel, as of when this was sent. */
-  gap: number;
-  /** How fast the gap closes (gap-seconds per second). */
-  speed: number;
-  maxGap: number;
-  boosts: number;
-  required: number;
-  lastBoost: { seq: number; nickname: string; avatar: AvatarChoice } | null;
-  dive: {
-    instructors: { nickname: string; index: number; total: number; found: number; groupSize: number; done: boolean }[];
-  } | null;
-  players: { id: string; nickname: string; avatar: AvatarChoice; connected: boolean; state: "question" | "boost" | "waiting" }[];
-  playerCount: number;
-  awards: SubAwards | null;
-  /** The questions answered wrongly most often (podium only). */
-  errors: QuestionError[] | null;
-}
-
-export interface PlayerSubView {
-  kind: "submarine";
-  phase: SubPhase;
-  title: string;
-  level: number;
-  depth: number;
-  phaseRemainingMs: number;
-  me: { id: string; nickname: string; avatar: AvatarChoice; correct: number; boosts: number; diveHits: number };
-  state: "question" | "boost" | "waiting";
-  /** Correct answers toward the next boost (0 … CORRECT_PER_BOOST-1). */
-  towardBoost: number;
-  question: StreamQuestionView | null;
-  feedback: StreamFeedbackView | null;
-  dive:
-    // symbolRemainingMs of symbolMs: time left to find the current symbol before the instructor moves on.
-    | { role: "instructor"; symbol: string; index: number; total: number; found: number; groupSize: number; symbolRemainingMs: number; symbolMs: number }
-    | { role: "diver"; grid: string[]; index: number; total: number; lockedMs: number; done: boolean; hint: string | null; symbolRemainingMs: number; symbolMs: number }
-    | { role: "waiting" }
-    | null;
-  result: { depth: number; level: number; awards: string[] } | null;
 }
 
 // ---------- Tower Fight ----------

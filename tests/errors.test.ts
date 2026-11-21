@@ -8,7 +8,8 @@ import { COUNTDOWN_MS as ROBOT_COUNTDOWN_MS, RobotGame } from "../src/server/gam
 import { FEEDBACK_MS } from "../src/server/game/stream.ts";
 import { COUNTDOWN_MS as SUB_COUNTDOWN_MS, SubGame } from "../src/server/game/submarine.ts";
 import { COUNTDOWN_MS as TOWER_COUNTDOWN_MS, TowerGame } from "../src/server/game/tower.ts";
-import { ERRORS_SHOWN, type GameMode, type QuestionError } from "../src/shared/protocol.ts";
+import { ERRORS_SHOWN, type GameMode } from "../src/shared/protocol.ts";
+import type { QuestionError } from "../src/shared/mode-views.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
 import { classicGame, FakeClock, sampleQuiz } from "./helpers.ts";
 

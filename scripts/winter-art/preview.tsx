@@ -1,7 +1,8 @@
 /** Interactive art review fixture: bun scripts/winter-art/serve.ts */
 import { render } from "preact";
 import { useEffect, useState } from "preact/hooks";
-import type { HostView, SubPhase } from "../../src/shared/protocol.ts";
+import type { HostView } from "../../src/shared/protocol.ts";
+import type { SubPhase } from "../../src/shared/modes/submarine.ts";
 import { ChristmasGoblin, DogSled, WinterBackdrop } from "../../src/client/shared/winter-art.tsx";
 import { SubmarineStage } from "../../src/client/host/submarine.tsx";
 import "../../src/client/shared/theme.css";

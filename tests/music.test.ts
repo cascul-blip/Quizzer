@@ -1,7 +1,8 @@
 import { startTiles, hexDistance } from "../src/shared/land-board.ts";
 import { describe, expect, test } from "bun:test";
 import { musicFor } from "../src/client/host/music-cues.ts";
-import type { HostView, SubPhase } from "../src/shared/protocol.ts";
+import type { HostView } from "../src/shared/protocol.ts";
+import type { SubPhase } from "../src/shared/modes/submarine.ts";
 import { DRUMS, stepsPerBar, layerActive, noteFreq, stepSeconds, tokens, usesSamples } from "../src/client/shared/music/engine.ts";
 import { TRACKS, robotTracksForSkin } from "../src/client/shared/music/tracks.ts";
 import { ROBOT_SKIN } from "../src/client/shared/robot-skin.ts";

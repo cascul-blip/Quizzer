@@ -1,6 +1,7 @@
 import { useEffect, useState } from "preact/hooks";
 import { Tex, TexList } from "../shared/tex.tsx";
-import type { HostMsg, JoinInfo, QuestionError } from "../../shared/protocol.ts";
+import type { HostMsg, JoinInfo } from "../../shared/protocol.ts";
+import type { QuestionError } from "../../shared/mode-views.ts";
 import { musicEnabled, musicVolume, setMusicEnabled, setMusicVolume } from "../shared/music/index.ts";
 import { isMuted, setMuted } from "../shared/sounds.ts";
 import { setVoiceEnabled, voiceEnabled } from "../shared/voice.ts";

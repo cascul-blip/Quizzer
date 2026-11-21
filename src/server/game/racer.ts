@@ -3,7 +3,6 @@ import type {
   HostRacerState,
   Pacing,
   PlayerRacerView,
-  QuestionError,
   QuestionView,
   RacerAwards,
   RacerDriver,
@@ -12,6 +11,7 @@ import type {
   RacerTurn,
   ShuffleOptions,
 } from "../../shared/protocol.ts";
+import type { QuestionError } from "../../shared/mode-views.ts";
 import { randomAvatar, type AvatarChoice } from "../../shared/avatars.ts";
 import { MAX_TYPED_ANSWER, checkAnswer, type AnswerValue, answerOf } from "../../shared/answer-match.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
