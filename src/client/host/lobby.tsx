@@ -10,7 +10,7 @@ import type { Send } from "./common.tsx";
 import { ScreenControls, toggleFullscreen } from "./common.tsx";
 import { HOST_MODES, lobbyEntryOf } from "./modes.tsx";
 
-type LobbyView = Extract<HostView, { kind: "classic" }>;
+type LobbyView = Extract<HostView, { kind: "lobby" }>;
 
 /** The Game mode menu, in the order HOST_MODES lists the modes. */
 const MENU = keysOf(HOST_MODES);

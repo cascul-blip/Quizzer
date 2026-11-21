@@ -7,7 +7,7 @@ import { MUSIC_EXTENSIONS } from "../shared/music-tracks.ts";
 import { BASE_VERSION_HEADER, QUIZ_REVISION_HEADER } from "../shared/quiz-constants.ts";
 import { ValidationError } from "../shared/quiz-schema.ts";
 import { pageRoutes } from "./bundles.ts";
-import type { Clock } from "./game/game.ts";
+import type { Clock } from "./game/classic.ts";
 import { handleMcpRequest } from "./mcp/http.ts";
 import { isAdminRequest } from "./network.ts";
 import { isCompiled } from "./paths.ts";

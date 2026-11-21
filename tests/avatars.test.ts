@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { ACCESSORY_ART, AVATAR_ART } from "../src/client/shared/avatar-art.tsx";
-import { GameError } from "../src/server/game/game.ts";
+import { GameError } from "../src/server/game/classic.ts";
 import { Lobby } from "../src/server/game/lobby.ts";
 import { SubGame } from "../src/server/game/submarine.ts";
 import { TowerGame } from "../src/server/game/tower.ts";
@@ -66,18 +66,21 @@ describe("in the lobby", () => {
 
   test("players can change their look until the game starts", () => {
     let changes = 0;
-    const game = classicGame(sampleQuiz(), { clock: new FakeClock(), onChange: () => changes++ });
-    const p = game.join("A");
+    const quiz = sampleQuiz();
+    const lobby = new Lobby(quiz, { onChange: () => changes++ });
+    const p = lobby.join("A");
     const before = changes;
-    game.setAvatar(p.id, A2, X2);
+    lobby.setAvatar(p.id, A2, X2);
     expect(changes).toBe(before + 1);
-    expect(game.hostView().players[0]!.avatar).toEqual({ avatar: A2, accessory: X2 });
-    const view = game.playerView(p.id);
-    expect(view.kind === "classic" && view.me.avatar).toEqual({ avatar: A2, accessory: X2 });
+    expect(lobby.hostView().players[0]!.avatar).toEqual({ avatar: A2, accessory: X2 });
+    const view = lobby.playerView(p.id);
+    expect(view.kind === "lobby" && view.me.avatar).toEqual({ avatar: A2, accessory: X2 });
 
-    expect(() => game.setAvatar(p.id, A2, "jetpack")).toThrow(GameError);
+    expect(() => lobby.setAvatar(p.id, A2, "jetpack")).toThrow(GameError);
     expect(p.avatar.accessory).toBe(X2);
 
+    const game = classicGame(quiz, { clock: new FakeClock() });
+    game.adoptPlayers(lobby.players.values());
     game.start();
     expect(() => game.setAvatar(p.id, A1, "none")).toThrow(/already started/);
   });

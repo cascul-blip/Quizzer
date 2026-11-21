@@ -3,17 +3,13 @@ import { initialPhoneScreen, PhoneSession } from "../src/client/player/session.t
 import type { ClientMsg, PlayerView } from "../src/shared/protocol.ts";
 
 const notJoined: PlayerView = { kind: "none", game: { title: "Sample", phase: "lobby" } };
-const previous: Extract<PlayerView, { kind: "classic" }> = {
-  kind: "classic",
+const previous: Extract<PlayerView, { kind: "lobby" }> = {
+  kind: "lobby",
   phase: "lobby",
   title: "Sample",
-  me: { id: "player-1", nickname: "Sam", avatar: { avatar: "snowman", accessory: "none" }, score: 0, rank: 1, streak: 0 },
+  mode: "classic",
+  me: { id: "player-1", nickname: "Sam", avatar: { avatar: "snowman", accessory: "none" } },
   playerCount: 1,
-  question: null,
-  myChoice: null,
-  myText: null,
-  result: null,
-  podium: null,
   team: null,
 };
 

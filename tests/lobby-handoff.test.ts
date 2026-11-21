@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { ClassicGame, GameError } from "../src/server/game/classic.ts";
 import { DuelGame } from "../src/server/game/duel.ts";
-import { ClassicGame, GameError } from "../src/server/game/game.ts";
 import { GiftGame } from "../src/server/game/gift.ts";
 import { Lobby } from "../src/server/game/lobby.ts";
 import type { LiveGame } from "../src/server/game/mode-entry.ts";
@@ -39,6 +39,28 @@ function setup(mode: GameMode, players: string[]) {
 }
 
 describe("Lobby handoff", () => {
+  test("projector and phone switch from lobby views to Classic gameplay views", () => {
+    const {
+      lobby,
+      joined: [player],
+      opts,
+      installedGame,
+    } = setup("classic", ["Noel"]);
+    const playerId = player!.id;
+
+    expect(lobby.hostView()).toMatchObject({ kind: "lobby", mode: "classic", players: [{ id: playerId }] });
+    expect(lobby.playerView(playerId)).toMatchObject({ kind: "lobby", mode: "classic", me: { id: playerId } });
+
+    lobby.start(undefined, opts);
+    const game = installedGame()!;
+    const host = game.hostView();
+    const phone = game.playerView(playerId);
+    expect(host).toMatchObject({ kind: "classic", phase: "intro" });
+    expect(phone).toMatchObject({ kind: "classic", phase: "intro", me: { id: playerId } });
+    for (const field of ["mode", "settings", "teams", "shuffle", "protect"]) expect(host).not.toHaveProperty(field);
+    for (const field of ["mode", "team", "banner"]) expect(phone).not.toHaveProperty(field);
+  });
+
   test("an empty lobby refuses to start and installs nothing, so Start can be retried", () => {
     const { lobby, opts, installedGame } = setup("gift", []);
     expect(() => lobby.start(undefined, opts)).toThrow(GameError);
@@ -80,7 +102,7 @@ describe("Lobby handoff", () => {
     expect(
       joined.map(({ id }) => {
         const view = lobby.playerView(id);
-        return view.kind === "classic" ? view.team?.index : null;
+        return view.kind === "lobby" ? view.team?.index : null;
       }),
     ).toEqual(expectedTeams);
   });

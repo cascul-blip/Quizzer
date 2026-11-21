@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { AUTO_REVEAL_MS, INTRO_MS } from "../src/server/game/classic.ts";
 import { COUNTDOWN_MS as CUP_COUNTDOWN_MS } from "../src/server/game/cup.ts";
 import { COUNTDOWN_MS as FIGHT_COUNTDOWN_MS, RESULT_MS } from "../src/server/game/fight.ts";
-import { AUTO_REVEAL_MS, INTRO_MS } from "../src/server/game/game.ts";
 import { COUNTDOWN_MS as LAND_COUNTDOWN_MS } from "../src/server/game/land.ts";
 import { RacerGame } from "../src/server/game/racer.ts";
 import { COUNTDOWN_MS as ROBOT_COUNTDOWN_MS } from "../src/server/game/robot.ts";
@@ -66,7 +66,7 @@ describe("Game mode: Classic", () => {
     host.sendMsg({ type: "host.hello" });
     await host.hostState((v) => v.phase === "idle");
     host.sendMsg({ type: "host.open", quizId: quiz.id });
-    const lobby = await host.hostState((v) => v.phase === "lobby");
+    const lobby = await host.hostState((v) => v.kind === "lobby");
     expect(lobby.view.join.url).toBe("http://127.0.0.1:4321/");
 
     const players = ["Ann", "Bob", "Cy"].map(() => new HubSocket(hub));
@@ -85,12 +85,12 @@ describe("Game mode: Classic", () => {
     expect(await dup.waitFor((m) => m.type === "error")).toMatchObject({ message: expect.stringContaining("taken") });
     dup.close();
 
-    await host.hostState((v) => v.phase === "lobby" && v.players.length === 3);
+    await host.hostState((v) => v.kind === "lobby" && v.players.length === 3);
     // Avatars: picked in the lobby, shown on the host.
     const look = { avatar: OFFERED_AVATARS[0]!.id, accessory: OFFERED_ACCESSORIES[1]!.id };
     players[0]!.sendMsg({ type: "setAvatar", ...look });
     await host.hostState(
-      (v) => v.phase === "lobby" && v.players.some((p) => p.nickname === "Ann" && p.avatar.avatar === look.avatar && p.avatar.accessory === look.accessory),
+      (v) => v.kind === "lobby" && v.players.some((p) => p.nickname === "Ann" && p.avatar.avatar === look.avatar && p.avatar.accessory === look.accessory),
     );
     players[1]!.sendMsg({ type: "setAvatar", avatar: look.avatar, accessory: "jetpack" });
     expect(await players[1]!.waitFor((m) => m.type === "error")).toMatchObject({ message: "Unknown avatar" });
@@ -164,10 +164,10 @@ describe("Game mode: Tallest Tower", () => {
     host.sendMsg({ type: "host.hello" });
     await host.hostState((v) => v.kind === "idle");
     host.sendMsg({ type: "host.open", quizId: quiz.id });
-    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
+    await host.hostState((v) => v.kind === "lobby");
     host.sendMsg({ type: "host.setMode", mode: "tower" });
     host.sendMsg({ type: "host.setModeSettings", mode: "tower", settings: { teams: 2, minutes: 2, theme: "classic" } });
-    await host.hostState((v) => v.kind === "classic" && v.mode === "tower" && v.settings.tower.minutes === 2);
+    await host.hostState((v) => v.kind === "lobby" && v.mode === "tower" && v.settings.tower.minutes === 2);
 
     const names = ["Ann", "Bob", "Cy"];
     const players = names.map(() => new HubSocket(hub));
@@ -176,10 +176,10 @@ describe("Game mode: Tallest Tower", () => {
       p.sendMsg({ type: "join", nickname: names[i]! });
       await p.waitFor((m) => m.type === "joined");
     }
-    const lobby = await host.hostState((v) => v.kind === "classic" && !!v.teams && v.players.length === 3);
-    expect(lobby.view.kind === "classic" && lobby.view.teams!.map((t) => t.members.map((m) => m.nickname))).toEqual([["Ann", "Cy"], ["Bob"]]);
-    const annLobby = await players[0]!.playerState((v) => v.kind === "classic" && !!v.team);
-    expect(annLobby.view.kind === "classic" && annLobby.view.team?.name).toBe("Red");
+    const lobby = await host.hostState((v) => v.kind === "lobby" && !!v.teams && v.players.length === 3);
+    expect(lobby.view.kind === "lobby" && lobby.view.teams!.map((t) => t.members.map((m) => m.nickname))).toEqual([["Ann", "Cy"], ["Bob"]]);
+    const annLobby = await players[0]!.playerState((v) => v.kind === "lobby" && !!v.team);
+    expect(annLobby.view.kind === "lobby" && annLobby.view.team?.name).toBe("Red");
 
     host.sendMsg({ type: "host.start", pacing: "manual" });
     const themedHost = await host.hostState((v) => v.kind === "tower" && v.phase === "countdown");
@@ -239,9 +239,7 @@ describe("Game mode: Tallest Tower", () => {
 
     // Play again keeps Tallest Tower selected.
     host.sendMsg({ type: "host.open", quizId: quiz.id });
-    await host.hostState(
-      (v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "tower" && v.settings.tower.teams === 2 && v.settings.tower.theme === "classic",
-    );
+    await host.hostState((v) => v.kind === "lobby" && v.mode === "tower" && v.settings.tower.teams === 2 && v.settings.tower.theme === "classic");
     host.sendMsg({ type: "host.close" });
     [host, ...players].forEach((s) => s.close());
   });
@@ -257,9 +255,9 @@ describe("Game mode: Submarine Squad", () => {
     host.sendMsg({ type: "host.hello" });
     await host.hostState((v) => v.kind === "idle");
     host.sendMsg({ type: "host.open", quizId: quiz.id });
-    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
+    await host.hostState((v) => v.kind === "lobby");
     host.sendMsg({ type: "host.setMode", mode: "submarine" });
-    await host.hostState((v) => v.kind === "classic" && v.mode === "submarine");
+    await host.hostState((v) => v.kind === "lobby" && v.mode === "submarine");
 
     const players = ["Sam", "Kim"].map(() => new HubSocket(hub));
     for (const [i, p] of players.entries()) {
@@ -314,10 +312,10 @@ describe("Game mode: Tower Fight", () => {
     host.sendMsg({ type: "host.hello" });
     await host.hostState((v) => v.kind === "idle");
     host.sendMsg({ type: "host.open", quizId: quiz.id });
-    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
+    await host.hostState((v) => v.kind === "lobby");
     host.sendMsg({ type: "host.setMode", mode: "fight" });
     host.sendMsg({ type: "host.setModeSettings", mode: "fight", settings: { hill: "low" } });
-    await host.hostState((v) => v.kind === "classic" && v.mode === "fight" && v.settings.fight.hill === "low");
+    await host.hostState((v) => v.kind === "lobby" && v.mode === "fight" && v.settings.fight.hill === "low");
 
     const names = ["Red1", "Blue1"];
     const players = names.map(() => new HubSocket(hub));
@@ -326,8 +324,8 @@ describe("Game mode: Tower Fight", () => {
       p.sendMsg({ type: "join", nickname: names[i]! });
       await p.waitFor((m) => m.type === "joined");
     }
-    const lobby = await host.hostState((v) => v.kind === "classic" && !!v.teams && v.players.length === 2);
-    expect(lobby.view.kind === "classic" && lobby.view.teams!.map((t) => t.name)).toEqual(["Red", "Blue"]);
+    const lobby = await host.hostState((v) => v.kind === "lobby" && !!v.teams && v.players.length === 2);
+    expect(lobby.view.kind === "lobby" && lobby.view.teams!.map((t) => t.name)).toEqual(["Red", "Blue"]);
 
     host.sendMsg({ type: "host.start", pacing: "manual" });
     await host.hostState((v) => v.kind === "fight" && v.phase === "countdown" && v.hill === "low");
@@ -372,7 +370,7 @@ describe("Game mode: Tower Fight", () => {
 
     // Play again keeps Tower Fight and the hill.
     host.sendMsg({ type: "host.open", quizId: quiz.id });
-    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "fight" && v.settings.fight.hill === "low");
+    await host.hostState((v) => v.kind === "lobby" && v.mode === "fight" && v.settings.fight.hill === "low");
     host.sendMsg({ type: "host.close" });
     [host, ...players].forEach((s) => s.close());
   });
@@ -388,9 +386,9 @@ describe("Game mode: Robot Attack", () => {
     host.sendMsg({ type: "host.hello" });
     await host.hostState((v) => v.kind === "idle");
     host.sendMsg({ type: "host.open", quizId: quiz.id });
-    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
+    await host.hostState((v) => v.kind === "lobby");
     host.sendMsg({ type: "host.setMode", mode: "robot" });
-    await host.hostState((v) => v.kind === "classic" && v.mode === "robot" && v.teams === null);
+    await host.hostState((v) => v.kind === "lobby" && v.mode === "robot" && v.teams === null);
 
     const names = ["Ann", "Bob"];
     const players = names.map(() => new HubSocket(hub));
@@ -399,7 +397,7 @@ describe("Game mode: Robot Attack", () => {
       p.sendMsg({ type: "join", nickname: names[i]! });
       await p.waitFor((m) => m.type === "joined");
     }
-    await host.hostState((v) => v.kind === "classic" && v.players.length === 2);
+    await host.hostState((v) => v.kind === "lobby" && v.players.length === 2);
 
     host.sendMsg({ type: "host.start", pacing: "manual" });
     await host.hostState((v) => v.kind === "robot" && v.phase === "countdown");
@@ -449,7 +447,7 @@ describe("Game mode: Robot Attack", () => {
 
     // Play again keeps Robot Attack.
     host.sendMsg({ type: "host.open", quizId: quiz.id });
-    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "robot");
+    await host.hostState((v) => v.kind === "lobby" && v.mode === "robot");
     host.sendMsg({ type: "host.close" });
     [host, ...players].forEach((s) => s.close());
   });
@@ -465,15 +463,15 @@ describe("Game mode: Cup of Death", () => {
     host.sendMsg({ type: "host.hello" });
     await host.hostState((v) => v.kind === "idle");
     host.sendMsg({ type: "host.open", quizId: quiz.id });
-    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
+    await host.hostState((v) => v.kind === "lobby");
     host.sendMsg({ type: "host.setMode", mode: "cup" });
-    await host.hostState((v) => v.kind === "classic" && v.mode === "cup" && v.teams === null && v.settings.cup.cups === 3);
+    await host.hostState((v) => v.kind === "lobby" && v.mode === "cup" && v.teams === null && v.settings.cup.cups === 3);
     host.sendMsg({ type: "host.setModeSettings", mode: "cup", settings: { cups: 7 } });
     expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: expect.stringContaining("between 1 and 6") });
     host.sendMsg({ type: "host.setModeSettings", mode: "cup", settings: { cups: 5, theme: "classic" } });
-    await host.hostState((v) => v.kind === "classic" && v.settings.cup.cups === 5 && v.settings.cup.theme === "classic");
+    await host.hostState((v) => v.kind === "lobby" && v.settings.cup.cups === 5 && v.settings.cup.theme === "classic");
     host.sendMsg({ type: "host.setModeSettings", mode: "cup", settings: { cups: 5, theme: "christmas" } });
-    await host.hostState((v) => v.kind === "classic" && v.settings.cup.theme === "christmas");
+    await host.hostState((v) => v.kind === "lobby" && v.settings.cup.theme === "christmas");
 
     const names = ["Ann", "Bob"];
     const players = names.map(() => new HubSocket(hub));
@@ -482,7 +480,7 @@ describe("Game mode: Cup of Death", () => {
       p.sendMsg({ type: "join", nickname: names[i]! });
       await p.waitFor((m) => m.type === "joined");
     }
-    await host.hostState((v) => v.kind === "classic" && v.players.length === 2);
+    await host.hostState((v) => v.kind === "lobby" && v.players.length === 2);
 
     host.sendMsg({ type: "host.start", pacing: "manual" });
     await host.hostState((v) => v.kind === "cup" && v.phase === "countdown" && v.theme === "christmas");
@@ -530,9 +528,7 @@ describe("Game mode: Cup of Death", () => {
 
     // Play again keeps the Cup of Cheer theme and cup count.
     host.sendMsg({ type: "host.open", quizId: quiz.id });
-    await host.hostState(
-      (v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "cup" && v.settings.cup.theme === "christmas" && v.settings.cup.cups === 5,
-    );
+    await host.hostState((v) => v.kind === "lobby" && v.mode === "cup" && v.settings.cup.theme === "christmas" && v.settings.cup.cups === 5);
     host.sendMsg({ type: "host.close" });
     [host, ...players].forEach((s) => s.close());
   });
@@ -572,14 +568,14 @@ describe("Game mode: Kingdom Siege", () => {
     host.sendMsg({ type: "host.hello" });
     await host.hostState((v) => v.kind === "idle");
     host.sendMsg({ type: "host.open", quizId: quiz.id });
-    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
+    await host.hostState((v) => v.kind === "lobby");
     host.sendMsg({ type: "host.setMode", mode: "siege" });
-    const siegeLobby = await host.hostState((v) => v.kind === "classic" && v.mode === "siege" && v.settings.siege.waves === 5 && v.teams === null);
-    expect(siegeLobby.view.kind === "classic" && siegeLobby.view.settings.siege.theme).toBe("christmas");
+    const siegeLobby = await host.hostState((v) => v.kind === "lobby" && v.mode === "siege" && v.settings.siege.waves === 5 && v.teams === null);
+    expect(siegeLobby.view.kind === "lobby" && siegeLobby.view.settings.siege.theme).toBe("christmas");
     hub.onMessage(host, JSON.stringify({ type: "host.setModeSettings", mode: "siege", settings: { waves: 7 } })); // not a valid choice, as a stale page might send
     expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: expect.stringContaining("waves") });
     host.sendMsg({ type: "host.setModeSettings", mode: "siege", settings: { waves: "endless", theme: "classic" } });
-    await host.hostState((v) => v.kind === "classic" && v.settings.siege.waves === "endless");
+    await host.hostState((v) => v.kind === "lobby" && v.settings.siege.waves === "endless");
 
     const names = ["Ann", "Bob"];
     const players = names.map(() => new HubSocket(hub));
@@ -649,8 +645,8 @@ describe("Game mode: Kingdom Siege", () => {
 
     // Play again keeps Kingdom Siege and Endless, and the next run knows the record.
     host.sendMsg({ type: "host.open", quizId: quiz.id });
-    const siegeAgain = await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "siege" && v.settings.siege.waves === "endless");
-    expect(siegeAgain.view.kind === "classic" && siegeAgain.view.settings.siege.theme).toBe("classic");
+    const siegeAgain = await host.hostState((v) => v.kind === "lobby" && v.mode === "siege" && v.settings.siege.waves === "endless");
+    expect(siegeAgain.view.kind === "lobby" && siegeAgain.view.settings.siege.theme).toBe("classic");
     for (const [i, p] of players.entries()) {
       p.sendMsg({ type: "join", nickname: names[i]! });
       await p.waitFor((m) => m.type === "joined");
@@ -680,9 +676,9 @@ describe("Game mode: Land Grab", () => {
     host.sendMsg({ type: "host.setModeSettings", mode: "land", settings: { teams: 1, minutes: 3 } });
     expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: expect.stringContaining("between 2 and 6") });
     host.sendMsg({ type: "host.setModeSettings", mode: "land", settings: { teams: 2, minutes: 3, theme: "classic" } });
-    await host.hostState((v) => v.kind === "classic" && v.mode === "land" && v.settings.land.minutes === 3 && v.settings.land.theme === "classic");
+    await host.hostState((v) => v.kind === "lobby" && v.mode === "land" && v.settings.land.minutes === 3 && v.settings.land.theme === "classic");
     host.sendMsg({ type: "host.setModeSettings", mode: "land", settings: { teams: 2, minutes: 3, theme: "christmas" } });
-    await host.hostState((v) => v.kind === "classic" && v.settings.land.theme === "christmas");
+    await host.hostState((v) => v.kind === "lobby" && v.settings.land.theme === "christmas");
 
     const names = ["Ann", "Bob"];
     const players = names.map(() => new HubSocket(hub));
@@ -691,8 +687,8 @@ describe("Game mode: Land Grab", () => {
       p.sendMsg({ type: "join", nickname: names[i]! });
       await p.waitFor((m) => m.type === "joined");
     }
-    const lobby = await host.hostState((v) => v.kind === "classic" && !!v.teams && v.players.length === 2);
-    expect(lobby.view.kind === "classic" && lobby.view.teams!.map((t) => t.members.map((m) => m.nickname))).toEqual([["Ann"], ["Bob"]]);
+    const lobby = await host.hostState((v) => v.kind === "lobby" && !!v.teams && v.players.length === 2);
+    expect(lobby.view.kind === "lobby" && lobby.view.teams!.map((t) => t.members.map((m) => m.nickname))).toEqual([["Ann"], ["Bob"]]);
 
     host.sendMsg({ type: "host.start", pacing: "manual" });
     const started = await host.hostState((v) => v.kind === "land" && v.phase === "countdown");
@@ -744,7 +740,7 @@ describe("Game mode: Land Grab", () => {
 
     // Play again keeps Land Grab and its settings.
     host.sendMsg({ type: "host.open", quizId: quiz.id });
-    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "land" && v.settings.land.minutes === 3);
+    await host.hostState((v) => v.kind === "lobby" && v.mode === "land" && v.settings.land.minutes === 3);
     host.sendMsg({ type: "host.close" });
     [host, ...players].forEach((s) => s.close());
   });
@@ -760,12 +756,12 @@ describe("Game mode: Racer", () => {
     host.sendMsg({ type: "host.hello" });
     await host.hostState((v) => v.kind === "idle");
     host.sendMsg({ type: "host.open", quizId: quiz.id });
-    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
+    await host.hostState((v) => v.kind === "lobby");
     host.sendMsg({ type: "host.setMode", mode: "racer" });
-    await host.hostState((v) => v.kind === "classic" && v.mode === "racer" && v.teams === null);
+    await host.hostState((v) => v.kind === "lobby" && v.mode === "racer" && v.teams === null);
 
     host.sendMsg({ type: "host.setModeSettings", mode: "racer", settings: { theme: "christmas" } });
-    await host.hostState((v) => v.kind === "classic" && v.settings.racer.theme === "christmas");
+    await host.hostState((v) => v.kind === "lobby" && v.settings.racer.theme === "christmas");
 
     const names = ["Ann", "Bob"];
     const players = names.map(() => new HubSocket(hub));
@@ -774,7 +770,7 @@ describe("Game mode: Racer", () => {
       p.sendMsg({ type: "join", nickname: names[i]! });
       await p.waitFor((m) => m.type === "joined");
     }
-    await host.hostState((v) => v.kind === "classic" && v.players.length === 2);
+    await host.hostState((v) => v.kind === "lobby" && v.players.length === 2);
 
     // Straight into turn 1: one of them drives, the options are hidden.
     host.sendMsg({ type: "host.start", pacing: "manual" });
@@ -879,11 +875,9 @@ describe("Game mode: Racer", () => {
 
     // Play again keeps Racer and the pacing.
     host.sendMsg({ type: "host.open", quizId: quiz.id });
-    await host.hostState(
-      (v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "racer" && v.pacing === "auto" && v.settings.racer.theme === "christmas",
-    );
+    await host.hostState((v) => v.kind === "lobby" && v.mode === "racer" && v.pacing === "auto" && v.settings.racer.theme === "christmas");
     host.sendMsg({ type: "host.setPacing", pacing: "manual" });
-    await host.hostState((v) => v.kind === "classic" && v.pacing === "manual");
+    await host.hostState((v) => v.kind === "lobby" && v.pacing === "manual");
     host.sendMsg({ type: "host.close" });
     await host.hostState((v) => v.kind === "idle");
     [host, ...players].forEach((s) => s.close());
@@ -900,15 +894,15 @@ describe("Game mode: Showdown", () => {
     host.sendMsg({ type: "host.hello" });
     await host.hostState((v) => v.kind === "idle");
     host.sendMsg({ type: "host.open", quizId: quiz.id });
-    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
+    await host.hostState((v) => v.kind === "lobby");
     host.sendMsg({ type: "host.setMode", mode: "duel" });
     await host.hostState(
-      (v) => v.kind === "classic" && v.mode === "duel" && v.settings.duel.rounds === 15 && v.settings.duel.theme === "christmas" && v.teams === null,
+      (v) => v.kind === "lobby" && v.mode === "duel" && v.settings.duel.rounds === 15 && v.settings.duel.theme === "christmas" && v.teams === null,
     );
     host.sendMsg({ type: "host.setModeSettings", mode: "duel", settings: { rounds: 7 } });
     expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: "Unsupported number of rounds" });
     host.sendMsg({ type: "host.setModeSettings", mode: "duel", settings: { rounds: 10, theme: "classic" } });
-    await host.hostState((v) => v.kind === "classic" && v.settings.duel.rounds === 10 && v.settings.duel.theme === "classic");
+    await host.hostState((v) => v.kind === "lobby" && v.settings.duel.rounds === 10 && v.settings.duel.theme === "classic");
 
     const names = ["Ann", "Bob"];
     const players = names.map(() => new HubSocket(hub));
@@ -917,7 +911,7 @@ describe("Game mode: Showdown", () => {
       p.sendMsg({ type: "join", nickname: names[i]! });
       await p.waitFor((m) => m.type === "joined");
     }
-    await host.hostState((v) => v.kind === "classic" && v.players.length === 2);
+    await host.hostState((v) => v.kind === "lobby" && v.players.length === 2);
 
     host.sendMsg({ type: "host.start", pacing: "manual" });
     const started = await host.hostState((v) => v.kind === "duel" && v.phase === "intro");
@@ -969,9 +963,7 @@ describe("Game mode: Showdown", () => {
 
     // Play again keeps Showdown and its rounds.
     host.sendMsg({ type: "host.open", quizId: quiz.id });
-    await host.hostState(
-      (v) => v.kind === "classic" && v.phase === "lobby" && v.mode === "duel" && v.settings.duel.rounds === 10 && v.settings.duel.theme === "classic",
-    );
+    await host.hostState((v) => v.kind === "lobby" && v.mode === "duel" && v.settings.duel.rounds === 10 && v.settings.duel.theme === "classic");
     host.sendMsg({ type: "host.close" });
     await host.hostState((v) => v.kind === "idle");
     [host, ...players].forEach((s) => s.close());
@@ -1000,7 +992,7 @@ describe("Phone attachment", () => {
       }
 
       host.sendMsg({ type: "host.start", pacing: "manual" });
-      await host.hostState((v) => v.kind === "classic" && v.phase !== "lobby");
+      await host.hostState((v) => v.kind === "classic");
       first.sendMsg({ type: "resume", token: bob.token });
       expect(await first.waitFor((m) => m.type === "joined")).toMatchObject({ playerId: bob.playerId });
       const switched = await host.hostState((v) => v.kind === "classic" && v.players.some((p) => p.id === bob.playerId && p.connected));
@@ -1031,10 +1023,10 @@ describe("Lobby handoff", () => {
     host.sendMsg({ type: "host.hello" });
     await host.hostState((v) => v.kind === "idle");
     host.sendMsg({ type: "host.open", quizId: quiz.id });
-    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
+    await host.hostState((v) => v.kind === "lobby");
     host.sendMsg({ type: "host.setMode", mode: "tower" });
     host.sendMsg({ type: "host.setModeSettings", mode: "tower", settings: { teams: 2, minutes: 2 } });
-    await host.hostState((v) => v.kind === "classic" && v.mode === "tower" && v.settings.tower.minutes === 2);
+    await host.hostState((v) => v.kind === "lobby" && v.mode === "tower" && v.settings.tower.minutes === 2);
 
     const names = ["Ann", "Bob", "Cy"];
     const players = names.map(() => new HubSocket(hub));
@@ -1043,15 +1035,15 @@ describe("Lobby handoff", () => {
       p.sendMsg({ type: "join", nickname: names[i]! });
       await p.waitFor((m) => m.type === "joined");
     }
-    const lobby = await host.hostState((v) => v.kind === "classic" && !!v.teams && v.players.length === 3);
-    const ann = lobby.view.kind === "classic" ? lobby.view.players.find((p) => p.nickname === "Ann")! : null;
-    await players[0]!.playerState((v) => v.kind === "classic" && v.team?.name === "Red");
+    const lobby = await host.hostState((v) => v.kind === "lobby" && !!v.teams && v.players.length === 3);
+    const ann = lobby.view.kind === "lobby" ? lobby.view.players.find((p) => p.nickname === "Ann")! : null;
+    await players[0]!.playerState((v) => v.kind === "lobby" && v.team?.name === "Red");
 
     host.sendMsg({ type: "host.setTeam", playerId: ann!.id, team: 1 });
-    const moved = await host.hostState((v) => v.kind === "classic" && !!v.teams && v.teams[1]!.members.length === 2);
-    expect(moved.view.kind === "classic" && moved.view.teams!.map((t) => t.members.map((m) => m.nickname))).toEqual([["Cy"], ["Ann", "Bob"]]);
-    const annLobby = await players[0]!.playerState((v) => v.kind === "classic" && v.team?.name === "Blue");
-    expect(annLobby.view.kind === "classic" && annLobby.view.team?.index).toBe(1);
+    const moved = await host.hostState((v) => v.kind === "lobby" && !!v.teams && v.teams[1]!.members.length === 2);
+    expect(moved.view.kind === "lobby" && moved.view.teams!.map((t) => t.members.map((m) => m.nickname))).toEqual([["Cy"], ["Ann", "Bob"]]);
+    const annLobby = await players[0]!.playerState((v) => v.kind === "lobby" && v.team?.name === "Blue");
+    expect(annLobby.view.kind === "lobby" && annLobby.view.team?.index).toBe(1);
 
     host.sendMsg({ type: "host.setTeam", playerId: ann!.id, team: 2 });
     expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: "Unknown team" });
@@ -1083,13 +1075,13 @@ describe("Lobby handoff", () => {
       host.sendMsg({ type: "host.hello" });
       host.sendMsg({ type: "host.open", quizId: quiz.id });
       host.sendMsg({ type: "host.setMode", mode: "gift" });
-      await host.hostState((v) => v.kind === "classic" && v.mode === "gift" && v.players.length === 0);
+      await host.hostState((v) => v.kind === "lobby" && v.mode === "gift" && v.players.length === 0);
       host.sendMsg({ type: "host.start", pacing: "manual" });
       expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: "Wait for at least one player to join" });
 
       phone.sendMsg({ type: "join", nickname: "Noel" });
       const joined = await phone.waitFor((m) => m.type === "joined");
-      await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.players.some((p) => p.id === joined.playerId));
+      await host.hostState((v) => v.kind === "lobby" && v.players.some((p) => p.id === joined.playerId));
       host.sendMsg({ type: "host.start", pacing: "manual" });
       const countdown = await host.hostState((v) => v.kind === "gift" && v.phase === "countdown");
       expect(countdown.view).toMatchObject({ standings: [{ id: joined.playerId, nickname: "Noel", connected: true }] });
@@ -1115,15 +1107,15 @@ describe("Game mode: Gift Grab", () => {
     try {
       host.sendMsg({ type: "host.hello" });
       host.sendMsg({ type: "host.open", quizId: quiz.id });
-      await host.hostState((v) => v.kind === "classic" && v.phase === "lobby");
+      await host.hostState((v) => v.kind === "lobby");
       host.sendMsg({ type: "host.setMode", mode: "gift" });
-      await host.hostState((v) => v.kind === "classic" && v.mode === "gift" && v.settings.gift.minutes === 5);
+      await host.hostState((v) => v.kind === "lobby" && v.mode === "gift" && v.settings.gift.minutes === 5);
       host.sendMsg({ type: "host.setModeSettings", mode: "gift", settings: { minutes: 4 } });
       expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: "Unsupported game length" });
       host.sendMsg({ type: "host.setModeSettings", mode: "gift", settings: { minutes: 3 } });
       player.sendMsg({ type: "join", nickname: "Noel" });
       const joined = await player.waitFor((m) => m.type === "joined");
-      await host.hostState((v) => v.kind === "classic" && v.settings.gift.minutes === 3 && v.players.length === 1);
+      await host.hostState((v) => v.kind === "lobby" && v.settings.gift.minutes === 3 && v.players.length === 1);
       host.sendMsg({ type: "host.start", pacing: "manual" });
       await host.hostState((v) => v.kind === "gift" && v.phase === "countdown");
       clock.advance(3_000);
@@ -1155,7 +1147,7 @@ describe("Game mode: Gift Grab", () => {
       expect(await resultsCsv()).toContain("1,Noel,10,5,0,1,1,0,0");
 
       host.sendMsg({ type: "host.open", quizId: quiz.id });
-      await host.hostState((v) => v.kind === "classic" && v.mode === "gift" && v.settings.gift.minutes === 3);
+      await host.hostState((v) => v.kind === "lobby" && v.mode === "gift" && v.settings.gift.minutes === 3);
     } finally {
       host.sendMsg({ type: "host.close" });
       await host.hostState((v) => v.kind === "idle");
@@ -1173,15 +1165,15 @@ describe("Protect from abuse", () => {
     host.sendMsg({ type: "host.hello" });
     await host.hostState((v) => v.kind === "idle");
     host.sendMsg({ type: "host.open", quizId: quiz.id });
-    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && v.protect);
+    await host.hostState((v) => v.kind === "lobby" && v.protect);
     host.sendMsg({ type: "host.setProtect", on: false });
-    await host.hostState((v) => v.kind === "classic" && !v.protect);
+    await host.hostState((v) => v.kind === "lobby" && !v.protect);
     host.sendMsg({ type: "host.close" });
     await host.hostState((v) => v.kind === "idle");
     host.sendMsg({ type: "host.open", quizId: quiz.id });
-    await host.hostState((v) => v.kind === "classic" && v.phase === "lobby" && !v.protect);
+    await host.hostState((v) => v.kind === "lobby" && !v.protect);
     host.sendMsg({ type: "host.setProtect", on: true });
-    await host.hostState((v) => v.kind === "classic" && v.protect);
+    await host.hostState((v) => v.kind === "lobby" && v.protect);
     host.sendMsg({ type: "host.close" });
     await host.hostState((v) => v.kind === "idle");
     host.close();

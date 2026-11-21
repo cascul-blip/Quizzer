@@ -14,7 +14,7 @@ import type { HostSubState, PlayerSubView, SubMsg, SubPhase } from "./modes/subm
 import type { HostTowerState, PlayerTowerView, TowerMsg, TowerPhase, TowerSettings } from "./modes/tower.ts";
 import type { PatchOp } from "./view-patch.ts";
 
-export type Phase = "lobby" | "intro" | "open" | "reveal" | "leaderboard" | "podium";
+export type ClassicPhase = "intro" | "open" | "reveal" | "leaderboard" | "podium";
 
 /** Consecutive correct answers needed before a 🔥 streak badge shows. */
 export const STREAK_MIN = 4;
@@ -126,18 +126,40 @@ export interface PlayerResult {
   points: number;
 }
 
+export interface PlayerLobbyView {
+  kind: "lobby";
+  phase: "lobby";
+  title: string;
+  mode: GameMode;
+  me: { id: string; nickname: string; avatar: AvatarChoice };
+  playerCount: number;
+  team: TeamInfo | null;
+}
+
 export type PlayerView =
   | { kind: "none"; game: null }
   | {
       kind: "none";
       game: {
         title: string;
-        phase: Phase | TowerPhase | SubPhase | FightPhase | RobotPhase | LandPhase | RacerPhase | CupPhase | SiegePhase | DuelPhase | GiftPhase;
+        phase:
+          | "lobby"
+          | ClassicPhase
+          | TowerPhase
+          | SubPhase
+          | FightPhase
+          | RobotPhase
+          | LandPhase
+          | RacerPhase
+          | CupPhase
+          | SiegePhase
+          | DuelPhase
+          | GiftPhase;
       };
     }
   | {
       kind: "classic";
-      phase: Phase;
+      phase: ClassicPhase;
       title: string;
       me: { id: string; nickname: string; avatar: AvatarChoice; score: number; rank: number; streak: number };
       playerCount: number;
@@ -148,11 +170,8 @@ export type PlayerView =
       myText: string | null;
       result: PlayerResult | null;
       podium: RankedEntry[] | null;
-      /** In the lobby with a team mode selected: the team this player will be on. */
-      team: TeamInfo | null;
-      /** In the lobby of a mode whose phones show its banner: that mode (Kingdom Siege shows the castle banner). */
-      banner?: GameMode;
     }
+  | PlayerLobbyView
   | PlayerTowerView
   | PlayerSubView
   | PlayerFightView
@@ -180,22 +199,26 @@ export interface JoinInfo {
   port: number;
 }
 
-/** Everything the projector needs about a live game, except join info. */
-export interface HostGameState {
-  kind: "classic";
-  phase: Phase;
-  /** Lobby choice; anything but "classic" hands the players over to that mode's game on start. */
+export interface HostLobbyView {
+  kind: "lobby";
+  phase: "lobby";
   mode: GameMode;
-  /** Mode settings of every game mode, kept while the host switches between modes. */
   settings: ModeSettingsMap;
-  /** Team preview while the lobby is in a team mode (Tallest Tower, Tower Fight, Land Grab). */
   teams: (TeamInfo & { members: HostPlayer[] })[] | null;
   quiz: { id: string; title: string; questionCount: number };
   pacing: Pacing;
-  /** Chosen in the lobby; applied when the game starts. */
   shuffle: ShuffleOptions;
-  /** "Protect from abuse": wrong answers in a row make the player wait longer (Tallest Tower, Submarine Squad, Tower Fight, Robot Attack). */
+  /** Availability follows the shared mode entry’s protect flag. */
   protect: boolean;
+  players: HostPlayer[];
+}
+
+/** Everything the projector needs about a live Classic game, except join info. */
+export interface HostClassicState {
+  kind: "classic";
+  phase: ClassicPhase;
+  quiz: { id: string; title: string; questionCount: number };
+  pacing: Pacing;
   players: HostPlayer[];
   question: QuestionView | null;
   /** Revealed only once answering has closed. */
@@ -211,7 +234,8 @@ export interface HostGameState {
 
 export type HostView =
   | { kind: "idle"; phase: "idle"; join: JoinInfo }
-  | (HostGameState & { join: JoinInfo })
+  | (HostLobbyView & { join: JoinInfo })
+  | (HostClassicState & { join: JoinInfo })
   | (HostTowerState & { join: JoinInfo })
   | (HostSubState & { join: JoinInfo })
   | (HostFightState & { join: JoinInfo })
@@ -222,6 +246,13 @@ export type HostView =
   | (HostSiegeState & { join: JoinInfo })
   | (HostDuelState & { join: JoinInfo })
   | (HostGiftState & { join: JoinInfo });
+
+type GameplayView = Extract<HostView | PlayerView, { kind: GameMode }>;
+
+/** A gameplay view cannot publish the lobby phase. */
+export type GameplayPhasesExcludeLobby = AssertTrue<"lobby" extends GameplayView["phase"] ? false : true>;
+
+type AssertTrue<T extends true> = T;
 
 export type ServerMsg =
   /** First message on every connection. A new serverId means the server restarted (maybe with new code). */

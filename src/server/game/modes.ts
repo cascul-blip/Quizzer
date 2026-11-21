@@ -1,5 +1,5 @@
 import type { GameMode } from "../../shared/mode-entries.ts";
-import { classicMode } from "./classic.ts";
+import { classicMode } from "./classic-entry.ts";
 import { cupMode } from "./cup.ts";
 import { duelMode } from "./duel.ts";
 import { fightMode } from "./fight.ts";

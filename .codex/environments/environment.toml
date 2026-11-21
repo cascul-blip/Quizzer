@@ -1,0 +1,10 @@
+version = 1
+name = "Quizzer"
+
+[setup]
+script = '''
+set -eu
+bun_cache="$PWD/node_modules/.cache/bun"
+mkdir -p "$bun_cache/tmp"
+BUN_TMPDIR="$bun_cache/tmp" BUN_INSTALL_CACHE_DIR="$bun_cache" bun install --frozen-lockfile
+'''

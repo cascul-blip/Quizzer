@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { INTRO_MS } from "../src/server/game/game.ts";
+import { INTRO_MS } from "../src/server/game/classic.ts";
 import { QuizStore } from "../src/server/quiz/store.ts";
 import { OFFERED_AVATARS } from "../src/shared/avatars.ts";
 import { FakeClock, tempDir } from "./helpers.ts";

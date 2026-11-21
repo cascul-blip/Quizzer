@@ -11,7 +11,6 @@ import type { SeasonTheme } from "../themed-modes.ts";
 //
 // A turn is "confidence" → "open" → "reveal" when the car is running (a driver sets the lever, then everyone answers),
 // or "intro" → "open" → "reveal" when there is no driver (the car is crashed, or nobody is connected).
-// Racer has no lobby phase. The lobby uses HostGameState with mode "racer".
 
 export interface RacerSettings {
   theme: SeasonTheme;

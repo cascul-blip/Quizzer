@@ -1,8 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { buildClassicResults } from "../src/server/game/classic.ts";
-import { INTRO_MS } from "../src/server/game/game.ts";
+import { buildClassicResults, INTRO_MS } from "../src/server/game/classic.ts";
 import { BOM, records, resultsCsv, saveResults, sheet, toCsv } from "../src/server/game/results.ts";
 import { classicGame, FakeClock, sampleQuiz, tempDir } from "./helpers.ts";
 

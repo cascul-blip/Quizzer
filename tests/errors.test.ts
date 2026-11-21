@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { INTRO_MS } from "../src/server/game/classic.ts";
 import { topErrors } from "../src/server/game/common.ts";
 import { COUNTDOWN_MS as FIGHT_COUNTDOWN_MS, FightGame } from "../src/server/game/fight.ts";
-import { INTRO_MS } from "../src/server/game/game.ts";
 import { COUNTDOWN_MS as LAND_COUNTDOWN_MS, LandGame } from "../src/server/game/land.ts";
 import { Lobby } from "../src/server/game/lobby.ts";
 import { COUNTDOWN_MS as ROBOT_COUNTDOWN_MS, RobotGame } from "../src/server/game/robot.ts";

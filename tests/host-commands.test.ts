@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { INTRO_MS } from "../src/server/game/game.ts";
+import { INTRO_MS } from "../src/server/game/classic.ts";
 import type { LobbyChoices } from "../src/server/game/lobby.ts";
 import { Lobby } from "../src/server/game/lobby.ts";
 import type { HostCommandContext } from "../src/server/host-commands.ts";
@@ -104,12 +104,24 @@ describe("Host command through the hub", () => {
     host.sendMsg({ type: "host.hello" });
     await host.hostState((v) => v.phase === "idle");
     host.sendMsg({ type: "host.open", quizId: quiz.id });
-    await host.hostState((v) => v.phase === "lobby");
+    await host.hostState((v) => v.kind === "lobby");
     const phone = new HubSocket(hub);
     phone.sendMsg({ type: "join", nickname: "Ann" });
     await phone.waitFor((m) => m.type === "joined");
     return { host, phone, quizId: quiz.id };
   }
+
+  test.each([
+    ["host.next", "intro"],
+    ["host.end", "podium"],
+  ] as const)("%s targets Classic from another mode’s lobby", async (type, phase) => {
+    const { host, phone } = await openLobby();
+    host.sendMsg({ type: "host.setMode", mode: "tower" });
+    await host.hostState((v) => v.kind === "lobby" && v.mode === "tower");
+    host.sendMsg({ type });
+    await host.hostState((v) => v.kind === "classic" && v.phase === phase);
+    await phone.playerState((v) => v.kind === "classic" && v.phase === phase);
+  });
 
   test("pacing changed during the game carries over to the next lobby (Play again)", async () => {
     const { host, quizId } = await openLobby();
@@ -118,7 +130,7 @@ describe("Host command through the hub", () => {
     clock.advance(INTRO_MS);
     host.sendMsg({ type: "host.setPacing", pacing: "auto" });
     host.sendMsg({ type: "host.open", quizId });
-    const lobby = await host.hostState((v) => v.phase === "lobby");
+    const lobby = await host.hostState((v) => v.kind === "lobby");
     expect(lobby.view).toMatchObject({ pacing: "auto" });
   });
 
@@ -132,11 +144,11 @@ describe("Host command through the hub", () => {
 
   test("a kicked player's phone is told it was removed", async () => {
     const { host, phone } = await openLobby();
-    const lb = await host.hostState((v) => v.phase === "lobby" && v.kind === "classic" && v.players.length === 1);
-    if (lb.view.kind !== "classic") throw new Error("expected the lobby");
+    const lb = await host.hostState((v) => v.kind === "lobby" && v.players.length === 1);
+    if (lb.view.kind !== "lobby") throw new Error("expected the lobby");
     host.sendMsg({ type: "host.kick", playerId: lb.view.players[0]!.id });
     await phone.waitFor((m) => m.type === "kicked");
-    await host.hostState((v) => v.phase === "lobby" && v.kind === "classic" && v.players.length === 0);
+    await host.hostState((v) => v.kind === "lobby" && v.players.length === 0);
   });
 
   test("a phone cannot send host commands", async () => {

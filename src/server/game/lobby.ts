@@ -2,7 +2,7 @@ import type { AvatarChoice } from "../../shared/avatars.ts";
 import { cleanAvatar, randomAvatar } from "../../shared/avatars.ts";
 import type { GameMode } from "../../shared/mode-entries.ts";
 import type { Pacing } from "../../shared/mode-views.ts";
-import type { HostGameState, ModeSettingsMap, PlayerView, ShuffleOptions } from "../../shared/protocol.ts";
+import type { HostLobbyView, ModeSettingsMap, PlayerView, ShuffleOptions } from "../../shared/protocol.ts";
 import type { Quiz } from "../../shared/quiz-schema.ts";
 import { isSeasonTheme } from "../../shared/themed-modes.ts";
 import { assignTeams, GameError, teamInfo } from "./common.ts";
@@ -192,7 +192,6 @@ export class Lobby {
     return {
       quiz: this.quiz,
       settings: this.modeSettings[mode],
-      lobbyView: { mode: this.mode, settings: { ...this.settings }, protect: this.protect },
       shuffle: { ...this.shuffle },
       protect: MODES[mode].flags.protect && this.protect,
       pacing: this.pacing,
@@ -222,11 +221,11 @@ export class Lobby {
     return game;
   }
 
-  hostView(): HostGameState {
+  hostView(): HostLobbyView {
     const players = [...this.players.values()].map(({ id, nickname, avatar, connected }) => ({ id, nickname, avatar, score: 0, connected }));
     const count = this.teamCount();
     return {
-      kind: "classic",
+      kind: "lobby",
       phase: this.phase,
       mode: this.mode,
       settings: this.settings,
@@ -242,13 +241,6 @@ export class Lobby {
       shuffle: this.shuffle,
       protect: this.protect,
       players,
-      question: null,
-      correct: null,
-      answeredCount: 0,
-      answerCounts: null,
-      answerAvatars: null,
-      leaderboard: [],
-      errors: null,
     };
   }
 
@@ -257,18 +249,13 @@ export class Lobby {
     if (!player) return { kind: "none", game: { title: this.title, phase: this.phase } };
     const { id, nickname, avatar } = player;
     return {
-      kind: "classic",
+      kind: "lobby",
       phase: this.phase,
       title: this.title,
-      me: { id, nickname, avatar, score: 0, rank: 1, streak: 0 },
+      me: { id, nickname, avatar },
       playerCount: this.players.size,
-      question: null,
-      myChoice: null,
-      myText: null,
-      result: null,
-      podium: null,
+      mode: this.mode,
       team: this.teamCount() === null ? null : teamInfo(this.teams.get(id) ?? 0),
-      ...(MODES[this.mode].lobbyBanner ? { banner: this.mode } : {}),
     };
   }
 }
