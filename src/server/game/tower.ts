@@ -23,7 +23,7 @@ import { Roster, type BasePlayer } from "./roster.ts";
 import { QuestionStream, newStreamPlayer, type StreamPlayer } from "./stream.ts";
 import { answerOf } from "../../shared/answer-match.ts";
 import { MODE_NAMES } from "../../shared/mode-names.ts";
-import { handoffOptions, lobbyProtect, pickTheme, unhandled, type ModeEntry } from "./mode-entry.ts";
+import { handoffOptions, pickTheme, unhandled, type ModeEntry } from "./mode-entry.ts";
 import { toCsv } from "./results.ts";
 
 export { FEEDBACK_MS } from "./stream.ts";
@@ -122,8 +122,8 @@ export class TowerGame {
   }
 
   /** Take over a lobby's players (same ids and tokens), on the teams shown in the lobby. */
-  static fromLobby(lobby: Game, opts: TowerOptions = {}): TowerGame {
-    const game = new TowerGame(lobby.quiz, { ...lobby.settings.tower, shuffleAnswers: lobby.shuffle.answers, protect: lobbyProtect(lobby, "tower") }, opts);
+  static fromLobby(lobby: Game, opts: TowerOptions = {}, protect = lobby.protect): TowerGame {
+    const game = new TowerGame(lobby.quiz, { ...lobby.settings.tower, shuffleAnswers: lobby.shuffle.answers, protect }, opts);
     const players = [...lobby.players.values()];
     const teams = lobby.teamAssignment();
     players.forEach((p) => {
@@ -471,7 +471,7 @@ export const towerMode: ModeEntry<"tower"> = {
     return { teams, minutes, monster: raw.monster === undefined ? current.monster : !!raw.monster, theme };
   },
   start(lobby, ctx) {
-    const game = TowerGame.fromLobby(lobby, handoffOptions(ctx));
+    const game = TowerGame.fromLobby(lobby, handoffOptions(ctx), ctx.protect);
     return { game, log: `${this.name} started: ${game.teams.length} team(s), ${game.settings.minutes} min` };
   },
   pacing: null,

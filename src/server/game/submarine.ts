@@ -16,7 +16,7 @@ import { Roster, type BasePlayer } from "./roster.ts";
 import { FEEDBACK_MS, QuestionStream, newStreamPlayer, type StreamPlayer } from "./stream.ts";
 import { answerOf } from "../../shared/answer-match.ts";
 import { MODE_NAMES } from "../../shared/mode-names.ts";
-import { handoffOptions, lobbyProtect, unhandled, type ModeEntry } from "./mode-entry.ts";
+import { handoffOptions, unhandled, type ModeEntry } from "./mode-entry.ts";
 import { toCsv } from "./results.ts";
 
 // ---------- tuning (all in one place) ----------
@@ -126,8 +126,8 @@ export class SubGame {
     this.onFinish = opts.onFinish ?? (() => {});
   }
 
-  static fromLobby(lobby: Game, opts: SubOptions = {}): SubGame {
-    const game = new SubGame(lobby.quiz, { ...opts, shuffleAnswers: lobby.shuffle.answers, protect: lobbyProtect(lobby, "submarine") });
+  static fromLobby(lobby: Game, opts: SubOptions = {}, protect = lobby.protect): SubGame {
+    const game = new SubGame(lobby.quiz, { ...opts, shuffleAnswers: lobby.shuffle.answers, protect });
     for (const p of lobby.players.values()) {
       game.roster.adopt(game.newPlayer({ id: p.id, nickname: p.nickname, token: p.token, connected: p.connected, avatar: p.avatar }));
     }
@@ -564,7 +564,7 @@ export const subMode: ModeEntry<"submarine"> = {
   defaultSettings: {},
   readSettings: () => ({}),
   start(lobby, ctx) {
-    const game = SubGame.fromLobby(lobby, handoffOptions(ctx));
+    const game = SubGame.fromLobby(lobby, handoffOptions(ctx), ctx.protect);
     return { game, log: `${this.name} started with ${game.players.size} player(s)` };
   },
   pacing: null,

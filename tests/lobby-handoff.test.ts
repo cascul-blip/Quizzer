@@ -1,8 +1,9 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { DuelGame } from "../src/server/game/duel.ts";
 import { Game, GameError } from "../src/server/game/game.ts";
 import { GiftGame } from "../src/server/game/gift.ts";
 import { type LiveGame, startLobbyGame } from "../src/server/game/lobby-handoff.ts";
+import { MODES } from "../src/server/game/modes.ts";
 import { RacerGame } from "../src/server/game/racer.ts";
 import type { GameMode } from "../src/shared/protocol.ts";
 import { FakeClock, sampleQuiz, tempDir } from "./helpers.ts";
@@ -63,6 +64,20 @@ describe("Lobby handoff", () => {
   test("modes without pacing carry nothing forward", () => {
     const { lobby, opts } = setup("gift", ["Noel"]);
     expect(startLobbyGame(lobby, "manual", opts)).toBeUndefined();
+  });
+
+  test("Protect from abuse reaches the started mode as the host set it, and stays off in a mode that doesn't protect", () => {
+    for (const [mode, host, expected] of [["gift", true, true], ["gift", false, false], ["land", true, false]] as const) {
+      const { lobby, opts } = setup(mode, ["Noel"]);
+      lobby.setProtect(host);
+      const start = spyOn(MODES[mode], "start");
+      try {
+        startLobbyGame(lobby, undefined, opts);
+        expect(start.mock.calls[0]![1].protect).toBe(expected);
+      } finally {
+        start.mockRestore();
+      }
+    }
   });
 
   test("classic starts in place and carries its pacing forward", () => {

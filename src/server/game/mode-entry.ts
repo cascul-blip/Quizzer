@@ -84,6 +84,8 @@ export interface StartContext {
   /** High-frequency projector refresh (Kingdom Siege). */
   onTick: () => void;
   onFinish: (game: LiveGame) => void;
+  /** "Protect from abuse" for the new game, decided by the handoff from MODE_FLAGS: the host's lobby setting in a mode whose flag is set, off in any other. A mode whose flag is set passes it to its game. */
+  protect: boolean;
 }
 
 /** A game played question by question: the host sets its pacing and moves it on. */
@@ -132,11 +134,6 @@ export interface ModeEntry<M extends GameMode> {
 /** The default case of a mode's handle: the compiler checks every message is handled, and one that still gets here is a server bug. */
 export function unhandled(msg: never): never {
   throw new Error(`No handler for phone message ${(msg as { type: string }).type}`);
-}
-
-/** "Protect from abuse" for the game of the mode the lobby hands its players to: the host's choice, in a mode whose MODE_FLAGS protect. */
-export function lobbyProtect(lobby: Game, mode: GameMode): boolean {
-  return MODE_FLAGS[mode].protect && lobby.protect;
 }
 
 /** The options every mode's fromLobby takes from the hub. */
