@@ -58,7 +58,7 @@ describe("Phone view delivery", () => {
   /** Just enough of a Bun socket for the hub, with a send queue the test controls. */
   function fakeSocket(data: Partial<SocketData>) {
     const sock = {
-      data: { admin: false, ip: "127.0.0.1", role: "player", playerId: null, ...data } satisfies SocketData,
+      data: { admin: false, ip: "127.0.0.1", role: "player", ...data } satisfies SocketData,
       sent: [] as ServerMsg[],
       buffered: 0,
       send(m: string) {

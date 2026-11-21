@@ -11,7 +11,7 @@ describe("Per-device caps", () => {
 
   function fakeSocket(data: Partial<SocketData>) {
     const sock = {
-      data: { admin: false, ip: "192.168.1.50", role: "player", playerId: null, ...data } as SocketData,
+      data: { admin: false, ip: "192.168.1.50", role: "player", ...data } as SocketData,
       sent: [] as ServerMsg[],
       send(m: string) {
         sock.sent.push(JSON.parse(m));

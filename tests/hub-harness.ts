@@ -71,7 +71,7 @@ export class HubSocket extends MessageLog {
   ) {
     // Fake sockets answer as fast as the hub does; only the activity throttle (a real timer) waits.
     super(2_000);
-    this.data = { admin: false, ip: "127.0.0.1", role: "player", playerId: null, ...data };
+    this.data = { admin: false, ip: "127.0.0.1", role: "player", ...data };
     hub.onOpen(this);
   }
   /** Called by the hub. */

@@ -7,8 +7,9 @@ import { Lobby, type LobbyChoices } from "./game/lobby.ts";
 import { MSG_MODE, isModeMsg, type LiveGame } from "./game/mode-entry.ts";
 import { entryOf, MODES } from "./game/modes.ts";
 import { writeResultsFile } from "./game/results.ts";
-import { GameError, type Clock, MAX_JOINS_PER_ADDRESS, MAX_SOCKETS_PER_ADDRESS } from "./game/common.ts";
-import { isLoopbackAddress, lanAddresses, type LanAddress } from "./network.ts";
+import { GameError, type Clock } from "./game/common.ts";
+import { lanAddresses, type LanAddress } from "./network.ts";
+import { PhoneAttachments } from "./phone-attachments.ts";
 import { PhoneViewDelivery } from "./phone-view-delivery.ts";
 import { NotFoundError, type QuizStore } from "./quiz/store.ts";
 
@@ -18,7 +19,6 @@ export interface SocketData {
   /** Remote address, for the per-device caps. */
   ip: string;
   role: "player" | "host";
-  playerId: string | null;
 }
 
 type WS = Pick<ServerWebSocket<SocketData>, "data" | "send" | "getBufferedAmount">;
@@ -52,7 +52,7 @@ export class GameHub {
   /** Changes on every server start; pages that reconnect to a different one reload to pick up new code. */
   readonly serverId = crypto.randomUUID();
 
-  private readonly sockets = new Set<WS>();
+  private readonly sockets = new PhoneAttachments<WS>((id, connected) => this.game?.setConnected(id, connected));
   private readonly phoneViews: PhoneViewDelivery;
   private selected: string | null;
   private addressCache: { at: number; list: LanAddress[] } | null = null;
@@ -128,8 +128,8 @@ export class GameHub {
   playerView(ws: WS): PlayerView {
     if (!this.game) return { kind: "none", game: null };
     const none: PlayerView = { kind: "none", game: { title: this.game.title, phase: this.game.phase } };
-    if (!ws.data.playerId) return none;
-    return this.game.playerView(ws.data.playerId) ?? none;
+    const playerId = this.sockets.playerId(ws);
+    return playerId ? (this.game.playerView(playerId) ?? none) : none;
   }
 
   private send(ws: WS, msg: ServerMsg): void {
@@ -163,7 +163,7 @@ export class GameHub {
 
   /** One player acted (Tallest Tower): update them now and everyone else shortly. */
   private onActivity(playerId: string): void {
-    for (const ws of this.sockets) if (ws.data.playerId === playerId) this.sendState(ws);
+    for (const ws of this.sockets.forPlayer(playerId)) this.sendState(ws);
     this.activityTimer ??= setTimeout(() => {
       this.activityTimer = null;
       this.broadcast();
@@ -194,22 +194,17 @@ export class GameHub {
 
   /** Another socket from this address would go over the per-device cap. */
   socketLimitReached(ip: string): boolean {
-    if (isLoopbackAddress(ip)) return false;
-    let n = 0;
-    for (const s of this.sockets) if (s.data.ip === ip) n++;
-    return n >= MAX_SOCKETS_PER_ADDRESS;
+    return this.sockets.socketLimitReached(ip);
   }
 
   onOpen(ws: WS): void {
-    this.sockets.add(ws);
+    this.sockets.open(ws);
     this.send(ws, { type: "hello", serverId: this.serverId });
     this.sendState(ws);
   }
 
   onClose(ws: WS): void {
-    this.sockets.delete(ws);
-    const pid = ws.data.playerId;
-    if (pid && this.game && ![...this.sockets].some((s) => s.data.playerId === pid)) this.game.setConnected(pid, false);
+    this.sockets.close(ws);
   }
 
   onMessage(ws: WS, raw: string | Buffer): void {
@@ -241,14 +236,11 @@ export class GameHub {
     switch (msg.type) {
       case "join": {
         if (!this.game) throw new GameError("No game is open yet. Wait for the host.");
-        if (ws.data.playerId && this.game.players.has(ws.data.playerId)) return this.sendState(ws);
-        if (!isLoopbackAddress(ws.data.ip)) {
-          const game = this.game;
-          const mine = new Set([...this.sockets].filter((s) => s.data.ip === ws.data.ip && s.data.playerId && game.players.has(s.data.playerId)).map((s) => s.data.playerId));
-          if (mine.size >= MAX_JOINS_PER_ADDRESS) throw new GameError("Too many players from this device");
-        }
+        const playerId = this.sockets.playerId(ws);
+        if (playerId && this.game.players.has(playerId)) return this.sendState(ws);
+        if (this.sockets.joinLimitReached(ws, this.game.players)) throw new GameError("Too many players from this device");
         const p = this.game.join(msg.nickname, cleanAvatar(msg.avatar, msg.accessory));
-        ws.data.playerId = p.id;
+        this.sockets.attach(ws, p.id);
         this.send(ws, { type: "joined", token: p.token, playerId: p.id, images: this.images });
         this.log(`Player joined: ${p.nickname}`);
         return;
@@ -259,15 +251,14 @@ export class GameHub {
           this.send(ws, { type: "resumeFailed" });
           return this.sendState(ws);
         }
-        ws.data.playerId = p.id;
+        this.sockets.attach(ws, p.id);
         this.send(ws, { type: "joined", token: p.token, playerId: p.id, images: this.images });
-        this.game!.setConnected(p.id, true);
         return this.sendState(ws);
       }
       default: {
         if (!isModeMsg(msg)) throw new GameError(`Unknown message ${(msg as { type: string }).type}`);
         const game = this.game;
-        const playerId = ws.data.playerId;
+        const playerId = this.sockets.playerId(ws);
         // A message for a mode that isn't running (say, a late tap from the last game) is ignored.
         if (!game || !playerId) return;
         if (game instanceof Lobby) {
@@ -361,12 +352,7 @@ export class GameHub {
       case "host.kick": {
         const p = game().kick(String(msg.playerId));
         if (!p) return;
-        for (const s of this.sockets) {
-          if (s.data.playerId === p.id) {
-            s.data.playerId = null;
-            this.send(s, { type: "kicked" });
-          }
-        }
+        for (const s of this.sockets.detachPlayer(p.id)) this.send(s, { type: "kicked" });
         this.log(`Player removed: ${p.nickname}`);
         return;
       }
@@ -411,10 +397,8 @@ export class GameHub {
     if (this.game instanceof Lobby) this.lastSetup = this.game.choices;
     else this.game.dispose();
     this.game = null;
-    for (const s of this.sockets) {
-      s.data.playerId = null;
-      this.phoneViews.requestRefresh(s);
-    }
+    this.sockets.detachAll();
+    for (const s of this.sockets) this.phoneViews.requestRefresh(s);
   }
 
   private onFinish(game: LiveGame): void {
