@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { MODE_NAMES } from "../src/shared/mode-names.ts";
 
 const ROOT = resolve(import.meta.dir, "..");
@@ -98,5 +98,91 @@ describe("Coding standards: the mode-literal guards themselves", () => {
   test("the client guard flags a view's kind, mode or banner compared against a game mode", () => {
     for (const line of [`view.kind === "classic"`, `view.mode !== "siege"`, `view.banner === "siege"`, `"duel" === view.kind`, `case "racer":`]) expect(CLIENT_MODE_LITERAL.test(line)).toBe(true);
     for (const line of [`role: "player"`, `view.phase === "lobby"`, `view.kind === "none"`, `view.kind === "idle"`]) expect(CLIENT_MODE_LITERAL.test(line)).toBe(false);
+  });
+});
+
+/** The relative imports of a source file, type-only ones included, as absolute paths. */
+function importsOf(path: string): string[] {
+  const text = readFileSync(path, "utf8");
+  const specs = [...text.matchAll(/(?:\bfrom\s*|\bimport\s*\(?\s*)["'](\.{1,2}\/[^"']+)["']/g)].map((m) => m[1]!);
+  return specs.map((spec) => resolve(dirname(path), spec));
+}
+
+/** Every import cycle under src/, each written once as a.ts -> b.ts -> a.ts. */
+function importCycles(): string[] {
+  const files = srcFiles(join(ROOT, "src"));
+  const known = new Set(files);
+  const graph = new Map(files.map((f) => [f, importsOf(f).filter((g) => known.has(g))]));
+  const cycles = new Set<string>();
+  const state = new Map<string, "open" | "done">();
+  const stack: string[] = [];
+  const visit = (f: string) => {
+    state.set(f, "open");
+    stack.push(f);
+    for (const g of graph.get(f)!) {
+      if (state.get(g) === "open") {
+        const loop = stack.slice(stack.indexOf(g)).map((p) => relative(ROOT, p));
+        const start = loop.indexOf([...loop].sort()[0]!);
+        const turned = [...loop.slice(start), ...loop.slice(0, start)];
+        cycles.add([...turned, turned[0]].join(" -> "));
+      } else if (!state.has(g)) visit(g);
+    }
+    stack.pop();
+    state.set(f, "done");
+  };
+  for (const f of files) if (!state.has(f)) visit(f);
+  return [...cycles].sort();
+}
+
+function srcFiles(dir: string): string[] {
+  return readdirSync(dir).flatMap((name) => {
+    const path = join(dir, name);
+    if (statSync(path).isDirectory()) return srcFiles(path);
+    return /\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name) ? [path] : [];
+  });
+}
+
+/**
+ * The server's mode entries and Game import each other: each XGame extends Game, and Game looks its mode up in MODES.
+ * These cycles predate the check; remove a line when a refactor breaks its cycle. Add none.
+ */
+const KNOWN_CYCLES = [
+  "src/server/game/classic.ts -> src/server/game/game.ts -> src/server/game/modes.ts -> src/server/game/classic.ts",
+  "src/server/game/cup.ts -> src/server/game/game.ts -> src/server/game/mode-entry.ts -> src/server/game/cup.ts",
+  "src/server/game/cup.ts -> src/server/game/mode-entry.ts -> src/server/game/cup.ts",
+  "src/server/game/duel.ts -> src/server/game/game.ts -> src/server/game/mode-entry.ts -> src/server/game/duel.ts",
+  "src/server/game/duel.ts -> src/server/game/mode-entry.ts -> src/server/game/duel.ts",
+  "src/server/game/fight.ts -> src/server/game/game.ts -> src/server/game/mode-entry.ts -> src/server/game/fight.ts",
+  "src/server/game/fight.ts -> src/server/game/mode-entry.ts -> src/server/game/fight.ts",
+  "src/server/game/game.ts -> src/server/game/mode-entry.ts -> src/server/game/game.ts",
+  "src/server/game/game.ts -> src/server/game/mode-entry.ts -> src/server/game/gift.ts -> src/server/game/game.ts",
+  "src/server/game/game.ts -> src/server/game/mode-entry.ts -> src/server/game/land.ts -> src/server/game/game.ts",
+  "src/server/game/game.ts -> src/server/game/mode-entry.ts -> src/server/game/racer.ts -> src/server/game/game.ts",
+  "src/server/game/game.ts -> src/server/game/mode-entry.ts -> src/server/game/robot.ts -> src/server/game/game.ts",
+  "src/server/game/game.ts -> src/server/game/mode-entry.ts -> src/server/game/siege.ts -> src/server/game/game.ts",
+  "src/server/game/game.ts -> src/server/game/mode-entry.ts -> src/server/game/submarine.ts -> src/server/game/game.ts",
+  "src/server/game/game.ts -> src/server/game/mode-entry.ts -> src/server/game/tower.ts -> src/server/game/game.ts",
+  "src/server/game/gift.ts -> src/server/game/mode-entry.ts -> src/server/game/gift.ts",
+  "src/server/game/land.ts -> src/server/game/mode-entry.ts -> src/server/game/land.ts",
+  "src/server/game/mode-entry.ts -> src/server/game/racer.ts -> src/server/game/mode-entry.ts",
+  "src/server/game/mode-entry.ts -> src/server/game/robot.ts -> src/server/game/mode-entry.ts",
+  "src/server/game/mode-entry.ts -> src/server/game/siege.ts -> src/server/game/mode-entry.ts",
+  "src/server/game/mode-entry.ts -> src/server/game/submarine.ts -> src/server/game/mode-entry.ts",
+  "src/server/game/mode-entry.ts -> src/server/game/tower.ts -> src/server/game/mode-entry.ts",
+];
+
+// Imports point one way: a module that imports another, even only for a type, is never imported back.
+// Move the shared piece down into the lower module (or a new one) instead.
+describe("Coding standards: import graph", () => {
+  test("finds the client's imports", () => {
+    expect(importsOf(join(ROOT, "src/client/player/modes.tsx"))).toContain(join(ROOT, "src/client/player/common.tsx"));
+  });
+
+  test("no module imports itself back through another", () => {
+    expect(importCycles().filter((c) => !KNOWN_CYCLES.includes(c))).toEqual([]);
+  });
+
+  test("every known cycle still exists, so a broken one leaves the list", () => {
+    expect(KNOWN_CYCLES.filter((c) => !importCycles().includes(c))).toEqual([]);
   });
 });
