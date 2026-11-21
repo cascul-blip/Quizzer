@@ -17,7 +17,7 @@ See `docs/agents/domain.md` before exploring the codebase.
 
 `bun run build` replaces the `dist/` executables the user runs. To check the build, use `bun run build -- linux --outdir <scratch dir>`. To check the code, use `bun run check` (typecheck then tests, one after the other as CI runs them).
 
-If network tests fail with `getifaddrs` and `errno: 1` in the sandbox, run focused tests while diagnosing, then request local networking for `bun run check`.
+If sandboxed network tests report `getifaddrs` with `errno: 1` or `EPERM: operation not permitted, listen`, run focused tests while diagnosing, then request local networking for `bun run check`.
 
 ### Game modes
 

@@ -58,7 +58,7 @@ describe("Coding standards: mode entries", () => {
     expect(offending(CLIENT_MODE_LITERAL, CLIENT_FILES)).toEqual([]);
   });
 
-  test("no code asks which game class is running", () => {
+  test("server code does not ask which game class is running", () => {
     const pattern = new RegExp(`\\binstanceof\\s+(${gameClasses.join("|")})\\b`);
     expect(offending(pattern)).toEqual([]);
   });
@@ -68,6 +68,23 @@ describe("Coding standards: mode entries", () => {
 const DIRECT_SOCKET_OPEN = /\.\s*onOpen\s*\(/;
 /** A temp directory cleaned up in a test's own finally block instead of an afterEach. */
 const FINALLY_CLEANUP = /\bfinally\s*\{[^}]*\.cleanup\(\)/;
+/** Find fixture declarations or assignments at the describe callback's own indentation. */
+function describeTempDirs(text: string): number[] {
+  const lines = text.split("\n");
+  const matches: number[] = [];
+  for (const [index, line] of lines.entries()) {
+    const describe = /^( *)describe\s*\(.*=>\s*\{\s*$/.exec(line);
+    if (!describe) continue;
+    const indent = describe[1] + "  ";
+    for (let body = index + 1; body < lines.length; body++) {
+      const statement = lines[body]!;
+      if (!statement.trim()) continue;
+      if (!statement.startsWith(indent)) break;
+      if (/^(?:(?:const|let|var) +)?\w+\s*=\s*tempDir\s*\(/.test(statement.slice(indent.length))) matches.push(body + 1);
+    }
+  }
+  return matches;
+}
 
 const testFiles = readdirSync(join(ROOT, "tests"))
   // This file is left out: its guard checks quote the pattern.
@@ -86,6 +103,17 @@ describe("Coding standards: tests", () => {
   test("the socket guard flags direct onOpen calls", () => {
     expect(DIRECT_SOCKET_OPEN.test("hub.onOpen(socket)")).toBe(true);
     expect(DIRECT_SOCKET_OPEN.test("new HubSocket(hub)")).toBe(false);
+  });
+
+  test("shared temp directories are created in setup hooks", () => {
+    expect(testFiles.flatMap(({ path, text }) => describeTempDirs(text).map((line) => `${path}:${line}`))).toEqual([]);
+  });
+
+  test("the fixture guard flags direct describe setup and accepts a setup hook", () => {
+    expect(describeTempDirs('describe("hub", () => {\n  const t = tempDir();\n});')).toEqual([2]);
+    expect(describeTempDirs('  describe("hub", () => {\n    let t;\n    t = tempDir();\n  });')).toEqual([3]);
+    expect(describeTempDirs('describe("hub", () => {\n  beforeEach(() => {\n    t = tempDir();\n  });\n});')).toEqual([]);
+    expect(describeTempDirs('describe("hub", () => {\n  beforeAll(() => { t = tempDir(); });\n});')).toEqual([]);
   });
 
   test("shared fixtures are cleaned up in afterEach or afterAll, not in a test's finally block", () => {
