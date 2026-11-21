@@ -64,6 +64,7 @@ export abstract class MessageLog {
 /** A phone or projector talking to a GameHub without a real socket. Pass admin: true for the host computer. */
 export class HubSocket extends MessageLog {
   closed = false;
+  bufferedAmount = 0;
   readonly data: SocketData;
   constructor(
     readonly hub: GameHub,
@@ -71,7 +72,7 @@ export class HubSocket extends MessageLog {
   ) {
     // Fake sockets answer as fast as the hub does; only the activity throttle (a real timer) waits.
     super(2_000);
-    this.data = { admin: false, ip: "127.0.0.1", role: "player", playerId: null, ...data };
+    this.data = { admin: false, ip: "127.0.0.1", role: "player", ...data };
     hub.onOpen(this);
   }
   /** Called by the hub. */
@@ -81,7 +82,7 @@ export class HubSocket extends MessageLog {
     return text.length;
   }
   getBufferedAmount() {
-    return 0;
+    return this.bufferedAmount;
   }
   /** Sends a message from this phone or projector to the hub. */
   sendMsg(m: ClientMsg) {
@@ -96,7 +97,7 @@ export class HubSocket extends MessageLog {
 
 /** A hub on a fake port, as the server would run it. */
 export function fakeHub(store: QuizStore, clock: FakeClock, port = 4321) {
-  const hub = new Hub(store, { address: "127.0.0.1", clock });
+  const hub = new Hub(store, { address: "127.0.0.1", discoverAddresses: () => [], clock });
   hub.port = port;
   return hub;
 }

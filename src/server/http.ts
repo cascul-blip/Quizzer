@@ -136,7 +136,7 @@ export function startServer(opts: ServerOptions): RunningServer {
 
       if (path === "/ws") {
         if (hub.socketLimitReached(ip)) return new Response("Too many connections from this device", { status: 429 });
-        if (srv.upgrade(req, { data: { admin, ip, role: "player", playerId: null } })) return undefined;
+        if (srv.upgrade(req, { data: { admin, ip, role: "player" } })) return undefined;
         return new Response("Expected a WebSocket upgrade", { status: 426 });
       }
 

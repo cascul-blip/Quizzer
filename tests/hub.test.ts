@@ -913,6 +913,46 @@ describe("Game mode: Showdown", () => {
   });
 });
 
+describe("Phone attachment", () => {
+  test.each([false, true])("reassignment across the Lobby handoff with a second attachment: %s", async (keepSecondPhone) => {
+    const quiz = await store.create({ title: "Attachment", questions: [{ type: "true_false", text: "True?", correct: [0] }] });
+    const host = new HubSocket(hub, { admin: true });
+    const first = new HubSocket(hub);
+    const second = new HubSocket(hub);
+    const replacement = new HubSocket(hub);
+    try {
+      host.sendMsg({ type: "host.hello" });
+      host.sendMsg({ type: "host.open", quizId: quiz.id });
+      first.sendMsg({ type: "join", nickname: "Ann" });
+      const ann = await first.waitFor((m) => m.type === "joined");
+      replacement.sendMsg({ type: "join", nickname: "Bob" });
+      const bob = await replacement.waitFor((m) => m.type === "joined");
+      replacement.close();
+
+      if (keepSecondPhone) {
+        second.sendMsg({ type: "resume", token: ann.token });
+        expect(await second.waitFor((m) => m.type === "joined")).toMatchObject({ playerId: ann.playerId });
+      }
+
+      host.sendMsg({ type: "host.start", pacing: "manual" });
+      await host.hostState((v) => v.kind === "classic" && v.phase !== "lobby");
+      first.sendMsg({ type: "resume", token: bob.token });
+      expect(await first.waitFor((m) => m.type === "joined")).toMatchObject({ playerId: bob.playerId });
+      const switched = await host.hostState((v) => v.kind === "classic" && v.players.some((p) => p.id === bob.playerId && p.connected));
+      expect(switched.view).toMatchObject({
+        players: [{ id: ann.playerId, connected: keepSecondPhone }, { id: bob.playerId, connected: true }],
+      });
+
+      if (keepSecondPhone) {
+        second.close();
+        await host.hostState((v) => v.kind === "classic" && v.players.some((p) => p.id === ann.playerId && !p.connected));
+      }
+    } finally {
+      [host, first, second, replacement].forEach((socket) => socket.close());
+    }
+  });
+});
+
 describe("Lobby handoff", () => {
   test("the host moves a player to another team; the phone follows and the game starts with it", async () => {
     const quiz = await store.create({
