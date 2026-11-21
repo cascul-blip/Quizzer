@@ -59,8 +59,8 @@ export interface QuestionView {
   remainingMs: number;
 }
 
-/** A phone's answer to a streamed question: `seq` is the StreamQuestionView's seq. Typed questions send `text` and ignore `option`. */
+/** A phone's answer to a streamed question (see GLOSSARY.md): `seq` is the StreamQuestionView's seq. Typed questions send `text` and ignore `option`. */
 export type StreamAnswerMsg<Prefix extends string> = { type: `${Prefix}.answer`; seq: number; option: number; text?: string };
 
-/** A phone's answer to a paced question: `index` is QuestionView.index, as `qIndex` in the classic "answer". Typed questions send `text` and ignore `option`. */
+/** A phone's answer to a paced question (see GLOSSARY.md): `index` is QuestionView.index, as `qIndex` in the classic "answer". Typed questions send `text` and ignore `option`. */
 export type PacedAnswerMsg<Prefix extends string> = { type: `${Prefix}.answer`; index: number; option: number; text?: string };

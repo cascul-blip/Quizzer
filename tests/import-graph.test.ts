@@ -112,4 +112,14 @@ describe("Mode protocol files", () => {
     );
     expect({ leaked, reexports }).toEqual({ leaked: [], reexports: false });
   });
+
+  test("answer messages use StreamAnswerMsg or PacedAnswerMsg from mode-views.ts", () => {
+    const handWritten = modeFiles
+      .filter((file) => /\.answer"\s*;\s*(?:seq|index)\s*:/.test(readFileSync(file, "utf8")))
+      .map(
+        (file) =>
+          `${relative(ROOT, file)}: write the answer message as StreamAnswerMsg<"prefix"> (streamed question) or PacedAnswerMsg<"prefix"> (paced question)`,
+      );
+    expect(handWritten).toEqual([]);
+  });
 });
