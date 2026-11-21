@@ -32,7 +32,8 @@ import { GameError, realClock, teamInfo } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
-import { toCsv } from "./results.ts";
+import type { Column, ResultsSheet } from "./results.ts";
+import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
 import { Roster } from "./roster.ts";
 import type { AnswerTotals } from "./stream.ts";
@@ -511,42 +512,32 @@ export class LandGame {
 }
 
 /** Land Grab: one row per player, grouped by the team they started on, in final team order. */
-export function buildLandResultsCsv(game: LandGame): string {
-  const header = [
-    "Team",
-    "Team rank",
-    "Team tiles",
-    "Knocked out by",
-    "Nickname",
-    "Correct",
-    "Wrong",
-    "Accuracy %",
-    "Tiles placed",
-    "Tiles stolen",
-    "Tiles surrounded",
+type LandResultRow = { team: ReturnType<LandGame["rankedTeams"]>[number]; p: LandPlayer };
+
+function landColumns(game: LandGame): Column<LandResultRow>[] {
+  return [
+    { header: "Team", value: (r) => r.team.name },
+    { header: "Team rank", value: (r) => r.team.rank },
+    { header: "Team tiles", value: (r) => r.team.tiles },
+    { header: "Knocked out by", value: (r) => (r.team.conqueredBy === null ? "" : game.teams[r.team.conqueredBy]!.name) },
+    { header: "Nickname", value: (r) => r.p.nickname },
+    { header: "Correct", value: (r) => r.p.correct },
+    { header: "Wrong", value: (r) => r.p.wrong },
+    { header: "Accuracy %", value: (r) => accuracy(r.p) },
+    { header: "Tiles placed", value: (r) => r.p.placed },
+    { header: "Tiles stolen", value: (r) => r.p.stolen },
+    { header: "Tiles surrounded", value: (r) => r.p.captured },
   ];
-  const rows: (string | number)[][] = [];
-  for (const t of game.rankedTeams()) {
-    const members = [...game.players.values()].filter((p) => p.firstTeam === t.index).sort((a, b) => b.placed - a.placed || b.correct - a.correct);
-    for (const p of members) {
-      const answered = p.correct + p.wrong;
-      const by = t.conqueredBy === null ? "" : game.teams[t.conqueredBy]!.name;
-      rows.push([
-        t.name,
-        t.rank,
-        t.tiles,
-        by,
-        p.nickname,
-        p.correct,
-        p.wrong,
-        answered ? Math.round((p.correct / answered) * 100) : "",
-        p.placed,
-        p.stolen,
-        p.captured,
-      ]);
-    }
-  }
-  return toCsv([header, ...rows]);
+}
+
+export function buildLandResults(game: LandGame): ResultsSheet {
+  const rows = game.rankedTeams().flatMap((team) =>
+    [...game.players.values()]
+      .filter((p) => p.firstTeam === team.index)
+      .sort((a, b) => b.placed - a.placed || b.correct - a.correct)
+      .map((p) => ({ team, p })),
+  );
+  return sheet(landColumns(game), rows);
 }
 
 export const landMode: ModeEntry<"land"> = {
@@ -565,7 +556,7 @@ export const landMode: ModeEntry<"land"> = {
   },
   pacing: null,
   teams: (settings) => settings.teams,
-  resultsCsv: buildLandResultsCsv,
+  results: buildLandResults,
   handle(game, playerId, msg) {
     switch (msg.type) {
       case "land.answer":

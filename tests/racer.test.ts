@@ -5,12 +5,13 @@ import {
   AUTO_REVEAL_MS,
   AWARD_BEST_DRIVER,
   AWARD_MOST_CORRECT,
-  buildRacerResultsCsv,
+  buildRacerResults,
   CONFIDENCE_MS,
   GRACE_MS,
   INTRO_MS,
   RacerGame,
 } from "../src/server/game/racer.ts";
+import { records } from "../src/server/game/results.ts";
 import type { Pacing } from "../src/shared/mode-views.ts";
 import type { ShuffleOptions } from "../src/shared/protocol.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
@@ -802,15 +803,25 @@ describe("Racer", () => {
       });
     }
 
-    const lines = buildRacerResultsCsv(game).replace(/^﻿/, "").trim().split("\r\n");
-    expect(lines[0]).toBe("Nickname,Correct,Wrong,Accuracy %,Turns driven,Mph gained,Fail points as driver,Class distance (miles),Top speed (mph),Crashes");
-    expect(lines).toHaveLength(4);
+    const rows = records(buildRacerResults(game));
     const gained = (n: string) => (drivers[2] === n ? 0 : 20);
-    // Formula-looking nicknames are neutralised; the shared result is in every row.
-    expect(lines.slice(1).sort()).toEqual(
-      [`'=C,3,0,100,1,${gained("=C")},0,31.67,70,0`, `A,2,1,67,1,${gained("A")},0,31.67,70,0`, `B,3,0,100,1,${gained("B")},0,31.67,70,0`].sort(),
-    );
-    expect(lines[3]).toStartWith("A,");
+    const row = (Nickname: string, Correct: number, Wrong: number, accuracy: number) => ({
+      Nickname,
+      Correct,
+      Wrong,
+      "Accuracy %": accuracy,
+      "Turns driven": 1,
+      "Mph gained": gained(Nickname),
+      "Fail points as driver": 0,
+      "Class distance (miles)": 31.67,
+      "Top speed (mph)": 70,
+      Crashes: 0,
+    });
+    // The shared result is in every row; the most correct come first.
+    expect(rows).toHaveLength(3);
+    expect(rows.slice(0, 2)).toContainEqual(row("=C", 3, 0, 100));
+    expect(rows.slice(0, 2)).toContainEqual(row("B", 3, 0, 100));
+    expect(rows[2]).toEqual(row("A", 2, 1, 67));
   });
 
   test("no awards when nobody earned one", () => {

@@ -26,7 +26,8 @@ import { GameError, realClock, teamInfo } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
-import { toCsv } from "./results.ts";
+import type { Column, ResultsSheet } from "./results.ts";
+import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
 import { Roster } from "./roster.ts";
 import type { AnswerTotals } from "./stream.ts";
@@ -542,32 +543,33 @@ export class FightGame {
 }
 
 /** Tower Fight: one row per player, winning team first. */
-export function buildFightResultsCsv(game: FightGame): string {
+type FightResultRow = { team: FightGame["teams"][number]; result: string; p: FightPlayer };
+
+const FIGHT_COLUMNS: Column<FightResultRow>[] = [
+  { header: "Team", value: (r) => r.team.name },
+  { header: "Result", value: (r) => r.result },
+  { header: "Tower damage", value: (r) => r.team.damage },
+  { header: "Nickname", value: (r) => r.p.nickname },
+  { header: "Correct", value: (r) => r.p.correct },
+  { header: "Wrong", value: (r) => r.p.wrong },
+  { header: "Accuracy %", value: (r) => accuracy(r.p) },
+  { header: "Shots", value: (r) => r.p.shots },
+  { header: "Enemy hits", value: (r) => r.p.hits },
+  { header: "Friendly hits", value: (r) => r.p.friendlyHits },
+  { header: "Rebuilds", value: (r) => r.p.rebuilds },
+];
+
+export function buildFightResults(game: FightGame): ResultsSheet {
   const outcome = game.outcome ?? game.judge();
-  const header = ["Team", "Result", "Tower damage", "Nickname", "Correct", "Wrong", "Accuracy %", "Shots", "Enemy hits", "Friendly hits", "Rebuilds"];
   const order = [...game.teams].sort((a, b) => Number(b.index === outcome.winner) - Number(a.index === outcome.winner) || a.index - b.index);
-  const rows: (string | number)[][] = [];
-  for (const t of order) {
-    const result = outcome.winner === null ? "Draw" : t.index === outcome.winner ? "Won" : "Lost";
-    const members = [...game.players.values()].filter((p) => p.team === t.index).sort((a, b) => b.hits - a.hits || b.correct - a.correct);
-    for (const p of members) {
-      const answered = p.correct + p.wrong;
-      rows.push([
-        t.name,
-        result,
-        t.damage,
-        p.nickname,
-        p.correct,
-        p.wrong,
-        answered ? Math.round((p.correct / answered) * 100) : "",
-        p.shots,
-        p.hits,
-        p.friendlyHits,
-        p.rebuilds,
-      ]);
-    }
-  }
-  return toCsv([header, ...rows]);
+  const rows = order.flatMap((team) => {
+    const result = outcome.winner === null ? "Draw" : team.index === outcome.winner ? "Won" : "Lost";
+    return [...game.players.values()]
+      .filter((p) => p.team === team.index)
+      .sort((a, b) => b.hits - a.hits || b.correct - a.correct)
+      .map((p) => ({ team, result, p }));
+  });
+  return sheet(FIGHT_COLUMNS, rows);
 }
 
 export const fightMode: ModeEntry<"fight"> = {
@@ -585,7 +587,7 @@ export const fightMode: ModeEntry<"fight"> = {
   },
   pacing: null,
   teams: () => 2,
-  resultsCsv: buildFightResultsCsv,
+  results: buildFightResults,
   handle(game, playerId, msg) {
     switch (msg.type) {
       case "fight.answer":

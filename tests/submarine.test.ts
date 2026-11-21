@@ -1,12 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { Lobby } from "../src/server/game/lobby.ts";
+import { records } from "../src/server/game/results.ts";
 import { FEEDBACK_MS } from "../src/server/game/stream.ts";
 import type { SubPlayer } from "../src/server/game/submarine.ts";
 import {
   BOOST_MIN_HOLD_MS,
   BOOST_POWER,
   BOOSTS_BASE,
-  buildSubResultsCsv,
+  buildSubResults,
   CAUGHT_MS,
   COUNTDOWN_MS,
   DIVE_METERS_PER_HIT,
@@ -337,7 +338,14 @@ test("awards and results CSV", () => {
   expect(game.phase).toBe("podium");
   expect(game.awards()).toMatchObject({ topBooster: { value: 1, nicknames: ["Ann"] }, mostCorrect: { value: 4, nicknames: ["Ann"] }, sharpestEyes: null });
   expect(game.playerView(byName(game, "Ann").id)!.result).toEqual({ depth: 0, level: 1, awards: ["Top booster", "Most correct answers"] });
-  const lines = buildSubResultsCsv(game).replace(/^﻿/, "").trim().split("\r\n");
-  expect(lines[0]).toBe("Nickname,Correct,Wrong,Boosts,Dive taps (correct),Instructor rounds,Squad depth (m),Level reached");
-  expect(lines[1]).toBe("Ann,4,0,1,0,0,0,1");
+  expect(records(buildSubResults(game))[0]).toEqual({
+    Nickname: "Ann",
+    Correct: 4,
+    Wrong: 0,
+    Boosts: 1,
+    "Dive taps (correct)": 0,
+    "Instructor rounds": 0,
+    "Squad depth (m)": 0,
+    "Level reached": 1,
+  });
 });

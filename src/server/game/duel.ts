@@ -25,7 +25,8 @@ import { AUTO_REVEAL_MS, GameError, GRACE_MS, preparePlayOrder, realClock, shuff
 import type { LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
-import { toCsv } from "./results.ts";
+import type { Column, ResultsSheet } from "./results.ts";
+import { sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
 import { Roster } from "./roster.ts";
 
@@ -620,25 +621,56 @@ function ref(p: DuelPlayer): DuelPlayerRef {
 }
 
 /** Showdown: one row per player in final ranking order (points, then ladder), then each round's answer, correctness and time. */
-export function buildDuelResultsCsv(game: DuelGame): string {
-  const header: string[] = ["Rank", "Nickname", "Points", "Final arena", "Start arena", "Wins", "Losses", "Draws", "Rounds won in Arena 1", "Correct", "Wrong"];
-  const played = game.questions.slice(0, game.played);
-  played.forEach((q, i) => {
-    const n = i + 1;
-    header.push(`R${n} answer (${q.text})`, `R${n} correct`, `R${n} time (s)`);
-  });
+function duelColumns(game: DuelGame): Column<{ rank: number; p: DuelPlayer }>[] {
   const arenas = game.ladderArenas();
-  const rows: (string | number)[][] = game.ranked().map((p, i) => {
-    const final = arenas.get(p.id) ?? "";
-    const row: (string | number)[] = [i + 1, p.nickname, p.points, final, p.startArena || final, p.wins, p.losses, p.draws, p.reign, p.correct, p.wrong];
-    played.forEach((q, slot) => {
-      const a = p.answers[slot];
-      if (a) row.push((q.type === "text" ? a.text : q.options[a.option]) ?? "", a.correct ? "yes" : "no", (a.ms / 1000).toFixed(2));
-      else row.push("", "no answer", "");
-    });
-    return row;
+  const final = (p: DuelPlayer) => arenas.get(p.id) ?? "";
+  const columns: Column<{ rank: number; p: DuelPlayer }>[] = [
+    { header: "Rank", value: (r) => r.rank },
+    { header: "Nickname", value: (r) => r.p.nickname },
+    { header: "Points", value: (r) => r.p.points },
+    { header: "Final arena", value: (r) => final(r.p) },
+    { header: "Start arena", value: (r) => r.p.startArena || final(r.p) },
+    { header: "Wins", value: (r) => r.p.wins },
+    { header: "Losses", value: (r) => r.p.losses },
+    { header: "Draws", value: (r) => r.p.draws },
+    { header: "Rounds won in Arena 1", value: (r) => r.p.reign },
+    { header: "Correct", value: (r) => r.p.correct },
+    { header: "Wrong", value: (r) => r.p.wrong },
+  ];
+  game.questions.slice(0, game.played).forEach((q, slot) => {
+    const n = slot + 1;
+    columns.push(
+      {
+        header: `R${n} answer (${q.text})`,
+        value: (r) => {
+          const a = r.p.answers[slot];
+          return a ? ((q.type === "text" ? a.text : q.options[a.option]) ?? "") : "";
+        },
+      },
+      {
+        header: `R${n} correct`,
+        value: (r) => {
+          const a = r.p.answers[slot];
+          return a ? (a.correct ? "yes" : "no") : "no answer";
+        },
+      },
+      {
+        header: `R${n} time (s)`,
+        value: (r) => {
+          const a = r.p.answers[slot];
+          return a ? (a.ms / 1000).toFixed(2) : "";
+        },
+      },
+    );
   });
-  return toCsv([header, ...rows]);
+  return columns;
+}
+
+export function buildDuelResults(game: DuelGame): ResultsSheet {
+  return sheet(
+    duelColumns(game),
+    game.ranked().map((p, i) => ({ rank: i + 1, p })),
+  );
 }
 
 export const duelMode: ModeEntry<"duel"> = {
@@ -655,7 +687,7 @@ export const duelMode: ModeEntry<"duel"> = {
   },
   pacing: (game) => game,
   teams: () => null,
-  resultsCsv: buildDuelResultsCsv,
+  results: buildDuelResults,
   handle(game, playerId, msg) {
     switch (msg.type) {
       case "duel.answer":

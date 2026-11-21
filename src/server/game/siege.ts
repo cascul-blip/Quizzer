@@ -40,7 +40,8 @@ import { GameError, realClock } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
-import { toCsv } from "./results.ts";
+import type { Column, ResultsSheet } from "./results.ts";
+import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
 import { Roster } from "./roster.ts";
 import { SiegeBattlefield } from "./siege-battlefield.ts";
@@ -662,66 +663,46 @@ export class SiegeGame {
  * Kingdom Siege: one row per player (kicked players included), each with the class result,
  * then a wave log with one row per wave.
  */
-export function buildSiegeResultsCsv(game: SiegeGame): string {
-  const header = [
-    "Nickname",
-    "Correct",
-    "Wrong",
-    "Accuracy %",
-    "Gold earned",
-    "Gold spent",
-    "Archers placed",
-    "Knights placed",
-    "Walls placed",
-    "Upgrades bought",
-    "Monsters defeated",
-    "Class result",
-    "Waves survived",
-    "Hearts left",
-    "Endless record",
-  ];
+function siegeColumns(game: SiegeGame): Column<SiegePlayer>[] {
   const r = game.result();
   const result = r.outcome === "stands" ? "Stood" : r.outcome === "fallen" ? "Fell" : "Ended";
   const record = r.record ? `${r.record.waves} waves, ${r.record.avgScale}% difficulty${r.newRecord ? " (new record)" : ""}` : "";
-  const rows: (string | number)[][] = game.everyone
-    .sort((a, b) => b.goldEarned - a.goldEarned || b.correct - a.correct)
-    .map((p) => {
-      const answered = p.correct + p.wrong;
-      return [
-        p.nickname,
-        p.correct,
-        p.wrong,
-        answered ? Math.round((p.correct / answered) * 100) : "",
-        p.goldEarned,
-        p.goldSpent,
-        p.placed.archer,
-        p.placed.knight,
-        p.placed.wall,
-        p.upgrades,
-        p.defeated,
-        result,
-        r.wavesSurvived,
-        r.hearts,
-        record,
-      ];
-    });
-  const log: (string | number)[][] = [
-    [],
-    ["Wave", "Difficulty scale %", "Defense gold", "Strength boost", "Monster budget", "Monster health ×", "Monsters sent", "Class accuracy %", "Hearts lost"],
-    ...game.waveLog.map((w) => [
-      w.wave,
-      w.scale,
-      w.defense,
-      w.boost,
-      w.budget,
-      w.toughness,
-      w.sent,
-      w.answered ? Math.round((w.correct / w.answered) * 100) : "",
-      w.heartsLost,
-    ]),
+  return [
+    { header: "Nickname", value: (p) => p.nickname },
+    { header: "Correct", value: (p) => p.correct },
+    { header: "Wrong", value: (p) => p.wrong },
+    { header: "Accuracy %", value: (p) => accuracy(p) },
+    { header: "Gold earned", value: (p) => p.goldEarned },
+    { header: "Gold spent", value: (p) => p.goldSpent },
+    { header: "Archers placed", value: (p) => p.placed.archer },
+    { header: "Knights placed", value: (p) => p.placed.knight },
+    { header: "Walls placed", value: (p) => p.placed.wall },
+    { header: "Upgrades bought", value: (p) => p.upgrades },
+    { header: "Monsters defeated", value: (p) => p.defeated },
+    { header: "Class result", value: () => result },
+    { header: "Waves survived", value: () => r.wavesSurvived },
+    { header: "Hearts left", value: () => r.hearts },
+    { header: "Endless record", value: () => record },
   ];
-  return toCsv([header, ...rows, ...log]);
 }
+
+export function buildSiegeResults(game: SiegeGame): ResultsSheet {
+  const players = game.everyone.sort((a, b) => b.goldEarned - a.goldEarned || b.correct - a.correct);
+  const waves = sheet(SIEGE_WAVE_COLUMNS, game.waveLog);
+  return sheet(siegeColumns(game), players, [waves.header, ...waves.rows]);
+}
+
+const SIEGE_WAVE_COLUMNS: Column<SiegeGame["waveLog"][number]>[] = [
+  { header: "Wave", value: (w) => w.wave },
+  { header: "Difficulty scale %", value: (w) => w.scale },
+  { header: "Defense gold", value: (w) => w.defense },
+  { header: "Strength boost", value: (w) => w.boost },
+  { header: "Monster budget", value: (w) => w.budget },
+  { header: "Monster health ×", value: (w) => w.toughness },
+  { header: "Monsters sent", value: (w) => w.sent },
+  { header: "Class accuracy %", value: (w) => (w.answered ? Math.round((w.correct / w.answered) * 100) : "") },
+  { header: "Hearts lost", value: (w) => w.heartsLost },
+];
 
 export const siegeMode: ModeEntry<"siege"> = {
   ...siegeShared,
@@ -743,7 +724,7 @@ export const siegeMode: ModeEntry<"siege"> = {
   },
   pacing: null,
   teams: () => null,
-  resultsCsv: buildSiegeResultsCsv,
+  results: buildSiegeResults,
   finished(game, ctx) {
     const r = game.result();
     if (!r.newRecord || !r.record) return;

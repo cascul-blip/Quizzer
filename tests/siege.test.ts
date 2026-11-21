@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { writeFileSync } from "node:fs";
 import { Lobby } from "../src/server/game/lobby.ts";
+import { records } from "../src/server/game/results.ts";
 import type { SiegeMonster, SiegePlayer } from "../src/server/game/siege.ts";
-import { buildSiegeResultsCsv, FEEDBACK_MS, SIEGE_NO_GOLD, SiegeGame } from "../src/server/game/siege.ts";
+import { buildSiegeResults, FEEDBACK_MS, SIEGE_NO_GOLD, SiegeGame } from "../src/server/game/siege.ts";
 import { siegeRecordsPath } from "../src/server/paths.ts";
 import { loadSiegeRecord, saveSiegeRecord } from "../src/server/siege-records.ts";
 import { siegeWords } from "../src/shared/modes/siege.ts";
@@ -964,15 +965,38 @@ describe("results", () => {
     game.kick(byName(game, "Cal").id);
     game.battlefield.hearts = 7;
     game.end();
-    const csv = buildSiegeResultsCsv(game);
-    const lines = csv.replace("\ufeff", "").trim().split("\r\n");
-    expect(lines[0]).toBe(
-      "Nickname,Correct,Wrong,Accuracy %,Gold earned,Gold spent,Archers placed,Knights placed,Walls placed,Upgrades bought,Monsters defeated,Class result,Waves survived,Hearts left,Endless record",
-    );
-    expect(lines[1]).toBe("Ana,1,1,50,25,50,1,0,0,0,0,Ended,0,7,");
-    expect(lines.filter((l) => l.startsWith("Cal,"))).toHaveLength(1);
-    expect(lines).toContain("Wave,Difficulty scale %,Defense gold,Strength boost,Monster budget,Monster health ×,Monsters sent,Class accuracy %,Hearts lost");
-    expect(lines[lines.length - 1]).toBe(`1,100,${game.waveLog[0]!.defense},1,${siegeWaveBudget(1, 3, 100)},1,1,50,0`);
+    const results = buildSiegeResults(game);
+    const rows = records(results);
+    expect(rows[0]).toEqual({
+      Nickname: "Ana",
+      Correct: 1,
+      Wrong: 1,
+      "Accuracy %": 50,
+      "Gold earned": 25,
+      "Gold spent": 50,
+      "Archers placed": 1,
+      "Knights placed": 0,
+      "Walls placed": 0,
+      "Upgrades bought": 0,
+      "Monsters defeated": 0,
+      "Class result": "Ended",
+      "Waves survived": 0,
+      "Hearts left": 7,
+      "Endless record": "",
+    });
+    expect(rows.filter((r) => r.Nickname === "Cal")).toHaveLength(1);
+    expect(results.appendix?.[0]).toEqual([
+      "Wave",
+      "Difficulty scale %",
+      "Defense gold",
+      "Strength boost",
+      "Monster budget",
+      "Monster health ×",
+      "Monsters sent",
+      "Class accuracy %",
+      "Hearts lost",
+    ]);
+    expect(results.appendix?.at(-1)).toEqual([1, 100, game.waveLog[0]!.defense, 1, siegeWaveBudget(1, 3, 100), 1, 1, 50, 0]);
   });
 });
 

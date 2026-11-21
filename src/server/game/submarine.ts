@@ -12,7 +12,8 @@ import { GameError, realClock, shuffle } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, unhandled } from "./mode-entry.ts";
-import { toCsv } from "./results.ts";
+import type { Column, ResultsSheet } from "./results.ts";
+import { sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
 import { Roster } from "./roster.ts";
 import type { AnswerTotals } from "./stream.ts";
@@ -561,12 +562,24 @@ export class SubGame {
 }
 
 /** Submarine Squad: one row per player; the squad's final depth is in every row. */
-export function buildSubResultsCsv(game: SubGame): string {
-  const header = ["Nickname", "Correct", "Wrong", "Boosts", "Dive taps (correct)", "Instructor rounds", "Squad depth (m)", "Level reached"];
-  const rows: (string | number)[][] = [...game.players.values()]
-    .sort((a, b) => b.boosts - a.boosts || b.correct - a.correct)
-    .map((p) => [p.nickname, p.correct, p.wrong, p.boosts, p.diveHits, p.instructorRounds, game.depth, game.level]);
-  return toCsv([header, ...rows]);
+function subColumns(game: SubGame): Column<SubPlayer>[] {
+  return [
+    { header: "Nickname", value: (p) => p.nickname },
+    { header: "Correct", value: (p) => p.correct },
+    { header: "Wrong", value: (p) => p.wrong },
+    { header: "Boosts", value: (p) => p.boosts },
+    { header: "Dive taps (correct)", value: (p) => p.diveHits },
+    { header: "Instructor rounds", value: (p) => p.instructorRounds },
+    { header: "Squad depth (m)", value: () => game.depth },
+    { header: "Level reached", value: () => game.level },
+  ];
+}
+
+export function buildSubResults(game: SubGame): ResultsSheet {
+  return sheet(
+    subColumns(game),
+    [...game.players.values()].sort((a, b) => b.boosts - a.boosts || b.correct - a.correct),
+  );
 }
 
 export const subMode: ModeEntry<"submarine"> = {
@@ -579,7 +592,7 @@ export const subMode: ModeEntry<"submarine"> = {
   },
   pacing: null,
   teams: () => null,
-  resultsCsv: buildSubResultsCsv,
+  results: buildSubResults,
   handle(game, playerId, msg) {
     switch (msg.type) {
       case "sub.answer":

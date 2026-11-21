@@ -207,19 +207,23 @@ describe("Game modes", () => {
         expect(lobbyView().pacing).toBe(PACED.has(mode) ? "auto" : "manual");
       });
 
-      test("the results CSV has a header and one row per player", async () => {
+      test("the results CSV has a BOM, a header, and one row per player as wide as the header", async () => {
         const nicknames = ["Noel", "Holly", "Ivy"];
         openLobby(mode, nicknames);
         send(host, { type: "host.start", pacing: "manual" });
         send(host, { type: "host.end" });
         await flush();
-        // The CSV starts with a byte order mark, which trimStart drops.
-        const lines = (hub.lastResults?.csv ?? "").trimStart().split("\r\n");
+        const csv = hub.lastResults?.csv ?? "";
+        expect(csv.codePointAt(0)).toBe(0xfeff);
+        const lines = csv.slice(1).split("\r\n");
         // Kingdom Siege adds a wave log after a blank line; the player rows come first in every mode.
         const rows = lines.slice(1, lines.indexOf(""));
         expect(lines[0]).toContain("Nickname");
         expect(rows).toHaveLength(nicknames.length);
         for (const nickname of nicknames) expect(rows.some((row) => row.includes(nickname))).toBe(true);
+        // No cell in this quiz holds a comma or quote, so splitting on commas counts the columns.
+        const width = lines[0]!.split(",").length;
+        for (const row of rows) expect(row.split(",")).toHaveLength(width);
       });
 
       test("a phone message for a game mode that isn't running is ignored", async () => {

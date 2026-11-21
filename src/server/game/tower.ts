@@ -12,7 +12,8 @@ import { GameError, realClock, teamInfo } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
-import { toCsv } from "./results.ts";
+import type { Column, ResultsSheet } from "./results.ts";
+import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
 import { Roster } from "./roster.ts";
 import type { AnswerTotals } from "./stream.ts";
@@ -433,41 +434,30 @@ export class TowerGame {
 }
 
 /** Tallest Tower: one row per player, grouped by team in final team order. */
-export function buildTowerResultsCsv(game: TowerGame): string {
-  const header = [
-    "Team",
-    "Team rank",
-    "Team floors",
-    "Team blocks",
-    "Nickname",
-    "Correct",
-    "Wrong",
-    "Accuracy %",
-    "Blocks placed",
-    "Blocks missed",
-    "Monster hatched",
-  ];
-  const rows: (string | number)[][] = [];
-  for (const t of game.rankedTeams()) {
-    const members = [...game.players.values()].filter((p) => p.team === t.index).sort((a, b) => b.placed - a.placed || b.correct - a.correct);
-    for (const p of members) {
-      const answered = p.correct + p.wrong;
-      rows.push([
-        t.name,
-        t.rank,
-        t.floors,
-        t.placed,
-        p.nickname,
-        p.correct,
-        p.wrong,
-        answered ? Math.round((p.correct / answered) * 100) : "",
-        p.placed,
-        p.missed,
-        p.hatched,
-      ]);
-    }
-  }
-  return toCsv([header, ...rows]);
+type TowerResultRow = { team: ReturnType<TowerGame["rankedTeams"]>[number]; p: TowerPlayer };
+
+const TOWER_COLUMNS: Column<TowerResultRow>[] = [
+  { header: "Team", value: (r) => r.team.name },
+  { header: "Team rank", value: (r) => r.team.rank },
+  { header: "Team floors", value: (r) => r.team.floors },
+  { header: "Team blocks", value: (r) => r.team.placed },
+  { header: "Nickname", value: (r) => r.p.nickname },
+  { header: "Correct", value: (r) => r.p.correct },
+  { header: "Wrong", value: (r) => r.p.wrong },
+  { header: "Accuracy %", value: (r) => accuracy(r.p) },
+  { header: "Blocks placed", value: (r) => r.p.placed },
+  { header: "Blocks missed", value: (r) => r.p.missed },
+  { header: "Monster hatched", value: (r) => r.p.hatched },
+];
+
+export function buildTowerResults(game: TowerGame): ResultsSheet {
+  const rows = game.rankedTeams().flatMap((team) =>
+    [...game.players.values()]
+      .filter((p) => p.team === team.index)
+      .sort((a, b) => b.placed - a.placed || b.correct - a.correct)
+      .map((p) => ({ team, p })),
+  );
+  return sheet(TOWER_COLUMNS, rows);
 }
 
 export const towerMode: ModeEntry<"tower"> = {
@@ -487,7 +477,7 @@ export const towerMode: ModeEntry<"tower"> = {
   },
   pacing: null,
   teams: (settings) => settings.teams,
-  resultsCsv: buildTowerResultsCsv,
+  results: buildTowerResults,
   handle(game, playerId, msg) {
     switch (msg.type) {
       case "tower.answer":

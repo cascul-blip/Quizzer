@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { buildGiftResultsCsv, GiftGame } from "../src/server/game/gift.ts";
+import { buildGiftResults, GiftGame } from "../src/server/game/gift.ts";
 import { Lobby } from "../src/server/game/lobby.ts";
+import { records } from "../src/server/game/results.ts";
 import { FEEDBACK_MS } from "../src/server/game/stream.ts";
 import type { GiftItem } from "../src/shared/gift-rules.ts";
 import { GIFT_DUDS, GIFT_GOODS, GIFT_READY_MS, GIFT_ROUND_MS, GIFT_TAP_GRACE_MS } from "../src/shared/gift-rules.ts";
@@ -190,6 +191,16 @@ describe("Gift Grab", () => {
     clock.advance(GIFT_ROUND_MS - item.from);
     expect(game.phase).toBe("podium");
     expect(game.hostView().mostCorrect).toEqual({ value: 10, nicknames: ["Player 1"] });
-    expect(buildGiftResultsCsv(game)).toContain("1,Player 1,30,10,0,2,1,0,0");
+    expect(records(buildGiftResults(game))).toContainEqual({
+      Rank: 1,
+      Nickname: "Player 1",
+      Score: 30,
+      Correct: 10,
+      Wrong: 0,
+      "Bonus rounds earned": 2,
+      "Gift taps": 1,
+      "Dud taps": 0,
+      "Power-ups collected": 0,
+    });
   });
 });
