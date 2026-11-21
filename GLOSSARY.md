@@ -31,3 +31,5 @@ _Avoid_: board, map (the phone's lane map is only a view of it)
 **Quiz revision** is the saved version of a quiz that an editor opened or last saved. Each successful edit creates a new revision, even when two edits happen in the same millisecond.
 
 **Phone attachment** is the association of an open phone connection with a player identity. A player can have multiple attached connections and becomes disconnected when the last one closes or switches to another player. Attachments carry over through the Lobby handoff.
+
+**Host command** is an instruction the host sends, in the lobby or during a game, such as Start, changing mode settings, or ending the game.
