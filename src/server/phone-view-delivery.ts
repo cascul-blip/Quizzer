@@ -69,11 +69,16 @@ export class PhoneViewDelivery {
     socket.send(message, true);
   }
 
-  /** Only refresh if a view was held back, and read the current view when refreshing. */
-  onDrain(socket: PhoneSocket, refresh: () => void): void {
+  /** Catch up from the current view even if its comparison key is unchanged. */
+  onDrain(socket: PhoneSocket, readView: () => PlayerView): void {
+    if (this.takePendingDrain(socket)) this.push(socket, readView, true);
+  }
+
+  /** Consume a held-back update, including when the socket has since become a projector. */
+  takePendingDrain(socket: PhoneSocket): boolean {
     const state = this.states.get(socket);
-    if (!state?.waitingForDrain) return;
+    if (!state?.waitingForDrain) return false;
     state.waitingForDrain = false;
-    refresh();
+    return true;
   }
 }

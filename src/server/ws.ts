@@ -22,7 +22,7 @@ export interface SocketData {
   playerId: string | null;
 }
 
-type WS = ServerWebSocket<SocketData>;
+type WS = Pick<ServerWebSocket<SocketData>, "data" | "send" | "getBufferedAmount">;
 
 interface HubOptions {
   /** Forced join address (--host). */
@@ -152,7 +152,11 @@ export class GameHub {
   }
 
   onDrain(ws: WS): void {
-    this.phoneViews.onDrain(ws, () => this.sendState(ws));
+    if (ws.data.role === "host") {
+      if (this.phoneViews.takePendingDrain(ws)) this.sendState(ws);
+      return;
+    }
+    this.phoneViews.onDrain(ws, () => this.playerView(ws));
   }
 
   /** Coalesce bursts of changes (e.g. many answers) into one push per tick. */

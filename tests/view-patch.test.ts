@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { QuizStore } from "../src/server/quiz/store.ts";
 import { GameHub, type SocketData } from "../src/server/ws.ts";
 import { OFFERED_AVATARS } from "../src/shared/avatars.ts";
@@ -50,14 +50,15 @@ describe("diffView / applyPatch", () => {
   });
 });
 
-describe("Phones that fall behind", () => {
-  const t = tempDir();
-  afterAll(() => t.cleanup());
+describe("Phone view delivery", () => {
+  let t: ReturnType<typeof tempDir>;
+  beforeEach(() => { t = tempDir(); });
+  afterEach(() => t.cleanup());
 
   /** Just enough of a Bun socket for the hub, with a send queue the test controls. */
   function fakeSocket(data: Partial<SocketData>) {
     const sock = {
-      data: { admin: false, ip: "127.0.0.1", role: "player", playerId: null, ...data } as SocketData,
+      data: { admin: false, ip: "127.0.0.1", role: "player", playerId: null, ...data } satisfies SocketData,
       sent: [] as ServerMsg[],
       buffered: 0,
       send(m: string) {
@@ -69,36 +70,55 @@ describe("Phones that fall behind", () => {
     return sock;
   }
 
-  test("get no snapshots while their socket is backed up, then only the latest", async () => {
+  test("patches changes, resends on request, and catches up after drain", async () => {
     const store = new QuizStore(t.dir);
     const quiz = await store.create({ title: "Behind", questions: [{ type: "true_false", text: "Q", correct: [0] }] });
     const hub = new GameHub(store, { clock: new FakeClock() });
     const host = fakeSocket({ admin: true, role: "host" });
     const phone = fakeSocket({});
-    hub.onOpen(host as never);
-    hub.onMessage(host as never, JSON.stringify({ type: "host.open", quizId: quiz.id }));
-    hub.onOpen(phone as never);
-    hub.onMessage(phone as never, JSON.stringify({ type: "join", nickname: "Ann", avatar: OFFERED_AVATARS[0]!.id, accessory: "none" }));
+    hub.onOpen(host);
+    hub.onMessage(host, JSON.stringify({ type: "host.open", quizId: quiz.id }));
+    hub.onOpen(phone);
+    hub.onMessage(phone, JSON.stringify({ type: "join", nickname: "Ann", avatar: OFFERED_AVATARS[0]!.id, accessory: "none" }));
     await Promise.resolve();
+    phone.sent = [];
+
+    const avatar = OFFERED_AVATARS[4]!.id;
+    hub.onMessage(phone, JSON.stringify({ type: "setAvatar", avatar, accessory: "none" }));
+    await Promise.resolve();
+    expect(phone.sent).toEqual([{ type: "player.patch", ops: [[["me", "avatar", "avatar"], avatar]] }]);
+
+    phone.sent = [];
+    hub.broadcast();
+    expect(phone.sent).toEqual([]);
+
+    // A join retry from an already joined phone requests the current view.
+    hub.onMessage(phone, JSON.stringify({ type: "join", nickname: "Ann" }));
+    expect(phone.sent).toEqual([{ type: "player.patch", ops: [] }]);
+    phone.sent = [];
+
+    // Drain also forces a refresh when the queued attempt saw no view change.
+    phone.buffered = 4096;
+    hub.broadcast();
+    expect(phone.sent).toEqual([]);
+    phone.buffered = 0;
+    hub.onDrain(phone);
+    expect(phone.sent).toEqual([{ type: "player.patch", ops: [] }]);
     phone.sent = [];
 
     phone.buffered = 4096;
     for (const avatar of OFFERED_AVATARS.slice(1, 4).map((a) => a.id)) {
-      hub.onMessage(phone as never, JSON.stringify({ type: "setAvatar", avatar, accessory: "none" }));
+      hub.onMessage(phone, JSON.stringify({ type: "setAvatar", avatar, accessory: "none" }));
       await Promise.resolve();
     }
     expect(phone.sent).toEqual([]);
 
     phone.buffered = 0;
-    hub.onDrain(phone as never);
-    expect(phone.sent).toHaveLength(1);
-    expect(phone.sent[0]!.type).toBe("player.patch");
-    const ops = phone.sent[0]!.type === "player.patch" ? phone.sent[0]!.ops : [];
-    expect(JSON.stringify(ops)).toContain(JSON.stringify(OFFERED_AVATARS[3]!.id));
-    expect(JSON.stringify(ops)).not.toContain('"fox"');
+    hub.onDrain(phone);
+    expect(phone.sent).toEqual([{ type: "player.patch", ops: [[["me", "avatar", "avatar"], OFFERED_AVATARS[3]!.id]] }]);
 
     // A socket that keeps up isn't sent anything extra on drain.
-    hub.onDrain(phone as never);
+    hub.onDrain(phone);
     expect(phone.sent).toHaveLength(1);
   });
 });
