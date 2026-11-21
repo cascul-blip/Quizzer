@@ -104,7 +104,7 @@ async function main(): Promise<void> {
   Quizzer ${pkg.version}
 
   Admin (this computer only):  ${adminUrl}
-  Players join at:             ${running.hub.joinUrl()}
+  Players join at:             ${running.hub.join.url()}
   MCP (HTTP, this computer):   http://localhost:${running.port}/mcp
   Data folder:                 ${dataDir}
 

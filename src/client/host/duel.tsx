@@ -408,7 +408,6 @@ function ArenaPanel({ arena, result, view, step, panelRef }: { arena: DuelArena;
   const throne = arena.arena === 1;
   // On the reveal the panel shows the round as it was played; otherwise the live arena.
   const people = result ? result.duelists : arena.duelists;
-  const count = people.length;
   const live = new Map(arena.duelists.map((d) => [d.id, d]));
   const round = result ? view.lastRound!.round : view.round;
   const winner = result && !result.draw ? result.duelists.findIndex((d) => d.outcome === "win") : -1;

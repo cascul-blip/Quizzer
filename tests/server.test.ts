@@ -65,6 +65,13 @@ afterAll(async () => {
 });
 
 describe("REST API", () => {
+  test("/api/info reports the same join URL the hub uses for the startup banner", async () => {
+    const info = await (await fetch(`${base}/api/info`)).json();
+    expect(info.port).toBe(srv.port);
+    expect(info.joinUrl).toBe(`http://127.0.0.1:${srv.port}/`);
+    expect(info.joinUrl).toBe(srv.hub.join.url());
+  });
+
   test("pages are served", async () => {
     for (const p of ["/", "/admin", "/host"]) {
       const r = await fetch(base + p);

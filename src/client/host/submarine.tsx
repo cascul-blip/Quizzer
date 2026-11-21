@@ -8,7 +8,7 @@ import { useEventFlash } from "../shared/tower-art.tsx";
 import { useCountdown } from "../shared/ui.tsx";
 import { ErrorsButton, ErrorsTable, ScreenControls, toggleFullscreen, type Send } from "./common.tsx";
 import type { MusicCue } from "../shared/music/index.ts";
-import type { LobbyModeEntry, LobbySettingsProps } from "./lobby-modes.tsx";
+import type { LobbyModeEntry } from "./lobby-modes.tsx";
 
 type SubView = Extract<HostView, { kind: "submarine" }>;
 

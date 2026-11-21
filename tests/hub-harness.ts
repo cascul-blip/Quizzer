@@ -98,7 +98,7 @@ export class HubSocket extends MessageLog {
 /** A hub on a fake port, as the server would run it. */
 export function fakeHub(store: QuizStore, clock: FakeClock, port = 4321) {
   const hub = new Hub(store, { address: "127.0.0.1", discoverAddresses: () => [], clock });
-  hub.port = port;
+  hub.join.port = port;
   return hub;
 }
 

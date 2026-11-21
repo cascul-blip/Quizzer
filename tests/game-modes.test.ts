@@ -7,7 +7,7 @@ import { QuizStore } from "../src/server/quiz/store.ts";
 import type { GameHub } from "../src/server/ws.ts";
 import { MODE_FLAGS } from "../src/shared/mode-flags.ts";
 import { MODE_NAMES } from "../src/shared/mode-names.ts";
-import type { ClientMsg, GameMode, ModeSettingsInput, ServerMsg } from "../src/shared/protocol.ts";
+import type { ClientMsg, GameMode, ModeSettingsInput } from "../src/shared/protocol.ts";
 import { FakeClock, tempDir } from "./helpers.ts";
 import { fakeHub, HubSocket } from "./hub-harness.ts";
 
