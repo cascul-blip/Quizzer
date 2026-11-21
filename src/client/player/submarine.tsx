@@ -4,7 +4,7 @@ import { GlyphSymbol } from "../shared/glyph-symbol.tsx";
 import { winterGradient } from "../shared/winter-gradient.ts";
 import { play, startRev, type Rev } from "../shared/sounds.ts";
 import { useCountdown } from "../shared/ui.tsx";
-import { Feedback, StreamQuestion } from "./tower.tsx";
+import { Feedback, StreamQuestion } from "./stream-question.tsx";
 
 type Send = (m: ClientMsg) => void;
 

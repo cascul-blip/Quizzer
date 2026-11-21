@@ -4,6 +4,8 @@
 
 Track Quizzer issues and specs in GitHub Issues. See `docs/agents/issue-tracker.md`.
 
+Before reporting implementation complete, account for every requirement in the issue or spec, including named test scenarios. Implement and verify each one, or report what remains and why.
+
 ### Triage labels
 
 Use the five labels in `docs/agents/triage-labels.md` when triaging issues.
@@ -16,6 +18,8 @@ See `docs/agents/domain.md` before exploring the codebase.
 ### Building
 
 `bun run build` replaces the `dist/` executables the user runs. To check the build, use `bun run build -- linux --outdir <scratch dir>`. To check the code, use `bun run check` (typecheck then tests, one after the other as CI runs them).
+
+For phone component DOM tests, see `tests/stream-question.test.tsx` for the Happy DOM and Preact setup.
 
 If sandboxed network tests report `getifaddrs` with `errno: 1` or `EPERM: operation not permitted, listen`, run focused tests while diagnosing, then request local networking for `bun run check`.
 

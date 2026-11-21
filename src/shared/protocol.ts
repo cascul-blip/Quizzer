@@ -214,6 +214,15 @@ export interface StreamQuestionView {
   spots?: PinSpot[];
 }
 
+/** Feedback for an answer in a self-paced mode. */
+export interface StreamFeedbackView {
+  seq: number;
+  correct: boolean;
+  remainingMs: number;
+  answers: string[];
+  penaltyMs: number;
+}
+
 /** How many errors the final screen's "Show errors" table lists. */
 export const ERRORS_SHOWN = 10;
 
@@ -294,7 +303,7 @@ export interface PlayerTowerView {
   blocksHeld: number;
   question: StreamQuestionView | null;
   /** Result of the last answer while its 1 s flash is still showing. */
-  feedback: { seq: number; correct: boolean; remainingMs: number; answers: string[]; penaltyMs: number } | null;
+  feedback: StreamFeedbackView | null;
   egg: MonsterEgg | null;
   /** Latest monster news for this player (shown once per seq). */
   monsterEvent: { seq: number; kind: "egg" | "hatched" | "smashed"; byTeam: string | null; target: string | null } | null;
@@ -438,7 +447,7 @@ export interface PlayerSubView {
   /** Correct answers toward the next boost (0 … CORRECT_PER_BOOST-1). */
   towardBoost: number;
   question: StreamQuestionView | null;
-  feedback: { seq: number; correct: boolean; remainingMs: number; answers: string[]; penaltyMs: number } | null;
+  feedback: StreamFeedbackView | null;
   dive:
     // symbolRemainingMs of symbolMs: time left to find the current symbol before the instructor moves on.
     | { role: "instructor"; symbol: string; index: number; total: number; found: number; groupSize: number; symbolRemainingMs: number; symbolMs: number }
@@ -550,7 +559,7 @@ export interface PlayerFightView {
   /** This player's most recently finished repair; repaired is false if teammates had already fixed the tower. */
   lastRepair: { seq: number; repaired: boolean } | null;
   question: StreamQuestionView | null;
-  feedback: { seq: number; correct: boolean; remainingMs: number; answers: string[]; penaltyMs: number } | null;
+  feedback: StreamFeedbackView | null;
   /** Damage per team. */
   damage: number[];
   terrain: number[];
@@ -667,7 +676,7 @@ export interface PlayerRobotView {
   phaseRemainingMs: number;
   me: { id: string; nickname: string; avatar: AvatarChoice; lives: number; out: boolean; points: number; correct: number; x: number; y: number };
   question: StreamQuestionView | null;
-  feedback: { seq: number; correct: boolean; remainingMs: number; answers: string[]; penaltyMs: number } | null;
+  feedback: StreamFeedbackView | null;
   /** The board, during movement and the attack only (quiz time is for questions). */
   board: { marked: number[]; inset: number; collapsing: number[]; others: { x: number; y: number }[] } | null;
   /** This player's part in the latest attack. */
@@ -800,7 +809,7 @@ export interface PlayerCupView {
   startCups: number;
   /** Questions to answer: living players during the quiz until safe; poisoned players any time, for practice. */
   question: StreamQuestionView | null;
-  feedback: { seq: number; correct: boolean; remainingMs: number; answers: string[]; penaltyMs: number } | null;
+  feedback: StreamFeedbackView | null;
   /** Drink phase, drinkers only: their pick so far (null until they pick). */
   drink: { picked: number | null } | null;
   /** Reveal phase, drinkers only: this player's own drink. `turn` is true while they are in the spotlight. */
@@ -906,7 +915,7 @@ export interface PlayerLandView {
   /** Time left on the "no tiles to place" message (empty state). */
   emptyMs: number;
   question: StreamQuestionView | null;
-  feedback: { seq: number; correct: boolean; remainingMs: number; answers: string[]; penaltyMs: number } | null;
+  feedback: StreamFeedbackView | null;
   /** The land, while this player is placing tiles. */
   board: LandBoard | null;
   /** Set once this player's first team was surrounded and they joined the conquerors. */
@@ -1373,7 +1382,7 @@ export interface PlayerSiegeView {
   danger: number[];
   me: { id: string; nickname: string; avatar: AvatarChoice; correct: number; goldEarned: number };
   question: StreamQuestionView | null;
-  feedback: { seq: number; correct: boolean; remainingMs: number; answers: string[]; penaltyMs: number } | null;
+  feedback: StreamFeedbackView | null;
   /** The defender this player placed last, pre-selected on the map. */
   lastPlaced: SiegeDefenderType | null;
   /** The latest banner: a giant approaches, or the wall was hit. Shown once per seq. */
@@ -1462,7 +1471,7 @@ export interface PlayerGiftView {
   correct: number;
   rank: number | null;
   question: StreamQuestionView | null;
-  feedback: PlayerTowerView["feedback"];
+  feedback: StreamFeedbackView | null;
   bonus: {
     round: number;
     remainingMs: number;

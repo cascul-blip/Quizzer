@@ -4,7 +4,7 @@ import { CATAPULT_X, LAUNCH_Y, MAX_PULL, launchVector, shotPos, simulate } from 
 import { CORRECT_PER_DECISION, REPAIR_MS, TOWER_MAX_DAMAGE, type ClientMsg, type FightShot, type PlayerFightView } from "../../shared/protocol.ts";
 import { AvatarSprite, Battlefield, FIGHT_PHONE_UI, HealthBar, ShotLayer, sy } from "../shared/fight-art.tsx";
 import { teamInk, teamVars, useCountdown } from "../shared/ui.tsx";
-import { Feedback, StreamQuestion } from "./tower.tsx";
+import { Feedback, StreamQuestion } from "./stream-question.tsx";
 
 type Send = (m: ClientMsg) => void;
 

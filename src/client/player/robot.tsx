@@ -3,7 +3,7 @@ import { ROBOT_BOARD, ROBOT_LIVES, robotInBounds, type ClientMsg, type PlayerRob
 import { MiniBoard } from "../shared/robot-art.tsx";
 import { SKIN_TEXT } from "../shared/robot-skin.ts";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
-import { Feedback, StreamQuestion } from "./tower.tsx";
+import { Feedback, StreamQuestion } from "./stream-question.tsx";
 
 type Send = (m: ClientMsg) => void;
 

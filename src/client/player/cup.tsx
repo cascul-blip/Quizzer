@@ -3,7 +3,7 @@ import { type ClientMsg, type PlayerCupView } from "../../shared/protocol.ts";
 import { CupArt, Die, RollingDie, RocketHead } from "../shared/cup-art.tsx";
 import { CupThemeProvider, useChristmasCup } from "../shared/cup-skin.tsx";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
-import { Feedback, StreamQuestion } from "./tower.tsx";
+import { Feedback, StreamQuestion } from "./stream-question.tsx";
 
 type Send = (m: ClientMsg) => void;
 

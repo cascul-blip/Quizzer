@@ -4,7 +4,7 @@ import {
 } from "../../shared/gift-rules.ts";
 import type { ClientMsg, GiftHit, PlayerGiftView } from "../../shared/protocol.ts";
 import { formatClock, ordinal, useCountdown } from "../shared/ui.tsx";
-import { Feedback, StreamQuestion } from "./tower.tsx";
+import { Feedback, StreamQuestion } from "./stream-question.tsx";
 import workshop from "../shared/gift/workshop.webp";
 import chest from "../shared/gift/chest.webp";
 import present from "../shared/gift/present.webp";
