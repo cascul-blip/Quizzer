@@ -37,7 +37,7 @@ import { modeTheme, THEMED_MODES } from "../../shared/themed-modes.ts";
 import { loadSiegeRecord, saveSiegeRecord } from "../siege-records.ts";
 import type { Clock } from "./common.ts";
 import { GameError, realClock } from "./common.ts";
-import type { LobbyFacts } from "./lobby-facts.ts";
+import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
 import { PhaseTimer } from "./phase-timer.ts";
@@ -186,8 +186,12 @@ export class SiegeGame {
   }
 
   /** Take over a lobby's players (same ids and tokens). */
+  /** What the lobby chose at Start; the next lobby opens with it. */
+  choices!: LobbyChoices;
+
   static fromLobby(lobby: LobbyFacts<"siege">, opts: SiegeOptions = {}): SiegeGame {
     const game = new SiegeGame(lobby.quiz, { ...lobby.settings, shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
+    game.choices = lobby.choices;
     game.roster.adoptFrom(lobby.players, (base) => game.newPlayer(base));
     return game;
   }
@@ -440,7 +444,7 @@ export class SiegeGame {
   join(rawNickname: unknown, avatar?: AvatarChoice | null): SiegePlayer {
     if (this.phase === "podium") throw new GameError("This game has finished");
     const player = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), (base) => this.newPlayer(base));
-    if (this.playing) this.stream.open(player);
+    this.stream.openOnJoin(player, this.playing);
     this.onChange();
     return player;
   }
@@ -582,7 +586,7 @@ export class SiegeGame {
       connectedCount: players.filter((p) => p.connected).length,
       result: ending && this.outcome ? this.result() : null,
       awards: podium ? this.awards() : null,
-      errors: podium ? this.stream.errors() : null,
+      errors: this.stream.errorsWhen(podium),
     };
   }
 
@@ -626,8 +630,7 @@ export class SiegeGame {
       gold: p.gold,
       danger: this.playing ? this.battlefield.danger : [],
       me: { id: p.id, nickname: p.nickname, avatar: p.avatar, correct: p.correct, goldEarned: p.goldEarned },
-      question: this.playing ? this.stream.questionView(p) : null,
-      feedback: this.playing ? this.stream.feedbackView(p) : null,
+      ...this.stream.fragment(p, this.playing),
       lastPlaced: p.lastPlaced,
       alert: this.playing ? this.battlefield.alert : null,
       map: p.mapOpen && this.playing ? this.battlefield.mapView() : null,

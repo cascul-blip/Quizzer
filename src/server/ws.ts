@@ -5,8 +5,8 @@ import type { ClientMsg, HostView, PlayerView } from "../shared/protocol.ts";
 import { ValidationError } from "../shared/quiz-schema.ts";
 import type { Clock } from "./game/common.ts";
 import { GameError, realClock } from "./game/common.ts";
-import type { LobbyChoices } from "./game/lobby.ts";
 import { Lobby } from "./game/lobby.ts";
+import type { LobbyChoices } from "./game/lobby-facts.ts";
 import type { LiveGame, ModeGame, StartContext } from "./game/mode-entry.ts";
 import { entryOf, MODES } from "./game/modes.ts";
 import { dispatchPhoneMessage } from "./game/phone-message-dispatch.ts";
@@ -214,9 +214,6 @@ export class GameHub {
         this.log(`Player removed: ${p.nickname}`);
       },
       handoff: (lobby, action) => this.handoff(lobby, action),
-      rememberPacing: (pacing) => {
-        this.lastSetup.pacing = pacing;
-      },
     };
   }
 
@@ -231,7 +228,6 @@ export class GameHub {
       onTick: () => this.views.pushHost(),
       onFinish: (game) => this.onFinish(game),
     };
-    const choices = lobby.choices;
 
     const installAndActivate = <M extends GameMode>(mode: M, activate: (game: ModeGame[M]) => void) => {
       const { game, log } = MODES[mode].start(lobby.handoffFacts(mode), context);
@@ -249,20 +245,18 @@ export class GameHub {
     };
 
     if (action.type === "start") {
-      const game = installAndActivate(choices.mode, (game) => game.start(action.pacing));
-      choices.pacing = entryOf(game).pacing?.(game).pacing ?? choices.pacing;
+      installAndActivate(lobby.choices.mode, (game) => game.start(action.pacing));
     } else {
       // The lobby's legacy Next and End commands always target Classic.
       installAndActivate("classic", (game) => game[action.type]());
     }
-    this.lastSetup = choices;
   }
 
   closeGame(): void {
     this.views.cancelPending();
     if (!this.game) return;
-    if (this.game instanceof Lobby) this.lastSetup = this.game.choices;
-    else this.game.dispose();
+    this.lastSetup = this.game.choices;
+    this.game.dispose();
     this.game = null;
     this.phoneAttachments.detachAll();
     this.views.refreshOnNextUpdate();

@@ -29,7 +29,7 @@ import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import { modeTheme, THEMED_MODES } from "../../shared/themed-modes.ts";
 import type { Clock } from "./common.ts";
 import { GameError, realClock, teamInfo } from "./common.ts";
-import type { LobbyFacts } from "./lobby-facts.ts";
+import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
 import { GameLengthClock, PhaseTimer } from "./phase-timer.ts";
@@ -133,10 +133,14 @@ export class LandGame {
   }
 
   /** Take over a lobby's players (same ids and tokens), on the teams shown in the lobby. */
+  /** What the lobby chose at Start; the next lobby opens with it. */
+  choices!: LobbyChoices;
+
   static fromLobby(lobby: LobbyFacts<"land">, opts: LandOptions = {}): LandGame {
     const game = new LandGame(lobby.quiz, { ...lobby.settings, shuffleAnswers: lobby.shuffle.answers }, opts);
     const players = [...lobby.players];
     const teams = lobby.teams;
+    game.choices = lobby.choices;
     game.roster.adoptFrom(players, (base) => game.newPlayer(base, teams.get(base.id) ?? 0));
     return game;
   }
@@ -217,7 +221,7 @@ export class LandGame {
   join(rawNickname: unknown, avatar?: AvatarChoice | null): LandPlayer {
     if (this.phase === "podium") throw new GameError("This game has finished");
     const player = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), (base) => this.newPlayer(base, this.smallestTeam()));
-    if (this.phase === "playing") this.stream.open(player);
+    this.stream.openOnJoin(player, this.phase === "playing");
     this.onChange();
     return player;
   }
@@ -452,7 +456,7 @@ export class LandGame {
       lastCapture: this.lastCapture,
       playerCount: players.length,
       awards: this.phase === "podium" ? this.awards() : null,
-      errors: this.phase === "podium" ? this.stream.errors() : null,
+      errors: this.stream.errorsWhen(this.phase === "podium"),
     };
   }
 
@@ -491,8 +495,7 @@ export class LandGame {
       claims: p.claims,
       answered: p.answered,
       emptyMs: state === "empty" ? Math.max(0, p.emptyEndsAt - now) : 0,
-      question: playing && state === "question" ? this.stream.questionView(p) : null,
-      feedback: this.stream.feedbackView(p),
+      ...this.stream.fragment(p, playing, playing && state === "question"),
       board: playing && state === "claim" ? this.boardView() : null,
       conquered: p.conquered,
       result,

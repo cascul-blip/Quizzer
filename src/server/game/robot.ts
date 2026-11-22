@@ -21,7 +21,7 @@ import {
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import type { Clock } from "./common.ts";
 import { GameError, realClock, shuffle } from "./common.ts";
-import type { LobbyFacts } from "./lobby-facts.ts";
+import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, unhandled } from "./mode-entry.ts";
 import { PhaseTimer } from "./phase-timer.ts";
@@ -135,8 +135,12 @@ export class RobotGame {
   }
 
   /** Take over a lobby's players (same ids and tokens), spread out across the board. */
+  /** What the lobby chose at Start; the next lobby opens with it. */
+  choices!: LobbyChoices;
+
   static fromLobby(lobby: LobbyFacts<"robot">, opts: RobotOptions = {}): RobotGame {
     const game = new RobotGame(lobby.quiz, { shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
+    game.choices = lobby.choices;
     game.roster.adoptFrom(lobby.players, (base) => game.newPlayer(base));
     return game;
   }
@@ -302,7 +306,7 @@ export class RobotGame {
   join(rawNickname: unknown, avatar?: AvatarChoice | null): RobotPlayer {
     if (this.phase === "podium") throw new GameError("This game has finished");
     const player = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), (base) => this.newPlayer(base));
-    if (this.phase !== "countdown") this.stream.open(player);
+    this.stream.openOnJoin(player, this.phase !== "countdown");
     this.onChange();
     return player;
   }
@@ -411,7 +415,7 @@ export class RobotGame {
       playerCount: this.players.size,
       standings: podium ? this.standings() : null,
       awards: podium ? this.awards() : null,
-      errors: podium ? this.stream.errors() : null,
+      errors: this.stream.errorsWhen(podium),
     };
   }
 
@@ -443,9 +447,8 @@ export class RobotGame {
       round: this.round,
       phaseRemainingMs: this.remainingMs(),
       me: { id: p.id, nickname: p.nickname, avatar: p.avatar, lives: p.lives, out: p.outRound !== null, points: p.points, correct: p.correct, x: p.x, y: p.y },
-      question: this.phase === "quiz" ? this.stream.questionView(p) : null,
-      // Only while answering: a wrong-answer wait must never cover the arrows in the move phase.
-      feedback: this.phase === "quiz" ? this.stream.feedbackView(p) : null,
+      // Feedback only while answering: a wrong-answer wait must never cover the arrows in the move phase.
+      ...this.stream.fragment(p, this.phase === "quiz"),
       board: onBoard
         ? {
             marked: [...this.marked].sort((x, y) => x - y),

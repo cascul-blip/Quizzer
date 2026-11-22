@@ -32,9 +32,6 @@ describe("Host command", () => {
       handoff: () => {
         throw new Error("not expected");
       },
-      rememberPacing: () => {
-        throw new Error("not expected");
-      },
     };
     return { ctx, calls };
   }

@@ -20,7 +20,7 @@ import { giftShared } from "../../shared/modes/gift.ts";
 import type { Quiz } from "../../shared/quiz-schema.ts";
 import type { Clock } from "./common.ts";
 import { GameError, realClock, shuffle } from "./common.ts";
-import type { LobbyFacts } from "./lobby-facts.ts";
+import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, unhandled } from "./mode-entry.ts";
 import { GameLengthClock, PhaseTimer } from "./phase-timer.ts";
@@ -127,9 +127,13 @@ export class GiftGame {
     return this.stream.registerPlayer({ ...base, score: 0, rounds: 0, goodTaps: 0, dudTaps: 0, powerups: 0, bonus: null });
   }
 
+  /** What the lobby chose at Start; the next lobby opens with it. */
+  choices!: LobbyChoices;
+
   static fromLobby(lobby: LobbyFacts<"gift">, opts: GiftOptions = {}): GiftGame {
     if (!lobby.quiz.questions.length) throw new GameError("This quiz has no questions");
     const game = new GiftGame(lobby.quiz, lobby.settings.minutes, lobby.shuffle.answers, lobby.protect, opts);
+    game.choices = lobby.choices;
     game.roster.adoptFrom(lobby.players, (base) => game.newPlayer(base));
     return game;
   }
@@ -190,7 +194,7 @@ export class GiftGame {
   join(rawNickname: unknown, avatar?: AvatarChoice | null): GiftPlayer {
     if (this.phase === "podium" || this.phase === "finishing") throw new GameError("This game has finished accepting players");
     const player = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), (base) => this.newPlayer(base));
-    if (this.phase === "playing") this.stream.open(player);
+    this.stream.openOnJoin(player, this.phase === "playing");
     this.onChange();
     return player;
   }
@@ -303,7 +307,8 @@ export class GiftGame {
       remainingMs: this.remainingMs(),
       standings,
       mostCorrect: value ? { value, nicknames: standings.filter((player) => player.correct === value).map((player) => player.nickname) } : null,
-      errors: final ? this.stream.errors() : [],
+      // Gift's host view always carries a list, empty until the podium.
+      errors: this.stream.errorsWhen(final) ?? [],
     };
   }
 
@@ -319,8 +324,8 @@ export class GiftGame {
       correct: player.correct,
       progress: bonus ? GIFT_CORRECT_TO_PLAY : player.correct % GIFT_CORRECT_TO_PLAY,
       rank: this.phase === "podium" ? this.standings().find((standing) => standing.id === id)!.rank : null,
-      question: this.phase === "playing" && !bonus ? this.stream.questionView(player) : null,
-      feedback: this.phase === "playing" || bonus ? this.stream.feedbackView(player) : null,
+      // The bonus round is part of answering, so its feedback flash shows, but its question does not.
+      ...this.stream.fragment(player, this.phase === "playing", this.phase === "playing" && !bonus),
       bonus: bonus
         ? {
             round: player.rounds,

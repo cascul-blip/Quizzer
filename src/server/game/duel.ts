@@ -22,7 +22,7 @@ import type { SeasonTheme } from "../../shared/themed-modes.ts";
 import { modeTheme, THEMED_MODES } from "../../shared/themed-modes.ts";
 import type { Clock } from "./common.ts";
 import { GameError, preparePlayOrder, realClock, shuffle, topErrors } from "./common.ts";
-import type { LobbyFacts } from "./lobby-facts.ts";
+import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
 import { INTRO_MS, PacedRound } from "./paced-round.ts";
@@ -157,8 +157,17 @@ export class DuelGame {
   }
 
   /** Take over a lobby's players (same ids and tokens), its rounds, shuffle choices and pacing. */
+  /** What the lobby chose at Start. */
+  private setup!: LobbyChoices;
+
+  /** The lobby's choices with the pacing as the host left it; the next lobby opens with them. */
+  get choices(): LobbyChoices {
+    return { ...this.setup, pacing: this.pacing };
+  }
+
   static fromLobby(lobby: LobbyFacts<"duel">, opts: DuelOptions = {}): DuelGame {
     const game = new DuelGame(lobby.quiz, { shuffle: lobby.shuffle, rounds: lobby.settings.rounds, theme: lobby.settings.theme, pacing: lobby.pacing }, opts);
+    game.setup = lobby.choices;
     game.roster.adoptFrom(lobby.players, (base) => game.newPlayer(base));
     return game;
   }

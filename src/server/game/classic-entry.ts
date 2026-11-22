@@ -15,6 +15,7 @@ export const classicMode: ModeEntry<"classic"> = {
       pacing: lobby.pacing,
       shuffle: lobby.shuffle,
     });
+    game.setup = lobby.choices;
     game.adoptPlayers(lobby.players);
     return { game, log: null };
   },

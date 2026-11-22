@@ -117,6 +117,22 @@ describe("Phase timer", () => {
     expect(fired).toEqual(["second"]);
   });
 
+  test("a player's slot taken over by a later timer fires only the later one, as Hill Fight's decision, repair and result timers do", () => {
+    const clock = new FakeClock();
+    const timer = new PhaseTimer<Phase>(clock, "playing");
+    const fired: string[] = [];
+    timer.after("player:p1", 10_500, () => fired.push("forfeit"));
+    clock.advance(1000);
+    timer.after("player:p1", 4000, () => fired.push("repair"));
+    timer.after("player:p2", 10_500, () => fired.push("other player"));
+    clock.advance(3999);
+    expect(fired).toEqual([]);
+    clock.advance(1);
+    expect(fired).toEqual(["repair"]);
+    clock.advance(10_000);
+    expect(fired).toEqual(["repair", "other player"]);
+  });
+
   test("a named slot reports its remaining time until it fires, is replaced or is cancelled", () => {
     const clock = new FakeClock();
     const timer = new PhaseTimer<Phase>(clock, "countdown");

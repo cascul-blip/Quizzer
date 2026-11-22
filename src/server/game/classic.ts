@@ -8,6 +8,7 @@ import type { PlayerView, ShuffleOptions } from "../../shared/protocol.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import type { Clock } from "./common.ts";
 import { GameError, preparePlayOrder, realClock, topErrors } from "./common.ts";
+import type { LobbyChoices } from "./lobby-facts.ts";
 import { INTRO_MS, PacedRound } from "./paced-round.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { sheet } from "./results.ts";
@@ -106,6 +107,14 @@ export class ClassicGame {
 
   get pacing(): Pacing {
     return this.paced.pacing;
+  }
+
+  /** What the lobby chose at Start; set by the Classic mode entry. */
+  setup!: LobbyChoices;
+
+  /** The lobby's choices with the pacing as the host left it; the next lobby opens with them. */
+  get choices(): LobbyChoices {
+    return { ...this.setup, pacing: this.pacing };
   }
 
   get openedAt(): number {

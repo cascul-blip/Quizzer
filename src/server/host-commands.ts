@@ -24,8 +24,6 @@ export interface HostCommandContext {
   /** A player was removed: drop their phones. */
   kicked(player: { id: string; nickname: string }): void;
   handoff(lobby: Lobby, action: HandoffAction): void;
-  /** Carry in-game pacing over to the next lobby ("Play again"). */
-  rememberPacing(pacing: Pacing): void;
 }
 
 /** Applies one Host command to the lobby or the live game. Throws GameError when the command doesn't apply. */
@@ -62,8 +60,7 @@ export function applyHostCommand(msg: ClientMsg, ctx: HostCommandContext): void 
       if (!PACINGS.has(msg.pacing)) throw new GameError("Unknown pacing");
       const current = game();
       if (current instanceof Lobby) return current.setPacing(msg.pacing);
-      paced(current).setPacing(msg.pacing);
-      return ctx.rememberPacing(msg.pacing);
+      return paced(current).setPacing(msg.pacing);
     }
     case "host.setShuffle":
       return lobby("Shuffle can only be changed before the game starts").setShuffle({ questions: !!msg.questions, answers: !!msg.answers });
