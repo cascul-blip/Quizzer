@@ -21,7 +21,7 @@ import type { SeasonTheme } from "../../shared/themed-modes.ts";
 import { modeTheme, THEMED_MODES } from "../../shared/themed-modes.ts";
 import type { Clock } from "./common.ts";
 import { GameError, realClock, shuffle } from "./common.ts";
-import type { LobbyFacts } from "./lobby-facts.ts";
+import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
 import { PhaseTimer } from "./phase-timer.ts";
@@ -128,12 +128,16 @@ export class CupGame {
   }
 
   /** Take over a lobby's players (same ids and tokens). */
+  /** What the lobby chose at Start; the next lobby opens with it. */
+  choices!: LobbyChoices;
+
   static fromLobby(lobby: LobbyFacts<"cup">, opts: CupOptions = {}): CupGame {
     const game = new CupGame(
       lobby.quiz,
       { cups: lobby.settings.cups, theme: lobby.settings.theme, shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect },
       opts,
     );
+    game.choices = lobby.choices;
     game.roster.adoptFrom(lobby.players, (base) => game.newPlayer(base));
     return game;
   }
@@ -535,6 +539,7 @@ export class CupGame {
         correct: p.correct,
       },
       startCups: this.startCups,
+      // Feedback follows quizzing, not answering: a player who just became safe still sees the flash of the answer that made them safe.
       ...this.stream.fragment(p, this.quizzing(p), this.answering(p)),
       drink: this.phase === "drink" && this.drinkers.includes(p.id) ? { picked: p.pick } : null,
       myDrink: reveal && mineAt >= 0 ? { ...reveal.drinks[mineAt]!, seq: reveal.seq, turn: reveal.current === mineAt, waiting: reveal.current < mineAt } : null,

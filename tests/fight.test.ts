@@ -310,6 +310,34 @@ describe("end of game", () => {
     expect(game.hostView().awards!.topGunner).toEqual({ value: 5, nicknames: ["A"] });
   });
 
+  test("the collapse is not answering: a thrower's question and feedback flash are hidden while the tower falls", () => {
+    const { game, clock } = setup(["A", "B"]);
+    const a = byName(game, "A");
+    const b = byName(game, "B");
+    for (let i = 0; i < FIGHT_MAX_DAMAGE - 1; i++) shoot(game, clock, a, 1);
+    earnDecision(game, clock, a);
+    const { dx, dy, durationMs } = pullFor(game, 0, 1);
+    expect(durationMs).toBeGreaterThan(500);
+    game.fire(a.id, dx, dy);
+    clock.advance(durationMs - 500);
+    // B's flash is still showing when the shot lands.
+    const question = game.playerView(b.id)!.question!;
+    expect(game.answer(b.id, question.seq, question.options.indexOf("yes"))).toBe(true);
+    expect(game.playerView(b.id)!.feedback).not.toBeNull();
+    clock.advance(500);
+    expect(game.phase).toBe("collapse");
+    expect(game.playerView(b.id)).toMatchObject({ question: null, feedback: null });
+  });
+
+  test("a player who joins during the collapse is dealt no question", () => {
+    const { game, clock } = setup(["A", "B"]);
+    const a = byName(game, "A");
+    for (let i = 0; i < FIGHT_MAX_DAMAGE; i++) shoot(game, clock, a, 1);
+    expect(game.phase).toBe("collapse");
+    const late = game.join("C");
+    expect(game.playerView(late.id)!.question).toBeNull();
+  });
+
   test("host end: least damaged tower wins", () => {
     const { game, clock } = setup(["A", "B"]);
     shoot(game, clock, byName(game, "B"), 0);

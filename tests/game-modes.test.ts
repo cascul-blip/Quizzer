@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { PLAYER_MODES } from "../src/client/player/modes.tsx";
+import { GRACE_MS } from "../src/server/game/common.ts";
 import { Lobby } from "../src/server/game/lobby.ts";
 import type { ModeMsg } from "../src/server/game/mode-entry.ts";
 import { entryOf, MODES } from "../src/server/game/modes.ts";
@@ -74,6 +75,7 @@ const PHONE_MSG: { [M in GameMode]: ModeMsg<M> } = {
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
 let data: ReturnType<typeof tempDir>;
+let clock: FakeClock;
 let hub: GameHub;
 let host: HubSocket;
 let quizId: string;
@@ -120,7 +122,8 @@ beforeEach(async () => {
     ],
   });
   quizId = quiz.id;
-  hub = fakeHub(store, new FakeClock());
+  clock = new FakeClock();
+  hub = fakeHub(store, clock);
   host = new HubSocket(hub, { admin: true, role: "host" });
   send(host, { type: "host.hello" });
 });
@@ -186,6 +189,27 @@ describe("Phone message dispatch", () => {
     expect(phone.raw).toEqual([{ type: "player.patch", ops: [] }]);
     expect(phone.view).toEqual(before);
   });
+});
+
+describe("Paced round", () => {
+  /** The question a host or phone view carries; undefined for a view without one. */
+  const questionOf = (view: object) => ("question" in view ? view.question : undefined);
+
+  for (const mode of ["classic", "racer", "duel"] as const) {
+    test(`${SHARED_MODES[mode].name} shows the question on the host and phone views without options before it opens, then with them and its deadline`, () => {
+      const [noel] = openLobby(mode, ["Noel", "Holly"]);
+      send(host, { type: "host.start", pacing: "manual" });
+      const views = () => [questionOf(hub.hostView()), questionOf(hub.game!.playerView(noel!.playerId)!)];
+      expect(["intro", "confidence"]).toContain(hub.hostView().phase);
+      for (const question of views()) expect(question).toMatchObject({ index: 0, text: "One", options: [] });
+      send(host, { type: "host.skip" });
+      expect(hub.hostView().phase).toBe("open");
+      for (const question of views()) expect(question).toMatchObject({ index: 0, text: "One", options: ["True", "False"], remainingMs: 20_000 });
+      clock.advance(20_000 + GRACE_MS);
+      expect(hub.hostView().phase).toBe("reveal");
+      for (const question of views()) expect(question).toMatchObject({ options: ["True", "False"], remainingMs: 0 });
+    });
+  }
 });
 
 describe("Game modes", () => {

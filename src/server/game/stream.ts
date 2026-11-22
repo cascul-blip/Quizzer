@@ -87,9 +87,10 @@ export class QuestionStream {
 
   /**
    * The question and answer feedback a Streamed question mode puts in a phone view.
-   * Feedback shows only while the mode says the player is answering; the question
-   * shows while `asking` (by default the same), for modes that answer a question
-   * and then do something else while the flash is still running.
+   * Feedback shows only while the mode says the player is answering. The question shows while
+   * `asking` (by default the same): a mode's answer can move the player on to something else
+   * (Tower's decision, Cup's safe step, Gift's bonus round) while the feedback flash still runs,
+   * so the flash outlives the question. The errors are on the host's view: see `errorsWhen`.
    */
   fragment(player: AnswerTotals, answering: boolean, asking = answering): StreamFragment {
     return { question: asking ? this.questionView(player) : null, feedback: answering ? this.feedbackView(player) : null };

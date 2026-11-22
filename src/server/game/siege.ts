@@ -37,7 +37,7 @@ import { modeTheme, THEMED_MODES } from "../../shared/themed-modes.ts";
 import { loadSiegeRecord, saveSiegeRecord } from "../siege-records.ts";
 import type { Clock } from "./common.ts";
 import { GameError, realClock } from "./common.ts";
-import type { LobbyFacts } from "./lobby-facts.ts";
+import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
 import { PhaseTimer } from "./phase-timer.ts";
@@ -186,8 +186,12 @@ export class SiegeGame {
   }
 
   /** Take over a lobby's players (same ids and tokens). */
+  /** What the lobby chose at Start; the next lobby opens with it. */
+  choices!: LobbyChoices;
+
   static fromLobby(lobby: LobbyFacts<"siege">, opts: SiegeOptions = {}): SiegeGame {
     const game = new SiegeGame(lobby.quiz, { ...lobby.settings, shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
+    game.choices = lobby.choices;
     game.roster.adoptFrom(lobby.players, (base) => game.newPlayer(base));
     return game;
   }

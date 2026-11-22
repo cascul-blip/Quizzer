@@ -29,7 +29,7 @@ import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import { modeTheme, THEMED_MODES } from "../../shared/themed-modes.ts";
 import type { Clock } from "./common.ts";
 import { GameError, realClock, teamInfo } from "./common.ts";
-import type { LobbyFacts } from "./lobby-facts.ts";
+import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
 import { GameLengthClock, PhaseTimer } from "./phase-timer.ts";
@@ -133,10 +133,14 @@ export class LandGame {
   }
 
   /** Take over a lobby's players (same ids and tokens), on the teams shown in the lobby. */
+  /** What the lobby chose at Start; the next lobby opens with it. */
+  choices!: LobbyChoices;
+
   static fromLobby(lobby: LobbyFacts<"land">, opts: LandOptions = {}): LandGame {
     const game = new LandGame(lobby.quiz, { ...lobby.settings, shuffleAnswers: lobby.shuffle.answers }, opts);
     const players = [...lobby.players];
     const teams = lobby.teams;
+    game.choices = lobby.choices;
     game.roster.adoptFrom(players, (base) => game.newPlayer(base, teams.get(base.id) ?? 0));
     return game;
   }

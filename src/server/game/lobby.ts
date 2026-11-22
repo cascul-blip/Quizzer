@@ -6,18 +6,11 @@ import type { HostLobbyView, ModeSettingsMap, PlayerView, ShuffleOptions } from 
 import type { Quiz } from "../../shared/quiz-schema.ts";
 import { isSeasonTheme } from "../../shared/themed-modes.ts";
 import { assignTeams, GameError, teamInfo } from "./common.ts";
-import type { LobbyFacts } from "./lobby-facts.ts";
+import type { InitialSettings, LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry, RawSettings } from "./mode-entry.ts";
 import { MODES } from "./modes.ts";
 import type { BasePlayer } from "./roster.ts";
 import { Roster } from "./roster.ts";
-
-export interface LobbyChoices {
-  mode: GameMode;
-  settings: InitialSettings;
-  protect: boolean;
-  pacing: Pacing;
-}
 
 interface LobbyOptions extends Partial<LobbyChoices> {
   rng?: () => number;
@@ -179,7 +172,7 @@ export class Lobby {
     this.onChange();
   }
 
-  /** A lobby holds no timers, so there is nothing to release. */
+  /** The hub closes a lobby like any game: it remembers its `choices`, then disposes of it. A lobby holds no timers. */
   dispose(): void {}
 
   get choices(): LobbyChoices {
@@ -193,6 +186,7 @@ export class Lobby {
       shuffle: { ...this.shuffle },
       protect: MODES[mode].flags.protect && this.protect,
       pacing: this.pacing,
+      choices: this.choices,
       players: [...this.players.values()],
       teams: this.teamCount() === null ? new Map([...this.players.keys()].map((id) => [id, 0])) : new Map(this.teams),
     };
@@ -236,10 +230,6 @@ export class Lobby {
     };
   }
 }
-
-type InitialSettings = {
-  [M in GameMode]?: Partial<Omit<ModeSettingsMap[M], "theme">> & ("theme" extends keyof ModeSettingsMap[M] ? { theme?: string } : object);
-};
 
 /**
  * Every mode's settings: the given ones where there are any (carried over from the last lobby), else the defaults.

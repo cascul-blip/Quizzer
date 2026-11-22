@@ -20,7 +20,7 @@ import { giftShared } from "../../shared/modes/gift.ts";
 import type { Quiz } from "../../shared/quiz-schema.ts";
 import type { Clock } from "./common.ts";
 import { GameError, realClock, shuffle } from "./common.ts";
-import type { LobbyFacts } from "./lobby-facts.ts";
+import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, unhandled } from "./mode-entry.ts";
 import { GameLengthClock, PhaseTimer } from "./phase-timer.ts";
@@ -127,9 +127,13 @@ export class GiftGame {
     return this.stream.registerPlayer({ ...base, score: 0, rounds: 0, goodTaps: 0, dudTaps: 0, powerups: 0, bonus: null });
   }
 
+  /** What the lobby chose at Start; the next lobby opens with it. */
+  choices!: LobbyChoices;
+
   static fromLobby(lobby: LobbyFacts<"gift">, opts: GiftOptions = {}): GiftGame {
     if (!lobby.quiz.questions.length) throw new GameError("This quiz has no questions");
     const game = new GiftGame(lobby.quiz, lobby.settings.minutes, lobby.shuffle.answers, lobby.protect, opts);
+    game.choices = lobby.choices;
     game.roster.adoptFrom(lobby.players, (base) => game.newPlayer(base));
     return game;
   }
@@ -303,7 +307,8 @@ export class GiftGame {
       remainingMs: this.remainingMs(),
       standings,
       mostCorrect: value ? { value, nicknames: standings.filter((player) => player.correct === value).map((player) => player.nickname) } : null,
-      errors: final ? this.stream.errors() : [],
+      // Gift's host view always carries a list, empty until the podium.
+      errors: this.stream.errorsWhen(final) ?? [],
     };
   }
 

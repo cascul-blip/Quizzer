@@ -13,7 +13,7 @@ import type { SeasonTheme } from "../../shared/themed-modes.ts";
 import { modeTheme, THEMED_MODES } from "../../shared/themed-modes.ts";
 import type { Clock } from "./common.ts";
 import { GameError, preparePlayOrder, realClock, shuffle, topErrors } from "./common.ts";
-import type { LobbyFacts } from "./lobby-facts.ts";
+import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
 import { INTRO_MS, PacedRound } from "./paced-round.ts";
@@ -126,8 +126,17 @@ export class RacerGame {
   }
 
   /** Take over a lobby's players (same ids and tokens), its shuffle choices and its pacing. */
+  /** What the lobby chose at Start. */
+  private setup!: LobbyChoices;
+
+  /** The lobby's choices with the pacing as the host left it; the next lobby opens with them. */
+  get choices(): LobbyChoices {
+    return { ...this.setup, pacing: this.pacing };
+  }
+
   static fromLobby(lobby: LobbyFacts<"racer">, opts: RacerOptions = {}): RacerGame {
     const game = new RacerGame(lobby.quiz, { shuffle: lobby.shuffle, pacing: lobby.pacing, theme: lobby.settings.theme }, opts);
+    game.setup = lobby.choices;
     game.roster.adoptFrom(lobby.players, (base) => game.newPlayer(base));
     return game;
   }
