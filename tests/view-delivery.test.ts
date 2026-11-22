@@ -3,6 +3,7 @@ import { PhoneAttachments } from "../src/server/phone-attachments.ts";
 import { ViewDelivery } from "../src/server/view-delivery.ts";
 import type { ClassicView } from "../src/shared/modes/classic.ts";
 import type { HostView, PlayerView, ServerMsg } from "../src/shared/protocol.ts";
+import { FakeClock } from "./helpers.ts";
 import { pastThrottle } from "./hub-harness.ts";
 
 class DeliverySocket {
@@ -46,7 +47,8 @@ const emptyPatch = phoneFrame({ type: "player.patch", ops: [] });
 function setup() {
   const sockets = new PhoneAttachments<DeliverySocket>(() => {});
   const phoneViews = new Map<DeliverySocket, PlayerView>();
-  const state = { now: 0, port: 4321, batches: 0, hostReads: 0, phoneReads: 0 };
+  const clock = new FakeClock();
+  const state = { port: 4321, batches: 0, hostReads: 0, phoneReads: 0 };
   const delivery = new ViewDelivery(
     sockets,
     (): HostView => {
@@ -61,7 +63,7 @@ function setup() {
       state.phoneReads++;
       return phoneViews.get(socket) ?? noGame;
     },
-    () => state.now,
+    clock,
     (send) => {
       state.batches++;
       send();
@@ -72,7 +74,7 @@ function setup() {
     sockets.open(socket);
     return socket;
   }
-  return { delivery, state, sockets, phoneViews, open };
+  return { delivery, state, sockets, phoneViews, open, clock };
 }
 
 describe("View delivery", () => {
@@ -123,7 +125,7 @@ describe("View delivery", () => {
   });
 
   test("refreshes each attachment immediately and sends one trailing update for a burst", async () => {
-    const { delivery, open, state, sockets, phoneViews } = fixture;
+    const { delivery, open, state, sockets, phoneViews, clock } = fixture;
     const phone = open();
     const secondAttachment = open();
     const observer = open();
@@ -139,19 +141,36 @@ describe("View delivery", () => {
     expect(state.batches).toBe(0);
     phoneViews.set(observer, waiting("After activity"));
 
-    await pastThrottle();
+    pastThrottle(clock);
     expect(state.batches).toBe(1);
     expect(observer.frames).toEqual([fullPhoneFrame(waiting("After activity"))]);
     expect(phone.frames).toHaveLength(2);
   });
 
+  test("sends the trailing update exactly 100 ms after the first activity of a burst", () => {
+    const { delivery, open, state, sockets, clock } = fixture;
+    sockets.attach(open(), "ann");
+    const observer = open();
+
+    delivery.onActivity("ann");
+    clock.advance(60);
+    delivery.onActivity("ann");
+    clock.advance(39);
+    expect(state.batches).toBe(0);
+    expect(observer.frames).toEqual([]);
+
+    clock.advance(1);
+    expect(state.batches).toBe(1);
+    expect(observer.frames).toEqual([fullPhoneFrame(noGame)]);
+  });
+
   test("cancels both pending schedules and can schedule a new broadcast", async () => {
-    const { delivery, open, state } = fixture;
+    const { delivery, open, state, clock } = fixture;
     const phone = open();
     delivery.scheduleBroadcast();
     delivery.onActivity("ann");
     delivery.cancelPending();
-    await pastThrottle();
+    pastThrottle(clock);
     expect(phone.frames).toEqual([]);
     expect(state.batches).toBe(0);
 
@@ -185,10 +204,10 @@ describe("View delivery", () => {
   });
 
   test("normalizes countdowns until the deadline changes or the countdown reaches zero", () => {
-    const { delivery, open, state, phoneViews } = fixture;
+    const { delivery, open, phoneViews, clock } = fixture;
     const phone = open();
     function update(now: number, remainingMs: number) {
-      state.now = now;
+      clock.t = now;
       phoneViews.set(phone, { ...timedView, question: { ...timedView.question!, remainingMs } });
       delivery.broadcast();
     }

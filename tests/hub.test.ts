@@ -44,7 +44,7 @@ async function resultsCsv() {
 
 /** The view a phone built from patches matches a fresh snapshot of the same player. */
 async function expectInSync(s: HubSocket) {
-  await pastThrottle();
+  pastThrottle(clock);
   const fresh = new HubSocket(hub);
   fresh.sendMsg({ type: "resume", token: s.token! });
   const st = await fresh.playerState((v) => v.kind !== "none");
@@ -286,6 +286,7 @@ describe("Game mode: Submarine Squad", () => {
     await sam.playerState((v) => v.kind === "submarine" && v.state === "boost");
     clock.advance(BOOST_MIN_HOLD_MS);
     sam.sendMsg({ type: "sub.boost" });
+    pastThrottle(clock);
     const boosted = await host.hostState((v) => v.kind === "submarine" && v.boosts === 1);
     expect(boosted.view.kind === "submarine" && boosted.view.lastBoost?.nickname).toBe("Sam");
     // The boost carries Sam's avatar so the projector can show who boosted.
@@ -352,6 +353,7 @@ describe("Game mode: Tower Fight", () => {
     const watching = await red.playerState((v) => v.kind === "fight" && v.state === "watch" && !!v.shot);
     const shot = watching.view.kind === "fight" ? watching.view.shot! : null;
     expect(shot!.impact).toMatchObject({ kind: "tower", team: 0 });
+    pastThrottle(clock);
     await host.hostState((v) => v.kind === "fight" && v.shots.some((s) => s.id === shot!.id));
     clock.advance(shot!.durationMs);
     const hit = await host.hostState((v) => v.kind === "fight" && v.teams[0]!.damage === 1);
@@ -721,6 +723,7 @@ describe("Game mode: Land Grab", () => {
     await ann.playerState((v) => v.kind === "land" && v.claims === 3);
     ann.sendMsg({ type: "land.place", tile: 0 });
     await ann.playerState((v) => v.kind === "land" && v.claims === 2 && v.board?.owners[0] === 0);
+    pastThrottle(clock);
     const placed = await host.hostState((v) => v.kind === "land" && v.lastPlace?.tile === 0);
     expect(placed.view.kind === "land" && placed.view.teams.map((t) => t.tiles)).toEqual([2, 1]);
     await expectInSync(ann);
@@ -838,6 +841,7 @@ describe("Game mode: Racer", () => {
     await host.hostState((v) => v.kind === "racer" && v.phase === "open" && v.confidence === "low");
     await players[0]!.playerState((v) => v.kind === "racer" && v.phase === "open");
     players[0]!.sendMsg({ type: "racer.answer", index: 1, option: 1 });
+    pastThrottle(clock);
     await host.hostState((v) => v.kind === "racer" && v.phase === "open" && v.answeredCount === 1);
     host.sendMsg({ type: "host.skip" });
     const failed = await host.hostState((v) => v.kind === "racer" && v.phase === "reveal" && v.lastTurn?.index === 1);
@@ -934,6 +938,7 @@ describe("Game mode: Showdown", () => {
     host.sendMsg({ type: "host.skip" });
     await players[0]!.playerState((v) => v.kind === "duel" && v.phase === "open" && v.question!.options.length === 2);
     players[0]!.sendMsg({ type: "duel.answer", index: 0, option: 0 });
+    pastThrottle(clock);
     await host.hostState((v) => v.kind === "duel" && v.phase === "open" && v.answeredCount === 1);
     await players[1]!.playerState((v) => v.kind === "duel" && v.phase === "open");
     players[1]!.sendMsg({ type: "duel.answer", index: 0, option: 1 });
@@ -1136,6 +1141,7 @@ describe("Game mode: Gift Grab", () => {
       clock.advance(GIFT_READY_MS + item.from);
       player.sendMsg({ type: "gift.tap", round: bonus.round, item: item.id });
       await player.playerState((v) => v.kind === "gift" && v.score === 10);
+      pastThrottle(clock);
       await host.hostState((v) => v.kind === "gift" && v.standings[0]?.score === 10 && v.standings[0]?.inBonus);
 
       player.close();
