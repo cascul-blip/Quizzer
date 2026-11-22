@@ -12,11 +12,11 @@ import { applyRacerTurn, newRacerCar, RACER_CONFIDENCE_LEVELS } from "../../shar
 import type { SeasonTheme } from "../../shared/themed-modes.ts";
 import { modeTheme, THEMED_MODES } from "../../shared/themed-modes.ts";
 import type { Clock } from "./common.ts";
-import { AUTO_REVEAL_MS, GameError, GRACE_MS, preparePlayOrder, realClock, shuffle, topErrors } from "./common.ts";
+import { GameError, preparePlayOrder, realClock, shuffle, topErrors } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
-import { PhaseTimer } from "./phase-timer.ts";
+import { INTRO_MS, PacedRound } from "./paced-round.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
@@ -24,8 +24,8 @@ import { Roster } from "./roster.ts";
 
 export { AUTO_REVEAL_MS, GRACE_MS } from "./common.ts";
 
-/** A turn without a driver shows the question this long before the options. */
-export const INTRO_MS = 3000;
+/** A turn without a driver shows the question this long before the options (INTRO_MS). */
+export { INTRO_MS };
 /** The driver has this long to set the lever; then it is locked where it is. */
 export const CONFIDENCE_MS = 20_000;
 
@@ -81,8 +81,6 @@ export class RacerGame {
   /** Play order, shuffled if the lobby asked for it. */
   readonly questions: Question[];
   readonly roster = new Roster<RacerPlayer>();
-  qIndex = -1;
-  pacing: Pacing;
   car: RacerCar = newRacerCar();
   /** This turn's driver, as they were when the turn started. */
   driver: RacerDriver | null = null;
@@ -100,7 +98,7 @@ export class RacerGame {
   private readonly rng: () => number;
   /** Player ids still to drive in this round of the bag. */
   private bag: string[] = [];
-  private readonly phases: PhaseTimer<RacerPhase>;
+  private readonly paced: PacedRound<"confidence" | "podium">;
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: RacerGame) => void;
@@ -111,10 +109,17 @@ export class RacerGame {
     this.quizId = quiz.id;
     this.title = quiz.title;
     this.clock = opts.clock ?? realClock;
-    this.phases = new PhaseTimer(this.clock, "intro");
+    this.paced = new PacedRound<"confidence" | "podium">(this.clock, {
+      initial: "intro",
+      pacing: settings.pacing ?? "manual",
+      questions: () => this.questions,
+      opensFrom: ["confidence"],
+      settle: () => this.settleQuestion(),
+      advance: () => this.afterReveal(),
+      onChange: () => this.onChange(),
+    });
     this.rng = opts.rng ?? Math.random;
     this.questions = preparePlayOrder(quiz.questions, settings.shuffle, this.rng);
-    this.pacing = settings.pacing ?? "manual";
     this.onChange = opts.onChange ?? (() => {});
     this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
@@ -128,16 +133,24 @@ export class RacerGame {
   }
 
   get phase(): RacerPhase {
-    return this.phases.phase;
+    return this.paced.phase;
+  }
+
+  get qIndex(): number {
+    return this.paced.qIndex;
+  }
+
+  get pacing(): Pacing {
+    return this.paced.pacing;
   }
 
   /** When the current phase's countdown ends; 0 when it has none. */
   get phaseEndsAt(): number {
-    return this.phases.endsAt;
+    return this.paced.phases.endsAt;
   }
 
   get phaseDurationMs(): number {
-    return this.phases.durationMs;
+    return this.paced.phases.durationMs;
   }
 
   get players(): Map<string, RacerPlayer> {
@@ -145,7 +158,7 @@ export class RacerGame {
   }
 
   get currentQuestion(): Question | null {
-    return this.questions[this.qIndex] ?? null;
+    return this.paced.currentQuestion;
   }
 
   private newPlayer(base: BasePlayer): RacerPlayer {
@@ -227,11 +240,10 @@ export class RacerGame {
   answer(playerId: string, qIndex: number, answer: AnswerValue): boolean {
     const p = this.players.get(playerId);
     const q = this.currentQuestion;
-    if (!p || !q || this.phase !== "open" || qIndex !== this.qIndex) return false;
+    if (!p || !q || !this.paced.accepts(qIndex)) return false;
     if (p.answers[qIndex]) return false;
     const correct = checkAnswer(q, answer);
     if (correct === null) return false;
-    if (this.clock.now() > this.phases.endsAt + GRACE_MS) return false;
     p.answers[qIndex] = { ...(typeof answer === "string" ? { option: -1, text: answer.slice(0, MAX_TYPED_ANSWER) } : { option: answer }), correct };
     if (!this.maybeCloseEarly()) this.onActivity(p.id);
     return true;
@@ -242,30 +254,24 @@ export class RacerGame {
   start(pacing?: Pacing): void {
     if (this.qIndex >= 0) throw new GameError("The game has already started");
     if (this.players.size === 0) throw new GameError("Wait for at least one player to join");
-    if (pacing) this.pacing = pacing;
+    if (pacing) this.paced.pacing = pacing;
     this.beginTurn(0);
   }
 
   setPacing(pacing: Pacing): void {
-    this.pacing = pacing;
-    if (this.phase === "reveal") {
-      this.phases.cancelPhase();
-      this.scheduleAuto();
-    }
+    this.paced.setPacing(pacing);
     this.onChange();
   }
 
   /** Advance to whatever comes next from the current phase. */
   next(): void {
     switch (this.phase) {
-      case "intro":
-        return this.openQuestion();
       case "confidence":
         return this.lockIn();
+      case "intro":
       case "open":
-        return this.closeQuestion();
       case "reveal":
-        return this.afterReveal();
+        return this.paced.next();
       case "podium":
         return;
     }
@@ -273,50 +279,42 @@ export class RacerGame {
 
   /** Cut the current countdown short: straight to the options, lock the lever where it is, or close the question. */
   skip(): void {
-    if (this.phase === "intro") this.openQuestion();
-    else if (this.phase === "confidence") this.lockIn();
-    else if (this.phase === "open") this.closeQuestion();
+    if (this.phase === "confidence") this.lockIn();
+    else this.paced.skip();
   }
 
   /** Host ends the game now. An open question is settled first; a turn that hadn't opened yet is dropped. */
   end(): void {
     if (this.phase === "podium") return;
-    if (this.phase === "open") this.closeQuestion();
+    if (this.phase === "open") this.paced.close();
     this.finish();
   }
 
   dispose(): void {
-    this.phases.dispose();
+    this.paced.phases.dispose();
   }
 
   // ---------- state machine ----------
 
   private beginTurn(index: number): void {
-    this.qIndex = index;
+    this.paced.begin(index);
     this.lever = null;
     this.confidence = null;
     const driver = this.car.crashed ? null : this.pickDriver();
     this.driver = driver && { id: driver.id, nickname: driver.nickname, avatar: driver.avatar };
     if (driver) {
       this.lever = RACER_CONFIDENCE_LEVELS[0]!;
-      this.phases.set("confidence", CONFIDENCE_MS, () => this.lockIn());
+      this.paced.phases.set("confidence", CONFIDENCE_MS, () => this.lockIn());
+      this.onChange();
     } else {
-      this.phases.set("intro", INTRO_MS, () => this.openQuestion());
+      this.paced.intro(index);
     }
-    this.onChange();
   }
 
   private lockIn(): void {
     if (this.phase !== "confidence") return;
     this.confidence = this.lever;
-    this.openQuestion();
-  }
-
-  private openQuestion(): void {
-    const q = this.currentQuestion;
-    if ((this.phase !== "intro" && this.phase !== "confidence") || !q) return;
-    this.phases.set("open", q.timeLimitSec * 1000, () => this.closeQuestion(), { graceMs: GRACE_MS });
-    this.onChange();
+    this.paced.open();
   }
 
   /** Close as soon as every connected player has answered. Returns whether it closed. */
@@ -324,12 +322,12 @@ export class RacerGame {
     if (this.phase !== "open") return false;
     const connected = [...this.players.values()].filter((p) => p.connected);
     if (connected.length === 0 || !connected.every((p) => p.answers[this.qIndex])) return false;
-    this.closeQuestion();
+    this.paced.close();
     return true;
   }
 
-  private closeQuestion(): void {
-    if (this.phase !== "open") return;
+  /** Apply the turn to the shared car and tally the question that just closed. */
+  private settleQuestion(): void {
     const players = [...this.players.values()];
     let correct = 0;
     let total = 0;
@@ -357,9 +355,6 @@ export class RacerGame {
     }
     this.lastTurn = { index: this.qIndex, driver: this.driver, ...summary };
     this.turns++;
-    this.phases.enter("reveal");
-    this.scheduleAuto();
-    this.onChange();
   }
 
   private afterReveal(): void {
@@ -370,19 +365,12 @@ export class RacerGame {
 
   private finish(): void {
     if (this.phase === "podium") return;
-    this.phases.enter("podium");
+    this.paced.phases.enter("podium");
     this.driver = null;
     this.lever = null;
     this.confidence = null;
     this.onFinish(this);
     this.onChange();
-  }
-
-  /** The reveal waits for the host, or moves on by itself with auto pacing. */
-  private scheduleAuto(): void {
-    if (this.phase !== "reveal") return;
-    if (this.pacing === "auto") this.phases.set("reveal", AUTO_REVEAL_MS, () => this.afterReveal());
-    else this.phases.enter("reveal");
   }
 
   // ---------- results ----------
@@ -409,24 +397,11 @@ export class RacerGame {
   // ---------- views ----------
 
   private remainingMs(): number {
-    return this.phases.remainingMs();
+    return this.paced.phases.remainingMs();
   }
 
   private questionView(): QuestionView | null {
-    const q = this.currentQuestion;
-    if (!q || this.phase === "podium") return null;
-    return {
-      index: this.qIndex,
-      total: this.questions.length,
-      type: q.type,
-      text: q.text,
-      ...(q.image ? { image: q.image } : {}),
-      timeLimitSec: q.timeLimitSec,
-      // A typed question's accepted answers stay hidden until the reveal.
-      options: this.phase === "intro" || this.phase === "confidence" || (q.type === "text" && this.phase !== "reveal") ? [] : q.options,
-      ...(q.spots && this.phase !== "intro" && this.phase !== "confidence" ? { spots: q.spots } : {}),
-      remainingMs: this.phase === "reveal" ? 0 : this.remainingMs(),
-    };
+    return this.phase === "podium" ? null : this.paced.view();
   }
 
   hostView(): HostRacerState {

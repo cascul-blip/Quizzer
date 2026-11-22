@@ -1,0 +1,165 @@
+import type { Pacing, QuestionView } from "../../shared/mode-views.ts";
+import type { Question } from "../../shared/quiz-schema.ts";
+import type { Clock } from "./common.ts";
+import { AUTO_REVEAL_MS, GRACE_MS } from "./common.ts";
+import { PhaseTimer } from "./phase-timer.ts";
+
+/** How long a paced question shows before its options. */
+export const INTRO_MS = 3000;
+
+/** The phases every paced mode shares; a mode adds its own (a lobby, a confidence step, a leaderboard, a podium). */
+export type PacedPhase = "intro" | "open" | "reveal";
+
+interface PacedRoundOptions<Extra extends string> {
+  /** The phase before the game starts: "intro" for a mode that starts at once, "lobby" for Classic. */
+  initial: PacedPhase | Extra;
+  pacing: Pacing;
+  /** The play order. Read each time, as Classic reshuffles it when the game starts. */
+  questions: () => readonly Question[];
+  /** The mode's own phases the question opens from, as Racer's confidence step. They show no options, like the intro. */
+  opensFrom?: readonly Extra[];
+  /** The mode's own phases that still show the answers after the reveal, as Classic's leaderboard. */
+  afterReveal?: readonly Extra[];
+  /** Auto-paced reveals run behind the scenes with no countdown in views (Classic), or count down (Racer, Showdown). */
+  hideAutoCountdown?: boolean;
+  /** Settle the question that just closed: scores, rewards, the mode's own tallies. The round then moves to the reveal. */
+  settle: () => void;
+  /** Move on from the reveal: the next question, or the end of the game. Called by the host's next or by auto pacing. */
+  advance: () => void;
+  onChange: () => void;
+}
+
+/**
+ * The Paced question round that Classic, Racer and Showdown compose: the question index, the intro → open → reveal
+ * cycle with its deadline and grace, auto-reveal, pacing, and the question view. A mode brings what it adds
+ * through hooks: how a question settles, what comes after the reveal, and its own phases, which it sets on `phases`.
+ */
+export class PacedRound<Extra extends string = never> {
+  /** The mode's phase timer; a mode sets its own phases on it. */
+  readonly phases: PhaseTimer<PacedPhase | Extra>;
+  /** Index of the current question in the play order; -1 before the first. */
+  qIndex = -1;
+  pacing: Pacing;
+  /** The clock time the current question opened. */
+  openedAt = 0;
+
+  constructor(
+    private readonly clock: Clock,
+    private readonly opts: PacedRoundOptions<Extra>,
+  ) {
+    this.phases = new PhaseTimer<PacedPhase | Extra>(clock, opts.initial);
+    this.pacing = opts.pacing;
+  }
+
+  get phase(): PacedPhase | Extra {
+    return this.phases.phase;
+  }
+
+  get currentQuestion(): Question | null {
+    return this.opts.questions()[this.qIndex] ?? null;
+  }
+
+  /** Show question `index` for the intro, then open it. */
+  intro(index: number): void {
+    this.qIndex = index;
+    this.phases.set("intro", INTRO_MS, () => this.open());
+    this.opts.onChange();
+  }
+
+  /** Point at question `index` while the mode runs a phase of its own before opening it. */
+  begin(index: number): void {
+    this.qIndex = index;
+  }
+
+  /** Open the current question from the intro (or a phase of the mode's that it opens from); answers are taken until the deadline plus grace. */
+  open(): void {
+    const q = this.currentQuestion;
+    const from = this.phase;
+    if (!q || (from !== "intro" && !this.isOneOf(from, this.opts.opensFrom))) return;
+    this.openedAt = this.clock.now();
+    this.phases.set("open", q.timeLimitSec * 1000, () => this.close(), { graceMs: GRACE_MS });
+    this.opts.onChange();
+  }
+
+  /** Whether an answer to question `qIndex` arriving now is in time: the question is open and the deadline plus grace has not passed. */
+  accepts(qIndex: number): boolean {
+    return this.phase === "open" && qIndex === this.qIndex && this.clock.now() <= this.phases.endsAt + GRACE_MS;
+  }
+
+  /** Milliseconds from the question opening to now. */
+  elapsedMs(): number {
+    return Math.max(0, this.clock.now() - this.openedAt);
+  }
+
+  /** Close the open question: the mode settles it, and the reveal starts. */
+  close(): void {
+    if (this.phase !== "open") return;
+    this.opts.settle();
+    this.phases.enter("reveal");
+    this.scheduleAuto();
+    this.opts.onChange();
+  }
+
+  /** Advance from the current phase: intro → open → reveal → what the mode does next. A phase of the mode's own is its to handle. */
+  next(): void {
+    if (this.phase === "intro") this.open();
+    else if (this.phase === "open") this.close();
+    else if (this.phase === "reveal") this.moveOn();
+  }
+
+  /** Cut the intro or the open question short. */
+  skip(): void {
+    if (this.phase === "intro") this.open();
+    else if (this.phase === "open") this.close();
+  }
+
+  /** Change pacing; a reveal already waiting is rescheduled. The mode reports the change itself. */
+  setPacing(pacing: Pacing): void {
+    this.pacing = pacing;
+    if (this.phase === "reveal") {
+      this.phases.cancelPhase();
+      this.scheduleAuto();
+    }
+  }
+
+  /** The reveal waits for the host, or moves on by itself after AUTO_REVEAL_MS with auto pacing. */
+  scheduleAuto(): void {
+    if (this.phase !== "reveal") return;
+    if (this.pacing === "auto") this.phases.set("reveal", AUTO_REVEAL_MS, () => this.moveOn(), { hidden: this.opts.hideAutoCountdown });
+    else this.phases.enter("reveal");
+  }
+
+  private moveOn(): void {
+    if (this.phase === "reveal") this.opts.advance();
+  }
+
+  /** Whether the current question's answers are shown: from the reveal on, until the next question. */
+  get revealed(): boolean {
+    const phase = this.phase;
+    return phase === "reveal" || this.isOneOf(phase, this.opts.afterReveal);
+  }
+
+  private isOneOf(phase: PacedPhase | Extra, phases: readonly Extra[] | undefined): boolean {
+    return !!phases?.some((p) => p === phase);
+  }
+
+  /** The question as the host and phones see it: no options before it opens, no typed-answer key until the reveal. Null when there is no current question. */
+  view(): QuestionView | null {
+    const q = this.currentQuestion;
+    if (!q) return null;
+    const phase = this.phase;
+    const beforeOpen = phase === "intro" || this.isOneOf(phase, this.opts.opensFrom);
+    return {
+      index: this.qIndex,
+      total: this.opts.questions().length,
+      type: q.type,
+      text: q.text,
+      ...(q.image ? { image: q.image } : {}),
+      timeLimitSec: q.timeLimitSec,
+      // A typed question's accepted answers stay hidden until the reveal.
+      options: beforeOpen || (q.type === "text" && !this.revealed) ? [] : q.options,
+      ...(q.spots && !beforeOpen ? { spots: q.spots } : {}),
+      remainingMs: this.revealed ? 0 : this.phases.remainingMs(),
+    };
+  }
+}

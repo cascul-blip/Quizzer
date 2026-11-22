@@ -7,8 +7,8 @@ import type { ClassicPhase, HostClassicState, RankedEntry } from "../../shared/m
 import type { PlayerView, ShuffleOptions } from "../../shared/protocol.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import type { Clock } from "./common.ts";
-import { AUTO_REVEAL_MS, GameError, GRACE_MS, preparePlayOrder, realClock, topErrors } from "./common.ts";
-import { PhaseTimer } from "./phase-timer.ts";
+import { GameError, preparePlayOrder, realClock, topErrors } from "./common.ts";
+import { INTRO_MS, PacedRound } from "./paced-round.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
@@ -17,7 +17,7 @@ import { rankScores, scoreAnswer } from "./scoring.ts";
 
 export { AUTO_REVEAL_MS, type Clock, GameError, GRACE_MS, preparePlayOrder } from "./common.ts";
 
-export const INTRO_MS = 3000;
+export { INTRO_MS };
 export const AUTO_LEADERBOARD_MS = 5000;
 const LEADERBOARD_SIZE = 10;
 
@@ -58,17 +58,14 @@ export class ClassicGame {
   readonly title: string;
   /** Play order; fixed (and shuffled if chosen) when the game starts. */
   questions: Question[];
-  qIndex = -1;
-  pacing: Pacing;
   shuffle: ShuffleOptions;
   readonly runningMode = "classic" as const;
-  openedAt = 0;
   readonly roster = new Roster<Player>();
 
   private readonly clock: Clock;
   private readonly rng: () => number;
   private readonly source: Question[];
-  private readonly phases: PhaseTimer<ClassicPhase | "lobby">;
+  private readonly paced: PacedRound<"lobby" | "leaderboard" | "podium">;
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: ClassicGame) => void;
@@ -84,20 +81,40 @@ export class ClassicGame {
     this.shuffle = opts.shuffle ?? { questions: quiz.settings.shuffleQuestions, answers: quiz.settings.shuffleAnswers };
     this.rng = opts.rng ?? Math.random;
     this.clock = opts.clock ?? realClock;
-    this.phases = new PhaseTimer(this.clock, "lobby");
-    this.pacing = opts.pacing ?? "manual";
+    this.paced = new PacedRound<"lobby" | "leaderboard" | "podium">(this.clock, {
+      initial: "lobby",
+      pacing: opts.pacing ?? "manual",
+      questions: () => this.questions,
+      afterReveal: ["leaderboard"],
+      hideAutoCountdown: true,
+      settle: () => this.settleQuestion(),
+      advance: () => this.afterReveal(),
+      onChange: () => this.onChange(),
+    });
     this.onChange = opts.onChange ?? (() => {});
     this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
   }
 
   get phase(): ClassicPhase | "lobby" {
-    return this.phases.phase;
+    return this.paced.phase;
+  }
+
+  get qIndex(): number {
+    return this.paced.qIndex;
+  }
+
+  get pacing(): Pacing {
+    return this.paced.pacing;
+  }
+
+  get openedAt(): number {
+    return this.paced.openedAt;
   }
 
   /** When the current phase's countdown ends (intro/open), for views; 0 when it has none. */
   get phaseEndsAt(): number {
-    return this.phases.endsAt;
+    return this.paced.phases.endsAt;
   }
 
   get players(): Map<string, Player> {
@@ -105,7 +122,7 @@ export class ClassicGame {
   }
 
   get currentQuestion(): Question | null {
-    return this.questions[this.qIndex] ?? null;
+    return this.paced.currentQuestion;
   }
 
   // ---------- players ----------
@@ -154,13 +171,11 @@ export class ClassicGame {
   answer(playerId: string, qIndex: number, answer: AnswerValue): boolean {
     const p = this.players.get(playerId);
     const q = this.currentQuestion;
-    if (!p || !q || this.phase !== "open" || qIndex !== this.qIndex) return false;
+    if (!p || !q || !this.paced.accepts(qIndex)) return false;
     if (p.answers[qIndex]) return false;
     const correct = checkAnswer(q, answer);
     if (correct === null) return false;
-    const now = this.clock.now();
-    if (now > this.phases.endsAt + GRACE_MS) return false;
-    const ms = Math.max(0, now - this.openedAt);
+    const ms = this.paced.elapsedMs();
     const choice = typeof answer === "string" ? { option: -1, text: answer.slice(0, MAX_TYPED_ANSWER) } : { option: answer };
     p.answers[qIndex] = { ...choice, correct, points: scoreAnswer(correct, ms, q.timeLimitSec), ms };
     this.onActivity(playerId);
@@ -174,7 +189,7 @@ export class ClassicGame {
     if (this.phase !== "lobby") throw new GameError("The game has already started");
     if (this.questions.length === 0) throw new GameError("This quiz has no questions");
     if (this.players.size === 0) throw new GameError("Wait for at least one player to join");
-    if (pacing) this.pacing = pacing;
+    if (pacing) this.paced.pacing = pacing;
     this.questions = preparePlayOrder(this.source, this.shuffle, this.rng);
     this.enterIntro(0);
   }
@@ -186,10 +201,10 @@ export class ClassicGame {
   }
 
   setPacing(pacing: Pacing): void {
-    this.pacing = pacing;
-    if (this.phase === "reveal" || this.phase === "leaderboard") {
-      this.phases.cancelPhase();
-      this.scheduleAuto();
+    this.paced.setPacing(pacing);
+    if (this.phase === "leaderboard") {
+      this.paced.phases.cancelPhase();
+      this.scheduleLeaderboardAuto();
     }
     this.onChange();
   }
@@ -200,11 +215,9 @@ export class ClassicGame {
       case "lobby":
         return this.start();
       case "intro":
-        return this.openQuestion();
       case "open":
-        return this.closeQuestion();
       case "reveal":
-        return this.afterReveal();
+        return this.paced.next();
       case "leaderboard":
         return this.enterIntro(this.qIndex + 1);
       case "podium":
@@ -213,73 +226,59 @@ export class ClassicGame {
   }
 
   skip(): void {
-    if (this.phase === "intro") this.openQuestion();
-    else if (this.phase === "open") this.closeQuestion();
+    this.paced.skip();
   }
 
   end(): void {
     if (this.phase === "podium") return;
-    if (this.phase === "open") this.closeQuestion();
+    if (this.phase === "open") this.paced.close();
     this.finish();
   }
 
   dispose(): void {
-    this.phases.dispose();
+    this.paced.phases.dispose();
   }
 
   // ---------- state machine ----------
 
   private enterIntro(index: number): void {
-    this.qIndex = index;
-    this.phases.set("intro", INTRO_MS, () => this.openQuestion());
-    this.onChange();
-  }
-
-  private openQuestion(): void {
-    const q = this.currentQuestion;
-    if (this.phase !== "intro" || !q) return;
-    this.openedAt = this.clock.now();
-    this.phases.set("open", q.timeLimitSec * 1000, () => this.closeQuestion(), { graceMs: GRACE_MS });
-    this.onChange();
+    this.paced.intro(index);
   }
 
   private maybeCloseEarly(): void {
     if (this.phase !== "open") return;
     const connected = [...this.players.values()].filter((p) => p.connected);
-    if (connected.length > 0 && connected.every((p) => p.answers[this.qIndex])) this.closeQuestion();
+    if (connected.length > 0 && connected.every((p) => p.answers[this.qIndex])) this.paced.close();
   }
 
-  private closeQuestion(): void {
-    if (this.phase !== "open") return;
+  /** Score the question that just closed. */
+  private settleQuestion(): void {
     for (const p of this.players.values()) {
       const ans = p.answers[this.qIndex];
       p.score += ans?.points ?? 0;
       p.lastDelta = ans?.points ?? 0;
       p.streak = ans?.correct ? p.streak + 1 : 0;
     }
-    this.phases.enter("reveal");
-    this.scheduleAuto();
-    this.onChange();
   }
 
   private afterReveal(): void {
     if (this.qIndex >= this.questions.length - 1) return this.finish();
-    this.phases.enter("leaderboard");
-    this.scheduleAuto();
+    this.paced.phases.enter("leaderboard");
+    this.scheduleLeaderboardAuto();
     this.onChange();
   }
 
   private finish(): void {
-    this.phases.enter("podium");
+    this.paced.phases.enter("podium");
     this.onFinish(this);
     this.onChange();
   }
 
-  private scheduleAuto(): void {
-    if (this.pacing !== "auto") return;
-    // The timer runs behind the scenes: views show no countdown for an auto-paced reveal or leaderboard.
-    if (this.phase === "reveal") this.phases.set("reveal", AUTO_REVEAL_MS, () => this.afterReveal(), { hidden: true });
-    else if (this.phase === "leaderboard") this.phases.set("leaderboard", AUTO_LEADERBOARD_MS, () => this.enterIntro(this.qIndex + 1), { hidden: true });
+  private scheduleLeaderboardAuto(): void {
+    // The timer runs behind the scenes: views show no countdown for an auto-paced leaderboard.
+    if (this.pacing === "auto" && this.phase === "leaderboard") {
+      this.paced.phases.set("leaderboard", AUTO_LEADERBOARD_MS, () => this.enterIntro(this.qIndex + 1), { hidden: true });
+    }
   }
 
   // ---------- views ----------
@@ -310,24 +309,11 @@ export class ClassicGame {
   }
 
   private questionView(): QuestionView | null {
-    const q = this.currentQuestion;
-    if (!q || this.phase === "lobby" || this.phase === "podium") return null;
-    return {
-      index: this.qIndex,
-      total: this.questions.length,
-      type: q.type,
-      text: q.text,
-      ...(q.image ? { image: q.image } : {}),
-      timeLimitSec: q.timeLimitSec,
-      // A typed question's accepted answers stay hidden until the reveal.
-      options: this.phase === "intro" || (q.type === "text" && !this.revealed) ? [] : q.options,
-      ...(q.spots && this.phase !== "intro" ? { spots: q.spots } : {}),
-      remainingMs: this.phases.remainingMs(),
-    };
+    return this.phase === "lobby" || this.phase === "podium" ? null : this.paced.view();
   }
 
   private get revealed(): boolean {
-    return this.phase === "reveal" || this.phase === "leaderboard";
+    return this.paced.revealed;
   }
 
   hostView(): HostClassicState {
