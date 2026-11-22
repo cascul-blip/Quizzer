@@ -66,6 +66,26 @@ describe("Coding standards: mode entries", () => {
   });
 });
 
+/** A real timer or wall-clock read: server timing goes through the injected Clock (src/server/game/common.ts) so tests can control it. */
+const REAL_TIME = /(?<![.\w])(?:setTimeout|clearTimeout|setInterval|clearInterval)\s*\(|\bDate\s*\.\s*now\s*\(/;
+/** realClock is the one real adapter; the quiz store stamps revisions with wall time, which no game rule reads. */
+const REAL_TIME_ALLOWED = ["src/server/game/common.ts", "src/server/quiz/store.ts"];
+
+describe("Coding standards: server time", () => {
+  test("server code reads time and sets timers through the injected Clock", () => {
+    const files = sources.filter(({ path }) => !REAL_TIME_ALLOWED.includes(relative(ROOT, path)));
+    expect(offending(REAL_TIME, files)).toEqual([]);
+  });
+
+  test("the time guard flags real timers and Date.now, and accepts the Clock", () => {
+    expect(REAL_TIME.test("this.timer = setTimeout(() => this.flush(), 100);")).toBe(true);
+    expect(REAL_TIME.test("clearTimeout(this.timer);")).toBe(true);
+    expect(REAL_TIME.test("const now = Date.now();")).toBe(true);
+    expect(REAL_TIME.test("this.timer = this.clock.setTimeout(() => this.flush(), 100);")).toBe(false);
+    expect(REAL_TIME.test("this.clock.clearTimeout(this.timer);")).toBe(false);
+  });
+});
+
 /** HubSocket owns opening in-memory sockets. */
 const DIRECT_SOCKET_OPEN = /\.\s*onOpen\s*\(/;
 /** A temp directory cleaned up in a test's own finally block instead of an afterEach. */
@@ -107,8 +127,13 @@ const testFiles = readdirSync(join(ROOT, "tests"))
   .filter((name) => /\.test\.tsx?$/.test(name) && name !== "standards.test.ts")
   .map((name) => ({ path: `tests/${name}`, text: readFileSync(join(ROOT, "tests", name), "utf8") }));
 
-/** Bun.sleep or a timer-based pause used as a wait in a test. */
-const SLEEP_WAIT = /\bBun\s*\.\s*sleep\s*\(/;
+/** Bun.sleep, or a promise resolved by a real timer after a fixed delay, used as a wait. setTimeout(r, 0) only lets pending work run. */
+const SLEEP_WAIT = /\bBun\s*\.\s*sleep\s*\(|\bsetTimeout\s*\(\s*\w+\s*,\s*[1-9]/;
+
+/** Test helpers (hub-harness.ts, helpers.ts) as well as test files: a wait hidden in a helper is still a wait. */
+const testSources = readdirSync(join(ROOT, "tests"))
+  .filter((name) => /\.tsx?$/.test(name) && name !== "standards.test.ts")
+  .map((name) => ({ path: `tests/${name}`, text: readFileSync(join(ROOT, "tests", name), "utf8") }));
 
 describe("Coding standards: tests", () => {
   test("finds the test files", () => {
@@ -124,13 +149,17 @@ describe("Coding standards: tests", () => {
     expect(DIRECT_SOCKET_OPEN.test("new HubSocket(hub)")).toBe(false);
   });
 
-  test("tests wait on an event or the controlled clock, not on Bun.sleep", () => {
-    expect(testFiles.filter(({ text }) => SLEEP_WAIT.test(text)).map(({ path }) => path)).toEqual([]);
+  test("tests and their helpers wait on an event or a controlled clock, not on real time", () => {
+    expect(testSources.filter(({ text }) => SLEEP_WAIT.test(text)).map(({ path }) => path)).toEqual([]);
   });
 
-  test("the sleep guard flags Bun.sleep and accepts awaiting an event", () => {
+  test("the sleep guard flags Bun.sleep and fixed timer delays, and accepts events, clocks and a zero delay", () => {
     expect(SLEEP_WAIT.test("await Bun.sleep(100);")).toBe(true);
+    expect(SLEEP_WAIT.test("new Promise((r) => setTimeout(r, 200))")).toBe(true);
     expect(SLEEP_WAIT.test("await nextQr();")).toBe(false);
+    expect(SLEEP_WAIT.test("clock.advance(100);")).toBe(false);
+    expect(SLEEP_WAIT.test("new Promise((r) => setTimeout(r, 0))")).toBe(false);
+    expect(SLEEP_WAIT.test("const timer = setTimeout(r, left);")).toBe(false);
   });
 
   test("shared temp directories are created in setup hooks", () => {

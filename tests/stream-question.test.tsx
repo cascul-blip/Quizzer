@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, describe, expect, jest, test } from "bun:test";
 import { Window } from "happy-dom";
 import { render } from "preact";
 import { act } from "preact/test-utils";
@@ -15,6 +15,7 @@ beforeAll(() => {
   for (const key of globals) Object.defineProperty(globalThis, key, { configurable: true, value: window[key] });
 });
 afterEach(() => {
+  jest.useRealTimers();
   act(() => render(null, root));
   root.remove();
 });
@@ -70,14 +71,19 @@ describe("Streamed phone questions", () => {
     expect(root.querySelector('[role="status"]')?.textContent).toContain("One");
   });
 
-  test("Protect from abuse countdown decreases and feedback disappears", async () => {
+  test("Protect from abuse countdown decreases and feedback disappears", () => {
+    jest.useFakeTimers();
     mount();
     const feedback = { seq: 1, correct: false, remainingMs: 1100, answers: [], penaltyMs: 100 };
     act(() => render(<Feedback feedback={feedback} rightText="Correct" />, root));
     expect(root.textContent).toContain("Next question in 2s");
-    await act(() => new Promise<void>((resolve) => setTimeout(resolve, 180)));
+    act(() => {
+      jest.advanceTimersByTime(180);
+    });
     expect(root.textContent).toContain("Next question in 1s");
-    await act(() => new Promise<void>((resolve) => setTimeout(resolve, 1000)));
+    act(() => {
+      jest.advanceTimersByTime(1000);
+    });
     expect(root.querySelector('[role="status"]')).toBeNull();
   });
 });
