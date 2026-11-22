@@ -48,6 +48,10 @@ _Avoid_: deadline timer, match clock
 A question one player gets on their own phone in a self-paced game mode, such as Tallest Tower or Kingdom Siege. Each player moves through questions at their own speed, and an answer names the question by its sequence number.
 _Avoid_: self-paced question, stream question
 
+**Paced round**:
+The one module that runs the question cycle of a paced mode (Classic, Racer, Showdown): the question index, the intro, the open question with its deadline plus grace, the reveal and its auto-advance after five seconds, the pacing, and the question view. A mode composes it and brings what it adds through hooks (how a question settles, what follows the reveal) and its own phases (Racer's confidence step, Classic's leaderboard).
+_Avoid_: question loop, round engine
+
 **Paced question**:
 A question the whole game answers together, opened and closed for everyone at once, as in Classic, Racer and Showdown. An answer names the question by its index in the quiz.
 _Avoid_: shared question, round question
