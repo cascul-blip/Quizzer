@@ -24,6 +24,7 @@ import { GameError, realClock, shuffle } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
+import { PhaseTimer } from "./phase-timer.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
@@ -96,10 +97,7 @@ export class CupGame {
   /** Cups in front of each player at the start. */
   readonly startCups: number;
   readonly roster = new Roster<CupPlayer>();
-  phase: CupPhase = "countdown";
   round = 0;
-  phaseEndsAt = 0;
-  phaseDurationMs = COUNTDOWN_MS;
   /** Ids of the players who have to drink this round (drink and reveal phases). */
   drinkers: string[] = [];
   reveal: Reveal | null = null;
@@ -108,8 +106,7 @@ export class CupGame {
   private readonly clock: Clock;
   private readonly rng: () => number;
   private readonly stream: QuestionStream;
-  private timer: unknown = null;
-  private stepTimer: unknown = null;
+  private readonly phases: PhaseTimer<CupPhase>;
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: CupGame) => void;
@@ -122,6 +119,7 @@ export class CupGame {
     this.startCups = settings.cups ?? CUP_DEFAULT_CUPS;
     this.theme = modeTheme("cup", settings.theme);
     this.clock = opts.clock ?? realClock;
+    this.phases = new PhaseTimer(this.clock, "countdown", COUNTDOWN_MS);
     this.rng = opts.rng ?? Math.random;
     this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock, settings.protect);
     this.onChange = opts.onChange ?? (() => {});
@@ -138,6 +136,19 @@ export class CupGame {
     );
     game.roster.adoptFrom(lobby.players, (base) => game.newPlayer(base));
     return game;
+  }
+
+  get phase(): CupPhase {
+    return this.phases.phase;
+  }
+
+  /** When the current phase's countdown ends; 0 when it has none. */
+  get phaseEndsAt(): number {
+    return this.phases.endsAt;
+  }
+
+  get phaseDurationMs(): number {
+    return this.phases.durationMs;
   }
 
   get players(): Map<string, CupPlayer> {
@@ -174,19 +185,8 @@ export class CupGame {
 
   start(): void {
     if (this.players.size === 0) throw new GameError("Wait for at least one player to join");
-    this.setPhase("countdown", COUNTDOWN_MS, () => this.beginRound());
+    this.phases.set("countdown", COUNTDOWN_MS, () => this.beginRound());
     this.onChange();
-  }
-
-  private setPhase(phase: CupPhase, ms: number, then: () => void): void {
-    if (this.timer !== null) this.clock.clearTimeout(this.timer);
-    this.phase = phase;
-    this.phaseDurationMs = ms;
-    this.phaseEndsAt = this.clock.now() + ms;
-    this.timer = this.clock.setTimeout(() => {
-      this.timer = null;
-      then();
-    }, ms);
   }
 
   /** Everyone still alive rolls the die: that's how many questions they must get right. */
@@ -200,12 +200,12 @@ export class CupGame {
       p.safe = false;
       p.target = p.outRound === null ? this.rollDie() : 0;
     }
-    this.setPhase("roll", CUP_ROLL_MS, () => this.beginQuiz());
+    this.phases.set("roll", CUP_ROLL_MS, () => this.beginQuiz());
     this.onChange();
   }
 
   private beginQuiz(): void {
-    this.setPhase("quiz", cupQuizMs(this.round), () => this.endQuiz());
+    this.phases.set("quiz", cupQuizMs(this.round), () => this.endQuiz());
     for (const p of this.players.values()) this.stream.open(p);
     this.onChange();
   }
@@ -228,13 +228,13 @@ export class CupGame {
     );
     if (drinkers.length === 0) {
       this.reveal = { seq: ++this.reveals, round: this.round, drinks: [], step: 0 };
-      this.setPhase("reveal", CUP_ALL_SAFE_MS, () => this.afterReveal());
+      this.phases.set("reveal", CUP_ALL_SAFE_MS, () => this.afterReveal());
       this.onChange();
       return;
     }
     // A last cup needs no choosing.
     for (const p of drinkers) if (p.cups <= 1) p.pick = 0;
-    this.setPhase("drink", CUP_DRINK_MS, () => this.pour());
+    this.phases.set("drink", CUP_DRINK_MS, () => this.pour());
     this.onChange();
     this.maybeEndDrinkEarly();
   }
@@ -258,18 +258,17 @@ export class CupGame {
       drinks.push({ id, cup, cupsBefore: p.cups, auto, poisoned: cup === poison });
     }
     this.reveal = { seq: ++this.reveals, round: this.round, drinks, step: -1 };
-    this.setPhase("reveal", drinks.length * (CUP_SIP_MS + CUP_VERDICT_MS), () => this.afterReveal());
+    this.phases.set("reveal", drinks.length * (CUP_SIP_MS + CUP_VERDICT_MS), () => this.afterReveal());
     this.nextStep();
   }
 
   /** Spotlight the next drinker, or show the current one's verdict. */
   private nextStep(): void {
-    this.stepTimer = null;
     const r = this.reveal;
     if (!r || this.phase !== "reveal") return;
     r.step++;
     if (r.step % 2 === 1) this.applyVerdict(r.drinks[(r.step - 1) / 2]!);
-    if (r.step < r.drinks.length * 2 - 1) this.stepTimer = this.clock.setTimeout(() => this.nextStep(), r.step % 2 === 0 ? CUP_SIP_MS : CUP_VERDICT_MS);
+    if (r.step < r.drinks.length * 2 - 1) this.phases.after("step", r.step % 2 === 0 ? CUP_SIP_MS : CUP_VERDICT_MS, () => this.nextStep());
     this.onChange();
   }
 
@@ -289,8 +288,7 @@ export class CupGame {
     // Everything has been shown by now; make sure every verdict is in.
     const r = this.reveal;
     if (r) while (r.step < r.drinks.length * 2 - 1) this.forceStep(r);
-    if (this.stepTimer !== null) this.clock.clearTimeout(this.stepTimer);
-    this.stepTimer = null;
+    this.phases.cancel("step");
     if (this.isOver()) this.finish();
     else this.beginRound();
   }
@@ -316,10 +314,8 @@ export class CupGame {
     // Ending mid-reveal: the drinks already poured still count.
     const r = this.reveal;
     if (this.phase === "reveal" && r) while (r.step < r.drinks.length * 2 - 1) this.forceStep(r);
-    this.clearTimers();
-    this.phase = "podium";
-    this.phaseEndsAt = 0;
-    this.phaseDurationMs = 0;
+    this.phases.dispose();
+    this.phases.enter("podium");
     this.drinkers = [];
     this.reveal = null;
     this.onFinish(this);
@@ -327,14 +323,7 @@ export class CupGame {
   }
 
   dispose(): void {
-    this.clearTimers();
-  }
-
-  private clearTimers(): void {
-    if (this.timer !== null) this.clock.clearTimeout(this.timer);
-    if (this.stepTimer !== null) this.clock.clearTimeout(this.stepTimer);
-    this.timer = null;
-    this.stepTimer = null;
+    this.phases.dispose();
   }
 
   // ---------- players ----------
@@ -443,7 +432,7 @@ export class CupGame {
   // ---------- views ----------
 
   private remainingMs(): number {
-    return this.phaseEndsAt ? Math.max(0, this.phaseEndsAt - this.clock.now()) : 0;
+    return this.phases.remainingMs();
   }
 
   private revealView(): CupRevealView | null {

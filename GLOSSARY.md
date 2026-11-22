@@ -36,6 +36,14 @@ _Avoid_: results table, results CSV (the CSV is the file written from it)
 Kingdom Siege's lanes and squares, with the defenders players place on them, the monsters marching down them, and the castle's hearts. The battlefield decides who hits whom and what may stand where; the projector and the phone's lane map both show it.
 _Avoid_: board, map (the phone's lane map is only a view of it)
 
+**Phase timer**:
+The one timer a game mode's server class keeps for the phase it is in, built on the injected clock. Setting a phase cancels the previous phase's pending continuation, so a stale timer cannot fire. It reports the phase's remaining time and progress, and holds the mode's other timers (Robot Attack's warning before a round ends, a player's cooldown) in named slots that are cancelled when replaced and on dispose.
+_Avoid_: countdown timer, phase clock
+
+**Game-length clock**:
+The overall deadline of a minute-limited game mode (Tallest Tower, Land Grab, Gift Grab), on top of its phase timer. It reports the time left and runs the game's finish exactly once, whether the deadline or an early end by the host comes first.
+_Avoid_: deadline timer, match clock
+
 **Streamed question**:
 A question one player gets on their own phone in a self-paced game mode, such as Tallest Tower or Kingdom Siege. Each player moves through questions at their own speed, and an answer names the question by its sequence number.
 _Avoid_: self-paced question, stream question

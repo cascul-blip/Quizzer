@@ -16,6 +16,7 @@ import { AUTO_REVEAL_MS, GameError, GRACE_MS, preparePlayOrder, realClock, shuff
 import type { LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
+import { PhaseTimer } from "./phase-timer.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
@@ -80,7 +81,6 @@ export class RacerGame {
   /** Play order, shuffled if the lobby asked for it. */
   readonly questions: Question[];
   readonly roster = new Roster<RacerPlayer>();
-  phase: RacerPhase = "intro";
   qIndex = -1;
   pacing: Pacing;
   car: RacerCar = newRacerCar();
@@ -95,15 +95,12 @@ export class RacerGame {
   ejected: { id: string; nickname: string; avatar: AvatarChoice }[] = [];
   /** Turns played to the end. */
   turns = 0;
-  /** When the current phase's countdown ends; 0 when it has none. */
-  phaseEndsAt = 0;
-  phaseDurationMs = 0;
 
   private readonly clock: Clock;
   private readonly rng: () => number;
   /** Player ids still to drive in this round of the bag. */
   private bag: string[] = [];
-  private timer: unknown = null;
+  private readonly phases: PhaseTimer<RacerPhase>;
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: RacerGame) => void;
@@ -114,6 +111,7 @@ export class RacerGame {
     this.quizId = quiz.id;
     this.title = quiz.title;
     this.clock = opts.clock ?? realClock;
+    this.phases = new PhaseTimer(this.clock, "intro");
     this.rng = opts.rng ?? Math.random;
     this.questions = preparePlayOrder(quiz.questions, settings.shuffle, this.rng);
     this.pacing = settings.pacing ?? "manual";
@@ -127,6 +125,19 @@ export class RacerGame {
     const game = new RacerGame(lobby.quiz, { shuffle: lobby.shuffle, pacing: lobby.pacing, theme: lobby.settings.theme }, opts);
     game.roster.adoptFrom(lobby.players, (base) => game.newPlayer(base));
     return game;
+  }
+
+  get phase(): RacerPhase {
+    return this.phases.phase;
+  }
+
+  /** When the current phase's countdown ends; 0 when it has none. */
+  get phaseEndsAt(): number {
+    return this.phases.endsAt;
+  }
+
+  get phaseDurationMs(): number {
+    return this.phases.durationMs;
   }
 
   get players(): Map<string, RacerPlayer> {
@@ -220,7 +231,7 @@ export class RacerGame {
     if (p.answers[qIndex]) return false;
     const correct = checkAnswer(q, answer);
     if (correct === null) return false;
-    if (this.clock.now() > this.phaseEndsAt + GRACE_MS) return false;
+    if (this.clock.now() > this.phases.endsAt + GRACE_MS) return false;
     p.answers[qIndex] = { ...(typeof answer === "string" ? { option: -1, text: answer.slice(0, MAX_TYPED_ANSWER) } : { option: answer }), correct };
     if (!this.maybeCloseEarly()) this.onActivity(p.id);
     return true;
@@ -238,7 +249,7 @@ export class RacerGame {
   setPacing(pacing: Pacing): void {
     this.pacing = pacing;
     if (this.phase === "reveal") {
-      this.clearTimer();
+      this.phases.cancelPhase();
       this.scheduleAuto();
     }
     this.onChange();
@@ -275,23 +286,10 @@ export class RacerGame {
   }
 
   dispose(): void {
-    this.clearTimer();
+    this.phases.dispose();
   }
 
   // ---------- state machine ----------
-
-  private setPhase(phase: RacerPhase, ms: number, then: (() => void) | null, graceMs = 0): void {
-    this.clearTimer();
-    this.phase = phase;
-    this.phaseDurationMs = ms;
-    this.phaseEndsAt = ms > 0 ? this.clock.now() + ms : 0;
-    if (then) {
-      this.timer = this.clock.setTimeout(() => {
-        this.timer = null;
-        then();
-      }, ms + graceMs);
-    }
-  }
 
   private beginTurn(index: number): void {
     this.qIndex = index;
@@ -301,9 +299,9 @@ export class RacerGame {
     this.driver = driver && { id: driver.id, nickname: driver.nickname, avatar: driver.avatar };
     if (driver) {
       this.lever = RACER_CONFIDENCE_LEVELS[0]!;
-      this.setPhase("confidence", CONFIDENCE_MS, () => this.lockIn());
+      this.phases.set("confidence", CONFIDENCE_MS, () => this.lockIn());
     } else {
-      this.setPhase("intro", INTRO_MS, () => this.openQuestion());
+      this.phases.set("intro", INTRO_MS, () => this.openQuestion());
     }
     this.onChange();
   }
@@ -317,7 +315,7 @@ export class RacerGame {
   private openQuestion(): void {
     const q = this.currentQuestion;
     if ((this.phase !== "intro" && this.phase !== "confidence") || !q) return;
-    this.setPhase("open", q.timeLimitSec * 1000, () => this.closeQuestion(), GRACE_MS);
+    this.phases.set("open", q.timeLimitSec * 1000, () => this.closeQuestion(), { graceMs: GRACE_MS });
     this.onChange();
   }
 
@@ -359,7 +357,7 @@ export class RacerGame {
     }
     this.lastTurn = { index: this.qIndex, driver: this.driver, ...summary };
     this.turns++;
-    this.phase = "reveal";
+    this.phases.enter("reveal");
     this.scheduleAuto();
     this.onChange();
   }
@@ -372,7 +370,7 @@ export class RacerGame {
 
   private finish(): void {
     if (this.phase === "podium") return;
-    this.setPhase("podium", 0, null);
+    this.phases.enter("podium");
     this.driver = null;
     this.lever = null;
     this.confidence = null;
@@ -383,13 +381,8 @@ export class RacerGame {
   /** The reveal waits for the host, or moves on by itself with auto pacing. */
   private scheduleAuto(): void {
     if (this.phase !== "reveal") return;
-    if (this.pacing === "auto") this.setPhase("reveal", AUTO_REVEAL_MS, () => this.afterReveal());
-    else this.setPhase("reveal", 0, null);
-  }
-
-  private clearTimer(): void {
-    if (this.timer !== null) this.clock.clearTimeout(this.timer);
-    this.timer = null;
+    if (this.pacing === "auto") this.phases.set("reveal", AUTO_REVEAL_MS, () => this.afterReveal());
+    else this.phases.enter("reveal");
   }
 
   // ---------- results ----------
@@ -416,7 +409,7 @@ export class RacerGame {
   // ---------- views ----------
 
   private remainingMs(): number {
-    return this.phaseEndsAt ? Math.max(0, this.phaseEndsAt - this.clock.now()) : 0;
+    return this.phases.remainingMs();
   }
 
   private questionView(): QuestionView | null {

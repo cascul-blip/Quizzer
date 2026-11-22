@@ -32,6 +32,7 @@ import { GameError, realClock, teamInfo } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
+import { GameLengthClock, PhaseTimer } from "./phase-timer.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
@@ -71,7 +72,6 @@ export interface LandPlayer extends BasePlayer, AnswerTotals {
   /** Tiles won by closing a ring (not counting the tiles placed). */
   captured: number;
   conquered: { seq: number; from: string; by: string } | null;
-  timer: unknown;
 }
 
 interface LandOptions {
@@ -98,8 +98,6 @@ export class LandGame {
   /** owners[tile] is a team index, or EMPTY for grass. */
   readonly owners: number[];
   readonly roster = new Roster<LandPlayer>();
-  phase: LandPhase = "countdown";
-  phaseEndsAt = 0;
   lastPlace: LandPlace | null = null;
   lastCapture: LandCapture | null = null;
   private eventSeq = 0;
@@ -108,7 +106,8 @@ export class LandGame {
   private readonly clock: Clock;
   private readonly rng: () => number;
   private readonly stream: QuestionStream;
-  private timer: unknown = null;
+  private readonly phases: PhaseTimer<LandPhase>;
+  private readonly gameLength: GameLengthClock<LandPhase>;
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: LandGame) => void;
@@ -124,6 +123,8 @@ export class LandGame {
     this.teams = startTiles(settings.teams).map((start, i) => ({ ...teamInfo(i), start, out: false, conqueredBy: null, outOrder: 0 }));
     for (const t of this.teams) this.owners[t.start] = t.index;
     this.clock = opts.clock ?? realClock;
+    this.phases = new PhaseTimer(this.clock, "countdown");
+    this.gameLength = new GameLengthClock(this.phases, () => this.finish());
     this.rng = opts.rng ?? Math.random;
     this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock);
     this.onChange = opts.onChange ?? (() => {});
@@ -138,6 +139,10 @@ export class LandGame {
     const teams = lobby.teams;
     game.roster.adoptFrom(players, (base) => game.newPlayer(base, teams.get(base.id) ?? 0));
     return game;
+  }
+
+  get phase(): LandPhase {
+    return this.phases.phase;
   }
 
   get players(): Map<string, LandPlayer> {
@@ -157,7 +162,6 @@ export class LandGame {
       stolen: 0,
       captured: 0,
       conquered: null,
-      timer: null,
     });
   }
 
@@ -169,56 +173,43 @@ export class LandGame {
 
   start(): void {
     if (this.players.size === 0) throw new GameError("Wait for at least one player to join");
-    this.phase = "countdown";
-    this.phaseEndsAt = this.clock.now() + COUNTDOWN_MS;
-    this.timer = this.clock.setTimeout(() => this.beginPlaying(), COUNTDOWN_MS);
+    this.phases.set("countdown", COUNTDOWN_MS, () => this.beginPlaying());
     this.onChange();
   }
 
   private beginPlaying(): void {
     if (this.phase !== "countdown") return;
     const ms = this.settings.minutes * 60_000;
-    this.phase = "playing";
-    this.phaseEndsAt = this.clock.now() + ms;
+    this.gameLength.start("playing", ms);
     for (const p of this.players.values()) this.stream.open(p);
-    this.timer = this.clock.setTimeout(() => this.finish(), ms);
     this.onChange();
   }
 
   end(): void {
-    this.finish();
+    this.gameLength.end();
   }
 
   /** Only one team is left: show the board for a moment, then the podium. */
   private conquer(): void {
-    this.clearTimers();
-    this.phase = "conquered";
-    this.phaseEndsAt = this.clock.now() + CONQUEST_MS;
-    this.timer = this.clock.setTimeout(() => this.finish(), CONQUEST_MS);
+    this.phases.dispose();
+    this.phases.set("conquered", CONQUEST_MS, () => this.gameLength.end());
   }
 
+  /** Runs once, from the game-length clock: at the deadline, when one team is left, or when the host ends the game. */
   private finish(): void {
-    if (this.phase === "podium") return;
-    this.clearTimers();
-    this.phase = "podium";
-    this.phaseEndsAt = 0;
+    this.phases.dispose();
+    this.phases.enter("podium");
     this.onFinish(this);
     this.onChange();
   }
 
   dispose(): void {
-    this.clearTimers();
+    this.phases.dispose();
   }
 
-  private clearTimers(): void {
-    if (this.timer !== null) this.clock.clearTimeout(this.timer);
-    this.timer = null;
-    for (const p of this.players.values()) this.clearPlayerTimer(p);
-  }
-
-  private clearPlayerTimer(p: LandPlayer): void {
-    if (p.timer !== null) this.clock.clearTimeout(p.timer);
-    p.timer = null;
+  /** Each player's cooldown has its own slot on the phase timer. */
+  private playerSlot(p: LandPlayer): string {
+    return `player:${p.id}`;
   }
 
   // ---------- players ----------
@@ -249,14 +240,14 @@ export class LandGame {
   kick(playerId: string): LandPlayer | null {
     const p = this.roster.remove(playerId);
     if (p) {
-      this.clearPlayerTimer(p);
+      this.phases.cancel(this.playerSlot(p));
       this.onChange();
     }
     return p;
   }
 
   private backToQuestions(p: LandPlayer): void {
-    this.clearPlayerTimer(p);
+    this.phases.cancel(this.playerSlot(p));
     p.state = "question";
     this.stream.resume(p);
   }
@@ -275,7 +266,7 @@ export class LandGame {
         // The message starts once the ✗ flash is over.
         p.state = "empty";
         p.emptyEndsAt = this.stream.feedbackEndsAt(p) + LAND_EMPTY_MS;
-        p.timer = this.clock.setTimeout(() => this.endEmpty(p.id), p.emptyEndsAt - this.clock.now());
+        this.phases.after(this.playerSlot(p), p.emptyEndsAt - this.clock.now(), () => this.endEmpty(p.id));
       } else if (this.canPlace(p)) {
         p.state = "claim";
       }
@@ -286,9 +277,7 @@ export class LandGame {
 
   private endEmpty(playerId: string): void {
     const p = this.players.get(playerId);
-    if (!p) return;
-    p.timer = null;
-    if (p.state !== "empty") return;
+    if (!p || p.state !== "empty") return;
     this.backToQuestions(p);
     this.onActivity(p.id);
   }
@@ -425,7 +414,7 @@ export class LandGame {
   // ---------- views ----------
 
   private remainingMs(): number {
-    return this.phaseEndsAt ? Math.max(0, this.phaseEndsAt - this.clock.now()) : 0;
+    return this.phases.remainingMs();
   }
 
   private boardView(): LandBoard {

@@ -25,6 +25,7 @@ import { AUTO_REVEAL_MS, GameError, GRACE_MS, preparePlayOrder, realClock, shuff
 import type { LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
+import { PhaseTimer } from "./phase-timer.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
@@ -95,7 +96,6 @@ export class DuelGame {
   /** One question per round slot: the quiz's play order, repeated in fresh cycles. */
   readonly questions: Question[];
   readonly roster = new Roster<DuelPlayer>();
-  phase: DuelPhase = "intro";
   /** Current round slot (round − 1); -1 before the start. */
   qIndex = -1;
   pacing: Pacing;
@@ -107,10 +107,6 @@ export class DuelGame {
   /** Rounds played to the end. */
   played = 0;
   openedAt = 0;
-  /** When the current phase's countdown ends; 0 when it has none. */
-  phaseEndsAt = 0;
-  phaseDurationMs = 0;
-  private phaseStartedAt = 0;
   /** Set while views are built in a batch: what every phone's view shares, computed once. */
   private batch: {
     ranked?: DuelPlayer[];
@@ -125,7 +121,7 @@ export class DuelGame {
   private readonly slotSource: number[];
   private readonly clock: Clock;
   private readonly rng: () => number;
-  private timer: unknown = null;
+  private readonly phases: PhaseTimer<DuelPhase>;
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: DuelGame) => void;
@@ -136,6 +132,7 @@ export class DuelGame {
     this.quizId = quiz.id;
     this.title = quiz.title;
     this.clock = opts.clock ?? realClock;
+    this.phases = new PhaseTimer(this.clock, "intro");
     this.rng = opts.rng ?? Math.random;
     const rounds = settings.rounds ?? DUEL_DEFAULT_ROUNDS;
     this.rounds = (DUEL_ROUNDS as readonly number[]).includes(rounds) ? rounds : DUEL_DEFAULT_ROUNDS;
@@ -161,6 +158,19 @@ export class DuelGame {
     const game = new DuelGame(lobby.quiz, { shuffle: lobby.shuffle, rounds: lobby.settings.rounds, theme: lobby.settings.theme, pacing: lobby.pacing }, opts);
     game.roster.adoptFrom(lobby.players, (base) => game.newPlayer(base));
     return game;
+  }
+
+  get phase(): DuelPhase {
+    return this.phases.phase;
+  }
+
+  /** When the current phase's countdown ends; 0 when it has none. */
+  get phaseEndsAt(): number {
+    return this.phases.endsAt;
+  }
+
+  get phaseDurationMs(): number {
+    return this.phases.durationMs;
   }
 
   get players(): Map<string, DuelPlayer> {
@@ -235,7 +245,7 @@ export class DuelGame {
     const correct = checkAnswer(q, answer);
     if (correct === null) return false;
     const now = this.clock.now();
-    if (now > this.phaseEndsAt + GRACE_MS) return false;
+    if (now > this.phases.endsAt + GRACE_MS) return false;
     p.answers[qIndex] = {
       ...(typeof answer === "string" ? { option: -1, text: answer.slice(0, MAX_TYPED_ANSWER) } : { option: answer }),
       correct,
@@ -258,7 +268,7 @@ export class DuelGame {
   setPacing(pacing: Pacing): void {
     this.pacing = pacing;
     if (this.phase === "reveal") {
-      this.clearTimer();
+      this.phases.cancelPhase();
       this.scheduleAuto();
     }
     this.onChange();
@@ -292,24 +302,10 @@ export class DuelGame {
   }
 
   dispose(): void {
-    this.clearTimer();
+    this.phases.dispose();
   }
 
   // ---------- state machine ----------
-
-  private setPhase(phase: DuelPhase, ms: number, then: (() => void) | null, graceMs = 0): void {
-    this.clearTimer();
-    if (this.phase !== phase) this.phaseStartedAt = this.clock.now();
-    this.phase = phase;
-    this.phaseDurationMs = ms;
-    this.phaseEndsAt = ms > 0 ? this.clock.now() + ms : 0;
-    if (then) {
-      this.timer = this.clock.setTimeout(() => {
-        this.timer = null;
-        then();
-      }, ms + graceMs);
-    }
-  }
 
   private beginRound(index: number): void {
     this.qIndex = index;
@@ -320,7 +316,7 @@ export class DuelGame {
         if (p && !p.startArena) p.startArena = k + 1;
       }
     });
-    this.setPhase("intro", INTRO_MS, () => this.openQuestion());
+    this.phases.set("intro", INTRO_MS, () => this.openQuestion());
     this.onChange();
   }
 
@@ -328,7 +324,7 @@ export class DuelGame {
     const q = this.currentQuestion;
     if (this.phase !== "intro" || !q) return;
     this.openedAt = this.clock.now();
-    this.setPhase("open", q.timeLimitSec * 1000, () => this.closeQuestion(), GRACE_MS);
+    this.phases.set("open", q.timeLimitSec * 1000, () => this.closeQuestion(), { graceMs: GRACE_MS });
     this.onChange();
   }
 
@@ -381,8 +377,7 @@ export class DuelGame {
     });
     this.played++;
     this.lastRound = { round: slot + 1, arenas };
-    this.phaseStartedAt = this.clock.now();
-    this.phase = "reveal";
+    this.phases.enter("reveal");
     this.scheduleAuto();
     this.onChange();
   }
@@ -395,7 +390,7 @@ export class DuelGame {
 
   private finish(): void {
     if (this.phase === "podium") return;
-    this.setPhase("podium", 0, null);
+    this.phases.enter("podium");
     this.arenas = [];
     this.onFinish(this);
     this.onChange();
@@ -404,13 +399,8 @@ export class DuelGame {
   /** The reveal waits for the host, or moves on by itself with auto pacing. */
   private scheduleAuto(): void {
     if (this.phase !== "reveal") return;
-    if (this.pacing === "auto") this.setPhase("reveal", AUTO_REVEAL_MS, () => this.afterReveal());
-    else this.setPhase("reveal", 0, null);
-  }
-
-  private clearTimer(): void {
-    if (this.timer !== null) this.clock.clearTimeout(this.timer);
-    this.timer = null;
+    if (this.pacing === "auto") this.phases.set("reveal", AUTO_REVEAL_MS, () => this.afterReveal());
+    else this.phases.enter("reveal");
   }
 
   // ---------- results ----------
@@ -462,7 +452,7 @@ export class DuelGame {
   // ---------- views ----------
 
   private remainingMs(): number {
-    return this.phaseEndsAt ? Math.max(0, this.phaseEndsAt - this.clock.now()) : 0;
+    return this.phases.remainingMs();
   }
 
   private questionView(): QuestionView | null {
@@ -525,7 +515,7 @@ export class DuelGame {
       round: Math.max(1, this.round),
       rounds: this.rounds,
       theme: this.theme,
-      revealElapsedMs: this.phase === "reveal" ? Math.max(0, this.clock.now() - this.phaseStartedAt) : 0,
+      revealElapsedMs: this.phase === "reveal" ? Math.max(0, this.clock.now() - this.phases.enteredAtMs) : 0,
       question: this.questionView(),
       arenas,
       answeredCount: answering ? arenas.reduce((n, a) => n + a.duelists.filter((d) => d.answered).length, 0) : 0,
@@ -600,7 +590,7 @@ export class DuelGame {
       round: Math.max(1, this.round),
       rounds: this.rounds,
       theme: this.theme,
-      revealElapsedMs: this.phase === "reveal" ? Math.max(0, this.clock.now() - this.phaseStartedAt) : 0,
+      revealElapsedMs: this.phase === "reveal" ? Math.max(0, this.clock.now() - this.phases.enteredAtMs) : 0,
       question: this.questionView(),
       phaseRemainingMs: this.remainingMs(),
       phaseDurationMs: this.phaseDurationMs,

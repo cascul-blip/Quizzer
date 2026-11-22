@@ -26,6 +26,7 @@ import { GameError, realClock, teamInfo } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
+import { PhaseTimer } from "./phase-timer.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
@@ -69,7 +70,6 @@ export interface FightPlayer extends BasePlayer, AnswerTotals {
   /** When the repair in progress finishes. */
   repairEndsAt: number;
   lastRepair: { seq: number; repaired: boolean } | null;
-  timer: unknown;
 }
 
 interface Shot extends Omit<FightShot, "elapsedMs"> {
@@ -100,8 +100,6 @@ export class FightGame {
   readonly hill: HillHeight;
   readonly theme: SeasonTheme;
   readonly roster = new Roster<FightPlayer>();
-  phase: FightPhase = "countdown";
-  phaseEndsAt = 0;
   terrain: number[];
   outcome: FightOutcome | null = null;
   private shots: Shot[] = [];
@@ -113,8 +111,7 @@ export class FightGame {
   private readonly clock: Clock;
   private readonly rng: () => number;
   private readonly stream: QuestionStream;
-  private timer: unknown = null;
-  private readonly shotTimers = new Set<unknown>();
+  private readonly phases: PhaseTimer<FightPhase>;
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: FightGame) => void;
@@ -127,6 +124,7 @@ export class FightGame {
     this.questions = quiz.questions;
     this.teams = Array.from({ length: TEAM_COUNT }, (_, i) => ({ ...teamInfo(i), damage: 0 }));
     this.clock = opts.clock ?? realClock;
+    this.phases = new PhaseTimer(this.clock, "countdown");
     this.rng = opts.rng ?? Math.random;
     const heights = keysOf(HILL_HEIGHTS);
     this.hill = settings.hill === "random" ? heights[Math.min(heights.length - 1, Math.floor(this.rng() * heights.length))]! : settings.hill;
@@ -144,6 +142,10 @@ export class FightGame {
     const teams = lobby.teams;
     game.roster.adoptFrom(players, (base) => game.newPlayer(base, teams.get(base.id) ?? 0));
     return game;
+  }
+
+  get phase(): FightPhase {
+    return this.phases.phase;
   }
 
   get players(): Map<string, FightPlayer> {
@@ -164,7 +166,6 @@ export class FightGame {
       shotId: null,
       repairEndsAt: 0,
       lastRepair: null,
-      timer: null,
     });
   }
 
@@ -172,16 +173,13 @@ export class FightGame {
 
   start(): void {
     if (this.players.size === 0) throw new GameError("Wait for at least one player to join");
-    this.phase = "countdown";
-    this.phaseEndsAt = this.clock.now() + COUNTDOWN_MS;
-    this.timer = this.clock.setTimeout(() => this.beginPlaying(), COUNTDOWN_MS);
+    this.phases.set("countdown", COUNTDOWN_MS, () => this.beginPlaying());
     this.onChange();
   }
 
   private beginPlaying(): void {
     if (this.phase !== "countdown") return;
-    this.phase = "playing";
-    this.phaseEndsAt = 0;
+    this.phases.enter("playing");
     for (const p of this.players.values()) this.stream.open(p);
     this.onChange();
   }
@@ -195,32 +193,21 @@ export class FightGame {
 
   private finish(): void {
     if (this.phase === "podium") return;
-    this.clearTimers();
-    this.phase = "podium";
-    this.phaseEndsAt = 0;
+    this.phases.dispose();
+    this.phases.enter("podium");
     this.onFinish(this);
     this.onChange();
   }
 
   dispose(): void {
-    this.clearTimers();
-  }
-
-  private clearTimers(): void {
-    if (this.timer !== null) this.clock.clearTimeout(this.timer);
-    this.timer = null;
-    for (const t of this.shotTimers) this.clock.clearTimeout(t);
-    this.shotTimers.clear();
-    for (const p of this.players.values()) this.clearPlayerTimer(p);
+    this.phases.dispose();
   }
 
   /** A tower fell: play the collapse, then the podium. */
   private collapse(destroyed: number): void {
     this.outcome = { winner: this.teams.find((t) => t.index !== destroyed)!.index, reason: "destroyed" };
-    this.phase = "collapse";
-    this.phaseEndsAt = this.clock.now() + COLLAPSE_MS;
     for (const p of this.players.values()) this.clearPlayerTimer(p);
-    this.timer = this.clock.setTimeout(() => this.finish(), COLLAPSE_MS);
+    this.phases.set("collapse", COLLAPSE_MS, () => this.finish());
     this.onChange();
   }
 
@@ -275,9 +262,13 @@ export class FightGame {
     return p;
   }
 
+  /** Each player's decision, repair and result timer has its own slot on the phase timer. */
+  private playerSlot(p: FightPlayer): string {
+    return `player:${p.id}`;
+  }
+
   private clearPlayerTimer(p: FightPlayer): void {
-    if (p.timer !== null) this.clock.clearTimeout(p.timer);
-    p.timer = null;
+    this.phases.cancel(this.playerSlot(p));
   }
 
   private backToQuestions(p: FightPlayer): void {
@@ -299,7 +290,7 @@ export class FightGame {
       if (this.teams[p.team]!.damage > 0) {
         p.state = "decide";
         p.deadline = this.clock.now() + DECISION_MS;
-        p.timer = this.clock.setTimeout(() => this.forfeit(p.id), DECISION_MS + DECISION_GRACE_MS);
+        this.phases.after(this.playerSlot(p), DECISION_MS + DECISION_GRACE_MS, () => this.forfeit(p.id));
       } else {
         // Nothing to repair: straight to the catapult, where there's no time limit.
         p.state = "aim";
@@ -312,9 +303,7 @@ export class FightGame {
   /** Too slow to choose: the move is lost. */
   private forfeit(playerId: string): void {
     const p = this.players.get(playerId);
-    if (!p) return;
-    p.timer = null;
-    if (p.state !== "decide") return;
+    if (!p || p.state !== "decide") return;
     this.backToQuestions(p);
     this.onActivity(p.id);
   }
@@ -335,7 +324,7 @@ export class FightGame {
       this.clearPlayerTimer(p);
       p.state = "repair";
       p.repairEndsAt = this.clock.now() + REPAIR_MS;
-      p.timer = this.clock.setTimeout(() => this.finishRepair(p.id), REPAIR_MS);
+      this.phases.after(this.playerSlot(p), REPAIR_MS, () => this.finishRepair(p.id));
       this.onChange();
       return true;
     } else {
@@ -348,9 +337,7 @@ export class FightGame {
   /** The repair is done: fix one damage, unless teammates already fixed the tower. */
   private finishRepair(playerId: string): void {
     const p = this.players.get(playerId);
-    if (!p) return;
-    p.timer = null;
-    if (this.phase !== "playing" || p.state !== "repair") return;
+    if (!p || this.phase !== "playing" || p.state !== "repair") return;
     const team = this.teams[p.team]!;
     const repaired = team.damage > 0;
     if (repaired) {
@@ -389,11 +376,7 @@ export class FightGame {
     p.state = "watch";
     p.shotId = shot.id;
     p.shots++;
-    const t = this.clock.setTimeout(() => {
-      this.shotTimers.delete(t);
-      this.land(shot);
-    }, flight.durationMs);
-    this.shotTimers.add(t);
+    this.phases.after(`shot:${shot.id}`, flight.durationMs, () => this.land(shot));
     this.onActivity(p.id);
     return this.shotView(shot, now);
   }
@@ -418,14 +401,12 @@ export class FightGame {
       this.log("miss", p ?? shot);
     }
     if (p && p.shotId === shot.id) {
-      this.clearPlayerTimer(p);
-      p.timer = this.clock.setTimeout(() => {
-        p.timer = null;
+      this.phases.after(this.playerSlot(p), RESULT_MS, () => {
         if (p.state === "watch" && p.shotId === shot.id) {
           this.backToQuestions(p);
           this.onActivity(p.id);
         }
-      }, RESULT_MS);
+      });
     }
     if (destroyed !== null) return this.collapse(destroyed);
     this.onChange();
@@ -450,7 +431,7 @@ export class FightGame {
   // ---------- views ----------
 
   private remainingMs(): number {
-    return this.phaseEndsAt ? Math.max(0, this.phaseEndsAt - this.clock.now()) : 0;
+    return this.phases.remainingMs();
   }
 
   private shotView(s: Shot, now = this.clock.now()): FightShot {

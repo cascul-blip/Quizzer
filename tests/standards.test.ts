@@ -86,6 +86,25 @@ describe("Coding standards: server time", () => {
   });
 });
 
+/** A game mode times its phases, its game length and its other timers on its PhaseTimer (src/server/game/phase-timer.ts). */
+const CLOCK_TIMER = /\bclock\s*\.\s*(?:setTimeout|clearTimeout)\b/;
+
+describe("Coding standards: phase timer", () => {
+  test("no game mode file sets or clears a timer on the Clock directly", () => {
+    const files = sources.filter(
+      ({ path }) => path.startsWith(join(SERVER, "game")) && !["common.ts", "phase-timer.ts"].includes(relative(join(SERVER, "game"), path)),
+    );
+    expect(files.length).toBeGreaterThan(10);
+    expect(offending(CLOCK_TIMER, files)).toEqual([]);
+  });
+
+  test("the timer guard flags Clock timers and accepts the phase timer", () => {
+    expect(CLOCK_TIMER.test("this.timer = this.clock.setTimeout(() => this.finish(), ms);")).toBe(true);
+    expect(CLOCK_TIMER.test("this.clock.clearTimeout(this.timer);")).toBe(true);
+    expect(CLOCK_TIMER.test('this.phases.after("warn", ms, () => this.markTargets());')).toBe(false);
+  });
+});
+
 /** HubSocket owns opening in-memory sockets. */
 const DIRECT_SOCKET_OPEN = /\.\s*onOpen\s*\(/;
 /** A temp directory cleaned up in a test's own finally block instead of an afterEach. */

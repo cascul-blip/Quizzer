@@ -23,6 +23,7 @@ import { GameError, realClock, shuffle } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, unhandled } from "./mode-entry.ts";
+import { GameLengthClock, PhaseTimer } from "./phase-timer.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
@@ -39,7 +40,6 @@ interface Bonus {
   items: GiftItem[];
   hits: Map<number, GiftHit>;
   power: GiftPower | null;
-  timer: unknown;
 }
 
 interface GiftPlayer extends BasePlayer, AnswerTotals {
@@ -92,7 +92,6 @@ export class GiftGame {
   readonly quizId: string;
   readonly title: string;
   readonly roster = new Roster<GiftPlayer>();
-  phase: GiftPhase = "countdown";
 
   private readonly clock: Clock;
   private readonly rng: () => number;
@@ -101,8 +100,8 @@ export class GiftGame {
   private readonly onChange: () => void;
   private readonly onActivity: (id: string) => void;
   private readonly onFinish: (game: GiftGame) => void;
-  private timer: unknown = null;
-  private phaseEndsAt = 0;
+  private readonly phases: PhaseTimer<GiftPhase>;
+  private readonly gameLength: GameLengthClock<GiftPhase>;
 
   private constructor(
     private readonly quiz: Quiz,
@@ -114,6 +113,8 @@ export class GiftGame {
     this.quizId = quiz.id;
     this.title = quiz.title;
     this.clock = opts.clock ?? realClock;
+    this.phases = new PhaseTimer(this.clock, "countdown");
+    this.gameLength = new GameLengthClock(this.phases, () => this.finish());
     this.rng = opts.rng ?? Math.random;
     this.stream = new QuestionStream(quiz.questions, shuffleAnswers, this.rng, this.clock, protect);
     this.durationMs = minutes * 60_000;
@@ -133,25 +134,29 @@ export class GiftGame {
     return game;
   }
 
+  get phase(): GiftPhase {
+    return this.phases.phase;
+  }
+
   get players(): Map<string, GiftPlayer> {
     return this.roster.players;
   }
 
   start(): void {
     if (!this.players.size) throw new GameError("Wait for at least one player to join");
-    this.phaseEndsAt = this.clock.now() + COUNTDOWN_MS;
-    this.timer = this.clock.setTimeout(() => {
-      this.phase = "playing";
-      this.phaseEndsAt = this.clock.now() + this.durationMs;
-      for (const player of this.players.values()) this.stream.open(player);
-      this.timer = this.clock.setTimeout(() => this.expire(), this.durationMs);
-      this.onChange();
-    }, COUNTDOWN_MS);
+    this.phases.set("countdown", COUNTDOWN_MS, () => this.beginPlaying());
     this.onChange();
   }
 
+  private beginPlaying(): void {
+    this.gameLength.start("playing", this.durationMs, () => this.expire());
+    for (const player of this.players.values()) this.stream.open(player);
+    this.onChange();
+  }
+
+  /** The deadline: the last bonus rounds play out before the game finishes. */
   private expire(): void {
-    this.phase = "finishing";
+    this.phases.enter("finishing");
     this.finishIfReady();
     this.onChange();
   }
@@ -161,21 +166,24 @@ export class GiftGame {
   }
 
   end(): void {
-    if (this.phase === "podium") return;
+    this.gameLength.end();
+  }
+
+  /** Runs once, from the game-length clock: when the last bonus round after the deadline ends, or when the host ends the game. */
+  private finish(): void {
     this.dispose();
-    this.phase = "podium";
+    this.phases.enter("podium");
     this.onFinish(this);
     this.onChange();
   }
 
   dispose(): void {
-    if (this.timer !== null) this.clock.clearTimeout(this.timer);
-    this.timer = null;
-    for (const player of this.players.values()) this.clearBonus(player);
+    this.phases.dispose();
+    for (const player of this.players.values()) player.bonus = null;
   }
 
   private clearBonus(player: GiftPlayer): void {
-    if (player.bonus) this.clock.clearTimeout(player.bonus.timer);
+    this.phases.cancel(`bonus:${player.id}`);
     player.bonus = null;
   }
 
@@ -207,7 +215,7 @@ export class GiftGame {
 
   answer(id: string, seq: number, answer: AnswerValue): boolean {
     const player = this.players.get(id);
-    if (!player || player.bonus || this.phase !== "playing" || this.clock.now() >= this.phaseEndsAt) return false;
+    if (!player || player.bonus || this.phase !== "playing" || this.clock.now() >= this.phases.endsAt) return false;
     const correct = this.stream.answer(player, seq, answer);
     if (correct === null) return false;
     if (correct && player.correct % GIFT_CORRECT_TO_PLAY === 0) this.earnBonus(player);
@@ -226,12 +234,12 @@ export class GiftGame {
       items: launchSchedule(round, this.rng),
       hits: new Map(),
       power: null,
-      timer: this.clock.setTimeout(() => {
-        this.clearBonus(player);
-        this.finishIfReady();
-        if (this.phase !== "podium") this.onActivity(player.id);
-      }, endsAt - this.clock.now()),
     };
+    this.phases.after(`bonus:${player.id}`, endsAt - this.clock.now(), () => {
+      this.clearBonus(player);
+      this.finishIfReady();
+      if (this.phase !== "podium") this.onActivity(player.id);
+    });
   }
 
   tap(id: string, round: number, itemId: number): boolean {
@@ -276,8 +284,7 @@ export class GiftGame {
   }
 
   private remainingMs(): number {
-    if (this.phase === "finishing" || this.phase === "podium") return 0;
-    return Math.max(0, this.phaseEndsAt - this.clock.now());
+    return this.phases.remainingMs();
   }
 
   private multiplier(): number {

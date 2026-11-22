@@ -40,6 +40,7 @@ import { GameError, realClock } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
+import { PhaseTimer } from "./phase-timer.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
@@ -122,9 +123,6 @@ export class SiegeGame {
   readonly roster = new Roster<SiegePlayer>();
   /** Kicked players: their stats stay in the results. */
   readonly kicked: SiegePlayer[] = [];
-  phase: SiegePhase = "countdown";
-  phaseEndsAt = 0;
-  phaseDurationMs = SIEGE_COUNTDOWN_MS;
 
   /** The wave being fought, or the next one during a build break. */
   wave = 0;
@@ -145,8 +143,7 @@ export class SiegeGame {
   private readonly clock: Clock;
   private readonly rng: () => number;
   private readonly stream: QuestionStream;
-  private timer: unknown = null;
-  private tickTimer: unknown = null;
+  private readonly phases: PhaseTimer<SiegePhase>;
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onTick: () => void;
@@ -163,6 +160,7 @@ export class SiegeGame {
     this.questions = quiz.questions;
     this.settings = settings;
     this.clock = opts.clock ?? realClock;
+    this.phases = new PhaseTimer(this.clock, "countdown", SIEGE_COUNTDOWN_MS);
     this.rng = opts.rng ?? Math.random;
     this.previousRecord = opts.record ?? null;
     this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock, settings.protect);
@@ -224,6 +222,14 @@ export class SiegeGame {
     });
   }
 
+  get phase(): SiegePhase {
+    return this.phases.phase;
+  }
+
+  get phaseDurationMs(): number {
+    return this.phases.durationMs;
+  }
+
   private get playing(): boolean {
     return this.phase === "build" || this.phase === "wave";
   }
@@ -236,26 +242,15 @@ export class SiegeGame {
 
   start(): void {
     if (this.players.size === 0) throw new GameError("Wait for at least one player to join");
-    this.setPhase("countdown", SIEGE_COUNTDOWN_MS, () => this.beginOpening());
+    this.phases.set("countdown", SIEGE_COUNTDOWN_MS, () => this.beginOpening());
     this.onChange();
-  }
-
-  private setPhase(phase: SiegePhase, ms: number, then: () => void): void {
-    if (this.timer !== null) this.clock.clearTimeout(this.timer);
-    this.phase = phase;
-    this.phaseDurationMs = ms;
-    this.phaseEndsAt = this.clock.now() + ms;
-    this.timer = this.clock.setTimeout(() => {
-      this.timer = null;
-      then();
-    }, ms);
   }
 
   /** The opening build break: questions start and the class places its first defenders. */
   private beginOpening(): void {
     this.wave = 1;
     for (const p of this.players.values()) this.stream.open(p);
-    this.setPhase("build", SIEGE_OPENING_MS, () => this.beginWave(1));
+    this.phases.set("build", SIEGE_OPENING_MS, () => this.beginWave(1));
     this.scheduleTick();
     this.onChange();
   }
@@ -282,11 +277,7 @@ export class SiegeGame {
     );
     this.battlefield.beginWave({ wave, budget, toughness, giantPace: siegeGiantPace(boost) });
     this.waveLog.push({ wave, scale: this.scale, defense, boost, budget, toughness, sent: 0, correct: 0, answered: 0, heartsLost: 0 });
-    if (this.timer !== null) this.clock.clearTimeout(this.timer);
-    this.timer = null;
-    this.phase = "wave";
-    this.phaseEndsAt = 0;
-    this.phaseDurationMs = 0;
+    this.phases.enter("wave");
     this.onChange();
   }
 
@@ -296,11 +287,7 @@ export class SiegeGame {
   }
 
   private scheduleTick(): void {
-    if (this.tickTimer !== null) this.clock.clearTimeout(this.tickTimer);
-    this.tickTimer = this.clock.setTimeout(() => {
-      this.tickTimer = null;
-      this.tick();
-    }, SIEGE_TICK_MS);
+    this.phases.after("tick", SIEGE_TICK_MS, () => this.tick());
   }
 
   // ---------- the battle ----------
@@ -330,7 +317,7 @@ export class SiegeGame {
     this.battlefield.endWave();
     const next = this.wave + 1;
     this.wave = next;
-    this.setPhase("build", SIEGE_BREAK_MS, () => this.beginWave(next));
+    this.phases.set("build", SIEGE_BREAK_MS, () => this.beginWave(next));
     this.scheduleTick();
     this.onChange();
   }
@@ -397,7 +384,7 @@ export class SiegeGame {
     this.closePeriod();
     this.outcome = "stands";
     this.stopBattle();
-    this.setPhase("stands", SIEGE_ENDING_MS, () => this.finish());
+    this.phases.set("stands", SIEGE_ENDING_MS, () => this.finish());
     this.onChange();
   }
 
@@ -405,7 +392,7 @@ export class SiegeGame {
     this.closePeriod();
     this.outcome = "fallen";
     this.stopBattle();
-    this.setPhase("fallen", SIEGE_ENDING_MS, () => this.finish());
+    this.phases.set("fallen", SIEGE_ENDING_MS, () => this.finish());
     this.onChange();
   }
 
@@ -429,8 +416,7 @@ export class SiegeGame {
   }
 
   private stopBattle(): void {
-    if (this.tickTimer !== null) this.clock.clearTimeout(this.tickTimer);
-    this.tickTimer = null;
+    this.phases.cancel("tick");
     this.battlefield.stop();
     for (const p of this.players.values()) p.mapOpen = false;
   }
@@ -438,19 +424,14 @@ export class SiegeGame {
   private finish(): void {
     if (this.phase === "podium") return;
     this.stopBattle();
-    if (this.timer !== null) this.clock.clearTimeout(this.timer);
-    this.timer = null;
-    this.phase = "podium";
-    this.phaseEndsAt = 0;
-    this.phaseDurationMs = 0;
+    this.phases.enter("podium");
     this.finishedResult = this.computeResult();
     this.onFinish(this);
     this.onChange();
   }
 
   dispose(): void {
-    if (this.timer !== null) this.clock.clearTimeout(this.timer);
-    this.timer = null;
+    this.phases.dispose();
     this.stopBattle();
   }
 
@@ -579,10 +560,6 @@ export class SiegeGame {
 
   // ---------- views ----------
 
-  private remaining(at: number): number {
-    return at ? Math.max(0, at - this.clock.now()) : 0;
-  }
-
   hostView(): HostSiegeState {
     const podium = this.phase === "podium";
     const players = [...this.players.values()];
@@ -596,7 +573,7 @@ export class SiegeGame {
       gold: players.reduce((sum, p) => sum + p.gold, 0),
       hearts: this.hearts,
       maxHearts: SIEGE_HEARTS,
-      phaseRemainingMs: this.phase === "wave" || podium ? 0 : this.remaining(this.phaseEndsAt),
+      phaseRemainingMs: this.phase === "wave" || podium ? 0 : this.phases.remainingMs(),
       phaseDurationMs: this.phaseDurationMs,
       ...this.battlefield.hostBoard(this.playing, ending),
       events: this.events,
@@ -640,7 +617,7 @@ export class SiegeGame {
       kind: "siege",
       phase: this.phase,
       title: this.title,
-      phaseRemainingMs: this.phase === "wave" || podium ? 0 : this.remaining(this.phaseEndsAt),
+      phaseRemainingMs: this.phase === "wave" || podium ? 0 : this.phases.remainingMs(),
       theme: modeTheme("siege", this.settings.theme),
       phaseDurationMs: this.phaseDurationMs,
       wave: this.wave,

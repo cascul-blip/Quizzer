@@ -8,6 +8,7 @@ import type { PlayerView, ShuffleOptions } from "../../shared/protocol.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import type { Clock } from "./common.ts";
 import { AUTO_REVEAL_MS, GameError, GRACE_MS, preparePlayOrder, realClock, topErrors } from "./common.ts";
+import { PhaseTimer } from "./phase-timer.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
@@ -57,20 +58,17 @@ export class ClassicGame {
   readonly title: string;
   /** Play order; fixed (and shuffled if chosen) when the game starts. */
   questions: Question[];
-  phase: ClassicPhase | "lobby" = "lobby";
   qIndex = -1;
   pacing: Pacing;
   shuffle: ShuffleOptions;
   readonly runningMode = "classic" as const;
-  /** When the current phase's countdown ends (intro/open), for views. */
-  phaseEndsAt = 0;
   openedAt = 0;
   readonly roster = new Roster<Player>();
 
   private readonly clock: Clock;
   private readonly rng: () => number;
   private readonly source: Question[];
-  private timer: unknown = null;
+  private readonly phases: PhaseTimer<ClassicPhase | "lobby">;
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: ClassicGame) => void;
@@ -86,10 +84,20 @@ export class ClassicGame {
     this.shuffle = opts.shuffle ?? { questions: quiz.settings.shuffleQuestions, answers: quiz.settings.shuffleAnswers };
     this.rng = opts.rng ?? Math.random;
     this.clock = opts.clock ?? realClock;
+    this.phases = new PhaseTimer(this.clock, "lobby");
     this.pacing = opts.pacing ?? "manual";
     this.onChange = opts.onChange ?? (() => {});
     this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
+  }
+
+  get phase(): ClassicPhase | "lobby" {
+    return this.phases.phase;
+  }
+
+  /** When the current phase's countdown ends (intro/open), for views; 0 when it has none. */
+  get phaseEndsAt(): number {
+    return this.phases.endsAt;
   }
 
   get players(): Map<string, Player> {
@@ -151,7 +159,7 @@ export class ClassicGame {
     const correct = checkAnswer(q, answer);
     if (correct === null) return false;
     const now = this.clock.now();
-    if (now > this.phaseEndsAt + GRACE_MS) return false;
+    if (now > this.phases.endsAt + GRACE_MS) return false;
     const ms = Math.max(0, now - this.openedAt);
     const choice = typeof answer === "string" ? { option: -1, text: answer.slice(0, MAX_TYPED_ANSWER) } : { option: answer };
     p.answers[qIndex] = { ...choice, correct, points: scoreAnswer(correct, ms, q.timeLimitSec), ms };
@@ -180,7 +188,7 @@ export class ClassicGame {
   setPacing(pacing: Pacing): void {
     this.pacing = pacing;
     if (this.phase === "reveal" || this.phase === "leaderboard") {
-      this.clearTimer();
+      this.phases.cancelPhase();
       this.scheduleAuto();
     }
     this.onChange();
@@ -216,28 +224,22 @@ export class ClassicGame {
   }
 
   dispose(): void {
-    this.clearTimer();
+    this.phases.dispose();
   }
 
   // ---------- state machine ----------
 
   private enterIntro(index: number): void {
-    this.clearTimer();
-    this.phase = "intro";
     this.qIndex = index;
-    this.phaseEndsAt = this.clock.now() + INTRO_MS;
-    this.timer = this.clock.setTimeout(() => this.openQuestion(), INTRO_MS);
+    this.phases.set("intro", INTRO_MS, () => this.openQuestion());
     this.onChange();
   }
 
   private openQuestion(): void {
     const q = this.currentQuestion;
     if (this.phase !== "intro" || !q) return;
-    this.clearTimer();
-    this.phase = "open";
     this.openedAt = this.clock.now();
-    this.phaseEndsAt = this.openedAt + q.timeLimitSec * 1000;
-    this.timer = this.clock.setTimeout(() => this.closeQuestion(), q.timeLimitSec * 1000 + GRACE_MS);
+    this.phases.set("open", q.timeLimitSec * 1000, () => this.closeQuestion(), { graceMs: GRACE_MS });
     this.onChange();
   }
 
@@ -249,44 +251,35 @@ export class ClassicGame {
 
   private closeQuestion(): void {
     if (this.phase !== "open") return;
-    this.clearTimer();
     for (const p of this.players.values()) {
       const ans = p.answers[this.qIndex];
       p.score += ans?.points ?? 0;
       p.lastDelta = ans?.points ?? 0;
       p.streak = ans?.correct ? p.streak + 1 : 0;
     }
-    this.phase = "reveal";
-    this.phaseEndsAt = 0;
+    this.phases.enter("reveal");
     this.scheduleAuto();
     this.onChange();
   }
 
   private afterReveal(): void {
-    this.clearTimer();
     if (this.qIndex >= this.questions.length - 1) return this.finish();
-    this.phase = "leaderboard";
+    this.phases.enter("leaderboard");
     this.scheduleAuto();
     this.onChange();
   }
 
   private finish(): void {
-    this.clearTimer();
-    this.phase = "podium";
-    this.phaseEndsAt = 0;
+    this.phases.enter("podium");
     this.onFinish(this);
     this.onChange();
   }
 
   private scheduleAuto(): void {
     if (this.pacing !== "auto") return;
-    if (this.phase === "reveal") this.timer = this.clock.setTimeout(() => this.afterReveal(), AUTO_REVEAL_MS);
-    else if (this.phase === "leaderboard") this.timer = this.clock.setTimeout(() => this.enterIntro(this.qIndex + 1), AUTO_LEADERBOARD_MS);
-  }
-
-  private clearTimer(): void {
-    if (this.timer !== null) this.clock.clearTimeout(this.timer);
-    this.timer = null;
+    // The timer runs behind the scenes: views show no countdown for an auto-paced reveal or leaderboard.
+    if (this.phase === "reveal") this.phases.set("reveal", AUTO_REVEAL_MS, () => this.afterReveal(), { hidden: true });
+    else if (this.phase === "leaderboard") this.phases.set("leaderboard", AUTO_LEADERBOARD_MS, () => this.enterIntro(this.qIndex + 1), { hidden: true });
   }
 
   // ---------- views ----------
@@ -329,7 +322,7 @@ export class ClassicGame {
       // A typed question's accepted answers stay hidden until the reveal.
       options: this.phase === "intro" || (q.type === "text" && !this.revealed) ? [] : q.options,
       ...(q.spots && this.phase !== "intro" ? { spots: q.spots } : {}),
-      remainingMs: this.phaseEndsAt ? Math.max(0, this.phaseEndsAt - this.clock.now()) : 0,
+      remainingMs: this.phases.remainingMs(),
     };
   }
 
