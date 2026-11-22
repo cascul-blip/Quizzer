@@ -4,7 +4,7 @@ import type { GameMode } from "../shared/mode-entries.ts";
 import type { ClientMsg, HostView, PlayerView } from "../shared/protocol.ts";
 import { ValidationError } from "../shared/quiz-schema.ts";
 import type { Clock } from "./game/common.ts";
-import { GameError } from "./game/common.ts";
+import { GameError, realClock } from "./game/common.ts";
 import type { LobbyChoices } from "./game/lobby.ts";
 import { Lobby } from "./game/lobby.ts";
 import type { LiveGame, ModeGame, StartContext } from "./game/mode-entry.ts";
@@ -58,18 +58,7 @@ export class GameHub {
   readonly join: JoinInformation;
   /** Image refs of the open quiz, sent to phones on join so they can preload them. */
   private images: string[] = [];
-  private readonly views = new ViewDelivery(
-    this.phoneAttachments,
-    () => this.hostView(),
-    (ws) => this.playerView(ws),
-    () => this.opts.clock?.now() ?? Date.now(),
-    (send) => {
-      // Games that can share work between the views of one broadcast (Classic, Showdown).
-      const game = this.game;
-      if (game && "viewBatch" in game) game.viewBatch(send);
-      else send();
-    },
-  );
+  private readonly views: ViewDelivery<WS>;
   /** Mode, mode settings and pacing carry over to the next lobby ("Play again"). */
   private lastSetup: Partial<LobbyChoices> = {};
   private readonly log: (msg: string) => void;
@@ -78,6 +67,18 @@ export class GameHub {
     private readonly store: QuizStore,
     private readonly opts: HubOptions = {},
   ) {
+    this.views = new ViewDelivery(
+      this.phoneAttachments,
+      () => this.hostView(),
+      (ws) => this.playerView(ws),
+      opts.clock ?? realClock,
+      (send) => {
+        // Games that can share work between the views of one broadcast (Classic, Showdown).
+        const game = this.game;
+        if (game && "viewBatch" in game) game.viewBatch(send);
+        else send();
+      },
+    );
     this.join = new JoinInformation({
       address: opts.address,
       discoverAddresses: opts.discoverAddresses,

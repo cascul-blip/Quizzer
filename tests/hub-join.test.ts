@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, test } from "bun:test";
 import { QuizStore } from "../src/server/quiz/store.ts";
 import { GameHub } from "../src/server/ws.ts";
 import { FakeClock, tempDir } from "./helpers.ts";
-import { HubSocket, pastThrottle } from "./hub-harness.ts";
+import { HubSocket } from "./hub-harness.ts";
 
 // Join information as the projector sees it, through the hub's host view.
 
@@ -40,7 +40,6 @@ test("choosing an address updates the URL and broadcasts it to the projector", a
   await host.hostState((v) => !!v.join.qrSvg);
   host.msgs = [];
   host.sendMsg({ type: "host.setAddress", address: "10.0.0.7" });
-  await pastThrottle();
   const changed = await host.hostState((v) => v.join.address === "10.0.0.7");
   expect(changed.view.join.url).toBe("http://10.0.0.7:4321/");
   expect(hub.join.url()).toBe("http://10.0.0.7:4321/");

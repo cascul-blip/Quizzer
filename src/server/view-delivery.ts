@@ -1,5 +1,6 @@
 import type { HostView, PlayerView, ServerMsg } from "../shared/protocol.ts";
 import { diffView } from "../shared/view-patch.ts";
+import type { Clock } from "./game/common.ts";
 import type { PhoneAttachments } from "./phone-attachments.ts";
 
 const ACTIVITY_THROTTLE_MS = 100;
@@ -50,13 +51,13 @@ interface DeliveryState {
 export class ViewDelivery<S extends ViewSocket> {
   private readonly states = new WeakMap<S, DeliveryState>();
   private queuedBroadcast: (() => void) | null = null;
-  private activityTimer: ReturnType<typeof setTimeout> | null = null;
+  private activityTimer: unknown = null;
 
   constructor(
     private readonly sockets: PhoneAttachments<S>,
     private readonly hostView: () => HostView,
     private readonly playerView: (socket: S) => PlayerView,
-    private readonly now: () => number,
+    private readonly clock: Clock,
     private readonly viewBatch: (send: () => void) => void,
   ) {}
 
@@ -75,7 +76,7 @@ export class ViewDelivery<S extends ViewSocket> {
   /** Acknowledge the acting player immediately and share one trailing update across a burst. */
   onActivity(playerId: string): void {
     for (const socket of this.sockets.forPlayer(playerId)) this.refresh(socket);
-    this.activityTimer ??= setTimeout(() => {
+    this.activityTimer ??= this.clock.setTimeout(() => {
       this.activityTimer = null;
       this.broadcast();
     }, ACTIVITY_THROTTLE_MS);
@@ -91,7 +92,7 @@ export class ViewDelivery<S extends ViewSocket> {
 
   cancelPending(): void {
     this.queuedBroadcast = null;
-    if (this.activityTimer !== null) clearTimeout(this.activityTimer);
+    if (this.activityTimer !== null) this.clock.clearTimeout(this.activityTimer);
     this.activityTimer = null;
   }
 
@@ -159,7 +160,7 @@ export class ViewDelivery<S extends ViewSocket> {
     }
 
     const view = this.playerView(socket);
-    const key = viewKey(view, this.now());
+    const key = viewKey(view, this.clock.now());
     if (!force && key === state.comparisonKey) return;
     state.comparisonKey = key;
 

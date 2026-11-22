@@ -44,10 +44,15 @@ export abstract class MessageLog {
     for (;;) {
       const i = this.msgs.findIndex(pred);
       if (i >= 0) return this.msgs.splice(0, i + 1).pop()!;
-      if (Date.now() > deadline) throw new Error(`timeout; last got ${this.msgs.slice(-3).map(summary).join(", ") || "nothing"}`);
+      const left = deadline - Date.now();
+      if (left <= 0) throw new Error(`timeout; last got ${this.msgs.slice(-3).map(summary).join(", ") || "nothing"}`);
+      // Wakes on the next message, or once at the deadline to report the timeout.
       await new Promise<void>((r) => {
-        this.waiters.push(r);
-        setTimeout(r, 50);
+        const timer = setTimeout(r, left);
+        this.waiters.push(() => {
+          clearTimeout(timer);
+          r();
+        });
       });
     }
   }
@@ -71,7 +76,7 @@ export class HubSocket extends MessageLog {
     readonly hub: GameHub,
     data: Partial<SocketData> = {},
   ) {
-    // Fake sockets answer as fast as the hub does; only the activity throttle (a real timer) waits.
+    // Fake sockets answer as fast as the hub does.
     super(2_000);
     this.data = { admin: false, ip: "127.0.0.1", role: "player", ...data };
     hub.onOpen(this);
@@ -104,8 +109,8 @@ export function fakeHub(store: QuizStore, clock: FakeClock, port = 4321) {
   return hub;
 }
 
-/** Waits until the hub's activity throttle (100 ms) has flushed its pending phone updates. */
-export const pastThrottle = () => new Promise((r) => setTimeout(r, 200));
+/** Moves the clock past the hub's activity throttle (100 ms) so its pending room-wide update is sent. */
+export const pastThrottle = (clock: FakeClock) => clock.advance(100);
 
 /** Timer fields (countdowns, cooldowns, lock-outs) are left out: a snapshot where only time passed isn't sent, so the phone's can be older. */
 export const withoutTimers = (v: unknown): unknown =>

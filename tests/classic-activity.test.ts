@@ -10,12 +10,13 @@ describe("View update scheduling", () => {
   let hub: ReturnType<typeof fakeHub>;
   let host: HubSocket;
   let phones: HubSocket[];
+  let clock: FakeClock;
 
   beforeEach(async () => {
     t = tempDir();
     const store = new QuizStore(t.dir);
     const quiz = await store.create({ title: "Classic", questions: [{ type: "true_false", text: "Q", correct: [0] }] });
-    const clock = new FakeClock();
+    clock = new FakeClock();
     hub = fakeHub(store, clock);
     host = new HubSocket(hub, { admin: true, role: "host" });
     host.sendMsg({ type: "host.open", quizId: quiz.id });
@@ -49,7 +50,7 @@ describe("View update scheduling", () => {
 
     await Promise.resolve();
     expect(host.raw).toHaveLength(0);
-    await pastThrottle();
+    pastThrottle(clock);
     expect(host.raw).toEqual([{ type: "host.state", view: expect.objectContaining({ answeredCount: 2 }) }]);
   });
 
@@ -69,7 +70,7 @@ describe("View update scheduling", () => {
     for (const socket of [host, ...phones]) socket.raw = [];
 
     hub.closeGame();
-    await pastThrottle();
+    pastThrottle(clock);
 
     for (const socket of [host, ...phones]) expect(socket.raw).toEqual([]);
 

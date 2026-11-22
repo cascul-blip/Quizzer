@@ -32,11 +32,23 @@ class TestSocket extends MessageLog {
   close() {
     this.ws.close();
   }
+  /** Resolves once every frame the server sent before now has arrived: the pong follows them on the same connection. */
+  delivered(): Promise<void> {
+    const ws = this.ws;
+    // Bun's client socket has ping(); the DOM WebSocket type doesn't declare it.
+    const ping = "ping" in ws ? ws.ping : undefined;
+    if (typeof ping !== "function") throw new Error("WebSocket.ping is not available");
+    return new Promise((r) => {
+      ws.addEventListener("pong", () => r(), { once: true });
+      ping.call(ws);
+    });
+  }
 }
 
 /** The view a phone built from patches matches a fresh snapshot of the same player. */
 async function expectInSync(s: TestSocket, wsUrl: string) {
-  await pastThrottle();
+  pastThrottle(clock);
+  await s.delivered();
   const fresh = await TestSocket.open(wsUrl);
   fresh.sendMsg({ type: "resume", token: s.token! });
   const st = await fresh.playerState((v) => v.kind !== "none");
@@ -241,21 +253,24 @@ describe("WebSocket transport", () => {
     srv.hub.broadcast();
     const annQ = await ann!.playerState((v) => v.kind === "tower" && v.phase === "playing" && !!v.question);
     await bob!.playerState((v) => v.kind === "tower" && v.phase === "playing" && !!v.question);
-    await pastThrottle();
+    pastThrottle(clock);
+    await Promise.all([ann!.delivered(), bob!.delivered()]);
     ann!.msgs = [];
     bob!.msgs = [];
 
     // Only the clock moved: countdowns run on the phone, so nothing is sent.
     clock.advance(500);
     srv.hub.broadcast();
-    await pastThrottle();
+    pastThrottle(clock);
+    await Promise.all([ann!.delivered(), bob!.delivered()]);
     expect([states(ann!), states(bob!)]).toEqual([0, 0]);
 
     // Ann answers: she hears back, Bob's screen is unchanged so he gets nothing.
     const q = annQ.view.kind === "tower" ? annQ.view.question! : null;
     ann!.sendMsg({ type: "tower.answer", seq: q!.seq, option: 0 });
     await ann!.playerState((v) => v.kind === "tower" && v.feedback?.seq === q!.seq);
-    await pastThrottle();
+    pastThrottle(clock);
+    await bob!.delivered();
     expect(states(bob!)).toBe(0);
     await host.hostState((v) => v.kind === "tower");
 
