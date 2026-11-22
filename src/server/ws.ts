@@ -61,6 +61,8 @@ export class GameHub {
   private readonly views: ViewDelivery<WS>;
   /** Mode, mode settings and pacing carry over to the next lobby ("Play again"). */
   private lastSetup: Partial<LobbyChoices> = {};
+  /** The lobby that has not yet handed off, whose choices closeGame remembers. */
+  private openLobbyChoices: (() => LobbyChoices) | null = null;
   private readonly log: (msg: string) => void;
 
   constructor(
@@ -200,7 +202,9 @@ export class GameHub {
       openLobby: (quiz) => {
         this.closeGame();
         this.images = [...new Set(quiz.questions.flatMap((q) => (q.image ? [q.image] : [])))];
-        this.game = new Lobby(quiz, { ...this.lastSetup, onChange: () => this.views.scheduleBroadcast() });
+        const lobby = new Lobby(quiz, { ...this.lastSetup, onChange: () => this.views.scheduleBroadcast() });
+        this.game = lobby;
+        this.openLobbyChoices = () => lobby.choices;
         this.log(`Game opened: ${quiz.title}. Players join at ${this.join.url()}`);
         this.views.scheduleBroadcast();
       },
@@ -256,13 +260,15 @@ export class GameHub {
       installAndActivate("classic", (game) => game[action.type]());
     }
     this.lastSetup = choices;
+    this.openLobbyChoices = null;
   }
 
   closeGame(): void {
     this.views.cancelPending();
     if (!this.game) return;
-    if (this.game instanceof Lobby) this.lastSetup = this.game.choices;
-    else this.game.dispose();
+    if (this.openLobbyChoices) this.lastSetup = this.openLobbyChoices();
+    this.openLobbyChoices = null;
+    this.game.dispose();
     this.game = null;
     this.phoneAttachments.detachAll();
     this.views.refreshOnNextUpdate();

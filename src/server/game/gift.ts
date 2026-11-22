@@ -190,7 +190,7 @@ export class GiftGame {
   join(rawNickname: unknown, avatar?: AvatarChoice | null): GiftPlayer {
     if (this.phase === "podium" || this.phase === "finishing") throw new GameError("This game has finished accepting players");
     const player = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), (base) => this.newPlayer(base));
-    if (this.phase === "playing") this.stream.open(player);
+    this.stream.openOnJoin(player, this.phase === "playing");
     this.onChange();
     return player;
   }
@@ -319,8 +319,8 @@ export class GiftGame {
       correct: player.correct,
       progress: bonus ? GIFT_CORRECT_TO_PLAY : player.correct % GIFT_CORRECT_TO_PLAY,
       rank: this.phase === "podium" ? this.standings().find((standing) => standing.id === id)!.rank : null,
-      question: this.phase === "playing" && !bonus ? this.stream.questionView(player) : null,
-      feedback: this.phase === "playing" || bonus ? this.stream.feedbackView(player) : null,
+      // The bonus round is part of answering, so its feedback flash shows, but its question does not.
+      ...this.stream.fragment(player, this.phase === "playing", this.phase === "playing" && !bonus),
       bonus: bonus
         ? {
             round: player.rounds,

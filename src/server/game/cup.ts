@@ -331,7 +331,7 @@ export class CupGame {
   join(rawNickname: unknown, avatar?: AvatarChoice | null): CupPlayer {
     if (this.phase === "podium") throw new GameError("This game has finished");
     const player = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), (base) => this.newPlayer(base));
-    if (this.phase !== "countdown") this.stream.open(player);
+    this.stream.openOnJoin(player, this.phase !== "countdown");
     this.onChange();
     return player;
   }
@@ -363,10 +363,15 @@ export class CupGame {
 
   // ---------- actions ----------
 
+  /** Whether this player is in the quiz part of the game, even if safe already: poisoned players practise in every phase of play. */
+  private quizzing(p: CupPlayer): boolean {
+    if (p.outRound !== null) return this.phase !== "countdown" && this.phase !== "podium";
+    return this.phase === "quiz";
+  }
+
   /** Whether this player is answering questions right now. */
   private answering(p: CupPlayer): boolean {
-    if (p.outRound !== null) return this.phase !== "countdown" && this.phase !== "podium";
-    return this.phase === "quiz" && !p.safe;
+    return this.quizzing(p) && (p.outRound !== null || !p.safe);
   }
 
   /** Answer a question. Living players need `target` right this round; poisoned players answer for practice. */
@@ -482,7 +487,7 @@ export class CupGame {
       playerCount: this.players.size,
       standings: podium ? this.standings() : null,
       awards: podium ? this.awards() : null,
-      errors: podium ? this.stream.errors() : null,
+      errors: this.stream.errorsWhen(podium),
     };
   }
 
@@ -530,8 +535,7 @@ export class CupGame {
         correct: p.correct,
       },
       startCups: this.startCups,
-      question: this.answering(p) ? this.stream.questionView(p) : null,
-      feedback: this.stream.feedbackView(p),
+      ...this.stream.fragment(p, this.quizzing(p), this.answering(p)),
       drink: this.phase === "drink" && this.drinkers.includes(p.id) ? { picked: p.pick } : null,
       myDrink: reveal && mineAt >= 0 ? { ...reveal.drinks[mineAt]!, seq: reveal.seq, turn: reveal.current === mineAt, waiting: reveal.current < mineAt } : null,
       alive: this.alive().length,

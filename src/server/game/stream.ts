@@ -1,6 +1,6 @@
 import type { AnswerValue } from "../../shared/answer-match.ts";
 import { checkAnswer } from "../../shared/answer-match.ts";
-import type { QuestionError, StreamQuestionView } from "../../shared/mode-views.ts";
+import type { QuestionError, StreamFeedbackView, StreamQuestionView } from "../../shared/mode-views.ts";
 import type { Question } from "../../shared/quiz-schema.ts";
 import type { Clock } from "./common.ts";
 import { shuffle, shuffleOptions, topErrors } from "./common.ts";
@@ -14,6 +14,12 @@ const WRONG_PENALTY_3_MS = 4000;
 /** How much longer the ✗ shows for a wrong answer that is the streak-th in a row. */
 function wrongPenaltyMs(streak: number): number {
   return streak >= 3 ? WRONG_PENALTY_3_MS : streak === 2 ? WRONG_PENALTY_2_MS : 0;
+}
+
+/** The part of a Streamed question mode's phone view that the stream builds. */
+export interface StreamFragment {
+  question: StreamQuestionView | null;
+  feedback: StreamFeedbackView | null;
 }
 
 interface CurrentQuestion {
@@ -77,6 +83,26 @@ export class QuestionStream {
   open(player: AnswerTotals): void {
     const state = this.state(player);
     if (!state.current) this.deal(state);
+  }
+
+  /**
+   * The question and answer feedback a Streamed question mode puts in a phone view.
+   * Feedback shows only while the mode says the player is answering; the question
+   * shows while `asking` (by default the same), for modes that answer a question
+   * and then do something else while the flash is still running.
+   */
+  fragment(player: AnswerTotals, answering: boolean, asking = answering): StreamFragment {
+    return { question: asking ? this.questionView(player) : null, feedback: answering ? this.feedbackView(player) : null };
+  }
+
+  /** Open a question for a player who joined mid-game, when the mode is in play. */
+  openOnJoin(player: AnswerTotals, inPlay: boolean): void {
+    if (inPlay) this.open(player);
+  }
+
+  /** The most-missed questions once the game has finished, else null. */
+  errorsWhen(finished: boolean): QuestionError[] | null {
+    return finished ? this.errors() : null;
   }
 
   /** When the feedback flash ends, including any Protect from abuse wait. */
@@ -152,7 +178,7 @@ export class QuestionStream {
     };
   }
 
-  feedbackView(player: AnswerTotals): { seq: number; correct: boolean; answers: string[]; penaltyMs: number; remainingMs: number } | null {
+  feedbackView(player: AnswerTotals): StreamFeedbackView | null {
     const state = this.state(player);
     const now = this.clock.now();
     return state.feedback && now < state.readyAt ? { ...state.feedback, answers: [...state.feedback.answers], remainingMs: state.readyAt - now } : null;

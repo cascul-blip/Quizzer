@@ -238,7 +238,7 @@ export class TowerGame {
   join(rawNickname: unknown, avatar?: AvatarChoice | null): TowerPlayer {
     if (this.phase === "podium") throw new GameError("This game has finished");
     const player = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), (base) => this.newPlayer(base, this.smallestTeam()));
-    if (this.phase === "playing") this.stream.open(player);
+    this.stream.openOnJoin(player, this.phase === "playing");
     this.onChange();
     return player;
   }
@@ -368,7 +368,7 @@ export class TowerGame {
       lastAttack: this.lastAttack,
       nextMonsterMs: this.phase === "playing" ? this.nextMonsterMs() : null,
       awards: this.phase === "podium" ? this.awards() : null,
-      errors: this.phase === "podium" ? this.stream.errors() : null,
+      errors: this.stream.errorsWhen(this.phase === "podium"),
     };
   }
 
@@ -414,8 +414,7 @@ export class TowerGame {
       team: teamInfo(team.index),
       state: p.state,
       blocksHeld: p.blocksHeld,
-      question: playing && p.state === "question" ? this.stream.questionView(p) : null,
-      feedback: this.stream.feedbackView(p),
+      ...this.stream.fragment(p, playing, playing && p.state === "question"),
       egg: playing && this.egg ? { seq: this.egg.seq, ...this.egg.cells[p.team]! } : null,
       monsterEvent: this.monsterEventFor(p),
       build: playing && p.state === "build" ? { columns: [...team.columns], floors: floorsOf(team), sweepMs: sweepMsFor(floorsOf(team)) } : null,

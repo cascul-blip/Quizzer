@@ -440,7 +440,7 @@ export class SiegeGame {
   join(rawNickname: unknown, avatar?: AvatarChoice | null): SiegePlayer {
     if (this.phase === "podium") throw new GameError("This game has finished");
     const player = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), (base) => this.newPlayer(base));
-    if (this.playing) this.stream.open(player);
+    this.stream.openOnJoin(player, this.playing);
     this.onChange();
     return player;
   }
@@ -582,7 +582,7 @@ export class SiegeGame {
       connectedCount: players.filter((p) => p.connected).length,
       result: ending && this.outcome ? this.result() : null,
       awards: podium ? this.awards() : null,
-      errors: podium ? this.stream.errors() : null,
+      errors: this.stream.errorsWhen(podium),
     };
   }
 
@@ -626,8 +626,7 @@ export class SiegeGame {
       gold: p.gold,
       danger: this.playing ? this.battlefield.danger : [],
       me: { id: p.id, nickname: p.nickname, avatar: p.avatar, correct: p.correct, goldEarned: p.goldEarned },
-      question: this.playing ? this.stream.questionView(p) : null,
-      feedback: this.playing ? this.stream.feedbackView(p) : null,
+      ...this.stream.fragment(p, this.playing),
       lastPlaced: p.lastPlaced,
       alert: this.playing ? this.battlefield.alert : null,
       map: p.mapOpen && this.playing ? this.battlefield.mapView() : null,

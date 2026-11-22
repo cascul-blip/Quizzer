@@ -84,4 +84,46 @@ describe("QuestionStream", () => {
       clock.advance(1000);
     }
   });
+
+  test("fragment shows feedback only while answering, and the question while asking", () => {
+    const clock = new FakeClock();
+    const stream = new QuestionStream(sampleQuiz().questions, false, () => 0, clock);
+    const player = stream.registerPlayer({});
+    expect(stream.fragment(player, true)).toEqual({ question: null, feedback: null });
+    stream.open(player);
+    expect(stream.fragment(player, true).question).toEqual(stream.questionView(player));
+    expect(stream.fragment(player, false).question).toBeNull();
+    expect(stream.fragment(player, true, false).question).toBeNull();
+    stream.answer(player, stream.questionView(player)!.seq, 0);
+    expect(stream.fragment(player, true).feedback).toEqual(stream.feedbackView(player));
+    expect(stream.fragment(player, true).feedback).not.toBeNull();
+    expect(stream.fragment(player, false).feedback).toBeNull();
+    expect(stream.fragment(player, true, false).feedback).not.toBeNull();
+    clock.advance(1000);
+    expect(stream.fragment(player, true).feedback).toBeNull();
+  });
+
+  test("a player who joins mid-game gets a question only when the mode is in play", () => {
+    const stream = new QuestionStream(sampleQuiz().questions, false, () => 0, new FakeClock());
+    const early = stream.registerPlayer({});
+    stream.openOnJoin(early, false);
+    expect(stream.questionView(early)).toBeNull();
+    const late = stream.registerPlayer({});
+    stream.openOnJoin(late, true);
+    const first = stream.questionView(late);
+    expect(first).not.toBeNull();
+    stream.openOnJoin(late, true);
+    expect(stream.questionView(late)).toEqual(first);
+  });
+
+  test("errorsWhen lists the most-missed questions only once the game has finished", () => {
+    const clock = new FakeClock();
+    const stream = new QuestionStream(sampleQuiz().questions.slice(0, 1), false, () => 0, clock);
+    const player = stream.registerPlayer({});
+    stream.open(player);
+    stream.answer(player, 1, 0);
+    expect(stream.errorsWhen(false)).toBeNull();
+    expect(stream.errorsWhen(true)).toEqual(stream.errors());
+    expect(stream.errorsWhen(true)).toHaveLength(1);
+  });
 });

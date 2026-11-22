@@ -394,7 +394,7 @@ export class SubGame {
     const p = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), (base) => this.newPlayer(base));
     // Joining mid-dive: wait for the next level (like Kahoot).
     if (this.phase === "dive") p.state = "waiting";
-    else if (this.phase === "chase") this.stream.open(p);
+    else this.stream.openOnJoin(p, this.phase === "chase");
     this.onChange();
     return p;
   }
@@ -472,7 +472,7 @@ export class SubGame {
       players: [...this.players.values()].map((p) => ({ id: p.id, nickname: p.nickname, avatar: p.avatar, connected: p.connected, state: p.state })),
       playerCount: this.players.size,
       awards: this.phase === "podium" ? this.awards() : null,
-      errors: this.phase === "podium" ? this.stream.errors() : null,
+      errors: this.stream.errorsWhen(this.phase === "podium"),
     };
   }
 
@@ -531,8 +531,7 @@ export class SubGame {
       me: { id: p.id, nickname: p.nickname, avatar: p.avatar, correct: p.correct, boosts: p.boosts, diveHits: p.diveHits },
       state: p.state,
       towardBoost: p.towardBoost,
-      question: this.phase === "chase" && p.state === "question" ? this.stream.questionView(p) : null,
-      feedback: this.stream.feedbackView(p),
+      ...this.stream.fragment(p, this.phase === "chase", this.phase === "chase" && p.state === "question"),
       dive: this.diveView(p),
       result,
     };

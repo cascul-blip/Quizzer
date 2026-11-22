@@ -269,4 +269,19 @@ describe("Game modes", () => {
       });
     });
   }
+
+  test("closing a lobby that never started keeps its mode for the next lobby", () => {
+    openLobby("robot", ["Noel"]);
+    send(host, { type: "host.close" });
+    send(host, { type: "host.open", quizId });
+    expect(lobbyView().mode).toBe("robot");
+  });
+
+  test("closing a game after its start keeps its mode for the next lobby", () => {
+    openLobby("cup", ["Noel"]);
+    send(host, { type: "host.start", pacing: "manual" });
+    send(host, { type: "host.close" });
+    send(host, { type: "host.open", quizId });
+    expect(lobbyView().mode).toBe("cup");
+  });
 });

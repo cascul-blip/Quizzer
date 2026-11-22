@@ -234,7 +234,7 @@ export class FightGame {
   join(rawNickname: unknown, avatar?: AvatarChoice | null): FightPlayer {
     if (this.phase === "podium") throw new GameError("This game has finished");
     const player = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), (base) => this.newPlayer(base, this.smallestTeam()));
-    if (this.phase === "playing" || this.phase === "collapse") this.stream.open(player);
+    this.stream.openOnJoin(player, this.phase === "playing" || this.phase === "collapse");
     this.onChange();
     return player;
   }
@@ -475,7 +475,7 @@ export class FightGame {
       outcome: this.phase === "collapse" || this.phase === "podium" ? this.outcome : null,
       playerCount: players.length,
       awards: this.phase === "podium" ? this.awards() : null,
-      errors: this.phase === "podium" ? this.stream.errors() : null,
+      errors: this.stream.errorsWhen(this.phase === "podium"),
     };
   }
 
@@ -513,8 +513,7 @@ export class FightGame {
       decisionMs: state === "decide" ? Math.max(0, p.deadline - now) : 0,
       repairMs: state === "repair" ? Math.max(0, p.repairEndsAt - now) : 0,
       lastRepair: p.lastRepair,
-      question: playing && state === "question" ? this.stream.questionView(p) : null,
-      feedback: this.stream.feedbackView(p),
+      ...this.stream.fragment(p, playing, playing && state === "question"),
       damage: this.teams.map((t) => t.damage),
       terrain: this.terrain,
       shot: shot ? this.shotView(shot, now) : null,

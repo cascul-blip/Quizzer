@@ -179,6 +179,9 @@ export class Lobby {
     this.onChange();
   }
 
+  /** A lobby holds no timers, so there is nothing to release. */
+  dispose(): void {}
+
   get choices(): LobbyChoices {
     return { mode: this.mode, settings: { ...this.settings }, protect: this.protect, pacing: this.pacing };
   }
