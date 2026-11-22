@@ -24,6 +24,7 @@ import { GameError, realClock, shuffle } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, unhandled } from "./mode-entry.ts";
+import { PhaseTimer } from "./phase-timer.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
@@ -101,12 +102,9 @@ export class RobotGame {
   readonly title: string;
   readonly questions: Question[];
   readonly roster = new Roster<RobotPlayer>();
-  phase: RobotPhase = "countdown";
   round = 0;
   /** Laser attacks fired so far. */
   attacks = 0;
-  phaseEndsAt = 0;
-  phaseDurationMs = COUNTDOWN_MS;
   marked = new Set<number>();
   /** Rings of tiles destroyed so far. */
   inset = 0;
@@ -117,8 +115,7 @@ export class RobotGame {
   private readonly clock: Clock;
   private readonly rng: () => number;
   private readonly stream: QuestionStream;
-  private timer: unknown = null;
-  private warnTimer: unknown = null;
+  private readonly phases: PhaseTimer<RobotPhase>;
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: RobotGame) => void;
@@ -129,6 +126,7 @@ export class RobotGame {
     this.title = quiz.title;
     this.questions = quiz.questions;
     this.clock = opts.clock ?? realClock;
+    this.phases = new PhaseTimer(this.clock, "countdown", COUNTDOWN_MS);
     this.rng = opts.rng ?? Math.random;
     this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock, settings.protect);
     this.onChange = opts.onChange ?? (() => {});
@@ -141,6 +139,19 @@ export class RobotGame {
     const game = new RobotGame(lobby.quiz, { shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
     game.roster.adoptFrom(lobby.players, (base) => game.newPlayer(base));
     return game;
+  }
+
+  get phase(): RobotPhase {
+    return this.phases.phase;
+  }
+
+  /** When the current phase's countdown ends; 0 when it has none. */
+  get phaseEndsAt(): number {
+    return this.phases.endsAt;
+  }
+
+  get phaseDurationMs(): number {
+    return this.phases.durationMs;
   }
 
   get players(): Map<string, RobotPlayer> {
@@ -173,18 +184,8 @@ export class RobotGame {
 
   start(): void {
     if (this.players.size === 0) throw new GameError("Wait for at least one player to join");
-    this.setPhase("countdown", COUNTDOWN_MS, () => this.beginRound());
+    this.phases.set("countdown", COUNTDOWN_MS, () => this.beginRound());
     this.onChange();
-  }
-
-  private setPhase(phase: RobotPhase, ms: number, then: () => void): void {
-    this.phase = phase;
-    this.phaseDurationMs = ms;
-    this.phaseEndsAt = this.clock.now() + ms;
-    this.timer = this.clock.setTimeout(() => {
-      this.timer = null;
-      then();
-    }, ms);
   }
 
   private beginRound(): void {
@@ -192,10 +193,10 @@ export class RobotGame {
     this.marked = new Set();
     this.collapsing = new Set();
     const ms = robotQuizMs(this.round);
-    this.setPhase("quiz", ms, () => this.beginMove());
+    this.phases.set("quiz", ms, () => this.beginMove());
     for (const p of this.players.values()) this.stream.open(p);
     if (ms <= ROBOT_WARN_MS) this.markTargets();
-    else this.warnTimer = this.clock.setTimeout(() => this.markTargets(), ms - ROBOT_WARN_MS);
+    else this.phases.after("warn", ms - ROBOT_WARN_MS, () => this.markTargets());
     this.onChange();
   }
 
@@ -205,7 +206,7 @@ export class RobotGame {
    * Occupied tiles count toward the 3/4 first, so a quarter of the board stays safe however small it gets.
    */
   private markTargets(): void {
-    this.warnTimer = null;
+    this.phases.cancel("warn");
     if (this.phase !== "quiz") return;
     const shrink = this.round % ROBOT_SHRINK_EVERY === 0 && ROBOT_BOARD - 2 * this.inset > ROBOT_MIN_BOARD;
     this.collapsing = new Set(shrink ? this.playableTiles().filter((i) => robotRing(i) === this.inset) : []);
@@ -220,7 +221,7 @@ export class RobotGame {
 
   private beginMove(): void {
     if (this.marked.size === 0) this.markTargets();
-    this.setPhase("move", ROBOT_MOVE_MS, () => this.fire());
+    this.phases.set("move", ROBOT_MOVE_MS, () => this.fire());
     this.onChange();
   }
 
@@ -246,7 +247,7 @@ export class RobotGame {
       for (const p of this.alive()) if (!robotInBounds(p.x, p.y, this.inset)) this.relocate(p);
     }
     this.lastAttack = { seq: this.attacks, round: this.round, hit, eliminated };
-    this.setPhase("attack", ROBOT_ATTACK_MS, () => (this.isOver() ? this.finish() : this.beginRound()));
+    this.phases.set("attack", ROBOT_ATTACK_MS, () => (this.isOver() ? this.finish() : this.beginRound()));
     this.onChange();
   }
 
@@ -284,10 +285,8 @@ export class RobotGame {
 
   private finish(): void {
     if (this.phase === "podium") return;
-    this.clearTimers();
-    this.phase = "podium";
-    this.phaseEndsAt = 0;
-    this.phaseDurationMs = 0;
+    this.phases.dispose();
+    this.phases.enter("podium");
     this.marked = new Set();
     this.collapsing = new Set();
     this.onFinish(this);
@@ -295,14 +294,7 @@ export class RobotGame {
   }
 
   dispose(): void {
-    this.clearTimers();
-  }
-
-  private clearTimers(): void {
-    if (this.timer !== null) this.clock.clearTimeout(this.timer);
-    if (this.warnTimer !== null) this.clock.clearTimeout(this.warnTimer);
-    this.timer = null;
-    this.warnTimer = null;
+    this.phases.dispose();
   }
 
   // ---------- players ----------
@@ -389,7 +381,7 @@ export class RobotGame {
   // ---------- views ----------
 
   private remainingMs(): number {
-    return this.phaseEndsAt ? Math.max(0, this.phaseEndsAt - this.clock.now()) : 0;
+    return this.phases.remainingMs();
   }
 
   hostView(): HostRobotState {

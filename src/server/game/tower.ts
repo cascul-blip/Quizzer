@@ -12,6 +12,7 @@ import { GameError, realClock, teamInfo } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
+import { GameLengthClock, PhaseTimer } from "./phase-timer.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
@@ -71,6 +72,9 @@ interface TowerGameSettings extends TowerSettings {
 }
 
 /** Tallest Tower: teams answer at their own pace; every 4 correct answers are dropped onto the team tower. */
+/** The phase timer slot of the i-th egg announcement. */
+const monsterSlot = (i: number): string => `monster-${i}`;
+
 export class TowerGame {
   readonly runningMode = "tower" as const;
   readonly quizId: string;
@@ -79,22 +83,17 @@ export class TowerGame {
   readonly teams: TowerTeam[];
   readonly settings: TowerGameSettings;
   readonly roster = new Roster<TowerPlayer>();
-  phase: TowerPhase = "countdown";
-  /** When the current phase's countdown ends. */
-  phaseEndsAt = 0;
   dropCount = 0;
   egg: MonsterEggs | null = null;
   lastAttack: MonsterAttack | null = null;
   private monsterSeq = 0;
   private lastMonsterEvent: { seq: number; kind: "egg" | "attack" } | null = null;
-  /** Absolute clock times of the egg announcements still to come. */
-  private monsterAt: number[] = [];
-  private monsterTimers: unknown[] = [];
 
   private readonly clock: Clock;
   private readonly rng: () => number;
   private readonly stream: QuestionStream;
-  private timer: unknown = null;
+  private readonly phases: PhaseTimer<TowerPhase>;
+  private readonly gameLength: GameLengthClock<TowerPhase>;
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: TowerGame) => void;
@@ -107,6 +106,8 @@ export class TowerGame {
     this.settings = settings;
     this.teams = Array.from({ length: settings.teams }, (_, i) => ({ ...teamInfo(i), columns: [0, 0, 0] }));
     this.clock = opts.clock ?? realClock;
+    this.phases = new PhaseTimer(this.clock, "countdown");
+    this.gameLength = new GameLengthClock(this.phases, () => this.finish());
     this.rng = opts.rng ?? Math.random;
     this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock, settings.protect);
     this.onChange = opts.onChange ?? (() => {});
@@ -121,6 +122,10 @@ export class TowerGame {
     const teams = lobby.teams;
     game.roster.adoptFrom(players, (base) => game.newPlayer(base, teams.get(base.id) ?? 0));
     return game;
+  }
+
+  get phase(): TowerPhase {
+    return this.phases.phase;
   }
 
   get players(): Map<string, TowerPlayer> {
@@ -144,27 +149,28 @@ export class TowerGame {
 
   start(): void {
     if (this.players.size === 0) throw new GameError("Wait for at least one player to join");
-    this.phase = "countdown";
-    this.phaseEndsAt = this.clock.now() + COUNTDOWN_MS;
-    this.timer = this.clock.setTimeout(() => this.beginPlaying(), COUNTDOWN_MS);
+    this.phases.set("countdown", COUNTDOWN_MS, () => this.beginPlaying());
     this.onChange();
   }
 
   private beginPlaying(): void {
     if (this.phase !== "countdown") return;
     const ms = this.settings.minutes * 60_000;
-    this.phase = "playing";
-    this.phaseEndsAt = this.clock.now() + ms;
+    this.gameLength.start("playing", ms);
     for (const p of this.players.values()) this.stream.open(p);
-    this.timer = this.clock.setTimeout(() => this.finish(), ms);
     if (this.monsterEnabled) {
-      for (const frac of MONSTER_AT) {
-        const delay = Math.round(ms * frac);
-        this.monsterAt.push(this.clock.now() + delay);
-        this.monsterTimers.push(this.clock.setTimeout(() => this.announceMonster(), delay));
-      }
+      MONSTER_AT.forEach((frac, i) => this.phases.after(monsterSlot(i), Math.round(ms * frac), () => this.announceMonster()));
     }
     this.onChange();
+  }
+
+  /** Time until the next egg announcement, or null if none is coming. */
+  private nextMonsterMs(): number | null {
+    for (let i = 0; i < MONSTER_AT.length; i++) {
+      const ms = this.phases.slotRemainingMs(monsterSlot(i));
+      if (ms !== null) return ms;
+    }
+    return null;
   }
 
   /** The monster needs another team to attack. */
@@ -180,7 +186,6 @@ export class TowerGame {
    * is still empty.
    */
   private announceMonster(): void {
-    this.monsterAt.shift();
     if (this.phase !== "playing") return;
     if (!this.egg) {
       const seq = ++this.monsterSeq;
@@ -211,35 +216,21 @@ export class TowerGame {
     this.onChange();
   }
 
-  private clearMonsterTimers(): void {
-    for (const t of this.monsterTimers) this.clock.clearTimeout(t);
-    this.monsterTimers = [];
-    this.monsterAt = [];
-  }
-
   end(): void {
-    this.finish();
+    this.gameLength.end();
   }
 
+  /** Runs once, from the game-length clock: at the deadline or when the host ends the game. */
   private finish(): void {
-    if (this.phase === "podium") return;
-    this.clearTimer();
-    this.clearMonsterTimers();
+    this.phases.cancelSlots();
     this.egg = null;
-    this.phase = "podium";
-    this.phaseEndsAt = 0;
+    this.phases.enter("podium");
     this.onFinish(this);
     this.onChange();
   }
 
   dispose(): void {
-    this.clearTimer();
-    this.clearMonsterTimers();
-  }
-
-  private clearTimer(): void {
-    if (this.timer !== null) this.clock.clearTimeout(this.timer);
-    this.timer = null;
+    this.phases.dispose();
   }
 
   // ---------- players ----------
@@ -340,7 +331,7 @@ export class TowerGame {
   // ---------- views ----------
 
   private remainingMs(): number {
-    return this.phaseEndsAt ? Math.max(0, this.phaseEndsAt - this.clock.now()) : 0;
+    return this.gameLength.remainingMs();
   }
 
   hostView(): HostTowerState {
@@ -375,7 +366,7 @@ export class TowerGame {
       monster: this.monsterEnabled,
       egg: this.egg,
       lastAttack: this.lastAttack,
-      nextMonsterMs: this.phase === "playing" && this.monsterAt.length ? Math.max(0, this.monsterAt[0]! - this.clock.now()) : null,
+      nextMonsterMs: this.phase === "playing" ? this.nextMonsterMs() : null,
       awards: this.phase === "podium" ? this.awards() : null,
       errors: this.phase === "podium" ? this.stream.errors() : null,
     };
