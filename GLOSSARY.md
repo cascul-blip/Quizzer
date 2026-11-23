@@ -33,7 +33,7 @@ What a finished game saves for the host as a spreadsheet: one row per player in 
 _Avoid_: results table, results CSV (the CSV is the file written from it)
 
 **Standings**:
-The places of a finished (or running) game: entries sorted by the game mode's comparison order, such as Tallest Tower's floors then blocks placed, with competition ranks (1, 2, 2, 4) where entries equal on every key share a place. One module (`src/server/game/standings.ts`) computes them; the podium, the phone's rank and the results sheet's Rank column all read from it. Showdown's order ends with the ladder, so its places are never shared.
+The places of a finished (or running) game: entries sorted by the game mode's comparison order, such as Tallest Tower's floors then blocks placed, with competition ranks (1, 2, 2, 4) where entries equal on every key share a place. One module (`src/server/game/standings.ts`) computes them; the podium, the phone's rank and the results sheet's Rank column all read from it. Showdown ranks by points, then correct answers; players equal on both share a place, listed higher on the ladder first.
 _Avoid_: leaderboard (Classic's between-question screen), ranking loop
 
 **Battlefield**:
