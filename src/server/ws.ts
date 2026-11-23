@@ -73,9 +73,10 @@ export class GameHub {
       (ws) => this.playerView(ws),
       opts.clock ?? realClock,
       (send) => {
-        // Games that can share work between the views of one broadcast (Classic, Showdown).
         const game = this.game;
-        if (game && "viewBatch" in game) game.viewBatch(send);
+        if (!game || game instanceof Lobby) return send();
+        const { viewBatch } = entryOf(game);
+        if (viewBatch) viewBatch(game, send);
         else send();
       },
     );
