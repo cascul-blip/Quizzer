@@ -401,10 +401,10 @@ export class DuelGame {
     return this.ladder.map((id) => this.players.get(id)).filter((p): p is DuelPlayer => !!p);
   }
 
-  /** The standings (rank 1 first): most points, then higher on the ladder. */
+  /** The standings (rank 1 first): most points; equal points share a place, listed higher on the ladder first. */
   ranked(): Ranked<DuelPlayer>[] {
     const pos = new Map(this.ladder.map((id, i) => [id, i]));
-    return rankBy(this.onLadder(), [most((p) => p.points), fewest((p) => pos.get(p.id) ?? Infinity)]);
+    return rankBy(this.onLadder(), [most((p) => p.points)], [fewest((p) => pos.get(p.id) ?? Infinity)]);
   }
 
   /** Arena per player id on the current ladder (next round's arena during the reveal; the final one at the podium). */

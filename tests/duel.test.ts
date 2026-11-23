@@ -205,12 +205,13 @@ describe("Showdown", () => {
       ],
     ]);
     expect(v.players.map((p) => [p.nickname, p.rank, p.arena, p.startArena])).toEqual([
+      // Nobody has points yet, so everyone shares first place (listed in ladder order).
       ["A", 1, 1, 1],
-      ["B", 2, 1, 1],
-      ["C", 3, 2, 2],
-      ["D", 4, 2, 2],
-      ["E", 5, 3, 3],
-      ["F", 6, 3, 3],
+      ["B", 1, 1, 1],
+      ["C", 1, 2, 2],
+      ["D", 1, 2, 2],
+      ["E", 1, 3, 3],
+      ["F", 1, 3, 3],
     ]);
     const c = game.playerView(byName(game, "C").id)!;
     expect(c).toMatchObject({
@@ -225,7 +226,7 @@ describe("Showdown", () => {
       myDuel: null,
       result: null,
     });
-    expect(c.me).toMatchObject({ nickname: "C", arena: 2, rank: 3, wins: 0 });
+    expect(c.me).toMatchObject({ nickname: "C", arena: 2, rank: 1, wins: 0 });
     expect(c.opponents.map((o) => o.nickname)).toEqual(["D"]);
     expect(c.question!.options).toEqual([]);
     expect(game.playerView("nobody")).toBeNull();
@@ -430,7 +431,7 @@ describe("Showdown", () => {
     const late = game.join("Late");
     expect(ladderNames(game)).toEqual(["A", "B", "C", "D", "Late"]);
     const lv = game.playerView(late.id)!;
-    expect(lv).toMatchObject({ phase: "open", opponents: [], me: { rank: 5 } });
+    expect(lv).toMatchObject({ phase: "open", opponents: [], me: { rank: 1 } });
     expect(lv.arena).toBe(2);
     // Not in an arena this round: can't answer and doesn't hold up the early close.
     expect(answer(game, late, true)).toBe(false);
@@ -439,7 +440,7 @@ describe("Showdown", () => {
     answer(game, byName(game, "D"), false);
     expect(game.phase).toBe("reveal");
     expect(game.lastRound!.arenas.flatMap((a) => a.duelists.map((d) => d.nickname))).not.toContain("Late");
-    expect(game.hostView().players.find((p) => p.nickname === "Late")).toMatchObject({ rank: 5, arena: 2, startArena: 2, wins: 0 });
+    expect(game.hostView().players.find((p) => p.nickname === "Late")).toMatchObject({ rank: 2, arena: 2, startArena: 2, wins: 0 });
     game.next();
     // A beat B in Arena 1 (stays), C beat D; Late joins the bottom arena: a 3-way duel.
     expect(arenaNames(game)).toEqual([
@@ -563,10 +564,10 @@ describe("Showdown", () => {
     expect(v.players.map((p) => [p.nickname, p.rank, p.points, p.arena, p.startArena, p.wins, p.reign])).toEqual([
       ["D", 1, 5, 1, 2, 2, 1],
       ["F", 2, 3, 1, 3, 2, 0],
-      ["A", 3, 3, 2, 1, 1, 1],
+      ["A", 2, 3, 2, 1, 1, 1],
       ["E", 4, 1, 2, 3, 1, 0],
       ["B", 5, 0, 3, 1, 0, 0],
-      ["C", 6, 0, 3, 2, 0, 0],
+      ["C", 5, 0, 3, 2, 0, 0],
     ]);
     expect(v.awards).toEqual({
       longestReign: { value: 1, nicknames: ["D", "A"] },
@@ -587,7 +588,7 @@ describe("Showdown", () => {
       result: { rank: 2, playerCount: 6, awards: [AWARD_MOST_WINS, AWARD_BIGGEST_CLIMB] },
     });
     expect(game.playerView(byName(game, "D").id)!.result!.awards).toEqual([AWARD_LONGEST_REIGN, AWARD_MOST_WINS]);
-    expect(game.playerView(byName(game, "C").id)!.result).toEqual({ rank: 6, playerCount: 6, awards: [] });
+    expect(game.playerView(byName(game, "C").id)!.result).toEqual({ rank: 5, playerCount: 6, awards: [] });
 
     const results = buildDuelResults(game);
     expect(results.header).toEqual([
@@ -612,10 +613,10 @@ describe("Showdown", () => {
     expect(results.rows).toEqual([
       [1, "D", 5, 1, 2, 2, 0, 0, 1, 2, 0, "yes", "yes", "0.20", "yes", "yes", "0.10"],
       expect.anything(),
-      [3, "A", 3, 2, 1, 1, 1, 0, 1, 1, 1, "yes", "yes", "0.10", "no", "no", "0.40"],
+      [2, "A", 3, 2, 1, 1, 1, 0, 1, 1, 1, "yes", "yes", "0.10", "no", "no", "0.40"],
       expect.anything(),
       expect.anything(),
-      [6, "C", 0, 3, 2, 0, 2, 0, 0, 0, 2, "no", "no", "0.50", "no", "no", "0.60"],
+      [5, "C", 0, 3, 2, 0, 2, 0, 0, 0, 2, "no", "no", "0.50", "no", "no", "0.60"],
     ]);
   });
 
@@ -656,10 +657,10 @@ describe("Showdown", () => {
     ]);
     expect(ladderNames(game)).toEqual(["D", "B", "A", "C"]);
     game.end();
-    // A (2 + 1) and D (1 + 2) tie on 3: D is higher on the ladder. A outranks B, who is above A on the ladder.
+    // A (2 + 1) and D (1 + 2) tie on 3 and share first place, D listed first as higher on the ladder. A outranks B, who is above A on the ladder.
     expect(game.hostView().players.map((p) => [p.nickname, p.rank, p.points])).toEqual([
       ["D", 1, 3],
-      ["A", 2, 3],
+      ["A", 1, 3],
       ["B", 3, 1],
       ["C", 4, 0],
     ]);

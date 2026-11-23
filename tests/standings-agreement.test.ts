@@ -145,10 +145,10 @@ describe("Standings", () => {
     });
   });
 
-  test("in Showdown, equal points never share a place: the ladder breaks the tie on the podium, the phone and the results sheet", async () => {
+  test("in Showdown, equal points share a place on the podium, the phone and the results sheet", async () => {
     const places = await finish("duel");
     const ranks = NICKNAMES.map((n) => places[n]!);
     for (const r of ranks) expect([r.phone, r.sheet]).toEqual([r.podium, r.podium]);
-    expect(ranks.map((r) => r.podium).sort()).toEqual([1, 2, 3]);
+    expect(ranks.map((r) => r.podium)).toEqual([1, 1, 1]);
   });
 });
