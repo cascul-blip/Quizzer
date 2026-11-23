@@ -67,3 +67,5 @@ _Avoid_: shared question, round question
 **Host command** is an instruction the host sends, in the lobby or during a game, such as Start, changing mode settings, or ending the game.
 
 **View delivery** is how the server sends projector snapshots and phone views. A phone can receive a patch based on its last view and catch up from the latest view when its socket drains.
+
+**View batching** is building every view of one broadcast together, so work the views share (a ranking, a podium) is done once. A game mode opts in through its mode entry (Classic and Showdown do).

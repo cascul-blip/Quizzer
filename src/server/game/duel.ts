@@ -652,6 +652,7 @@ export const duelMode: ModeEntry<"duel"> = {
     return { game, log: `${this.name} started with ${game.players.size} player(s), ${game.rounds} round(s)` };
   },
   pacing: (game) => game,
+  viewBatch: (game, send) => game.viewBatch(send),
   teams: () => null,
   results: buildDuelResults,
   handle(game, playerId, msg) {
