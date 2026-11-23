@@ -1,15 +1,24 @@
 # Mode docs
 
-Design notes for the app and individual modes live in `docs/modes/`:
+Design notes for the app and individual modes live in `docs/modes/`. [Quizzer](../modes/Quizzer.md) holds the original requirements for the app.
 
-- [Quizzer](../modes/Quizzer.md): the original requirements for the app
-- [Cup of Death](../modes/Cup%20of%20Death.md)
-- [Land Grab](../modes/Land%20Grab.md)
-- [Racer](../modes/Racer.md)
-- [Robot Attack](../modes/Robot%20Attack.md)
-- [Showdown](../modes/Showdown.md)
+Issues and docs name a mode by its plain name; the code uses its key (`src/server/game/<key>.ts`, `src/shared/modes/<key>.ts`, `kind: "<key>"`).
 
-Put a new mode's doc in `docs/modes/` and link it here.
+| Mode | Key | Design notes |
+| --- | --- | --- |
+| Classic | `classic` | |
+| Tallest Tower | `tower` | |
+| Sled Squad | `submarine` | |
+| Tower Fight | `fight` | |
+| Robot Attack | `robot` | [Robot Attack](../modes/Robot%20Attack.md) |
+| Land Grab | `land` | [Land Grab](../modes/Land%20Grab.md) |
+| Racer | `racer` | [Racer](../modes/Racer.md) |
+| Cup of Death | `cup` | [Cup of Death](../modes/Cup%20of%20Death.md) |
+| Kingdom Siege | `siege` | |
+| Showdown | `duel` | [Showdown](../modes/Showdown.md) |
+| Gift Grab | `gift` | |
+
+Add a new mode's row here, and put its design notes in `docs/modes/`.
 
 # Lobby handoff
 
@@ -38,6 +47,7 @@ The [shared mode entry](../../GLOSSARY.md#language) for each mode lives in `src/
 The following checklist covers adding a mode. "Compiler" marks the places where `bun run typecheck` reports a mode that is missing. The others fail silently:
 
 - [ ] `src/shared/modes/<mode>.ts`: the mode's own protocol types (phase, settings, views, constants), its phone message union (`<Mode>Msg`, for example `TowerMsg`), and its shared mode entry (`<mode>Shared`, built with `sharedModeEntry<ModeProtocol<...>>()`): the mode's one plain name, its flags, `lobbyBanner`, and `msgTypes`, which the compiler holds to exactly the union's message types. Supply the message union, stored settings type (`NoSettings` for a mode without settings), host view and phone view to `ModeProtocol`. Give it a fifth type argument if the host sends a different settings shape. Both gameplay views must use the mode key as their `kind` (compiler). `protocol.ts` derives the gameplay messages, settings, views and phases from `SHARED_MODES`. Its answer message is `StreamAnswerMsg<"<prefix>">` for a streamed question or `PacedAnswerMsg<"<prefix>">` for a paced question, both from `src/shared/mode-views.ts`. Every file in `modes/` is a mode file: it imports no other mode file and nothing from `protocol.ts`, and collections of modes live outside it (`src/shared/mode-entries.ts`); view pieces several modes share live in `src/shared/mode-views.ts`. `tests/import-graph.test.ts` checks these import boundaries and requires a file for every mode in `SHARED_MODES`.
+- [ ] Its row in the mode table under Mode docs.
 - [ ] `SHARED_MODES` in `src/shared/mode-entries.ts`: the import and entry for the mode's shared mode entry. `GameMode` follows from it. Also add the name to `GLOSSARY.md` if the glossary lists it.
 - [ ] A protected mode's `start` passes the handoff’s `protect` value on to its game.
 - [ ] `ModeGame` in `src/server/game/mode-entry.ts`: the mode's game class (compiler).

@@ -152,6 +152,21 @@ describe("Lobby handoff", () => {
   }
 });
 
+describe("Starting", () => {
+  for (const mode of GAME_MODES) {
+    test(`${SHARED_MODES[mode].name} refuses to start again once running`, () => {
+      openLobby(mode, ["Noel", "Holly"]);
+      send(host, { type: "host.start", pacing: "manual" });
+      expect(errors(host)).toEqual([]);
+      const game = hub.game;
+      if (!game || !("start" in game) || typeof game.start !== "function") throw new Error(`${mode} has no start()`);
+      const phase = hub.hostView().phase;
+      expect(() => game.start()).toThrow("The game has already started");
+      expect(hub.hostView().phase).toBe(phase);
+    });
+  }
+});
+
 describe("Mode settings carryover", () => {
   for (const mode of THEMED_MODES) {
     test(`${SHARED_MODES[mode].name} restores the default theme when the carried-over theme is unknown`, () => {

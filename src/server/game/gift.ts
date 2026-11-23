@@ -146,8 +146,13 @@ export class GiftGame {
     return this.roster.players;
   }
 
+  /** Set by start(); a running game can't be started again. */
+  private started = false;
+
   start(): void {
+    if (this.started) throw new GameError("The game has already started");
     if (!this.players.size) throw new GameError("Wait for at least one player to join");
+    this.started = true;
     this.phases.set("countdown", COUNTDOWN_MS, () => this.beginPlaying());
     this.onChange();
   }
