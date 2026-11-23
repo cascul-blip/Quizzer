@@ -29,6 +29,7 @@ import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
 import { Roster } from "./roster.ts";
+import { most, rankBy } from "./standings.ts";
 import type { AnswerTotals } from "./stream.ts";
 import { QuestionStream } from "./stream.ts";
 
@@ -416,17 +417,15 @@ export class CupGame {
 
   /** Survivors first, then the latest poisoned; poisoned in the same round share a rank. Ordered by correct answers within a rank. */
   standings(): CupStanding[] {
-    const key = (p: CupPlayer) => p.outRound ?? 1e6;
-    const sorted = [...this.players.values()].sort((a, b) => key(b) - key(a) || b.correct - a.correct);
-    let rank = 0;
-    let prev: number | null = null;
-    return sorted.map((p, i) => {
-      if (key(p) !== prev) {
-        rank = i + 1;
-        prev = key(p);
-      }
-      return { id: p.id, nickname: p.nickname, avatar: p.avatar, rank, cups: p.cups, outRound: p.outRound, correct: p.correct };
-    });
+    return rankBy([...this.players.values()], [most((p: CupPlayer) => p.outRound ?? Infinity)], [most((p) => p.correct)]).map((p) => ({
+      id: p.id,
+      nickname: p.nickname,
+      avatar: p.avatar,
+      rank: p.rank,
+      cups: p.cups,
+      outRound: p.outRound,
+      correct: p.correct,
+    }));
   }
 
   awards(): CupAwards {

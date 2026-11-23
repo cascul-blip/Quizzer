@@ -17,6 +17,7 @@ import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
 import { Roster } from "./roster.ts";
+import { fewest, most, rankBy } from "./standings.ts";
 import type { AnswerTotals } from "./stream.ts";
 import { QuestionStream } from "./stream.ts";
 
@@ -322,13 +323,8 @@ export class TowerGame {
 
   /** Teams by floors, then blocks placed; equal teams share a rank. */
   rankedTeams(): (TowerTeam & { rank: number; floors: number; placed: number })[] {
-    const withTotals = this.teams.map((t) => ({ ...t, floors: floorsOf(t), placed: placedOf(t), rank: 0 }));
-    const sorted = [...withTotals].sort((a, b) => b.floors - a.floors || b.placed - a.placed || a.index - b.index);
-    sorted.forEach((t, i) => {
-      const prev = sorted[i - 1];
-      t.rank = prev && prev.floors === t.floors && prev.placed === t.placed ? prev.rank : i + 1;
-    });
-    return sorted;
+    const withTotals = this.teams.map((t) => ({ ...t, floors: floorsOf(t), placed: placedOf(t) }));
+    return rankBy(withTotals, [most((t) => t.floors), most((t) => t.placed)], [fewest((t) => t.index)]);
   }
 
   awards(): TowerAwards {

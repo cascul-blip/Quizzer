@@ -13,7 +13,8 @@ import type { Column, ResultsSheet } from "./results.ts";
 import { sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
 import { Roster } from "./roster.ts";
-import { rankScores, scoreAnswer } from "./scoring.ts";
+import { scoreAnswer } from "./scoring.ts";
+import { most, rankBy } from "./standings.ts";
 
 export { AUTO_REVEAL_MS, type Clock, GameError, GRACE_MS, preparePlayOrder } from "./common.ts";
 
@@ -281,7 +282,7 @@ export class ClassicGame {
   // ---------- views ----------
 
   ranked(): (Player & { rank: number })[] {
-    return rankScores([...this.players.values()]);
+    return rankBy([...this.players.values()], [most((p) => p.score)]);
   }
 
   /** Per option, who picked it on the current question (fastest first). */

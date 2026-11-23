@@ -63,7 +63,7 @@ In the example above, Ben scores 3, Dee 2 and Fox 1.
 * **Kicking** a player removes them and the ladder closes up.  If that leaves an arena with one duelist this round, that duelist just stays.
 
 ## End and awards
-The game ends after the last round.  **The most points wins.**  Players with equal points are ranked by their place on the ladder, higher first.  The ladder only decides who duels whom; a player near the top of the ladder can still finish below someone who scored more.  The podium shows the top three on **WANTED** posters with their points, the rest of the ranking, and the awards:
+The game ends after the last round.  **The most points wins.**  Players with equal points are ranked by correct answers, more first; players equal on both share a place (listed higher on the ladder first).  The ladder only decides who duels whom; a player near the top of the ladder can still finish below someone who scored more.  The podium shows the top three on **WANTED** posters with their points, the rest of the ranking, and the awards:
 
 * **Longest reign**: most rounds won in Arena 1.
 * **Most wins**: most duels won.
@@ -112,7 +112,7 @@ These are the starting choices for this mode.
 * An odd count makes the **bottom** arena a 3-way duel (not the top), so High Noon is always one-on-one.
 * The starting ladder is random.
 * Late joiners start at the bottom; disconnected players keep their place and count as no answer.
-* The final ranking is the ladder order, not a points total.
+* The final ranking is by points, then correct answers; a tie on both shares a place.
 * Awards: Longest reign, Most wins, Biggest climb.
 * Protect from abuse doesn't apply: each player only answers once per round, and a wrong answer already loses the duel.
 * Animation is done in code over still art (pose swaps, hat spin, flash, dust, tumbleweed, walking).  No video playback, so each player's avatar can be placed on their duelist.

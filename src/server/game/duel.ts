@@ -2,7 +2,7 @@ import type { AnswerValue } from "../../shared/answer-match.ts";
 import { answerOf } from "../../shared/answer-match.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { randomAvatar } from "../../shared/avatars.ts";
-import { arenaOf, arenaPoints, climbLadder, duelOutcome, pairArenas, standings } from "../../shared/duel-rules.ts";
+import { arenaOf, arenaPoints, climbLadder, duelOutcome, pairArenas } from "../../shared/duel-rules.ts";
 import type { Pacing, QuestionError, QuestionView, SubAward } from "../../shared/mode-views.ts";
 import type {
   DuelArena,
@@ -30,6 +30,8 @@ import type { Column, ResultsSheet } from "./results.ts";
 import { sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
 import { Roster } from "./roster.ts";
+import type { Ranked } from "./standings.ts";
+import { fewest, most, rankBy } from "./standings.ts";
 
 export { AUTO_REVEAL_MS, GRACE_MS } from "./common.ts";
 
@@ -106,7 +108,7 @@ export class DuelGame {
   played = 0;
   /** Set while views are built in a batch: what every phone's view shares, computed once. */
   private batch: {
-    ranked?: DuelPlayer[];
+    ranked?: Ranked<DuelPlayer>[];
     rankById?: Map<string, number>;
     ladderArenas?: Map<string, number>;
     arenaById?: Map<string, number>;
@@ -379,9 +381,10 @@ export class DuelGame {
     return this.ladder.map((id) => this.players.get(id)).filter((p): p is DuelPlayer => !!p);
   }
 
-  /** The standings (rank 1 first): most points, then higher on the ladder. */
-  ranked(): DuelPlayer[] {
-    return standings(this.ladder, this.onLadder());
+  /** The standings (rank 1 first): most points, then most correct answers; a full tie shares a place, listed higher on the ladder first. */
+  ranked(): Ranked<DuelPlayer>[] {
+    const pos = new Map(this.ladder.map((id, i) => [id, i]));
+    return rankBy(this.onLadder(), [most((p) => p.points), most((p) => p.correct)], [fewest((p) => pos.get(p.id) ?? Infinity)]);
   }
 
   /** Arena per player id on the current ladder (next round's arena during the reveal; the final one at the podium). */
@@ -395,7 +398,7 @@ export class DuelGame {
   }
 
   /** ranked(), shared by every view in a batch. */
-  private rankedNow(): DuelPlayer[] {
+  private rankedNow(): Ranked<DuelPlayer>[] {
     return this.shared("ranked", () => this.ranked());
   }
 
@@ -445,11 +448,11 @@ export class DuelGame {
         return { ...ref(p), connected: p.connected, answered: answering && !!p.answers[this.qIndex] };
       }),
     }));
-    const players: HostDuelPlayer[] = this.ranked().map((p, i) => ({
+    const players: HostDuelPlayer[] = this.ranked().map((p) => ({
       ...ref(p),
       connected: p.connected,
       arena: this.arenaNow(p.id, ladderArenas),
-      rank: i + 1,
+      rank: p.rank,
       points: p.points,
       wins: p.wins,
       losses: p.losses,
@@ -510,8 +513,8 @@ export class DuelGame {
     const q = this.currentQuestion;
     const ladderArenas = this.shared("ladderArenas", () => this.ladderArenas());
     const rank = this.batch
-      ? (this.shared("rankById", () => new Map(this.rankedNow().map((x, i) => [x.id, i + 1]))).get(p.id) ?? 0)
-      : this.ranked().indexOf(p) + 1;
+      ? (this.shared("rankById", () => new Map(this.rankedNow().map((x) => [x.id, x.rank]))).get(p.id) ?? 0)
+      : (this.ranked().find((x) => x.id === p.id)?.rank ?? 0);
     const arenaNow = this.arenaNow(p.id, ladderArenas);
     // This round's arena and opponents (still this round's on the reveal); a late joiner waiting for the next round
     // gets the arena the ladder puts them in and no opponents.
@@ -611,7 +614,7 @@ function duelColumns(game: DuelGame): Column<{ rank: number; p: DuelPlayer }>[] 
 export function buildDuelResults(game: DuelGame): ResultsSheet {
   return sheet(
     duelColumns(game),
-    game.ranked().map((p, i) => ({ rank: i + 1, p })),
+    game.ranked().map((p) => ({ rank: p.rank, p })),
   );
 }
 

@@ -29,6 +29,7 @@ import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
 import { Roster } from "./roster.ts";
+import { most, rankBy } from "./standings.ts";
 import type { AnswerTotals } from "./stream.ts";
 import { QuestionStream } from "./stream.ts";
 
@@ -368,17 +369,16 @@ export class RobotGame {
 
   /** Survivors first, then the latest knocked out; lives break ties. Equal standing shares a rank, ordered by correct answers. */
   standings(): RobotStanding[] {
-    const key = (p: RobotPlayer) => (p.outRound ?? 1e6) * 10 + p.lives;
-    const sorted = [...this.players.values()].sort((a, b) => key(b) - key(a) || b.correct - a.correct);
-    let rank = 0;
-    let prev: number | null = null;
-    return sorted.map((p, i) => {
-      if (key(p) !== prev) {
-        rank = i + 1;
-        prev = key(p);
-      }
-      return { id: p.id, nickname: p.nickname, avatar: p.avatar, rank, lives: p.lives, outRound: p.outRound, correct: p.correct };
-    });
+    const order = [most((p: RobotPlayer) => p.outRound ?? Infinity), most((p: RobotPlayer) => p.lives)];
+    return rankBy([...this.players.values()], order, [most((p) => p.correct)]).map((p) => ({
+      id: p.id,
+      nickname: p.nickname,
+      avatar: p.avatar,
+      rank: p.rank,
+      lives: p.lives,
+      outRound: p.outRound,
+      correct: p.correct,
+    }));
   }
 
   awards(): RobotAwards {

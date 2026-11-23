@@ -28,6 +28,7 @@ import type { Column, ResultsSheet } from "./results.ts";
 import { sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
 import { Roster } from "./roster.ts";
+import { most, rankBy } from "./standings.ts";
 import type { AnswerTotals } from "./stream.ts";
 import { QuestionStream } from "./stream.ts";
 
@@ -81,10 +82,6 @@ function launchSchedule(round: number, rng: () => number): GiftItem[] {
       return { id, kind: kinds[id]!, lane, from, until: from + 1_050 };
     }),
   ).flat();
-}
-
-function compare(a: GiftPlayer, b: GiftPlayer): number {
-  return b.score - a.score || b.correct - a.correct;
 }
 
 export class GiftGame {
@@ -286,11 +283,9 @@ export class GiftGame {
   }
 
   standings(): GiftStanding[] {
-    const sorted = [...this.players.values()].sort(compare);
-    let rank = 0;
-    return sorted.map((player, i) => {
-      if (i === 0 || compare(sorted[i - 1]!, player) !== 0) rank = i + 1;
-      const { id, nickname, avatar, score, correct, connected } = player;
+    const order = [most((p: GiftPlayer) => p.score), most((p: GiftPlayer) => p.correct)];
+    return rankBy([...this.players.values()], order).map((player) => {
+      const { id, nickname, avatar, rank, score, correct, connected } = player;
       return { id, nickname, avatar, rank, score, correct, connected, inBonus: player.bonus !== null };
     });
   }

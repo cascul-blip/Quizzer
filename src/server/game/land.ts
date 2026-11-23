@@ -37,6 +37,7 @@ import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
 import { Roster } from "./roster.ts";
+import { fewest, most, rankBy } from "./standings.ts";
 import type { AnswerTotals } from "./stream.ts";
 import { QuestionStream } from "./stream.ts";
 
@@ -402,15 +403,8 @@ export class LandGame {
 
   /** Teams by tiles, then correct answers; equal teams share a rank. Knocked-out teams come last, the first one out at the bottom. */
   rankedTeams(): (LandTeam & { rank: number; tiles: number; correct: number })[] {
-    const withTotals = this.teams.map((t) => ({ ...t, tiles: this.teamTiles(t.index), correct: this.teamCorrect(t.index), rank: 0 }));
-    const sorted = [...withTotals].sort(
-      (a, b) => Number(a.out) - Number(b.out) || b.outOrder - a.outOrder || b.tiles - a.tiles || b.correct - a.correct || a.index - b.index,
-    );
-    sorted.forEach((t, i) => {
-      const prev = sorted[i - 1];
-      t.rank = prev && !t.out && !prev.out && prev.tiles === t.tiles && prev.correct === t.correct ? prev.rank : i + 1;
-    });
-    return sorted;
+    const withTotals = this.teams.map((t) => ({ ...t, tiles: this.teamTiles(t.index), correct: this.teamCorrect(t.index) }));
+    return rankBy(withTotals, [fewest((t) => Number(t.out)), most((t) => t.outOrder), most((t) => t.tiles), most((t) => t.correct)], [fewest((t) => t.index)]);
   }
 
   awards(): LandAwards {
@@ -450,8 +444,9 @@ export class LandGame {
           rank: r.rank,
           out: t.out,
           conqueredBy: t.conqueredBy,
+          // At the podium players stand with the team they started on, so a conquered team keeps its players and its place.
           members: players
-            .filter((p) => p.team === t.index)
+            .filter((p) => (this.phase === "podium" ? p.firstTeam : p.team) === t.index)
             .map((p) => ({ id: p.id, nickname: p.nickname, avatar: p.avatar, connected: p.connected, claiming: playing && p.state === "claim" })),
         };
       }),
@@ -471,7 +466,8 @@ export class LandGame {
     const state: LandState = playing ? p.state : "question";
     let result: PlayerLandView["result"] = null;
     if (this.phase === "podium") {
-      const mine = this.rankedTeams().find((t) => t.index === p.team)!;
+      // A conquered player's result is the place of the team they started on, as on the podium and the results sheet.
+      const mine = this.rankedTeams().find((t) => t.index === p.firstTeam)!;
       const a = this.awards();
       result = {
         teamRank: mine.rank,
