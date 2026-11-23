@@ -318,7 +318,8 @@ describe("surrounding", () => {
     expect(game.phase).toBe("podium");
     expect(finished()).toBe(1);
     expect(game.playerView(a.id)!.result).toMatchObject({ teamRank: 1, teamCount: 2, won: true });
-    expect(game.playerView(byName(game, "B").id)!.result).toMatchObject({ teamRank: 1, won: true });
+    // B's team was conquered: B's result is the place of the team B started on.
+    expect(game.playerView(byName(game, "B").id)!.result).toMatchObject({ teamRank: 2, won: false });
     // The game clock doesn't fire a second finish.
     clock.advance(10 * 60_000);
     expect(finished()).toBe(1);

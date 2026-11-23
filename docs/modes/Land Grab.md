@@ -20,4 +20,4 @@ The players are able to place their colors anywhere on the field except directly
 
 Tiles that are 2 spots away from an opposing team's starting point cost 2 claims instead of 1.  Stealing one of those tiles from another team also costs 2, the same as any other steal.
 
-If the players are able to surround an area with their claimed land, all tiles that are inside the surrounded area turn that color.  If they are able to surround an enemy starting point, that team is knocked out of the game.
+If the players are able to surround an area with their claimed land, all tiles that are inside the surrounded area turn that color.  If they are able to surround an enemy starting point, that team is knocked out of the game.  Its players join the team that surrounded them and keep playing, but at the end they finish in the place of the team they started on.  Knocked-out teams finish below the teams still in the game, in reverse order of being knocked out: the first team out is last.

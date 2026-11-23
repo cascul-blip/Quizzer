@@ -242,7 +242,7 @@ describe("Standings", () => {
     });
   });
 
-  test("in Land Grab, knocked-out teams come last, the first one out at the bottom; their players play on, and win, with the conquerors", async () => {
+  test("in Land Grab, knocked-out teams come last, the first one out at the bottom, and their players keep their starting team's place on every screen", async () => {
     const places = await finish(
       "land",
       (phones, ids) => {
@@ -266,15 +266,15 @@ describe("Standings", () => {
     );
     const view = hub.hostView();
     expect(view.kind === "land" && view.teams.map((t) => [t.name, t.rank, t.out, t.members.map((m) => m.nickname)])).toEqual([
-      ["Red", 1, false, ["Noel", "Holly", "Ivy"]],
-      ["Blue", 2, true, []],
-      ["Yellow", 3, true, []],
+      ["Red", 1, false, ["Noel"]],
+      ["Blue", 2, true, ["Holly"]],
+      ["Yellow", 3, true, ["Ivy"]],
     ]);
-    // The podium and the phone show the team a player is on now; the results sheet, the team they started on.
+    // A conquered player plays on with the conquerors, but finishes in the place of the team they started on.
     expect(places).toEqual({
       Noel: { podium: 1, phone: 1, sheet: 1 },
-      Holly: { podium: 1, phone: 1, sheet: 2 },
-      Ivy: { podium: 1, phone: 1, sheet: 3 },
+      Holly: { podium: 2, phone: 2, sheet: 2 },
+      Ivy: { podium: 3, phone: 3, sheet: 3 },
     });
   });
 

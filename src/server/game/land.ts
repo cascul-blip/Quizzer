@@ -446,8 +446,9 @@ export class LandGame {
           rank: r.rank,
           out: t.out,
           conqueredBy: t.conqueredBy,
+          // At the podium players stand with the team they started on, so a conquered team keeps its players and its place.
           members: players
-            .filter((p) => p.team === t.index)
+            .filter((p) => (this.phase === "podium" ? p.firstTeam : p.team) === t.index)
             .map((p) => ({ id: p.id, nickname: p.nickname, avatar: p.avatar, connected: p.connected, claiming: playing && p.state === "claim" })),
         };
       }),
@@ -467,7 +468,8 @@ export class LandGame {
     const state: LandState = playing ? p.state : "question";
     let result: PlayerLandView["result"] = null;
     if (this.phase === "podium") {
-      const mine = this.rankedTeams().find((t) => t.index === p.team)!;
+      // A conquered player's result is the place of the team they started on, as on the podium and the results sheet.
+      const mine = this.rankedTeams().find((t) => t.index === p.firstTeam)!;
       const a = this.awards();
       result = {
         teamRank: mine.rank,
