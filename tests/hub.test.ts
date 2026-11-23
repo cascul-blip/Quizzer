@@ -1,8 +1,11 @@
-import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
+import type { ClassicGame } from "../src/server/game/classic.ts";
 import { AUTO_REVEAL_MS, INTRO_MS } from "../src/server/game/classic.ts";
 import { COUNTDOWN_MS as CUP_COUNTDOWN_MS } from "../src/server/game/cup.ts";
+import type { DuelGame } from "../src/server/game/duel.ts";
 import { COUNTDOWN_MS as FIGHT_COUNTDOWN_MS, RESULT_MS } from "../src/server/game/fight.ts";
 import { COUNTDOWN_MS as LAND_COUNTDOWN_MS } from "../src/server/game/land.ts";
+import { entryOf, MODES } from "../src/server/game/modes.ts";
 import { RacerGame } from "../src/server/game/racer.ts";
 import { COUNTDOWN_MS as ROBOT_COUNTDOWN_MS } from "../src/server/game/robot.ts";
 import type { SiegeGame } from "../src/server/game/siege.ts";
@@ -1186,4 +1189,55 @@ describe("Protect from abuse", () => {
     await host.hostState((v) => v.kind === "idle");
     host.close();
   });
+});
+
+describe("View batching", () => {
+  // The spies wrap the shared MODES entries, so they come off even when a test fails.
+  afterEach(() => mock.restore());
+  for (const mode of ["classic", "duel"] as const) {
+    test(`${mode}: a broadcast batches its views through the mode entry`, async () => {
+      expect(MODES[mode].viewBatch).toBeFunction();
+      const quiz = await store.create({
+        title: "Batch",
+        questions: [
+          { type: "multiple_choice", text: "2+2", options: ["3", "4"], correct: [1], timeLimitSec: 10 },
+          { type: "true_false", text: "Fire is cold", correct: [1], timeLimitSec: 10 },
+        ],
+      });
+      const host = new HubSocket(hub, { admin: true });
+      host.sendMsg({ type: "host.hello" });
+      host.sendMsg({ type: "host.open", quizId: quiz.id });
+      await host.hostState((v) => v.kind === "lobby");
+      host.sendMsg({ type: "host.setMode", mode });
+      await host.hostState((v) => v.kind === "lobby" && v.mode === mode);
+      const names = ["Ann", "Bob", "Cy", "Dee"];
+      const players = names.map(() => new HubSocket(hub));
+      for (const [i, p] of players.entries()) {
+        p.sendMsg({ type: "join", nickname: names[i]! });
+        await p.waitFor((m) => m.type === "joined");
+      }
+      host.sendMsg({ type: "host.start", pacing: "manual" });
+      for (const p of players) await p.playerState((v) => v.kind === mode && v.phase === "intro");
+      pastThrottle(clock);
+      const game = hub.game as ClassicGame | DuelGame;
+      const ranked = spyOn(game, "ranked");
+      // Ranking calls while each broadcast builds its views.
+      const perBroadcast: number[] = [];
+      const entry = entryOf(game);
+      const declared = entry.viewBatch!;
+      const batch = spyOn(entry, "viewBatch").mockImplementation((g, send) =>
+        declared(g, () => {
+          const before = ranked.mock.calls.length;
+          send();
+          perBroadcast.push(ranked.mock.calls.length - before);
+        }),
+      );
+      host.sendMsg({ type: "host.next" });
+      for (const p of players) await p.playerState((v) => v.kind === mode && v.phase !== "intro");
+      expect(batch).toHaveBeenCalled();
+      expect(perBroadcast.length).toBeGreaterThan(0);
+      // Built one by one, every phone's view ranks the players again.
+      for (const calls of perBroadcast) expect(calls).toBeLessThan(players.length);
+    });
+  }
 });
