@@ -424,10 +424,6 @@ export class LandGame {
 
   // ---------- views ----------
 
-  private remainingMs(): number {
-    return this.phases.remainingMs();
-  }
-
   private boardView(): LandBoard {
     return { size: this.size, owners: [...this.owners], starts: this.starts };
   }
@@ -441,7 +437,7 @@ export class LandGame {
       theme: modeTheme("land", this.settings.theme),
       phase: this.phase,
       quiz: { id: this.quizId, title: this.title, questionCount: this.questions.length },
-      remainingMs: this.remainingMs(),
+      remainingMs: this.phases.remainingMs(),
       board: this.boardView(),
       teams: this.teams.map((t) => {
         const r = ranked.get(t.index)!;
@@ -494,7 +490,7 @@ export class LandGame {
       theme: modeTheme("land", this.settings.theme),
       phase: this.phase,
       title: this.title,
-      remainingMs: this.remainingMs(),
+      remainingMs: this.phases.remainingMs(),
       me: { id: p.id, nickname: p.nickname, avatar: p.avatar, correct: p.correct, placed: p.placed, stolen: p.stolen },
       team: teamInfo(p.team),
       teamTiles: this.teamTiles(p.team),

@@ -1,5 +1,5 @@
 import type { AnswerValue } from "../../shared/answer-match.ts";
-import { answerOf, checkAnswer, MAX_TYPED_ANSWER } from "../../shared/answer-match.ts";
+import { answerOf } from "../../shared/answer-match.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { randomAvatar } from "../../shared/avatars.ts";
 import type { Pacing, QuestionError, QuestionView } from "../../shared/mode-views.ts";
@@ -113,6 +113,7 @@ export class RacerGame {
       initial: "intro",
       pacing: settings.pacing ?? "manual",
       questions: () => this.questions,
+      asked: () => this.players.values(),
       opensFrom: ["confidence"],
       settle: () => this.settleQuestion(),
       advance: () => this.afterReveal(),
@@ -207,7 +208,7 @@ export class RacerGame {
   /** A driver who leaves while choosing is taken at their word so far; otherwise the question may be complete now. */
   private afterPlayerLeft(playerId: string): void {
     if (this.phase === "confidence" && this.driver?.id === playerId) this.lockIn();
-    else this.maybeCloseEarly();
+    else this.paced.closeIfAllAnswered();
   }
 
   /**
@@ -247,14 +248,9 @@ export class RacerGame {
 
   /** One answer per player per question, the driver included. Returns whether it was accepted. */
   answer(playerId: string, qIndex: number, answer: AnswerValue): boolean {
-    const p = this.players.get(playerId);
-    const q = this.currentQuestion;
-    if (!p || !q || !this.paced.accepts(qIndex)) return false;
-    if (p.answers[qIndex]) return false;
-    const correct = checkAnswer(q, answer);
-    if (correct === null) return false;
-    p.answers[qIndex] = { ...(typeof answer === "string" ? { option: -1, text: answer.slice(0, MAX_TYPED_ANSWER) } : { option: answer }), correct };
-    if (!this.maybeCloseEarly()) this.onActivity(p.id);
+    const taken = this.paced.take(this.players.get(playerId), qIndex, answer, ({ ms: _ms, ...a }): RacerAnswer => a);
+    if (!taken) return false;
+    if (!this.paced.closeIfAllAnswered()) this.onActivity(playerId);
     return true;
   }
 
@@ -324,15 +320,6 @@ export class RacerGame {
     if (this.phase !== "confidence") return;
     this.confidence = this.lever;
     this.paced.open();
-  }
-
-  /** Close as soon as every connected player has answered. Returns whether it closed. */
-  private maybeCloseEarly(): boolean {
-    if (this.phase !== "open") return false;
-    const connected = [...this.players.values()].filter((p) => p.connected);
-    if (connected.length === 0 || !connected.every((p) => p.answers[this.qIndex])) return false;
-    this.paced.close();
-    return true;
   }
 
   /** Apply the turn to the shared car and tally the question that just closed. */
@@ -405,10 +392,6 @@ export class RacerGame {
 
   // ---------- views ----------
 
-  private remainingMs(): number {
-    return this.paced.phases.remainingMs();
-  }
-
   private questionView(): QuestionView | null {
     return this.phase === "podium" ? null : this.paced.view();
   }
@@ -448,7 +431,7 @@ export class RacerGame {
       car: { ...this.car },
       lastTurn: this.lastTurn,
       ejected: revealed ? this.ejected : null,
-      phaseRemainingMs: this.remainingMs(),
+      phaseRemainingMs: this.paced.phases.remainingMs(),
       phaseDurationMs: this.phaseDurationMs,
       result: podium ? this.result() : null,
       awards: podium ? this.awards() : null,
@@ -460,7 +443,7 @@ export class RacerGame {
     const p = this.players.get(playerId);
     if (!p) return null;
     const q = this.currentQuestion;
-    const ans = this.phase === "open" || this.phase === "reveal" ? p.answers[this.qIndex] : undefined;
+    const ans = this.paced.shownAnswer(p);
     let result: PlayerRacerView["result"] = null;
     if (this.phase === "podium") {
       const aw = this.awards();
@@ -489,7 +472,7 @@ export class RacerGame {
       },
       playerCount: this.players.size,
       question: this.questionView(),
-      phaseRemainingMs: this.remainingMs(),
+      phaseRemainingMs: this.paced.phases.remainingMs(),
       phaseDurationMs: this.phaseDurationMs,
       isDriver: this.driver?.id === p.id,
       driver: this.driver,

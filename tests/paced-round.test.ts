@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import type { PacedAnswer, PacedAnswerer } from "../src/server/game/paced-round.ts";
 import { PacedRound } from "../src/server/game/paced-round.ts";
+import { MAX_TYPED_ANSWER } from "../src/shared/answer-match.ts";
 import type { Pacing } from "../src/shared/mode-views.ts";
 import type { Question } from "../src/shared/quiz-schema.ts";
 import { FakeClock } from "./helpers.ts";
@@ -9,13 +11,19 @@ const questions: Question[] = [
   { id: "b", type: "text", text: "B?", timeLimitSec: 5, options: ["answer"], correct: [0] },
 ];
 
-function round(opts: { pacing?: Pacing; hideAutoCountdown?: boolean } = {}) {
+function answerer(connected = true): PacedAnswerer<PacedAnswer> {
+  return { connected, answers: [] };
+}
+
+function round(opts: { pacing?: Pacing; hideAutoCountdown?: boolean; asked?: PacedAnswerer<unknown>[] } = {}) {
   const clock = new FakeClock();
   const log: string[] = [];
+  const asked = opts.asked ?? [];
   const paced = new PacedRound<"confidence" | "podium">(clock, {
     initial: "intro",
     pacing: opts.pacing ?? "manual",
     questions: () => questions,
+    asked: () => asked,
     opensFrom: ["confidence"],
     hideAutoCountdown: opts.hideAutoCountdown,
     settle: () => log.push("settle"),
@@ -25,7 +33,7 @@ function round(opts: { pacing?: Pacing; hideAutoCountdown?: boolean } = {}) {
   return { clock, log, paced };
 }
 
-describe("Paced round", () => {
+describe("Paced question round", () => {
   test("the intro lasts 3 seconds, then the question opens with its deadline", () => {
     const { clock, paced } = round();
     paced.intro(0);
@@ -172,5 +180,96 @@ describe("Paced round", () => {
 
   test("the view has no question before the first", () => {
     expect(round().paced.view()).toBeNull();
+  });
+
+  describe("taking answers", () => {
+    const keep = (a: PacedAnswer) => a;
+    const openAt = (index: number, asked: PacedAnswerer<unknown>[] = []) => {
+      const r = round({ asked });
+      r.paced.intro(index);
+      r.clock.advance(3000);
+      return r;
+    };
+
+    test("an answer inside grace is accepted and recorded with its time", () => {
+      const p = answerer();
+      const { clock, paced } = openAt(0, [p, answerer()]);
+      clock.advance(10_499);
+      expect(paced.take(p, 0, 1, keep)).toEqual({ option: 1, correct: false, ms: 10_499 });
+      expect(p.answers[0]).toEqual({ option: 1, correct: false, ms: 10_499 });
+    });
+
+    test("an answer after grace is refused", () => {
+      const p = answerer();
+      const { clock, paced } = openAt(0, [p]);
+      clock.advance(10_500);
+      expect(paced.take(p, 0, 0, keep)).toBeNull();
+      expect(p.answers[0]).toBeUndefined();
+    });
+
+    test("a duplicate answer is refused and the first one kept", () => {
+      const p = answerer();
+      const { paced } = openAt(0, [p, answerer()]);
+      expect(paced.take(p, 0, 0, keep)?.correct).toBe(true);
+      expect(paced.take(p, 0, 1, keep)).toBeNull();
+      expect(p.answers[0]?.option).toBe(0);
+    });
+
+    test("an answer for another question, before opening, or that does not fit is refused", () => {
+      const p = answerer();
+      const r = round({ asked: [p] });
+      r.paced.intro(0);
+      expect(r.paced.take(p, 0, 0, keep)).toBeNull();
+      r.clock.advance(3000);
+      expect(r.paced.take(p, 1, 0, keep)).toBeNull();
+      expect(r.paced.take(p, 0, 7, keep)).toBeNull();
+      expect(r.paced.take(undefined, 0, 0, keep)).toBeNull();
+    });
+
+    test("typed text is cut to the maximum length, and the mode adds its own fields", () => {
+      const p: PacedAnswerer<PacedAnswer & { points: number }> = { connected: true, answers: [] };
+      const { paced } = openAt(1, [p, answerer()]);
+      const taken = paced.take(p, 1, "x".repeat(500), (a) => ({ ...a, points: 7 }));
+      expect(taken?.option).toBe(-1);
+      expect(taken?.text?.length).toBe(MAX_TYPED_ANSWER);
+      expect(taken?.points).toBe(7);
+    });
+
+    test("typed answers stay hidden until the reveal, and the phone sees its own answer only while open or revealed", () => {
+      const p = answerer();
+      const { paced } = openAt(1, [p, answerer()]);
+      expect(paced.view()?.options).toEqual([]);
+      paced.take(p, 1, "answers", keep);
+      expect(paced.shownAnswer(p)?.correct).toBe(true);
+      paced.close();
+      expect(paced.view()?.options).toEqual(["answer"]);
+      expect(paced.shownAnswer(p)?.text).toBe("answers");
+      paced.intro(0);
+      expect(paced.shownAnswer(p)).toBeUndefined();
+    });
+
+    test("the round closes early once everyone connected who is asked has answered", () => {
+      const a = answerer();
+      const b = answerer();
+      const away = answerer(false);
+      const notAsked = answerer();
+      const { log, paced } = openAt(0, [a, b, away]);
+      paced.take(a, 0, 0, keep);
+      expect(paced.closeIfAllAnswered()).toBe(false);
+      expect(paced.phase).toBe("open");
+      paced.take(notAsked, 0, 0, keep);
+      expect(paced.closeIfAllAnswered()).toBe(false);
+      paced.take(b, 0, 1, keep);
+      expect(paced.closeIfAllAnswered()).toBe(true);
+      expect(paced.phase).toBe("reveal");
+      expect(log.filter((l) => l === "settle")).toHaveLength(1);
+      expect(paced.closeIfAllAnswered()).toBe(false);
+    });
+
+    test("with nobody connected asked, the round does not close early", () => {
+      const { paced } = openAt(0, [answerer(false)]);
+      expect(paced.closeIfAllAnswered()).toBe(false);
+      expect(paced.phase).toBe("open");
+    });
   });
 });

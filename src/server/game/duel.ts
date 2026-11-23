@@ -1,5 +1,5 @@
 import type { AnswerValue } from "../../shared/answer-match.ts";
-import { answerOf, checkAnswer, MAX_TYPED_ANSWER } from "../../shared/answer-match.ts";
+import { answerOf } from "../../shared/answer-match.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { randomAvatar } from "../../shared/avatars.ts";
 import { arenaOf, arenaPoints, climbLadder, duelOutcome, pairArenas, standings } from "../../shared/duel-rules.ts";
@@ -133,6 +133,7 @@ export class DuelGame {
       initial: "intro",
       pacing: settings.pacing ?? "manual",
       questions: () => this.questions,
+      asked: () => this.arenas.flat().map((id) => this.players.get(id)!),
       settle: () => this.settleRound(),
       advance: () => this.afterReveal(),
       onChange: () => this.onChange(),
@@ -245,7 +246,7 @@ export class DuelGame {
   setConnected(playerId: string, connected: boolean): void {
     if (!this.roster.setConnected(playerId, connected)) return;
     this.onChange();
-    if (!connected) this.maybeCloseEarly();
+    if (!connected) this.paced.closeIfAllAnswered();
   }
 
   /** The ladder closes up; an arena left with one duelist ends in "stay". */
@@ -255,7 +256,7 @@ export class DuelGame {
     this.ladder = this.ladder.filter((id) => id !== playerId);
     this.arenas = this.arenas.map((a) => a.filter((id) => id !== playerId)).filter((a) => a.length > 0);
     this.onChange();
-    this.maybeCloseEarly();
+    this.paced.closeIfAllAnswered();
     return p;
   }
 
@@ -263,18 +264,9 @@ export class DuelGame {
 
   /** One answer per duelist per round. Returns whether it was accepted. */
   answer(playerId: string, qIndex: number, answer: AnswerValue): boolean {
-    const p = this.players.get(playerId);
-    const q = this.currentQuestion;
-    if (!p || !q || !this.paced.accepts(qIndex)) return false;
-    if (p.answers[qIndex] || this.arenaIndex(playerId) < 0) return false;
-    const correct = checkAnswer(q, answer);
-    if (correct === null) return false;
-    p.answers[qIndex] = {
-      ...(typeof answer === "string" ? { option: -1, text: answer.slice(0, MAX_TYPED_ANSWER) } : { option: answer }),
-      correct,
-      ms: this.paced.elapsedMs(),
-    };
-    if (!this.maybeCloseEarly()) this.onActivity(p.id);
+    if (this.arenaIndex(playerId) < 0) return false;
+    if (!this.paced.take(this.players.get(playerId), qIndex, answer, (a) => a)) return false;
+    if (!this.paced.closeIfAllAnswered()) this.onActivity(playerId);
     return true;
   }
 
@@ -325,18 +317,6 @@ export class DuelGame {
       }
     });
     this.paced.intro(index);
-  }
-
-  /** Close as soon as every connected duelist has answered. Returns whether it closed. */
-  private maybeCloseEarly(): boolean {
-    if (this.phase !== "open") return false;
-    const duelists = this.arenas
-      .flat()
-      .map((id) => this.players.get(id)!)
-      .filter((p) => p.connected);
-    if (duelists.length === 0 || !duelists.every((p) => p.answers[this.qIndex])) return false;
-    this.paced.close();
-    return true;
   }
 
   /** Settle every arena's duel on the round that just closed and move the ladder. */
@@ -440,10 +420,6 @@ export class DuelGame {
 
   // ---------- views ----------
 
-  private remainingMs(): number {
-    return this.paced.phases.remainingMs();
-  }
-
   private questionView(): QuestionView | null {
     return this.phase === "podium" ? null : this.paced.view();
   }
@@ -499,7 +475,7 @@ export class DuelGame {
       correct: this.phase === "reveal" && q ? q.correct : null,
       lastRound: this.lastRound,
       players,
-      phaseRemainingMs: this.remainingMs(),
+      phaseRemainingMs: this.paced.phases.remainingMs(),
       phaseDurationMs: this.phaseDurationMs,
       awards: podium ? this.awards() : null,
       errors: podium ? this.errors() : null,
@@ -542,7 +518,7 @@ export class DuelGame {
     const k = this.phase === "podium" ? -1 : this.batch ? (this.shared("arenaById", () => this.arenaIndexes()).get(p.id) ?? -1) : this.arenaIndex(p.id);
     const arena = k >= 0 ? k + 1 : arenaNow;
     const opponents = k >= 0 ? this.arenas[k]!.filter((id) => id !== p.id).map((id) => ref(this.players.get(id)!)) : [];
-    const ans = this.phase === "open" || this.phase === "reveal" ? p.answers[this.qIndex] : undefined;
+    const ans = this.paced.shownAnswer(p);
     const revealed = this.phase === "reveal" && !!q;
     let result: PlayerDuelView["result"] = null;
     if (this.phase === "podium") {
@@ -568,7 +544,7 @@ export class DuelGame {
       theme: this.theme,
       revealElapsedMs: this.phase === "reveal" ? Math.max(0, this.clock.now() - this.paced.phases.enteredAtMs) : 0,
       question: this.questionView(),
-      phaseRemainingMs: this.remainingMs(),
+      phaseRemainingMs: this.paced.phases.remainingMs(),
       phaseDurationMs: this.phaseDurationMs,
       arena,
       arenaCount: this.phase === "podium" ? pairArenas(this.ladder).length : this.arenas.length,
@@ -652,6 +628,7 @@ export const duelMode: ModeEntry<"duel"> = {
     return { game, log: `${this.name} started with ${game.players.size} player(s), ${game.rounds} round(s)` };
   },
   pacing: (game) => game,
+  viewBatch: (game, send) => game.viewBatch(send),
   teams: () => null,
   results: buildDuelResults,
   handle(game, playerId, msg) {

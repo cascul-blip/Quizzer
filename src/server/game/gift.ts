@@ -118,7 +118,7 @@ export class GiftGame {
     this.rng = opts.rng ?? Math.random;
     this.stream = new QuestionStream(quiz.questions, shuffleAnswers, this.rng, this.clock, {
       penalizeGuessing: protect,
-      canAnswer: (player) => !player.bonus && this.phase === "playing" && this.clock.now() < this.phases.endsAt,
+      canAnswer: (player) => !player.bonus && this.phase === "playing" && this.phases.remainingMs() > 0,
     });
     this.durationMs = minutes * 60_000;
     this.onChange = opts.onChange ?? (() => {});
@@ -295,13 +295,9 @@ export class GiftGame {
     });
   }
 
-  private remainingMs(): number {
-    return this.phases.remainingMs();
-  }
-
   private multiplier(): number {
     if (this.phase === "countdown") return 1;
-    return giftMultiplier(this.durationMs - this.remainingMs(), this.durationMs);
+    return giftMultiplier(this.durationMs - this.phases.remainingMs(), this.durationMs);
   }
 
   hostView(): HostGiftState {
@@ -312,7 +308,7 @@ export class GiftGame {
       kind: "gift",
       phase: this.phase,
       quiz: { id: this.quizId, title: this.title, questionCount: this.quiz.questions.length },
-      remainingMs: this.remainingMs(),
+      remainingMs: this.phases.remainingMs(),
       standings,
       mostCorrect: value ? { value, nicknames: standings.filter((player) => player.correct === value).map((player) => player.nickname) } : null,
       // Gift's host view always carries a list, empty until the podium.
@@ -327,7 +323,7 @@ export class GiftGame {
     return {
       kind: "gift",
       phase: this.phase,
-      remainingMs: this.remainingMs(),
+      remainingMs: this.phases.remainingMs(),
       score: player.score,
       correct: player.correct,
       progress: bonus ? GIFT_CORRECT_TO_PLAY : player.correct % GIFT_CORRECT_TO_PLAY,
