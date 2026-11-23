@@ -447,10 +447,6 @@ export class SubGame {
     return { topBooster: best((p) => p.boosts), sharpestEyes: best((p) => p.diveHits), mostCorrect: best((p) => p.correct) };
   }
 
-  private phaseRemainingMs(): number {
-    return this.phases.remainingMs();
-  }
-
   hostView(): HostSubState {
     return {
       kind: "submarine",
@@ -458,7 +454,7 @@ export class SubGame {
       quiz: { id: this.quizId, title: this.title, questionCount: this.questionCount },
       level: this.level,
       depth: this.depth,
-      phaseRemainingMs: this.phaseRemainingMs(),
+      phaseRemainingMs: this.phases.remainingMs(),
       gap: this.gap(),
       speed: this.speed,
       maxGap: GAP_MAX,
@@ -536,7 +532,7 @@ export class SubGame {
       title: this.title,
       level: this.level,
       depth: this.depth,
-      phaseRemainingMs: this.phaseRemainingMs(),
+      phaseRemainingMs: this.phases.remainingMs(),
       me: { id: p.id, nickname: p.nickname, avatar: p.avatar, correct: p.correct, boosts: p.boosts, diveHits: p.diveHits },
       state: p.state,
       towardBoost: p.towardBoost,

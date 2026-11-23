@@ -445,10 +445,6 @@ export class CupGame {
 
   // ---------- views ----------
 
-  private remainingMs(): number {
-    return this.phases.remainingMs();
-  }
-
   private revealView(): CupRevealView | null {
     const r = this.reveal;
     if (!r || this.phase !== "reveal") return null;
@@ -476,7 +472,7 @@ export class CupGame {
       phase: this.phase,
       quiz: { id: this.quizId, title: this.title, questionCount: this.questions.length },
       round: this.round,
-      phaseRemainingMs: this.remainingMs(),
+      phaseRemainingMs: this.phases.remainingMs(),
       phaseDurationMs: this.phaseDurationMs,
       players: [...this.players.values()].map((p) => ({
         id: p.id,
@@ -530,7 +526,7 @@ export class CupGame {
       phase: this.phase,
       title: this.title,
       round: this.round,
-      phaseRemainingMs: this.remainingMs(),
+      phaseRemainingMs: this.phases.remainingMs(),
       phaseDurationMs: this.phaseDurationMs,
       me: {
         id: p.id,
