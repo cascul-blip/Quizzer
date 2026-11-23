@@ -1,5 +1,4 @@
 import type { AnswerValue } from "../../shared/answer-match.ts";
-import { checkAnswer, MAX_TYPED_ANSWER } from "../../shared/answer-match.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { cleanAvatar, randomAvatar } from "../../shared/avatars.ts";
 import type { Pacing, QuestionError, QuestionView } from "../../shared/mode-views.ts";
@@ -86,6 +85,7 @@ export class ClassicGame {
       initial: "lobby",
       pacing: opts.pacing ?? "manual",
       questions: () => this.questions,
+      asked: () => this.players.values(),
       afterReveal: ["leaderboard"],
       hideAutoCountdown: true,
       settle: () => this.settleQuestion(),
@@ -166,29 +166,23 @@ export class ClassicGame {
   setConnected(playerId: string, connected: boolean): void {
     if (!this.roster.setConnected(playerId, connected)) return;
     this.onChange();
-    if (!connected) this.maybeCloseEarly();
+    if (!connected) this.paced.closeIfAllAnswered();
   }
 
   kick(playerId: string): Player | null {
     const p = this.roster.remove(playerId);
     if (!p) return null;
     this.onChange();
-    this.maybeCloseEarly();
+    this.paced.closeIfAllAnswered();
     return p;
   }
 
   answer(playerId: string, qIndex: number, answer: AnswerValue): boolean {
-    const p = this.players.get(playerId);
-    const q = this.currentQuestion;
-    if (!p || !q || !this.paced.accepts(qIndex)) return false;
-    if (p.answers[qIndex]) return false;
-    const correct = checkAnswer(q, answer);
-    if (correct === null) return false;
-    const ms = this.paced.elapsedMs();
-    const choice = typeof answer === "string" ? { option: -1, text: answer.slice(0, MAX_TYPED_ANSWER) } : { option: answer };
-    p.answers[qIndex] = { ...choice, correct, points: scoreAnswer(correct, ms, q.timeLimitSec), ms };
+    const limitSec = this.currentQuestion?.timeLimitSec ?? 0;
+    const taken = this.paced.take(this.players.get(playerId), qIndex, answer, (a) => ({ ...a, points: scoreAnswer(a.correct, a.ms, limitSec) }));
+    if (!taken) return false;
     this.onActivity(playerId);
-    this.maybeCloseEarly();
+    this.paced.closeIfAllAnswered();
     return true;
   }
 
@@ -252,12 +246,6 @@ export class ClassicGame {
 
   private enterIntro(index: number): void {
     this.paced.intro(index);
-  }
-
-  private maybeCloseEarly(): void {
-    if (this.phase !== "open") return;
-    const connected = [...this.players.values()].filter((p) => p.connected);
-    if (connected.length > 0 && connected.every((p) => p.answers[this.qIndex])) this.paced.close();
   }
 
   /** Score the question that just closed. */
@@ -376,7 +364,7 @@ export class ClassicGame {
     if (this.phase === "lobby") throw new GameError("The game has not started");
     if (!p) return { kind: "none", game: { title: this.title, phase: this.phase } };
     const q = this.currentQuestion;
-    const ans = this.qIndex >= 0 ? p.answers[this.qIndex] : undefined;
+    const ans = this.paced.shownAnswer(p);
     return {
       kind: "classic",
       phase: this.phase,
@@ -384,8 +372,8 @@ export class ClassicGame {
       me: { id: p.id, nickname: p.nickname, avatar: p.avatar, score: p.score, rank: this.rankOf(p.id), streak: p.streak },
       playerCount: this.players.size,
       question: this.questionView(),
-      myChoice: this.phase === "open" || this.revealed ? (ans && ans.option >= 0 ? ans.option : null) : null,
-      myText: this.phase === "open" || this.revealed ? (ans?.text ?? null) : null,
+      myChoice: ans && ans.option >= 0 ? ans.option : null,
+      myText: ans?.text ?? null,
       result:
         this.revealed && q
           ? { choice: ans && ans.option >= 0 ? ans.option : null, correct: q.correct, wasCorrect: !!ans?.correct, points: ans?.points ?? 0 }
