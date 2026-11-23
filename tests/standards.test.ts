@@ -88,6 +88,9 @@ describe("Coding standards: server time", () => {
 
 /** A game mode times its phases, its game length and its other timers on its PhaseTimer (src/server/game/phase-timer.ts). */
 const CLOCK_TIMER = /\bclock\s*\.\s*(?:setTimeout|clearTimeout)\b/;
+/** A game mode's own copy of phase timing: a remainingMs method or a phase deadline field (its PhaseTimer holds these). */
+const OWN_PHASE_TIME =
+  /^\s*(?:(?:private|protected|public|readonly|static|override|get)\s+)*(?:remainingMs\s*(?:\(\s*\)|=)|phase(?:EndsAt|Deadline|Timer|Timeout|Start(?:edAt)?)\s*\??\s*[:=])/;
 
 describe("Coding standards: phase timer", () => {
   test("no game mode file sets or clears a timer on the Clock directly", () => {
@@ -96,6 +99,26 @@ describe("Coding standards: phase timer", () => {
     );
     expect(files.length).toBeGreaterThan(10);
     expect(offending(CLOCK_TIMER, files)).toEqual([]);
+  });
+
+  test("no game mode file keeps its own phase deadline or remainingMs method", () => {
+    const files = sources.filter(
+      ({ path }) => path.startsWith(join(SERVER, "game")) && !["common.ts", "phase-timer.ts"].includes(relative(join(SERVER, "game"), path)),
+    );
+    expect(offending(OWN_PHASE_TIME, files)).toEqual([]);
+  });
+
+  test("the phase time guard flags a remainingMs method or phase deadline field and accepts reading the phase timer", () => {
+    expect(OWN_PHASE_TIME.test("  private remainingMs(): number {")).toBe(true);
+    expect(OWN_PHASE_TIME.test("  remainingMs() {")).toBe(true);
+    expect(OWN_PHASE_TIME.test("  private get remainingMs(): number {")).toBe(true);
+    expect(OWN_PHASE_TIME.test("  private remainingMs = () => this.phases.remainingMs();")).toBe(true);
+    expect(OWN_PHASE_TIME.test("  phaseEndsAt?: number;")).toBe(true);
+    expect(OWN_PHASE_TIME.test("  private phaseEndsAt = 0;")).toBe(true);
+    expect(OWN_PHASE_TIME.test("  private phaseTimer: unknown = null;")).toBe(true);
+    expect(OWN_PHASE_TIME.test("  leapEndsAt: number;")).toBe(false);
+    expect(OWN_PHASE_TIME.test("      remainingMs: this.phases.remainingMs(),")).toBe(false);
+    expect(OWN_PHASE_TIME.test("    if (this.clock.now() >= this.phases.endsAt) return false;")).toBe(false);
   });
 
   test("the timer guard flags Clock timers and accepts the phase timer", () => {

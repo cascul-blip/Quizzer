@@ -440,10 +440,6 @@ export class DuelGame {
 
   // ---------- views ----------
 
-  private remainingMs(): number {
-    return this.paced.phases.remainingMs();
-  }
-
   private questionView(): QuestionView | null {
     return this.phase === "podium" ? null : this.paced.view();
   }
@@ -499,7 +495,7 @@ export class DuelGame {
       correct: this.phase === "reveal" && q ? q.correct : null,
       lastRound: this.lastRound,
       players,
-      phaseRemainingMs: this.remainingMs(),
+      phaseRemainingMs: this.paced.phases.remainingMs(),
       phaseDurationMs: this.phaseDurationMs,
       awards: podium ? this.awards() : null,
       errors: podium ? this.errors() : null,
@@ -568,7 +564,7 @@ export class DuelGame {
       theme: this.theme,
       revealElapsedMs: this.phase === "reveal" ? Math.max(0, this.clock.now() - this.paced.phases.enteredAtMs) : 0,
       question: this.questionView(),
-      phaseRemainingMs: this.remainingMs(),
+      phaseRemainingMs: this.paced.phases.remainingMs(),
       phaseDurationMs: this.phaseDurationMs,
       arena,
       arenaCount: this.phase === "podium" ? pairArenas(this.ladder).length : this.arenas.length,

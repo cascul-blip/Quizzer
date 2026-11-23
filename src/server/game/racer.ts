@@ -405,10 +405,6 @@ export class RacerGame {
 
   // ---------- views ----------
 
-  private remainingMs(): number {
-    return this.paced.phases.remainingMs();
-  }
-
   private questionView(): QuestionView | null {
     return this.phase === "podium" ? null : this.paced.view();
   }
@@ -448,7 +444,7 @@ export class RacerGame {
       car: { ...this.car },
       lastTurn: this.lastTurn,
       ejected: revealed ? this.ejected : null,
-      phaseRemainingMs: this.remainingMs(),
+      phaseRemainingMs: this.paced.phases.remainingMs(),
       phaseDurationMs: this.phaseDurationMs,
       result: podium ? this.result() : null,
       awards: podium ? this.awards() : null,
@@ -489,7 +485,7 @@ export class RacerGame {
       },
       playerCount: this.players.size,
       question: this.questionView(),
-      phaseRemainingMs: this.remainingMs(),
+      phaseRemainingMs: this.paced.phases.remainingMs(),
       phaseDurationMs: this.phaseDurationMs,
       isDriver: this.driver?.id === p.id,
       driver: this.driver,

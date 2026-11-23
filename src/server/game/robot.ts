@@ -389,10 +389,6 @@ export class RobotGame {
 
   // ---------- views ----------
 
-  private remainingMs(): number {
-    return this.phases.remainingMs();
-  }
-
   hostView(): HostRobotState {
     const podium = this.phase === "podium";
     return {
@@ -400,7 +396,7 @@ export class RobotGame {
       phase: this.phase,
       quiz: { id: this.quizId, title: this.title, questionCount: this.questions.length },
       round: this.round,
-      phaseRemainingMs: this.remainingMs(),
+      phaseRemainingMs: this.phases.remainingMs(),
       phaseDurationMs: this.phaseDurationMs,
       marked: [...this.marked].sort((a, b) => a - b),
       inset: this.inset,
@@ -450,7 +446,7 @@ export class RobotGame {
       phase: this.phase,
       title: this.title,
       round: this.round,
-      phaseRemainingMs: this.remainingMs(),
+      phaseRemainingMs: this.phases.remainingMs(),
       me: { id: p.id, nickname: p.nickname, avatar: p.avatar, lives: p.lives, out: p.outRound !== null, points: p.points, correct: p.correct, x: p.x, y: p.y },
       // Feedback only while answering: a wrong-answer wait must never cover the arrows in the move phase.
       ...this.stream.fragment(p, this.phase === "quiz"),
