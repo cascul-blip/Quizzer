@@ -58,6 +58,27 @@ describe("Standings", () => {
     ]);
   });
 
+  test("entries equal on every key keep their input order (the sort is stable)", () => {
+    const r = rankBy(
+      [
+        { n: "a", score: 5, correct: 1 },
+        { n: "b", score: 9, correct: 0 },
+        { n: "c", score: 5, correct: 1 },
+        { n: "d", score: 5, correct: 2 },
+        { n: "e", score: 5, correct: 1 },
+      ],
+      [most((x) => x.score)],
+      [most((x) => x.correct)],
+    );
+    expect(r.map((x) => [x.n, x.rank])).toEqual([
+      ["b", 1],
+      ["d", 2],
+      ["a", 2],
+      ["c", 2],
+      ["e", 2],
+    ]);
+  });
+
   test("a display order sorts within a shared place without splitting it", () => {
     const r = rankBy(
       [

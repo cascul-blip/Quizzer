@@ -1,13 +1,22 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import type { CupGame } from "../src/server/game/cup.ts";
+import type { GiftGame } from "../src/server/game/gift.ts";
+import type { LandGame } from "../src/server/game/land.ts";
+import { COUNTDOWN_MS as LAND_COUNTDOWN_MS } from "../src/server/game/land.ts";
 import { Lobby } from "../src/server/game/lobby.ts";
 import { entryOf } from "../src/server/game/modes.ts";
 import { INTRO_MS } from "../src/server/game/paced-round.ts";
 import { records } from "../src/server/game/results.ts";
+import type { RobotGame } from "../src/server/game/robot.ts";
+import { FEEDBACK_MS } from "../src/server/game/stream.ts";
+import { DROP_COOLDOWN_MS, COUNTDOWN_MS as TOWER_COUNTDOWN_MS } from "../src/server/game/tower.ts";
 import { QuizStore } from "../src/server/quiz/store.ts";
 import type { GameHub } from "../src/server/ws.ts";
+import { GIFT_GOODS, GIFT_READY_MS } from "../src/shared/gift-rules.ts";
+import { hexDistance } from "../src/shared/land-board.ts";
 import type { GameMode } from "../src/shared/mode-entries.ts";
 import { SHARED_MODES } from "../src/shared/mode-entries.ts";
-import type { HostView, PlayerView } from "../src/shared/protocol.ts";
+import type { ClientMsg, HostView, PlayerView } from "../src/shared/protocol.ts";
 import { FakeClock, tempDir } from "./helpers.ts";
 import { fakeHub, HubSocket } from "./hub-harness.ts";
 
@@ -61,6 +70,8 @@ const READERS: Partial<Record<GameMode, RankReaders>> = {
 };
 
 const NICKNAMES = ["Noel", "Holly", "Ivy"];
+/** Gift Grab's countdown before play (3 s). */
+const GIFT_COUNTDOWN_MS = 3_000;
 
 let data: ReturnType<typeof tempDir>;
 let clock: FakeClock;
@@ -90,10 +101,40 @@ afterEach(() => {
   data.cleanup();
 });
 
-/** Start the mode with three players, let `play` act, end the game, and read each player's place on the podium, phone and results sheet. */
-async function finish(mode: GameMode, play: (phones: Map<string, HubSocket>) => void = () => {}) {
+/** The running game, for reading a player's question and for setting up an outcome that play leaves to chance. */
+function running() {
+  const game = hub.game;
+  if (!game || game instanceof Lobby) throw new Error("expected a running game");
+  return game;
+}
+
+type QuestionShown = { seq: number; index: number; text: string; options: string[] };
+
+/** The player's open question, and the option that answers it correctly ("One" is True, "Two" is False). */
+function question(id: string) {
+  const view = running().playerView(id) as { question?: QuestionShown | null } | null;
+  const q = view?.question;
+  if (!q) throw new Error("expected an open question");
+  return { ...q, right: q.options.indexOf(q.text === "One" ? "True" : "False") };
+}
+
+/** Answer `count` streamed questions correctly, waiting out each answer's feedback. */
+function answerRight(mode: GameMode, phone: HubSocket, id: string, count: number) {
+  for (let i = 0; i < count; i++) {
+    const q = question(id);
+    phone.sendMsg({ type: `${mode}.answer`, seq: q.seq, option: q.right } as ClientMsg);
+    clock.advance(FEEDBACK_MS);
+  }
+}
+
+/**
+ * Start the mode with three players (and the given mode settings), let `play` act, end the game,
+ * and read each player's place on the podium, phone and results sheet.
+ */
+async function finish(mode: GameMode, play: (phones: Map<string, HubSocket>, ids: Map<string, string>) => void = () => {}, settings?: Record<string, unknown>) {
   host.sendMsg({ type: "host.open", quizId });
   host.sendMsg({ type: "host.setMode", mode });
+  if (settings) host.sendMsg({ type: "host.setModeSettings", mode, settings } as ClientMsg);
   const phones = new Map<string, HubSocket>();
   const ids = new Map<string, string>();
   for (const nickname of NICKNAMES) {
@@ -105,7 +146,7 @@ async function finish(mode: GameMode, play: (phones: Map<string, HubSocket>) => 
     ids.set(nickname, joined.playerId);
   }
   host.sendMsg({ type: "host.start", pacing: "manual" });
-  play(phones);
+  play(phones, ids);
   host.sendMsg({ type: "host.end" });
   await new Promise((r) => setTimeout(r, 0));
   const readers = READERS[mode]!;
@@ -145,10 +186,137 @@ describe("Standings", () => {
     });
   });
 
-  test("in Showdown, equal points share a place on the podium, the phone and the results sheet", async () => {
-    const places = await finish("duel");
-    const ranks = NICKNAMES.map((n) => places[n]!);
-    for (const r of ranks) expect([r.phone, r.sheet]).toEqual([r.podium, r.podium]);
-    expect(ranks.map((r) => r.podium)).toEqual([1, 1, 1]);
+  test("in Showdown, points place players first and correct answers split equal points", async () => {
+    // One three-way arena: Noel is right first and wins it, Holly is right but slower, Ivy doesn't answer.
+    const places = await finish("duel", (phones, ids) => {
+      clock.advance(INTRO_MS);
+      for (const n of ["Noel", "Holly"]) {
+        const q = question(ids.get(n)!);
+        phones.get(n)!.sendMsg({ type: "duel.answer", index: q.index, option: q.right });
+        clock.advance(1000);
+      }
+    });
+    expect(places).toEqual({
+      Noel: { podium: 1, phone: 1, sheet: 1 },
+      Holly: { podium: 2, phone: 2, sheet: 2 },
+      Ivy: { podium: 3, phone: 3, sheet: 3 },
+    });
+  });
+
+  test("in Tallest Tower, the team that builds is first and the teams that don't share second", async () => {
+    const places = await finish(
+      "tower",
+      (phones, ids) => {
+        clock.advance(TOWER_COUNTDOWN_MS);
+        const noel = phones.get("Noel")!;
+        answerRight("tower", noel, ids.get("Noel")!, 4);
+        for (const zone of [1, 2, 3]) {
+          noel.sendMsg({ type: "tower.drop", zone });
+          clock.advance(DROP_COOLDOWN_MS);
+        }
+      },
+      { teams: 3, minutes: 2, theme: "classic" },
+    );
+    expect(places).toEqual({
+      Noel: { podium: 1, phone: 1, sheet: 1 },
+      Holly: { podium: 2, phone: 2, sheet: 2 },
+      Ivy: { podium: 2, phone: 2, sheet: 2 },
+    });
+  });
+
+  test("in Land Grab, the team with more tiles is first and equal teams share second", async () => {
+    const places = await finish(
+      "land",
+      (phones, ids) => {
+        clock.advance(LAND_COUNTDOWN_MS);
+        const noel = phones.get("Noel")!;
+        answerRight("land", noel, ids.get("Noel")!, 3);
+        noel.sendMsg({ type: "land.place", tile: 0 });
+      },
+      { teams: 3, minutes: 5 },
+    );
+    expect(places).toEqual({
+      Noel: { podium: 1, phone: 1, sheet: 1 },
+      Holly: { podium: 2, phone: 2, sheet: 2 },
+      Ivy: { podium: 2, phone: 2, sheet: 2 },
+    });
+  });
+
+  test("in Land Grab, knocked-out teams come last, the first one out at the bottom; their players play on, and win, with the conquerors", async () => {
+    const places = await finish(
+      "land",
+      (phones, ids) => {
+        clock.advance(LAND_COUNTDOWN_MS);
+        const game = running() as LandGame;
+        // Claims are earned three questions at a time; skip to a purse that can wall in two starts.
+        const noel = game.players.get(ids.get("Noel")!)!;
+        noel.claims = 99;
+        noel.state = "claim";
+        const ring = (team: number) => game.owners.map((_, t) => t).filter((t) => hexDistance(game.size, game.teams[team]!.start, t) === 2);
+        for (const [team, nickname] of [
+          [2, "Ivy"],
+          [1, "Holly"],
+        ] as const) {
+          expect(game.hostView().teams[team]!.members.map((m) => m.nickname)).toEqual([nickname]);
+          for (const tile of ring(team)) phones.get("Noel")!.sendMsg({ type: "land.place", tile });
+          expect(game.teams[team]!.out).toBe(true);
+        }
+      },
+      { teams: 3, minutes: 5 },
+    );
+    const view = hub.hostView();
+    expect(view.kind === "land" && view.teams.map((t) => [t.name, t.rank, t.out, t.members.map((m) => m.nickname)])).toEqual([
+      ["Red", 1, false, ["Noel", "Holly", "Ivy"]],
+      ["Blue", 2, true, []],
+      ["Yellow", 3, true, []],
+    ]);
+    // The podium and the phone show the team a player is on now; the results sheet, the team they started on.
+    expect(places).toEqual({
+      Noel: { podium: 1, phone: 1, sheet: 1 },
+      Holly: { podium: 1, phone: 1, sheet: 2 },
+      Ivy: { podium: 1, phone: 1, sheet: 3 },
+    });
+  });
+
+  test("in Robot Attack, a player who lost a life comes after those who didn't, who share first", async () => {
+    // Which players the lasers hit depends on the random board, so set the lives the attacks would leave.
+    const places = await finish("robot", (_phones, ids) => {
+      (running() as RobotGame).players.get(ids.get("Holly")!)!.lives--;
+    });
+    expect(places).toEqual({
+      Noel: { podium: 1, phone: 1, sheet: 1 },
+      Holly: { podium: 3, phone: 3, sheet: 3 },
+      Ivy: { podium: 1, phone: 1, sheet: 1 },
+    });
+  });
+
+  test("in Cup of Death, a player knocked out comes after the survivors, who share first", async () => {
+    // Which cup is the bad one is random, so set the round the drink would knock Ivy out in.
+    const places = await finish("cup", (_phones, ids) => {
+      (running() as CupGame).players.get(ids.get("Ivy")!)!.outRound = 1;
+    });
+    expect(places).toEqual({
+      Noel: { podium: 1, phone: 1, sheet: 1 },
+      Holly: { podium: 1, phone: 1, sheet: 1 },
+      Ivy: { podium: 3, phone: 3, sheet: 3 },
+    });
+  });
+
+  test("in Gift Grab, the player who grabs a gift is first and the others share second", async () => {
+    const places = await finish("gift", (phones, ids) => {
+      clock.advance(GIFT_COUNTDOWN_MS);
+      const id = ids.get("Noel")!;
+      const noel = phones.get("Noel")!;
+      answerRight("gift", noel, id, 5);
+      const bonus = (running() as GiftGame).playerView(id)!.bonus!;
+      const item = bonus.items.find((i) => (GIFT_GOODS as readonly string[]).includes(i.kind))!;
+      clock.advance(GIFT_READY_MS + item.from);
+      noel.sendMsg({ type: "gift.tap", round: bonus.round, item: item.id });
+    });
+    expect(places).toEqual({
+      Noel: { podium: 1, phone: 1, sheet: 1 },
+      Holly: { podium: 2, phone: 2, sheet: 2 },
+      Ivy: { podium: 2, phone: 2, sheet: 2 },
+    });
   });
 });
