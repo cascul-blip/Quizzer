@@ -110,7 +110,7 @@ export class FightGame {
 
   private readonly clock: Clock;
   private readonly rng: () => number;
-  private readonly stream: QuestionStream;
+  private readonly stream: QuestionStream<FightPlayer>;
   private readonly phases: PhaseTimer<FightPhase>;
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
@@ -129,7 +129,10 @@ export class FightGame {
     const heights = keysOf(HILL_HEIGHTS);
     this.hill = settings.hill === "random" ? heights[Math.min(heights.length - 1, Math.floor(this.rng() * heights.length))]! : settings.hill;
     this.terrain = this.theme === "christmas" ? gingerbreadTerrain(this.hill) : makeTerrain(this.hill, this.rng);
-    this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock, settings.protect);
+    this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock, {
+      penalizeGuessing: settings.protect,
+      canAnswer: (p) => this.phase === "playing" && p.state === "question",
+    });
     this.onChange = opts.onChange ?? (() => {});
     this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
@@ -291,7 +294,7 @@ export class FightGame {
 
   answer(playerId: string, seq: number, option: AnswerValue): boolean {
     const p = this.players.get(playerId);
-    if (!p || this.phase !== "playing" || p.state !== "question") return false;
+    if (!p) return false;
     const correct = this.stream.answer(p, seq, option);
     if (correct === null) return false;
     if (correct && ++p.towardDecision >= CORRECT_PER_DECISION) {
@@ -522,7 +525,7 @@ export class FightGame {
       decisionMs: state === "decide" ? Math.max(0, p.deadline - now) : 0,
       repairMs: state === "repair" ? Math.max(0, p.repairEndsAt - now) : 0,
       lastRepair: p.lastRepair,
-      ...this.stream.fragment(p, playing, playing && state === "question"),
+      ...this.stream.fragment(p),
       damage: this.teams.map((t) => t.damage),
       terrain: this.terrain,
       shot: shot ? this.shotView(shot, now) : null,

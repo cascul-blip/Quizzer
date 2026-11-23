@@ -142,7 +142,7 @@ export class SiegeGame {
 
   private readonly clock: Clock;
   private readonly rng: () => number;
-  private readonly stream: QuestionStream;
+  private readonly stream: QuestionStream<SiegePlayer>;
   private readonly phases: PhaseTimer<SiegePhase>;
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
@@ -163,7 +163,10 @@ export class SiegeGame {
     this.phases = new PhaseTimer(this.clock, "countdown", SIEGE_COUNTDOWN_MS);
     this.rng = opts.rng ?? Math.random;
     this.previousRecord = opts.record ?? null;
-    this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock, settings.protect);
+    this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock, {
+      penalizeGuessing: settings.protect,
+      canAnswer: () => this.playing,
+    });
     this.onChange = opts.onChange ?? (() => {});
     this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onTick = opts.onTick ?? (() => this.onChange());
@@ -481,7 +484,7 @@ export class SiegeGame {
 
   answer(playerId: string, seq: number, answer: AnswerValue): boolean {
     const p = this.players.get(playerId);
-    if (!p || !this.playing) return false;
+    if (!p) return false;
     const correct = this.stream.answer(p, seq, answer);
     if (correct === null) return false;
     this.periodAnswered++;
@@ -635,7 +638,7 @@ export class SiegeGame {
       gold: p.gold,
       danger: this.playing ? this.battlefield.danger : [],
       me: { id: p.id, nickname: p.nickname, avatar: p.avatar, correct: p.correct, goldEarned: p.goldEarned },
-      ...this.stream.fragment(p, this.playing),
+      ...this.stream.fragment(p),
       lastPlaced: p.lastPlaced,
       alert: this.playing ? this.battlefield.alert : null,
       map: p.mapOpen && this.playing ? this.battlefield.mapView() : null,

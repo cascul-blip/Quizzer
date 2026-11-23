@@ -95,7 +95,7 @@ export class GiftGame {
 
   private readonly clock: Clock;
   private readonly rng: () => number;
-  private readonly stream: QuestionStream;
+  private readonly stream: QuestionStream<GiftPlayer>;
   private readonly durationMs: number;
   private readonly onChange: () => void;
   private readonly onActivity: (id: string) => void;
@@ -116,7 +116,10 @@ export class GiftGame {
     this.phases = new PhaseTimer(this.clock, "countdown");
     this.gameLength = new GameLengthClock(this.phases, () => this.finish());
     this.rng = opts.rng ?? Math.random;
-    this.stream = new QuestionStream(quiz.questions, shuffleAnswers, this.rng, this.clock, protect);
+    this.stream = new QuestionStream(quiz.questions, shuffleAnswers, this.rng, this.clock, {
+      penalizeGuessing: protect,
+      canAnswer: (player) => !player.bonus && this.phase === "playing" && this.clock.now() < this.phases.endsAt,
+    });
     this.durationMs = minutes * 60_000;
     this.onChange = opts.onChange ?? (() => {});
     this.onActivity = opts.onActivity ?? this.onChange;
@@ -224,7 +227,7 @@ export class GiftGame {
 
   answer(id: string, seq: number, answer: AnswerValue): boolean {
     const player = this.players.get(id);
-    if (!player || player.bonus || this.phase !== "playing" || this.clock.now() >= this.phases.endsAt) return false;
+    if (!player) return false;
     const correct = this.stream.answer(player, seq, answer);
     if (correct === null) return false;
     if (correct && player.correct % GIFT_CORRECT_TO_PLAY === 0) this.earnBonus(player);
@@ -329,8 +332,7 @@ export class GiftGame {
       correct: player.correct,
       progress: bonus ? GIFT_CORRECT_TO_PLAY : player.correct % GIFT_CORRECT_TO_PLAY,
       rank: this.phase === "podium" ? this.standings().find((standing) => standing.id === id)!.rank : null,
-      // The bonus round is part of answering, so its feedback flash shows, but its question does not.
-      ...this.stream.fragment(player, this.phase === "playing", this.phase === "playing" && !bonus),
+      ...this.stream.fragment(player),
       bonus: bonus
         ? {
             round: player.rounds,
