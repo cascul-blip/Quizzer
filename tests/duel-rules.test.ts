@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { DuelAnswerInfo } from "../src/shared/duel-rules.ts";
-import { arenaOf, arenaPoints, climbLadder, compareDuelists, duelOutcome, pairArenas, standings } from "../src/shared/duel-rules.ts";
+import { arenaOf, arenaPoints, climbLadder, compareDuelists, duelOutcome, pairArenas } from "../src/shared/duel-rules.ts";
 
 const right = (ms: number): DuelAnswerInfo => ({ correct: true, ms });
 const wrong = (ms: number): DuelAnswerInfo => ({ correct: false, ms });
@@ -179,11 +179,5 @@ describe("points", () => {
     expect(arenaPoints(1, 1)).toBe(1);
     expect(arenaPoints(1, 15)).toBe(15);
     expect(arenaPoints(15, 15)).toBe(1);
-  });
-
-  test("standings: most points first, equal points by ladder order, off-ladder last", () => {
-    const p = (id: string, points: number) => ({ id, points });
-    const players = [p("a", 2), p("b", 5), p("c", 2), p("d", 0), p("x", 2)];
-    expect(standings(["d", "c", "b", "a"], players).map((q) => q.id)).toEqual(["b", "c", "a", "x", "d"]);
   });
 });

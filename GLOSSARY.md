@@ -32,6 +32,10 @@ _Avoid_: skinned mode, seasonal mode
 What a finished game saves for the host as a spreadsheet: one row per player in the game mode's order, under the columns the mode declares, and optionally a free-form appendix such as Kingdom Siege's wave log. Every row has one cell per column.
 _Avoid_: results table, results CSV (the CSV is the file written from it)
 
+**Standings**:
+The places of a finished (or running) game: entries sorted by the game mode's comparison order, such as Tallest Tower's floors then blocks placed, with competition ranks (1, 2, 2, 4) where entries equal on every key share a place. One module (`src/server/game/standings.ts`) computes them; the podium, the phone's rank and the results sheet's Rank column all read from it. Showdown's order ends with the ladder, so its places are never shared.
+_Avoid_: leaderboard (Classic's between-question screen), ranking loop
+
 **Battlefield**:
 Kingdom Siege's lanes and squares, with the defenders players place on them, the monsters marching down them, and the castle's hearts. The battlefield decides who hits whom and what may stand where; the projector and the phone's lane map both show it.
 _Avoid_: board, map (the phone's lane map is only a view of it)

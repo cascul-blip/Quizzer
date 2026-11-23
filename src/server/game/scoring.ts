@@ -10,17 +10,3 @@ export function scoreAnswer(correct: boolean, elapsedMs: number, timeLimitSec: n
   const t = Math.min(Math.max(elapsedMs, 0), limitMs) / limitMs;
   return Math.round(MAX_POINTS * (1 - t / 2));
 }
-
-/** Standard competition ranking (1, 2, 2, 4): ties share a rank. */
-export function rankScores<T extends { score: number }>(items: T[]): (T & { rank: number })[] {
-  const sorted = [...items].sort((a, b) => b.score - a.score);
-  let rank = 0;
-  let prev: number | null = null;
-  return sorted.map((item, i) => {
-    if (item.score !== prev) {
-      rank = i + 1;
-      prev = item.score;
-    }
-    return { ...item, rank };
-  });
-}

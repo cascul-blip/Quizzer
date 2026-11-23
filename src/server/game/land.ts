@@ -37,6 +37,7 @@ import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
 import { Roster } from "./roster.ts";
+import { fewest, most, rankBy } from "./standings.ts";
 import type { AnswerTotals } from "./stream.ts";
 import { QuestionStream } from "./stream.ts";
 
@@ -400,15 +401,8 @@ export class LandGame {
 
   /** Teams by tiles, then correct answers; equal teams share a rank. Knocked-out teams come last, the first one out at the bottom. */
   rankedTeams(): (LandTeam & { rank: number; tiles: number; correct: number })[] {
-    const withTotals = this.teams.map((t) => ({ ...t, tiles: this.teamTiles(t.index), correct: this.teamCorrect(t.index), rank: 0 }));
-    const sorted = [...withTotals].sort(
-      (a, b) => Number(a.out) - Number(b.out) || b.outOrder - a.outOrder || b.tiles - a.tiles || b.correct - a.correct || a.index - b.index,
-    );
-    sorted.forEach((t, i) => {
-      const prev = sorted[i - 1];
-      t.rank = prev && !t.out && !prev.out && prev.tiles === t.tiles && prev.correct === t.correct ? prev.rank : i + 1;
-    });
-    return sorted;
+    const withTotals = this.teams.map((t) => ({ ...t, tiles: this.teamTiles(t.index), correct: this.teamCorrect(t.index) }));
+    return rankBy(withTotals, [fewest((t) => Number(t.out)), most((t) => t.outOrder), most((t) => t.tiles), most((t) => t.correct)], [fewest((t) => t.index)]);
   }
 
   awards(): LandAwards {
