@@ -20,6 +20,7 @@ export const classicMode: ModeEntry<"classic"> = {
     return { game, log: null };
   },
   pacing: (game) => game,
+  viewBatch: (game, send) => game.viewBatch(send),
   teams: () => null,
   results: buildClassicResults,
   handle(game, playerId, msg) {

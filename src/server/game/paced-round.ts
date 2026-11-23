@@ -1,3 +1,5 @@
+import type { AnswerValue } from "../../shared/answer-match.ts";
+import { checkAnswer, MAX_TYPED_ANSWER } from "../../shared/answer-match.ts";
 import type { Pacing, QuestionView } from "../../shared/mode-views.ts";
 import type { Question } from "../../shared/quiz-schema.ts";
 import type { Clock } from "./common.ts";
@@ -10,7 +12,26 @@ export const INTRO_MS = 3000;
 /** The phases every paced mode shares; a mode adds its own (a lobby, a confidence step, a leaderboard, a podium). */
 export type PacedPhase = "intro" | "open" | "reveal";
 
+/** What the Paced question round records for an accepted answer; a mode may add its own fields. */
+export interface PacedAnswer {
+  /** Chosen option index; -1 for a typed answer. */
+  option: number;
+  /** The typed text, cut to MAX_TYPED_ANSWER. */
+  text?: string;
+  correct: boolean;
+  /** Milliseconds from the question opening to the answer. */
+  ms: number;
+}
+
+/** A player as the round sees them: whether they are connected, and their answers by question index. */
+export interface PacedAnswerer<A> {
+  connected: boolean;
+  answers: (A | undefined)[];
+}
+
 interface PacedRoundOptions<Extra extends string> {
+  /** The players the open question is asked of (Showdown asks only the duelists in arenas). Read each time. */
+  asked: () => Iterable<PacedAnswerer<unknown>>;
   /** The phase before the game starts: "intro" for a mode that starts at once, "lobby" for Classic. */
   initial: PacedPhase | Extra;
   pacing: Pacing;
@@ -84,6 +105,36 @@ export class PacedRound<Extra extends string = never> {
   /** Whether an answer to question `qIndex` arriving now is in time: the question is open and the deadline plus grace has not passed. */
   accepts(qIndex: number): boolean {
     return this.phase === "open" && qIndex === this.qIndex && this.clock.now() <= this.phases.endsAt + GRACE_MS;
+  }
+
+  /**
+   * Take a player's answer to question `qIndex`: refused (null) when the question is not open, the deadline plus grace has
+   * passed, the player already answered, or the answer does not fit the question. Otherwise it is recorded on the player,
+   * with the mode's own fields from `build`, and returned. The mode then calls closeIfAllAnswered.
+   */
+  take<A>(player: PacedAnswerer<A> | undefined, qIndex: number, value: AnswerValue, build: (answer: PacedAnswer) => A): A | null {
+    const q = this.currentQuestion;
+    if (!player || !q || !this.accepts(qIndex) || player.answers[qIndex]) return null;
+    const correct = checkAnswer(q, value);
+    if (correct === null) return null;
+    const choice = typeof value === "string" ? { option: -1, text: value.slice(0, MAX_TYPED_ANSWER) } : { option: value };
+    const answer = build({ ...choice, correct, ms: this.elapsedMs() });
+    player.answers[qIndex] = answer;
+    return answer;
+  }
+
+  /** Close the open question early once every connected player asked has answered it. Returns whether it closed. */
+  closeIfAllAnswered(): boolean {
+    if (this.phase !== "open") return false;
+    const connected = [...this.opts.asked()].filter((p) => p.connected);
+    if (connected.length === 0 || !connected.every((p) => p.answers[this.qIndex])) return false;
+    this.close();
+    return true;
+  }
+
+  /** A player's answer to the current question as their phone sees it: while it is open and once revealed; undefined otherwise. */
+  shownAnswer<A>(player: PacedAnswerer<A>): A | undefined {
+    return this.phase === "open" || this.revealed ? player.answers[this.qIndex] : undefined;
   }
 
   /** Milliseconds from the question opening to now. */

@@ -52,8 +52,8 @@ _Avoid_: deadline timer, match clock
 A question one player gets on their own phone in a self-paced game mode, such as Tallest Tower or Kingdom Siege. Each player moves through questions at their own speed, and an answer names the question by its sequence number.
 _Avoid_: self-paced question, stream question
 
-**Paced round**:
-The one module that runs the question cycle of a paced mode (Classic, Racer, Showdown): the question index, the intro, the open question with its deadline plus grace, the reveal and its auto-advance after five seconds, the pacing, and the question view. A mode composes it and brings what it adds through hooks (how a question settles, what follows the reveal) and its own phases (Racer's confidence step, Classic's leaderboard).
+**Paced question round**:
+The one module that runs the question cycle of a paced mode (Classic, Racer, Showdown): the question index, the intro, the open question with its deadline plus grace, the reveal and its auto-advance after five seconds, the pacing, the question view, and taking answers: it refuses an answer after the deadline plus grace or a second one from the same player, checks the answer, records the chosen option or the typed text cut to the maximum length, keeps typed answers hidden until the reveal, and closes the question early once every connected player asked has answered. The paced counterpart of the QuestionStream. A mode composes it, says which players are asked (Showdown asks only the duelists in arenas), adds its own scoring to each answer and brings what it adds through hooks (how a question settles, what follows the reveal) and its own phases (Racer's confidence step, Classic's leaderboard).
 _Avoid_: question loop, round engine
 
 **Paced question**:
@@ -71,3 +71,5 @@ _Avoid_: shared question, round question
 **Host command** is an instruction the host sends, in the lobby or during a game, such as Start, changing mode settings, or ending the game.
 
 **View delivery** is how the server sends projector snapshots and phone views. A phone can receive a patch based on its last view and catch up from the latest view when its socket drains.
+
+**View batching** is building every view of one broadcast together, so work the views share (a ranking, a podium) is done once. A game mode opts in through its mode entry (Classic and Showdown do).

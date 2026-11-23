@@ -106,7 +106,7 @@ export class CupGame {
 
   private readonly clock: Clock;
   private readonly rng: () => number;
-  private readonly stream: QuestionStream;
+  private readonly stream: QuestionStream<CupPlayer>;
   private readonly phases: PhaseTimer<CupPhase>;
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
@@ -122,7 +122,10 @@ export class CupGame {
     this.clock = opts.clock ?? realClock;
     this.phases = new PhaseTimer(this.clock, "countdown", COUNTDOWN_MS);
     this.rng = opts.rng ?? Math.random;
-    this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock, settings.protect);
+    this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock, {
+      penalizeGuessing: settings.protect,
+      canAnswer: (p) => this.answering(p),
+    });
     this.onChange = opts.onChange ?? (() => {});
     this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
@@ -387,7 +390,7 @@ export class CupGame {
   /** Answer a question. Living players need `target` right this round; poisoned players answer for practice. */
   answer(playerId: string, seq: number, option: AnswerValue): boolean {
     const p = this.players.get(playerId);
-    if (!p || !this.answering(p)) return false;
+    if (!p) return false;
     const correct = this.stream.answer(p, seq, option);
     if (correct === null) return false;
     if (correct && p.outRound === null) {
@@ -539,8 +542,7 @@ export class CupGame {
         correct: p.correct,
       },
       startCups: this.startCups,
-      // Feedback follows quizzing, not answering: a player who just became safe still sees the flash of the answer that made them safe.
-      ...this.stream.fragment(p, this.quizzing(p), this.answering(p)),
+      ...this.stream.fragment(p),
       drink: this.phase === "drink" && this.drinkers.includes(p.id) ? { picked: p.pick } : null,
       myDrink: reveal && mineAt >= 0 ? { ...reveal.drinks[mineAt]!, seq: reveal.seq, turn: reveal.current === mineAt, waiting: reveal.current < mineAt } : null,
       alive: this.alive().length,

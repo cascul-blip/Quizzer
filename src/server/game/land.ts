@@ -106,7 +106,7 @@ export class LandGame {
 
   private readonly clock: Clock;
   private readonly rng: () => number;
-  private readonly stream: QuestionStream;
+  private readonly stream: QuestionStream<LandPlayer>;
   private readonly phases: PhaseTimer<LandPhase>;
   private readonly gameLength: GameLengthClock<LandPhase>;
   private readonly onChange: () => void;
@@ -127,7 +127,9 @@ export class LandGame {
     this.phases = new PhaseTimer(this.clock, "countdown");
     this.gameLength = new GameLengthClock(this.phases, () => this.finish());
     this.rng = opts.rng ?? Math.random;
-    this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock);
+    this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock, {
+      canAnswer: (p) => this.phase === "playing" && p.state === "question",
+    });
     this.onChange = opts.onChange ?? (() => {});
     this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
@@ -266,7 +268,7 @@ export class LandGame {
 
   answer(playerId: string, seq: number, option: AnswerValue): boolean {
     const p = this.players.get(playerId);
-    if (!p || this.phase !== "playing" || p.state !== "question") return false;
+    if (!p) return false;
     const correct = this.stream.answer(p, seq, option);
     if (correct === null) return false;
     if (correct) p.claims++;
@@ -416,10 +418,6 @@ export class LandGame {
 
   // ---------- views ----------
 
-  private remainingMs(): number {
-    return this.phases.remainingMs();
-  }
-
   private boardView(): LandBoard {
     return { size: this.size, owners: [...this.owners], starts: this.starts };
   }
@@ -433,7 +431,7 @@ export class LandGame {
       theme: modeTheme("land", this.settings.theme),
       phase: this.phase,
       quiz: { id: this.quizId, title: this.title, questionCount: this.questions.length },
-      remainingMs: this.remainingMs(),
+      remainingMs: this.phases.remainingMs(),
       board: this.boardView(),
       teams: this.teams.map((t) => {
         const r = ranked.get(t.index)!;
@@ -488,7 +486,7 @@ export class LandGame {
       theme: modeTheme("land", this.settings.theme),
       phase: this.phase,
       title: this.title,
-      remainingMs: this.remainingMs(),
+      remainingMs: this.phases.remainingMs(),
       me: { id: p.id, nickname: p.nickname, avatar: p.avatar, correct: p.correct, placed: p.placed, stolen: p.stolen },
       team: teamInfo(p.team),
       teamTiles: this.teamTiles(p.team),
@@ -496,7 +494,7 @@ export class LandGame {
       claims: p.claims,
       answered: p.answered,
       emptyMs: state === "empty" ? Math.max(0, p.emptyEndsAt - now) : 0,
-      ...this.stream.fragment(p, playing, playing && state === "question"),
+      ...this.stream.fragment(p),
       board: playing && state === "claim" ? this.boardView() : null,
       conquered: p.conquered,
       result,

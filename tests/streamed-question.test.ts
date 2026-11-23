@@ -127,7 +127,7 @@ const MODES: Record<string, StreamedMode> = {
   "Gift Grab": {
     game: (clock) => GiftGame.fromLobby(lobbyFor("gift").handoffFacts("gift"), { clock }),
     toAnswering: (clock) => clock.advance(3_000),
-    // Its bonus round is part of answering, so it has no phase between.
+    // Its bonus round hides question and flash too, but within playing, not a phase between; see its own test below.
     toBetween: null,
   },
 };
@@ -156,7 +156,8 @@ describe("Streamed question feedback", () => {
     test(`${name} shows feedback while answering and hides it once the game has finished`, () => {
       const scenario = started(mode);
       mode.toAnswering(scenario.clock, scenario.game);
-      answerOnce(scenario);
+      // Wrong, so no mode moves the player off answering (Cup's safe step, Gift's bonus round).
+      answerOnce(scenario, WRONG);
       expect(scenario.game.playerView(scenario.id)!.feedback).not.toBeNull();
       scenario.game.end();
       expect(scenario.game.phase).toBe("podium");
@@ -175,7 +176,7 @@ describe("Streamed question feedback", () => {
     }
   }
 
-  test("Cup of Death keeps the feedback flash of the answer that made a player safe, while the quiz goes on", () => {
+  test("Cup of Death hides the feedback flash once an answer makes a player safe, while the quiz goes on", () => {
     const clock = new FakeClock();
     const game = CupGame.fromLobby(lobbyFor("cup").handoffFacts("cup"), { clock });
     game.start();
@@ -185,15 +186,13 @@ describe("Streamed question feedback", () => {
       answerOnce({ clock, game, id: ana.id });
       if (!ana.safe) clock.advance(FEEDBACK_MS);
     }
-    // Ben is not safe, so the quiz continues; Ana has nothing left to answer but still sees her last flash.
+    // Ben is not safe, so the quiz continues; Ana can't answer, so she sees neither question nor flash.
     expect(game.phase).toBe("quiz");
-    expect(game.playerView(ana.id)!.question).toBeNull();
-    expect(game.playerView(ana.id)!.feedback).not.toBeNull();
-    clock.advance(FEEDBACK_MS);
-    expect(game.playerView(ana.id)!.feedback).toBeNull();
+    expect(game.playerView(ana.id)).toMatchObject({ question: null, feedback: null });
+    expect(game.answer(ana.id, 1, RIGHT)).toBe(false);
   });
 
-  test("Gift Grab counts its bonus round as answering and keeps the feedback flash", () => {
+  test("Gift Grab hides the question and the feedback flash during its bonus round", () => {
     const clock = new FakeClock();
     const game = GiftGame.fromLobby(lobbyFor("gift").handoffFacts("gift"), { clock });
     game.start();
@@ -207,6 +206,20 @@ describe("Streamed question feedback", () => {
     const view = game.playerView(id)!;
     expect(view.bonus).not.toBeNull();
     expect(view.question).toBeNull();
-    expect(view.feedback).not.toBeNull();
+    expect(view.feedback).toBeNull();
+  });
+
+  test("Gift Grab takes an answer one tick before the game's end and refuses it at the end", () => {
+    const clock = new FakeClock();
+    const game = GiftGame.fromLobby(lobbyFor("gift").handoffFacts("gift"), { clock });
+    game.start();
+    clock.advance(3_000);
+    const id = [...game.players.keys()][0]!;
+    clock.advance(game.hostView().remainingMs - 1);
+    expect(game.answer(id, game.playerView(id)!.question!.seq, WRONG)).toBe(true);
+    const seq = game.playerView(id)!.question!.seq;
+    clock.advance(1);
+    expect(game.playerView(id)).toMatchObject({ question: null, feedback: null });
+    expect(game.answer(id, seq, RIGHT)).toBe(false);
   });
 });

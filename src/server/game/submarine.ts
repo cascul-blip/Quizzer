@@ -105,7 +105,7 @@ export class SubGame {
   private readonly phases: PhaseTimer<SubPhase>;
   private readonly clock: Clock;
   private readonly rng: () => number;
-  private readonly stream: QuestionStream;
+  private readonly stream: QuestionStream<SubPlayer>;
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: SubGame) => void;
@@ -118,7 +118,10 @@ export class SubGame {
     this.clock = opts.clock ?? realClock;
     this.phases = new PhaseTimer(this.clock, "countdown");
     this.rng = opts.rng ?? Math.random;
-    this.stream = new QuestionStream(quiz.questions, !!opts.shuffleAnswers, this.rng, this.clock, opts.protect);
+    this.stream = new QuestionStream(quiz.questions, !!opts.shuffleAnswers, this.rng, this.clock, {
+      penalizeGuessing: opts.protect,
+      canAnswer: (p) => this.phase === "chase" && p.state === "question",
+    });
     this.onChange = opts.onChange ?? (() => {});
     this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
@@ -244,7 +247,7 @@ export class SubGame {
 
   answer(playerId: string, seq: number, option: AnswerValue): boolean {
     const p = this.players.get(playerId);
-    if (!p || this.phase !== "chase" || p.state !== "question") return false;
+    if (!p) return false;
     const correct = this.stream.answer(p, seq, option);
     if (correct === null) return false;
     if (correct && ++p.towardBoost >= CORRECT_PER_BOOST) {
@@ -536,7 +539,7 @@ export class SubGame {
       me: { id: p.id, nickname: p.nickname, avatar: p.avatar, correct: p.correct, boosts: p.boosts, diveHits: p.diveHits },
       state: p.state,
       towardBoost: p.towardBoost,
-      ...this.stream.fragment(p, this.phase === "chase", this.phase === "chase" && p.state === "question"),
+      ...this.stream.fragment(p),
       dive: this.diveView(p),
       result,
     };

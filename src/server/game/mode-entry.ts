@@ -110,6 +110,8 @@ interface ServerModeEntry<M extends GameMode> {
   pacing: PacingOf<M>;
   /** How many teams the lobby previews and assigns players to with these settings; null in a solo mode. */
   teams(settings: ModeSettingsMap[M]): number | null;
+  /** Build every view of one broadcast inside send, so work the views share is done once. Absent: views are built one by one. */
+  viewBatch?(game: ModeGame[M], send: () => void): void;
   /** The results to save when the game finishes. */
   results(game: ModeGame[M]): ResultsSheet;
   /** After the results are saved. */

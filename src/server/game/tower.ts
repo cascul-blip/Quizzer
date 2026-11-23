@@ -92,7 +92,7 @@ export class TowerGame {
 
   private readonly clock: Clock;
   private readonly rng: () => number;
-  private readonly stream: QuestionStream;
+  private readonly stream: QuestionStream<TowerPlayer>;
   private readonly phases: PhaseTimer<TowerPhase>;
   private readonly gameLength: GameLengthClock<TowerPhase>;
   private readonly onChange: () => void;
@@ -110,7 +110,10 @@ export class TowerGame {
     this.phases = new PhaseTimer(this.clock, "countdown");
     this.gameLength = new GameLengthClock(this.phases, () => this.finish());
     this.rng = opts.rng ?? Math.random;
-    this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock, settings.protect);
+    this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock, {
+      penalizeGuessing: settings.protect,
+      canAnswer: (p) => this.phase === "playing" && p.state === "question",
+    });
     this.onChange = opts.onChange ?? (() => {});
     this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
@@ -277,7 +280,7 @@ export class TowerGame {
 
   answer(playerId: string, seq: number, option: AnswerValue): boolean {
     const p = this.players.get(playerId);
-    if (!p || this.phase !== "playing" || p.state !== "question") return false;
+    if (!p) return false;
     const correct = this.stream.answer(p, seq, option);
     if (correct === null) return false;
     if (correct) p.blocksHeld++;
@@ -335,10 +338,6 @@ export class TowerGame {
 
   // ---------- views ----------
 
-  private remainingMs(): number {
-    return this.gameLength.remainingMs();
-  }
-
   hostView(): HostTowerState {
     const ranked = new Map(this.rankedTeams().map((t) => [t.index, t.rank]));
     const players = [...this.players.values()];
@@ -347,7 +346,7 @@ export class TowerGame {
       theme: modeTheme("tower", this.settings.theme),
       phase: this.phase,
       quiz: { id: this.quizId, title: this.title, questionCount: this.questions.length },
-      remainingMs: this.remainingMs(),
+      remainingMs: this.gameLength.remainingMs(),
       teams: this.teams.map((t) => ({
         index: t.index,
         name: t.name,
@@ -414,12 +413,12 @@ export class TowerGame {
       theme: modeTheme("tower", this.settings.theme),
       phase: this.phase,
       title: this.title,
-      remainingMs: this.remainingMs(),
+      remainingMs: this.gameLength.remainingMs(),
       me: { id: p.id, nickname: p.nickname, avatar: p.avatar, correct: p.correct, placed: p.placed },
       team: teamInfo(team.index),
       state: p.state,
       blocksHeld: p.blocksHeld,
-      ...this.stream.fragment(p, playing, playing && p.state === "question"),
+      ...this.stream.fragment(p),
       egg: playing && this.egg ? { seq: this.egg.seq, ...this.egg.cells[p.team]! } : null,
       monsterEvent: this.monsterEventFor(p),
       build: playing && p.state === "build" ? { columns: [...team.columns], floors: floorsOf(team), sweepMs: sweepMsFor(floorsOf(team)) } : null,

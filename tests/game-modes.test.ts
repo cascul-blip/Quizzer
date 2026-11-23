@@ -206,7 +206,7 @@ describe("Phone message dispatch", () => {
   });
 });
 
-describe("Paced round", () => {
+describe("Paced question round", () => {
   /** The question a host or phone view carries; undefined for a view without one. */
   const questionOf = (view: object) => ("question" in view ? view.question : undefined);
 

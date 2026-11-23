@@ -92,7 +92,7 @@ export class GiftGame {
 
   private readonly clock: Clock;
   private readonly rng: () => number;
-  private readonly stream: QuestionStream;
+  private readonly stream: QuestionStream<GiftPlayer>;
   private readonly durationMs: number;
   private readonly onChange: () => void;
   private readonly onActivity: (id: string) => void;
@@ -113,7 +113,10 @@ export class GiftGame {
     this.phases = new PhaseTimer(this.clock, "countdown");
     this.gameLength = new GameLengthClock(this.phases, () => this.finish());
     this.rng = opts.rng ?? Math.random;
-    this.stream = new QuestionStream(quiz.questions, shuffleAnswers, this.rng, this.clock, protect);
+    this.stream = new QuestionStream(quiz.questions, shuffleAnswers, this.rng, this.clock, {
+      penalizeGuessing: protect,
+      canAnswer: (player) => !player.bonus && this.phase === "playing" && this.phases.remainingMs() > 0,
+    });
     this.durationMs = minutes * 60_000;
     this.onChange = opts.onChange ?? (() => {});
     this.onActivity = opts.onActivity ?? this.onChange;
@@ -221,7 +224,7 @@ export class GiftGame {
 
   answer(id: string, seq: number, answer: AnswerValue): boolean {
     const player = this.players.get(id);
-    if (!player || player.bonus || this.phase !== "playing" || this.clock.now() >= this.phases.endsAt) return false;
+    if (!player) return false;
     const correct = this.stream.answer(player, seq, answer);
     if (correct === null) return false;
     if (correct && player.correct % GIFT_CORRECT_TO_PLAY === 0) this.earnBonus(player);
@@ -287,13 +290,9 @@ export class GiftGame {
     });
   }
 
-  private remainingMs(): number {
-    return this.phases.remainingMs();
-  }
-
   private multiplier(): number {
     if (this.phase === "countdown") return 1;
-    return giftMultiplier(this.durationMs - this.remainingMs(), this.durationMs);
+    return giftMultiplier(this.durationMs - this.phases.remainingMs(), this.durationMs);
   }
 
   hostView(): HostGiftState {
@@ -304,7 +303,7 @@ export class GiftGame {
       kind: "gift",
       phase: this.phase,
       quiz: { id: this.quizId, title: this.title, questionCount: this.quiz.questions.length },
-      remainingMs: this.remainingMs(),
+      remainingMs: this.phases.remainingMs(),
       standings,
       mostCorrect: value ? { value, nicknames: standings.filter((player) => player.correct === value).map((player) => player.nickname) } : null,
       // Gift's host view always carries a list, empty until the podium.
@@ -319,13 +318,12 @@ export class GiftGame {
     return {
       kind: "gift",
       phase: this.phase,
-      remainingMs: this.remainingMs(),
+      remainingMs: this.phases.remainingMs(),
       score: player.score,
       correct: player.correct,
       progress: bonus ? GIFT_CORRECT_TO_PLAY : player.correct % GIFT_CORRECT_TO_PLAY,
       rank: this.phase === "podium" ? this.standings().find((standing) => standing.id === id)!.rank : null,
-      // The bonus round is part of answering, so its feedback flash shows, but its question does not.
-      ...this.stream.fragment(player, this.phase === "playing", this.phase === "playing" && !bonus),
+      ...this.stream.fragment(player),
       bonus: bonus
         ? {
             round: player.rounds,

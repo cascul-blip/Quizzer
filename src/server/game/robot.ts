@@ -115,7 +115,7 @@ export class RobotGame {
 
   private readonly clock: Clock;
   private readonly rng: () => number;
-  private readonly stream: QuestionStream;
+  private readonly stream: QuestionStream<RobotPlayer>;
   private readonly phases: PhaseTimer<RobotPhase>;
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
@@ -129,7 +129,10 @@ export class RobotGame {
     this.clock = opts.clock ?? realClock;
     this.phases = new PhaseTimer(this.clock, "countdown", COUNTDOWN_MS);
     this.rng = opts.rng ?? Math.random;
-    this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock, settings.protect);
+    this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock, {
+      penalizeGuessing: settings.protect, // Only in the quiz phase, so a wrong-answer wait never covers the arrows in the move phase.
+      canAnswer: () => this.phase === "quiz",
+    });
     this.onChange = opts.onChange ?? (() => {});
     this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
@@ -336,7 +339,7 @@ export class RobotGame {
   /** Answer during the quiz phase; a correct answer earns a movement point (players still in the game only). */
   answer(playerId: string, seq: number, option: AnswerValue): boolean {
     const p = this.players.get(playerId);
-    if (!p || this.phase !== "quiz") return false;
+    if (!p) return false;
     const correct = this.stream.answer(p, seq, option);
     if (correct === null) return false;
     if (correct && p.outRound === null) p.points++;
@@ -389,10 +392,6 @@ export class RobotGame {
 
   // ---------- views ----------
 
-  private remainingMs(): number {
-    return this.phases.remainingMs();
-  }
-
   hostView(): HostRobotState {
     const podium = this.phase === "podium";
     return {
@@ -400,7 +399,7 @@ export class RobotGame {
       phase: this.phase,
       quiz: { id: this.quizId, title: this.title, questionCount: this.questions.length },
       round: this.round,
-      phaseRemainingMs: this.remainingMs(),
+      phaseRemainingMs: this.phases.remainingMs(),
       phaseDurationMs: this.phaseDurationMs,
       marked: [...this.marked].sort((a, b) => a - b),
       inset: this.inset,
@@ -450,10 +449,9 @@ export class RobotGame {
       phase: this.phase,
       title: this.title,
       round: this.round,
-      phaseRemainingMs: this.remainingMs(),
+      phaseRemainingMs: this.phases.remainingMs(),
       me: { id: p.id, nickname: p.nickname, avatar: p.avatar, lives: p.lives, out: p.outRound !== null, points: p.points, correct: p.correct, x: p.x, y: p.y },
-      // Feedback only while answering: a wrong-answer wait must never cover the arrows in the move phase.
-      ...this.stream.fragment(p, this.phase === "quiz"),
+      ...this.stream.fragment(p),
       board: onBoard
         ? {
             marked: [...this.marked].sort((x, y) => x - y),

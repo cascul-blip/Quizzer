@@ -7,7 +7,7 @@ describe("QuestionStream", () => {
     const clock = new FakeClock();
     const { questions } = sampleQuiz();
     const draws = [0, 0];
-    const stream = new QuestionStream(questions, false, () => draws.shift() ?? 0.99, clock);
+    const stream = new QuestionStream(questions, false, () => draws.shift() ?? 0.99, clock, { canAnswer: () => true });
     const original = { nickname: "A" };
     const player = stream.registerPlayer(original);
     expect(original).toBe(player);
@@ -43,7 +43,7 @@ describe("QuestionStream", () => {
 
   test("rejects invalid, stale, and early answers and resets the penalty after a correct answer", () => {
     const clock = new FakeClock();
-    const stream = new QuestionStream(sampleQuiz().questions.slice(0, 1), false, () => 0, clock, true);
+    const stream = new QuestionStream(sampleQuiz().questions.slice(0, 1), false, () => 0, clock, { penalizeGuessing: true, canAnswer: () => true });
     const player = stream.registerPlayer({});
     stream.open(player);
     const answer = (option: number) => stream.answer(player, stream.questionView(player)!.seq, option);
@@ -75,7 +75,7 @@ describe("QuestionStream", () => {
 
   test("without Protect from abuse every wrong answer has the same wait", () => {
     const clock = new FakeClock();
-    const stream = new QuestionStream(sampleQuiz().questions.slice(0, 1), false, () => 0, clock);
+    const stream = new QuestionStream(sampleQuiz().questions.slice(0, 1), false, () => 0, clock, { canAnswer: () => true });
     const player = stream.registerPlayer({});
     stream.open(player);
     for (let seq = 1; seq <= 4; seq++) {
@@ -85,26 +85,34 @@ describe("QuestionStream", () => {
     }
   });
 
-  test("fragment shows feedback only while answering, and the question while asking", () => {
+  test("refuses an answer exactly when the fragment shows no question, and hides feedback outside play", () => {
     const clock = new FakeClock();
-    const stream = new QuestionStream(sampleQuiz().questions, false, () => 0, clock);
+    let open = true;
+    const stream = new QuestionStream(sampleQuiz().questions, false, () => 0, clock, { canAnswer: () => open });
     const player = stream.registerPlayer({});
-    expect(stream.fragment(player, true)).toEqual({ question: null, feedback: null });
+    expect(stream.fragment(player)).toEqual({ question: null, feedback: null });
     stream.open(player);
-    expect(stream.fragment(player, true).question).toEqual(stream.questionView(player));
-    expect(stream.fragment(player, false).question).toBeNull();
-    expect(stream.fragment(player, true, false).question).toBeNull();
-    stream.answer(player, stream.questionView(player)!.seq, 0);
-    expect(stream.fragment(player, true).feedback).toEqual(stream.feedbackView(player));
-    expect(stream.fragment(player, true).feedback).not.toBeNull();
-    expect(stream.fragment(player, false).feedback).toBeNull();
-    expect(stream.fragment(player, true, false).feedback).not.toBeNull();
+    expect(stream.fragment(player).question).toEqual(stream.questionView(player));
+
+    open = false;
+    expect(stream.fragment(player)).toEqual({ question: null, feedback: null });
+    expect(stream.answer(player, stream.questionView(player)!.seq, 0)).toBeNull();
+    expect([player.correct, player.wrong]).toEqual([0, 0]);
+
+    open = true;
+    expect(stream.answer(player, stream.questionView(player)!.seq, 0)).not.toBeNull();
+    expect(stream.fragment(player).feedback).toEqual(stream.feedbackView(player));
+    expect(stream.fragment(player).feedback).not.toBeNull();
+    open = false;
+    expect(stream.fragment(player).feedback).toBeNull();
+    expect(stream.feedbackView(player)).not.toBeNull();
+    open = true;
     clock.advance(1000);
-    expect(stream.fragment(player, true).feedback).toBeNull();
+    expect(stream.fragment(player).feedback).toBeNull();
   });
 
   test("a player who joins mid-game gets a question only when the mode is in play", () => {
-    const stream = new QuestionStream(sampleQuiz().questions, false, () => 0, new FakeClock());
+    const stream = new QuestionStream(sampleQuiz().questions, false, () => 0, new FakeClock(), { canAnswer: () => true });
     const early = stream.registerPlayer({});
     stream.openOnJoin(early, false);
     expect(stream.questionView(early)).toBeNull();
@@ -118,7 +126,7 @@ describe("QuestionStream", () => {
 
   test("errorsWhen lists the most-missed questions only once the game has finished", () => {
     const clock = new FakeClock();
-    const stream = new QuestionStream(sampleQuiz().questions.slice(0, 1), false, () => 0, clock);
+    const stream = new QuestionStream(sampleQuiz().questions.slice(0, 1), false, () => 0, clock, { canAnswer: () => true });
     const player = stream.registerPlayer({});
     stream.open(player);
     stream.answer(player, 1, 0);
