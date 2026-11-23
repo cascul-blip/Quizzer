@@ -106,7 +106,7 @@ describe("text questions in the streamed modes", () => {
     const { QuestionStream } = await import("../src/server/game/stream.ts");
     const clock = new FakeClock();
     const q = normalizeQuestion({ type: "text", text: "Flies?", options: ["Airplane"] });
-    const stream = new QuestionStream([q], false, () => 0.5, clock);
+    const stream = new QuestionStream([q], false, () => 0.5, clock, { canAnswer: () => true });
     const p = stream.registerPlayer({});
     stream.open(p);
     expect(stream.questionView(p)?.options).toEqual([]);

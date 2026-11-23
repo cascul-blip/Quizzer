@@ -61,7 +61,8 @@ function answer(game: TowerGame, clock: FakeClock, p: TowerPlayer, right: boolea
   const cur = game.playerView(p.id)!.question!;
   const option = right ? cur.options.indexOf("yes") : cur.options.findIndex((option) => option !== "yes");
   expect(game.answer(p.id, cur.seq, option)).toBe(true);
-  clock.advance(game.playerView(p.id)!.feedback!.remainingMs);
+  // The flash is hidden once the player moves on to building, so wait it out by its length.
+  clock.advance(FEEDBACK_MS);
 }
 
 describe("Lobby handoff", () => {

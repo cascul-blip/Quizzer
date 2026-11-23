@@ -124,7 +124,7 @@ describe("pin in a game", () => {
 
   test("self-paced modes: the stream sends spots and scores the spot index", () => {
     const clock = new FakeClock();
-    const stream = new QuestionStream([pinQuestion()], true, () => 0.3, clock);
+    const stream = new QuestionStream([pinQuestion()], true, () => 0.3, clock, { canAnswer: () => true });
     const p = stream.registerPlayer({});
     stream.open(p);
     const view = stream.questionView(p)!;

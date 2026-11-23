@@ -21,6 +21,8 @@ import { SIEGE_COUNTDOWN_MS, SIEGE_GIANT_WAIT_MS, SIEGE_OPENING_MS, SIEGE_TICK_M
 import { FakeClock, tempDir } from "./helpers.ts";
 import { fakeHub, HubSocket, pastThrottle, withoutTimers } from "./hub-harness.ts";
 
+type PlayerStateMsg = Awaited<ReturnType<HubSocket["playerState"]>>;
+
 // The hub's game logic, end to end, on fake sockets; tests/server.test.ts keeps what only a real socket can show.
 
 let t: ReturnType<typeof tempDir>;
@@ -198,15 +200,17 @@ describe("Game mode: Tallest Tower", () => {
 
     // Ann answers 4 correctly at her own pace; the others do nothing.
     const ann = players[0]!;
+    let answered: PlayerStateMsg | undefined;
     for (let i = 0; i < 4; i++) {
       const st = await ann.playerState((v) => v.kind === "tower" && v.phase === "playing" && !!v.question && !v.feedback);
       const q = st.view.kind === "tower" ? st.view.question! : null;
       ann.sendMsg({ type: "tower.answer", seq: q!.seq, option: 0 });
-      await ann.playerState((v) => v.kind === "tower" && v.feedback?.seq === q!.seq);
+      answered = await ann.playerState((v) => v.kind === "tower" && v.question?.seq !== q!.seq);
       clock.advance(FEEDBACK_MS);
       hub.broadcast();
     }
-    const building = await ann.playerState((v) => v.kind === "tower" && v.state === "build");
+    const building = answered!;
+    expect(building.view.kind === "tower" && building.view.state).toBe("build");
     expect(building.view.kind === "tower" && building.view.build).toEqual({ columns: [0, 0, 0], floors: 0, sweepMs: 2500 });
 
     let back!: Awaited<ReturnType<typeof ann.playerState>>;
@@ -278,15 +282,16 @@ describe("Game mode: Submarine Squad", () => {
     expect(chase.view.kind === "submarine" && chase.view.required).toBe(5);
 
     const sam = players[0]!;
+    let answered: PlayerStateMsg | undefined;
     for (let i = 0; i < 4; i++) {
       const st = await sam.playerState((v) => v.kind === "submarine" && !!v.question && !v.feedback);
       const q = st.view.kind === "submarine" ? st.view.question! : null;
       sam.sendMsg({ type: "sub.answer", seq: q!.seq, option: 0 });
-      await sam.playerState((v) => v.kind === "submarine" && v.feedback?.seq === q!.seq);
+      answered = await sam.playerState((v) => v.kind === "submarine" && v.question?.seq !== q!.seq);
       clock.advance(FEEDBACK_MS);
       hub.broadcast();
     }
-    await sam.playerState((v) => v.kind === "submarine" && v.state === "boost");
+    expect(answered!.view.kind === "submarine" && answered!.view.state).toBe("boost");
     clock.advance(BOOST_MIN_HOLD_MS);
     sam.sendMsg({ type: "sub.boost" });
     pastThrottle(clock);
@@ -339,16 +344,18 @@ describe("Game mode: Tower Fight", () => {
     hub.broadcast();
 
     const red = players[0]!;
+    let answered: PlayerStateMsg | undefined;
     for (let i = 0; i < 4; i++) {
       const st = await red.playerState((v) => v.kind === "fight" && v.phase === "playing" && !!v.question && !v.feedback);
       const q = st.view.kind === "fight" ? st.view.question! : null;
       red.sendMsg({ type: "fight.answer", seq: q!.seq, option: 0 });
-      await red.playerState((v) => v.kind === "fight" && v.feedback?.seq === q!.seq);
+      answered = await red.playerState((v) => v.kind === "fight" && v.question?.seq !== q!.seq);
       clock.advance(FEEDBACK_MS);
       hub.broadcast();
     }
     // Undamaged tower: straight to aiming.
-    const aiming = await red.playerState((v) => v.kind === "fight" && v.state === "aim");
+    const aiming = answered!;
+    expect(aiming.view.kind === "fight" && aiming.view.state).toBe("aim");
     expect(aiming.view.kind === "fight" && aiming.view.decisionMs).toBe(0);
 
     // A hard throw backwards: friendly fire on Red's own tower.
@@ -417,7 +424,7 @@ describe("Game mode: Robot Attack", () => {
       const q = st.view.kind === "robot" ? st.view.question! : null;
       expect(st.view.kind === "robot" && st.view.board).toBeNull();
       ann.sendMsg({ type: "robot.answer", seq: q!.seq, option: 0 });
-      await ann.playerState((v) => v.kind === "robot" && v.feedback?.seq === q!.seq);
+      await ann.playerState((v) => v.kind === "robot" && v.question?.seq !== q!.seq);
       clock.advance(FEEDBACK_MS);
       hub.broadcast();
     }
@@ -509,8 +516,10 @@ describe("Game mode: Cup of Death", () => {
       if (st.view.kind !== "cup" || st.view.me.safe) break;
       const q = st.view.question!;
       ann.sendMsg({ type: "cup.answer", seq: q.seq, option: 0 });
-      await ann.playerState((v) => v.kind === "cup" && v.feedback?.seq === q.seq);
+      const answered = await ann.playerState((v) => v.kind === "cup" && v.question?.seq !== q.seq);
       clock.advance(FEEDBACK_MS);
+      // The answer that makes Ann safe hides her question and flash, so no later view changes.
+      if (answered.view.kind === "cup" && answered.view.me.safe) break;
       hub.broadcast();
     }
     clock.advance(cupQuizMs(1));
@@ -708,15 +717,17 @@ describe("Game mode: Land Grab", () => {
 
     // Ann answers her three questions correctly, then is on the land with 3 tiles to place.
     const ann = players[0]!;
+    let answered: PlayerStateMsg | undefined;
     for (let i = 0; i < 3; i++) {
       const st = await ann.playerState((v) => v.kind === "land" && v.phase === "playing" && !!v.question && !v.feedback);
       const q = st.view.kind === "land" ? st.view.question! : null;
       ann.sendMsg({ type: "land.answer", seq: q!.seq, option: 0 });
-      await ann.playerState((v) => v.kind === "land" && v.feedback?.seq === q!.seq);
+      answered = await ann.playerState((v) => v.kind === "land" && v.question?.seq !== q!.seq);
       clock.advance(FEEDBACK_MS);
       hub.broadcast();
     }
-    const claiming = await ann.playerState((v) => v.kind === "land" && v.state === "claim" && !v.feedback);
+    const claiming = answered!;
+    expect(claiming.view.kind === "land" && claiming.view.state).toBe("claim");
     expect(claiming.view.kind === "land" && [claiming.view.claims, claiming.view.board?.size]).toEqual([3, 10]);
     await host.hostState((v) => v.kind === "land" && v.teams[0]!.members[0]!.claiming);
 
@@ -1129,15 +1140,17 @@ describe("Game mode: Gift Grab", () => {
       host.sendMsg({ type: "host.start", pacing: "manual" });
       await host.hostState((v) => v.kind === "gift" && v.phase === "countdown");
       clock.advance(3_000);
+      let answered: PlayerStateMsg | undefined;
       for (let i = 1; i <= 5; i++) {
         const state = await player.playerState((v) => v.kind === "gift" && v.question?.seq === i);
         if (state.view.kind !== "gift") throw new Error("Expected Gift Grab view");
         player.sendMsg({ type: "gift.answer", seq: state.view.question!.seq, option: 0 });
-        await player.playerState((v) => v.kind === "gift" && v.feedback?.seq === i);
+        answered = await player.playerState((v) => v.kind === "gift" && v.question?.seq !== i);
         clock.advance(FEEDBACK_MS);
         hub.broadcast();
       }
-      const earned = await player.playerState((v) => v.kind === "gift" && v.bonus !== null);
+      const earned = answered!;
+      expect(earned.view.kind === "gift" && earned.view.bonus).not.toBeNull();
       if (earned.view.kind !== "gift" || joined.type !== "joined") throw new Error("Expected joined Gift Grab player");
       const bonus = earned.view.bonus!;
       const item = bonus.items.find((candidate) => GIFT_GOODS.some((kind) => kind === candidate.kind))!;

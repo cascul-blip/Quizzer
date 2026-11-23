@@ -45,8 +45,20 @@ interface QuestionState {
   readyAt: number;
 }
 
-/** Deals each player their own shuffled, repeating deck of questions and scores their answers. */
-export class QuestionStream {
+/** What a Streamed question mode tells its QuestionStream. */
+export interface StreamRules<P> {
+  /** Whether the mode lets this player answer right now. Outside it the phone shows no question and no feedback. */
+  canAnswer: (player: P) => boolean;
+  /** Hold the ✗ longer for wrong answers in a row (the lobby's "Protect from abuse"). */
+  penalizeGuessing?: boolean;
+}
+
+/**
+ * Deals each player their own shuffled, repeating deck of questions and scores their answers.
+ * The mode gives its "can answer now" check once; the stream uses it both to build the phone's
+ * question and feedback and to refuse answers.
+ */
+export class QuestionStream<P extends AnswerTotals = AnswerTotals> {
   /** Wrong answers given to each question, by everyone, over the whole game. */
   private readonly wrongCounts: number[];
   private readonly states = new WeakMap<AnswerTotals, QuestionState>();
@@ -56,8 +68,7 @@ export class QuestionStream {
     private readonly shuffleAnswers: boolean,
     private readonly rng: () => number,
     private readonly clock: Clock,
-    /** Hold the ✗ longer for wrong answers in a row (the lobby's "Protect from abuse"). */
-    private readonly penalizeGuessing = false,
+    private readonly rules: StreamRules<P>,
   ) {
     this.wrongCounts = questions.map(() => 0);
   }
@@ -86,14 +97,11 @@ export class QuestionStream {
   }
 
   /**
-   * The question and answer feedback a Streamed question mode puts in a phone view.
-   * Feedback shows only while the mode says the player is answering. The question shows while
-   * `asking` (by default the same): a mode's answer can move the player on to something else
-   * (Tower's decision, Cup's safe step, Gift's bonus round) while the feedback flash still runs,
-   * so the flash outlives the question. The errors are on the host's view: see `errorsWhen`.
+   * The question and answer feedback a Streamed question mode puts in a phone view: both show
+   * only while the player can answer. The errors are on the host's view: see `errorsWhen`.
    */
-  fragment(player: AnswerTotals, answering: boolean, asking = answering): StreamFragment {
-    return { question: asking ? this.questionView(player) : null, feedback: answering ? this.feedbackView(player) : null };
+  fragment(player: P): StreamFragment {
+    return this.rules.canAnswer(player) ? { question: this.questionView(player), feedback: this.feedbackView(player) } : { question: null, feedback: null };
   }
 
   /** Open a question for a player who joined mid-game, when the mode is in play. */
@@ -137,9 +145,10 @@ export class QuestionStream {
   /**
    * Score an answer to the current question and deal the next one.
    * Returns whether it was correct, or null if the answer was rejected
-   * (stale seq, still in the feedback flash, or an invalid option).
+   * (the player can't answer now, stale seq, still in the feedback flash, or an invalid option).
    */
-  answer(player: AnswerTotals, seq: number, answer: AnswerValue): boolean | null {
+  answer(player: P, seq: number, answer: AnswerValue): boolean | null {
+    if (!this.rules.canAnswer(player)) return null;
     const state = this.state(player);
     const cur = state.current;
     if (!cur || seq !== cur.seq || this.clock.now() < state.readyAt) return null;
@@ -153,7 +162,7 @@ export class QuestionStream {
       state.wrongStreak++;
       this.wrongCounts[cur.qIndex]!++;
     }
-    const penaltyMs = this.penalizeGuessing ? wrongPenaltyMs(state.wrongStreak) : 0;
+    const penaltyMs = this.rules.penalizeGuessing ? wrongPenaltyMs(state.wrongStreak) : 0;
     state.feedback = { seq, correct, answers: correct ? [] : cur.correct.map((i) => cur.options[i]!), penaltyMs };
     state.readyAt = this.clock.now() + FEEDBACK_MS + penaltyMs;
     this.deal(state);
