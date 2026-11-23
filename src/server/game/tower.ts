@@ -339,10 +339,6 @@ export class TowerGame {
 
   // ---------- views ----------
 
-  private remainingMs(): number {
-    return this.gameLength.remainingMs();
-  }
-
   hostView(): HostTowerState {
     const ranked = new Map(this.rankedTeams().map((t) => [t.index, t.rank]));
     const players = [...this.players.values()];
@@ -351,7 +347,7 @@ export class TowerGame {
       theme: modeTheme("tower", this.settings.theme),
       phase: this.phase,
       quiz: { id: this.quizId, title: this.title, questionCount: this.questions.length },
-      remainingMs: this.remainingMs(),
+      remainingMs: this.gameLength.remainingMs(),
       teams: this.teams.map((t) => ({
         index: t.index,
         name: t.name,
@@ -418,7 +414,7 @@ export class TowerGame {
       theme: modeTheme("tower", this.settings.theme),
       phase: this.phase,
       title: this.title,
-      remainingMs: this.remainingMs(),
+      remainingMs: this.gameLength.remainingMs(),
       me: { id: p.id, nickname: p.nickname, avatar: p.avatar, correct: p.correct, placed: p.placed },
       team: teamInfo(team.index),
       state: p.state,

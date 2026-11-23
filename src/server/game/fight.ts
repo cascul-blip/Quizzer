@@ -439,10 +439,6 @@ export class FightGame {
 
   // ---------- views ----------
 
-  private remainingMs(): number {
-    return this.phases.remainingMs();
-  }
-
   private shotView(s: Shot, now = this.clock.now()): FightShot {
     const { firedAt, ...rest } = s;
     return { ...rest, elapsedMs: now - firedAt };
@@ -457,7 +453,7 @@ export class FightGame {
       theme: this.theme,
       phase: this.phase,
       quiz: { id: this.quizId, title: this.title, questionCount: this.questions.length },
-      phaseRemainingMs: this.remainingMs(),
+      phaseRemainingMs: this.phases.remainingMs(),
       hill: this.hill,
       terrain: this.terrain,
       teams: this.teams.map((t) => ({
@@ -513,7 +509,7 @@ export class FightGame {
       phase: this.phase,
       title: this.title,
       hill: this.hill,
-      phaseRemainingMs: this.remainingMs(),
+      phaseRemainingMs: this.phases.remainingMs(),
       me: { id: p.id, nickname: p.nickname, avatar: p.avatar, correct: p.correct, hits: p.hits, rebuilds: p.rebuilds },
       team: teamInfo(p.team),
       teams: this.teams.map((t) => teamInfo(t.index)),
