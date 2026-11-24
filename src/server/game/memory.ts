@@ -20,6 +20,7 @@ interface MemoryParticipant extends BasePlayer {
   pairs: number;
   correct: number;
   totalMs: number;
+  revealStarts: number;
 }
 
 interface MemoryOptions {
@@ -222,7 +223,18 @@ export class MemoryGame {
   }
 
   private beginRevealPhase(): void {
-    this.turnOrder = [...this.players.values()].filter((p) => p.chips > 0).map((p) => p.id);
+    const end = this.paced.qIndex + 1;
+    const order = [...this.players.values()]
+      .filter((player) => player.chips > 0)
+      .map((player) => {
+        const answers = player.answers.slice(end - MEMORY_QUESTIONS_PER_PHASE, end);
+        const correctMs = answers.reduce((total, answer) => total + (answer?.correct ? answer.ms : 0), 0);
+        return { player, averageMs: correctMs / player.chips };
+      })
+      // The roster starts in join order, which a stable sort preserves for remaining ties.
+      .sort((a, b) => a.averageMs - b.averageMs || a.player.revealStarts - b.player.revealStarts);
+    order[0]!.player.revealStarts++;
+    this.turnOrder = order.map(({ player }) => player.id);
     this.nextInOrder = 0;
     this.nextTurn();
   }
@@ -324,7 +336,7 @@ export class MemoryGame {
 }
 
 function newPlayer(base: BasePlayer): MemoryParticipant {
-  return { ...base, answers: [], chips: 0, pairs: 0, correct: 0, totalMs: 0 };
+  return { ...base, answers: [], chips: 0, pairs: 0, correct: 0, totalMs: 0, revealStarts: 0 };
 }
 
 function playerView({ id, nickname, avatar, chips, pairs }: MemoryParticipant): MemoryPlayer {

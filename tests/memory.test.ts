@@ -213,6 +213,79 @@ describe("Memory Game", () => {
     expect(player(noel!)).toMatchObject({ me: { chips: 1 }, phaseRemainingMs: 15_000 });
   });
 
+  test("starts reveal turns by average correct answer time even when the faster player spent more time answering", async () => {
+    const {
+      host,
+      phones: [noel, holly, ivy],
+    } = await launch(["Noel", "Holly", "Ivy"]);
+
+    const first = openQuestion(host);
+    submit(noel!, first, 1);
+    clock.advance(100);
+    submit(holly!, first);
+    clock.advance(110);
+    submit(ivy!, first);
+    host.sendMsg({ type: "host.next" });
+
+    const second = openQuestion(host);
+    clock.advance(210);
+    submit(ivy!, second);
+    clock.advance(40);
+    submit(noel!, second);
+    clock.advance(10);
+    submit(holly!, second);
+    host.sendMsg({ type: "host.next" });
+
+    const third = openQuestion(host);
+    clock.advance(210);
+    submit(ivy!, third);
+    clock.advance(790);
+    submit(holly!, third, 1);
+    host.sendMsg({ type: "host.skip" });
+    host.sendMsg({ type: "host.next" });
+
+    expect(player(holly!).me.chips).toBe(2);
+    expect(player(noel!).me.chips).toBe(1);
+    expect(player(ivy!).me.chips).toBe(3);
+    for (const nickname of ["Holly", "Ivy", "Noel", "Holly", "Ivy", "Ivy"]) {
+      expect(projector().phase).toBe("turn");
+      expect(projector().turn?.nickname).toBe(nickname);
+      clock.advance(15_000);
+    }
+    expect(projector().phase).toBe("intro");
+  });
+
+  test("breaks equal averages by prior first turns, then lobby join order", async () => {
+    const {
+      host,
+      phones: [noel, holly],
+    } = await launch(["Noel", "Holly"]);
+    const firstTurns: (string | undefined)[] = [];
+
+    for (const [hollyMs, noelMs] of [
+      [100, 100],
+      [200, 200],
+      [100, 300],
+      [100, 100],
+      [100, 100],
+    ] as const) {
+      const index = openQuestion(host);
+      clock.advance(hollyMs);
+      submit(holly!, index);
+      clock.advance(noelMs - hollyMs);
+      submit(noel!, index);
+      host.sendMsg({ type: "host.next" });
+      playQuestion(host);
+      playQuestion(host);
+
+      firstTurns.push(projector().turn?.nickname);
+      clock.advance(30_000);
+      expect(projector().phase).toBe("intro");
+    }
+
+    expect(firstTurns).toEqual(["Noel", "Holly", "Holly", "Noel", "Noel"]);
+  });
+
   test("spends one chip for each pair, shows feedback at each deadline and gives everyone with chips one turn per pass", async () => {
     const {
       host,
