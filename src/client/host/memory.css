@@ -1,0 +1,69 @@
+.memory-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(12rem, 22vw);
+  flex: 1;
+  min-height: 0;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.memory-table {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  justify-items: center;
+  align-items: center;
+  min-height: 0;
+  gap: 0.6rem;
+}
+
+.memory-table h1,
+.memory-scores h2 {
+  margin: 0;
+}
+
+.memory-board {
+  display: grid;
+  grid-template-columns: repeat(var(--memory-size), 1fr);
+  grid-template-rows: repeat(var(--memory-size), 1fr);
+  gap: clamp(2px, 0.45vmin, 8px);
+  width: min(100%, 69vh);
+  max-height: 100%;
+  aspect-ratio: 1;
+}
+
+.memory-card {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  border-radius: 12%;
+  font-size: clamp(0.65rem, 2.2vmin, 1.5rem);
+  font-weight: 800;
+}
+
+.memory-down {
+  background: #27445d;
+  color: #eef7ff;
+  box-shadow: inset 0 0 0 1px #82a5c7;
+}
+
+.memory-up {
+  background: hsl(var(--memory-hue) 75% 82%);
+  color: #202332;
+}
+
+.memory-scores {
+  overflow: auto;
+  padding: 0.5rem;
+}
+
+.memory-scores ol {
+  list-style: none;
+  padding: 0;
+}
+
+.memory-scores li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.5rem 0;
+}

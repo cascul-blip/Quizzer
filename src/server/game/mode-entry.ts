@@ -14,6 +14,7 @@ import type { FightGame } from "./fight.ts";
 import type { GiftGame } from "./gift.ts";
 import type { LandGame } from "./land.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
+import type { MemoryGame } from "./memory.ts";
 import type { RacerGame } from "./racer.ts";
 import type { ResultsSheet } from "./results.ts";
 import type { RobotGame } from "./robot.ts";
@@ -33,6 +34,7 @@ export interface ModeGame {
   siege: SiegeGame;
   duel: DuelGame;
   gift: GiftGame;
+  memory: MemoryGame;
 }
 
 export type LiveGame = ModeGame[GameMode];
@@ -59,6 +61,7 @@ export type RawSettings = Readonly<Record<string, unknown>>;
 
 export interface StartContext {
   clock?: Clock;
+  rng?: () => number;
   dataDir: string;
   onChange: () => void;
   onActivity: (playerId: string) => void;
@@ -117,8 +120,8 @@ export function unhandled(msg: never): never {
   throw new Error(`No handler for phone message ${(msg as { type: string }).type}`);
 }
 
-export function handoffOptions({ clock, onChange, onActivity, onFinish }: StartContext) {
-  return { clock, onChange, onActivity, onFinish };
+export function handoffOptions({ clock, rng, onChange, onActivity, onFinish }: StartContext) {
+  return { clock, rng, onChange, onActivity, onFinish };
 }
 
 /** A settings theme: kept as it is when not given, refused when it isn't a known look. */

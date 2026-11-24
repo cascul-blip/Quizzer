@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { AvatarChoice } from "../../shared/avatars.ts";
+import type { QuestionView } from "../../shared/mode-views.ts";
 import type { HostView } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import type { MusicCue } from "../shared/music/index.ts";
@@ -96,10 +97,17 @@ export function ClassicStage({ view, send, enteredFromLobby }: { view: GameView;
 function PhaseView({ view, send }: { view: GameView; send: Send }) {
   switch (view.phase) {
     case "intro":
-      return <Intro view={view} send={send} />;
+      return <PacedQuestionIntro question={view.question!} send={send} />;
     case "open":
     case "reveal":
-      return <QuestionScreen view={view} send={send} />;
+      return (
+        <PacedQuestionScreen
+          question={view.question!}
+          view={view}
+          send={send}
+          nextLabel={view.question!.index + 1 >= view.question!.total ? "Final results" : "Leaderboard"}
+        />
+      );
     case "leaderboard":
       return <Leaderboard view={view} send={send} />;
     case "podium":
@@ -107,8 +115,7 @@ function PhaseView({ view, send }: { view: GameView; send: Send }) {
   }
 }
 
-function Intro({ view, send }: { view: GameView; send: Send }) {
-  const q = view.question!;
+export function PacedQuestionIntro({ question: q, send }: { question: QuestionView; send: Send }) {
   return (
     <main class="intro" onClick={() => send({ type: "host.skip" })}>
       <div class="intro-num">Question {q.index + 1}</div>
@@ -122,8 +129,23 @@ function Intro({ view, send }: { view: GameView; send: Send }) {
   );
 }
 
-function QuestionScreen({ view, send }: { view: GameView; send: Send }) {
-  const q = view.question!;
+type PacedQuestionState = Pick<GameView, "answeredCount" | "answerCounts" | "correct" | "pacing"> & {
+  phase: string;
+  players: { connected: boolean }[];
+  answerAvatars?: AvatarChoice[][] | null;
+};
+
+export function PacedQuestionScreen({
+  question: q,
+  view,
+  send,
+  nextLabel,
+}: {
+  question: QuestionView;
+  view: PacedQuestionState;
+  send: Send;
+  nextLabel: string;
+}) {
   const open = view.phase === "open";
   const secs = useCountdown(q.remainingMs, `${view.phase}:${q.index}`);
   const lastTick = useRef(-1);
@@ -214,14 +236,14 @@ function QuestionScreen({ view, send }: { view: GameView; send: Send }) {
             Skip (S)
           </button>
         ) : (
-          <NextButton view={view} send={send} label={q.index + 1 >= q.total ? "Final results" : "Leaderboard"} />
+          <NextButton view={view} send={send} label={nextLabel} />
         )}
       </footer>
     </main>
   );
 }
 
-function NextButton({ view, send, label }: { view: GameView; send: Send; label: string }) {
+function NextButton({ view, send, label }: { view: Pick<GameView, "pacing">; send: Send; label: string }) {
   return (
     <button class="btn primary next" onClick={() => send({ type: "host.next" })}>
       {label} {view.pacing === "auto" ? <span class="auto-note">(auto)</span> : "→"}

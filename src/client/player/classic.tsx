@@ -1,4 +1,6 @@
+import type { ComponentChildren } from "preact";
 import { useEffect, useState } from "preact/hooks";
+import type { QuestionView } from "../../shared/mode-views.ts";
 import { STREAK_MIN } from "../../shared/protocol.ts";
 import { PinBoard, PinDragger } from "../shared/pin.tsx";
 import { Tex } from "../shared/tex.tsx";
@@ -20,19 +22,9 @@ function Phase({ view, send }: { view: ClassicView; send: Send }) {
   const q = view.question;
   switch (view.phase) {
     case "intro":
-      return (
-        <Center>
-          <p class="muted">
-            Question {q!.index + 1} of {q!.total}
-          </p>
-          <h1 class="q-text">
-            <Tex text={q!.text} />
-          </h1>
-          <p class="muted">Get ready…</p>
-        </Center>
-      );
+      return <PacedQuestionIntro question={q!} label={`Question ${q!.index + 1} of ${q!.total}`} />;
     case "open":
-      return <Answering view={view} send={send} />;
+      return <PacedQuestionAnswering question={q!} view={view} submit={(option, text) => send({ type: "answer", qIndex: q!.index, option, text })} />;
     case "reveal":
     case "leaderboard":
       return <Result view={view} />;
@@ -51,8 +43,27 @@ function Phase({ view, send }: { view: ClassicView; send: Send }) {
   }
 }
 
-function Answering({ view, send }: { view: ClassicView; send: Send }) {
-  const q = view.question!;
+export function PacedQuestionIntro({ question, label }: { question: QuestionView; label: string }) {
+  return (
+    <Center>
+      <p class="muted">{label}</p>
+      <h1 class="q-text">
+        <Tex text={question.text} />
+      </h1>
+      <p class="muted">Get ready…</p>
+    </Center>
+  );
+}
+
+export function PacedQuestionAnswering({
+  question: q,
+  view,
+  submit,
+}: {
+  question: QuestionView;
+  view: Pick<ClassicView, "myChoice" | "myText">;
+  submit: (option: number, text?: string) => void;
+}) {
   const [pending, setPending] = useState<number | null>(null);
   const secs = useCountdown(q.remainingMs, `open:${q.index}`);
   useEffect(() => setPending(null), [q.index]);
@@ -74,7 +85,7 @@ function Answering({ view, send }: { view: ClassicView; send: Send }) {
   const choose = (i: number) => {
     if (navigator.vibrate) navigator.vibrate(30);
     setPending(i);
-    send({ type: "answer", qIndex: q.index, option: i });
+    submit(i);
   };
   const head = (
     <div class="q-head">
@@ -103,7 +114,7 @@ function Answering({ view, send }: { view: ClassicView; send: Send }) {
           onSubmit={(text) => {
             if (navigator.vibrate) navigator.vibrate(30);
             setPendingText(text);
-            send({ type: "answer", qIndex: q.index, option: 0, text });
+            submit(0, text);
           }}
         />
       ) : (
@@ -126,24 +137,51 @@ function Answering({ view, send }: { view: ClassicView; send: Send }) {
 }
 
 function Result({ view }: { view: ClassicView }) {
-  const q = view.question!;
   const r = view.result!;
+  return (
+    <PacedQuestionFeedback
+      question={view.question!}
+      result={r}
+      myText={view.myText}
+      reward={r.wasCorrect ? `+${r.points.toLocaleString()}` : "+0"}
+      streak={r.wasCorrect && view.me.streak >= STREAK_MIN ? view.me.streak : 0}
+    >
+      {view.me.score.toLocaleString()} points · {ordinal(view.me.rank)} of {view.playerCount}
+    </PacedQuestionFeedback>
+  );
+}
+
+export function PacedQuestionFeedback({
+  question: q,
+  result: r,
+  myText,
+  reward,
+  streak = 0,
+  children,
+}: {
+  question: QuestionView;
+  result: Pick<NonNullable<ClassicView["result"]>, "choice" | "correct" | "wasCorrect">;
+  myText: string | null;
+  reward: string;
+  streak?: number;
+  children: ComponentChildren;
+}) {
   const correctSet = new Set(r.correct);
-  const heading = r.choice === null && view.myText === null ? "Time's up!" : r.wasCorrect ? "Correct!" : "Wrong";
+  const heading = r.choice === null && myText === null ? "Time's up!" : r.wasCorrect ? "Correct!" : "Wrong";
   return (
     <main class={`result ${r.wasCorrect ? "good" : "bad"}`}>
       <div class="verdict">
         <div class="verdict-icon">{r.wasCorrect ? "✓" : "✗"}</div>
         <h1>{heading}</h1>
-        <div class="points">{r.wasCorrect ? `+${r.points.toLocaleString()}` : "+0"}</div>
-        {r.wasCorrect && view.me.streak >= STREAK_MIN && <div class="streak-note">🔥 {view.me.streak} in a row!</div>}
+        <div class="points">{reward}</div>
+        {streak > 0 && <div class="streak-note">🔥 {streak} in a row!</div>}
       </div>
       <p class="q-text small-q">
         <Tex text={q.text} />
       </p>
-      {view.myText !== null && (
+      {myText !== null && (
         <p class="muted">
-          You typed: <b>{view.myText}</b>
+          You typed: <b>{myText}</b>
         </p>
       )}
       {q.type === "pin" && q.image && q.spots ? (
@@ -176,9 +214,7 @@ function Result({ view }: { view: ClassicView }) {
           })}
         </ul>
       )}
-      <p class="standing">
-        {view.me.score.toLocaleString()} points · {ordinal(view.me.rank)} of {view.playerCount}
-      </p>
+      <p class="standing">{children}</p>
     </main>
   );
 }

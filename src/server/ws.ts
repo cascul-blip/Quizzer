@@ -35,6 +35,7 @@ interface HubOptions {
   address?: string;
   discoverAddresses?: () => LanAddress[];
   clock?: Clock;
+  rng?: () => number;
   log?: (msg: string) => void;
 }
 
@@ -217,6 +218,7 @@ export class GameHub {
 
     const context: StartContext = {
       clock: this.opts.clock,
+      rng: this.opts.rng,
       dataDir: this.store.dataDir,
       onChange: () => this.views.scheduleBroadcast(),
       onActivity: (id) => this.views.onActivity(id),

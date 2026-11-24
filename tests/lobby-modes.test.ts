@@ -18,7 +18,7 @@ function holds(tree: ComponentChildren, node: unknown): boolean {
 
 describe("Lobby mode entries", () => {
   test("projector mode entries preserve the Game mode menu order", () => {
-    expect(Object.keys(HOST_MODES)).toEqual(["classic", "tower", "submarine", "fight", "robot", "land", "racer", "gift", "cup", "siege", "duel"]);
+    expect(Object.keys(HOST_MODES)).toEqual(["classic", "tower", "submarine", "fight", "robot", "land", "racer", "gift", "cup", "siege", "duel", "memory"]);
   });
 
   for (const mode of keysOf(HOST_MODES)) {

@@ -11,6 +11,7 @@ import { FightStage, fightCue, fightLobby } from "./fight.tsx";
 import { GiftStage, giftCue, giftLobby } from "./gift.tsx";
 import { LandStage, landCue, landLobby } from "./land.tsx";
 import type { LobbyModeEntry } from "./lobby-modes.tsx";
+import { MemoryStage, memoryCue, memoryLobby } from "./memory.tsx";
 import { RacerStage, racerCue, racerLobby } from "./racer.tsx";
 import { RobotStage, robotCue, robotLobby } from "./robot.tsx";
 import { SiegeStage, siegeCue, siegeLobby } from "./siege.tsx";
@@ -48,6 +49,7 @@ export const HOST_MODES: { [M in GameMode]: HostModeEntry<M> } = {
   cup: { ...cupLobby, Stage: CupStage, cue: cupCue },
   siege: { ...siegeLobby, Stage: SiegeStage, cue: siegeCue },
   duel: { ...duelLobby, Stage: DuelStage, cue: duelCue },
+  memory: { ...memoryLobby, Stage: MemoryStage, cue: memoryCue },
 };
 
 /** The music cue of the mode a view belongs to, for that same view. */

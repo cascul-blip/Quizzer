@@ -5,6 +5,7 @@ import { duelMode } from "./duel.ts";
 import { fightMode } from "./fight.ts";
 import { giftMode } from "./gift.ts";
 import { landMode } from "./land.ts";
+import { memoryMode } from "./memory-entry.ts";
 import type { LiveGame, ModeEntry } from "./mode-entry.ts";
 import { racerMode } from "./racer.ts";
 import { robotMode } from "./robot.ts";
@@ -24,6 +25,7 @@ export const MODES: { [M in GameMode]: ModeEntry<M> } = {
   siege: siegeMode,
   duel: duelMode,
   gift: giftMode,
+  memory: memoryMode,
 };
 
 /** The entry of the mode a live game is running, for calls that pass that same game back in. */

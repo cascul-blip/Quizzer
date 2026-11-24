@@ -63,6 +63,31 @@ describe("Lobby handoff", () => {
     for (const field of ["mode", "team", "banner"]) expect(phoneView).not.toHaveProperty(field);
   });
 
+  test.each([
+    ["host.start", "an empty lobby", "lobby", "lobby"],
+    ["host.start", "a joined player", "memory", "intro"],
+    ["host.next", "an empty lobby", "lobby", "lobby"],
+    ["host.next", "a joined player", "classic", "intro"],
+    ["host.end", "an empty lobby", "classic", "podium"],
+    ["host.end", "a joined player", "classic", "podium"],
+  ] as const)("Memory Game handles %s with %s", async (type, room, kind, phase) => {
+    const hasPlayers = room === "a joined player";
+    const { host, joined, phones } = await setup("memory", hasPlayers ? ["Noel"] : []);
+    const view = hub.hostView();
+    expect(view).toMatchObject({ kind: "lobby", mode: "memory", teams: null });
+    host.sendMsg(type === "host.start" ? { type, pacing: "manual" } : { type });
+    expect(hub.hostView()).toMatchObject({ kind, phase });
+
+    if (kind === "lobby") {
+      expect(host.raw).toContainEqual({ type: "error", message: "Wait for at least one player to join" });
+      const phone = new HubSocket(hub);
+      phone.sendMsg({ type: "join", nickname: "Noel" });
+      host.sendMsg({ type: "host.start", pacing: "manual" });
+      expect(hub.playerView(phone)).toMatchObject({ kind: "memory", phase: "intro" });
+    }
+    if (hasPlayers) expect(hub.playerView(phones[0]!)).toMatchObject({ kind, phase, me: { id: joined[0]!.id } });
+  });
+
   test("players carry their ids into the selected game", async () => {
     const { joined, host } = await setup("gift", ["Noel", "Holly"]);
     host.sendMsg({ type: "host.start", pacing: "manual" });

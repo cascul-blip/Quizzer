@@ -9,6 +9,7 @@ import { DuelPlayer } from "./duel.tsx";
 import { FightPlayer } from "./fight.tsx";
 import { GiftPlayer } from "./gift.tsx";
 import { LandPlayer } from "./land.tsx";
+import { MemoryPlayer } from "./memory.tsx";
 import { RacerPlayer } from "./racer.tsx";
 import { RobotPlayer } from "./robot.tsx";
 import { SiegePlayer, siegeBanner } from "./siege.tsx";
@@ -41,6 +42,7 @@ export const PLAYER_MODES: { [M in GameMode]: PlayerModeEntry<M> } = {
   siege: { Screen: SiegePlayer, banner: siegeBanner },
   duel: { Screen: DuelPlayer, banner: null },
   gift: { Screen: GiftPlayer, banner: null },
+  memory: { Screen: MemoryPlayer, banner: null },
 };
 
 /** Show the joined phone's game without remounting its screen on resume. */

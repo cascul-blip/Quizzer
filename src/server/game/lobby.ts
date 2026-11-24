@@ -252,6 +252,7 @@ function initialSettings(given: InitialSettings = {}): ModeSettingsMap {
     siege: read("siege"),
     duel: read("duel"),
     gift: read("gift"),
+    memory: read("memory"),
   };
 }
 

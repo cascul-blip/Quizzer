@@ -35,6 +35,9 @@ const EXPECTED: Record<ThemedMode, Partial<Record<SeasonTheme, Record<string, st
     classic: { lobby: "showdown-lobby", play: "showdown", results: "showdown-results" },
     christmas: { lobby: "tower-christmas-lobby", play: "tower-christmas-play", results: "tower-christmas-results" },
   },
+  memory: {
+    christmas: { lobby: "tower-christmas-lobby", play: "tower-christmas-play", results: "tower-christmas-results" },
+  },
   gift: {
     christmas: { lobby: "tower-christmas-lobby", play: "tower-christmas-play", results: "tower-christmas-results" },
   },
@@ -52,6 +55,7 @@ function viewFor(mode: ThemedMode, theme: SeasonTheme, screen: string) {
     siege: "countdown",
     duel: "intro",
     gift: "playing",
+    memory: "intro",
   };
   return {
     kind: mode,
@@ -103,6 +107,6 @@ describe("themed modes", () => {
     expect(rows.map((t): string => t.id).sort()).toEqual([...ids].sort());
     for (const id of ids) expect(TRACKS[id as keyof typeof TRACKS]).toBeDefined();
     const shared = themedMusicTracks().find((t) => t.id === "tower-christmas-lobby")!;
-    expect(shared.mode).toBe("North Pole Tower, Cup of Cheer, North Pole Snowball Showdown, Gift Grab");
+    expect(shared.mode).toBe("North Pole Tower, Cup of Cheer, North Pole Snowball Showdown, Gift Grab, Memory Game");
   });
 });
