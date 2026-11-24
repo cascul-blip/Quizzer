@@ -206,12 +206,38 @@ describe("Game mode: Tallest Tower", () => {
       const q = st.view.kind === "tower" ? st.view.question! : null;
       ann.sendMsg({ type: "tower.answer", seq: q!.seq, option: 0 });
       answered = await ann.playerState((v) => v.kind === "tower" && v.question?.seq !== q!.seq);
-      clock.advance(FEEDBACK_MS);
-      hub.broadcast();
+      if (i < 3) {
+        clock.advance(FEEDBACK_MS);
+        hub.broadcast();
+      }
     }
     const building = answered!;
-    expect(building.view.kind === "tower" && building.view.state).toBe("build");
-    expect(building.view.kind === "tower" && building.view.build).toEqual({ columns: [0, 0, 0], floors: 0, sweepMs: 2500 });
+    expect(building.view).toMatchObject({
+      kind: "tower",
+      state: "build",
+      blocksHeld: 4,
+      build: { columns: [0, 0, 0], floors: 0, sweepMs: 2500, remainingMs: 1000 },
+      question: null,
+      feedback: null,
+    });
+
+    const sent = ann.raw.length;
+    clock.advance(600);
+    hub.broadcast();
+    expect(ann.raw).toHaveLength(sent); // Elapsed time alone doesn't send another view.
+    const midway = new HubSocket(hub);
+    midway.sendMsg({ type: "resume", token: ann.token! });
+    const midWait = await midway.playerState((v) => v.kind === "tower");
+    expect(midWait.view).toMatchObject({ build: { remainingMs: 400 }, question: null, feedback: null });
+    clock.advance(399);
+    midway.sendMsg({ type: "tower.drop", zone: 1 });
+    midway.close();
+    clock.advance(1);
+    const ready = new HubSocket(hub);
+    ready.sendMsg({ type: "resume", token: ann.token! });
+    const afterWait = await ready.playerState((v) => v.kind === "tower");
+    expect(afterWait.view).toMatchObject({ blocksHeld: 4, build: { remainingMs: 0, columns: [0, 0, 0] } });
+    ready.close();
 
     let back!: Awaited<ReturnType<typeof ann.playerState>>;
     for (const [i, zone] of [1, 2, 3, 0].entries()) {

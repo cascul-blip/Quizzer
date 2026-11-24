@@ -52,6 +52,9 @@ _Avoid_: deadline timer, match clock
 A question one player gets on their own phone in a self-paced game mode, such as Tallest Tower or Kingdom Siege. Each player moves through questions at their own speed, and an answer names the question by its sequence number.
 _Avoid_: self-paced question, stream question
 
+**After-answer wait**:
+The time after answering a Streamed question before the next answer is legal, including any Protect from abuse penalty. The QuestionStream owns this deadline. Tallest Tower also waits until it expires before allowing the first drop, even though the build screen shows the tower instead of the answer feedback.
+
 **Paced question round**:
 The one module that runs the question cycle of a paced mode (Classic, Racer, Showdown): the question index, the intro, the open question with its deadline plus grace, the reveal and its auto-advance after five seconds, the pacing, the question view, and taking answers: it refuses an answer after the deadline plus grace or a second one from the same player, checks the answer, records the chosen option or the typed text cut to the maximum length, keeps typed answers hidden until the reveal, and closes the question early once every connected player asked has answered. The paced counterpart of the QuestionStream. A mode composes it, says which players are asked (Showdown asks only the duelists in arenas), adds its own scoring to each answer and brings what it adds through hooks (how a question settles, what follows the reveal) and its own phases (Racer's confidence step, Classic's leaderboard).
 _Avoid_: question loop, round engine

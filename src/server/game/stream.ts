@@ -119,6 +119,11 @@ export class QuestionStream<P extends AnswerTotals = AnswerTotals> {
     return this.state(player).readyAt;
   }
 
+  /** The wait still in force after an answer, even if the mode is hiding feedback. */
+  afterAnswerRemainingMs(player: AnswerTotals): number {
+    return Math.max(0, this.feedbackEndsAt(player) - this.clock.now());
+  }
+
   /** Resume questions after a mode activity, keeping any feedback wait still in progress. */
   resume(player: AnswerTotals, now = this.clock.now()): void {
     const state = this.state(player);

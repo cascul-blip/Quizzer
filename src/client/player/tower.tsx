@@ -18,6 +18,7 @@ import {
 } from "../shared/tower-art.tsx";
 import { ChristmasBackdrop, TowerThemeProvider, useChristmasTower, useTowerTheme } from "../shared/tower-skin.tsx";
 import { formatClock, ordinal, teamInk, teamVars, useCountdown } from "../shared/ui.tsx";
+import { useAfterAnswerWait } from "./after-answer-wait.ts";
 import { Feedback, StreamQuestion } from "./stream-question.tsx";
 
 type Send = (m: ClientMsg) => void;
@@ -70,7 +71,17 @@ function TowerPlayerContent({ view, send }: { view: PlayerTowerView; send: Send 
     body = <TowerResult view={view} />;
   } else if (build) {
     body = (
-      <BuildMode build={build} blocksHeld={view.blocksHeld} color={view.team.color} team={view.team.index} egg={view.egg} send={send} onLastDrop={onLastDrop} />
+      <BuildMode
+        build={build}
+        buildId={view.me.correct}
+        remainingMs={view.build?.remainingMs ?? 0}
+        blocksHeld={view.blocksHeld}
+        color={view.team.color}
+        team={view.team.index}
+        egg={view.egg}
+        send={send}
+        onLastDrop={onLastDrop}
+      />
     );
   } else if (view.question) {
     body = (
@@ -160,6 +171,8 @@ function Piece({ color, team }: { color: string; team: number }) {
 
 function BuildMode(props: {
   build: Build;
+  buildId: number;
+  remainingMs: number;
   blocksHeld: number;
   color: string;
   team: number;
@@ -169,6 +182,7 @@ function BuildMode(props: {
 }) {
   const christmas = useChristmasTower();
   const { build, blocksHeld, color, team, egg, send } = props;
+  const wait = useAfterAnswerWait(props.buildId, props.remainingMs);
   const isFresh = useFreshKeys();
   const newFloor = useNewFloor(build.floors);
   const [puff, setPuff] = useState<{ x: number; y: number; id: number } | null>(null);
@@ -232,7 +246,7 @@ function BuildMode(props: {
   }, [falling?.id]);
 
   function drop() {
-    if (falling || blocksHeld <= 0 || !size.w) return;
+    if (wait.isWaiting() || falling || blocksHeld <= 0 || !size.w) return;
     const zone = Math.min(DROP_ZONES - 1, Math.max(0, Math.floor(pos.current * DROP_ZONES)));
     send({ type: "tower.drop", zone });
     navigator.vibrate?.(25);
@@ -269,9 +283,9 @@ function BuildMode(props: {
   return (
     <main class="build" onPointerDown={drop}>
       <div class="build-head">
-        <b>{blocksHeld > 0 ? `Drop your blocks! ${blocksHeld} left` : "Nice building!"}</b>
+        <b>{blocksHeld <= 0 ? "Nice building!" : wait.seconds > 0 ? `${blocksHeld} blocks ready` : `Drop your blocks! ${blocksHeld} left`}</b>
         <span>
-          Tap anywhere to drop · Team tower: {build.floors} floor{build.floors === 1 ? "" : "s"}
+          {wait.seconds > 0 ? `Drop available in ${wait.seconds}s` : "Tap anywhere to drop"} · Team tower: {build.floors} floor{build.floors === 1 ? "" : "s"}
         </span>
       </div>
       <div class="build-area" ref={areaRef} style={{ "--team": color, background: christmas ? "#102759" : `linear-gradient(${sky.top}, ${sky.bottom})` }}>

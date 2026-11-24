@@ -77,7 +77,13 @@ export interface PlayerTowerView {
   /** Latest monster news for this player (shown once per seq). */
   monsterEvent: { seq: number; kind: "egg" | "hatched" | "smashed"; byTeam: string | null; target: string | null } | null;
   /** The team tower, while this player is building. */
-  build: { columns: number[]; floors: number; sweepMs: number } | null;
+  build: {
+    columns: number[];
+    floors: number;
+    sweepMs: number;
+    /** After-answer wait before the first drop, relative to this view. */
+    remainingMs: number;
+  } | null;
   result: {
     teamRank: number;
     teamCount: number;

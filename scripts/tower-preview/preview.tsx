@@ -71,7 +71,7 @@ function Preview({ phone }: { phone: boolean }) {
     question: question ? { seq: 1, type: "multiple_choice", text: "What is 2 + 2?", options: ["3", "4", "5", "6"] } : null,
     egg: phase === "playing" ? { seq: 1, ...egg.cells[team.index]! } : null,
     monsterEvent: seq ? { seq, kind: "smashed", byTeam: "Blue", target: "Red" } : null,
-    build: question ? null : { columns: team.columns, floors: team.floors, sweepMs: 1800 },
+    build: question ? null : { columns: team.columns, floors: team.floors, sweepMs: 1800, remainingMs: 0 },
     result: { teamRank: 1, teamCount: count, floors: team.floors, placed: team.placed, awards: [] },
   };
   return (
