@@ -13,7 +13,7 @@ export interface MemorySettings {
   boardSize: MemoryBoardSize;
 }
 export const MEMORY_QUESTIONS_PER_PHASE = 3;
-export const MEMORY_TURN_MS = 15_000;
+export const MEMORY_TURN_MS = 20_000;
 
 export type MemoryPhase = "intro" | "open" | "reveal" | "turn" | "feedback" | "podium";
 
@@ -56,12 +56,13 @@ export interface PlayerMemoryView {
   myText: string | null;
   reveal: { choice: number | null; correct: number[]; wasCorrect: boolean } | null;
   boardSize: number;
-  turn: { id: number; available: boolean[] } | null;
+  /** A null step keeps the confirmed faces visible during feedback. */
+  turn: { id: number; step: 1 | 2 | null; board: MemoryCardView[] } | null;
   phaseRemainingMs: number;
   result: { rank: number; playerCount: number } | null;
 }
 
-export type MemoryMsg = PacedAnswerMsg<"memory"> | { type: "memory.confirm"; turnId: number; positions: [number, number] };
+export type MemoryMsg = PacedAnswerMsg<"memory"> | { type: "memory.confirm"; turnId: number; step: 1 | 2; position: number };
 
 export const memoryShared = sharedModeEntry<ModeProtocol<MemoryMsg, MemorySettings, HostMemoryState, PlayerMemoryView>>()({
   name: "Memory Game",

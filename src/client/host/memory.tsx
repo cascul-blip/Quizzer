@@ -1,7 +1,7 @@
 import { MEMORY_BOARD_SIZES, MEMORY_QUESTIONS_PER_PHASE } from "../../shared/modes/memory.ts";
 import type { HostView } from "../../shared/protocol.ts";
 import { themedLabel, themedTrack } from "../../shared/themed-modes.ts";
-import { memoryThemeArt as art } from "../shared/memory/themes.ts";
+import { memoryThemeArt as art, memoryFacePosition, memoryFaceSize } from "../shared/memory/themes.ts";
 import type { MusicCue } from "../shared/music/index.ts";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
 import type { Send } from "./common.tsx";
@@ -80,8 +80,7 @@ export function MemoryStage({ view, send }: { view: MemoryView; send: Send }) {
 
 function MemoryBoard({ view }: { view: MemoryView }) {
   const left = useCountdown(view.phaseRemainingMs, `${view.phase}:${view.turn?.id}`);
-  const { image, columns, names } = art.faces;
-  const rows = names.length / columns;
+  const { image, names } = art.faces;
   return (
     <main class="memory-stage" style={{ "--memory-wood": `url("${art.table}")` }}>
       <section class="memory-table" aria-label="Memory board">
@@ -101,7 +100,7 @@ function MemoryBoard({ view }: { view: MemoryView }) {
             style={{
               "--memory-size": view.boardSize,
               "--memory-face-image": `url("${image}")`,
-              "--memory-face-size": `${columns * 100}% ${rows * 100}%`,
+              "--memory-face-size": memoryFaceSize,
             }}
           >
             {view.board.map((card, position) => (
@@ -110,11 +109,7 @@ function MemoryBoard({ view }: { view: MemoryView }) {
                 class={`memory-card memory-${card.state}${card.state === "down" ? ` ${art.cardBackClass}` : ""}`}
                 role="img"
                 aria-label={`Card ${position + 1}, ${card.state === "up" ? (names[card.face] ?? "revealed") : card.state === "empty" ? "empty" : "face down"}`}
-                style={
-                  card.state === "up"
-                    ? { backgroundPosition: `${((card.face % columns) / (columns - 1)) * 100}% ${(Math.floor(card.face / columns) / (rows - 1)) * 100}%` }
-                    : undefined
-                }
+                style={card.state === "up" ? { backgroundPosition: memoryFacePosition(card.face) } : undefined}
               />
             ))}
           </div>

@@ -90,8 +90,13 @@ function playQuestion(host: HubSocket, correct: HubSocket[] = []) {
   host.sendMsg({ type: "host.next" });
 }
 
-function confirm(phone: HubSocket, positions: [number, number], turnId = projector().turn!.id) {
-  phone.sendMsg({ type: "memory.confirm", turnId, positions });
+function confirm(phone: HubSocket, step: 1 | 2, position: number, turnId = projector().turn!.id) {
+  phone.sendMsg({ type: "memory.confirm", turnId, step, position });
+}
+
+function confirmPair(phone: HubSocket, [first, second]: [number, number]) {
+  confirm(phone, 1, first);
+  confirm(phone, 2, second);
 }
 
 function facesUp() {
@@ -159,7 +164,7 @@ describe("Memory Game", () => {
       expect(projector().question).toMatchObject({ index, text: `Question ${question}` });
       playQuestion(host, index === 8 ? [noel!] : []);
     }
-    expect(projector()).toMatchObject({ phase: "turn", turn: { nickname: "Noel" }, phaseRemainingMs: 15_000 });
+    expect(projector()).toMatchObject({ phase: "turn", turn: { nickname: "Noel" }, phaseRemainingMs: 20_000 });
   });
 
   test("applies the lobby's question shuffle again on each quiz pass", async () => {
@@ -210,7 +215,7 @@ describe("Memory Game", () => {
       clock.advance(1);
       expect(projector().phase).toBe(index === 5 ? "turn" : "intro");
     }
-    expect(player(noel!)).toMatchObject({ me: { chips: 1 }, phaseRemainingMs: 15_000 });
+    expect(player(noel!)).toMatchObject({ me: { chips: 1 }, phaseRemainingMs: 20_000 });
   });
 
   test("starts reveal turns by average correct answer time even when the faster player spent more time answering", async () => {
@@ -250,7 +255,7 @@ describe("Memory Game", () => {
     for (const nickname of ["Holly", "Ivy", "Noel", "Holly", "Ivy", "Ivy"]) {
       expect(projector().phase).toBe("turn");
       expect(projector().turn?.nickname).toBe(nickname);
-      clock.advance(15_000);
+      clock.advance(20_000);
     }
     expect(projector().phase).toBe("intro");
   });
@@ -279,7 +284,7 @@ describe("Memory Game", () => {
       playQuestion(host);
 
       firstTurns.push(projector().turn?.nickname);
-      clock.advance(30_000);
+      clock.advance(40_000);
       expect(projector().phase).toBe("intro");
     }
 
@@ -298,93 +303,196 @@ describe("Memory Game", () => {
     expect(projector()).toMatchObject({ phase: "turn", turn: { nickname: "Noel" } });
     expect(projector().board).toEqual(initialBoard);
 
-    confirm(holly!, [0, 1]);
-    confirm(noel!, [0, 0]);
-    confirm(noel!, [-1, 1]);
-    confirm(noel!, [0, 100]);
+    confirm(holly!, 1, 0);
+    confirm(noel!, 2, 1);
+    confirm(noel!, 1, -1);
+    confirm(noel!, 1, 100);
+    confirm(noel!, 1, 1.5);
     expect(player(noel!).me.chips).toBe(2);
     expect(projector().board).toEqual(initialBoard);
 
     const firstTurnId = projector().turn!.id;
-    confirm(noel!, [0, 2]);
+    confirm(noel!, 1, 0);
+    confirm(noel!, 1, 1);
+    confirm(noel!, 2, 0);
+    confirm(holly!, 2, 1);
+    expect(projector()).toMatchObject({ phase: "turn", feedback: null });
+    expect(player(noel!).me).toMatchObject({ pairs: 0, chips: 2 });
+    expect(facesUp()).toEqual([[0, 0]]);
+    confirm(noel!, 2, 2);
     expect(projector()).toMatchObject({ phase: "feedback", feedback: { matched: false } });
     expect(facesUp()).toEqual([
       [0, 0],
       [2, 1],
     ]);
     expect(player(noel!).me).toMatchObject({ pairs: 0, chips: 1 });
-    confirm(noel!, [0, 1], firstTurnId);
+    await Promise.resolve();
+    expect(noel!.view).toMatchObject({
+      phase: "feedback",
+      turn: { id: firstTurnId, step: null, board: projector().board },
+      phaseRemainingMs: 2_000,
+    });
+    const mismatchBoard = projector().board;
+    confirm(noel!, 2, 1, firstTurnId);
     expect(player(noel!).me.chips).toBe(1);
     clock.advance(1_999);
     expect(facesUp()).toEqual([
       [0, 0],
       [2, 1],
     ]);
+    expect(noel!.view).toMatchObject({ turn: { board: mismatchBoard } });
     clock.advance(1);
-    expect(projector()).toMatchObject({ phase: "turn", turn: { nickname: "Holly" }, phaseRemainingMs: 15_000 });
+    await Promise.resolve();
+    expect(noel!.view).toMatchObject({ turn: null });
+    expect(projector()).toMatchObject({ phase: "turn", turn: { nickname: "Holly" }, phaseRemainingMs: 20_000 });
     expect(projector().board).toEqual(initialBoard);
 
-    confirm(holly!, [0, 1]);
+    confirmPair(holly!, [0, 1]);
     expect(projector()).toMatchObject({ phase: "feedback", feedback: { matched: true } });
     expect(player(holly!).me).toMatchObject({ pairs: 1, chips: 0 });
     expect(facesUp()).toEqual([
       [0, 0],
       [1, 0],
     ]);
+    await Promise.resolve();
+    const matchBoard = projector().board;
+    expect(holly!.view).toMatchObject({ phase: "feedback", turn: { step: null, board: matchBoard }, phaseRemainingMs: 1_000 });
     clock.advance(999);
     expect(facesUp()).toHaveLength(2);
+    expect(holly!.view).toMatchObject({ turn: { board: matchBoard } });
     clock.advance(1);
-    expect(projector()).toMatchObject({ phase: "turn", turn: { nickname: "Noel" }, phaseRemainingMs: 15_000 });
+    await Promise.resolve();
+    expect(holly!.view).toMatchObject({ turn: null });
+    expect(projector()).toMatchObject({ phase: "turn", turn: { nickname: "Noel" }, phaseRemainingMs: 20_000 });
     expect(projector().board).toEqual([{ state: "empty" }, { state: "empty" }, ...initialBoard.slice(2)]);
-    expect(player(noel!).turn?.available.slice(0, 4)).toEqual([false, false, true, true]);
+    expect(player(noel!).turn?.board.slice(0, 4)).toEqual([{ state: "empty" }, { state: "empty" }, { state: "down" }, { state: "down" }]);
     expect(player(ivy!).turn).toBeNull();
 
-    confirm(noel!, [2, 3], firstTurnId);
-    confirm(noel!, [0, 3]);
+    confirm(noel!, 1, 2, firstTurnId);
+    confirm(noel!, 1, 0);
     expect(player(noel!).me.chips).toBe(1);
     expect(facesUp()).toEqual([]);
-    confirm(noel!, [2, 3]);
+    confirmPair(noel!, [2, 3]);
     clock.advance(1_000);
     expect(projector()).toMatchObject({ phase: "intro", question: { index: 3 } });
     expect(projector().board).toEqual([...Array.from<unknown, MemoryCardView>({ length: 4 }, () => ({ state: "empty" })), ...initialBoard.slice(4)]);
   });
 
-  test("keeps the original turn through reconnect and spends one chip per expiry without revealing cards", async () => {
+  test.each([
+    ["zero confirmations from a connected player", 0, true],
+    ["zero confirmations from a disconnected player", 0, false],
+    ["one confirmation from a connected player", 1, true],
+    ["one confirmation from a disconnected player", 1, false],
+  ] as const)("expires after %s", async (_, confirmations, connected) => {
+    const {
+      host,
+      phones: [noel, holly],
+    } = await launch(["Noel", "Holly"]);
+    playQuestion(host, [noel!, holly!]);
+    playQuestion(host);
+    playQuestion(host);
+    const initialBoard = projector().board;
+
+    if (confirmations) confirm(noel!, 1, 0);
+    if (!connected) noel!.close();
+    clock.advance(19_999);
+    expect(projector()).toMatchObject({
+      phase: "turn",
+      turn: { nickname: "Noel" },
+      phaseRemainingMs: 1,
+      board: confirmations ? [{ state: "up", face: 0 }, ...initialBoard.slice(1)] : initialBoard,
+      players: [
+        { nickname: "Noel", chips: 1, pairs: 0 },
+        { nickname: "Holly", chips: 1, pairs: 0 },
+      ],
+    });
+    clock.advance(1);
+    expect(projector()).toMatchObject({
+      phase: "turn",
+      turn: { nickname: "Holly" },
+      phaseRemainingMs: 20_000,
+      board: initialBoard,
+      feedback: null,
+      players: [
+        { nickname: "Noel", chips: 0, pairs: 0 },
+        { nickname: "Holly", chips: 1, pairs: 0 },
+      ],
+    });
+    expect(player(holly!).turn?.board).toEqual(initialBoard);
+  });
+
+  test("restores the first confirmed card and original deadline on reconnect and accepts the second card", async () => {
     const {
       host,
       phones: [noel],
     } = await launch(["Noel"]);
-    for (let i = 0; i < 3; i++) playQuestion(host, [noel!]);
-    const firstTurnId = projector().turn!.id;
-    const initialBoard = projector().board;
-    clock.advance(14_999);
-    expect(projector()).toMatchObject({ turn: { id: firstTurnId }, phaseRemainingMs: 1 });
-    expect(player(noel!).me.chips).toBe(3);
-    clock.advance(1);
-    const secondTurnId = projector().turn!.id;
-    expect(secondTurnId).not.toBe(firstTurnId);
-    expect(player(noel!).me.chips).toBe(2);
-    confirm(noel!, [0, 1], firstTurnId);
-    expect(projector().board).toEqual(initialBoard);
-
+    playQuestion(host, [noel!]);
+    playQuestion(host);
+    playQuestion(host);
+    const turnId = projector().turn!.id;
+    clock.advance(2_000);
+    confirm(noel!, 1, 0);
     const token = noel!.token;
     noel!.close();
     clock.advance(6_000);
+
     const reconnected = new HubSocket(hub);
     reconnected.sendMsg({ type: "resume", token: token! });
-    expect(player(reconnected)).toMatchObject({ turn: { id: secondTurnId }, phaseRemainingMs: 9_000 });
-    confirm(reconnected, [0, 1], secondTurnId);
-    expect(projector().phase).toBe("feedback");
-    expect(player(reconnected).me).toMatchObject({ pairs: 1, chips: 1 });
-    clock.advance(1_000);
-    const afterMatch = projector().board;
-    reconnected.close();
-    clock.advance(15_000);
-    expect(projector()).toMatchObject({ phase: "intro", players: [{ nickname: "Noel", chips: 0, pairs: 1 }] });
-    expect(projector().board).toEqual(afterMatch);
+    expect(reconnected.view).toMatchObject({
+      turn: { id: turnId, step: 2, board: projector().board },
+      phaseRemainingMs: 12_000,
+    });
+    expect(facesUp()).toEqual([[0, 0]]);
+    confirm(reconnected, 2, 1, turnId);
+    expect(projector()).toMatchObject({ phase: "feedback", players: [{ chips: 0, pairs: 1 }] });
   });
 
-  test("reveals faces only to the projector, keeping them out of phone snapshots and patches", async () => {
+  test.each([
+    ["match", 1, 0, 1_000],
+    ["mismatch", 2, 1, 2_000],
+  ] as const)("restores both confirmed faces on reconnect for the remainder of the %s delay", async (_outcome, position, face, delay) => {
+    const {
+      host,
+      phones: [noel, spectator],
+    } = await launch(["Noel", "Holly"], { boardSize: 6 });
+    playQuestion(host, [noel!]);
+    playQuestion(host, [noel!]);
+    playQuestion(host);
+
+    const expectedBoard = Array.from<unknown, MemoryCardView>({ length: 36 }, () => ({ state: "down" }));
+    const turnId = projector().turn!.id;
+    confirmPair(noel!, [0, position]);
+    expectedBoard[0] = { state: "up", face: 0 };
+    expectedBoard[position] = { state: "up", face };
+    const token = noel!.token;
+    noel!.close();
+    clock.advance(delay - 100);
+
+    const reconnected = new HubSocket(hub);
+    reconnected.sendMsg({ type: "resume", token: token! });
+    expect(reconnected.view).toMatchObject({
+      phase: "feedback",
+      turn: { id: turnId, step: null },
+      phaseRemainingMs: 100,
+    });
+    expect(reconnected.view?.kind === "memory" && reconnected.view.turn?.board).toEqual(expectedBoard);
+    expect(projector().board).toEqual(expectedBoard);
+
+    const resumedSpectator = new HubSocket(hub);
+    resumedSpectator.sendMsg({ type: "resume", token: spectator!.token! });
+    const snapshots = resumedSpectator.raw.filter(({ type }) => type === "player.state");
+    expect(snapshots.at(-1)).toMatchObject({ view: { phase: "feedback", turn: null } });
+    expect(JSON.stringify(snapshots)).not.toMatch(/"(?:face|board)"/);
+
+    clock.advance(99);
+    expect(projector().phase).toBe("feedback");
+    clock.advance(1);
+    await Promise.resolve();
+    expect(reconnected.view).toMatchObject({ phase: "turn", turn: { id: turnId + 1, step: 1 }, phaseRemainingMs: 20_000 });
+    expect(facesUp()).toEqual([]);
+  });
+
+  test("reveals the first confirmed card on the projector and active phone without extending the turn", async () => {
     const {
       host,
       phones: [noel, spectator],
@@ -393,24 +501,42 @@ describe("Memory Game", () => {
     playQuestion(host);
     playQuestion(host);
 
-    const active = await noel!.playerState((view) => view.kind === "memory" && view.phase === "turn");
-    const watching = await spectator!.playerState((view) => view.kind === "memory" && view.phase === "turn");
-    expect(active.view).toMatchObject({ turn: { available: Array.from({ length: 100 }, () => true) } });
-    expect(watching.view).toMatchObject({ turn: null });
+    await Promise.resolve();
+    const turnId = projector().turn!.id;
+    const hiddenBoard = Array.from({ length: 100 }, () => ({ state: "down" }));
+    expect(noel!.view).toMatchObject({ turn: { id: turnId, step: 1, board: hiddenBoard }, phaseRemainingMs: 20_000 });
+    expect(spectator!.view).toMatchObject({ turn: null });
     expect(facesUp()).toEqual([]);
 
-    confirm(noel!, [0, 2]);
+    clock.advance(4_000);
+    noel!.sendMsg({ type: "memory.confirm", turnId, step: 1, position: 0 });
+    await Promise.resolve();
+    expect(facesUp()).toEqual([[0, 0]]);
+    expect(projector()).toMatchObject({ phase: "turn", phaseRemainingMs: 16_000 });
+    expect(noel!.view).toMatchObject({
+      phase: "turn",
+      me: { chips: 1, pairs: 0 },
+      turn: { id: turnId, step: 2, board: [{ state: "up", face: 0 }, ...hiddenBoard.slice(1)] },
+    });
+    const spectatorToken = spectator!.token;
+    const resumedSpectator = new HubSocket(hub);
+    resumedSpectator.sendMsg({ type: "resume", token: spectatorToken! });
+    expect(resumedSpectator.view).toMatchObject({ turn: null });
+    expect(JSON.stringify(resumedSpectator.view)).not.toMatch(/"(?:face|board)"/);
+
+    const framesBeforeFeedback = resumedSpectator.raw.length;
+    confirm(noel!, 2, 2);
+    await Promise.resolve();
     expect(facesUp()).toEqual([
       [0, 0],
       [2, 1],
     ]);
-    for (const phone of [noel!, spectator!]) {
-      const feedback = await phone.playerState((view) => view.kind === "memory" && view.phase === "feedback");
-      expect(feedback.view).toMatchObject({ turn: null });
-      const frames = phone.raw.filter(({ type }) => type === "player.state" || type === "player.patch");
-      expect(frames.some(({ type }) => type === "player.patch")).toBe(true);
-      expect(JSON.stringify(frames)).not.toMatch(/"(?:face|board)"/);
-    }
+    expect(resumedSpectator.view).toMatchObject({ phase: "feedback", turn: null });
+    const feedbackFrames = resumedSpectator.raw.slice(framesBeforeFeedback).filter(({ type }) => type === "player.patch");
+    expect(feedbackFrames.length).toBeGreaterThan(0);
+    expect(JSON.stringify(feedbackFrames)).not.toMatch(/"(?:face|board)"/);
+    const frames = spectator!.raw.filter(({ type }) => type === "player.state" || type === "player.patch");
+    expect(JSON.stringify(frames)).not.toMatch(/"(?:face|board)"/);
   });
 
   test("refuses confirmation at the turn deadline even before expiry runs and accepts it one millisecond before", async () => {
@@ -422,17 +548,25 @@ describe("Memory Game", () => {
     playQuestion(host, [noel!]);
     playQuestion(host);
 
-    clock.advance(14_999);
+    clock.advance(19_999);
+    confirm(noel!, 1, 0);
+    expect(projector()).toMatchObject({ phase: "turn", phaseRemainingMs: 1 });
+    expect(facesUp()).toEqual([[0, 0]]);
+
     clock.t += 1;
-    confirm(noel!, [0, 1]);
+    confirm(noel!, 2, 1);
+    clock.t += 1;
+    confirm(noel!, 2, 1);
     expect(projector()).toMatchObject({ phase: "turn", players: [{ chips: 2, pairs: 0 }] });
-    expect(facesUp()).toEqual([]);
+    expect(facesUp()).toEqual([[0, 0]]);
 
     clock.advance(0);
-    expect(projector()).toMatchObject({ phase: "turn", players: [{ chips: 1, pairs: 0 }], phaseRemainingMs: 15_000 });
+    expect(projector()).toMatchObject({ phase: "turn", players: [{ chips: 1, pairs: 0 }], phaseRemainingMs: 19_999 });
     expect(facesUp()).toEqual([]);
-    clock.advance(14_999);
-    confirm(noel!, [0, 1]);
+    confirm(noel!, 1, 0);
+    clock.advance(19_998);
+    expect(projector().phaseRemainingMs).toBe(1);
+    confirm(noel!, 2, 1);
     expect(projector()).toMatchObject({ phase: "feedback", players: [{ chips: 0, pairs: 1 }] });
     expect(facesUp()).toEqual([
       [0, 0],
@@ -455,10 +589,10 @@ describe("Memory Game", () => {
     for (let pair = 0; pair < pairCount; pair++) {
       if (pair % 3 === 0) for (let i = 0; i < 3; i++) playQuestion(host, [noel!]);
       expect(projector().board).toEqual(expectedBoard);
-      expect(player(noel!)).toMatchObject({ boardSize, turn: { available: expectedBoard.map((card) => card.state === "down") } });
+      expect(player(noel!)).toMatchObject({ boardSize, turn: { board: expectedBoard } });
       // The deterministic shuffle shifts the original first card to the end of the board.
       const positions: [number, number] = pair === 0 ? [0, expectedBoard.length - 1] : [pair * 2 - 1, pair * 2];
-      confirm(noel!, positions);
+      confirmPair(noel!, positions);
       const exposed = facesUp();
       const face = exposed[0]?.[1];
       expect(face).toBeDefined();
@@ -478,7 +612,7 @@ describe("Memory Game", () => {
     expect(projector().phase).toBe("podium");
   });
 
-  test.each(["questions", "turn", "match feedback"])("host End during %s reaches and stays at the podium", async (when) => {
+  test.each(["questions", "turn", "first confirmed card", "match feedback"])("host End during %s reaches and stays at the podium", async (when) => {
     const {
       host,
       phones: [noel, holly],
@@ -498,13 +632,15 @@ describe("Memory Game", () => {
       host.sendMsg({ type: "host.next" });
       playQuestion(host);
       expect(projector().phase).toBe("turn");
+      if (when === "first confirmed card") confirm(noel!, 1, 0);
       if (when === "match feedback") {
-        confirm(noel!, [0, 1]);
+        confirmPair(noel!, [0, 1]);
         expect(projector().phase).toBe("feedback");
       }
     }
 
     host.sendMsg({ type: "host.end" });
+    expect(facesUp()).toEqual([]);
     const matched = when === "match feedback" ? 1 : 0;
     const sharedPlace = matched ? 2 : 1;
     expect(projector()).toMatchObject({

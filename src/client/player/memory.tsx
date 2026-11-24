@@ -1,7 +1,8 @@
-import { useState } from "preact/hooks";
+import { useContext, useState } from "preact/hooks";
 import type { PlayerMemoryView } from "../../shared/modes/memory.ts";
-import { memoryThemeArt } from "../shared/memory/themes.ts";
+import { memoryFacePosition, memoryFaceSize, memoryThemeArt } from "../shared/memory/themes.ts";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
+import { PhoneResumeVersion } from "./after-answer-wait.ts";
 import type { Send } from "./common.tsx";
 import { Center } from "./common.tsx";
 import { PacedQuestionAnswering, PacedQuestionFeedback, PacedQuestionIntro } from "./paced-question.tsx";
@@ -57,7 +58,9 @@ function MemoryPhase({ view, send }: { view: PlayerMemoryView; send: Send }) {
       </Center>
     );
   }
-  if (view.turn) return <MemoryPicks key={view.turn.id} turn={view.turn} boardSize={view.boardSize} remainingMs={view.phaseRemainingMs} send={send} />;
+  if (view.turn) {
+    return <MemoryPicks key={`${view.phase}:${view.turn.id}`} turn={view.turn} boardSize={view.boardSize} remainingMs={view.phaseRemainingMs} send={send} />;
+  }
   return (
     <Center>
       <h1>Watch the projector</h1>
@@ -77,58 +80,82 @@ function MemoryPicks({
   remainingMs: number;
   send: Send;
 }) {
-  const [picks, setPicks] = useState<number[]>([]);
+  const [pending, setPending] = useState<{ step: 1 | 2; position: number } | null>(null);
+  const { step } = turn;
+  const choosing = step !== null;
+  const resumeVersion = useContext(PhoneResumeVersion);
+  const selected = pending?.step === step ? pending.position : null;
   const { box, inner, zoomIn, zoomOut, pointerHandlers, isTap } = usePanZoom();
-  const left = useCountdown(remainingMs, `turn:${turn.id}`);
-  const toggle = (position: number) => {
-    setPicks((previous) => {
-      if (previous.includes(position)) return previous.filter((pick) => pick !== position);
-      return previous.length < 2 ? [...previous, position] : previous;
-    });
-  };
+  const left = useCountdown(choosing ? remainingMs : 0, `turn:${turn.id}:${resumeVersion}`);
+  const canSelect = choosing && left > 0;
+  const { image, names } = memoryThemeArt.faces;
   return (
     <main class="memory-picks">
+      <link rel="preload" as="image" href={image} />
       <div class="memory-board-controls">
-        <div class={`timer ${left <= 5 ? "urgent" : ""}`} role="timer" aria-label="Turn time remaining">
-          {left}
-        </div>
-        <h1>Pick two cards</h1>
-        <button class="btn ghost" aria-label="Zoom in" onClick={zoomIn}>
-          +
-        </button>
-        <button class="btn ghost" aria-label="Zoom out" onClick={zoomOut}>
-          −
-        </button>
+        {choosing && (
+          <div class={`timer ${left <= 5 ? "urgent" : ""}`} role="timer" aria-label="Turn time remaining">
+            {left}
+          </div>
+        )}
+        <h1>{step === null ? "Cards revealed" : step === 1 ? "Pick the first card" : "Pick the second card"}</h1>
+        {choosing && (
+          <>
+            <button class="btn ghost" aria-label="Zoom in" onClick={zoomIn}>
+              +
+            </button>
+            <button class="btn ghost" aria-label="Zoom out" onClick={zoomOut}>
+              −
+            </button>
+          </>
+        )}
       </div>
       <div class="memory-board-fit">
-        <div class="memory-board-viewport" ref={box} {...pointerHandlers}>
-          <div class="memory-board-pan" ref={inner} style={{ gridTemplateColumns: `repeat(${boardSize}, minmax(0, 1fr))` }}>
-            {turn.available.map((available, position) =>
-              available ? (
+        <div class="memory-board-viewport" ref={choosing ? box : undefined} {...(choosing ? pointerHandlers : undefined)}>
+          <div class="memory-board-pan" ref={choosing ? inner : undefined} style={{ gridTemplateColumns: `repeat(${boardSize}, minmax(0, 1fr))` }}>
+            {turn.board.map((card, position) => {
+              if (card.state === "empty") return <div key={position} aria-hidden="true" />;
+              if (card.state === "up") {
+                return (
+                  <div
+                    key={position}
+                    class="memory-phone-face"
+                    role="img"
+                    aria-label={`Card ${position + 1}, ${names[card.face] ?? "revealed"}`}
+                    style={{
+                      backgroundImage: `url("${image}")`,
+                      backgroundSize: memoryFaceSize,
+                      backgroundPosition: memoryFacePosition(card.face),
+                    }}
+                  />
+                );
+              }
+              return (
                 <button
                   key={position}
                   class={memoryThemeArt.cardBackClass}
                   aria-label={`Card ${position + 1}`}
-                  aria-pressed={picks.includes(position)}
-                  aria-disabled={left === 0 || (picks.length === 2 && !picks.includes(position))}
-                  onClick={(e) => left > 0 && isTap(e) && toggle(position)}
+                  aria-pressed={selected === position}
+                  aria-disabled={!canSelect}
+                  onClick={(e) => {
+                    if (canSelect && isTap(e)) setPending(selected === position ? null : { step, position });
+                  }}
                 />
-              ) : (
-                <div key={position} aria-hidden="true" />
-              ),
-            )}
+              );
+            })}
           </div>
         </div>
       </div>
       <button
         class="btn primary memory-confirm"
-        disabled={picks.length !== 2 || left === 0}
+        disabled={selected === null || !canSelect}
         onClick={() => {
-          const [first, second] = picks;
-          if (first !== undefined && second !== undefined) send({ type: "memory.confirm", turnId: turn.id, positions: [first, second] });
+          if (selected === null || !canSelect) return;
+          setPending(null);
+          send({ type: "memory.confirm", turnId: turn.id, step, position: selected });
         }}
       >
-        Confirm pair
+        Confirm card
       </button>
     </main>
   );

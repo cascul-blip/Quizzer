@@ -75,3 +75,8 @@
   min-height: 44px;
   padding: 0;
 }
+
+.memory-phone-face {
+  border-radius: 12%;
+  background-repeat: no-repeat;
+}
