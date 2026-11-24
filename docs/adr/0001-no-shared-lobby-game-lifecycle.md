@@ -10,4 +10,6 @@ Note (issue #298): the paced modes (Classic, Racer, Showdown) now share the answ
 
 Modes share a Phase timer built on the injected clock. Replacing a phase cancels its pending continuation, and named timer slots allow a mode to replace individual timers or cancel all of them on disposal. The mode still owns what each timer does.
 
+Note (game finish): every mode now ends through one Game finish (`GameFinish` in `src/server/game/phase-timer.ts`) built on its phase timer: run the mode's clean-up, cancel all timers, enter the podium once, hand the game to the hub, broadcast. Like the phase timer, it is a shared step, not a base: the mode still supplies its own clean-up and its own `end()` steps, so this decision stands.
+
 During the Lobby handoff, activation may publish a view synchronously. The hub installs the game before activating it so any update reads from the game. If activation fails, the hub restores the lobby and disposes of the new game. The [mode guide](../agents/game-modes.md#lobby-handoff) lists the handoff scenarios.

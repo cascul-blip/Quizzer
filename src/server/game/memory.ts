@@ -10,6 +10,7 @@ import { GameError, preparePlayOrder, realClock, shuffle } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
 import type { PacedAnswer } from "./paced-round.ts";
 import { PacedRound } from "./paced-round.ts";
+import { GameFinish } from "./phase-timer.ts";
 import type { BasePlayer } from "./roster.ts";
 import { Roster } from "./roster.ts";
 import { most, rankBy } from "./standings.ts";
@@ -58,6 +59,7 @@ export class MemoryGame {
   private readonly onChange: () => void;
   private readonly onActivity: (id: string) => void;
   private readonly onFinish: (game: MemoryGame) => void;
+  private readonly gameFinish: GameFinish<MemoryGame["phase"]>;
   private turnOrder: string[] = [];
   private nextInOrder = 0;
   private turnId = 0;
@@ -91,6 +93,14 @@ export class MemoryGame {
       settle: () => {},
       advance: () => this.afterQuestion(),
       onChange: this.onChange,
+    });
+    this.gameFinish = new GameFinish(this.paced.phases, "podium", {
+      cleanup: () => {
+        this.turn = null;
+        this.feedback = null;
+      },
+      onFinish: () => this.onFinish(this),
+      onChange: () => this.onChange(),
     });
   }
 
@@ -199,16 +209,7 @@ export class MemoryGame {
   }
 
   end(): void {
-    if (this.phase === "podium") return;
-    this.turn = null;
-    this.feedback = null;
-    this.paced.phases.enter("podium");
-    try {
-      this.onFinish(this);
-    } catch (error) {
-      console.error("Could not finish Memory Game:", error);
-    }
-    this.onChange();
+    this.gameFinish.finish();
   }
 
   dispose(): void {

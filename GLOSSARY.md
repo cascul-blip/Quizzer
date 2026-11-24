@@ -48,6 +48,10 @@ _Avoid_: countdown timer, phase clock
 The overall deadline of a minute-limited game mode (Tallest Tower, Land Grab, Gift Grab), on top of its phase timer. It reports the time left and runs the game's finish exactly once, whether the deadline or an early end by the host comes first.
 _Avoid_: deadline timer, match clock
 
+**Game finish**:
+The one step that ends a game, shared by every game mode: the mode's own clean-up, cancel every timer on its phase timer, enter the podium once, hand the finished game to the hub, and broadcast even if handing over fails. Finishing again does nothing. The game-length clock finishes through it. It enters the podium and broadcasts even if the clean-up or the hand-over throws; the hub logs its own failures, so the mode catches nothing.
+_Avoid_: finish handler, podium step
+
 **Streamed question**:
 A question one player gets on their own phone in a self-paced game mode, such as Tallest Tower or Kingdom Siege. Each player moves through questions at their own speed, and an answer names the question by its sequence number.
 _Avoid_: self-paced question, stream question

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { Lobby } from "../src/server/game/lobby.ts";
-import { GameLengthClock, PhaseTimer } from "../src/server/game/phase-timer.ts";
+import { GameFinish, GameLengthClock, PhaseTimer } from "../src/server/game/phase-timer.ts";
 import { RobotGame } from "../src/server/game/robot.ts";
 import { COUNTDOWN_MS, TowerGame } from "../src/server/game/tower.ts";
 import { FakeClock, sampleQuiz } from "./helpers.ts";
@@ -177,10 +177,7 @@ describe("Game-length clock", () => {
     const clock = new FakeClock();
     const timer = new PhaseTimer<Phase>(clock, "countdown");
     let finished = 0;
-    const length = new GameLengthClock(timer, () => {
-      finished++;
-      timer.enter("podium");
-    });
+    const length = new GameLengthClock(timer, new GameFinish(timer, "podium", { onFinish: () => finished++, onChange: () => {} }));
     length.start("playing", 60_000, atDeadline);
     return { clock, timer, length, finished: () => finished };
   }
@@ -191,7 +188,7 @@ describe("Game-length clock", () => {
     clock.advance(45_000);
     expect(length.remainingMs()).toBe(15_000);
     clock.advance(15_000);
-    expect([finished(), timer.phase, length.remainingMs()]).toEqual([1, "podium", 0]);
+    expect([finished(), timer.phase, length.remainingMs(), length.ended]).toEqual([1, "podium", 0, true]);
   });
 
   test("finish runs once when an early end comes first and the deadline passes after", () => {

@@ -26,7 +26,7 @@ import { GameError, realClock, teamInfo } from "./common.ts";
 import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
-import { PhaseTimer } from "./phase-timer.ts";
+import { GameFinish, PhaseTimer } from "./phase-timer.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
@@ -114,6 +114,7 @@ export class FightGame {
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: FightGame) => void;
+  private readonly gameFinish: GameFinish<FightGame["phase"]>;
 
   constructor(quiz: Quiz, settings: FightGameSettings, opts: FightOptions = {}) {
     if (quiz.questions.length === 0) throw new GameError("This quiz has no questions");
@@ -135,6 +136,10 @@ export class FightGame {
     this.onChange = opts.onChange ?? (() => {});
     this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
+    this.gameFinish = new GameFinish(this.phases, "podium", {
+      onFinish: () => this.onFinish(this),
+      onChange: () => this.onChange(),
+    });
   }
 
   /** Take over a lobby's players (same ids and tokens), split Red/Blue as shown in the lobby. */
@@ -193,17 +198,9 @@ export class FightGame {
 
   /** Host ends the game: the least damaged tower wins. */
   end(): void {
-    if (this.phase === "podium") return;
+    if (this.gameFinish.finished) return;
     this.outcome ??= this.judge();
-    this.finish();
-  }
-
-  private finish(): void {
-    if (this.phase === "podium") return;
-    this.phases.dispose();
-    this.phases.enter("podium");
-    this.onFinish(this);
-    this.onChange();
+    this.gameFinish.finish();
   }
 
   dispose(): void {
@@ -214,7 +211,7 @@ export class FightGame {
   private collapse(destroyed: number): void {
     this.outcome = { winner: this.teams.find((t) => t.index !== destroyed)!.index, reason: "destroyed" };
     for (const p of this.players.values()) this.clearPlayerTimer(p);
-    this.phases.set("collapse", COLLAPSE_MS, () => this.finish());
+    this.phases.set("collapse", COLLAPSE_MS, () => this.gameFinish.finish());
     this.onChange();
   }
 

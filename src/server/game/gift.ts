@@ -23,7 +23,7 @@ import { GameError, realClock, shuffle } from "./common.ts";
 import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, unhandled } from "./mode-entry.ts";
-import { GameLengthClock, PhaseTimer } from "./phase-timer.ts";
+import { GameFinish, GameLengthClock, PhaseTimer } from "./phase-timer.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
@@ -97,6 +97,7 @@ export class GiftGame {
   private readonly onChange: () => void;
   private readonly onActivity: (id: string) => void;
   private readonly onFinish: (game: GiftGame) => void;
+  private readonly gameFinish: GameFinish<GiftGame["phase"]>;
   private readonly phases: PhaseTimer<GiftPhase>;
   private readonly gameLength: GameLengthClock<GiftPhase>;
 
@@ -111,7 +112,6 @@ export class GiftGame {
     this.title = quiz.title;
     this.clock = opts.clock ?? realClock;
     this.phases = new PhaseTimer(this.clock, "countdown");
-    this.gameLength = new GameLengthClock(this.phases, () => this.finish());
     this.rng = opts.rng ?? Math.random;
     this.stream = new QuestionStream(quiz.questions, shuffleAnswers, this.rng, this.clock, {
       penalizeGuessing: protect,
@@ -121,6 +121,14 @@ export class GiftGame {
     this.onChange = opts.onChange ?? (() => {});
     this.onActivity = opts.onActivity ?? this.onChange;
     this.onFinish = opts.onFinish ?? (() => {});
+    this.gameFinish = new GameFinish(this.phases, "podium", {
+      cleanup: () => {
+        for (const player of this.players.values()) player.bonus = null;
+      },
+      onFinish: () => this.onFinish(this),
+      onChange: () => this.onChange(),
+    });
+    this.gameLength = new GameLengthClock(this.phases, this.gameFinish);
   }
 
   private newPlayer(base: BasePlayer): GiftPlayer {
@@ -174,14 +182,6 @@ export class GiftGame {
 
   end(): void {
     this.gameLength.end();
-  }
-
-  /** Runs once, from the game-length clock: when the last bonus round after the deadline ends, or when the host ends the game. */
-  private finish(): void {
-    this.dispose();
-    this.phases.enter("podium");
-    this.onFinish(this);
-    this.onChange();
   }
 
   dispose(): void {

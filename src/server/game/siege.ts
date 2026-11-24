@@ -40,7 +40,7 @@ import { GameError, realClock } from "./common.ts";
 import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
-import { PhaseTimer } from "./phase-timer.ts";
+import { GameFinish, PhaseTimer } from "./phase-timer.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
@@ -148,6 +148,7 @@ export class SiegeGame {
   private readonly onActivity: (playerId: string) => void;
   private readonly onTick: () => void;
   private readonly onFinish: (game: SiegeGame) => void;
+  private readonly gameFinish: GameFinish<SiegeGame["phase"]>;
 
   private defenderName(type: SiegeDefenderType): string {
     return siegeDefenderPhrase(type, this.settings.theme);
@@ -171,6 +172,14 @@ export class SiegeGame {
     this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onTick = opts.onTick ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
+    this.gameFinish = new GameFinish(this.phases, "podium", {
+      cleanup: () => {
+        this.stopBattle();
+        this.finishedResult = this.computeResult();
+      },
+      onFinish: () => this.onFinish(this),
+      onChange: () => this.onChange(),
+    });
     this.battlefield = new SiegeBattlefield<SiegePlayer>({
       clock: this.clock,
       rng: this.rng,
@@ -390,7 +399,7 @@ export class SiegeGame {
     this.closePeriod();
     this.outcome = "stands";
     this.stopBattle();
-    this.phases.set("stands", SIEGE_ENDING_MS, () => this.finish());
+    this.phases.set("stands", SIEGE_ENDING_MS, () => this.gameFinish.finish());
     this.onChange();
   }
 
@@ -398,18 +407,18 @@ export class SiegeGame {
     this.closePeriod();
     this.outcome = "fallen";
     this.stopBattle();
-    this.phases.set("fallen", SIEGE_ENDING_MS, () => this.finish());
+    this.phases.set("fallen", SIEGE_ENDING_MS, () => this.gameFinish.finish());
     this.onChange();
   }
 
   /** Host ends the game now: straight to the podium, without a cinematic. */
   end(): void {
-    if (this.phase === "podium") return;
+    if (this.gameFinish.finished) return;
     if (!this.outcome) {
       this.closePeriod();
       this.outcome = "ended";
     }
-    this.finish();
+    this.gameFinish.finish();
   }
 
   private closePeriod(): void {
@@ -425,15 +434,6 @@ export class SiegeGame {
     this.phases.cancel("tick");
     this.battlefield.stop();
     for (const p of this.players.values()) p.mapOpen = false;
-  }
-
-  private finish(): void {
-    if (this.phase === "podium") return;
-    this.stopBattle();
-    this.phases.enter("podium");
-    this.finishedResult = this.computeResult();
-    this.onFinish(this);
-    this.onChange();
   }
 
   dispose(): void {

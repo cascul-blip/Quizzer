@@ -32,7 +32,7 @@ import { GameError, realClock, teamInfo } from "./common.ts";
 import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
-import { GameLengthClock, PhaseTimer } from "./phase-timer.ts";
+import { GameFinish, GameLengthClock, PhaseTimer } from "./phase-timer.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
@@ -111,6 +111,7 @@ export class LandGame {
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: LandGame) => void;
+  private readonly gameFinish: GameFinish<LandGame["phase"]>;
 
   constructor(quiz: Quiz, settings: LandGameSettings, opts: LandOptions = {}) {
     if (quiz.questions.length === 0) throw new GameError("This quiz has no questions");
@@ -124,7 +125,6 @@ export class LandGame {
     for (const t of this.teams) this.owners[t.start] = t.index;
     this.clock = opts.clock ?? realClock;
     this.phases = new PhaseTimer(this.clock, "countdown");
-    this.gameLength = new GameLengthClock(this.phases, () => this.finish());
     this.rng = opts.rng ?? Math.random;
     this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock, {
       canAnswer: (p) => this.phase === "playing" && p.state === "question",
@@ -132,6 +132,11 @@ export class LandGame {
     this.onChange = opts.onChange ?? (() => {});
     this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
+    this.gameFinish = new GameFinish(this.phases, "podium", {
+      onFinish: () => this.onFinish(this),
+      onChange: () => this.onChange(),
+    });
+    this.gameLength = new GameLengthClock(this.phases, this.gameFinish);
   }
 
   /** Take over a lobby's players (same ids and tokens), on the teams shown in the lobby. */
@@ -200,14 +205,6 @@ export class LandGame {
   private conquer(): void {
     this.phases.dispose();
     this.phases.set("conquered", CONQUEST_MS, () => this.gameLength.end());
-  }
-
-  /** Runs once, from the game-length clock: at the deadline, when one team is left, or when the host ends the game. */
-  private finish(): void {
-    this.phases.dispose();
-    this.phases.enter("podium");
-    this.onFinish(this);
-    this.onChange();
   }
 
   dispose(): void {

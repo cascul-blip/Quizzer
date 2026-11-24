@@ -12,7 +12,7 @@ import { GameError, realClock, teamInfo } from "./common.ts";
 import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
-import { GameLengthClock, PhaseTimer } from "./phase-timer.ts";
+import { GameFinish, GameLengthClock, PhaseTimer } from "./phase-timer.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
@@ -98,6 +98,7 @@ export class TowerGame {
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: TowerGame) => void;
+  private readonly gameFinish: GameFinish<TowerGame["phase"]>;
 
   constructor(quiz: Quiz, settings: TowerGameSettings, opts: TowerOptions = {}) {
     if (quiz.questions.length === 0) throw new GameError("This quiz has no questions");
@@ -108,7 +109,6 @@ export class TowerGame {
     this.teams = Array.from({ length: settings.teams }, (_, i) => ({ ...teamInfo(i), columns: [0, 0, 0] }));
     this.clock = opts.clock ?? realClock;
     this.phases = new PhaseTimer(this.clock, "countdown");
-    this.gameLength = new GameLengthClock(this.phases, () => this.finish());
     this.rng = opts.rng ?? Math.random;
     this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock, {
       penalizeGuessing: settings.protect,
@@ -117,6 +117,14 @@ export class TowerGame {
     this.onChange = opts.onChange ?? (() => {});
     this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
+    this.gameFinish = new GameFinish(this.phases, "podium", {
+      cleanup: () => {
+        this.egg = null;
+      },
+      onFinish: () => this.onFinish(this),
+      onChange: () => this.onChange(),
+    });
+    this.gameLength = new GameLengthClock(this.phases, this.gameFinish);
   }
 
   /** Take over a lobby's players (same ids and tokens), on the teams shown in the lobby. */
@@ -227,15 +235,6 @@ export class TowerGame {
 
   end(): void {
     this.gameLength.end();
-  }
-
-  /** Runs once, from the game-length clock: at the deadline or when the host ends the game. */
-  private finish(): void {
-    this.phases.cancelSlots();
-    this.egg = null;
-    this.phases.enter("podium");
-    this.onFinish(this);
-    this.onChange();
   }
 
   dispose(): void {
