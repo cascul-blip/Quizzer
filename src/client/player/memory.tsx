@@ -4,11 +4,12 @@ import { ordinal, useCountdown } from "../shared/ui.tsx";
 import { PacedQuestionAnswering, PacedQuestionFeedback, PacedQuestionIntro } from "./classic.tsx";
 import type { Send } from "./common.tsx";
 import { Center } from "./common.tsx";
+import { usePanZoom } from "./pan-zoom.ts";
 import "./memory.css";
 
 export function MemoryPlayer({ view, send }: { view: PlayerMemoryView; send: Send }) {
   return (
-    <div class="game">
+    <div class={view.turn ? "game memory-turn" : "game"}>
       <header class="bar">
         <span class="name">{view.me.nickname}</span>
         <span class="score">
@@ -55,7 +56,7 @@ function MemoryPhase({ view, send }: { view: PlayerMemoryView; send: Send }) {
       </Center>
     );
   }
-  if (view.turn) return <MemoryPicks key={view.turn.id} turn={view.turn} remainingMs={view.phaseRemainingMs} send={send} />;
+  if (view.turn) return <MemoryPicks key={view.turn.id} turn={view.turn} boardSize={view.boardSize} remainingMs={view.phaseRemainingMs} send={send} />;
   return (
     <Center>
       <h1>Watch the projector</h1>
@@ -64,8 +65,19 @@ function MemoryPhase({ view, send }: { view: PlayerMemoryView; send: Send }) {
   );
 }
 
-function MemoryPicks({ turn, remainingMs, send }: { turn: NonNullable<PlayerMemoryView["turn"]>; remainingMs: number; send: Send }) {
+function MemoryPicks({
+  turn,
+  boardSize,
+  remainingMs,
+  send,
+}: {
+  turn: NonNullable<PlayerMemoryView["turn"]>;
+  boardSize: number;
+  remainingMs: number;
+  send: Send;
+}) {
   const [picks, setPicks] = useState<number[]>([]);
+  const { box, inner, zoomIn, zoomOut, pointerHandlers, isTap } = usePanZoom();
   const left = useCountdown(remainingMs, `turn:${turn.id}`);
   const toggle = (position: number) => {
     setPicks((previous) => {
@@ -75,8 +87,38 @@ function MemoryPicks({ turn, remainingMs, send }: { turn: NonNullable<PlayerMemo
   };
   return (
     <main class="memory-picks">
-      <div class={`timer ${left <= 5 ? "urgent" : ""}`}>{left}</div>
-      <h1>Pick two cards</h1>
+      <div class="memory-board-controls">
+        <div class={`timer ${left <= 5 ? "urgent" : ""}`} role="timer" aria-label="Turn time remaining">
+          {left}
+        </div>
+        <h1>Pick two cards</h1>
+        <button class="btn ghost" aria-label="Zoom in" onClick={zoomIn}>
+          +
+        </button>
+        <button class="btn ghost" aria-label="Zoom out" onClick={zoomOut}>
+          −
+        </button>
+      </div>
+      <div class="memory-board-fit">
+        <div class="memory-board-viewport" ref={box} {...pointerHandlers}>
+          <div class="memory-board-pan" ref={inner} style={{ gridTemplateColumns: `repeat(${boardSize}, minmax(0, 1fr))` }}>
+            {turn.available.map((available, position) =>
+              available ? (
+                <button
+                  key={position}
+                  class="memory-card-back"
+                  aria-label={`Card ${position + 1}`}
+                  aria-pressed={picks.includes(position)}
+                  aria-disabled={left === 0 || (picks.length === 2 && !picks.includes(position))}
+                  onClick={(e) => left > 0 && isTap(e) && toggle(position)}
+                />
+              ) : (
+                <div key={position} aria-hidden="true" />
+              ),
+            )}
+          </div>
+        </div>
+      </div>
       <button
         class="btn primary memory-confirm"
         disabled={picks.length !== 2 || left === 0}
@@ -87,20 +129,6 @@ function MemoryPicks({ turn, remainingMs, send }: { turn: NonNullable<PlayerMemo
       >
         Confirm pair
       </button>
-      <div class="memory-pick-list">
-        {turn.available.map((available, position) => (
-          <button
-            key={position}
-            class="btn ghost"
-            aria-label={`Card ${position + 1}`}
-            aria-pressed={picks.includes(position)}
-            disabled={!available || left === 0 || (picks.length === 2 && !picks.includes(position))}
-            onClick={() => toggle(position)}
-          >
-            {position + 1}
-          </button>
-        ))}
-      </div>
     </main>
   );
 }

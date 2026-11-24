@@ -46,6 +46,7 @@ for (const { name, tile, claims, otherTile } of [
     show({ ...claimView, claims });
     expect(dom.root.textContent).toContain("Claim or Steal available in 1s");
     expect(dom.root.querySelector(".land-claim svg [data-tile]")).not.toBeNull();
+    expect(dom.root.querySelector<HTMLDivElement>(".land-pan")?.style.transform).toContain("scale(1.5)");
     expect(dom.root.querySelector(".answering")).toBeNull();
     expect(dom.root.querySelector(".flash")).toBeNull();
     tapTile(otherTile);

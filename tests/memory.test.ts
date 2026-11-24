@@ -309,6 +309,62 @@ describe("Memory Game", () => {
     expect(projector().board).toEqual(afterMatch);
   });
 
+  test("reveals faces only to the projector, keeping them out of phone snapshots and patches", async () => {
+    const {
+      host,
+      phones: [noel, spectator],
+    } = await launch(["Noel", "Holly"]);
+    playQuestion(host, [noel!]);
+    playQuestion(host);
+    playQuestion(host);
+
+    const active = await noel!.playerState((view) => view.kind === "memory" && view.phase === "turn");
+    const watching = await spectator!.playerState((view) => view.kind === "memory" && view.phase === "turn");
+    expect(active.view).toMatchObject({ turn: { available: Array.from({ length: 100 }, () => true) } });
+    expect(watching.view).toMatchObject({ turn: null });
+    expect(facesUp()).toEqual([]);
+
+    confirm(noel!, [0, 2]);
+    expect(facesUp()).toEqual([
+      [0, 0],
+      [2, 1],
+    ]);
+    for (const phone of [noel!, spectator!]) {
+      const feedback = await phone.playerState((view) => view.kind === "memory" && view.phase === "feedback");
+      expect(feedback.view).toMatchObject({ turn: null });
+      const frames = phone.raw.filter(({ type }) => type === "player.state" || type === "player.patch");
+      expect(frames.some(({ type }) => type === "player.patch")).toBe(true);
+      expect(JSON.stringify(frames)).not.toMatch(/"(?:face|board)"/);
+    }
+  });
+
+  test("refuses confirmation at the turn deadline even before expiry runs and accepts it one millisecond before", async () => {
+    const {
+      host,
+      phones: [noel],
+    } = await launch(["Noel"]);
+    playQuestion(host, [noel!]);
+    playQuestion(host, [noel!]);
+    playQuestion(host);
+
+    clock.advance(14_999);
+    clock.t += 1;
+    confirm(noel!, [0, 1]);
+    expect(projector()).toMatchObject({ phase: "turn", players: [{ chips: 2, pairs: 0 }] });
+    expect(facesUp()).toEqual([]);
+
+    clock.advance(0);
+    expect(projector()).toMatchObject({ phase: "turn", players: [{ chips: 1, pairs: 0 }], phaseRemainingMs: 15_000 });
+    expect(facesUp()).toEqual([]);
+    clock.advance(14_999);
+    confirm(noel!, [0, 1]);
+    expect(projector()).toMatchObject({ phase: "feedback", players: [{ chips: 0, pairs: 1 }] });
+    expect(facesUp()).toEqual([
+      [0, 0],
+      [1, 0],
+    ]);
+  });
+
   test("clears exactly 50 distinct pairs at fixed positions and finishes after the last match even with chips left", async () => {
     random = () => 0;
     const {
