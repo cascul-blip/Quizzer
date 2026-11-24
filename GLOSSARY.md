@@ -56,12 +56,32 @@ _Avoid_: self-paced question, stream question
 The time after answering a Streamed question before the next answer is legal, including any Protect from abuse penalty. The QuestionStream owns this deadline. Tallest Tower also waits before allowing the first drop, and Land Grab before allowing Claim or Steal. Their activity screens show the wait instead of the answer feedback.
 
 **Paced question round**:
-The one module that runs the question cycle of a paced mode (Classic, Racer, Showdown): the question index, the intro, the open question with its deadline plus grace, the reveal and its auto-advance after five seconds, the pacing, the question view, and taking answers: it refuses an answer after the deadline plus grace or a second one from the same player, checks the answer, records the chosen option or the typed text cut to the maximum length, keeps typed answers hidden until the reveal, and closes the question early once every connected player asked has answered. The paced counterpart of the QuestionStream. A mode composes it, says which players are asked (Showdown asks only the duelists in arenas), adds its own scoring to each answer and brings what it adds through hooks (how a question settles, what follows the reveal) and its own phases (Racer's confidence step, Classic's leaderboard).
+The one module that runs the question cycle of a paced mode (Classic, Racer, Showdown, Memory Game): the question index, the intro, the open question with its deadline plus grace, the reveal and its auto-advance after five seconds, the pacing, the question view, and taking answers: it refuses an answer after the deadline plus grace or a second one from the same player, checks the answer, records the chosen option or the typed text cut to the maximum length, keeps typed answers hidden until the reveal, and closes the question early once every connected player asked has answered. The paced counterpart of the QuestionStream. A mode composes it, says which players are asked (Showdown asks only the duelists in arenas), adds its own scoring to each answer and brings what it adds through hooks (how a question settles, what follows the reveal) and its own phases (Racer's confidence step, Classic's leaderboard).
 _Avoid_: question loop, round engine
 
 **Paced question**:
 A question the whole game answers together, opened and closed for everyone at once, as in Classic, Racer and Showdown. An answer names the question by its index in the quiz.
 _Avoid_: shared question, round question
+
+**Memory Game**:
+A game mode in which players earn chips by answering paced questions and score points by matching pairs on a shared board.
+
+**Memory board**:
+The shared grid of paired cards in Memory Game. Card positions stay fixed, and matched cards leave empty spaces.
+
+**Question phase**:
+The part of Memory Game in which players earn chips by answering a batch of paced questions.
+
+**Reveal phase**:
+The part of Memory Game in which players take turns spending their earned chips to reveal cards on the shared board.
+_Avoid_: reveal mode
+
+**Chip**:
+A Memory Game reward for a correct answer. One chip pays for one attempt to match a pair of cards.
+
+**Reveal turn**:
+One player's timed opportunity to choose and confirm two cards in Memory Game.
+_Avoid_: reveal opportunity
 
 **Lobby handoff** is the transition that carries the players who joined the lobby into the selected game when the host presses Start. Each player keeps their identity and can reconnect to the game from their phone.
 
