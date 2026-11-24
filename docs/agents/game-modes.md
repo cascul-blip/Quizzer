@@ -41,6 +41,8 @@ A mode's server knowledge lives in its entry: a `ModeEntry` (`src/server/game/mo
 
 Lobby imports the registry. Put code that needs both Lobby and the registry in a separate module, as in [phone message dispatch](../../src/server/game/phone-message-dispatch.ts). The cycle check in `tests/standards.test.ts` includes type-only imports.
 
+When a game finishes, GameHub logs failures from the results sheet and the mode's finish hook separately so the game can publish the podium. [The game mode tests](../../tests/game-modes.test.ts) verify podium delivery for every mode when results preparation fails.
+
 The projector and the phone have a mode entry each, collected the same way: `HOST_MODES` (`src/client/host/modes.tsx`) holds the mode's stage, its music cue and its lobby part, and `PLAYER_MODES` (`src/client/player/modes.tsx`) its phone screen and lobby banner. Both are typed over `GameMode`. Each `main.tsx` looks the entry up by `view.kind`, which is the mode, and never branches on the mode, and neither does `src/client/host/music-cues.ts`, which plays the entry's cue; `tests/standards.test.ts` enforces that for all three files. The server sends dedicated projector and joined-phone lobby views with `kind: "lobby"`. The projector, phone and music handler use that kind to select the lobby and use its selected mode for settings, banners and lobby music. Classic and Memory Game keep their server classes in `classic.ts` and `memory.ts` and their server mode entries in `classic-entry.ts` and `memory-entry.ts`.
 
 Keep rules shared by game engines and browser views usable in both runtimes. Put runtime-neutral dependencies alongside the shared rules. The Showdown ladder, Racer lever rules, and Kingdom Siege prices are examples.
