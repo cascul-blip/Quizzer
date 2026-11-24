@@ -459,7 +459,7 @@ describe("Memory Game", () => {
     playQuestion(host, [noel!]);
     playQuestion(host);
 
-    const expectedBoard = projector().board;
+    const expectedBoard = Array.from<unknown, MemoryCardView>({ length: 36 }, () => ({ state: "down" }));
     const turnId = projector().turn!.id;
     confirmPair(noel!, [0, position]);
     expectedBoard[0] = { state: "up", face: 0 };

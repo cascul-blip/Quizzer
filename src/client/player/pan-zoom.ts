@@ -44,7 +44,8 @@ export function usePanZoom({ focus, onTap }: PanZoomOptions = {}) {
   };
 
   useEffect(() => {
-    const el = box.current!;
+    const el = box.current;
+    if (!el) return;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       const p = local(e);

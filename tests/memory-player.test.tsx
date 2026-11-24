@@ -28,7 +28,8 @@ const turnView: PlayerMemoryView = {
 
 function phone() {
   const send = mock((_message: ClientMsg) => {});
-  const show = (view: PlayerMemoryView) => act(() => render(<PhoneModeScreen view={view} send={send} resumeVersion={0} />, dom.root));
+  const show = (view: PlayerMemoryView, resumeVersion = 0) =>
+    act(() => render(<PhoneModeScreen view={view} send={send} resumeVersion={resumeVersion} />, dom.root));
   return { show, send };
 }
 
@@ -124,6 +125,7 @@ test("Memory Game replaces or clears a selection and confirms one card at a time
   expect(confirmCard().disabled).toBe(true);
   expect(send).not.toHaveBeenCalled();
 
+  act(() => dom.root.querySelector<HTMLButtonElement>('button[aria-label="Zoom in"]')?.click());
   act(() => card(0)?.click());
   act(() => confirmCard().click());
   expect(send.mock.calls).toEqual([[{ type: "memory.confirm", turnId: 4, step: 1, position: 0 }]]);
@@ -135,6 +137,7 @@ test("Memory Game replaces or clears a selection and confirms one card at a time
     phaseRemainingMs: 16_000,
   });
   expect(dom.root.querySelector('[role="timer"]')?.textContent).toBe("16");
+  expect(dom.root.querySelector<HTMLDivElement>(".memory-board-pan")?.style.transform).toContain("scale(1.5)");
   const revealed = dom.root.querySelector('[aria-label="Card 1, Santa Claus"]');
   expect(revealed).not.toBeNull();
   expect(card(0)).toBeNull();
@@ -147,6 +150,30 @@ test("Memory Game replaces or clears a selection and confirms one card at a time
   ]);
 });
 
+test("Memory Game restores the authoritative countdown on reconnect without resetting the current reveal turn", () => {
+  const { show, send } = phone();
+  const secondPick: PlayerMemoryView = {
+    ...turnView,
+    turn: { id: 4, step: 2, board: [{ state: "up", face: 0 }, ...board(6).slice(1)] },
+  };
+  show(secondPick);
+  const pan = dom.root.querySelector<HTMLDivElement>(".memory-board-pan")!;
+  act(() => dom.root.querySelector<HTMLButtonElement>('button[aria-label="Zoom in"]')?.click());
+  const transform = pan.style.transform;
+  expect(transform).toContain("scale(1.5)");
+  act(() => card(3)?.click());
+  dom.advance(4_000);
+  expect(dom.root.querySelector('[role="timer"]')?.textContent).toBe("16");
+
+  show({ ...secondPick, phaseRemainingMs: 6_000 }, 1);
+  expect(dom.root.querySelector('[role="timer"]')?.textContent).toBe("6");
+  expect(dom.root.querySelector('[aria-label="Card 1, Santa Claus"]')).not.toBeNull();
+  expect(pan.style.transform).toBe(transform);
+  expect(card(3)?.getAttribute("aria-pressed")).toBe("true");
+  act(() => confirmCard().click());
+  expect(send.mock.calls).toEqual([[{ type: "memory.confirm", turnId: 4, step: 2, position: 3 }]]);
+});
+
 test.each([
   ["match", 0, "Santa Claus", 1_000],
   ["mismatch", 1, "Christmas tree", 2_000],
@@ -156,6 +183,8 @@ test.each([
   show({ ...turnView, turn: { id: 4, step: 2, board: [firstCard, ...board(6).slice(1)] } });
   act(() => card(2)?.click());
   expect(confirmCard().disabled).toBe(false);
+  act(() => dom.root.querySelector<HTMLButtonElement>('button[aria-label="Zoom in"]')?.click());
+  expect(dom.root.querySelector<HTMLDivElement>(".memory-board-pan")?.style.transform).toContain("scale(1.5)");
 
   show({
     ...turnView,
@@ -166,6 +195,20 @@ test.each([
   const faces = () => Array.from(dom.root.querySelectorAll('[role="img"]'), (face) => face.getAttribute("aria-label"));
   expect(faces()).toEqual(["Card 1, Santa Claus", `Card 2, ${secondName}`]);
   expect(dom.root.querySelectorAll('[role="timer"]')).toHaveLength(0);
+  expect(dom.root.querySelector('button[aria-label="Zoom in"]')).toBeNull();
+  expect(dom.root.querySelector('button[aria-label="Zoom out"]')).toBeNull();
+  const viewport = dom.root.querySelector(".memory-board-viewport")!;
+  const pan = dom.root.querySelector<HTMLDivElement>(".memory-board-pan")!;
+  expect(pan.style.transform).toBe("");
+  act(() => {
+    viewport.dispatchEvent(Object.assign(new Event("wheel", { bubbles: true, cancelable: true }), { deltaY: -1 }));
+    pointer(viewport, "pointerdown", 1, 30, 30);
+    pointer(viewport, "pointerdown", 2, 90, 30);
+    pointer(viewport, "pointermove", 2, 150, 30);
+    pointer(viewport, "pointerup", 2, 150, 30);
+    pointer(viewport, "pointerup", 1, 30, 30);
+  });
+  expect(pan.style.transform).toBe("");
   expect(card(2)?.getAttribute("aria-pressed")).toBe("false");
   expect(card(2)?.getAttribute("aria-disabled")).toBe("true");
   expect(confirmCard().disabled).toBe(true);

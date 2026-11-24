@@ -1,7 +1,7 @@
 import { MEMORY_BOARD_SIZES, MEMORY_QUESTIONS_PER_PHASE } from "../../shared/modes/memory.ts";
 import type { HostView } from "../../shared/protocol.ts";
 import { themedLabel, themedTrack } from "../../shared/themed-modes.ts";
-import { memoryThemeArt as art, memoryFacePosition } from "../shared/memory/themes.ts";
+import { memoryThemeArt as art, memoryFacePosition, memoryFaceSize } from "../shared/memory/themes.ts";
 import type { MusicCue } from "../shared/music/index.ts";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
 import type { Send } from "./common.tsx";
@@ -80,8 +80,7 @@ export function MemoryStage({ view, send }: { view: MemoryView; send: Send }) {
 
 function MemoryBoard({ view }: { view: MemoryView }) {
   const left = useCountdown(view.phaseRemainingMs, `${view.phase}:${view.turn?.id}`);
-  const { image, columns, names } = art.faces;
-  const rows = names.length / columns;
+  const { image, names } = art.faces;
   return (
     <main class="memory-stage" style={{ "--memory-wood": `url("${art.table}")` }}>
       <section class="memory-table" aria-label="Memory board">
@@ -101,7 +100,7 @@ function MemoryBoard({ view }: { view: MemoryView }) {
             style={{
               "--memory-size": view.boardSize,
               "--memory-face-image": `url("${image}")`,
-              "--memory-face-size": `${columns * 100}% ${rows * 100}%`,
+              "--memory-face-size": memoryFaceSize,
             }}
           >
             {view.board.map((card, position) => (

@@ -80,8 +80,10 @@ const MEMORY_THEME_ART = {
 
 export const memoryThemeArt = MEMORY_THEME_ART[modeTheme("memory")];
 
+const { columns, names } = memoryThemeArt.faces;
+const rows = names.length / columns;
+export const memoryFaceSize = `${columns * 100}% ${rows * 100}%`;
+
 export function memoryFacePosition(face: number): string {
-  const { columns, names } = memoryThemeArt.faces;
-  const rows = names.length / columns;
   return `${((face % columns) / (columns - 1)) * 100}% ${(Math.floor(face / columns) / (rows - 1)) * 100}%`;
 }

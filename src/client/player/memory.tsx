@@ -1,7 +1,8 @@
-import { useState } from "preact/hooks";
+import { useContext, useState } from "preact/hooks";
 import type { PlayerMemoryView } from "../../shared/modes/memory.ts";
-import { memoryFacePosition, memoryThemeArt } from "../shared/memory/themes.ts";
+import { memoryFacePosition, memoryFaceSize, memoryThemeArt } from "../shared/memory/themes.ts";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
+import { PhoneResumeVersion } from "./after-answer-wait.ts";
 import type { Send } from "./common.tsx";
 import { Center } from "./common.tsx";
 import { PacedQuestionAnswering, PacedQuestionFeedback, PacedQuestionIntro } from "./paced-question.tsx";
@@ -57,7 +58,9 @@ function MemoryPhase({ view, send }: { view: PlayerMemoryView; send: Send }) {
       </Center>
     );
   }
-  if (view.turn) return <MemoryPicks key={view.turn.id} turn={view.turn} boardSize={view.boardSize} remainingMs={view.phaseRemainingMs} send={send} />;
+  if (view.turn) {
+    return <MemoryPicks key={`${view.phase}:${view.turn.id}`} turn={view.turn} boardSize={view.boardSize} remainingMs={view.phaseRemainingMs} send={send} />;
+  }
   return (
     <Center>
       <h1>Watch the projector</h1>
@@ -79,32 +82,37 @@ function MemoryPicks({
 }) {
   const [pending, setPending] = useState<{ step: 1 | 2; position: number } | null>(null);
   const { step } = turn;
+  const choosing = step !== null;
+  const resumeVersion = useContext(PhoneResumeVersion);
   const selected = pending?.step === step ? pending.position : null;
   const { box, inner, zoomIn, zoomOut, pointerHandlers, isTap } = usePanZoom();
-  const left = useCountdown(step === null ? 0 : remainingMs, step === null ? "feedback" : `turn:${turn.id}`);
-  const canSelect = step !== null && left > 0;
-  const { image, columns, names } = memoryThemeArt.faces;
-  const rows = names.length / columns;
+  const left = useCountdown(choosing ? remainingMs : 0, `turn:${turn.id}:${resumeVersion}`);
+  const canSelect = choosing && left > 0;
+  const { image, names } = memoryThemeArt.faces;
   return (
     <main class="memory-picks">
       <link rel="preload" as="image" href={image} />
       <div class="memory-board-controls">
-        {step !== null && (
+        {choosing && (
           <div class={`timer ${left <= 5 ? "urgent" : ""}`} role="timer" aria-label="Turn time remaining">
             {left}
           </div>
         )}
         <h1>{step === null ? "Cards revealed" : step === 1 ? "Pick the first card" : "Pick the second card"}</h1>
-        <button class="btn ghost" aria-label="Zoom in" onClick={zoomIn}>
-          +
-        </button>
-        <button class="btn ghost" aria-label="Zoom out" onClick={zoomOut}>
-          −
-        </button>
+        {choosing && (
+          <>
+            <button class="btn ghost" aria-label="Zoom in" onClick={zoomIn}>
+              +
+            </button>
+            <button class="btn ghost" aria-label="Zoom out" onClick={zoomOut}>
+              −
+            </button>
+          </>
+        )}
       </div>
       <div class="memory-board-fit">
-        <div class="memory-board-viewport" ref={box} {...pointerHandlers}>
-          <div class="memory-board-pan" ref={inner} style={{ gridTemplateColumns: `repeat(${boardSize}, minmax(0, 1fr))` }}>
+        <div class="memory-board-viewport" ref={choosing ? box : undefined} {...(choosing ? pointerHandlers : undefined)}>
+          <div class="memory-board-pan" ref={choosing ? inner : undefined} style={{ gridTemplateColumns: `repeat(${boardSize}, minmax(0, 1fr))` }}>
             {turn.board.map((card, position) => {
               if (card.state === "empty") return <div key={position} aria-hidden="true" />;
               if (card.state === "up") {
@@ -116,7 +124,7 @@ function MemoryPicks({
                     aria-label={`Card ${position + 1}, ${names[card.face] ?? "revealed"}`}
                     style={{
                       backgroundImage: `url("${image}")`,
-                      backgroundSize: `${columns * 100}% ${rows * 100}%`,
+                      backgroundSize: memoryFaceSize,
                       backgroundPosition: memoryFacePosition(card.face),
                     }}
                   />
