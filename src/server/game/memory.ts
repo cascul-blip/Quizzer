@@ -2,8 +2,8 @@ import type { AnswerValue } from "../../shared/answer-match.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { randomAvatar } from "../../shared/avatars.ts";
 import type { Pacing } from "../../shared/mode-views.ts";
-import type { HostMemoryState, MemoryCardView, MemoryPlayer, PlayerMemoryView } from "../../shared/modes/memory.ts";
-import { MEMORY_BOARD_SIZE, MEMORY_QUESTIONS_PER_PHASE, MEMORY_TURN_MS } from "../../shared/modes/memory.ts";
+import type { HostMemoryState, MemoryBoardSize, MemoryCardView, MemoryPlayer, PlayerMemoryView } from "../../shared/modes/memory.ts";
+import { MEMORY_FACE_COUNT, MEMORY_QUESTIONS_PER_PHASE, MEMORY_TURN_MS } from "../../shared/modes/memory.ts";
 import type { Question } from "../../shared/quiz-schema.ts";
 import type { Clock } from "./common.ts";
 import { GameError, preparePlayOrder, realClock, shuffle } from "./common.ts";
@@ -20,6 +20,7 @@ interface MemoryParticipant extends BasePlayer {
   pairs: number;
   correct: number;
   totalMs: number;
+  revealStarts: number;
 }
 
 interface MemoryOptions {
@@ -51,7 +52,7 @@ export class MemoryGame {
   private readonly rng: () => number;
   private readonly paced: PacedRound<"turn" | "feedback" | "podium">;
   private readonly questions: Question[] = [];
-  private readonly boardSize = MEMORY_BOARD_SIZE;
+  private readonly boardSize: MemoryBoardSize;
   private readonly board: (number | null)[];
   private readonly onChange: () => void;
   private readonly onActivity: (id: string) => void;
@@ -72,8 +73,12 @@ export class MemoryGame {
     this.onChange = options.onChange ?? (() => {});
     this.onActivity = options.onActivity ?? this.onChange;
     this.onFinish = options.onFinish ?? (() => {});
+    this.boardSize = lobby.settings.boardSize;
+    const pairCount = this.boardSize ** 2 / 2;
+    const faces = Array.from({ length: MEMORY_FACE_COUNT }, (_, face) => face);
+    const chosenFaces = pairCount === faces.length ? faces : shuffle(faces, this.rng).slice(0, pairCount);
     this.board = shuffle(
-      Array.from({ length: this.boardSize ** 2 }, (_, i) => Math.floor(i / 2)),
+      chosenFaces.flatMap((face) => [face, face]),
       this.rng,
     );
     this.roster.adoptFrom(lobby.players, newPlayer);
@@ -218,7 +223,18 @@ export class MemoryGame {
   }
 
   private beginRevealPhase(): void {
-    this.turnOrder = [...this.players.values()].filter((p) => p.chips > 0).map((p) => p.id);
+    const end = this.paced.qIndex + 1;
+    const order = [...this.players.values()]
+      .filter((player) => player.chips > 0)
+      .map((player) => {
+        const answers = player.answers.slice(end - MEMORY_QUESTIONS_PER_PHASE, end);
+        const correctMs = answers.reduce((total, answer) => total + (answer?.correct ? answer.ms : 0), 0);
+        return { player, averageMs: correctMs / player.chips };
+      })
+      // The roster starts in join order, which a stable sort preserves for remaining ties.
+      .sort((a, b) => a.averageMs - b.averageMs || a.player.revealStarts - b.player.revealStarts);
+    order[0]!.player.revealStarts++;
+    this.turnOrder = order.map(({ player }) => player.id);
     this.nextInOrder = 0;
     this.nextTurn();
   }
@@ -320,7 +336,7 @@ export class MemoryGame {
 }
 
 function newPlayer(base: BasePlayer): MemoryParticipant {
-  return { ...base, answers: [], chips: 0, pairs: 0, correct: 0, totalMs: 0 };
+  return { ...base, answers: [], chips: 0, pairs: 0, correct: 0, totalMs: 0, revealStarts: 0 };
 }
 
 function playerView({ id, nickname, avatar, chips, pairs }: MemoryParticipant): MemoryPlayer {

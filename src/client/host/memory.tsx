@@ -1,7 +1,8 @@
 import { useEffect } from "preact/hooks";
-import { MEMORY_QUESTIONS_PER_PHASE } from "../../shared/modes/memory.ts";
+import { MEMORY_BOARD_SIZES, MEMORY_QUESTIONS_PER_PHASE } from "../../shared/modes/memory.ts";
 import type { HostView } from "../../shared/protocol.ts";
-import { themedLabel, themedTrack } from "../../shared/themed-modes.ts";
+import { modeTheme, themedLabel, themedTrack } from "../../shared/themed-modes.ts";
+import { MEMORY_THEME_ART } from "../shared/memory/themes.ts";
 import type { MusicCue } from "../shared/music/index.ts";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
 import { PacedQuestionIntro, PacedQuestionScreen } from "./classic.tsx";
@@ -12,11 +13,29 @@ import "./memory.css";
 
 type MemoryView = Extract<HostView, { kind: "memory" }>;
 
+const art = MEMORY_THEME_ART[modeTheme("memory")];
+
 export const memoryLobby: LobbyModeEntry<"memory"> = {
   label: () => themedLabel("memory"),
   lobbyTrack: () => themedTrack("memory", undefined, "lobby"),
-  Settings: ({ children }) => (
+  Settings: ({ children, settings, send }) => (
     <>
+      <label class="opt">
+        Board size
+        <select
+          value={settings.boardSize}
+          onChange={(event) => {
+            const boardSize = MEMORY_BOARD_SIZES[event.currentTarget.selectedIndex];
+            if (boardSize !== undefined) send({ type: "host.setModeSettings", mode: "memory", settings: { boardSize } });
+          }}
+        >
+          {MEMORY_BOARD_SIZES.map((size) => (
+            <option key={size} value={size}>
+              {size}×{size}
+            </option>
+          ))}
+        </select>
+      </label>
       {children}
       <span class="opt mode-hint">Correct answers earn chips to turn over pairs of cards on the shared board.</span>
     </>
@@ -48,6 +67,7 @@ export function MemoryStage({ view, send }: { view: MemoryView; send: Send }) {
 
   return (
     <div class="stage">
+      <link rel="preload" as="image" href={art.faces.image} />
       <header class="topbar">
         <div class="title">{view.quiz.title}</div>
         {question && (
@@ -94,32 +114,52 @@ export function MemoryStage({ view, send }: { view: MemoryView; send: Send }) {
 
 function MemoryBoard({ view }: { view: MemoryView }) {
   const left = useCountdown(view.phaseRemainingMs, `${view.phase}:${view.turn?.id}`);
+  const { image, columns, names } = art.faces;
+  const rows = names.length / columns;
   return (
-    <main class="memory-stage">
-      <div class="memory-table">
-        <h1>
-          {view.turn?.nickname}
-          {view.phase === "turn" ? ` · ${left}s` : view.feedback?.matched ? " matched a pair!" : " missed"}
-        </h1>
-        <div class="memory-board" style={{ "--memory-size": view.boardSize }}>
-          {view.board.map((card, position) => (
-            <div
-              key={position}
-              class={`memory-card memory-${card.state}`}
-              aria-label={`Card ${position + 1}, ${card.state === "up" ? `face ${card.face + 1}` : card.state === "empty" ? "empty" : "face down"}`}
-              style={card.state === "up" ? { "--memory-hue": (card.face * 137) % 360 } : undefined}
-            >
-              {card.state === "up" ? card.face + 1 : card.state === "down" ? position + 1 : ""}
-            </div>
-          ))}
+    <main class="memory-stage" style={{ "--memory-wood": `url("${art.table}")` }}>
+      <section class="memory-table" aria-label="Memory board">
+        <div class="memory-turn">
+          <h1>{view.turn?.nickname}</h1>
+          {view.phase === "turn" ? (
+            <span class={`memory-turn-clock${left <= 5 ? " urgent" : ""}`} aria-label={`${left} seconds left`}>
+              {left}s
+            </span>
+          ) : (
+            <span class="memory-turn-result">{view.feedback?.matched ? "Matched a pair!" : "Missed"}</span>
+          )}
         </div>
-      </div>
+        <div class="memory-board-space">
+          <div
+            class="memory-board"
+            style={{
+              "--memory-size": view.boardSize,
+              "--memory-face-image": `url("${image}")`,
+              "--memory-face-size": `${columns * 100}% ${rows * 100}%`,
+            }}
+          >
+            {view.board.map((card, position) => (
+              <div
+                key={position}
+                class={`memory-card memory-${card.state}${card.state === "down" ? ` ${art.cardBackClass}` : ""}`}
+                role="img"
+                aria-label={`Card ${position + 1}, ${card.state === "up" ? (names[card.face] ?? "revealed") : card.state === "empty" ? "empty" : "face down"}`}
+                style={
+                  card.state === "up"
+                    ? { backgroundPosition: `${((card.face % columns) / (columns - 1)) * 100}% ${(Math.floor(card.face / columns) / (rows - 1)) * 100}%` }
+                    : undefined
+                }
+              />
+            ))}
+          </div>
+        </div>
+      </section>
       <aside class="memory-scores">
         <h2>Matched pairs</h2>
         <ol>
           {view.players.map((player) => (
-            <li key={player.id}>
-              <span>{player.nickname}</span>
+            <li key={player.id} class={player.id === view.turn?.playerId ? "memory-active-score" : ""}>
+              <span title={player.nickname}>{player.nickname}</span>
               <strong>{player.pairs}</strong>
             </li>
           ))}

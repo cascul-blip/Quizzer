@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { QuizStore } from "../src/server/quiz/store.ts";
 import type { GameHub } from "../src/server/ws.ts";
 import type { Pacing } from "../src/shared/mode-views.ts";
-import type { MemoryCardView } from "../src/shared/modes/memory.ts";
+import type { MemoryBoardSize, MemoryCardView } from "../src/shared/modes/memory.ts";
 import type { ShuffleOptions } from "../src/shared/protocol.ts";
 import { FakeClock, tempDir } from "./helpers.ts";
 import { fakeHub, HubSocket } from "./hub-harness.ts";
@@ -39,7 +39,8 @@ async function launch(
     pacing = "manual",
     shuffle = { questions: false, answers: false },
     multipleChoice = false,
-  }: { count?: number; pacing?: Pacing; shuffle?: ShuffleOptions; multipleChoice?: boolean } = {},
+    boardSize,
+  }: { count?: number; pacing?: Pacing; shuffle?: ShuffleOptions; multipleChoice?: boolean; boardSize?: MemoryBoardSize } = {},
 ) {
   const quiz = await store.create({
     title: "Memory",
@@ -53,6 +54,7 @@ async function launch(
   host.sendMsg({ type: "host.hello" });
   host.sendMsg({ type: "host.open", quizId: quiz.id });
   host.sendMsg({ type: "host.setMode", mode: "memory" });
+  if (boardSize) host.sendMsg({ type: "host.setModeSettings", mode: "memory", settings: { boardSize } });
   host.sendMsg({ type: "host.setShuffle", ...shuffle });
   const phones = nicknames.map((nickname) => {
     const phone = new HubSocket(hub);
@@ -211,6 +213,79 @@ describe("Memory Game", () => {
     expect(player(noel!)).toMatchObject({ me: { chips: 1 }, phaseRemainingMs: 15_000 });
   });
 
+  test("starts reveal turns by average correct answer time even when the faster player spent more time answering", async () => {
+    const {
+      host,
+      phones: [noel, holly, ivy],
+    } = await launch(["Noel", "Holly", "Ivy"]);
+
+    const first = openQuestion(host);
+    submit(noel!, first, 1);
+    clock.advance(100);
+    submit(holly!, first);
+    clock.advance(110);
+    submit(ivy!, first);
+    host.sendMsg({ type: "host.next" });
+
+    const second = openQuestion(host);
+    clock.advance(210);
+    submit(ivy!, second);
+    clock.advance(40);
+    submit(noel!, second);
+    clock.advance(10);
+    submit(holly!, second);
+    host.sendMsg({ type: "host.next" });
+
+    const third = openQuestion(host);
+    clock.advance(210);
+    submit(ivy!, third);
+    clock.advance(790);
+    submit(holly!, third, 1);
+    host.sendMsg({ type: "host.skip" });
+    host.sendMsg({ type: "host.next" });
+
+    expect(player(holly!).me.chips).toBe(2);
+    expect(player(noel!).me.chips).toBe(1);
+    expect(player(ivy!).me.chips).toBe(3);
+    for (const nickname of ["Holly", "Ivy", "Noel", "Holly", "Ivy", "Ivy"]) {
+      expect(projector().phase).toBe("turn");
+      expect(projector().turn?.nickname).toBe(nickname);
+      clock.advance(15_000);
+    }
+    expect(projector().phase).toBe("intro");
+  });
+
+  test("breaks equal averages by prior first turns, then lobby join order", async () => {
+    const {
+      host,
+      phones: [noel, holly],
+    } = await launch(["Noel", "Holly"]);
+    const firstTurns: (string | undefined)[] = [];
+
+    for (const [hollyMs, noelMs] of [
+      [100, 100],
+      [200, 200],
+      [100, 300],
+      [100, 100],
+      [100, 100],
+    ] as const) {
+      const index = openQuestion(host);
+      clock.advance(hollyMs);
+      submit(holly!, index);
+      clock.advance(noelMs - hollyMs);
+      submit(noel!, index);
+      host.sendMsg({ type: "host.next" });
+      playQuestion(host);
+      playQuestion(host);
+
+      firstTurns.push(projector().turn?.nickname);
+      clock.advance(30_000);
+      expect(projector().phase).toBe("intro");
+    }
+
+    expect(firstTurns).toEqual(["Noel", "Holly", "Holly", "Noel", "Noel"]);
+  });
+
   test("spends one chip for each pair, shows feedback at each deadline and gives everyone with chips one turn per pass", async () => {
     const {
       host,
@@ -365,27 +440,39 @@ describe("Memory Game", () => {
     ]);
   });
 
-  test("clears exactly 50 distinct pairs at fixed positions and finishes after the last match even with chips left", async () => {
+  test.each([
+    [6, 18, 0],
+    [8, 32, 1],
+    [10, 50, 1],
+  ] as const)("clears all %i-wide board pairs at fixed positions and finishes after the last match", async (boardSize, pairCount, chipsLeft) => {
     random = () => 0;
     const {
       host,
       phones: [noel],
-    } = await launch(["Noel"]);
-    const expectedBoard: MemoryCardView[] = Array.from({ length: 100 }, () => ({ state: "down" }));
-    for (let pair = 0; pair < 50; pair++) {
+    } = await launch(["Noel"], { boardSize });
+    const expectedBoard: MemoryCardView[] = Array.from({ length: pairCount * 2 }, () => ({ state: "down" }));
+    const revealedFaces = new Set<number>();
+    for (let pair = 0; pair < pairCount; pair++) {
       if (pair % 3 === 0) for (let i = 0; i < 3; i++) playQuestion(host, [noel!]);
       expect(projector().board).toEqual(expectedBoard);
+      expect(player(noel!)).toMatchObject({ boardSize, turn: { available: expectedBoard.map((card) => card.state === "down") } });
       // The deterministic shuffle shifts the original first card to the end of the board.
-      const positions: [number, number] = pair === 0 ? [0, 99] : [pair * 2 - 1, pair * 2];
+      const positions: [number, number] = pair === 0 ? [0, expectedBoard.length - 1] : [pair * 2 - 1, pair * 2];
       confirm(noel!, positions);
-      expect(facesUp()).toEqual(positions.map((position) => [position, pair]));
+      const exposed = facesUp();
+      const face = exposed[0]?.[1];
+      expect(face).toBeDefined();
+      expect(exposed).toEqual(positions.map((position) => [position, face]));
+      revealedFaces.add(face!);
       expect(projector().players[0]?.pairs).toBe(pair + 1);
       clock.advance(999);
       expect(projector().phase).toBe("feedback");
       clock.advance(1);
       for (const position of positions) expectedBoard[position] = { state: "empty" };
     }
-    expect(projector()).toMatchObject({ phase: "podium", board: expectedBoard, players: [{ rank: 1, pairs: 50, chips: 1 }] });
+    // Smaller boards draw from the full pool: for this RNG, the draw moves the original first face out of the chosen subset.
+    expect([...revealedFaces].sort((a, b) => a - b)).toEqual(Array.from({ length: pairCount }, (_, index) => index + (boardSize === 10 ? 0 : 1)));
+    expect(projector()).toMatchObject({ phase: "podium", board: expectedBoard, players: [{ rank: 1, pairs: pairCount, chips: chipsLeft }] });
     expect(player(noel!).result).toEqual({ rank: 1, playerCount: 1 });
     clock.advance(60_000);
     expect(projector().phase).toBe("podium");

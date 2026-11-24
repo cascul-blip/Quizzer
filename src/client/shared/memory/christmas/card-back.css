@@ -1,0 +1,5 @@
+.memory-card-back {
+  background-image: url("./card-back.webp");
+  background-position: center;
+  background-size: cover;
+}
