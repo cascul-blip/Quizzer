@@ -31,7 +31,7 @@ const CHANGED: { [M in GameMode]: ModeSettingsInput[M] } = {
   siege: { waves: 10, theme: "classic" },
   duel: { rounds: 20, theme: "classic" },
   gift: { minutes: 3 },
-  memory: {},
+  memory: { boardSize: 6 },
 };
 
 /** How many teams the lobby shows with CHANGED settings; null in solo modes. */

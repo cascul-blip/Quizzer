@@ -1,5 +1,5 @@
 import { answerOf } from "../../shared/answer-match.ts";
-import { memoryShared } from "../../shared/modes/memory.ts";
+import { MEMORY_BOARD_SIZES, MEMORY_DEFAULT_BOARD_SIZE, memoryShared } from "../../shared/modes/memory.ts";
 import { MemoryGame } from "./memory.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, unhandled } from "./mode-entry.ts";
@@ -7,8 +7,10 @@ import { sheet } from "./results.ts";
 
 export const memoryMode: ModeEntry<"memory"> = {
   ...memoryShared,
-  defaultSettings: {},
-  readSettings: () => ({}),
+  defaultSettings: { boardSize: MEMORY_DEFAULT_BOARD_SIZE },
+  readSettings: (raw, current) => ({
+    boardSize: MEMORY_BOARD_SIZES.find((size) => size === raw.boardSize) ?? current.boardSize,
+  }),
   start(lobby, ctx) {
     const game = new MemoryGame(lobby, handoffOptions(ctx));
     return { game, log: `${this.name} started with ${game.players.size} player(s)` };

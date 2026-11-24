@@ -1,9 +1,17 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { PacedAnswerMsg, Pacing, QuestionView } from "../mode-views.ts";
-import type { ModeProtocol, NoSettings } from "../shared-mode-entry.ts";
+import type { ModeProtocol } from "../shared-mode-entry.ts";
 import { sharedModeEntry } from "../shared-mode-entry.ts";
 
-export const MEMORY_BOARD_SIZE = 10;
+export const MEMORY_BOARD_SIZES = [6, 8, 10] as const;
+export const MEMORY_DEFAULT_BOARD_SIZE = 10;
+export const MEMORY_FACE_COUNT = 50;
+
+export type MemoryBoardSize = (typeof MEMORY_BOARD_SIZES)[number];
+
+export interface MemorySettings {
+  boardSize: MemoryBoardSize;
+}
 export const MEMORY_QUESTIONS_PER_PHASE = 3;
 export const MEMORY_TURN_MS = 15_000;
 
@@ -53,7 +61,7 @@ export interface PlayerMemoryView {
 
 export type MemoryMsg = PacedAnswerMsg<"memory"> | { type: "memory.confirm"; turnId: number; positions: [number, number] };
 
-export const memoryShared = sharedModeEntry<ModeProtocol<MemoryMsg, NoSettings, HostMemoryState, PlayerMemoryView>>()({
+export const memoryShared = sharedModeEntry<ModeProtocol<MemoryMsg, MemorySettings, HostMemoryState, PlayerMemoryView>>()({
   name: "Memory Game",
   flags: { paced: true, protect: false },
   lobbyBanner: false,

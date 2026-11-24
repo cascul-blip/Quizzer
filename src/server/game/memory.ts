@@ -2,8 +2,8 @@ import type { AnswerValue } from "../../shared/answer-match.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { randomAvatar } from "../../shared/avatars.ts";
 import type { Pacing } from "../../shared/mode-views.ts";
-import type { HostMemoryState, MemoryCardView, MemoryPlayer, PlayerMemoryView } from "../../shared/modes/memory.ts";
-import { MEMORY_BOARD_SIZE, MEMORY_QUESTIONS_PER_PHASE, MEMORY_TURN_MS } from "../../shared/modes/memory.ts";
+import type { HostMemoryState, MemoryBoardSize, MemoryCardView, MemoryPlayer, PlayerMemoryView } from "../../shared/modes/memory.ts";
+import { MEMORY_FACE_COUNT, MEMORY_QUESTIONS_PER_PHASE, MEMORY_TURN_MS } from "../../shared/modes/memory.ts";
 import type { Question } from "../../shared/quiz-schema.ts";
 import type { Clock } from "./common.ts";
 import { GameError, preparePlayOrder, realClock, shuffle } from "./common.ts";
@@ -51,7 +51,7 @@ export class MemoryGame {
   private readonly rng: () => number;
   private readonly paced: PacedRound<"turn" | "feedback" | "podium">;
   private readonly questions: Question[] = [];
-  private readonly boardSize = MEMORY_BOARD_SIZE;
+  private readonly boardSize: MemoryBoardSize;
   private readonly board: (number | null)[];
   private readonly onChange: () => void;
   private readonly onActivity: (id: string) => void;
@@ -72,8 +72,12 @@ export class MemoryGame {
     this.onChange = options.onChange ?? (() => {});
     this.onActivity = options.onActivity ?? this.onChange;
     this.onFinish = options.onFinish ?? (() => {});
+    this.boardSize = lobby.settings.boardSize;
+    const pairCount = this.boardSize ** 2 / 2;
+    const faces = Array.from({ length: MEMORY_FACE_COUNT }, (_, face) => face);
+    const chosenFaces = pairCount === faces.length ? faces : shuffle(faces, this.rng).slice(0, pairCount);
     this.board = shuffle(
-      Array.from({ length: this.boardSize ** 2 }, (_, i) => Math.floor(i / 2)),
+      chosenFaces.flatMap((face) => [face, face]),
       this.rng,
     );
     this.roster.adoptFrom(lobby.players, newPlayer);
