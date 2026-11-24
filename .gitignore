@@ -12,3 +12,4 @@ output/
 
 # Claude Code per-machine settings
 .claude/settings.local.json
+.claude/worktrees/
