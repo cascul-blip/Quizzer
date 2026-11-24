@@ -198,7 +198,11 @@ export class MemoryGame {
     this.turn = null;
     this.feedback = null;
     this.paced.phases.enter("podium");
-    this.onFinish(this);
+    try {
+      this.onFinish(this);
+    } catch (error) {
+      console.error("Could not finish Memory Game:", error);
+    }
     this.onChange();
   }
 
@@ -214,8 +218,12 @@ export class MemoryGame {
     this.paced.intro(index);
   }
 
+  private get revealTurnsNext(): boolean {
+    return this.phase === "reveal" && (this.paced.qIndex + 1) % MEMORY_QUESTIONS_PER_PHASE === 0 && [...this.players.values()].some((p) => p.chips > 0);
+  }
+
   private afterQuestion(): void {
-    if ((this.paced.qIndex + 1) % MEMORY_QUESTIONS_PER_PHASE === 0 && [...this.players.values()].some((p) => p.chips > 0)) {
+    if (this.revealTurnsNext) {
       this.beginRevealPhase();
     } else {
       this.beginQuestion();
@@ -302,6 +310,7 @@ export class MemoryGame {
       question,
       correct: revealed ? (this.paced.currentQuestion?.correct ?? null) : null,
       answeredCount: answers.length,
+      revealTurnsNext: this.revealTurnsNext,
       answerCounts: revealed && question ? question.options.map((_, i) => answers.filter((a) => a.option === i).length) : null,
       players: this.ranked().map((p) => ({ ...playerView(p), connected: p.connected, rank: p.rank })),
       boardSize: this.boardSize,

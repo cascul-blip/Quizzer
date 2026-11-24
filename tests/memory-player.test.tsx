@@ -1,7 +1,7 @@
 import { expect, mock, test } from "bun:test";
 import { render } from "preact";
 import { act } from "preact/test-utils";
-import { MemoryPlayer } from "../src/client/player/memory.tsx";
+import { PhoneModeScreen } from "../src/client/player/modes.tsx";
 import type { PlayerMemoryView } from "../src/shared/modes/memory.ts";
 import type { ClientMsg } from "../src/shared/protocol.ts";
 import { usePhoneDom } from "./phone-dom.ts";
@@ -24,7 +24,7 @@ const turnView: PlayerMemoryView = {
 
 function phone() {
   const send = mock((_message: ClientMsg) => {});
-  const show = (view: PlayerMemoryView) => act(() => render(<MemoryPlayer view={view} send={send} />, dom.root));
+  const show = (view: PlayerMemoryView) => act(() => render(<PhoneModeScreen view={view} send={send} resumeVersion={0} />, dom.root));
   return { show, send };
 }
 

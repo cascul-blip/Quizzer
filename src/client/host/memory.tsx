@@ -1,14 +1,12 @@
-import { useEffect } from "preact/hooks";
 import { MEMORY_BOARD_SIZES, MEMORY_QUESTIONS_PER_PHASE } from "../../shared/modes/memory.ts";
 import type { HostView } from "../../shared/protocol.ts";
 import { themedLabel, themedTrack } from "../../shared/themed-modes.ts";
 import { memoryThemeArt as art } from "../shared/memory/themes.ts";
 import type { MusicCue } from "../shared/music/index.ts";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
-import { PacedQuestionIntro, PacedQuestionScreen } from "./classic.tsx";
 import type { Send } from "./common.tsx";
-import { ScreenControls, toggleFullscreen } from "./common.tsx";
 import type { LobbyModeEntry } from "./lobby-modes.tsx";
+import { PacedQuestionIntro, PacedQuestionScreen, PacedStageHeader, usePacedShortcuts } from "./paced-question.tsx";
 import "./memory.css";
 
 type MemoryView = Extract<HostView, { kind: "memory" }>;
@@ -47,62 +45,32 @@ export function memoryCue(view: MemoryView): MusicCue {
 
 export function MemoryStage({ view, send }: { view: MemoryView; send: Send }) {
   const { phase, question } = view;
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLElement && e.target.closest("input, select, textarea, button")) return;
-      if (e.key.toLowerCase() === "f") toggleFullscreen();
-      if (!question) return;
-      if (e.key === " " || e.key === "ArrowRight") {
-        e.preventDefault();
-        send({ type: "host.next" });
-      } else if (e.key.toLowerCase() === "s" && (phase === "intro" || phase === "open")) {
-        send({ type: "host.skip" });
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [phase, question, send]);
+  usePacedShortcuts(
+    {
+      advance: question ? "send" : "ignore",
+      canSkip: !!question && (phase === "intro" || phase === "open"),
+      ignoreButtons: true,
+    },
+    send,
+  );
 
   return (
     <div class="stage">
       <link rel="preload" as="image" href={art.faces.image} />
-      <header class="topbar">
-        <div class="title">{view.quiz.title}</div>
-        {question && (
-          <div class="pill">
-            Question {(question.index % MEMORY_QUESTIONS_PER_PHASE) + 1} / {MEMORY_QUESTIONS_PER_PHASE} this phase
-          </div>
-        )}
-        <div class="spacer" />
-        {phase !== "podium" && (
-          <label class="pacing-toggle" title="Auto-advance after the answer reveal">
-            <input
-              type="checkbox"
-              checked={view.pacing === "auto"}
-              onChange={(e) => send({ type: "host.setPacing", pacing: e.currentTarget.checked ? "auto" : "manual" })}
-            />
-            Auto-advance
-          </label>
-        )}
-        <div class="pill">👥 {view.players.filter((p) => p.connected).length}</div>
-        <ScreenControls join={view.join} />
-        {phase !== "podium" && (
-          <button class="btn ghost small" onClick={() => confirm("End the game now and show the final results?") && send({ type: "host.end" })}>
-            End game
-          </button>
-        )}
-      </header>
+      <PacedStageHeader
+        title={view.quiz.title}
+        questionLabel={question ? `Question ${(question.index % MEMORY_QUESTIONS_PER_PHASE) + 1} / ${MEMORY_QUESTIONS_PER_PHASE} this phase` : undefined}
+        connectedCount={view.players.filter((p) => p.connected).length}
+        join={view.join}
+        gameControls={phase !== "podium" ? { pacing: view.pacing, autoAdvanceTitle: "Auto-advance after the answer reveal" } : undefined}
+        send={send}
+      />
       {phase === "podium" ? (
         <MemoryPodium view={view} send={send} />
       ) : phase === "intro" && question ? (
         <PacedQuestionIntro question={question} send={send} />
       ) : question ? (
-        <PacedQuestionScreen
-          question={question}
-          view={view}
-          send={send}
-          nextLabel={(question.index + 1) % MEMORY_QUESTIONS_PER_PHASE === 0 && view.players.some((p) => p.chips > 0) ? "Reveal turns" : "Next question"}
-        />
+        <PacedQuestionScreen question={question} view={view} send={send} nextLabel={view.revealTurnsNext ? "Reveal turns" : "Next question"} />
       ) : (
         <MemoryBoard view={view} />
       )}

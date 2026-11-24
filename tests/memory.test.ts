@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, jest, spyOn, test } from "bun:test";
+import { memoryMode } from "../src/server/game/memory-entry.ts";
 import { QuizStore } from "../src/server/quiz/store.ts";
 import type { GameHub } from "../src/server/ws.ts";
 import type { Pacing } from "../src/shared/mode-views.ts";
@@ -23,6 +24,7 @@ beforeEach(() => {
 
 afterEach(() => {
   hub.closeGame();
+  jest.restoreAllMocks();
   data.cleanup();
 });
 
@@ -114,6 +116,28 @@ describe("Memory Game", () => {
     expect(view.board).toEqual(Array.from({ length: 100 }, () => ({ state: "down" })));
   });
 
+  test("still broadcasts the podium when the finish callback fails", async () => {
+    const {
+      host,
+      phones: [phone],
+    } = await launch(["Noel"]);
+    const failure = new Error("results failed");
+    const results = spyOn(memoryMode, "results").mockImplementation(() => {
+      throw failure;
+    });
+    const log = spyOn(console, "error").mockImplementation(() => {});
+
+    host.sendMsg({ type: "host.end" });
+    clock.advance(100);
+
+    const podium = await host.hostState((view) => view.kind === "memory" && view.phase === "podium");
+    expect(podium.view).toMatchObject({ phase: "podium", players: [{ nickname: "Noel", rank: 1 }] });
+    const final = await phone!.playerState((view) => view.kind === "memory" && view.phase === "podium");
+    expect(final.view).toMatchObject({ result: { rank: 1, playerCount: 1 } });
+    expect(results).toHaveBeenCalledTimes(1);
+    expect(log).toHaveBeenCalledWith("Could not finish Memory Game:", failure);
+  });
+
   test("a short quiz repeats at new indexes, rejects duplicate and stale answers, and awards only correct submissions", async () => {
     const {
       host,
@@ -126,7 +150,7 @@ describe("Memory Game", () => {
     expect(projector()).toMatchObject({ phase: "open", answeredCount: 1 });
     expect(player(noel!).me.chips).toBe(1);
     submit(holly!, 0, 1);
-    expect(projector()).toMatchObject({ phase: "reveal", answeredCount: 2 });
+    expect(projector()).toMatchObject({ phase: "reveal", answeredCount: 2, revealTurnsNext: false });
     host.sendMsg({ type: "host.next" });
 
     expect(openQuestion(host)).toBe(1);
@@ -142,7 +166,7 @@ describe("Memory Game", () => {
     submit(holly!, 1);
     expect(projector().answeredCount).toBe(0);
     host.sendMsg({ type: "host.skip" });
-    expect(projector()).toMatchObject({ phase: "reveal", answeredCount: 0 });
+    expect(projector()).toMatchObject({ phase: "reveal", answeredCount: 0, revealTurnsNext: true });
     host.sendMsg({ type: "host.next" });
 
     expect(projector()).toMatchObject({ phase: "turn", turn: { nickname: "Noel" } });
@@ -204,7 +228,7 @@ describe("Memory Game", () => {
     for (let index = 0; index < 6; index++) {
       expect(openQuestion(host)).toBe(index);
       submit(noel!, index, index === 3 ? 0 : 1);
-      expect(projector().phase).toBe("reveal");
+      expect(projector()).toMatchObject({ phase: "reveal", revealTurnsNext: index === 5 });
       clock.advance(4_999);
       expect(projector().phase).toBe("reveal");
       clock.advance(1);

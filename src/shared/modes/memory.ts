@@ -35,6 +35,8 @@ export interface HostMemoryState {
   question: QuestionView | null;
   correct: number[] | null;
   answeredCount: number;
+  /** Whether the current answer reveal advances to reveal turns. */
+  revealTurnsNext: boolean;
   answerCounts: number[] | null;
   players: (MemoryPlayer & { connected: boolean; rank: number })[];
   boardSize: number;

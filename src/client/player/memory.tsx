@@ -2,9 +2,9 @@ import { useState } from "preact/hooks";
 import type { PlayerMemoryView } from "../../shared/modes/memory.ts";
 import { memoryThemeArt } from "../shared/memory/themes.ts";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
-import { PacedQuestionAnswering, PacedQuestionFeedback, PacedQuestionIntro } from "./classic.tsx";
 import type { Send } from "./common.tsx";
 import { Center } from "./common.tsx";
+import { PacedQuestionAnswering, PacedQuestionFeedback, PacedQuestionIntro } from "./paced-question.tsx";
 import { usePanZoom } from "./pan-zoom.ts";
 import "./memory.css";
 
