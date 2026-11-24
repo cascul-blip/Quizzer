@@ -189,7 +189,6 @@ export class SiegeGame {
   }
 
   /** Take over a lobby's players (same ids and tokens). */
-  /** What the lobby chose at Start; the next lobby opens with it. */
   choices!: LobbyChoices;
 
   static fromLobby(lobby: LobbyFacts<"siege">, opts: SiegeOptions = {}): SiegeGame {
@@ -245,9 +244,6 @@ export class SiegeGame {
     return [...this.players.values()].filter((p) => p.connected).length;
   }
 
-  // ---------- lifecycle ----------
-
-  /** Set by start(); a running game can't be started again. */
   private started = false;
 
   start(): void {
@@ -333,8 +329,6 @@ export class SiegeGame {
     this.scheduleTick();
     this.onChange();
   }
-
-  // ---------- building ----------
 
   /** Place a defender, paid from the player's own purse. Returns null, or why it couldn't be placed. */
   place(playerId: string, type: unknown, lane: unknown, square: unknown): string | null {
@@ -447,8 +441,6 @@ export class SiegeGame {
     this.stopBattle();
   }
 
-  // ---------- players ----------
-
   join(rawNickname: unknown, avatar?: AvatarChoice | null): SiegePlayer {
     if (this.phase === "podium") throw new GameError("This game has finished");
     const player = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), (base) => this.newPlayer(base));
@@ -480,8 +472,6 @@ export class SiegeGame {
     return p;
   }
 
-  // ---------- answers ----------
-
   answer(playerId: string, seq: number, answer: AnswerValue): boolean {
     const p = this.players.get(playerId);
     if (!p) return false;
@@ -498,8 +488,6 @@ export class SiegeGame {
     else this.onActivity(p.id);
     return true;
   }
-
-  // ---------- results ----------
 
   awards(): SiegeAwards {
     const players = this.everyone;
@@ -569,8 +557,6 @@ export class SiegeGame {
       newRecord,
     };
   }
-
-  // ---------- views ----------
 
   hostView(): HostSiegeState {
     const podium = this.phase === "podium";

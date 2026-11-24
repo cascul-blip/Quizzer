@@ -84,7 +84,6 @@ let store: QuizStore;
 const send = (ws: HubSocket, msg: ClientMsg) => ws.sendMsg(msg);
 const errors = (ws: HubSocket) => ws.raw.filter((m) => m.type === "error");
 
-/** A phone's view in the lobby. */
 function phoneLobbyView(playerId: string) {
   const view = hub.game?.playerView(playerId);
   if (view?.kind !== "lobby") throw new Error(`expected the lobby, got ${view?.kind}`);

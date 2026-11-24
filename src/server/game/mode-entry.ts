@@ -21,7 +21,6 @@ import type { SiegeGame } from "./siege.ts";
 import type { SubGame } from "./submarine.ts";
 import type { TowerGame } from "./tower.ts";
 
-/** The game that runs each game mode. */
 export interface ModeGame {
   classic: ClassicGame;
   tower: TowerGame;
@@ -36,12 +35,10 @@ export interface ModeGame {
   gift: GiftGame;
 }
 
-/** The game the hub holds; its runningMode names its mode's entry in MODES. */
 export type LiveGame = ModeGame[GameMode];
 
 type MsgTypeOf<M extends GameMode> = SharedOf<M>["msgTypes"][number];
 
-/** Each phone message type, mapped to the mode whose shared mode entry lists it. */
 type MsgModeMap = { [T in MsgTypeOf<GameMode>]: { [M in GameMode]: T extends MsgTypeOf<M> ? M : never }[GameMode] };
 
 /** The mode whose shared mode entry lists this phone message type; undefined for join, resume and anything unknown. tests/mode-entries.test.ts checks that no two modes list the same type. */
@@ -55,19 +52,16 @@ type ModeMsgType = keyof MsgModeMap;
 /** Holds every phone message but join and resume to a mode: the compiler reports a PlayerMsg type no shared mode entry lists. */
 export const EVERY_MSG_HAS_A_MODE: [Exclude<PlayerMsg["type"], "join" | "resume">] extends [ModeMsgType] ? true : never = true;
 
-/** The phone messages of one game mode (of any mode, for GameMode). */
 export type ModeMsg<M extends GameMode> = Extract<PlayerMsg, { type: { [T in ModeMsgType]: MsgModeMap[T] extends M ? T : never }[ModeMsgType] }>;
 
 /** Raw mode settings from the host, read by the mode's readSettings. */
 export type RawSettings = Readonly<Record<string, unknown>>;
 
-/** What a mode's game needs from the hub when the lobby hands its players over. */
 export interface StartContext {
   clock?: Clock;
   dataDir: string;
   onChange: () => void;
   onActivity: (playerId: string) => void;
-  /** High-frequency projector refresh (Kingdom Siege). */
   onTick: () => void;
   onFinish: (game: LiveGame) => void;
 }
@@ -94,10 +88,8 @@ export interface FinishContext {
   log: (message: string) => void;
 }
 
-/** Everything the server knows about one game mode, its shared mode entry included; the hub, lobby and handoff look it up in MODES instead of branching on the mode. */
 export type ModeEntry<M extends GameMode> = SharedOf<M> & ServerModeEntry<M>;
 
-/** What only the server knows about one game mode. */
 interface ServerModeEntry<M extends GameMode> {
   /** Error text for a lobby control received after this game starts. */
   lobbyControlError?(message: string): string;
@@ -125,7 +117,6 @@ export function unhandled(msg: never): never {
   throw new Error(`No handler for phone message ${(msg as { type: string }).type}`);
 }
 
-/** The options every mode's fromLobby takes from the hub. */
 export function handoffOptions({ clock, onChange, onActivity, onFinish }: StartContext) {
   return { clock, onChange, onActivity, onFinish };
 }

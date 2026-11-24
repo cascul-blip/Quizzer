@@ -61,7 +61,6 @@ export interface HostClassicState {
 /** Classic's phone messages. Typed questions send `text` (the typed answer) and ignore `option`. */
 export type ClassicMsg = { type: "setAvatar"; avatar: string; accessory: string } | { type: "answer"; qIndex: number; option: number; text?: string };
 
-/** Classic's shared mode entry. */
 export const classicShared = sharedModeEntry<ModeProtocol<ClassicMsg, NoSettings, HostClassicState, ClassicView>>()({
   name: "Classic",
   flags: { paced: true, protect: false },

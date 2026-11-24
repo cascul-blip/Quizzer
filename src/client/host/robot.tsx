@@ -52,7 +52,6 @@ export function RobotStage({ view, send }: { view: RobotView; send: Send }) {
     }
   }, [view]);
 
-  // The last seconds of movement tick down.
   useEffect(() => {
     if (view.phase === "move" && secs > 0 && secs <= 3) play("tick");
   }, [secs, view.phase]);
@@ -240,19 +239,15 @@ function RobotPodium({ view, send }: { view: RobotView; send: Send }) {
   );
 }
 
-// ---------- lobby ----------
-
 /** Robot Attack has no mode settings; the lobby shows how it plays. */
 function RobotSettings() {
   return <span class="opt mode-hint">Answer questions to earn moves, then dodge the robot's lasers. Last one standing wins.</span>;
 }
 
-/** The projector's music for Robot Attack. */
 export function robotCue(view: RobotView): MusicCue {
   if (view.phase === "podium") return { track: "robot-results" };
   if (view.phase === "move" || view.phase === "attack") return { track: "robot-move" };
   if (view.phase === "quiz") {
-    // The less time left to answer, the more intense.
     const start = Math.max(0, Math.min(1, 1 - view.phaseRemainingMs / Math.max(1, view.phaseDurationMs)));
     return { track: "robot-quiz", intensity: 0.2 + start * 0.8, rampTo: 1, rampMs: view.phaseRemainingMs, key: `robot-q${view.round}` };
   }

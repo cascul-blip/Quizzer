@@ -16,7 +16,6 @@ export interface LobbyChoices {
   pacing: Pacing;
 }
 
-/** The lobby's choices and players as the selected mode receives them at Start. */
 export interface LobbyFacts<M extends GameMode> {
   readonly quiz: Quiz;
   readonly settings: Readonly<ModeSettingsMap[M]>;

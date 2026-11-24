@@ -86,7 +86,6 @@ export interface SiegeSpawn {
 
 /** What one battle tick changed, for deciding who needs a new view. */
 export interface SiegeTickResult {
-  /** Anything on the board moved, struck or changed. */
   changed: boolean;
   /** Something phones show changed: hearts, danger lanes or an alert. */
   phones: boolean;
@@ -185,7 +184,6 @@ export class SiegeBattlefield<O> {
     this.inWave = false;
   }
 
-  /** The battle is over: no more monsters come. */
   stop(): void {
     this.inWave = false;
     this.pending = [];

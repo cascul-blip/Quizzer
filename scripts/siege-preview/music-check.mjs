@@ -1,4 +1,3 @@
-// Start music-serve.ts first. Render real sampled audio with Chromium's OfflineAudioContext.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";

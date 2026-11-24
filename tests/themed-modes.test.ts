@@ -6,7 +6,6 @@ import { MUSIC_TRACKS } from "../src/shared/music-tracks.ts";
 import type { ScreenOf, SeasonTheme, ThemedMode } from "../src/shared/themed-modes.ts";
 import { modeTheme, THEMED_MODES, themedMusicTracks, themedTrack } from "../src/shared/themed-modes.ts";
 
-/** Every themed mode's theme × screen → track, written out by hand: a change to THEMED_MODES must change this too. */
 const EXPECTED: Record<ThemedMode, Partial<Record<SeasonTheme, Record<string, string>>>> = {
   tower: {
     classic: { lobby: "tower-lobby", play: "tower-play", results: "tower-results" },

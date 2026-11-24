@@ -32,3 +32,11 @@ Judgement calls the reviewer applies to a diff. `bun run typecheck` and `bun tes
 - **One table per fact**: anything that varies by game mode (its display name, whether it carries pacing, how it starts, its results sheet) lives in one exhaustive `switch` ending in `satisfies never`, or in a `Record<GameMode, …>`, so adding or removing a mode is a compile error at every site. Flag new `instanceof` chains or hand-written lists of mode strings.
 - **Mode entries**: a game mode's server knowledge (its settings, how it starts, pacing, results sheet, phone messages) lives in its mode entry, exported from the mode's own file and collected in `MODES` (`src/server/game/modes.ts`). The hub, lobby and lobby handoff look the entry up and don't branch on the mode.
 - **Enforced by `tests/standards.test.ts`**: server code does not compare a mode against a literal, no client file that uses the mode entries compares a view's kind, mode or banner against a game mode, and server code does not use `instanceof` on a game class. Tests may use `instanceof` to narrow a game fixture. A suggested fix must pass these too.
+
+## Imports
+
+Keep imports acyclic, including type-only imports. When two modules need the same definition, move it into a shared dependency. The import graph check in `tests/standards.test.ts` tracks the existing cycles and flags new ones.
+
+## Comments
+
+Use inline comments for local contracts and context a reader needs at the point of use. Examples include units, sentinels, callback obligations, and ordering that affects behavior. Put maintenance procedures in the relevant guide and cross-module design rationale in an ADR. When a change affects an existing decision, update its ADR with the revised decision and reason.

@@ -3,8 +3,6 @@ import type { ShuffleOptions } from "../../shared/protocol.ts";
 import { ERRORS_SHOWN, TEAMS } from "../../shared/protocol.ts";
 import type { Question } from "../../shared/quiz-schema.ts";
 
-// Building blocks shared by every game mode.
-
 export interface Clock {
   now(): number;
   setTimeout(fn: () => void, ms: number): unknown;

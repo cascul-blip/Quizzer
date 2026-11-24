@@ -139,8 +139,6 @@ export class QuizStore {
     for (const d of [this.quizzesDir, this.mediaDir, this.resultsDir, this.musicDir]) mkdirSync(d, { recursive: true });
   }
 
-  /** HTTP and standalone MCP share this SQLite writer lock. Quiz contents stay in JSON.
-   * BEGIN IMMEDIATE holds the OS lock across the entire read/check/rename; exit releases it even on a crash. */
   private async withWriteLock<T>(operation: () => T): Promise<T> {
     const lock = new Database(join(this.dataDir, ".quiz-writes.sqlite"));
     try {
@@ -155,7 +153,6 @@ export class QuizStore {
           await Bun.sleep(10);
         }
       }
-      // Only the lock lives in SQLite. Closing the connection releases it after the JSON write.
       return operation();
     } finally {
       lock.close();
@@ -396,8 +393,6 @@ export class QuizStore {
     writeAtomic(this.file(quiz.id), contents);
     return { ...parsed.data, revision: revision(contents) };
   }
-
-  // ----- media -----
 
   /**
    * Store an image, shrunk for phones (see shrinkImage), content-addressed by the uploaded bytes;

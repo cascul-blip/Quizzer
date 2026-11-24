@@ -1,5 +1,3 @@
-// The shape of a shared mode entry (GLOSSARY.md). The mode files in modes/ import this, so it must not import them or protocol.ts.
-
 /** What one game mode's server, projector and phone share (GLOSSARY.md: shared mode entry). Each mode file in modes/ declares its own; src/shared/mode-entries.ts collects them. */
 export interface SharedModeEntry<T extends string = string> {
   /** The mode's one plain name (GLOSSARY.md). A seasonal theme may decorate how the client shows it. */

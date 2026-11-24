@@ -513,7 +513,6 @@ const robotLobby: Track = {
     },
     { inst: "tribass", bars: [march("A1"), march("E2"), march("E2", "A1"), march("C2"), march("G2"), march("G2", "C2"), march("B1"), march("E2")], vol: 0.7 },
     { inst: "timpani", bars: [once("A2"), once("E3"), once("E3"), once("C3"), once("G2"), once("G2"), once("B2"), once("E3")], vol: 0.35 },
-    // A flute line floats over the second half.
     {
       inst: "flute",
       bars: [
@@ -1040,7 +1039,6 @@ const racerDrive: Track = {
     // Crawling or crashed: just a limping kick and bass.
     { inst: "kick", bars: [drum("x.......x.......")], vol: 0.8, to: 0.15 },
     { inst: "tribass", bars: RACER_ROOTS.map((r) => pump(r, "x...x.x.x...x.x.")), vol: 0.85, to: 0.15 },
-    // Rolling: the full rhythm section.
     { inst: "kick", bars: [drum("x...x...x...x...")], vol: 0.8, from: 0.15 },
     { inst: "tribass", bars: RACER_ROOTS.map((r) => octaves(r, octaveUp(r))), from: 0.15 },
     { inst: "chipnoise", bars: [drum("....o.......o...")], vol: 0.8, from: 0.15 },

@@ -4,8 +4,6 @@ import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestion
 import type { ModeProtocol } from "../shared-mode-entry.ts";
 import { sharedModeEntry } from "../shared-mode-entry.ts";
 
-// Gift Grab protocol types.
-
 export type GiftPhase = "countdown" | "playing" | "finishing" | "podium";
 
 export interface GiftSettings {
@@ -59,10 +57,8 @@ export interface PlayerGiftView {
   } | null;
 }
 
-/** What a phone sends during Gift Grab games. */
 export type GiftMsg = StreamAnswerMsg<"gift"> | { type: "gift.tap"; round: number; item: number };
 
-/** Gift Grab's shared mode entry. */
 export const giftShared = sharedModeEntry<ModeProtocol<GiftMsg, GiftSettings, HostGiftState, PlayerGiftView>>()({
   name: "Gift Grab",
   flags: { paced: false, protect: true },

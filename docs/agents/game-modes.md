@@ -34,11 +34,15 @@ Before moving ownership or migrating handoff tests, match each case to existing 
 
 # Adding or removing a game mode
 
+The [mode entry ADR](../adr/0002-route-game-behavior-through-mode-entries.md) records the rationale for the registries and import boundaries.
+
 A mode's server knowledge lives in its entry: a `ModeEntry` (`src/server/game/mode-entry.ts`) exported from the mode's own file in `src/server/game/`, collected in `MODES` (`src/server/game/modes.ts`). `MODES` is typed over `GameMode`, so a mode without an entry is a compile error. The hub, lobby and handoff look the entry up by `game.runningMode` and never branch on the mode; `tests/standards.test.ts` enforces that.
 
 Lobby imports the registry. Put code that needs both Lobby and the registry in a separate module, as in [phone message dispatch](../../src/server/game/phone-message-dispatch.ts). The cycle check in `tests/standards.test.ts` includes type-only imports.
 
 The projector and the phone have a mode entry each, collected the same way: `HOST_MODES` (`src/client/host/modes.tsx`) holds the mode's stage, its music cue and its lobby part, and `PLAYER_MODES` (`src/client/player/modes.tsx`) its phone screen and lobby banner. Both are typed over `GameMode`. Each `main.tsx` looks the entry up by `view.kind`, which is the mode, and never branches on the mode, and neither does `src/client/host/music-cues.ts`, which plays the entry's cue; `tests/standards.test.ts` enforces that for all three files. The server sends dedicated projector and joined-phone lobby views with `kind: "lobby"`. The projector, phone and music handler use that kind to select the lobby and use its selected mode for settings, banners and lobby music. Classic’s server class lives in `src/server/game/classic.ts` and its mode entry lives in `src/server/game/classic-entry.ts`.
+
+Keep rules shared by game engines and browser views usable in both runtimes. Put runtime-neutral dependencies alongside the shared rules. The Showdown ladder, Racer lever rules, and Kingdom Siege prices are examples.
 
 The lobby part of a projector entry (`LobbyModeEntry`) is the mode's line in the Game mode menu, its settings panel with its hint text, an optional preview below the settings, and its lobby track, the music the lobby plays while the mode is selected. The projector lobby and its music selection both look up the selected mode in `HOST_MODES`.
 
@@ -55,7 +59,7 @@ The following checklist covers adding a mode. "Compiler" marks the places where 
 - [ ] `HOST_MODES` in `src/client/host/modes.tsx`: the mode's stage, gameplay cue and lobby part (compiler), in Game mode menu order. Put the stage, cue (as `<mode>Cue`) and lobby part (as `<mode>Lobby`) in `src/client/host/<mode>.tsx`. A paced mode's settings panel places the shared rows passed as `children`.
 - [ ] `PLAYER_MODES` in `src/client/player/modes.tsx`: the mode's phone screen (compiler), and its `banner` if its shared mode entry sets `lobbyBanner` (null otherwise). Put the screen and banner in `src/client/player/<mode>.tsx`.
 - [ ] Music tracks: a new track id goes in `THEMED_MODES` for a themed mode's screen, else in `OTHER_TRACKS` (`src/shared/music-tracks.ts`), and its track in `TRACKS` (`src/client/shared/music/tracks.ts`, compiler once the id exists).
-- [ ] Themes: a themed mode's entry in `THEMED_MODES` (`src/shared/themed-modes.ts`): its default theme, its screens, and for each theme its name, icon and the track each screen plays. The cue and lobby track read tracks with `themedTrack` and choose only intensity; `MUSIC_TRACKS` builds the mode's rows from the table, and `tests/themed-modes.test.ts` pins every theme × screen → track (fails until updated). Theme words beyond the name (Kingdom Siege's defenders, say) go in the mode file.
+- [ ] Themes: a themed mode's entry in `THEMED_MODES` (`src/shared/themed-modes.ts`): its default theme, its screens, and for each theme its name, icon and the track each screen plays. The cue and lobby track read tracks with `themedTrack` and choose only intensity; `MUSIC_TRACKS` builds the mode's rows from the table, and `tests/themed-modes.test.ts` independently checks every theme × screen → track. Update its expected tracks when deliberately changing a mapping. Theme words beyond the name (Kingdom Siege's defenders, say) go in the mode file.
 - [ ] Art, by convention per mode: `src/shared/<mode>-rules.ts`, and `src/client/shared/<mode>-art.tsx`, `<mode>-skin.tsx` (`createSkin("<mode>")`) and `<mode>/` (assets).
 - [ ] Tests: in `tests/game-modes.test.ts`, the `CHANGED`, `TEAMS` and `PHONE_MSG` tables (compiler). Put the mode's own rules in `tests/<mode>.test.ts`.
 - [ ] `README.md`: the mode's section, and the list of modes under "Protect from abuse".

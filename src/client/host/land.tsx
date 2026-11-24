@@ -126,7 +126,6 @@ function LandBanner({ text, color }: { text: string; color: string }) {
   );
 }
 
-/** A parchment card with a ribbon in the team colour; the team's shape sits on the ribbon. */
 function TeamCard({ team, leading, by }: { team: HostLandTeam; leading: boolean; by: string | null }) {
   return (
     <section class={`land-team ${team.out ? "out" : ""}`} style={{ ...teamVars(team.color), borderImageSource: useTeamCard(team.color) }}>
@@ -223,9 +222,6 @@ function LandPodium({ view, send }: { view: LandView; send: Send }) {
   );
 }
 
-// ---------- lobby ----------
-
-/** Land Grab's mode settings in the lobby. */
 function LandSettings({ settings, send }: LobbySettingsProps<"land">) {
   return (
     <>
@@ -293,7 +289,6 @@ function landThreat(board: LandBoard): number {
   return landValue;
 }
 
-/** The projector's music for Land Grab. */
 export function landCue(view: LandView): MusicCue {
   const playTrack = themedTrack("land", view.theme, "play");
   if (view.phase === "podium") return { track: themedTrack("land", view.theme, "results") };

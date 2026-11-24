@@ -12,7 +12,6 @@ import { siegeMode } from "./siege.ts";
 import { subMode } from "./submarine.ts";
 import { towerMode } from "./tower.ts";
 
-/** Every game mode's entry: what the server knows about the mode, in the mode's own file. */
 export const MODES: { [M in GameMode]: ModeEntry<M> } = {
   classic: classicMode,
   tower: towerMode,

@@ -127,7 +127,6 @@ export class RacerGame {
   }
 
   /** Take over a lobby's players (same ids and tokens), its shuffle choices and its pacing. */
-  /** What the lobby chose at Start. */
   private setup!: LobbyChoices;
 
   /** The lobby's choices with the pacing as the host left it; the next lobby opens with them. */
@@ -174,8 +173,6 @@ export class RacerGame {
   private newPlayer(base: BasePlayer): RacerPlayer {
     return { ...base, answers: [], correct: 0, wrong: 0, turnsDriven: 0, mphGained: 0, failsAsDriver: 0 };
   }
-
-  // ---------- players ----------
 
   join(rawNickname: unknown, avatar?: AvatarChoice | null): RacerPlayer {
     if (this.phase === "podium") throw new GameError("This game has finished");
@@ -226,8 +223,6 @@ export class RacerGame {
     return this.players.get(this.bag.splice(i, 1)[0]!)!;
   }
 
-  // ---------- player actions ----------
-
   /** The driver moves the lever. Returns whether it was accepted. */
   setLever(playerId: string, level: RacerConfidence): boolean {
     if (this.phase !== "confidence" || this.driver?.id !== playerId || !this.players.has(playerId)) return false;
@@ -254,8 +249,6 @@ export class RacerGame {
     return true;
   }
 
-  // ---------- host controls ----------
-
   start(pacing?: Pacing): void {
     if (this.qIndex >= 0) throw new GameError("The game has already started");
     if (this.players.size === 0) throw new GameError("Wait for at least one player to join");
@@ -268,7 +261,6 @@ export class RacerGame {
     this.onChange();
   }
 
-  /** Advance to whatever comes next from the current phase. */
   next(): void {
     switch (this.phase) {
       case "confidence":
@@ -298,8 +290,6 @@ export class RacerGame {
   dispose(): void {
     this.paced.phases.dispose();
   }
-
-  // ---------- state machine ----------
 
   private beginTurn(index: number): void {
     this.paced.begin(index);
@@ -369,8 +359,6 @@ export class RacerGame {
     this.onChange();
   }
 
-  // ---------- results ----------
-
   result(): RacerResult {
     return { distance: this.car.distance, topSpeed: this.car.topSpeed, crashes: this.car.crashes, turns: this.turns };
   }
@@ -389,8 +377,6 @@ export class RacerGame {
     const wrong = this.questions.map((_, i) => [...this.players.values()].filter((p) => p.answers[i] && !p.answers[i]!.correct).length);
     return topErrors(this.questions, wrong);
   }
-
-  // ---------- views ----------
 
   private questionView(): QuestionView | null {
     return this.phase === "podium" ? null : this.paced.view();

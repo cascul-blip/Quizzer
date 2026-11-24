@@ -40,7 +40,6 @@ export type DuelFacing = "left" | "right";
 type Point = readonly [number, number];
 type Style = CSSProperties;
 
-/** Used by the art test. */
 export { DUEL_FILES, DUEL_PHONE_ART, DUEL_PROJECTOR_ART };
 
 /** A file by id (no ".webp"): the phone copy on phones when there is one. */
@@ -132,8 +131,6 @@ export function duelStreetId(arena: number): string {
 
 const pct = (v: number) => `${v}%`;
 
-// ---- backgrounds ---------------------------------------------------------------------
-
 /** The panel background: fills its (positioned) container, cropped to cover. */
 export function DuelStreet({ arena, phone, class: cls = "" }: { arena: number; phone?: boolean; class?: string }) {
   return <img class={`sd-street ${cls}`} src={duelArt(duelStreetId(arena), phone ?? isPhoneArt())} alt="" draggable={false} />;
@@ -182,8 +179,6 @@ export function WantedPoster({
     </div>
   );
 }
-
-// ---- the duelist ---------------------------------------------------------------------
 
 /** The avatar's 100x100 box placed so its head centre (50, 56) is on (x, y) % of the duelist box. */
 function faceStyle(x: number, y: number): Style {
@@ -513,7 +508,6 @@ export function Tumbleweed({
   class: cls = "",
 }: {
   durationMs?: number;
-  /** The side it enters from. */
   from?: DuelFacing;
   /** Height, % of the parent's height. */
   size?: number;

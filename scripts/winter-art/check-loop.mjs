@@ -1,6 +1,3 @@
-/** Regression: run the preview server, then node scripts/winter-art/check-loop.mjs.
- * Optional QUIZZER_PLAYWRIGHT_MODULE and QUIZZER_CHROMIUM select existing installs.
- */
 import assert from "node:assert/strict";
 
 const { chromium } = await import(process.env.QUIZZER_PLAYWRIGHT_MODULE || "playwright");

@@ -4,8 +4,6 @@ import type { ModeProtocol } from "../shared-mode-entry.ts";
 import { sharedModeEntry } from "../shared-mode-entry.ts";
 import type { SeasonTheme } from "../themed-modes.ts";
 
-// Cup of Death protocol types.
-
 export type CupPhase = "countdown" | "roll" | "quiz" | "drink" | "reveal" | "podium";
 /** Cups in front of each player at the start (a lobby setting); one is drunk (and gone) each time they survive a drink. */
 export const CUP_MIN_CUPS = 1;
@@ -139,13 +137,11 @@ export interface PlayerCupView {
   result: { rank: number; playerCount: number; won: boolean; outRound: number | null; awards: string[] } | null;
 }
 
-/** What a phone sends during Cup of Death games. */
 export type CupMsg =
   | StreamAnswerMsg<"cup">
   /** Drink phase, drinkers only: pick one of your remaining cups (0-based, left to right). Final once sent. */
   | { type: "cup.pick"; cup: number };
 
-/** Cup of Death's shared mode entry. */
 export const cupShared = sharedModeEntry<ModeProtocol<CupMsg, CupSettings, HostCupState, PlayerCupView>>()({
   name: "Cup of Death",
   flags: { paced: false, protect: true },

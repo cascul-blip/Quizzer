@@ -149,7 +149,6 @@ export function SubmarineStage({ view, send }: { view: SubView; send: Send }) {
   const sled = useMemo(() => <DogSled riders={faces} moving={sledMoving} boosting={!!boost} />, [faces, sledMoving, !!boost]);
   const seaRef = useRef<HTMLElement>(null);
   const craftRef = useRef<HTMLDivElement>(null);
-  // Sound cues.
   const prevPhase = useRef(view.phase);
   useEffect(() => {
     const p = prevPhase.current;
@@ -330,14 +329,11 @@ function Award({ icon, title, award, unit }: { icon: string; title: string; awar
   );
 }
 
-// ---------- lobby ----------
-
 /** Sled Squad has no mode settings; the lobby shows how it plays. */
 function SubSettings() {
   return <span class="opt mode-hint">Everyone works together to outrun the Christmas goblin. The game ends when it catches you.</span>;
 }
 
-/** The projector's music for Sled Squad. */
 export function submarineCue(view: SubView): MusicCue {
   if (view.phase === "podium") return { track: "submarine-results" };
   if (view.phase === "dive") return { track: "submarine-dive" };

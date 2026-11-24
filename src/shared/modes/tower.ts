@@ -5,8 +5,6 @@ import { sharedModeEntry } from "../shared-mode-entry.ts";
 import type { SeasonTheme } from "../themed-modes.ts";
 import { modeTheme, themedIcon, themedName } from "../themed-modes.ts";
 
-// Tallest Tower protocol types.
-
 export type TowerPhase = "countdown" | "playing" | "podium";
 
 export const TOWER_MINUTES = [2, 3, 5, 7, 10] as const;
@@ -120,10 +118,8 @@ export interface HostTowerState {
   errors: QuestionError[] | null;
 }
 
-/** What a phone sends during Tallest Tower games. */
 export type TowerMsg = StreamAnswerMsg<"tower"> | { type: "tower.drop"; zone: number };
 
-/** Tallest Tower's shared mode entry. */
 export const towerShared = sharedModeEntry<
   ModeProtocol<TowerMsg, TowerSettings, HostTowerState, PlayerTowerView, Omit<TowerSettings, "monster"> & { monster?: boolean }>
 >()({

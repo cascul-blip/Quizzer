@@ -73,7 +73,6 @@ const TOKEN_MS = 1500;
 /** The hats for the duelists below High Noon; one per player, picked from the id so it never changes. */
 const HATS: DuelHat[] = ["brown", "black", "white"];
 
-/** Projector screen for Showdown: (intro → open → reveal)… → podium. */
 export function DuelStage({ view, send }: { view: DuelView; send: Send }) {
   const q = view.question;
   const secs = useCountdown(view.phaseRemainingMs, `${view.phase}:${q?.index ?? -1}`);
@@ -86,7 +85,6 @@ export function DuelStage({ view, send }: { view: DuelView; send: Send }) {
   const christmas = modeTheme("duel", view.theme) === "christmas";
   useEffect(() => (christmas ? preloadSnowballArt(false) : preloadDuelArt()), [christmas]);
 
-  // Sound cues on transitions.
   useEffect(() => {
     const p = prev.current;
     prev.current = view;
@@ -117,7 +115,6 @@ export function DuelStage({ view, send }: { view: DuelView; send: Send }) {
     if (step === STEP_MOVE && round.arenas.some((a) => a.duelists.some((d) => d.nextArena !== a.arena))) play("whoosh");
   }, [step, round?.round]);
 
-  // The last seconds of the question tick down.
   const lastTick = useRef(-1);
   useEffect(() => {
     if (view.phase !== "open" || secs === lastTick.current) return;
@@ -268,7 +265,6 @@ function Question({ view, send, secs }: { view: DuelView; send: Send; secs: numb
   );
 }
 
-/** One timer for the whole class: a fuse that burns down over the question's time limit. */
 function TimerBar({ view, secs }: { view: DuelView; secs: number }) {
   const open = view.phase === "open";
   // Catch up once, when the question opens. A later snapshot (someone answering) carries a
@@ -290,8 +286,6 @@ function TimerBar({ view, secs }: { view: DuelView; secs: number }) {
     </div>
   );
 }
-
-// ---------- the arenas ----------
 
 /**
  * How to lay out `n` arena panels. Up to 3 sit in one row (Arena 1 wider); more make a grid
@@ -435,7 +429,6 @@ interface Act {
   facing: Facing;
   hat: DuelHat | undefined;
   fires: boolean;
-  /** Where its bullet goes, panel %. */
   target?: [number, number];
   hatFlies: boolean;
   leaving?: "up" | "down";
@@ -703,14 +696,11 @@ function hash(s: string): number {
   return Math.abs(h);
 }
 
-// ---------- podium ----------
-
 function DuelPodium({ view, send }: { view: DuelView; send: Send }) {
   const [showErrors, setShowErrors] = useState(false);
   const a = view.awards;
   const christmas = modeTheme("duel", view.theme) === "christmas";
   const ranked = [...view.players].sort((x, y) => x.rank - y.rank);
-  // Second, first, third, like the classic podium.
   const top = [ranked[1], ranked[0], ranked[2]];
   return (
     <main class={`podium duel-podium ${christmas ? "christmas" : ""}`}>
@@ -777,8 +767,6 @@ function DuelPodium({ view, send }: { view: DuelView; send: Send }) {
   );
 }
 
-// ---------- lobby ----------
-
 /** Showdown's mode settings in the lobby, after the shared rows it is given. */
 function DuelSettings({ settings, send, children }: LobbySettingsProps<"duel">) {
   return (
@@ -817,7 +805,6 @@ function DuelSettings({ settings, send, children }: LobbySettingsProps<"duel">) 
   );
 }
 
-/** The projector's music for Showdown. */
 export function duelCue(view: DuelView): MusicCue {
   const track = (screen: ScreenOf<"duel">) => themedTrack("duel", view.theme, screen);
   if (modeTheme("duel", view.theme) === "christmas")

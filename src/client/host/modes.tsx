@@ -22,7 +22,6 @@ export type HostModeView<M extends GameMode> = Extract<HostView, { kind: M }>;
 
 type StageProps<M extends GameMode> = { view: HostModeView<M>; send: Send; enteredFromLobby: boolean };
 
-/** Everything the projector knows about one game mode; main.tsx looks it up in HOST_MODES instead of branching on the mode. */
 export interface HostModeEntry<M extends GameMode> extends LobbyModeEntry<M> {
   /** The projector screen while the mode's view is shown. */
   Stage: ComponentType<StageProps<M>>;

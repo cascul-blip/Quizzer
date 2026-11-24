@@ -1,4 +1,3 @@
-// Run a fresh compiled app on port 8094 with a temporary data directory first.
 import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
 

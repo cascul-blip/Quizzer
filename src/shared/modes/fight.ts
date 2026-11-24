@@ -5,8 +5,6 @@ import type { ModeProtocol } from "../shared-mode-entry.ts";
 import { sharedModeEntry } from "../shared-mode-entry.ts";
 import type { SeasonTheme } from "../themed-modes.ts";
 
-// Tower Fight protocol types.
-
 export type FightPhase = "countdown" | "playing" | "collapse" | "podium";
 export type HillSetting = HillHeight | "random";
 export const HILL_SETTINGS: readonly HillSetting[] = ["random", "low", "medium", "high"];
@@ -116,14 +114,12 @@ export interface PlayerFightView {
   result: { outcome: FightOutcome; awards: string[] } | null;
 }
 
-/** What a phone sends during Tower Fight games. */
 export type FightMsg =
   | StreamAnswerMsg<"fight">
   | { type: "fight.choose"; action: "attack" | "rebuild" }
   /** The slingshot pull in field units (y up); the shot flies the opposite way. */
   | { type: "fight.fire"; dx: number; dy: number };
 
-/** Tower Fight's shared mode entry. */
 export const fightShared = sharedModeEntry<ModeProtocol<FightMsg, FightSettings, HostFightState, PlayerFightView, Partial<FightSettings>>>()({
   name: "Tower Fight",
   flags: { paced: false, protect: true },

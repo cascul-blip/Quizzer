@@ -1,4 +1,3 @@
-// Run the preview server first; Playwright and Chromium are required.
 const { chromium } = await import(process.env.QUIZZER_PLAYWRIGHT_MODULE || "playwright");
 
 import assert from "node:assert/strict";

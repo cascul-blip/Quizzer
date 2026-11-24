@@ -51,7 +51,6 @@ describe("built-in tracks", () => {
         expect(layer.from ?? 0).toBeGreaterThanOrEqual(0);
         expect(layer.from ?? 0).toBeLessThanOrEqual(1);
       }
-      // Something is always playing, even at zero intensity.
       expect(track.layers.some((l) => layerActive(l, 0))).toBe(true);
     });
   }

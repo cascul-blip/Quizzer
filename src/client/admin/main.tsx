@@ -21,8 +21,6 @@ import { optionColor, Shape, Toast } from "../shared/ui.tsx";
 import type { Draft } from "./save-quiz-draft.ts";
 import { saveQuizDraft, toDraft } from "./save-quiz-draft.ts";
 
-// ---------- api ----------
-
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, init);
   if (!res.ok) {
@@ -55,8 +53,6 @@ interface Info {
 function openHost(quizId?: string) {
   window.open(quizId ? `/host?quiz=${encodeURIComponent(quizId)}` : "/host", "quizzer-host");
 }
-
-// ---------- routing ----------
 
 function useHashRoute(): string {
   const [hash, setHash] = useState(location.hash);
@@ -96,8 +92,6 @@ function App() {
     </>
   );
 }
-
-// ---------- library ----------
 
 function Library({ notify }: { notify: (m: string) => void }) {
   const [quizzes, setQuizzes] = useState<QuizSummary[] | null>(null);
@@ -339,8 +333,6 @@ function Snippet({ label, text, onCopy }: { label: string; text: string; onCopy:
     </div>
   );
 }
-
-// ---------- editor ----------
 
 function blankQuestion(type: Question["type"], taken: Set<string>): Question {
   let id: string;

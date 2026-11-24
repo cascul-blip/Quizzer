@@ -1,6 +1,3 @@
-// Cross-compiles single-file executables for Linux and Windows into dist/ (or --outdir <dir>).
-// Only the executables are replaced: dist/data (quizzes, images, results) is kept.
-// Usage: bun scripts/build.ts [linux|windows] [--outdir <dir>]
 import { rmSync } from "node:fs";
 import { join } from "node:path";
 import pkg from "../package.json" with { type: "json" };

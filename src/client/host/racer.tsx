@@ -35,7 +35,6 @@ export function RacerStage({ view, send }: { view: RacerView; send: Send }) {
   const connected = view.players.filter((p) => p.connected).length;
   const shownSpeed = useCountUp(view.car.speed, SPEED_COUNT_MS);
 
-  // Sound cues on transitions.
   useEffect(() => {
     const p = prev.current;
     prev.current = view;
@@ -52,7 +51,6 @@ export function RacerStage({ view, send }: { view: RacerView; send: Send }) {
     }
   }, [view]);
 
-  // The last seconds of the question tick down.
   const lastTick = useRef(-1);
   useEffect(() => {
     if (view.phase !== "open" || secs === lastTick.current) return;
@@ -412,8 +410,6 @@ function RacerPodium({ view, send }: { view: RacerView; send: Send }) {
   );
 }
 
-// ---------- lobby ----------
-
 /** Racer's mode settings in the lobby, around the shared rows it is given. */
 function RacerSettings({ settings, send, children }: LobbySettingsProps<"racer">) {
   return (
@@ -436,7 +432,6 @@ function RacerSettings({ settings, send, children }: LobbySettingsProps<"racer">
   );
 }
 
-/** The projector's music for the racer. */
 export function racerCue(view: RacerView): MusicCue {
   if (view.phase === "podium") return { track: themedTrack("racer", view.theme, "results") };
   // One continuous drive: tempo and layers follow the car's speed. No key, so the

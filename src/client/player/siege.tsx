@@ -32,7 +32,6 @@ export const siegeBanner: PhoneBanner = {
   Line: () => <p class="siege-lobby-line">🛡️ Defend the kingdom! Watch the projector.</p>,
 };
 
-/** Phone screen for Kingdom Siege: answer questions for gold, and tap Build to place or upgrade defenders on the lane map. */
 export function SiegePlayer({ view, send }: { view: PlayerSiegeView; send: Send }) {
   return (
     <SiegeThemeProvider theme={view.theme}>
@@ -148,7 +147,6 @@ function LaneMap({ view, send, onClose }: { view: PlayerSiegeView; send: Send; o
   const [bubble, setBubble] = useState<{ lane: number; square: number } | null>(null);
   const [touched, setTouched] = useState(0);
   const touch = () => setTouched((n) => n + 1);
-  // Closes itself after a while without a tap.
   useEffect(() => {
     const t = setTimeout(onClose, SIEGE_MAP_IDLE_MS);
     return () => clearTimeout(t);

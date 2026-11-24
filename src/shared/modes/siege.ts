@@ -6,8 +6,6 @@ import type { SiegeDefenderType, SiegeMonsterType, SiegeWaves } from "../siege-r
 import type { SeasonTheme } from "../themed-modes.ts";
 import { modeTheme } from "../themed-modes.ts";
 
-// Kingdom Siege protocol types.
-
 /**
  * Kingdom Siege. countdown: 3, 2, 1. build: the opening build break and the breaks between
  * waves. wave: monsters are marching. stands / fallen: the ending cinematic, then podium.
@@ -90,7 +88,6 @@ export interface SiegeShot {
   lane: number;
   /** The archer's square. */
   square: number;
-  /** Where the arrow lands. */
   toX: number;
 }
 
@@ -190,17 +187,14 @@ export interface PlayerSiegeView {
   } | null;
 }
 
-/** What a phone sends during Kingdom Siege games. */
 export type SiegeMsg =
   | StreamAnswerMsg<"siege">
   /** Place a defender. lane 0–4 (top first), square 1–7 (1 = next to the castle wall). */
   | { type: "siege.place"; defender: SiegeDefenderType; lane: number; square: number }
-  /** Upgrade the defender on that square one level. */
   | { type: "siege.upgrade"; lane: number; square: number }
   /** The lane map opened or closed, so the server only sends its contents while it is open. */
   | { type: "siege.map"; open: boolean };
 
-/** Kingdom Siege's shared mode entry. */
 export const siegeShared = sharedModeEntry<ModeProtocol<SiegeMsg, SiegeSettings, HostSiegeState, PlayerSiegeView>>()({
   name: "Kingdom Siege",
   flags: { paced: false, protect: true },

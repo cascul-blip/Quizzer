@@ -123,7 +123,6 @@ function CupIcons({ count, of }: { count: number; of: number }) {
   );
 }
 
-/** The red bar draining under the header while the clock runs. */
 function PhoneBar({ view }: { view: PlayerCupView }) {
   const key = `${view.phase}-${view.round}`;
   const start = useRef<{ key: string; elapsed: number } | null>(null);

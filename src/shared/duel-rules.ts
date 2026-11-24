@@ -1,7 +1,3 @@
-// Showdown: the arena ladder as pure functions.
-// Used by the server engine and by the screens (to explain and replay a round).
-// No imports on purpose: this file must stay usable from both sides.
-
 /** What a duel did to one duelist: "win" moves up a boundary, "lose" moves down. */
 export type DuelOutcome = "win" | "lose" | "stay";
 

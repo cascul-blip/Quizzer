@@ -65,7 +65,6 @@ export interface DuelPlayer extends BasePlayer {
   wrong: number;
   /** Rounds won in Arena 1. */
   reign: number;
-  /** Arena of the first round they played; 0 until they have one. */
   startArena: number;
 }
 
@@ -85,10 +84,6 @@ interface DuelGameSettings {
   pacing?: Pacing;
 }
 
-/**
- * Showdown: every round one shared question, and every arena of the ladder duels on it at once
- * (intro → open → reveal), then the podium after the last round. The ladder order is the ranking.
- */
 export class DuelGame {
   readonly runningMode = "duel" as const;
   readonly quizId: string;
@@ -104,9 +99,7 @@ export class DuelGame {
   /** This round's arenas (player ids), fixed when the round starts; kicked players are taken out. */
   arenas: string[][] = [];
   lastRound: DuelRound | null = null;
-  /** Rounds played to the end. */
   played = 0;
-  /** Set while views are built in a batch: what every phone's view shares, computed once. */
   private batch: {
     ranked?: Ranked<DuelPlayer>[];
     rankById?: Map<string, number>;
@@ -160,7 +153,6 @@ export class DuelGame {
   }
 
   /** Take over a lobby's players (same ids and tokens), its rounds, shuffle choices and pacing. */
-  /** What the lobby chose at Start. */
   private setup!: LobbyChoices;
 
   /** The lobby's choices with the pacing as the host left it; the next lobby opens with them. */
@@ -222,14 +214,11 @@ export class DuelGame {
     return this.arenas.findIndex((a) => a.includes(playerId));
   }
 
-  /** arenaIndex() for everyone at once. */
   private arenaIndexes(): Map<string, number> {
     const out = new Map<string, number>();
     this.arenas.forEach((a, i) => a.forEach((id) => out.has(id) || out.set(id, i)));
     return out;
   }
-
-  // ---------- players ----------
 
   /** Late joiners go to the bottom of the ladder and duel from the next round. */
   join(rawNickname: unknown, avatar?: AvatarChoice | null): DuelPlayer {
@@ -262,8 +251,6 @@ export class DuelGame {
     return p;
   }
 
-  // ---------- player actions ----------
-
   /** One answer per duelist per round. Returns whether it was accepted. */
   answer(playerId: string, qIndex: number, answer: AnswerValue): boolean {
     if (this.arenaIndex(playerId) < 0) return false;
@@ -271,8 +258,6 @@ export class DuelGame {
     if (!this.paced.closeIfAllAnswered()) this.onActivity(playerId);
     return true;
   }
-
-  // ---------- host controls ----------
 
   start(pacing?: Pacing): void {
     if (this.qIndex >= 0) throw new GameError("The game has already started");
@@ -287,7 +272,6 @@ export class DuelGame {
     this.onChange();
   }
 
-  /** Advance to whatever comes next from the current phase. */
   next(): void {
     this.paced.next();
   }
@@ -307,8 +291,6 @@ export class DuelGame {
   dispose(): void {
     this.paced.phases.dispose();
   }
-
-  // ---------- state machine ----------
 
   private beginRound(index: number): void {
     this.arenas = pairArenas(this.ladder);
@@ -374,9 +356,6 @@ export class DuelGame {
     this.onChange();
   }
 
-  // ---------- results ----------
-
-  /** Players in ladder order (top of the ladder first). */
   onLadder(): DuelPlayer[] {
     return this.ladder.map((id) => this.players.get(id)).filter((p): p is DuelPlayer => !!p);
   }
@@ -397,7 +376,6 @@ export class DuelGame {
     return p.startArena ? p.startArena - (arenas.get(p.id) ?? p.startArena) : 0;
   }
 
-  /** ranked(), shared by every view in a batch. */
   private rankedNow(): Ranked<DuelPlayer>[] {
     return this.shared("ranked", () => this.ranked());
   }
@@ -420,8 +398,6 @@ export class DuelGame {
     });
     return topErrors(this.source, wrong);
   }
-
-  // ---------- views ----------
 
   private questionView(): QuestionView | null {
     return this.phase === "podium" ? null : this.paced.view();
@@ -485,10 +461,6 @@ export class DuelGame {
     };
   }
 
-  /**
-   * Build many views in one go (a broadcast). Nothing changes in between, so the ladder ranking,
-   * arenas and awards are worked out once instead of once per phone.
-   */
   viewBatch<T>(build: () => T): T {
     if (this.batch) return build();
     this.batch = {};
@@ -565,7 +537,7 @@ function ref(p: DuelPlayer): DuelPlayerRef {
   return { id: p.id, nickname: p.nickname, avatar: p.avatar };
 }
 
-/** Showdown: one row per player in final ranking order (points, then ladder), then each round's answer, correctness and time. */
+/** Showdown: one row per player in final ranking order, then each round's answer, correctness and time. */
 function duelColumns(game: DuelGame): Column<{ rank: number; p: DuelPlayer }>[] {
   const arenas = game.ladderArenas();
   const final = (p: DuelPlayer) => arenas.get(p.id) ?? "";

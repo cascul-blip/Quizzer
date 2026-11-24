@@ -72,7 +72,7 @@ export async function loadCustomMusic(): Promise<void> {
     const res = await fetch("/api/music");
     if (res.ok) custom = (await res.json()).files ?? {};
   } catch {
-    // no custom music
+    // Built-in music still works when the custom music list is unavailable.
   }
 }
 

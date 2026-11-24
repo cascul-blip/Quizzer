@@ -11,7 +11,6 @@ export const teamInk = (color: string | undefined): string => (color?.toLowerCas
 /** CSS variables for a team-coloured element: --team, and --team-ink for text on it. */
 export const teamVars = (color: string | undefined) => ({ "--team": color, "--team-ink": teamInk(color) });
 
-/** Kahoot-style option shapes: triangle, diamond, circle, square. */
 export function Shape({ index }: { index: number }) {
   const paths = [
     <polygon points="50,8 94,88 6,88" />,

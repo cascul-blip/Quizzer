@@ -416,7 +416,6 @@ function Scaffold({ team }: { team: number }) {
   );
 }
 
-/** The heap a destroyed tower leaves behind. */
 function Rubble({ team }: { team: number }) {
   const christmas = useGingerbread();
   const cx = TOWER_X[team]!;

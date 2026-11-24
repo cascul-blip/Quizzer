@@ -343,8 +343,6 @@ function Fallen({ view }: { view: SiegeView }) {
   );
 }
 
-// ---------- lobby ----------
-
 /** The empty diorama board with the castle wall, under the lobby's settings. */
 export function SiegeLobbyPreview({ theme }: { theme?: SeasonTheme }) {
   return (
@@ -355,8 +353,6 @@ export function SiegeLobbyPreview({ theme }: { theme?: SeasonTheme }) {
     </SiegeThemeProvider>
   );
 }
-
-// ---------- podium ----------
 
 function SiegePodium({ view, send }: { view: SiegeView; send: Send }) {
   const [showErrors, setShowErrors] = useState(false);
@@ -414,9 +410,6 @@ function SiegePodium({ view, send }: { view: SiegeView; send: Send }) {
   );
 }
 
-// ---------- lobby ----------
-
-/** Kingdom Siege's mode settings in the lobby. */
 function SiegeSettings({ settings, send }: LobbySettingsProps<"siege">) {
   return (
     <>
@@ -461,7 +454,6 @@ function SiegeSettings({ settings, send }: LobbySettingsProps<"siege">) {
   );
 }
 
-/** The projector's music for Kingdom Siege. */
 export function siegeCue(view: SiegeView): MusicCue {
   const outcome = view.result?.outcome;
   const battle = themedTrack("siege", view.settings.theme, "play");

@@ -120,7 +120,6 @@ export class TowerGame {
   }
 
   /** Take over a lobby's players (same ids and tokens), on the teams shown in the lobby. */
-  /** What the lobby chose at Start; the next lobby opens with it. */
   choices!: LobbyChoices;
 
   static fromLobby(lobby: LobbyFacts<"tower">, opts: TowerOptions = {}): TowerGame {
@@ -153,9 +152,6 @@ export class TowerGame {
     });
   }
 
-  // ---------- lifecycle ----------
-
-  /** Set by start(); a running game can't be started again. */
   private started = false;
 
   start(): void {
@@ -246,8 +242,6 @@ export class TowerGame {
     this.phases.dispose();
   }
 
-  // ---------- players ----------
-
   join(rawNickname: unknown, avatar?: AvatarChoice | null): TowerPlayer {
     if (this.phase === "podium") throw new GameError("This game has finished");
     const player = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), (base) => this.newPlayer(base, this.smallestTeam()));
@@ -276,8 +270,6 @@ export class TowerGame {
     return p;
   }
 
-  // ---------- questions ----------
-
   answer(playerId: string, seq: number, option: AnswerValue): boolean {
     const p = this.players.get(playerId);
     if (!p) return false;
@@ -288,8 +280,6 @@ export class TowerGame {
     this.onActivity(p.id);
     return true;
   }
-
-  // ---------- building ----------
 
   /** Drop the player's next block into zone 0–4 (0 and 4 miss the tower). Returns whether it landed. */
   drop(playerId: string, zone: number): boolean | null {
@@ -319,8 +309,6 @@ export class TowerGame {
     return landed;
   }
 
-  // ---------- results ----------
-
   /** Teams by floors, then blocks placed; equal teams share a rank. */
   rankedTeams(): (TowerTeam & { rank: number; floors: number; placed: number })[] {
     const withTotals = this.teams.map((t) => ({ ...t, floors: floorsOf(t), placed: placedOf(t) }));
@@ -335,8 +323,6 @@ export class TowerGame {
     };
     return { mostCorrect: best((p) => p.correct), masterBuilder: best((p) => p.placed) };
   }
-
-  // ---------- views ----------
 
   hostView(): HostTowerState {
     const ranked = new Map(this.rankedTeams().map((t) => [t.index, t.rank]));

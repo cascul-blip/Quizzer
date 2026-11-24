@@ -8,12 +8,6 @@ interface PhaseOptions {
   hidden?: boolean;
 }
 
-/**
- * The phase a game mode is in and the one timer that ends it, built on the injected Clock.
- * Setting a phase cancels the pending continuation of the previous one, so a stale timer cannot fire.
- * Named slots hold a mode's other timers (a warning before the phase ends, a player's cooldown); a slot
- * that is replaced or cancelled never fires, and dispose() cancels every pending timer.
- */
 export class PhaseTimer<P extends string> {
   private current: P;
   private deadline = 0;
@@ -110,7 +104,6 @@ export class PhaseTimer<P extends string> {
     return pending ? Math.max(0, pending.at - this.clock.now()) : null;
   }
 
-  /** Cancel the named slot's pending timer, if any. */
   cancel(slot: string): void {
     const pending = this.slots.get(slot);
     if (!pending) return;

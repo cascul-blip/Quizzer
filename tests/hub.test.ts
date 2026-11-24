@@ -485,7 +485,6 @@ describe("Game mode: Robot Attack", () => {
     expect(csv).toContain("Rank,Nickname,Status");
     expect(csv).toContain("Bob,");
 
-    // Play again keeps Robot Attack.
     host.sendMsg({ type: "host.open", quizId: quiz.id });
     await host.hostState((v) => v.kind === "lobby" && v.mode === "robot");
     host.sendMsg({ type: "host.close" });

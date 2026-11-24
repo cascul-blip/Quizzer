@@ -1,4 +1,3 @@
-// Start serve.ts first. Set QUIZZER_PLAYWRIGHT_MODULE and QUIZZER_CHROMIUM as needed.
 const { chromium } = await import(process.env.QUIZZER_PLAYWRIGHT_MODULE || "playwright");
 
 import assert from "node:assert/strict";

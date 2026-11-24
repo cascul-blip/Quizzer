@@ -313,8 +313,6 @@ const KNOWN_CYCLES = [
   "src/server/game/mode-entry.ts -> src/server/game/tower.ts -> src/server/game/mode-entry.ts",
 ];
 
-// Imports point one way: a module that imports another, even only for a type, is never imported back.
-// Move the shared piece down into the lower module (or a new one) instead.
 describe("Coding standards: import graph", () => {
   test("finds the client's imports", () => {
     expect(importsOf(join(ROOT, "src/client/player/modes.tsx"))).toContain(join(ROOT, "src/client/player/common.tsx"));
