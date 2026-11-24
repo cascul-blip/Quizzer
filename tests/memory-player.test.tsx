@@ -2,11 +2,15 @@ import { expect, mock, test } from "bun:test";
 import { render } from "preact";
 import { act } from "preact/test-utils";
 import { PhoneModeScreen } from "../src/client/player/modes.tsx";
-import type { PlayerMemoryView } from "../src/shared/modes/memory.ts";
+import type { MemoryCardView, PlayerMemoryView } from "../src/shared/modes/memory.ts";
 import type { ClientMsg } from "../src/shared/protocol.ts";
 import { usePhoneDom } from "./phone-dom.ts";
 
 const dom = usePhoneDom();
+function board(size: number): MemoryCardView[] {
+  return Array.from({ length: size ** 2 }, (_, position) => ({ state: position === 6 ? "empty" : "down" }));
+}
+
 const turnView: PlayerMemoryView = {
   kind: "memory",
   title: "Christmas Quiz",
@@ -17,8 +21,8 @@ const turnView: PlayerMemoryView = {
   myText: null,
   reveal: null,
   boardSize: 6,
-  turn: { id: 4, available: Array.from({ length: 36 }, (_, i) => i !== 6) },
-  phaseRemainingMs: 15_000,
+  turn: { id: 4, step: 1, board: board(6) },
+  phaseRemainingMs: 20_000,
   result: null,
 };
 
@@ -36,7 +40,7 @@ for (const boardSize of [6, 8, 10] as const) {
   test(`Memory Game starts the ${boardSize}×${boardSize} turn with all card backs and empty spaces in view`, () => {
     const { show } = phone();
     const cardCount = boardSize ** 2;
-    show({ ...turnView, boardSize, turn: { id: 4, available: Array.from({ length: cardCount }, (_, i) => i !== 6) } });
+    show({ ...turnView, boardSize, turn: { id: 4, step: 1, board: board(boardSize) } });
     const cells = dom.root.querySelector<HTMLDivElement>(".memory-board-pan")!;
     expect(cells.children.length).toBe(cardCount);
     expect(cells.style.gridTemplateColumns).toBe(`repeat(${boardSize}, minmax(0, 1fr))`);
@@ -48,7 +52,7 @@ for (const boardSize of [6, 8, 10] as const) {
   });
 }
 
-function confirmPair() {
+function confirmCard() {
   return dom.root.querySelector<HTMLButtonElement>(".memory-confirm")!;
 }
 
@@ -101,41 +105,55 @@ test("Memory Game zooms and pans without choosing cards during a pinch or drag, 
   show({ ...turnView, turn: { ...turnView.turn!, id: 5 } });
   expect(dom.root.querySelector<HTMLDivElement>(".memory-board-pan")!.style.transform).toBe("");
   expect(card(2)?.getAttribute("aria-pressed")).toBe("false");
-  expect(confirmPair().disabled).toBe(true);
+  expect(confirmCard().disabled).toBe(true);
 });
 
-test("Memory Game lets the player deselect either card and sends only the explicitly confirmed pair", () => {
+test("Memory Game replaces or clears a selection and confirms one card at a time", () => {
   const { show, send } = phone();
   show(turnView);
-  expect(confirmPair().disabled).toBe(true);
+  expect(confirmCard().disabled).toBe(true);
 
   act(() => card(3)?.click());
-  expect(confirmPair().disabled).toBe(true);
+  expect(card(3)?.getAttribute("aria-pressed")).toBe("true");
+  expect(confirmCard().disabled).toBe(false);
   act(() => card(8)?.click());
-  expect(confirmPair().disabled).toBe(false);
-  expect(card(9)?.getAttribute("aria-disabled")).toBe("true");
-  act(() => card(9)?.click());
-  expect(card(9)?.getAttribute("aria-pressed")).toBe("false");
+  expect(card(3)?.getAttribute("aria-pressed")).toBe("false");
+  expect(card(8)?.getAttribute("aria-pressed")).toBe("true");
+  act(() => card(8)?.click());
+  expect(card(8)?.getAttribute("aria-pressed")).toBe("false");
+  expect(confirmCard().disabled).toBe(true);
   expect(send).not.toHaveBeenCalled();
 
-  act(() => card(3)?.click());
-  expect(card(3)?.getAttribute("aria-pressed")).toBe("false");
-  expect(confirmPair().disabled).toBe(true);
-  act(() => card(9)?.click());
-  expect(confirmPair().disabled).toBe(false);
-  expect(send).not.toHaveBeenCalled();
-  act(() => confirmPair().click());
-  expect(send.mock.calls).toEqual([[{ type: "memory.confirm", turnId: 4, positions: [8, 9] }]]);
+  act(() => card(0)?.click());
+  act(() => confirmCard().click());
+  expect(send.mock.calls).toEqual([[{ type: "memory.confirm", turnId: 4, step: 1, position: 0 }]]);
+
+  dom.advance(4_000);
+  show({
+    ...turnView,
+    turn: { id: 4, step: 2, board: [{ state: "up", face: 0 }, ...turnView.turn!.board.slice(1)] },
+    phaseRemainingMs: 16_000,
+  });
+  expect(dom.root.querySelector('[role="timer"]')?.textContent).toBe("16");
+  const revealed = dom.root.querySelector('[aria-label="Card 1, Santa Claus"]');
+  expect(revealed).not.toBeNull();
+  expect(card(0)).toBeNull();
+  expect(confirmCard().disabled).toBe(true);
+  act(() => card(1)?.click());
+  act(() => confirmCard().click());
+  expect(send.mock.calls).toEqual([
+    [{ type: "memory.confirm", turnId: 4, step: 1, position: 0 }],
+    [{ type: "memory.confirm", turnId: 4, step: 2, position: 1 }],
+  ]);
 });
 
 test("Memory Game does not submit local selections when the turn expires", () => {
   const { show, send } = phone();
   show(turnView);
   act(() => card(3)?.click());
-  act(() => card(8)?.click());
-  expect(confirmPair().disabled).toBe(false);
-  dom.advance(15_005);
-  expect(confirmPair().disabled).toBe(true);
+  expect(confirmCard().disabled).toBe(false);
+  dom.advance(20_005);
+  expect(confirmCard().disabled).toBe(true);
   expect(send).not.toHaveBeenCalled();
 });
 

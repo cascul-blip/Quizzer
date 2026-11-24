@@ -33,7 +33,7 @@ export const memoryMode: ModeEntry<"memory"> = {
       case "memory.answer":
         return game.answer(playerId, Number(msg.index), answerOf(msg)) ? undefined : "resend";
       case "memory.confirm":
-        return game.confirm(playerId, msg.turnId, msg.positions) ? undefined : "resend";
+        return game.confirm(playerId, msg.turnId, msg.step, msg.position) ? undefined : "resend";
       default:
         return unhandled(msg);
     }

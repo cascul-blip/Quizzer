@@ -1,6 +1,6 @@
 import { useState } from "preact/hooks";
 import type { PlayerMemoryView } from "../../shared/modes/memory.ts";
-import { memoryThemeArt } from "../shared/memory/themes.ts";
+import { memoryFacePosition, memoryThemeArt } from "../shared/memory/themes.ts";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
 import type { Send } from "./common.tsx";
 import { Center } from "./common.tsx";
@@ -77,22 +77,20 @@ function MemoryPicks({
   remainingMs: number;
   send: Send;
 }) {
-  const [picks, setPicks] = useState<number[]>([]);
+  const [pending, setPending] = useState<{ step: 1 | 2; position: number } | null>(null);
+  const selected = pending?.step === turn.step ? pending.position : null;
   const { box, inner, zoomIn, zoomOut, pointerHandlers, isTap } = usePanZoom();
   const left = useCountdown(remainingMs, `turn:${turn.id}`);
-  const toggle = (position: number) => {
-    setPicks((previous) => {
-      if (previous.includes(position)) return previous.filter((pick) => pick !== position);
-      return previous.length < 2 ? [...previous, position] : previous;
-    });
-  };
+  const { image, columns, names } = memoryThemeArt.faces;
+  const rows = names.length / columns;
   return (
     <main class="memory-picks">
+      <link rel="preload" as="image" href={image} />
       <div class="memory-board-controls">
         <div class={`timer ${left <= 5 ? "urgent" : ""}`} role="timer" aria-label="Turn time remaining">
           {left}
         </div>
-        <h1>Pick two cards</h1>
+        <h1>{turn.step === 1 ? "Pick the first card" : "Pick the second card"}</h1>
         <button class="btn ghost" aria-label="Zoom in" onClick={zoomIn}>
           +
         </button>
@@ -103,32 +101,49 @@ function MemoryPicks({
       <div class="memory-board-fit">
         <div class="memory-board-viewport" ref={box} {...pointerHandlers}>
           <div class="memory-board-pan" ref={inner} style={{ gridTemplateColumns: `repeat(${boardSize}, minmax(0, 1fr))` }}>
-            {turn.available.map((available, position) =>
-              available ? (
+            {turn.board.map((card, position) => {
+              if (card.state === "empty") return <div key={position} aria-hidden="true" />;
+              if (card.state === "up") {
+                return (
+                  <div
+                    key={position}
+                    class="memory-phone-face"
+                    role="img"
+                    aria-label={`Card ${position + 1}, ${names[card.face] ?? "revealed"}`}
+                    style={{
+                      backgroundImage: `url("${image}")`,
+                      backgroundSize: `${columns * 100}% ${rows * 100}%`,
+                      backgroundPosition: memoryFacePosition(card.face),
+                    }}
+                  />
+                );
+              }
+              return (
                 <button
                   key={position}
                   class={memoryThemeArt.cardBackClass}
                   aria-label={`Card ${position + 1}`}
-                  aria-pressed={picks.includes(position)}
-                  aria-disabled={left === 0 || (picks.length === 2 && !picks.includes(position))}
-                  onClick={(e) => left > 0 && isTap(e) && toggle(position)}
+                  aria-pressed={selected === position}
+                  aria-disabled={left === 0}
+                  onClick={(e) => {
+                    if (left > 0 && isTap(e)) setPending(selected === position ? null : { step: turn.step, position });
+                  }}
                 />
-              ) : (
-                <div key={position} aria-hidden="true" />
-              ),
-            )}
+              );
+            })}
           </div>
         </div>
       </div>
       <button
         class="btn primary memory-confirm"
-        disabled={picks.length !== 2 || left === 0}
+        disabled={selected === null || left === 0}
         onClick={() => {
-          const [first, second] = picks;
-          if (first !== undefined && second !== undefined) send({ type: "memory.confirm", turnId: turn.id, positions: [first, second] });
+          if (selected === null || left === 0) return;
+          setPending(null);
+          send({ type: "memory.confirm", turnId: turn.id, step: turn.step, position: selected });
         }}
       >
-        Confirm pair
+        Confirm card
       </button>
     </main>
   );

@@ -79,3 +79,9 @@ const MEMORY_THEME_ART = {
 } as const satisfies Record<ThemeOf<"memory">, MemoryThemeArt>;
 
 export const memoryThemeArt = MEMORY_THEME_ART[modeTheme("memory")];
+
+export function memoryFacePosition(face: number): string {
+  const { columns, names } = memoryThemeArt.faces;
+  const rows = names.length / columns;
+  return `${((face % columns) / (columns - 1)) * 100}% ${(Math.floor(face / columns) / (rows - 1)) * 100}%`;
+}

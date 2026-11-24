@@ -82,7 +82,7 @@ _Avoid_: reveal mode
 A Memory Game reward for a correct answer. One chip pays for one attempt to match a pair of cards.
 
 **Reveal turn**:
-One player's timed opportunity to choose and confirm two cards in Memory Game.
+One player's timed attempt to match two cards in Memory Game by selecting and confirming them one at a time. Each card flips as soon as it is confirmed.
 _Avoid_: reveal opportunity
 
 **Lobby handoff** is the transition that carries the players who joined the lobby into the selected game when the host presses Start. Each player keeps their identity and can reconnect to the game from their phone.

@@ -314,9 +314,9 @@ Choose **Game mode → 🎁 Gift Grab** for a self-paced Christmas review in San
 
 Choose **Game mode → 🃏 Memory Game** to play individually on a shared Christmas board. Pick 6×6, 8×8, or 10×10 in the lobby. The default is 10×10, and the next lobby remembers your choice.
 
-Players earn one chip per correct answer. After every three paced questions, players with chips take 15-second turns in order of their average time on correct answers in that batch. Ties favor players who have gone first fewer times, then earlier lobby join order. Each turn spends one chip, including when time runs out.
+Players earn one chip per correct answer. After every three paced questions, players with chips take 20-second turns in order of their average time on correct answers in that batch. Ties favor players who have gone first fewer times, then earlier lobby join order. Each turn spends one chip, including when time runs out.
 
-On your turn, drag or pinch to find cards on your phone, tap two, and confirm to flip them on the projector. Tap a selected card again to deselect it. Matched cards leave empty spaces and all other cards stay in position.
+On your turn, drag or pinch to find cards on your phone. Select and confirm the first card to see its face, then select and confirm a second card before the same countdown ends. Tap another card to change your pending selection or tap the same card again to clear it. The projector shows each face as soon as you confirm it. Matched cards leave empty spaces and all other cards stay in position.
 
 The quiz repeats as needed using the lobby’s shuffle settings. Clearing the board or pressing **End game** opens the podium. Rankings use matched pairs, with equal scores sharing a place. The results sheet also includes correct answers and total submitted-answer time. See the [Memory Game design notes](docs/modes/Memory%20Game.md).
 

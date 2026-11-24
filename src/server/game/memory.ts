@@ -35,6 +35,7 @@ interface Turn {
   id: number;
   playerId: string;
   nickname: string;
+  first: number | null;
 }
 
 interface Feedback {
@@ -175,19 +176,23 @@ export class MemoryGame {
     return true;
   }
 
-  confirm(playerId: string, turnId: number, positions: unknown): boolean {
+  confirm(playerId: string, turnId: number, step: number, position: unknown): boolean {
     const turn = this.turn;
     if (this.phase !== "turn" || !turn || playerId !== turn.playerId || turnId !== turn.id || this.clock.now() >= this.paced.phases.endsAt) return false;
-    if (!Array.isArray(positions) || positions.length !== 2) return false;
-    const [first, second] = positions;
-    if (!this.eligible(first) || !this.eligible(second) || first === second) return false;
+    const { first } = turn;
+    if (step !== (first === null ? 1 : 2) || !this.eligible(position) || first === position) return false;
+    if (first === null) {
+      turn.first = position;
+      this.onChange();
+      return true;
+    }
     const player = this.players.get(playerId);
     if (!player) return false;
 
     player.chips--;
-    const matched = this.board[first] === this.board[second];
+    const matched = this.board[first] === this.board[position];
     if (matched) player.pairs++;
-    this.feedback = { matched, positions: [first, second] };
+    this.feedback = { matched, positions: [first, position] };
     this.paced.phases.set("feedback", matched ? MATCH_MS : MISS_MS, () => this.afterFeedback());
     this.onChange();
     return true;
@@ -253,7 +258,7 @@ export class MemoryGame {
       const player = this.players.get(this.turnOrder[this.nextInOrder]!);
       this.nextInOrder = (this.nextInOrder + 1) % this.turnOrder.length;
       if (!player?.chips) continue;
-      this.turn = { id: ++this.turnId, playerId: player.id, nickname: player.nickname };
+      this.turn = { id: ++this.turnId, playerId: player.id, nickname: player.nickname, first: null };
       this.paced.phases.set("turn", MEMORY_TURN_MS, () => {
         player.chips--;
         this.nextTurn();
@@ -297,11 +302,6 @@ export class MemoryGame {
       return answer ? [answer] : [];
     });
     const revealed = this.phase === "reveal";
-    const board = this.board.map((face, position): MemoryCardView => {
-      if (face === null) return { state: "empty" };
-      if (this.feedback?.positions.includes(position)) return { state: "up", face };
-      return { state: "down" };
-    });
     return {
       kind: "memory",
       phase: this.phase,
@@ -314,11 +314,19 @@ export class MemoryGame {
       answerCounts: revealed && question ? question.options.map((_, i) => answers.filter((a) => a.option === i).length) : null,
       players: this.ranked().map((p) => ({ ...playerView(p), connected: p.connected, rank: p.rank })),
       boardSize: this.boardSize,
-      board,
-      turn: this.turn,
+      board: this.boardView(),
+      turn: this.turn && { id: this.turn.id, playerId: this.turn.playerId, nickname: this.turn.nickname },
       feedback: this.feedback ? { matched: this.feedback.matched } : null,
       phaseRemainingMs: this.paced.phases.remainingMs(),
     };
+  }
+
+  private boardView(): MemoryCardView[] {
+    return this.board.map((face, position) => {
+      if (face === null) return { state: "empty" };
+      if (this.turn?.first === position || this.feedback?.positions.includes(position)) return { state: "up", face };
+      return { state: "down" };
+    });
   }
 
   playerView(id: string): PlayerMemoryView | null {
@@ -337,7 +345,7 @@ export class MemoryGame {
       myText: answer?.text ?? null,
       reveal: correct ? { choice, correct, wasCorrect: !!answer?.correct } : null,
       boardSize: this.boardSize,
-      turn: this.phase === "turn" && this.turn?.playerId === id ? { id: this.turn.id, available: this.board.map((face) => face !== null) } : null,
+      turn: this.phase === "turn" && this.turn?.playerId === id ? { id: this.turn.id, step: this.turn.first === null ? 1 : 2, board: this.boardView() } : null,
       phaseRemainingMs: this.paced.phases.remainingMs(),
       result: this.phase === "podium" ? { rank: this.ranked().find((p) => p.id === id)!.rank, playerCount: this.players.size } : null,
     };
