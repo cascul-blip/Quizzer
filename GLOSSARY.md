@@ -69,6 +69,8 @@ A game mode in which players earn chips by answering paced questions and score p
 **Memory board**:
 The shared grid of paired cards in Memory Game. Card positions stay fixed, and matched cards leave empty spaces.
 
+**Pan and zoom** is a phone board control in Land Grab and Memory Game. Dragging moves a zoomed board, and pinching or using the zoom buttons changes its scale. A tap can select a position.
+
 **Question phase**:
 The part of Memory Game in which players earn chips by answering a batch of paced questions.
 

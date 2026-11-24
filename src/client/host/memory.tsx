@@ -1,8 +1,8 @@
 import { useEffect } from "preact/hooks";
 import { MEMORY_BOARD_SIZES, MEMORY_QUESTIONS_PER_PHASE } from "../../shared/modes/memory.ts";
 import type { HostView } from "../../shared/protocol.ts";
-import { modeTheme, themedLabel, themedTrack } from "../../shared/themed-modes.ts";
-import { MEMORY_THEME_ART } from "../shared/memory/themes.ts";
+import { themedLabel, themedTrack } from "../../shared/themed-modes.ts";
+import { memoryThemeArt as art } from "../shared/memory/themes.ts";
 import type { MusicCue } from "../shared/music/index.ts";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
 import { PacedQuestionIntro, PacedQuestionScreen } from "./classic.tsx";
@@ -12,8 +12,6 @@ import type { LobbyModeEntry } from "./lobby-modes.tsx";
 import "./memory.css";
 
 type MemoryView = Extract<HostView, { kind: "memory" }>;
-
-const art = MEMORY_THEME_ART[modeTheme("memory")];
 
 export const memoryLobby: LobbyModeEntry<"memory"> = {
   label: () => themedLabel("memory"),

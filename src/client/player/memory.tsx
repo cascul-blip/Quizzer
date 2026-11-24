@@ -1,5 +1,6 @@
 import { useState } from "preact/hooks";
 import type { PlayerMemoryView } from "../../shared/modes/memory.ts";
+import { memoryThemeArt } from "../shared/memory/themes.ts";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
 import { PacedQuestionAnswering, PacedQuestionFeedback, PacedQuestionIntro } from "./classic.tsx";
 import type { Send } from "./common.tsx";
@@ -106,7 +107,7 @@ function MemoryPicks({
               available ? (
                 <button
                   key={position}
-                  class="memory-card-back"
+                  class={memoryThemeArt.cardBackClass}
                   aria-label={`Card ${position + 1}`}
                   aria-pressed={picks.includes(position)}
                   aria-disabled={left === 0 || (picks.length === 2 && !picks.includes(position))}

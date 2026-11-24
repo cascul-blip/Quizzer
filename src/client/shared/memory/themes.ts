@@ -1,5 +1,6 @@
 import type { MEMORY_FACE_COUNT } from "../../../shared/modes/memory.ts";
 import type { ThemeOf } from "../../../shared/themed-modes.ts";
+import { modeTheme } from "../../../shared/themed-modes.ts";
 import christmasFaces from "./christmas/faces.webp";
 import christmasTable from "./christmas/table.webp";
 import "./christmas/card-back.css";
@@ -14,7 +15,7 @@ interface MemoryThemeArt {
   };
 }
 
-export const MEMORY_THEME_ART = {
+const MEMORY_THEME_ART = {
   christmas: {
     table: christmasTable,
     cardBackClass: "memory-card-back",
@@ -76,3 +77,5 @@ export const MEMORY_THEME_ART = {
     },
   },
 } as const satisfies Record<ThemeOf<"memory">, MemoryThemeArt>;
+
+export const memoryThemeArt = MEMORY_THEME_ART[modeTheme("memory")];
