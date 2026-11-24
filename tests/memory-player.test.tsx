@@ -147,6 +147,51 @@ test("Memory Game replaces or clears a selection and confirms one card at a time
   ]);
 });
 
+test.each([
+  ["match", 0, "Santa Claus", 1_000],
+  ["mismatch", 1, "Christmas tree", 2_000],
+] as const)("Memory Game keeps the %s faces visible and locks selection until the next reveal turn", (outcome, secondFace, secondName, delay) => {
+  const { show, send } = phone();
+  const firstCard: MemoryCardView = { state: "up", face: 0 };
+  show({ ...turnView, turn: { id: 4, step: 2, board: [firstCard, ...board(6).slice(1)] } });
+  act(() => card(2)?.click());
+  expect(confirmCard().disabled).toBe(false);
+
+  show({
+    ...turnView,
+    phase: "feedback",
+    turn: { id: 4, step: null, board: [firstCard, { state: "up", face: secondFace }, ...board(6).slice(2)] },
+    phaseRemainingMs: delay,
+  });
+  const faces = () => Array.from(dom.root.querySelectorAll('[role="img"]'), (face) => face.getAttribute("aria-label"));
+  expect(faces()).toEqual(["Card 1, Santa Claus", `Card 2, ${secondName}`]);
+  expect(dom.root.querySelectorAll('[role="timer"]')).toHaveLength(0);
+  expect(card(2)?.getAttribute("aria-pressed")).toBe("false");
+  expect(card(2)?.getAttribute("aria-disabled")).toBe("true");
+  expect(confirmCard().disabled).toBe(true);
+  act(() => {
+    card(3)?.click();
+    confirmCard().click();
+  });
+  expect(card(3)?.getAttribute("aria-pressed")).toBe("false");
+  expect(send).not.toHaveBeenCalled();
+
+  dom.advance(delay - 1);
+  expect(faces()).toEqual(["Card 1, Santa Claus", `Card 2, ${secondName}`]);
+  expect(confirmCard().disabled).toBe(true);
+
+  dom.advance(1);
+  const nextBoard = board(6);
+  if (outcome === "match") nextBoard[0] = nextBoard[1] = { state: "empty" };
+  show({ ...turnView, turn: { id: 5, step: 1, board: nextBoard } });
+  expect(faces()).toEqual([]);
+  expect(card(0) === null).toBe(outcome === "match");
+  expect(card(1) === null).toBe(outcome === "match");
+  expect(dom.root.querySelector('[role="timer"]')?.textContent).toBe("20");
+  act(() => card(3)?.click());
+  expect(confirmCard().disabled).toBe(false);
+});
+
 test("Memory Game does not submit local selections when the turn expires", () => {
   const { show, send } = phone();
   show(turnView);
@@ -162,6 +207,9 @@ test("Memory Game prompts spectators to watch the projector and uses the standar
   show({ ...turnView, turn: null });
   expect(dom.root.textContent).toContain("Watch the projector");
   expect(card(0)).toBeNull();
+  show({ ...turnView, phase: "feedback", turn: null });
+  expect(dom.root.textContent).toContain("Watch the projector");
+  expect(dom.root.querySelector(".memory-board-pan")).toBeNull();
   show({
     ...turnView,
     phase: "open",

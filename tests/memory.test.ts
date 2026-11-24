@@ -326,7 +326,13 @@ describe("Memory Game", () => {
       [2, 1],
     ]);
     expect(player(noel!).me).toMatchObject({ pairs: 0, chips: 1 });
-    expect(player(noel!).turn).toBeNull();
+    await Promise.resolve();
+    expect(noel!.view).toMatchObject({
+      phase: "feedback",
+      turn: { id: firstTurnId, step: null, board: projector().board },
+      phaseRemainingMs: 2_000,
+    });
+    const mismatchBoard = projector().board;
     confirm(noel!, 2, 1, firstTurnId);
     expect(player(noel!).me.chips).toBe(1);
     clock.advance(1_999);
@@ -334,7 +340,10 @@ describe("Memory Game", () => {
       [0, 0],
       [2, 1],
     ]);
+    expect(noel!.view).toMatchObject({ turn: { board: mismatchBoard } });
     clock.advance(1);
+    await Promise.resolve();
+    expect(noel!.view).toMatchObject({ turn: null });
     expect(projector()).toMatchObject({ phase: "turn", turn: { nickname: "Holly" }, phaseRemainingMs: 20_000 });
     expect(projector().board).toEqual(initialBoard);
 
@@ -345,9 +354,15 @@ describe("Memory Game", () => {
       [0, 0],
       [1, 0],
     ]);
+    await Promise.resolve();
+    const matchBoard = projector().board;
+    expect(holly!.view).toMatchObject({ phase: "feedback", turn: { step: null, board: matchBoard }, phaseRemainingMs: 1_000 });
     clock.advance(999);
     expect(facesUp()).toHaveLength(2);
+    expect(holly!.view).toMatchObject({ turn: { board: matchBoard } });
     clock.advance(1);
+    await Promise.resolve();
+    expect(holly!.view).toMatchObject({ turn: null });
     expect(projector()).toMatchObject({ phase: "turn", turn: { nickname: "Noel" }, phaseRemainingMs: 20_000 });
     expect(projector().board).toEqual([{ state: "empty" }, { state: "empty" }, ...initialBoard.slice(2)]);
     expect(player(noel!).turn?.board.slice(0, 4)).toEqual([{ state: "empty" }, { state: "empty" }, { state: "down" }, { state: "down" }]);
@@ -432,6 +447,51 @@ describe("Memory Game", () => {
     expect(projector()).toMatchObject({ phase: "feedback", players: [{ chips: 0, pairs: 1 }] });
   });
 
+  test.each([
+    ["match", 1, 0, 1_000],
+    ["mismatch", 2, 1, 2_000],
+  ] as const)("restores both confirmed faces on reconnect for the remainder of the %s delay", async (_outcome, position, face, delay) => {
+    const {
+      host,
+      phones: [noel, spectator],
+    } = await launch(["Noel", "Holly"], { boardSize: 6 });
+    playQuestion(host, [noel!]);
+    playQuestion(host, [noel!]);
+    playQuestion(host);
+
+    const expectedBoard = projector().board;
+    const turnId = projector().turn!.id;
+    confirmPair(noel!, [0, position]);
+    expectedBoard[0] = { state: "up", face: 0 };
+    expectedBoard[position] = { state: "up", face };
+    const token = noel!.token;
+    noel!.close();
+    clock.advance(delay - 100);
+
+    const reconnected = new HubSocket(hub);
+    reconnected.sendMsg({ type: "resume", token: token! });
+    expect(reconnected.view).toMatchObject({
+      phase: "feedback",
+      turn: { id: turnId, step: null },
+      phaseRemainingMs: 100,
+    });
+    expect(reconnected.view?.kind === "memory" && reconnected.view.turn?.board).toEqual(expectedBoard);
+    expect(projector().board).toEqual(expectedBoard);
+
+    const resumedSpectator = new HubSocket(hub);
+    resumedSpectator.sendMsg({ type: "resume", token: spectator!.token! });
+    const snapshots = resumedSpectator.raw.filter(({ type }) => type === "player.state");
+    expect(snapshots.at(-1)).toMatchObject({ view: { phase: "feedback", turn: null } });
+    expect(JSON.stringify(snapshots)).not.toMatch(/"(?:face|board)"/);
+
+    clock.advance(99);
+    expect(projector().phase).toBe("feedback");
+    clock.advance(1);
+    await Promise.resolve();
+    expect(reconnected.view).toMatchObject({ phase: "turn", turn: { id: turnId + 1, step: 1 }, phaseRemainingMs: 20_000 });
+    expect(facesUp()).toEqual([]);
+  });
+
   test("reveals the first confirmed card on the projector and active phone without extending the turn", async () => {
     const {
       host,
@@ -464,14 +524,18 @@ describe("Memory Game", () => {
     expect(resumedSpectator.view).toMatchObject({ turn: null });
     expect(JSON.stringify(resumedSpectator.view)).not.toMatch(/"(?:face|board)"/);
 
+    const framesBeforeFeedback = resumedSpectator.raw.length;
     confirm(noel!, 2, 2);
     await Promise.resolve();
     expect(facesUp()).toEqual([
       [0, 0],
       [2, 1],
     ]);
+    expect(resumedSpectator.view).toMatchObject({ phase: "feedback", turn: null });
+    const feedbackFrames = resumedSpectator.raw.slice(framesBeforeFeedback).filter(({ type }) => type === "player.patch");
+    expect(feedbackFrames.length).toBeGreaterThan(0);
+    expect(JSON.stringify(feedbackFrames)).not.toMatch(/"(?:face|board)"/);
     const frames = spectator!.raw.filter(({ type }) => type === "player.state" || type === "player.patch");
-    expect(frames.some(({ type }) => type === "player.patch")).toBe(true);
     expect(JSON.stringify(frames)).not.toMatch(/"(?:face|board)"/);
   });
 

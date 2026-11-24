@@ -335,6 +335,7 @@ export class MemoryGame {
     const answer = this.paced.shownAnswer(player);
     const choice = answer && answer.option >= 0 ? answer.option : null;
     const correct = this.phase === "reveal" ? this.paced.currentQuestion?.correct : null;
+    const turn = this.turn?.playerId === id ? this.turn : null;
     return {
       kind: "memory",
       phase: this.phase,
@@ -345,7 +346,7 @@ export class MemoryGame {
       myText: answer?.text ?? null,
       reveal: correct ? { choice, correct, wasCorrect: !!answer?.correct } : null,
       boardSize: this.boardSize,
-      turn: this.phase === "turn" && this.turn?.playerId === id ? { id: this.turn.id, step: this.turn.first === null ? 1 : 2, board: this.boardView() } : null,
+      turn: turn ? { id: turn.id, step: this.phase === "feedback" ? null : turn.first === null ? 1 : 2, board: this.boardView() } : null,
       phaseRemainingMs: this.paced.phases.remainingMs(),
       result: this.phase === "podium" ? { rank: this.ranked().find((p) => p.id === id)!.rank, playerCount: this.players.size } : null,
     };

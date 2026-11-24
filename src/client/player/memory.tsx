@@ -78,19 +78,23 @@ function MemoryPicks({
   send: Send;
 }) {
   const [pending, setPending] = useState<{ step: 1 | 2; position: number } | null>(null);
-  const selected = pending?.step === turn.step ? pending.position : null;
+  const { step } = turn;
+  const selected = pending?.step === step ? pending.position : null;
   const { box, inner, zoomIn, zoomOut, pointerHandlers, isTap } = usePanZoom();
-  const left = useCountdown(remainingMs, `turn:${turn.id}`);
+  const left = useCountdown(step === null ? 0 : remainingMs, step === null ? "feedback" : `turn:${turn.id}`);
+  const canSelect = step !== null && left > 0;
   const { image, columns, names } = memoryThemeArt.faces;
   const rows = names.length / columns;
   return (
     <main class="memory-picks">
       <link rel="preload" as="image" href={image} />
       <div class="memory-board-controls">
-        <div class={`timer ${left <= 5 ? "urgent" : ""}`} role="timer" aria-label="Turn time remaining">
-          {left}
-        </div>
-        <h1>{turn.step === 1 ? "Pick the first card" : "Pick the second card"}</h1>
+        {step !== null && (
+          <div class={`timer ${left <= 5 ? "urgent" : ""}`} role="timer" aria-label="Turn time remaining">
+            {left}
+          </div>
+        )}
+        <h1>{step === null ? "Cards revealed" : step === 1 ? "Pick the first card" : "Pick the second card"}</h1>
         <button class="btn ghost" aria-label="Zoom in" onClick={zoomIn}>
           +
         </button>
@@ -124,9 +128,9 @@ function MemoryPicks({
                   class={memoryThemeArt.cardBackClass}
                   aria-label={`Card ${position + 1}`}
                   aria-pressed={selected === position}
-                  aria-disabled={left === 0}
+                  aria-disabled={!canSelect}
                   onClick={(e) => {
-                    if (left > 0 && isTap(e)) setPending(selected === position ? null : { step: turn.step, position });
+                    if (canSelect && isTap(e)) setPending(selected === position ? null : { step, position });
                   }}
                 />
               );
@@ -136,11 +140,11 @@ function MemoryPicks({
       </div>
       <button
         class="btn primary memory-confirm"
-        disabled={selected === null || left === 0}
+        disabled={selected === null || !canSelect}
         onClick={() => {
-          if (selected === null || left === 0) return;
+          if (selected === null || !canSelect) return;
           setPending(null);
-          send({ type: "memory.confirm", turnId: turn.id, step: turn.step, position: selected });
+          send({ type: "memory.confirm", turnId: turn.id, step, position: selected });
         }}
       >
         Confirm card

@@ -56,7 +56,8 @@ export interface PlayerMemoryView {
   myText: string | null;
   reveal: { choice: number | null; correct: number[]; wasCorrect: boolean } | null;
   boardSize: number;
-  turn: { id: number; step: 1 | 2; board: MemoryCardView[] } | null;
+  /** A null step keeps the confirmed faces visible during feedback. */
+  turn: { id: number; step: 1 | 2 | null; board: MemoryCardView[] } | null;
   phaseRemainingMs: number;
   result: { rank: number; playerCount: number } | null;
 }
