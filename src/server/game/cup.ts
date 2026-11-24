@@ -24,7 +24,7 @@ import { GameError, realClock, shuffle } from "./common.ts";
 import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
-import { PhaseTimer } from "./phase-timer.ts";
+import { GameFinish, PhaseTimer } from "./phase-timer.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
@@ -109,6 +109,7 @@ export class CupGame {
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: CupGame) => void;
+  private readonly gameFinish: GameFinish<CupGame["phase"]>;
 
   constructor(quiz: Quiz, settings: CupGameSettings, opts: CupOptions = {}) {
     if (quiz.questions.length === 0) throw new GameError("This quiz has no questions");
@@ -127,6 +128,17 @@ export class CupGame {
     this.onChange = opts.onChange ?? (() => {});
     this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
+    this.gameFinish = new GameFinish(this.phases, "podium", {
+      cleanup: () => {
+        // Ending mid-reveal: the drinks already poured still count.
+        const r = this.reveal;
+        if (this.phase === "reveal" && r) while (r.step < r.drinks.length * 2 - 1) this.forceStep(r);
+        this.drinkers = [];
+        this.reveal = null;
+      },
+      onFinish: () => this.onFinish(this),
+      onChange: () => this.onChange(),
+    });
   }
 
   choices!: LobbyChoices;
@@ -295,7 +307,7 @@ export class CupGame {
     const r = this.reveal;
     if (r) while (r.step < r.drinks.length * 2 - 1) this.forceStep(r);
     this.phases.cancel("step");
-    if (this.isOver()) this.finish();
+    if (this.isOver()) this.gameFinish.finish();
     else this.beginRound();
   }
 
@@ -311,20 +323,7 @@ export class CupGame {
   }
 
   end(): void {
-    this.finish();
-  }
-
-  private finish(): void {
-    if (this.phase === "podium") return;
-    // Ending mid-reveal: the drinks already poured still count.
-    const r = this.reveal;
-    if (this.phase === "reveal" && r) while (r.step < r.drinks.length * 2 - 1) this.forceStep(r);
-    this.phases.dispose();
-    this.phases.enter("podium");
-    this.drinkers = [];
-    this.reveal = null;
-    this.onFinish(this);
-    this.onChange();
+    this.gameFinish.finish();
   }
 
   dispose(): void {

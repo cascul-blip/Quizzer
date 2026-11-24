@@ -17,6 +17,7 @@ import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
 import { INTRO_MS, PacedRound } from "./paced-round.ts";
+import { GameFinish } from "./phase-timer.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
@@ -102,6 +103,7 @@ export class RacerGame {
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: RacerGame) => void;
+  private readonly gameFinish: GameFinish<RacerGame["phase"]>;
 
   constructor(quiz: Quiz, settings: RacerGameSettings, opts: RacerOptions = {}) {
     if (quiz.questions.length === 0) throw new GameError("This quiz has no questions");
@@ -124,6 +126,15 @@ export class RacerGame {
     this.onChange = opts.onChange ?? (() => {});
     this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
+    this.gameFinish = new GameFinish(this.paced.phases, "podium", {
+      cleanup: () => {
+        this.driver = null;
+        this.lever = null;
+        this.confidence = null;
+      },
+      onFinish: () => this.onFinish(this),
+      onChange: () => this.onChange(),
+    });
   }
 
   /** Take over a lobby's players (same ids and tokens), its shuffle choices and its pacing. */
@@ -282,9 +293,9 @@ export class RacerGame {
 
   /** Host ends the game now. An open question is settled first; a turn that hadn't opened yet is dropped. */
   end(): void {
-    if (this.phase === "podium") return;
+    if (this.gameFinish.finished) return;
     if (this.phase === "open") this.paced.close();
-    this.finish();
+    this.gameFinish.finish();
   }
 
   dispose(): void {
@@ -345,18 +356,8 @@ export class RacerGame {
 
   private afterReveal(): void {
     if (this.phase !== "reveal") return;
-    if (this.qIndex >= this.questions.length - 1) return this.finish();
+    if (this.qIndex >= this.questions.length - 1) return this.gameFinish.finish();
     this.beginTurn(this.qIndex + 1);
-  }
-
-  private finish(): void {
-    if (this.phase === "podium") return;
-    this.paced.phases.enter("podium");
-    this.driver = null;
-    this.lever = null;
-    this.confidence = null;
-    this.onFinish(this);
-    this.onChange();
   }
 
   result(): RacerResult {

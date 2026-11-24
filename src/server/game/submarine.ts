@@ -12,7 +12,7 @@ import { GameError, realClock, shuffle } from "./common.ts";
 import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, unhandled } from "./mode-entry.ts";
-import { PhaseTimer } from "./phase-timer.ts";
+import { GameFinish, PhaseTimer } from "./phase-timer.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
@@ -109,6 +109,7 @@ export class SubGame {
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: SubGame) => void;
+  private readonly gameFinish: GameFinish<SubGame["phase"]>;
 
   constructor(quiz: Quiz, opts: SubOptions & { shuffleAnswers?: boolean; protect?: boolean } = {}) {
     if (quiz.questions.length === 0) throw new GameError("This quiz has no questions");
@@ -125,6 +126,10 @@ export class SubGame {
     this.onChange = opts.onChange ?? (() => {});
     this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
+    this.gameFinish = new GameFinish(this.phases, "podium", {
+      onFinish: () => this.onFinish(this),
+      onChange: () => this.onChange(),
+    });
   }
 
   choices!: LobbyChoices;
@@ -173,7 +178,7 @@ export class SubGame {
   }
 
   end(): void {
-    this.finish();
+    this.gameFinish.finish();
   }
 
   dispose(): void {
@@ -183,14 +188,6 @@ export class SubGame {
   /** An instructor's symbol timeout has its own slot on the phase timer. */
   private symbolSlot(ins: Instructor): string {
     return `symbol:${ins.playerId}`;
-  }
-
-  private finish(): void {
-    if (this.phase === "podium") return;
-    this.phases.dispose();
-    this.phases.enter("podium");
-    this.onFinish(this);
-    this.onChange();
   }
 
   private connectedCount(): number {
@@ -237,7 +234,7 @@ export class SubGame {
   private caught(): void {
     this.phases.dispose();
     this.gapValue = 0;
-    this.phases.set("caught", CAUGHT_MS, () => this.finish());
+    this.phases.set("caught", CAUGHT_MS, () => this.gameFinish.finish());
     this.onChange();
   }
 

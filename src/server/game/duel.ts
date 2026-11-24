@@ -26,6 +26,7 @@ import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
 import { INTRO_MS, PacedRound } from "./paced-round.ts";
+import { GameFinish } from "./phase-timer.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
@@ -117,6 +118,7 @@ export class DuelGame {
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: DuelGame) => void;
+  private readonly gameFinish: GameFinish<DuelGame["phase"]>;
 
   constructor(quiz: Quiz, settings: DuelGameSettings, opts: DuelOptions = {}) {
     if (quiz.questions.length === 0) throw new GameError("This quiz has no questions");
@@ -150,6 +152,13 @@ export class DuelGame {
     this.onChange = opts.onChange ?? (() => {});
     this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
+    this.gameFinish = new GameFinish(this.paced.phases, "podium", {
+      cleanup: () => {
+        this.arenas = [];
+      },
+      onFinish: () => this.onFinish(this),
+      onChange: () => this.onChange(),
+    });
   }
 
   /** Take over a lobby's players (same ids and tokens), its rounds, shuffle choices and pacing. */
@@ -283,9 +292,9 @@ export class DuelGame {
 
   /** Host ends the game now. An open round is settled first; a round that hadn't opened yet is dropped. */
   end(): void {
-    if (this.phase === "podium") return;
+    if (this.gameFinish.finished) return;
     if (this.phase === "open") this.paced.close();
-    this.finish();
+    this.gameFinish.finish();
   }
 
   dispose(): void {
@@ -344,16 +353,8 @@ export class DuelGame {
 
   private afterReveal(): void {
     if (this.phase !== "reveal") return;
-    if (this.qIndex >= this.rounds - 1) return this.finish();
+    if (this.qIndex >= this.rounds - 1) return this.gameFinish.finish();
     this.beginRound(this.qIndex + 1);
-  }
-
-  private finish(): void {
-    if (this.phase === "podium") return;
-    this.paced.phases.enter("podium");
-    this.arenas = [];
-    this.onFinish(this);
-    this.onChange();
   }
 
   onLadder(): DuelPlayer[] {

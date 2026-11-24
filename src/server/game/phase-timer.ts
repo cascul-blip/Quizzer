@@ -124,20 +124,63 @@ export class PhaseTimer<P extends string> {
   }
 }
 
+/** What a game mode does when its game ends, besides the timers and the podium. */
+interface GameFinishSteps {
+  /** The mode's own clean-up, run before the timers are cancelled and the podium is entered (which happen even if it throws). */
+  cleanup?: () => void;
+  /** Hands the finished game to the hub. */
+  onFinish: () => void;
+  /** Broadcasts the change; runs even when an earlier step throws. */
+  onChange: () => void;
+}
+
 /**
- * The overall deadline of a minute-limited game mode, on top of a PhaseTimer.
- * `finish` runs exactly once, whether the deadline or an early end gets there first.
+ * The one step that ends a game: the mode's clean-up, cancel every timer, enter the podium,
+ * hand the game to the hub and broadcast. Runs once; later calls do nothing.
  */
-export class GameLengthClock<P extends string> {
+export class GameFinish<P extends string> {
   private done = false;
 
   constructor(
     private readonly timer: PhaseTimer<P>,
-    private readonly finish: () => void,
+    private readonly podium: P,
+    private readonly steps: GameFinishSteps,
+  ) {}
+
+  get finished(): boolean {
+    return this.done;
+  }
+
+  finish(): void {
+    if (this.done) return;
+    this.done = true;
+    try {
+      try {
+        this.steps.cleanup?.();
+      } finally {
+        // A failed clean-up must not leave the game short of the podium: later calls do nothing.
+        this.timer.dispose();
+        this.timer.enter(this.podium);
+      }
+      this.steps.onFinish();
+    } finally {
+      this.steps.onChange();
+    }
+  }
+}
+
+/**
+ * The overall deadline of a minute-limited game mode, on top of a PhaseTimer.
+ * The game finish runs exactly once, whether the deadline or an early end gets there first.
+ */
+export class GameLengthClock<P extends string> {
+  constructor(
+    private readonly timer: PhaseTimer<P>,
+    private readonly gameFinish: GameFinish<P>,
   ) {}
 
   get ended(): boolean {
-    return this.done;
+    return this.gameFinish.finished;
   }
 
   /**
@@ -155,9 +198,6 @@ export class GameLengthClock<P extends string> {
 
   /** Finish the game now. Later calls, and a deadline that comes after, do nothing. */
   end(): void {
-    if (this.done) return;
-    this.done = true;
-    this.timer.cancelPhase();
-    this.finish();
+    this.gameFinish.finish();
   }
 }

@@ -20,7 +20,7 @@ Judgement calls the reviewer applies to a diff. `bun run typecheck` and `bun tes
 
 ## Game end
 
-- **End-of-game steps**: work that runs as a game finishes (`onFinish`, a mode entry's `finished`, saving results) logs a failure and carries on, so the steps after it still run and the host still reaches the podium and the results download. `saveResults` (`src/server/game/results.ts`) is the model.
+- **End-of-game steps**: work that runs as a game finishes (`onFinish`, a mode entry's `finished`, saving results) logs a failure and carries on, so the steps after it still run and the host still reaches the podium and the results download. `saveResults` (`src/server/game/results.ts`) is the model. A mode does not catch these itself: the hub's `onFinish` logs its own failures and returns, and the mode's Game finish (`GameFinish`) still enters the podium and broadcasts if its clean-up or `onFinish` throws, then rethrows to whoever called `finish()` (a timer or the host's End).
 
 ## Types
 

@@ -9,6 +9,7 @@ import type { Clock } from "./common.ts";
 import { GameError, preparePlayOrder, realClock, topErrors } from "./common.ts";
 import type { LobbyChoices } from "./lobby-facts.ts";
 import { INTRO_MS, PacedRound } from "./paced-round.ts";
+import { GameFinish } from "./phase-timer.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
@@ -69,6 +70,7 @@ export class ClassicGame {
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: ClassicGame) => void;
+  private readonly gameFinish: GameFinish<ClassicGame["phase"]>;
   private batch: { ranked?: (Player & { rank: number })[]; rankById?: Map<string, number>; podium?: RankedEntry[] } | null = null;
 
   constructor(quiz: Quiz, opts: GameOptions = {}) {
@@ -94,6 +96,10 @@ export class ClassicGame {
     this.onChange = opts.onChange ?? (() => {});
     this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
+    this.gameFinish = new GameFinish(this.paced.phases, "podium", {
+      onFinish: () => this.onFinish(this),
+      onChange: () => this.onChange(),
+    });
   }
 
   get phase(): ClassicPhase | "lobby" {
@@ -226,9 +232,9 @@ export class ClassicGame {
   }
 
   end(): void {
-    if (this.phase === "podium") return;
+    if (this.gameFinish.finished) return;
     if (this.phase === "open") this.paced.close();
-    this.finish();
+    this.gameFinish.finish();
   }
 
   dispose(): void {
@@ -249,15 +255,9 @@ export class ClassicGame {
   }
 
   private afterReveal(): void {
-    if (this.qIndex >= this.questions.length - 1) return this.finish();
+    if (this.qIndex >= this.questions.length - 1) return this.gameFinish.finish();
     this.paced.phases.enter("leaderboard");
     this.scheduleLeaderboardAuto();
-    this.onChange();
-  }
-
-  private finish(): void {
-    this.paced.phases.enter("podium");
-    this.onFinish(this);
     this.onChange();
   }
 

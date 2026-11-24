@@ -24,7 +24,7 @@ import { GameError, realClock, shuffle } from "./common.ts";
 import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, unhandled } from "./mode-entry.ts";
-import { PhaseTimer } from "./phase-timer.ts";
+import { GameFinish, PhaseTimer } from "./phase-timer.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
@@ -120,6 +120,7 @@ export class RobotGame {
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: RobotGame) => void;
+  private readonly gameFinish: GameFinish<RobotGame["phase"]>;
 
   constructor(quiz: Quiz, settings: RobotGameSettings, opts: RobotOptions = {}) {
     if (quiz.questions.length === 0) throw new GameError("This quiz has no questions");
@@ -136,6 +137,14 @@ export class RobotGame {
     this.onChange = opts.onChange ?? (() => {});
     this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
+    this.gameFinish = new GameFinish(this.phases, "podium", {
+      cleanup: () => {
+        this.marked = new Set();
+        this.collapsing = new Set();
+      },
+      onFinish: () => this.onFinish(this),
+      onChange: () => this.onChange(),
+    });
   }
 
   /** Take over a lobby's players (same ids and tokens), spread out across the board. */
@@ -255,7 +264,7 @@ export class RobotGame {
       for (const p of this.alive()) if (!robotInBounds(p.x, p.y, this.inset)) this.relocate(p);
     }
     this.lastAttack = { seq: this.attacks, round: this.round, hit, eliminated };
-    this.phases.set("attack", ROBOT_ATTACK_MS, () => (this.isOver() ? this.finish() : this.beginRound()));
+    this.phases.set("attack", ROBOT_ATTACK_MS, () => (this.isOver() ? this.gameFinish.finish() : this.beginRound()));
     this.onChange();
   }
 
@@ -287,17 +296,7 @@ export class RobotGame {
   }
 
   end(): void {
-    this.finish();
-  }
-
-  private finish(): void {
-    if (this.phase === "podium") return;
-    this.phases.dispose();
-    this.phases.enter("podium");
-    this.marked = new Set();
-    this.collapsing = new Set();
-    this.onFinish(this);
-    this.onChange();
+    this.gameFinish.finish();
   }
 
   dispose(): void {
