@@ -65,7 +65,6 @@ export interface FightPlayer extends BasePlayer, AnswerTotals {
   hits: number;
   friendlyHits: number;
   rebuilds: number;
-  /** The shot this player is watching. */
   shotId: number | null;
   /** When the repair in progress finishes. */
   repairEndsAt: number;
@@ -139,7 +138,6 @@ export class FightGame {
   }
 
   /** Take over a lobby's players (same ids and tokens), split Red/Blue as shown in the lobby. */
-  /** What the lobby chose at Start; the next lobby opens with it. */
   choices!: LobbyChoices;
 
   static fromLobby(lobby: LobbyFacts<"fight">, opts: FightOptions = {}): FightGame {
@@ -176,9 +174,6 @@ export class FightGame {
     });
   }
 
-  // ---------- lifecycle ----------
-
-  /** Set by start(); a running game can't be started again. */
   private started = false;
 
   start(): void {
@@ -241,8 +236,6 @@ export class FightGame {
     return n;
   }
 
-  // ---------- players ----------
-
   join(rawNickname: unknown, avatar?: AvatarChoice | null): FightPlayer {
     if (this.phase === "podium") throw new GameError("This game has finished");
     const player = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), (base) => this.newPlayer(base, this.smallestTeam()));
@@ -290,8 +283,6 @@ export class FightGame {
     this.stream.resume(p);
   }
 
-  // ---------- questions ----------
-
   answer(playerId: string, seq: number, option: AnswerValue): boolean {
     const p = this.players.get(playerId);
     if (!p) return false;
@@ -320,9 +311,6 @@ export class FightGame {
     this.onActivity(p.id);
   }
 
-  // ---------- decisions ----------
-
-  /** Returns whether the choice was taken. */
   choose(playerId: string, action: "attack" | "rebuild"): boolean | null {
     const p = this.players.get(playerId);
     if (!p || p.state !== "decide" || this.phase !== "playing" || this.clock.now() > p.deadline + DECISION_GRACE_MS) return null;
@@ -429,8 +417,6 @@ export class FightGame {
     if (this.events.length > MAX_EVENTS) this.events.shift();
   }
 
-  // ---------- results ----------
-
   awards(): FightAwards {
     const best = (value: (p: FightPlayer) => number) => {
       const players = [...this.players.values()];
@@ -439,8 +425,6 @@ export class FightGame {
     };
     return { topGunner: best((p) => p.hits), masterBuilder: best((p) => p.rebuilds), mostCorrect: best((p) => p.correct) };
   }
-
-  // ---------- views ----------
 
   private shotView(s: Shot, now = this.clock.now()): FightShot {
     const { firedAt, ...rest } = s;

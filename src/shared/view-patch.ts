@@ -1,7 +1,3 @@
-// Player views as patches: the server sends one full snapshot, then only what changed.
-// A phone keeps the stable bulk (question text, Tower Fight terrain, Robot Attack marks,
-// the Land Grab board) and gets the parts that moved.
-
 export type PatchPath = (string | number)[];
 /** [path, value] sets a value; [path] deletes a key. An empty path replaces the whole view. */
 export type PatchOp = [PatchPath, unknown] | [PatchPath];

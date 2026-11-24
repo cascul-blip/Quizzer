@@ -93,7 +93,6 @@ export interface HostRacerState {
   lever: RacerConfidence | null;
   /** The locked lever, from the open phase on; null before that and without a driver. */
   confidence: RacerConfidence | null;
-  /** Players who have answered the current question. */
   answeredCount: number;
   playerCount: number;
   players: HostRacerPlayer[];
@@ -151,7 +150,6 @@ export interface PlayerRacerView {
   result: (RacerResult & { awards: string[] }) | null;
 }
 
-/** What a phone sends during Racer games. */
 export type RacerMsg =
   /** Driver only, confidence phase only: move the lever (everyone sees it move). */
   | { type: "racer.lever"; level: RacerConfidence }
@@ -160,7 +158,6 @@ export type RacerMsg =
   /** Open phase only. One answer per player per question. */
   | PacedAnswerMsg<"racer">;
 
-/** Racer's shared mode entry. */
 export const racerShared = sharedModeEntry<ModeProtocol<RacerMsg, RacerSettings, HostRacerState, PlayerRacerView>>()({
   name: "Racer",
   flags: { paced: true, protect: false },

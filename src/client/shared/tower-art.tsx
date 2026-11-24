@@ -19,8 +19,6 @@ import phoneShopTile from "./tower/phone/shop.webp";
 import shopTile from "./tower/shop.webp";
 import { christmasBell, christmasCrane, christmasCraneMask, christmasTiles, christmasYeti, useChristmasTower } from "./tower-skin.tsx";
 
-// ---------- randomness helper ----------
-
 /** Deterministic 0…1 hash so blocks keep their look across re-renders. */
 export function hash01(...parts: number[]): number {
   let h = 2166136261;

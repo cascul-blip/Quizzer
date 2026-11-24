@@ -230,7 +230,6 @@ describe("Showdown", () => {
     expect(c.opponents.map((o) => o.nickname)).toEqual(["D"]);
     expect(c.question!.options).toEqual([]);
     expect(game.playerView("nobody")).toBeNull();
-    // Answers wait for the options.
     expect(answer(game, byName(game, "A"), true)).toBe(false);
     expect(() => game.start()).toThrow("already started");
   });

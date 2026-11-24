@@ -5,8 +5,6 @@ import type { ModeProtocol } from "../shared-mode-entry.ts";
 import { sharedModeEntry } from "../shared-mode-entry.ts";
 import type { SeasonTheme } from "../themed-modes.ts";
 
-// Land Grab protocol types.
-
 export type LandPhase = "countdown" | "playing" | "conquered" | "podium";
 export const LAND_MINUTES = [3, 5, 7, 10] as const;
 export const LAND_MIN_TEAMS = 2;
@@ -110,14 +108,12 @@ export interface PlayerLandView {
   result: { teamRank: number; teamCount: number; tiles: number; won: boolean; awards: string[] } | null;
 }
 
-/** What a phone sends during Land Grab games. */
 export type LandMsg =
   | StreamAnswerMsg<"land">
   | { type: "land.place"; tile: number }
   /** Leave the land early; unused claims are kept for next time. */
   | { type: "land.done" };
 
-/** Land Grab's shared mode entry. */
 export const landShared = sharedModeEntry<ModeProtocol<LandMsg, LandSettings, HostLandState, PlayerLandView>>()({
   name: "Land Grab",
   flags: { paced: false, protect: false },

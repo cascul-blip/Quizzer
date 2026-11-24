@@ -1,13 +1,8 @@
-// Racer: the rules of the shared car as pure functions and constants.
-// Used by the server engine and by the screens (to explain the lever and replay a turn).
-// No imports on purpose: this file must stay usable from both sides.
-
 /** How sure the driver is that the class will answer this question correctly. */
 export type RacerConfidence = "low" | "mid" | "high";
 /** Lever positions from bottom to top; the lever starts on the first one. */
 export const RACER_CONFIDENCE_LEVELS: readonly RacerConfidence[] = ["low", "mid", "high"];
 
-/** Speed at the start of the game. */
 export const RACER_START_MPH = 30;
 /** Speed right after a repair. */
 export const RACER_REPAIR_MPH = 30;

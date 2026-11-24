@@ -34,7 +34,6 @@ function App() {
 
   const send: Send = (m) => conn.current?.send(m);
 
-  // Background music follows whatever screen the projector is showing.
   useEffect(() => void loadCustomMusic(), []);
   useMusic(musicFor(view));
 

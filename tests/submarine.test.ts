@@ -175,7 +175,6 @@ describe("dive", () => {
     expect(count(13)).toBe(3);
     expect(count(30)).toBe(4);
     const { game } = toDive(Array.from({ length: 13 }, (_, i) => `P${i}`));
-    // Everyone else is in exactly one group.
     const grouped = game.instructors.flatMap((i) => i.group);
     expect(new Set(grouped).size).toBe(13 - game.instructors.length);
     for (const i of game.instructors) expect(grouped).not.toContain(i.playerId);

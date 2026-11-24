@@ -1,4 +1,3 @@
-// Start serve.ts; override module/executable with the usual QUIZZER variables.
 import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
 

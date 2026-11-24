@@ -139,7 +139,6 @@ export class RobotGame {
   }
 
   /** Take over a lobby's players (same ids and tokens), spread out across the board. */
-  /** What the lobby chose at Start; the next lobby opens with it. */
   choices!: LobbyChoices;
 
   static fromLobby(lobby: LobbyFacts<"robot">, opts: RobotOptions = {}): RobotGame {
@@ -188,9 +187,6 @@ export class RobotGame {
     return shuffle(this.playableTiles(), this.rng);
   }
 
-  // ---------- lifecycle ----------
-
-  /** Set by start(); a running game can't be started again. */
   private started = false;
 
   start(): void {
@@ -238,7 +234,6 @@ export class RobotGame {
     this.onChange();
   }
 
-  /** Lasers hit every marked tile: anyone standing on one loses a life. */
   private fire(): void {
     this.attacks++;
     const hit: string[] = [];
@@ -291,7 +286,6 @@ export class RobotGame {
     return this.players.size <= 1 ? alive === 0 : alive <= 1;
   }
 
-  /** Host ends the game now; standings are as they are. */
   end(): void {
     this.finish();
   }
@@ -309,8 +303,6 @@ export class RobotGame {
   dispose(): void {
     this.phases.dispose();
   }
-
-  // ---------- players ----------
 
   join(rawNickname: unknown, avatar?: AvatarChoice | null): RobotPlayer {
     if (this.phase === "podium") throw new GameError("This game has finished");
@@ -333,8 +325,6 @@ export class RobotGame {
     if (p) this.onChange();
     return p;
   }
-
-  // ---------- actions ----------
 
   /** Answer during the quiz phase; a correct answer earns a movement point (players still in the game only). */
   answer(playerId: string, seq: number, option: AnswerValue): boolean {
@@ -365,8 +355,6 @@ export class RobotGame {
     return true;
   }
 
-  // ---------- results ----------
-
   /** Survivors first, then the latest knocked out; lives break ties. Equal standing shares a rank, ordered by correct answers. */
   standings(): RobotStanding[] {
     const order = [most((p: RobotPlayer) => p.outRound ?? Infinity), most((p: RobotPlayer) => p.lives)];
@@ -389,8 +377,6 @@ export class RobotGame {
     };
     return { mostCorrect: best((p) => p.correct), mostMoves: best((p) => p.moves) };
   }
-
-  // ---------- views ----------
 
   hostView(): HostRobotState {
     const podium = this.phase === "podium";
@@ -468,7 +454,6 @@ export class RobotGame {
   }
 }
 
-/** Robot Attack: one row per player in final standing order. */
 function robotColumns(game: RobotGame): Column<{ rank: number; p: RobotPlayer }>[] {
   return [
     { header: "Rank", value: (r) => r.rank },

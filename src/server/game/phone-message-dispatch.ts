@@ -6,7 +6,6 @@ import type { ModeGame, ModeMsg } from "./mode-entry.ts";
 import { modeOfMsg } from "./mode-entry.ts";
 import { MODES } from "./modes.ts";
 
-/** Dispatch a phone message after join and resume have been handled. */
 export function dispatchPhoneMessage<M extends GameMode>(
   game: (ModeGame[M] & { runningMode: M }) | Lobby | null,
   playerId: string | null,

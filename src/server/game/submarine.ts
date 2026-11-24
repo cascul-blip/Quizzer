@@ -83,7 +83,7 @@ interface SubOptions {
   onFinish?: (game: SubGame) => void;
 }
 
-/** Submarine Squad: the whole class boosts a submarine away from an anglerfish, then dives deeper. */
+/** Sled Squad: the whole class boosts a submarine away from an anglerfish, then dives deeper. */
 export class SubGame {
   readonly runningMode = "submarine" as const;
   readonly quizId: string;
@@ -127,7 +127,6 @@ export class SubGame {
     this.onFinish = opts.onFinish ?? (() => {});
   }
 
-  /** What the lobby chose at Start; the next lobby opens with it. */
   choices!: LobbyChoices;
 
   static fromLobby(lobby: LobbyFacts<"submarine">, opts: SubOptions = {}): SubGame {
@@ -163,9 +162,6 @@ export class SubGame {
     });
   }
 
-  // ---------- lifecycle ----------
-
-  /** Set by start(); a running game can't be started again. */
   private started = false;
 
   start(): void {
@@ -399,8 +395,6 @@ export class SubGame {
     this.startChase(GAP_MAX);
   }
 
-  // ---------- players ----------
-
   join(rawNickname: unknown, avatar?: AvatarChoice | null): SubPlayer {
     if (this.phase === "podium") throw new GameError("This game has finished");
     const p = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), (base) => this.newPlayer(base));
@@ -546,7 +540,7 @@ export class SubGame {
   }
 }
 
-/** Submarine Squad: one row per player; the squad's final depth is in every row. */
+/** Sled Squad: one row per player; the squad's final depth is in every row. */
 function subColumns(game: SubGame): Column<SubPlayer>[] {
   return [
     { header: "Nickname", value: (p) => p.nickname },

@@ -296,9 +296,6 @@ function CupPodium({ view, send }: { view: CupView; send: Send }) {
   );
 }
 
-// ---------- lobby ----------
-
-/** Cup of Death's mode settings in the lobby. */
 function CupSettings({ settings, send }: LobbySettingsProps<"cup">) {
   return (
     <>
@@ -333,7 +330,6 @@ function CupSettings({ settings, send }: LobbySettingsProps<"cup">) {
   );
 }
 
-/** The projector's music for Cup Roulette. */
 export function cupCue(view: CupView): MusicCue {
   const track = (screen: ScreenOf<"cup">) => themedTrack("cup", view.theme, screen);
   if (modeTheme("cup", view.theme) === "christmas")

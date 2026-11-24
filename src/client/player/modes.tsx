@@ -22,7 +22,6 @@ type BannerFlag<M extends GameMode> = SharedOf<M>["lobbyBanner"];
 /** A PlayerModeEntry's banner: a PhoneBanner for a mode with a lobby banner, null for any other, and either when M is not one mode. */
 type BannerOf<M extends GameMode> = [BannerFlag<M>] extends [true] ? PhoneBanner : [BannerFlag<M>] extends [false] ? null : PhoneBanner | null;
 
-/** Everything the phone knows about one game mode; main.tsx looks it up in PLAYER_MODES instead of branching on the mode. */
 export interface PlayerModeEntry<M extends GameMode> {
   /** The phone screen while the mode's game runs. */
   Screen: ComponentType<ScreenProps<M>>;
@@ -30,7 +29,6 @@ export interface PlayerModeEntry<M extends GameMode> {
   banner: BannerOf<M>;
 }
 
-/** Every game mode's phone entry, with its screen in src/client/player/<mode>.tsx. */
 export const PLAYER_MODES: { [M in GameMode]: PlayerModeEntry<M> } = {
   classic: { Screen: ClassicPlayer, banner: null },
   tower: { Screen: TowerPlayer, banner: null },

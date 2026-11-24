@@ -1,7 +1,3 @@
-// Kingdom Siege: the numbers of the lane battle as constants and pure functions.
-// Used by the server engine, the phone (prices) and the tests.
-// No imports on purpose: this file must stay usable from both sides.
-
 /** Lanes on the board, top to bottom (0-based in code, 1-based on screen). */
 export const SIEGE_LANES = 5;
 /** Squares per lane: 1 is next to the castle wall, 8 is where monsters come on. */
@@ -35,7 +31,6 @@ export const SIEGE_DANGER_SQUARES = 2;
 /** At most this many monsters on a lane's last two squares (7 and 8) at once, and one more from SIEGE_CROWD_FROM_WAVE on. */
 const SIEGE_MAX_ENTERING = 2;
 const SIEGE_CROWD_FROM_WAVE = 5;
-/** Goblins in one group come onto the lane this far apart. */
 export const SIEGE_GROUP_GAP_MS = 2500;
 /** How often an open phone lane map gets new monster dots. */
 export const SIEGE_MAP_DOTS_MS = 1000;
@@ -63,7 +58,6 @@ interface SiegeDefenderStats {
   health: readonly [number, number, number];
   /** Damage per hit (archer: per arrow) at each level. */
   damage: readonly [number, number, number];
-  /** Arrows per shot at each level (archer only). */
   arrows: readonly [number, number, number];
   /** Ms between hits at each level; 0 = doesn't attack. */
   attackMs: readonly [number, number, number];

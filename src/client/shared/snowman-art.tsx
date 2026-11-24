@@ -203,8 +203,6 @@ const armOps = (side: Side, arm: Arm) => {
 };
 const clumpOp = (side: Side, arm: Arm) => (side === "R" ? shoulderOp(arm) : mirrorOp(shoulderOp(arm)));
 
-// ---------- timelines (timeline.py) ----------
-
 type Side = "L" | "R";
 const SIDES: Side[] = ["L", "R"];
 

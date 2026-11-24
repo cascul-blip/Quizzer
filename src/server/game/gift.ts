@@ -127,7 +127,6 @@ export class GiftGame {
     return this.stream.registerPlayer({ ...base, score: 0, rounds: 0, goodTaps: 0, dudTaps: 0, powerups: 0, bonus: null });
   }
 
-  /** What the lobby chose at Start; the next lobby opens with it. */
   choices!: LobbyChoices;
 
   static fromLobby(lobby: LobbyFacts<"gift">, opts: GiftOptions = {}): GiftGame {
@@ -146,7 +145,6 @@ export class GiftGame {
     return this.roster.players;
   }
 
-  /** Set by start(); a running game can't be started again. */
   private started = false;
 
   start(): void {

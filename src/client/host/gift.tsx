@@ -133,9 +133,6 @@ export function GiftStage({ view, send }: { view: GiftView; send: Send }) {
   );
 }
 
-// ---------- lobby ----------
-
-/** Gift Grab's mode settings in the lobby. */
 function GiftSettings({ settings, send }: LobbySettingsProps<"gift">) {
   return (
     <>
@@ -157,7 +154,6 @@ function GiftSettings({ settings, send }: LobbySettingsProps<"gift">) {
   );
 }
 
-/** The projector's music for Gift Grab. */
 export function giftCue(view: GiftView): MusicCue {
   return view.phase === "podium"
     ? { track: themedTrack("gift", undefined, "results") }

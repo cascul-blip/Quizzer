@@ -107,7 +107,7 @@ describe("climbLadder", () => {
     ]);
   });
 
-  test("within an arena the winner moves to the top, so the ladder is the ranking", () => {
+  test("within an arena the winner moves to the top of the ladder", () => {
     expect(climbLadder(["a", "b"], [["a", "b"]], [["lose", "win"]])).toEqual(["b", "a"]);
     // A draw keeps the order.
     expect(climbLadder(["a", "b"], [["a", "b"]], [["stay", "stay"]])).toEqual(["a", "b"]);

@@ -1120,7 +1120,6 @@ a.btn {
   transition-timing-function: ease-in;
 }
 
-/* Nothing to bob on in space. */
 .racer-scene[data-space="on"] .racer-scene-car img {
   animation: none;
 }
@@ -1523,7 +1522,6 @@ a.btn {
     animation: none;
   }
 
-  /* No rising: the puffs stand still as a column. */
   .racer-scene-smoke i {
     animation-play-state: paused;
   }
@@ -1917,7 +1915,6 @@ a.btn {
   }
 }
 
-/* ----- Showdown: duelists, streets and effects (duel-art.tsx, classes sd-*; projector and phones) ----- */
 .sd-street,
 .sd-town {
   position: absolute;

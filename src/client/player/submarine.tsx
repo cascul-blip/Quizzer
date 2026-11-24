@@ -18,7 +18,6 @@ const DRAIN_MS = 4000;
 /** After a boost fires, keep the boost screen up this long so lifting the finger can't tap the next answer. */
 const AFTER_BOOST_MS = 1200;
 
-/** Phone screen for Submarine Squad. */
 export function SubmarinePlayer({ view, send }: { view: PlayerSubView; send: Send }) {
   const secs = useCountdown(view.phaseRemainingMs, `${view.phase}:${view.level}`);
   const [afterBoost, setAfterBoost] = useState(false);

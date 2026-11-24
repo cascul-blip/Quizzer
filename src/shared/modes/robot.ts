@@ -3,8 +3,6 @@ import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestion
 import type { ModeProtocol, NoSettings } from "../shared-mode-entry.ts";
 import { sharedModeEntry } from "../shared-mode-entry.ts";
 
-// Robot Attack protocol types.
-
 export type RobotPhase = "countdown" | "quiz" | "move" | "attack" | "podium";
 export type RobotDir = "up" | "down" | "left" | "right";
 export const ROBOT_DIRS: readonly RobotDir[] = ["up", "down", "left", "right"];
@@ -119,10 +117,8 @@ export interface PlayerRobotView {
   result: { rank: number; playerCount: number; won: boolean; outRound: number | null; awards: string[] } | null;
 }
 
-/** What a phone sends during Robot Attack games. */
 export type RobotMsg = StreamAnswerMsg<"robot"> | { type: "robot.move"; dir: RobotDir };
 
-/** Robot Attack's shared mode entry. */
 export const robotShared = sharedModeEntry<ModeProtocol<RobotMsg, NoSettings, HostRobotState, PlayerRobotView>>()({
   name: "Robot Attack",
   flags: { paced: false, protect: true },

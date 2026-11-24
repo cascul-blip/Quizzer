@@ -218,11 +218,8 @@ function FightPodium({ view, send }: { view: FightView; send: Send }) {
   );
 }
 
-// ---------- lobby ----------
-
 const HILL_LABELS: Record<HillSetting, string> = { random: "🎲 Random", low: "Low", medium: "Medium", high: "High" };
 
-/** Tower Fight's mode settings in the lobby. */
 function FightSettings({ settings, send }: LobbySettingsProps<"fight">) {
   return (
     <>
@@ -256,7 +253,6 @@ function FightSettings({ settings, send }: LobbySettingsProps<"fight">) {
   );
 }
 
-/** The projector's music for Tower Fight. */
 export function fightCue(view: FightView): MusicCue {
   if (view.phase === "podium") return { track: themedTrack("fight", view.theme, "results") };
   const worst = Math.max(0, ...view.teams.map((t) => t.damage)) / FIGHT_MAX_DAMAGE;

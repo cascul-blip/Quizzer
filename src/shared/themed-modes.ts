@@ -1,5 +1,3 @@
-// Each themed mode's looks in one table (GLOSSARY.md: themed mode). The mode files in modes/ import this, so it must not import them or protocol.ts.
-
 /** The looks a themed mode can be played in. */
 export type SeasonTheme = "classic" | "christmas";
 export const SEASON_THEMES: readonly SeasonTheme[] = ["classic", "christmas"];

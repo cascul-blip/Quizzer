@@ -90,14 +90,10 @@ export class GameHub {
     this.log = opts.log ?? (() => {});
   }
 
-  // ---------- join info ----------
-
   setAddress(address: string): void {
     if (!this.join.select(address)) throw new GameError(`${address} is not an address of this computer`);
     this.views.scheduleBroadcast();
   }
-
-  // ---------- views ----------
 
   hostView(): HostView {
     const join = this.join.info();
@@ -118,8 +114,6 @@ export class GameHub {
   broadcast(): void {
     this.views.broadcast();
   }
-
-  // ---------- socket lifecycle ----------
 
   /** Another socket from this address would go over the per-device cap. */
   socketLimitReached(ip: string): boolean {
@@ -232,7 +226,6 @@ export class GameHub {
 
     const installAndActivate = <M extends GameMode>(mode: M, activate: (game: ModeGame[M]) => void) => {
       const { game, log } = MODES[mode].start(lobby.handoffFacts(mode), context);
-      // Activation can publish a view synchronously.
       this.game = game;
       try {
         activate(game);

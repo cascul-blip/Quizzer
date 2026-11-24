@@ -1,4 +1,3 @@
-// Start serve.ts. Uses the actual MusicPlayer and browser sample renderer.
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 

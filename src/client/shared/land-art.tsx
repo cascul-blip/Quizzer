@@ -90,7 +90,6 @@ import { teamInk } from "./ui.tsx";
  * and plinths are projector only.
  */
 
-/** Projector picture and phone copy for each piece. */
 const ART = {
   background: [backgroundImg, phoneBackgroundImg],
   "felt-tile": [feltTileImg, phoneFeltTileImg],

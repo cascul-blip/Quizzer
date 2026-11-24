@@ -1,4 +1,3 @@
-/** Run the preview server first. Requires Playwright and its Chromium/FFmpeg. */
 import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 

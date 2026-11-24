@@ -439,13 +439,14 @@ The Classic Land Grab art in `src/client/shared/land/` (the storybook parchment 
 
 The Racer pixel art in `src/client/shared/racer/` (the car, the skyline and the palm tree) is made from the generated images in `scripts/racer-art/` by `python3 scripts/racer-art.py` (needs Pillow and numpy).
 
-The server is authoritative. It runs the game state machine and timers, scores answers by server time, and pushes a complete view snapshot to each screen after every change, so a reconnecting screen always gets the full picture.
+The server runs the game state machine and timers and scores answers by server time. The projector receives snapshots. Each phone connection starts with a fresh snapshot and can receive patches during play. See the [View delivery ADR](docs/adr/0003-deliver-phone-views-from-per-socket-baselines.md).
 
 ### Building
 
 ```sh
 bun run build            # dist/quizzer-linux-x64 and dist/quizzer-windows-x64.exe
 bun run build linux      # only one target
+bun run build -- linux --outdir /tmp/quizzer-build   # verify without replacing dist/
 ```
 
 Both executables are cross-compiled from any OS and embed the web UI. Nothing else needs to be installed on the host. A rebuild only replaces the executables, so a `dist/data` folder next to them is kept.

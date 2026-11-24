@@ -61,7 +61,6 @@ export class PacedRound<Extra extends string = never> {
   /** Index of the current question in the play order; -1 before the first. */
   qIndex = -1;
   pacing: Pacing;
-  /** The clock time the current question opened. */
   openedAt = 0;
 
   constructor(
@@ -137,7 +136,6 @@ export class PacedRound<Extra extends string = never> {
     return this.phase === "open" || this.revealed ? player.answers[this.qIndex] : undefined;
   }
 
-  /** Milliseconds from the question opening to now. */
   elapsedMs(): number {
     return Math.max(0, this.clock.now() - this.openedAt);
   }

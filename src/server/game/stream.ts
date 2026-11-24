@@ -45,7 +45,6 @@ interface QuestionState {
   readyAt: number;
 }
 
-/** What a Streamed question mode tells its QuestionStream. */
 export interface StreamRules<P> {
   /** Whether the mode lets this player answer right now. Outside it the phone shows no question and no feedback. */
   canAnswer: (player: P) => boolean;

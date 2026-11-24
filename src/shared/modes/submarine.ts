@@ -3,10 +3,7 @@ import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestion
 import type { ModeProtocol, NoSettings } from "../shared-mode-entry.ts";
 import { sharedModeEntry } from "../shared-mode-entry.ts";
 
-// Submarine Squad protocol types.
-
 export type SubPhase = "countdown" | "chase" | "escaped" | "dive" | "caught" | "podium";
-/** Correct answers needed to earn one boost. */
 export const CORRECT_PER_BOOST = 4;
 
 export interface SubAwards {
@@ -73,10 +70,8 @@ export interface PlayerSubView {
   result: { depth: number; level: number; awards: string[] } | null;
 }
 
-/** What a phone sends during Submarine Squad games. */
 export type SubMsg = StreamAnswerMsg<"sub"> | { type: "sub.boost" } | { type: "sub.tap"; symbol: string };
 
-/** Sled Squad's shared mode entry. */
 export const submarineShared = sharedModeEntry<ModeProtocol<SubMsg, NoSettings, HostSubState, PlayerSubView>>()({
   name: "Sled Squad",
   flags: { paced: false, protect: true },

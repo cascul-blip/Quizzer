@@ -52,7 +52,6 @@ interface GameOptions {
   shuffle?: ShuffleOptions;
 }
 
-/** Classic gameplay, from the first question through the podium. */
 export class ClassicGame {
   readonly quiz: Quiz;
   readonly quizId: string;
@@ -70,7 +69,6 @@ export class ClassicGame {
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: ClassicGame) => void;
-  /** Set while views are built in a batch: what every phone's view shares, computed once. */
   private batch: { ranked?: (Player & { rank: number })[]; rankById?: Map<string, number>; podium?: RankedEntry[] } | null = null;
 
   constructor(quiz: Quiz, opts: GameOptions = {}) {
@@ -110,7 +108,6 @@ export class ClassicGame {
     return this.paced.pacing;
   }
 
-  /** What the lobby chose at Start; set by the Classic mode entry. */
   setup!: LobbyChoices;
 
   /** The lobby's choices with the pacing as the host left it; the next lobby opens with them. */
@@ -134,8 +131,6 @@ export class ClassicGame {
   get currentQuestion(): Question | null {
     return this.paced.currentQuestion;
   }
-
-  // ---------- players ----------
 
   /** `avatar` is the player's previous pick (if any); otherwise they get a random one to change in the lobby. */
   join(rawNickname: unknown, avatar?: AvatarChoice | null): Player {
@@ -187,8 +182,6 @@ export class ClassicGame {
     return true;
   }
 
-  // ---------- host controls ----------
-
   start(pacing?: Pacing): void {
     if (this.phase !== "lobby") throw new GameError("The game has already started");
     if (this.questions.length === 0) throw new GameError("This quiz has no questions");
@@ -213,7 +206,6 @@ export class ClassicGame {
     this.onChange();
   }
 
-  /** Advance to whatever comes next from the current phase. */
   next(): void {
     switch (this.phase) {
       case "lobby":
@@ -243,13 +235,10 @@ export class ClassicGame {
     this.paced.phases.dispose();
   }
 
-  // ---------- state machine ----------
-
   private enterIntro(index: number): void {
     this.paced.intro(index);
   }
 
-  /** Score the question that just closed. */
   private settleQuestion(): void {
     for (const p of this.players.values()) {
       const ans = p.answers[this.qIndex];
@@ -278,8 +267,6 @@ export class ClassicGame {
       this.paced.phases.set("leaderboard", AUTO_LEADERBOARD_MS, () => this.enterIntro(this.qIndex + 1), { hidden: true });
     }
   }
-
-  // ---------- views ----------
 
   ranked(): (Player & { rank: number })[] {
     return rankBy([...this.players.values()], [most((p) => p.score)]);
@@ -335,10 +322,6 @@ export class ClassicGame {
     };
   }
 
-  /**
-   * Build many views in one go (a broadcast). Nothing changes in between, so the ranking,
-   * and the podium are worked out once instead of once per phone.
-   */
   viewBatch<T>(build: () => T): T {
     if (this.batch) return build();
     this.batch = {};
@@ -349,7 +332,6 @@ export class ClassicGame {
     }
   }
 
-  /** ranked(), shared by every view in a batch. */
   private rankedNow(): (Player & { rank: number })[] {
     return this.batch ? (this.batch.ranked ??= this.ranked()) : this.ranked();
   }

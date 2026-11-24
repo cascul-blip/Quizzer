@@ -54,8 +54,6 @@ interface SeatPlayer {
 
 export type SaloonMode = "idle" | "roll" | "quiz" | "drink" | "reveal";
 
-// ---------- dice ----------
-
 const PIPS: Record<number, [number, number][]> = {
   1: [[50, 50]],
   2: [
@@ -143,8 +141,6 @@ export function RollingDie({ value, rollMs, class: cls, onLand }: { value: numbe
   }, []);
   return <Die value={landed ? value : face} class={`${cls ?? ""} ${landed ? "landed" : "rolling"}`} />;
 }
-
-// ---------- cups ----------
 
 /** A tin cup of bubbling green liquid, `w` wide, standing with its base centred on (0, 0). */
 function CupShape({ w, bubbles = true }: { w: number; bubbles?: boolean }) {
@@ -236,8 +232,6 @@ export function CupArt({ class: cls }: { class?: string }) {
     </svg>
   );
 }
-
-// ---------- the saloon ----------
 
 /** The room behind the table, fading into the dark on screens wider than the picture. */
 function Backdrop() {

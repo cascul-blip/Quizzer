@@ -1,9 +1,6 @@
 import type { AvatarChoice } from "./avatars.ts";
 import type { PinSpot, QuestionType } from "./quiz-schema.ts";
 
-// View pieces several game modes share. Both protocol.ts and the mode files in modes/ import these,
-// so this file must not import either of them.
-
 /** A self-paced mode's current question for one player. */
 export interface StreamQuestionView {
   seq: number;

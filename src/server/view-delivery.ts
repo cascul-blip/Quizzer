@@ -28,10 +28,6 @@ const COUNTDOWN_KEYS = new Set([
 /** View fields holding "time since" something started; phones only read them to place the start. */
 const ELAPSED_KEYS = new Set(["revealElapsedMs", "elapsedMs"]);
 
-/**
- * A player view as JSON with each running countdown replaced by its deadline, and each running
- * count-up by its start (both to 100 ms), so two snapshots that differ only by time passing compare equal.
- */
 export function viewKey(view: PlayerView, now: number): string {
   return JSON.stringify(view, (k, v) => {
     if (typeof v !== "number" || v <= 0) return v;

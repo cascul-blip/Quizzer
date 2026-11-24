@@ -418,9 +418,6 @@ export function Award({
   );
 }
 
-// ---------- lobby ----------
-
-/** Tallest Tower's mode settings in the lobby. */
 function TowerSettings({ settings, send }: LobbySettingsProps<"tower">) {
   return (
     <>
@@ -493,7 +490,6 @@ function TowerSettings({ settings, send }: LobbySettingsProps<"tower">) {
   );
 }
 
-/** The projector's music for Tallest Tower. */
 export function towerCue(view: TowerView): MusicCue {
   const playTrack = themedTrack("tower", view.theme, "play");
   if (view.phase === "podium") return { track: themedTrack("tower", view.theme, "results") };

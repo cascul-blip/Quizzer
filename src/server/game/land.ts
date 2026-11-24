@@ -65,7 +65,6 @@ export interface LandPlayer extends BasePlayer, AnswerTotals {
   firstTeam: number;
   state: LandState;
   claims: number;
-  /** Answers given in the current round of questions. */
   answered: number;
   emptyEndsAt: number;
   placed: number;
@@ -136,7 +135,6 @@ export class LandGame {
   }
 
   /** Take over a lobby's players (same ids and tokens), on the teams shown in the lobby. */
-  /** What the lobby chose at Start; the next lobby opens with it. */
   choices!: LobbyChoices;
 
   static fromLobby(lobby: LobbyFacts<"land">, opts: LandOptions = {}): LandGame {
@@ -176,9 +174,6 @@ export class LandGame {
     return this.teams.map((t) => ({ team: t.index, tile: t.start, out: t.out }));
   }
 
-  // ---------- lifecycle ----------
-
-  /** Set by start(); a running game can't be started again. */
   private started = false;
 
   start(): void {
@@ -224,8 +219,6 @@ export class LandGame {
     return `player:${p.id}`;
   }
 
-  // ---------- players ----------
-
   join(rawNickname: unknown, avatar?: AvatarChoice | null): LandPlayer {
     if (this.phase === "podium") throw new GameError("This game has finished");
     const player = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), (base) => this.newPlayer(base, this.smallestTeam()));
@@ -234,7 +227,6 @@ export class LandGame {
     return player;
   }
 
-  /** The smallest team still in the game. */
   private smallestTeam(): number {
     const sizes = this.teams.map((t) => (t.out ? Infinity : 0));
     for (const p of this.players.values()) sizes[p.team]!++;
@@ -263,8 +255,6 @@ export class LandGame {
     p.state = "question";
     this.stream.resume(p);
   }
-
-  // ---------- questions ----------
 
   answer(playerId: string, seq: number, option: AnswerValue): boolean {
     const p = this.players.get(playerId);
@@ -300,7 +290,6 @@ export class LandGame {
     return placementCost(this.owners, this.size, this.starts, team, tile, LAND_STEAL_COST, LAND_GUARD_COST);
   }
 
-  /** Whether the player can afford any tile at all. */
   private canPlace(p: LandPlayer): boolean {
     for (let t = 0; t < this.owners.length; t++) {
       const cost = this.costFor(p.team, t);
@@ -368,7 +357,6 @@ export class LandGame {
     this.lastCapture = { seq: ++this.eventSeq, team, nickname: p.nickname, tiles, knockedOut };
   }
 
-  /** Returns the tiles that changed hands. */
   private absorb(victim: LandTeam, by: number): number[] {
     victim.out = true;
     victim.conqueredBy = by;
@@ -386,8 +374,6 @@ export class LandGame {
     }
     return tiles;
   }
-
-  // ---------- results ----------
 
   teamTiles(team: number): number {
     let n = 0;
@@ -415,8 +401,6 @@ export class LandGame {
     };
     return { mostCorrect: best((p) => p.correct), topSettler: best((p) => p.placed), topSurrounder: best((p) => p.captured) };
   }
-
-  // ---------- views ----------
 
   private boardView(): LandBoard {
     return { size: this.size, owners: [...this.owners], starts: this.starts };

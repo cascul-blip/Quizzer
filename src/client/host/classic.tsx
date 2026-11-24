@@ -13,7 +13,6 @@ import { everyoneAnswered, revealCue } from "./reveal-cue.ts";
 
 type GameView = Extract<HostView, { kind: "classic" }>;
 
-/** The projector's music during Classic gameplay. */
 export function classicCue(view: GameView): MusicCue {
   if (view.phase === "podium") return { track: "classic-results" };
   if (view.phase === "reveal" || view.phase === "leaderboard") return { track: "classic-leaderboard" };
@@ -25,11 +24,9 @@ export function classicCue(view: GameView): MusicCue {
   return { track: "classic-question", intensity: 0.1, key: `q${q?.index ?? 0}-intro` };
 }
 
-/** Projector screen during Classic gameplay. */
 export function ClassicStage({ view, send, enteredFromLobby }: { view: GameView; send: Send; enteredFromLobby: boolean }) {
   const prev = useRef<GameView | null>(null);
 
-  // Sound cues on transitions.
   useEffect(() => {
     const p = prev.current;
     prev.current = view;

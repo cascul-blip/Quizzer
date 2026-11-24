@@ -4,7 +4,6 @@ import type { HTMLBundle } from "bun";
 
 type Handler = (req: Request) => Response;
 
-/** Built files worth gzipping; images and audio are already compressed. */
 const TEXT_LOADERS = new Set(["html", "js", "css"]);
 
 /** Whether the request's Accept-Encoding allows gzip (and doesn't rule it out with q=0). */
@@ -19,11 +18,6 @@ export function acceptsGzip(req: Request): boolean {
   });
 }
 
-/**
- * A built file. HTML, JS and CSS are held in memory with a gzipped copy, compressed once at startup.
- * Images, audio and fonts are already compressed, so they're served straight from the executable
- * instead of being copied into memory (they're most of the size, and most modes never show them).
- */
 function fileHandler(file: NonNullable<HTMLBundle["files"]>[number], cacheControl: string): Handler {
   const text = TEXT_LOADERS.has(file.loader);
   const raw = text ? new Uint8Array(readFileSync(file.path)) : null;
@@ -38,11 +32,6 @@ function fileHandler(file: NonNullable<HTMLBundle["files"]>[number], cacheContro
   };
 }
 
-/**
- * Routes for the web pages. In the compiled exe Bun lists every built file, so they are
- * served from here with HTML, JS and CSS gzipped (Bun's own bundle routes never compress).
- * Running from source has no such list, so the pages are handed to Bun as they are.
- */
 export function pageRoutes(pages: Record<string, HTMLBundle>): Record<string, HTMLBundle | Handler> {
   const bundles = Object.values(pages);
   if (!bundles.every((b) => b.files)) return pages;

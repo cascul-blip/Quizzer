@@ -109,8 +109,6 @@ export const usesSamples = (track: Track): boolean => track.samples ?? richStyle
 export const STEPS_PER_BAR = 16;
 export const stepsPerBar = (track: Track): number => track.stepsPerBar ?? STEPS_PER_BAR;
 
-// ---------- notes ----------
-
 const NOTE_INDEX: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 
 /** "A4" → 440, "C#5", "Bb2" … or null for anything that isn't a note. */
@@ -532,9 +530,6 @@ function playInstrument(ctx: Ctx, dest: AudioNode, inst: Instrument, t: number, 
   }
 }
 
-// ---------- scheduling ----------
-
-/** Is this layer audible at this intensity? */
 export function layerActive(layer: Layer, intensity: number): boolean {
   return intensity >= (layer.from ?? 0) && intensity < (layer.to ?? 2);
 }
@@ -613,10 +608,7 @@ export function renderInto(ctx: Ctx, dest: AudioNode, track: Track, seconds: num
   }
 }
 
-/** The instruments a track plays. */
 export const instrumentsOf = (track: Track): Set<Instrument> => new Set(track.layers.map((l) => l.inst));
-
-// ---------- live player ----------
 
 const LOOKAHEAD_S = 0.12;
 const TICK_MS = 25;
@@ -783,7 +775,6 @@ export class MusicPlayer {
     if (!ctx || ctx.state !== "running") return; // waits for the first click/keypress (browser autoplay rules)
     const master = this.ensureMaster(ctx);
 
-    // Intensity ramp.
     const p = Math.min(1, (performance.now() - this.rampStart) / this.rampMs);
     this.intensity = this.rampFrom + (this.target - this.rampFrom) * p;
 

@@ -55,7 +55,6 @@ const ACCENT = 1.15;
 
 const setOf = (inst: string): SampleSet | undefined => SAMPLE_SETS[VOICES[inst]?.set ?? inst];
 
-/** Every recording an instrument needs. */
 export function urlsFor(inst: string): string[] {
   const set = VOICES[inst] && setOf(inst);
   if (!set) return [];

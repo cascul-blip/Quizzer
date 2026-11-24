@@ -8,10 +8,10 @@ The generated Christmas trail-challenge pictures, source sheets, prompts, and ph
 
 Run `bun scripts/winter-art/serve.ts`, then open http://127.0.0.1:8097. Review controls cover every host phase, boosts, and goblin distance. `?live=1` continuously closes the gap, `?subject=goblin` isolates the supplied goblin animation, and `?subject=dogs` isolates the sled team.
 
-With Playwright and Chromium installed:
+With the preview server running and Playwright and Chromium installed:
 
 - `node scripts/winter-art/check-loop.mjs` checks at least two full animation wraps during an 18-second moving chase, then verifies boost, capture pause, and resume.
-- `node scripts/winter-art/record.mjs` checks screen phases and ornament drops, then records review clips and stills into the ignored `captures/` directory.
+- `node scripts/winter-art/record.mjs` uses Playwright’s FFmpeg to record review clips and stills after checking screen phases and ornament drops into the ignored `captures/` directory.
 - Optional `QUIZZER_PLAYWRIGHT_MODULE` and `QUIZZER_CHROMIUM` variables select an existing installation.
 - `music-preview.ts` exposes an OfflineAudioContext renderer for checking the actual sampled soundtrack and exporting listening previews.
 

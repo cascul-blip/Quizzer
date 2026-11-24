@@ -1,13 +1,3 @@
-/**
- * Kingdom Siege art: a hand-painted tabletop diorama with a castle wall on the left and 5
- * lanes of meadow, painted miniatures for the defenders and monsters, and the effects drawn
- * in code (warning arrows, lane flashes, hit flashes, the Lv 3 glow, dust, confetti).
- *
- * The pictures are painted: scripts/siege-art.py turns the sources in scripts/siege-art/
- * into the WebPs in ./siege/ and the phone copies in ./siege/phone/. Every position below
- * comes from ./siege/manifest.md (squares, anchors, cut-out pivots, layer order); change
- * them there first. Phones only load the defender icons, the coin and the heart.
- */
 import type { ComponentChildren, JSX } from "preact";
 import type { HostSiegeDefender, HostSiegeMonster } from "../../shared/modes/siege.ts";
 import type { SiegeDefenderType, SiegeMonsterType } from "../../shared/siege-rules.ts";

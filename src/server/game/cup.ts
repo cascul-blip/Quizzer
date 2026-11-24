@@ -38,7 +38,6 @@ export { FEEDBACK_MS } from "./stream.ts";
 export const COUNTDOWN_MS = 3000;
 
 export interface CupPlayer extends BasePlayer, AnswerTotals {
-  /** Cups still in front of the player. */
   cups: number;
   /** Round this player was poisoned in, or null while still alive. */
   outRound: number | null;
@@ -95,7 +94,6 @@ export class CupGame {
   readonly quizId: string;
   readonly title: string;
   readonly questions: Question[];
-  /** Cups in front of each player at the start. */
   readonly startCups: number;
   readonly roster = new Roster<CupPlayer>();
   round = 0;
@@ -131,8 +129,6 @@ export class CupGame {
     this.onFinish = opts.onFinish ?? (() => {});
   }
 
-  /** Take over a lobby's players (same ids and tokens). */
-  /** What the lobby chose at Start; the next lobby opens with it. */
   choices!: LobbyChoices;
 
   static fromLobby(lobby: LobbyFacts<"cup">, opts: CupOptions = {}): CupGame {
@@ -189,9 +185,6 @@ export class CupGame {
     });
   }
 
-  // ---------- lifecycle ----------
-
-  /** Set by start(); a running game can't be started again. */
   private started = false;
 
   start(): void {
@@ -317,7 +310,6 @@ export class CupGame {
     return this.players.size <= 1 ? alive === 0 : alive <= 1;
   }
 
-  /** Host ends the game now; standings are as they are. */
   end(): void {
     this.finish();
   }
@@ -338,8 +330,6 @@ export class CupGame {
   dispose(): void {
     this.phases.dispose();
   }
-
-  // ---------- players ----------
 
   join(rawNickname: unknown, avatar?: AvatarChoice | null): CupPlayer {
     if (this.phase === "podium") throw new GameError("This game has finished");
@@ -374,15 +364,12 @@ export class CupGame {
     return p;
   }
 
-  // ---------- actions ----------
-
   /** Whether this player is in the quiz part of the game, even if safe already: poisoned players practise in every phase of play. */
   private quizzing(p: CupPlayer): boolean {
     if (p.outRound !== null) return this.phase !== "countdown" && this.phase !== "podium";
     return this.phase === "quiz";
   }
 
-  /** Whether this player is answering questions right now. */
   private answering(p: CupPlayer): boolean {
     return this.quizzing(p) && (p.outRound !== null || !p.safe);
   }
@@ -413,8 +400,6 @@ export class CupGame {
     return true;
   }
 
-  // ---------- results ----------
-
   /** Survivors first, then the latest poisoned; poisoned in the same round share a rank. Ordered by correct answers within a rank. */
   standings(): CupStanding[] {
     return rankBy([...this.players.values()], [most((p: CupPlayer) => p.outRound ?? Infinity)], [most((p) => p.correct)]).map((p) => ({
@@ -444,8 +429,6 @@ export class CupGame {
       unluckiest: unlucky.length > 0 ? { value: first, nicknames: unlucky.filter((p) => p.outRound === first).map((p) => p.nickname) } : null,
     };
   }
-
-  // ---------- views ----------
 
   private revealView(): CupRevealView | null {
     const r = this.reveal;
@@ -551,7 +534,6 @@ export class CupGame {
   }
 }
 
-/** Cup of Death: one row per player in final standing order. */
 function cupColumns(game: CupGame): Column<{ rank: number; p: CupPlayer }>[] {
   const out = game.theme === "christmas" ? "Blasted off" : "Poisoned";
   return [

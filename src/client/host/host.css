@@ -87,8 +87,6 @@ a {
   flex-wrap: wrap;
 }
 
-/* ----- stage ----- */
-
 .stage {
   height: 100%;
   display: flex;
@@ -178,8 +176,6 @@ select {
   border-radius: 6px;
   border: 0;
 }
-
-/* ----- lobby ----- */
 
 .lobby {
   flex: 1;
@@ -420,8 +416,6 @@ select {
   color: var(--on-bg-soft);
   font-size: 14px;
 }
-
-/* ----- intro ----- */
 
 .intro {
   flex: 1;
@@ -680,8 +674,6 @@ select {
   font-weight: 900;
 }
 
-/* ----- leaderboard ----- */
-
 .leaderboard,
 .podium {
   flex: 1;
@@ -758,8 +750,6 @@ select {
 .podium .controls {
   align-self: stretch;
 }
-
-/* ----- podium ----- */
 
 .podium-blocks {
   display: flex;
@@ -939,8 +929,6 @@ select {
   display: flex;
   overflow: hidden;
 }
-
-/* ----- sky ----- */
 
 .sky {
   position: absolute;
@@ -1337,8 +1325,6 @@ select {
   border-radius: 12px 12px 4px 4px;
 }
 
-/* ----- monster ----- */
-
 .monster-pill {
   background: #5b2799;
 }
@@ -1505,7 +1491,7 @@ select {
   }
 }
 
-/* ----- Submarine Squad ----- */
+/* ----- Sled Squad ----- */
 
 .mode-hint {
   font-weight: 600;
@@ -2033,8 +2019,6 @@ select {
   background: #8e1330;
 }
 
-/* dive */
-
 .dive-instructors {
   position: absolute;
   top: 2vh;
@@ -2125,8 +2109,6 @@ select {
   width: max-content;
   max-width: 90%;
 }
-
-/* podium */
 
 .sub-podium h1 {
   background: #0b3a66;
@@ -2426,7 +2408,6 @@ select {
   font-size: clamp(12px, 1vw, 18px);
 }
 
-/* leaderboard rows */
 .lb-avatar {
   width: 1.6em;
   height: 1.6em;
@@ -2435,7 +2416,6 @@ select {
   border-radius: 50%;
 }
 
-/* podium */
 .place-avatar {
   width: 13vh;
   height: 13vh;
@@ -2792,7 +2772,6 @@ select {
   color: #3a2412;
 }
 
-/* The team's shape on the ribbon, near the top. */
 .land-team .land-team-shape {
   position: absolute;
   top: calc(-14 * var(--card));
@@ -2893,7 +2872,6 @@ select {
   height: calc(369 * var(--plinth));
 }
 
-/* The shape and the rank on the drape. */
 .land-plinth-label {
   position: absolute;
   top: 26%;
@@ -2919,8 +2897,6 @@ select {
   grid-template-columns: 1fr;
   width: min(560px, 100%);
 }
-
-/* ----- "Show errors" on the final screen ----- */
 
 .errors {
   flex: 1;
@@ -3311,8 +3287,6 @@ select {
   font-size: min(1.6vw, 2.8vh);
 }
 
-/* the readouts over the scene */
-
 /* Driver stacked over speed in the bottom-left corner. */
 .racer-huds {
   position: absolute;
@@ -3363,8 +3337,6 @@ select {
   color: var(--racer-amber);
   text-transform: uppercase;
 }
-
-/* podium */
 
 .racer-podium h1 {
   margin-bottom: 1.6vh;
@@ -3788,7 +3760,6 @@ select {
   fill: #ff5a5a;
 }
 
-/* Poison green. */
 .saloon .table-text.bad .table-big {
   fill: #b6ff6a;
 }
@@ -4026,7 +3997,6 @@ select {
   }
 }
 
-/* Hit: a quick white flash. */
 .siege-fig-inner.hit-a {
   animation: siege-hit-a 0.28s ease-out;
 }
@@ -4047,7 +4017,6 @@ select {
   }
 }
 
-/* The Lv 3 glow. */
 .siege-fig-inner.lv3-glow {
   filter: drop-shadow(0 0 0.5cqw rgba(255, 214, 96, 0.95)) drop-shadow(0 0 1.2cqw rgba(255, 200, 60, 0.5));
 }
@@ -4764,8 +4733,6 @@ select {
   align-self: center;
   flex: none;
 }
-
-/* the arenas */
 
 .duel-lower {
   flex: 1 1 0;

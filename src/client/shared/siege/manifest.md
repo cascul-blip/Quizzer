@@ -2,6 +2,8 @@
 
 Style C (tabletop miniatures, from mockup C1). Made by `scripts/siege-art.py` from the sources in `scripts/siege-art/` (prompts at the top of the script). Coordinates are in each file's own pixels, top-left origin; % is of that file's width/height. Projector files are in this folder, phone files in `phone/`.
 
+When changing square positions, anchors, cut-out pivots, or layer order, update this manifest before applying the changes in [the renderer](../siege-art.tsx).
+
 Every figure is a painted miniature on a round base, facing its direction of travel (defenders right, monsters left), lit from the upper left like the board, with a soft contact shadow baked in down-right of the base. **Anchor** = the centre of the base's footprint: put it on the centre of a lane square. Poses of one figure share one canvas and one anchor, so swapping poses moves nothing.
 
 ## Files

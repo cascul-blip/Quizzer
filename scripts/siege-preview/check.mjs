@@ -1,4 +1,3 @@
-// Start serve.ts first. Uses production host/phone components and records review screenshots.
 import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
 
