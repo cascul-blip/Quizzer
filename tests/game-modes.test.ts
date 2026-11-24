@@ -31,6 +31,7 @@ const CHANGED: { [M in GameMode]: ModeSettingsInput[M] } = {
   siege: { waves: 10, theme: "classic" },
   duel: { rounds: 20, theme: "classic" },
   gift: { minutes: 3 },
+  memory: { boardSize: 6 },
 };
 
 /** How many teams the lobby shows with CHANGED settings; null in solo modes. */
@@ -46,10 +47,11 @@ const TEAMS: { [M in GameMode]: number | null } = {
   siege: null,
   duel: null,
   gift: null,
+  memory: null,
 };
 
 /** Modes played question by question, whose pacing the host sets and the next lobby keeps. */
-const PACED = new Set<GameMode>(["classic", "racer", "duel"]);
+const PACED = new Set<GameMode>(["classic", "racer", "duel", "memory"]);
 
 /** Modes whose phones show a banner in the lobby. */
 const BANNER = new Set<GameMode>(["siege"]);
@@ -70,6 +72,7 @@ const PHONE_MSG: { [M in GameMode]: ModeMsg<M> } = {
   siege: { type: "siege.place", defender: "archer", lane: 0, square: 1 },
   duel: { type: "duel.answer", index: 0, option: 0 },
   gift: { type: "gift.tap", round: 0, item: 0 },
+  memory: { type: "memory.answer", index: 0, option: 0 },
 };
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
@@ -209,7 +212,7 @@ describe("Paced question round", () => {
   /** The question a host or phone view carries; undefined for a view without one. */
   const questionOf = (view: object) => ("question" in view ? view.question : undefined);
 
-  for (const mode of ["classic", "racer", "duel"] as const) {
+  for (const mode of ["classic", "racer", "duel", "memory"] as const) {
     test(`${SHARED_MODES[mode].name} shows the question on the host and phone views without options before it opens, then with them and its deadline`, () => {
       const [noel] = openLobby(mode, ["Noel", "Holly"]);
       send(host, { type: "host.start", pacing: "manual" });

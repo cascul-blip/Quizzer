@@ -63,6 +63,46 @@ describe("Lobby handoff", () => {
     for (const field of ["mode", "team", "banner"]) expect(phoneView).not.toHaveProperty(field);
   });
 
+  test.each([
+    ["host.start", "an empty lobby", "lobby", "lobby"],
+    ["host.start", "a joined player", "memory", "intro"],
+    ["host.next", "an empty lobby", "lobby", "lobby"],
+    ["host.next", "a joined player", "classic", "intro"],
+    ["host.end", "an empty lobby", "classic", "podium"],
+    ["host.end", "a joined player", "classic", "podium"],
+  ] as const)("Memory Game handles %s with %s", async (type, room, kind, phase) => {
+    const hasPlayers = room === "a joined player";
+    const { host, joined, phones } = await setup("memory", hasPlayers ? ["Noel"] : []);
+    const view = hub.hostView();
+    expect(view).toMatchObject({ kind: "lobby", mode: "memory", teams: null });
+    host.sendMsg(type === "host.start" ? { type, pacing: "manual" } : { type });
+    expect(hub.hostView()).toMatchObject({ kind, phase });
+
+    if (kind === "lobby") {
+      expect(host.raw).toContainEqual({ type: "error", message: "Wait for at least one player to join" });
+      const phone = new HubSocket(hub);
+      phone.sendMsg({ type: "join", nickname: "Noel" });
+      host.sendMsg({ type: "host.start", pacing: "manual" });
+      expect(hub.playerView(phone)).toMatchObject({ kind: "memory", phase: "intro" });
+    }
+    if (hasPlayers) expect(hub.playerView(phones[0]!)).toMatchObject({ kind, phase, me: { id: joined[0]!.id } });
+  });
+
+  test.each([6, 8, 10] as const)("Memory Game carries a square board with %i cards per side from the lobby to gameplay and back", async (boardSize) => {
+    const { host, phones, joined, quizId } = await setup("memory", ["Noel"]);
+    expect(hub.hostView()).toMatchObject({ kind: "lobby", mode: "memory", settings: { memory: { boardSize: 10 } }, teams: null });
+
+    host.sendMsg({ type: "host.setModeSettings", mode: "memory", settings: { boardSize } });
+    expect(hub.hostView()).toMatchObject({ kind: "lobby", mode: "memory", settings: { memory: { boardSize } } });
+
+    host.sendMsg({ type: "host.start", pacing: "auto" });
+    expect(hub.hostView()).toMatchObject({ kind: "memory", phase: "intro", boardSize, pacing: "auto" });
+    expect(hub.playerView(phones[0]!)).toMatchObject({ kind: "memory", phase: "intro", boardSize, me: { id: joined[0]!.id } });
+
+    host.sendMsg({ type: "host.open", quizId });
+    expect(hub.hostView()).toMatchObject({ kind: "lobby", mode: "memory", settings: { memory: { boardSize } }, pacing: "auto" });
+  });
+
   test("players carry their ids into the selected game", async () => {
     const { joined, host } = await setup("gift", ["Noel", "Holly"]);
     host.sendMsg({ type: "host.start", pacing: "manual" });

@@ -9,15 +9,13 @@ import { LandThemeProvider, useNorthPole } from "../shared/land-skin.tsx";
 import { useEventFlash } from "../shared/tower-art.tsx";
 import { formatClock, ordinal, teamInk, teamVars, useCountdown } from "../shared/ui.tsx";
 import { useAfterAnswerWait } from "./after-answer-wait.ts";
+import { usePanZoom } from "./pan-zoom.ts";
 import { Feedback, StreamQuestion } from "./stream-question.tsx";
 
 type Send = (m: ClientMsg) => void;
 
 /** After the last tile goes down, keep the land on screen this long before the questions come back. */
 const LAST_TILE_PAUSE_MS = 900;
-const MAX_ZOOM = 4;
-/** The board opens zoomed in this far, on the player's own land. */
-const OPEN_ZOOM = 1.5;
 
 /** Phone screen for Land Grab: three questions, then place the tiles they earned. */
 export function LandPlayer({ view, send }: { view: PlayerLandView; send: Send }) {
@@ -230,129 +228,29 @@ function focusTiles(board: LandBoard, team: number): number[] {
   return board.starts.filter((s) => s.team === team).map((s) => s.tile);
 }
 
-/**
- * Drag to pan, pinch (or the buttons, or the mouse wheel) to zoom; a touch that doesn't move is a tap on a tile.
- * Opens at OPEN_ZOOM, centred on the `focus` tiles.
- */
+/** The Land Grab board opens zoomed in on the team's land. */
 function PanZoom({ children, focus, onTap }: { children: ComponentChildren; focus?: () => number[]; onTap: (tile: number) => void }) {
   const christmas = useNorthPole();
-  const box = useRef<HTMLDivElement>(null);
-  const inner = useRef<HTMLDivElement>(null);
-  const view = useRef({ s: 1, x: 0, y: 0 });
-  const pointers = useRef(new Map<number, { x: number; y: number }>());
-  const gesture = useRef({ moved: false, travel: 0 });
-
-  const apply = () => {
-    const el = box.current;
-    const v = view.current;
-    if (!el || !inner.current) return;
-    v.x = Math.min(0, Math.max(el.clientWidth * (1 - v.s), v.x));
-    v.y = Math.min(0, Math.max(el.clientHeight * (1 - v.s), v.y));
-    inner.current.style.transform = `translate(${v.x}px, ${v.y}px) scale(${v.s})`;
-  };
-  /** Zoom by `factor`, keeping the point (cx, cy) of the box under the fingers. */
-  const zoomAt = (cx: number, cy: number, factor: number) => {
-    const v = view.current;
-    const s = Math.min(MAX_ZOOM, Math.max(1, v.s * factor));
-    v.x = cx - ((cx - v.x) * s) / v.s;
-    v.y = cy - ((cy - v.y) * s) / v.s;
-    v.s = s;
-    apply();
-  };
-  const local = (e: { clientX: number; clientY: number }) => {
-    const r = box.current!.getBoundingClientRect();
-    return { x: e.clientX - r.left, y: e.clientY - r.top };
-  };
-  const spread = () => {
-    const [a, b] = [...pointers.current.values()];
-    return a && b ? { d: Math.hypot(a.x - b.x, a.y - b.y), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2 } : null;
-  };
-
-  useEffect(() => {
-    const el = box.current!;
-    const onWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      const p = local(e);
-      zoomAt(p.x, p.y, e.deltaY < 0 ? 1.2 : 1 / 1.2);
-    };
-    el.addEventListener("wheel", onWheel, { passive: false });
-    // Centre the focus tiles, measured on the unzoomed board.
-    const tiles = focus?.() ?? [];
-    const centres = tiles.flatMap((t) => {
-      const r = inner.current?.querySelector(`[data-tile="${t}"]`)?.getBoundingClientRect();
-      return r ? [local({ clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 })] : [];
-    });
-    if (centres.length) {
-      const cx = centres.reduce((a, c) => a + c.x, 0) / centres.length;
-      const cy = centres.reduce((a, c) => a + c.y, 0) / centres.length;
-      view.current = { s: OPEN_ZOOM, x: el.clientWidth / 2 - cx * OPEN_ZOOM, y: el.clientHeight / 2 - cy * OPEN_ZOOM };
-      apply();
-    }
-    const ro = new ResizeObserver(apply);
-    ro.observe(el);
-    return () => {
-      el.removeEventListener("wheel", onWheel);
-      ro.disconnect();
-    };
-  }, []);
-
-  const onDown = (e: PointerEvent) => {
-    pointers.current.set(e.pointerId, local(e));
-    if (pointers.current.size === 1) gesture.current = { moved: false, travel: 0 };
-    else gesture.current.moved = true;
-  };
-  const onMove = (e: PointerEvent) => {
-    const prev = pointers.current.get(e.pointerId);
-    if (!prev) return;
-    const before = spread();
-    const now = local(e);
-    pointers.current.set(e.pointerId, now);
-    const g = gesture.current;
-    if (pointers.current.size === 1) {
-      g.travel += Math.hypot(now.x - prev.x, now.y - prev.y);
-      if (g.travel > 8) g.moved = true;
-      if (!g.moved) return;
-      view.current.x += now.x - prev.x;
-      view.current.y += now.y - prev.y;
-      apply();
-    } else {
-      const after = spread();
-      if (!before || !after || before.d === 0) return;
-      view.current.x += after.cx - before.cx;
-      view.current.y += after.cy - before.cy;
-      zoomAt(after.cx, after.cy, after.d / before.d);
-    }
-  };
-  const onUp = (e: PointerEvent) => {
-    if (!pointers.current.delete(e.pointerId)) return;
-    if (pointers.current.size > 0 || gesture.current.moved || e.type !== "pointerup") return;
-    const tile = (e.target as Element | null)?.closest?.("[data-tile]")?.getAttribute("data-tile");
-    if (tile != null) onTap(Number(tile));
-  };
-  const step = (factor: number) => {
-    const el = box.current!;
-    zoomAt(el.clientWidth / 2, el.clientHeight / 2, factor);
-  };
+  const { box, inner, zoomIn, zoomOut, pointerHandlers } = usePanZoom({
+    focus: (el) => focus?.().flatMap((tile) => Array.from(el.querySelectorAll(`[data-tile="${tile}"]`))) ?? [],
+    onTap: (e) => {
+      const target = e.target;
+      if (!target || !("closest" in target) || typeof target.closest !== "function") return;
+      const tile = target.closest("[data-tile]")?.getAttribute("data-tile");
+      if (tile != null) onTap(Number(tile));
+    },
+  });
 
   return (
-    <div
-      class="land-area"
-      style={{ backgroundImage: christmas ? undefined : `url(${landArt("felt-tile")})` }}
-      ref={box}
-      onPointerDown={onDown}
-      onPointerMove={onMove}
-      onPointerUp={onUp}
-      onPointerCancel={onUp}
-      onPointerLeave={onUp}
-    >
+    <div class="land-area" style={{ backgroundImage: christmas ? undefined : `url(${landArt("felt-tile")})` }} ref={box} {...pointerHandlers}>
       <div class="land-pan" ref={inner}>
         {children}
       </div>
       <div class="land-zoom" onPointerDown={(e) => e.stopPropagation()}>
-        <button aria-label="Zoom in" onClick={() => step(1.5)}>
+        <button aria-label="Zoom in" onClick={zoomIn}>
           +
         </button>
-        <button aria-label="Zoom out" onClick={() => step(1 / 1.5)}>
+        <button aria-label="Zoom out" onClick={zoomOut}>
           −
         </button>
       </div>

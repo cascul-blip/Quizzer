@@ -4,6 +4,7 @@ import { duelShared } from "./modes/duel.ts";
 import { fightShared } from "./modes/fight.ts";
 import { giftShared } from "./modes/gift.ts";
 import { landShared } from "./modes/land.ts";
+import { memoryShared } from "./modes/memory.ts";
 import { racerShared } from "./modes/racer.ts";
 import { robotShared } from "./modes/robot.ts";
 import { siegeShared } from "./modes/siege.ts";
@@ -24,6 +25,7 @@ export const SHARED_MODES = {
   siege: siegeShared,
   duel: duelShared,
   gift: giftShared,
+  memory: memoryShared,
 } satisfies Record<string, SharedModeEntry & WithModeProtocol>;
 
 export type GameMode = keyof typeof SHARED_MODES;

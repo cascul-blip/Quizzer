@@ -51,7 +51,7 @@ interface PacedRoundOptions<Extra extends string> {
 }
 
 /**
- * The Paced question round that Classic, Racer and Showdown compose: the question index, the intro → open → reveal
+ * The Paced question round that paced modes compose: the question index, the intro → open → reveal
  * cycle with its deadline and grace, auto-reveal, pacing, and the question view. A mode brings what it adds
  * through hooks: how a question settles, what comes after the reveal, and its own phases, which it sets on `phases`.
  */

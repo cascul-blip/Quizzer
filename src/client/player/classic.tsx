@@ -1,10 +1,8 @@
-import { useEffect, useState } from "preact/hooks";
 import { STREAK_MIN } from "../../shared/protocol.ts";
-import { PinBoard, PinDragger } from "../shared/pin.tsx";
-import { Tex } from "../shared/tex.tsx";
-import { LockedChoice, optionColor, ordinal, Shape, TextAnswer, useCountdown } from "../shared/ui.tsx";
+import { ordinal } from "../shared/ui.tsx";
 import type { ClassicView, Send } from "./common.tsx";
 import { Bar, Center } from "./common.tsx";
+import { PacedQuestionAnswering, PacedQuestionFeedback, PacedQuestionIntro } from "./paced-question.tsx";
 
 /** Phone screen for Classic: the question, the answer buttons, the result and the final rank. */
 export function ClassicPlayer({ view, send }: { view: ClassicView; send: Send }) {
@@ -20,19 +18,9 @@ function Phase({ view, send }: { view: ClassicView; send: Send }) {
   const q = view.question;
   switch (view.phase) {
     case "intro":
-      return (
-        <Center>
-          <p class="muted">
-            Question {q!.index + 1} of {q!.total}
-          </p>
-          <h1 class="q-text">
-            <Tex text={q!.text} />
-          </h1>
-          <p class="muted">Get ready…</p>
-        </Center>
-      );
+      return <PacedQuestionIntro question={q!} label={`Question ${q!.index + 1} of ${q!.total}`} />;
     case "open":
-      return <Answering view={view} send={send} />;
+      return <PacedQuestionAnswering question={q!} view={view} submit={(option, text) => send({ type: "answer", qIndex: q!.index, option, text })} />;
     case "reveal":
     case "leaderboard":
       return <Result view={view} />;
@@ -51,134 +39,17 @@ function Phase({ view, send }: { view: ClassicView; send: Send }) {
   }
 }
 
-function Answering({ view, send }: { view: ClassicView; send: Send }) {
-  const q = view.question!;
-  const [pending, setPending] = useState<number | null>(null);
-  const secs = useCountdown(q.remainingMs, `open:${q.index}`);
-  useEffect(() => setPending(null), [q.index]);
-  const [pendingText, setPendingText] = useState<string | null>(null);
-  useEffect(() => setPendingText(null), [q.index]);
-  const chosen = view.myChoice ?? pending;
-  const typed = view.myText ?? pendingText;
-
-  if (chosen !== null || typed !== null) {
-    return (
-      <Center>
-        {typed !== null ? <div class="locked-text">{typed}</div> : <LockedChoice type={q.type} index={chosen!} label={q.options[chosen!] ?? ""} />}
-        <h1>Answer locked in</h1>
-        <p class="muted">Waiting for the others…</p>
-      </Center>
-    );
-  }
-
-  const choose = (i: number) => {
-    if (navigator.vibrate) navigator.vibrate(30);
-    setPending(i);
-    send({ type: "answer", qIndex: q.index, option: i });
-  };
-  const head = (
-    <div class="q-head">
-      <div class={`timer ${secs <= 5 ? "urgent" : ""}`}>{secs}</div>
-      <h2 class="q-text">
-        <Tex text={q.text} />
-      </h2>
-    </div>
-  );
-  if (q.type === "pin" && q.image && q.spots) {
-    return (
-      <main class="answering">
-        {head}
-        <PinDragger key={q.index} image={q.image} spots={q.spots} labels={q.options} onSubmit={choose} />
-      </main>
-    );
-  }
-
-  return (
-    <main class="answering">
-      {head}
-      {q.image && <img class="q-img" src={`/${q.image}`} alt="" />}
-      {q.type === "text" ? (
-        <TextAnswer
-          key={q.index}
-          onSubmit={(text) => {
-            if (navigator.vibrate) navigator.vibrate(30);
-            setPendingText(text);
-            send({ type: "answer", qIndex: q.index, option: 0, text });
-          }}
-        />
-      ) : (
-        <div class={`answers n${q.options.length}`}>
-          {q.options.map((text, i) => {
-            const c = optionColor(q.type, i);
-            return (
-              <button key={i} class={`answer opt-${c}`} onClick={() => choose(i)}>
-                <Shape index={c} />
-                <span>
-                  <Tex text={text} />
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </main>
-  );
-}
-
 function Result({ view }: { view: ClassicView }) {
-  const q = view.question!;
   const r = view.result!;
-  const correctSet = new Set(r.correct);
-  const heading = r.choice === null && view.myText === null ? "Time's up!" : r.wasCorrect ? "Correct!" : "Wrong";
   return (
-    <main class={`result ${r.wasCorrect ? "good" : "bad"}`}>
-      <div class="verdict">
-        <div class="verdict-icon">{r.wasCorrect ? "✓" : "✗"}</div>
-        <h1>{heading}</h1>
-        <div class="points">{r.wasCorrect ? `+${r.points.toLocaleString()}` : "+0"}</div>
-        {r.wasCorrect && view.me.streak >= STREAK_MIN && <div class="streak-note">🔥 {view.me.streak} in a row!</div>}
-      </div>
-      <p class="q-text small-q">
-        <Tex text={q.text} />
-      </p>
-      {view.myText !== null && (
-        <p class="muted">
-          You typed: <b>{view.myText}</b>
-        </p>
-      )}
-      {q.type === "pin" && q.image && q.spots ? (
-        <div class="pin-result">
-          <PinBoard
-            image={q.image}
-            spots={q.spots}
-            labels={q.options}
-            correct={r.correct}
-            pinAt={r.choice}
-            wrong={r.choice !== null && !correctSet.has(r.choice) ? r.choice : null}
-          />
-        </div>
-      ) : (
-        <ul class="reveal-list">
-          {q.options.map((text, i) => {
-            const isCorrect = correctSet.has(i);
-            const isMine = r.choice === i;
-            const c = optionColor(q.type, i);
-            return (
-              <li key={i} class={`reveal-item opt-${c} ${isCorrect ? "is-correct" : "is-other"} ${isMine && !isCorrect ? "is-wrong-pick" : ""}`}>
-                <Shape index={c} />
-                <span class="t">
-                  <Tex text={text} />
-                </span>
-                {isCorrect && <span class="tag">✓ {r.correct.length > 1 ? "Correct" : "Answer"}</span>}
-                {isMine && <span class="tag mine">{isCorrect ? "Your pick" : "✗ Your pick"}</span>}
-              </li>
-            );
-          })}
-        </ul>
-      )}
-      <p class="standing">
-        {view.me.score.toLocaleString()} points · {ordinal(view.me.rank)} of {view.playerCount}
-      </p>
-    </main>
+    <PacedQuestionFeedback
+      question={view.question!}
+      result={r}
+      myText={view.myText}
+      reward={r.wasCorrect ? `+${r.points.toLocaleString()}` : "+0"}
+      streak={r.wasCorrect && view.me.streak >= STREAK_MIN ? view.me.streak : 0}
+    >
+      {view.me.score.toLocaleString()} points · {ordinal(view.me.rank)} of {view.playerCount}
+    </PacedQuestionFeedback>
   );
 }

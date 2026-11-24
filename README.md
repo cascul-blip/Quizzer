@@ -97,7 +97,7 @@ quizzer mcp [options]       Run the MCP server over stdio (for AI agents)
 | Leaderboard | Top 5, with points gained on the last question. Players on a streak of 4+ correct answers in a row get a 🔥 badge with the count (e.g. 🔥x4). |
 | Podium | Top 3 plus the rest, with **Show errors**, **Play again** and **Done**. |
 
-- **Pacing**: *Manual* waits for you to press **Next** (or Space/→). *Auto-advance* moves on after 5 seconds on the reveal and leaderboard. You can switch pacing mid-game from the top bar. **Racer** and **Showdown** are paced the same way.
+- **Pacing**: *Manual* waits for you to press **Next** (or Space/→). *Auto-advance* moves on after 5 seconds on the reveal and leaderboard. You can switch pacing mid-game from the top bar. **Racer**, **Showdown** and **Memory Game** also support manual and automatic pacing.
 - **Scoring**: a correct answer is worth 1000 points if given instantly, falling to 500 at the time limit. Wrong or missing answers score 0.
 - **Multiple correct answers**: players still tap one option, and any correct option scores.
 - **Pin on picture**: the question has a picture with 2–20 labelled spots, such as the numbered lines of a labelled diagram. Players drag a pin onto the picture. Dropped near a label, it snaps onto that spot, and they press **Submit** to lock it in. One spot is the answer and the others are distractors. In the editor, click the picture to add a spot, drag a spot to move it, click it to make it the answer, and rename it in the list (e.g. "56"). To ask about every spot of a diagram, make one question and duplicate it (⧉) for each location. The reveal shows the right spot and how many players picked each one. Pin questions work in every game mode.
@@ -310,6 +310,16 @@ Choose **Game mode → 🎁 Gift Grab** for a self-paced Christmas review in San
 - The session’s early, middle, and final thirds pay **×1, ×2, and ×3**. Each bonus keeps the multiplier it was earned with. Every third bonus also launches a **Candy Cane Shield** or **Golden Star**, alternating. The shield blocks the next dud penalty and the star doubles the next gift.
 - Each player has a workshop chest on the projector. Their gift pile grows with their score, and a badge shows when they are in a bonus round. The timer lets earned rounds finish, while **End game** stops immediately. Rank is based on points, then correct answers. The results include **Most correct answers**, **Show errors**, and a CSV with quiz and tapping totals.
 
+## Memory Game mode
+
+Choose **Game mode → 🃏 Memory Game** to play individually on a shared Christmas board. Pick 6×6, 8×8, or 10×10 in the lobby. The default is 10×10, and the next lobby remembers your choice.
+
+Players earn one chip per correct answer. After every three paced questions, players with chips take 15-second turns in order of their average time on correct answers in that batch. Ties favor players who have gone first fewer times, then earlier lobby join order. Each turn spends one chip, including when time runs out.
+
+On your turn, drag or pinch to find cards on your phone, tap two, and confirm to flip them on the projector. Tap a selected card again to deselect it. Matched cards leave empty spaces and all other cards stay in position.
+
+The quiz repeats as needed using the lobby’s shuffle settings. Clearing the board or pressing **End game** opens the podium. Rankings use matched pairs, with equal scores sharing a place. The results sheet also includes correct answers and total submitted-answer time. See the [Memory Game design notes](docs/modes/Memory%20Game.md).
+
 ## Music
 
 Every game mode has **built-in background music** on the projector (phones stay quiet). It's composed in code and played on **recordings of real instruments**: grand piano, string sections, brass, flute, harp, organ, timpani and a drum kit, about 4 MB built into the program. The recordings are public domain (CC0) or free to use with credit (see `src/client/shared/music/samples/CREDITS.md`). Tallest Tower and Racer keep their chiptune and 80s-synth sound on purpose. Add `?music=synth` to the host page's address to hear every track on the older synthesized instruments:
@@ -327,6 +337,7 @@ Every game mode has **built-in background music** on the projector (phones stay 
 | Kingdom Siege | A pastoral lobby with recorder, lute and tabor; a marching battle theme with snare, recorders and brass | The march adds layers as monsters fill the board and as hearts are lost; low brass and timpani for a giant; drums and a held chord during breaks. Church bells and a fanfare if the kingdom stands; a low brass lament if the castle falls |
 | Christmas Toybox | Public-domain *Patapan*, arranged for flute, bells, plucked strings and toy percussion | Gentle in the lobby and build breaks; adds marching drums, strings, brass and giant timpani during waves. Bells and brass for victory, quiet flute and piano after the castle falls |
 | Showdown | Original Spaghetti Western music: a whistled tune over a twangy guitar's habanera, a jaw harp and anvil pings; a lone rider's whistle in the lobby | Builds from the intro on (rounds are quick) and peaks halfway through the question: the guitar, a gallop, timpani, whip cracks, chanted "hup!" stabs and strings, then the trumpet takes the tune. A whip-and-anvil "draw" sting on each reveal; a sunset trumpet-and-whistle tune on the podium |
+| Memory Game | The Christmas lobby, play and podium tracks shared with Gift Grab | The music grows more intense during reveal turns |
 
 The lobby plays the music of whichever game mode is selected. Use the **🎵 button and slider** in the projector's top bar to turn music off or change its volume. The 🔊 button still mutes everything.
 
