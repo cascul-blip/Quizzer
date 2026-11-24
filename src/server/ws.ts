@@ -260,8 +260,16 @@ export class GameHub {
 
   private onFinish(game: LiveGame): void {
     const entry = entryOf(game);
-    const { csv, file } = saveResults(game, entry.results(game), this.store.resultsDir, this.log);
-    this.lastResults = { quizId: game.quizId, title: game.title, csv, file };
-    entry.finished?.(game, { dataDir: this.store.dataDir, log: this.log });
+    try {
+      const { csv, file } = saveResults(game, entry.results(game), this.store.resultsDir, this.log);
+      this.lastResults = { quizId: game.quizId, title: game.title, csv, file };
+    } catch (error) {
+      this.log(`Could not prepare the ${entry.name} results: ${error}`);
+    }
+    try {
+      entry.finished?.(game, { dataDir: this.store.dataDir, log: this.log });
+    } catch (error) {
+      this.log(`Could not finish ${entry.name}: ${error}`);
+    }
   }
 }

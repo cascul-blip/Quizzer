@@ -1,5 +1,4 @@
-import { afterEach, beforeEach, describe, expect, jest, spyOn, test } from "bun:test";
-import { memoryMode } from "../src/server/game/memory-entry.ts";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { QuizStore } from "../src/server/quiz/store.ts";
 import type { GameHub } from "../src/server/ws.ts";
 import type { Pacing } from "../src/shared/mode-views.ts";
@@ -24,7 +23,6 @@ beforeEach(() => {
 
 afterEach(() => {
   hub.closeGame();
-  jest.restoreAllMocks();
   data.cleanup();
 });
 
@@ -114,28 +112,6 @@ describe("Memory Game", () => {
     const view = projector();
     expect(view).toMatchObject({ phase: "intro", pacing: "manual", boardSize: 10, players: [{ nickname: "Noel" }] });
     expect(view.board).toEqual(Array.from({ length: 100 }, () => ({ state: "down" })));
-  });
-
-  test("still broadcasts the podium when the finish callback fails", async () => {
-    const {
-      host,
-      phones: [phone],
-    } = await launch(["Noel"]);
-    const failure = new Error("results failed");
-    const results = spyOn(memoryMode, "results").mockImplementation(() => {
-      throw failure;
-    });
-    const log = spyOn(console, "error").mockImplementation(() => {});
-
-    host.sendMsg({ type: "host.end" });
-    clock.advance(100);
-
-    const podium = await host.hostState((view) => view.kind === "memory" && view.phase === "podium");
-    expect(podium.view).toMatchObject({ phase: "podium", players: [{ nickname: "Noel", rank: 1 }] });
-    const final = await phone!.playerState((view) => view.kind === "memory" && view.phase === "podium");
-    expect(final.view).toMatchObject({ result: { rank: 1, playerCount: 1 } });
-    expect(results).toHaveBeenCalledTimes(1);
-    expect(log).toHaveBeenCalledWith("Could not finish Memory Game:", failure);
   });
 
   test("a short quiz repeats at new indexes, rejects duplicate and stale answers, and awards only correct submissions", async () => {

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, jest, spyOn, test } from "bun:test";
 import { PLAYER_MODES } from "../src/client/player/modes.tsx";
 import { GRACE_MS } from "../src/server/game/common.ts";
 import { Lobby } from "../src/server/game/lobby.ts";
@@ -131,6 +131,7 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
+  jest.restoreAllMocks();
   send(host, { type: "host.close" });
   data.cleanup();
 });
@@ -297,6 +298,22 @@ describe("Game modes", () => {
         for (const row of sheet.rows) expect(row).toHaveLength(sheet.header.length);
       });
 
+      test("sends the podium to the projector and phone when the results sheet fails", async () => {
+        const [noel] = openLobby(mode, ["Noel"]);
+        send(host, { type: "host.start", pacing: "manual" });
+        await host.hostState((view) => view.kind === mode);
+        const results = spyOn(MODES[mode], "results").mockImplementation(() => {
+          throw new Error("Results sheet failed");
+        });
+
+        send(host, { type: "host.end" });
+
+        expect(errors(host)).toEqual([]);
+        await host.hostState((view) => view.kind === mode && view.phase === "podium");
+        await noel!.phone.playerState((view) => view.kind === mode && view.phase === "podium");
+        expect(results).toHaveBeenCalledTimes(1);
+      });
+
       test("a phone message for a game mode that isn't running is ignored", async () => {
         const [noel] = openLobby(mode, ["Noel"]);
         send(host, { type: "host.start", pacing: "manual" });
@@ -310,6 +327,23 @@ describe("Game modes", () => {
       });
     });
   }
+
+  test("Kingdom Siege sends the podium and keeps the results sheet when its finish hook fails", async () => {
+    const [noel] = openLobby("siege", ["Noel"]);
+    send(host, { type: "host.start", pacing: "manual" });
+    await host.hostState((view) => view.kind === "siege");
+    const finished = spyOn(MODES.siege, "finished").mockImplementation(() => {
+      throw new Error("Finish hook failed");
+    });
+
+    send(host, { type: "host.end" });
+
+    expect(errors(host)).toEqual([]);
+    await host.hostState((view) => view.kind === "siege" && view.phase === "podium");
+    await noel!.phone.playerState((view) => view.kind === "siege" && view.phase === "podium");
+    expect(hub.lastResults?.csv).toContain("Noel");
+    expect(finished).toHaveBeenCalledTimes(1);
+  });
 
   test("closing a lobby that never started keeps its mode for the next lobby", () => {
     openLobby("robot", ["Noel"]);
