@@ -104,6 +104,8 @@ export interface PlayerLandView {
   feedback: StreamFeedbackView | null;
   /** The land, while this player is placing tiles. */
   board: LandBoard | null;
+  /** This claim activity's answer number and remaining wait before placement. */
+  claimWait: { id: number; remainingMs: number } | null;
   /** Set once this player's first team was surrounded and they joined the conquerors. */
   conquered: { seq: number; from: string; by: string } | null;
   result: { teamRank: number; teamCount: number; tiles: number; won: boolean; awards: string[] } | null;

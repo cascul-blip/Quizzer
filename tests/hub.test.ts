@@ -749,13 +749,37 @@ describe("Game mode: Land Grab", () => {
       const q = st.view.kind === "land" ? st.view.question! : null;
       ann.sendMsg({ type: "land.answer", seq: q!.seq, option: 0 });
       answered = await ann.playerState((v) => v.kind === "land" && v.question?.seq !== q!.seq);
-      clock.advance(FEEDBACK_MS);
-      hub.broadcast();
+      if (i < 2) {
+        clock.advance(FEEDBACK_MS);
+        hub.broadcast();
+      }
     }
     const claiming = answered!;
-    expect(claiming.view.kind === "land" && claiming.view.state).toBe("claim");
-    expect(claiming.view.kind === "land" && [claiming.view.claims, claiming.view.board?.size]).toEqual([3, 10]);
+    expect(claiming.view).toMatchObject({
+      kind: "land",
+      state: "claim",
+      claims: 3,
+      board: { size: 10 },
+      claimWait: { id: 3, remainingMs: 1000 },
+      question: null,
+      feedback: null,
+    });
+    clock.advance(600);
     await host.hostState((v) => v.kind === "land" && v.teams[0]!.members[0]!.claiming);
+    const midway = new HubSocket(hub);
+    midway.sendMsg({ type: "resume", token: ann.token! });
+    const midWait = await midway.playerState((v) => v.kind === "land" && v.state === "claim");
+    expect(midWait.view).toMatchObject({ claimWait: { id: 3, remainingMs: 400 }, question: null, feedback: null });
+    clock.advance(399);
+    midway.sendMsg({ type: "land.place", tile: 0 });
+    midway.close();
+    clock.advance(1);
+    const ready = new HubSocket(hub);
+    ready.sendMsg({ type: "resume", token: ann.token! });
+    const afterWait = await ready.playerState((v) => v.kind === "land" && v.state === "claim");
+    expect(afterWait.view).toMatchObject({ claims: 3, claimWait: { id: 3, remainingMs: 0 } });
+    expect(afterWait.view.kind === "land" && afterWait.view.board?.owners[0]).toBe(-1);
+    ready.close();
 
     // A tile next to Blue's start is refused; grass is taken.
     const blueStart = started.view.kind === "land" ? started.view.board.starts[1]!.tile : 0;

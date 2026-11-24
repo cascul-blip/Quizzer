@@ -128,7 +128,7 @@ describe("rounds of questions", () => {
     answer(game, clock, a, false);
     const cur = game.playerView(a.id)!.question!;
     game.answer(a.id, cur.seq, 1);
-    expect(game.playerView(a.id)!).toMatchObject({ state: "empty", emptyMs: FEEDBACK_MS + LAND_EMPTY_MS, question: null, board: null });
+    expect(game.playerView(a.id)!).toMatchObject({ state: "empty", emptyMs: FEEDBACK_MS + LAND_EMPTY_MS, question: null, board: null, claimWait: null });
     clock.advance(FEEDBACK_MS + LAND_EMPTY_MS - 1);
     expect(a.state).toBe("empty");
     expect(game.place(a.id, 0)).toBe(false);
@@ -137,14 +137,33 @@ describe("rounds of questions", () => {
     expect(game.playerView(a.id)!.question).not.toBeNull();
   });
 
-  test("banked claims skip the message", () => {
+  test("Done banks claims during the wait without allowing an early answer; a later wrong answer opens claim play", () => {
     const { game, clock } = play(["A", "B"]);
     const a = byName(game, "A");
-    round(game, clock, a, 1);
+    answer(game, clock, a, true);
+    answer(game, clock, a, false);
+    const third = game.playerView(a.id)!.question!;
+    expect(game.answer(a.id, third.seq, 1)).toBe(true);
     expect(game.done(a.id)).toBe(true);
-    expect(a.state).toBe("question");
-    round(game, clock, a, 0);
-    expect(game.playerView(a.id)!).toMatchObject({ state: "claim", claims: 1 });
+    const back = game.playerView(a.id)!;
+    expect(back).toMatchObject({ state: "question", claims: 1, board: null, claimWait: null });
+    const fourth = back.question!;
+    clock.advance(999);
+    expect(game.answer(a.id, fourth.seq, 1)).toBe(false);
+    clock.advance(1);
+    expect(game.answer(a.id, fourth.seq, 1)).toBe(true);
+    clock.advance(1000);
+    answer(game, clock, a, false);
+    const sixth = game.playerView(a.id)!.question!;
+    expect(game.answer(a.id, sixth.seq, 1)).toBe(true);
+    expect(game.playerView(a.id)!).toMatchObject({
+      state: "claim",
+      claims: 1,
+      board: { size: 10 },
+      claimWait: { id: 6, remainingMs: 1000 },
+      question: null,
+      feedback: null,
+    });
   });
 });
 
@@ -178,8 +197,13 @@ describe("placing tiles", () => {
     round(game, clock, a, 1);
     expect(game.place(a.id, 55)).toBe(false);
     expect(game.done(a.id)).toBe(true);
-    round(game, clock, a, 2);
-    expect(a.claims).toBe(3);
+    answer(game, clock, a, true);
+    answer(game, clock, a, true);
+    const sixth = game.playerView(a.id)!.question!;
+    expect(game.answer(a.id, sixth.seq, 1)).toBe(true);
+    clock.advance(999);
+    expect(game.place(a.id, 55)).toBe(false);
+    clock.advance(1);
     expect(game.place(a.id, 55)).toBe(true);
     expect(game.owners[55]).toBe(0);
     expect(a).toMatchObject({ claims: 1, stolen: 1, state: "claim" });
