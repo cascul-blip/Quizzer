@@ -218,7 +218,7 @@ describe("building", () => {
     clock.advance(1);
     const v = game.playerView(a.id)!;
     expect(v.question).toBeNull();
-    expect(v.build).toEqual({ columns: [0, 0, 0], floors: 0, sweepMs: SWEEP_START_MS });
+    expect(v.build).toEqual({ columns: [0, 0, 0], floors: 0, sweepMs: SWEEP_START_MS, wait: { activityKey: 4, remainingMs: 0 } });
     expect(game.answer(a.id, cur.seq + 1, 0)).toBe(false);
     expect(game.drop(a.id, 2)).toBe(true);
   });

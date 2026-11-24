@@ -1,6 +1,7 @@
 import type { ComponentType } from "preact";
 import type { GameMode, SharedOf } from "../../shared/mode-entries.ts";
 import { entryOf } from "../shared/entry-of.ts";
+import { PhoneResumeVersion } from "./after-answer-wait.ts";
 import { ClassicPlayer } from "./classic.tsx";
 import type { PhoneBanner, PhoneModeView, PhoneView, Send } from "./common.tsx";
 import { CupPlayer } from "./cup.tsx";
@@ -44,7 +45,12 @@ export const PLAYER_MODES: { [M in GameMode]: PlayerModeEntry<M> } = {
   gift: { Screen: GiftPlayer, banner: null },
 };
 
-/** The screen of the mode a joined phone's view belongs to, to render with that same view. */
-export function screenOf(view: PhoneView): ComponentType<ScreenProps<GameMode>> {
-  return entryOf<PlayerModeEntry<GameMode>>(PLAYER_MODES, view.kind).Screen;
+/** Show the joined phone's game without remounting its screen on resume. */
+export function PhoneModeScreen({ view, send, resumeVersion }: { view: PhoneView; send: Send; resumeVersion: number }) {
+  const { Screen } = entryOf<PlayerModeEntry<GameMode>>(PLAYER_MODES, view.kind);
+  return (
+    <PhoneResumeVersion.Provider value={resumeVersion}>
+      <Screen view={view} send={send} />
+    </PhoneResumeVersion.Provider>
+  );
 }

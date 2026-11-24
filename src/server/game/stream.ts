@@ -1,6 +1,6 @@
 import type { AnswerValue } from "../../shared/answer-match.ts";
 import { checkAnswer } from "../../shared/answer-match.ts";
-import type { QuestionError, StreamFeedbackView, StreamQuestionView } from "../../shared/mode-views.ts";
+import type { AfterAnswerWaitView, QuestionError, StreamFeedbackView, StreamQuestionView } from "../../shared/mode-views.ts";
 import type { Question } from "../../shared/quiz-schema.ts";
 import type { Clock } from "./common.ts";
 import { shuffle, shuffleOptions, topErrors } from "./common.ts";
@@ -117,6 +117,12 @@ export class QuestionStream<P extends AnswerTotals = AnswerTotals> {
   /** When the feedback flash ends, including any Protect from abuse wait. */
   feedbackEndsAt(player: AnswerTotals): number {
     return this.state(player).readyAt;
+  }
+
+  /** The wait still in force after an answer, even if the mode is hiding feedback. */
+  afterAnswerWaitView(player: AnswerTotals): AfterAnswerWaitView {
+    const state = this.state(player);
+    return { activityKey: state.feedback?.seq ?? 0, remainingMs: Math.max(0, state.readyAt - this.clock.now()) };
   }
 
   /** Resume questions after a mode activity, keeping any feedback wait still in progress. */

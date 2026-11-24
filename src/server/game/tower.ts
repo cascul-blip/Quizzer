@@ -421,7 +421,10 @@ export class TowerGame {
       ...this.stream.fragment(p),
       egg: playing && this.egg ? { seq: this.egg.seq, ...this.egg.cells[p.team]! } : null,
       monsterEvent: this.monsterEventFor(p),
-      build: playing && p.state === "build" ? { columns: [...team.columns], floors: floorsOf(team), sweepMs: sweepMsFor(floorsOf(team)) } : null,
+      build:
+        playing && p.state === "build"
+          ? { columns: [...team.columns], floors: floorsOf(team), sweepMs: sweepMsFor(floorsOf(team)), wait: this.stream.afterAnswerWaitView(p) }
+          : null,
       result,
     };
   }

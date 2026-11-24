@@ -90,10 +90,10 @@ export function useCountdown(remainingMs: number, key: string): number {
   return Math.max(0, Math.ceil((ref.current.deadline - performance.now()) / 1000));
 }
 
-/** Milliseconds until a countdown with `leftMs` to go shows a new whole second (a hair after, so it has). */
-export function nextSecondIn(leftMs: number): number {
+/** Milliseconds until the displayed second changes, with 5ms slack unless exact timing matters. */
+export function nextSecondIn(leftMs: number, slackMs = 5): number {
   // ceil(left / 1000) drops by one once left reaches the whole second below it.
-  return leftMs - (Math.ceil(leftMs / 1000) - 1) * 1000 + 5;
+  return leftMs - (Math.ceil(leftMs / 1000) - 1) * 1000 + slackMs;
 }
 
 /** 125 → "2:05" */

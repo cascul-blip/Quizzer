@@ -206,12 +206,38 @@ describe("Game mode: Tallest Tower", () => {
       const q = st.view.kind === "tower" ? st.view.question! : null;
       ann.sendMsg({ type: "tower.answer", seq: q!.seq, option: 0 });
       answered = await ann.playerState((v) => v.kind === "tower" && v.question?.seq !== q!.seq);
-      clock.advance(FEEDBACK_MS);
-      hub.broadcast();
+      if (i < 3) {
+        clock.advance(FEEDBACK_MS);
+        hub.broadcast();
+      }
     }
     const building = answered!;
-    expect(building.view.kind === "tower" && building.view.state).toBe("build");
-    expect(building.view.kind === "tower" && building.view.build).toEqual({ columns: [0, 0, 0], floors: 0, sweepMs: 2500 });
+    expect(building.view).toMatchObject({
+      kind: "tower",
+      state: "build",
+      blocksHeld: 4,
+      build: { columns: [0, 0, 0], floors: 0, sweepMs: 2500, wait: { activityKey: 4, remainingMs: 1000 } },
+      question: null,
+      feedback: null,
+    });
+
+    const sent = ann.raw.length;
+    clock.advance(600);
+    hub.broadcast();
+    expect(ann.raw).toHaveLength(sent); // Elapsed time alone doesn't send another view.
+    const midway = new HubSocket(hub);
+    midway.sendMsg({ type: "resume", token: ann.token! });
+    const midWait = await midway.playerState((v) => v.kind === "tower");
+    expect(midWait.view).toMatchObject({ build: { wait: { activityKey: 4, remainingMs: 400 } }, question: null, feedback: null });
+    clock.advance(399);
+    midway.sendMsg({ type: "tower.drop", zone: 1 });
+    midway.close();
+    clock.advance(1);
+    const ready = new HubSocket(hub);
+    ready.sendMsg({ type: "resume", token: ann.token! });
+    const afterWait = await ready.playerState((v) => v.kind === "tower");
+    expect(afterWait.view).toMatchObject({ blocksHeld: 4, build: { wait: { activityKey: 4, remainingMs: 0 }, columns: [0, 0, 0] } });
+    ready.close();
 
     let back!: Awaited<ReturnType<typeof ann.playerState>>;
     for (const [i, zone] of [1, 2, 3, 0].entries()) {
@@ -723,13 +749,37 @@ describe("Game mode: Land Grab", () => {
       const q = st.view.kind === "land" ? st.view.question! : null;
       ann.sendMsg({ type: "land.answer", seq: q!.seq, option: 0 });
       answered = await ann.playerState((v) => v.kind === "land" && v.question?.seq !== q!.seq);
-      clock.advance(FEEDBACK_MS);
-      hub.broadcast();
+      if (i < 2) {
+        clock.advance(FEEDBACK_MS);
+        hub.broadcast();
+      }
     }
     const claiming = answered!;
-    expect(claiming.view.kind === "land" && claiming.view.state).toBe("claim");
-    expect(claiming.view.kind === "land" && [claiming.view.claims, claiming.view.board?.size]).toEqual([3, 10]);
+    expect(claiming.view).toMatchObject({
+      kind: "land",
+      state: "claim",
+      claims: 3,
+      board: { size: 10 },
+      claimWait: { activityKey: 3, remainingMs: 1000 },
+      question: null,
+      feedback: null,
+    });
+    clock.advance(600);
     await host.hostState((v) => v.kind === "land" && v.teams[0]!.members[0]!.claiming);
+    const midway = new HubSocket(hub);
+    midway.sendMsg({ type: "resume", token: ann.token! });
+    const midWait = await midway.playerState((v) => v.kind === "land" && v.state === "claim");
+    expect(midWait.view).toMatchObject({ claimWait: { activityKey: 3, remainingMs: 400 }, question: null, feedback: null });
+    clock.advance(399);
+    midway.sendMsg({ type: "land.place", tile: 0 });
+    midway.close();
+    clock.advance(1);
+    const ready = new HubSocket(hub);
+    ready.sendMsg({ type: "resume", token: ann.token! });
+    const afterWait = await ready.playerState((v) => v.kind === "land" && v.state === "claim");
+    expect(afterWait.view).toMatchObject({ claims: 3, claimWait: { activityKey: 3, remainingMs: 0 } });
+    expect(afterWait.view.kind === "land" && afterWait.view.board?.owners[0]).toBe(-1);
+    ready.close();
 
     // A tile next to Blue's start is refused; grass is taken.
     const blueStart = started.view.kind === "land" ? started.view.board.starts[1]!.tile : 0;

@@ -8,6 +8,7 @@ import { HexBoard, LandShape, landArt } from "../shared/land-art.tsx";
 import { LandThemeProvider, useNorthPole } from "../shared/land-skin.tsx";
 import { useEventFlash } from "../shared/tower-art.tsx";
 import { formatClock, ordinal, teamInk, teamVars, useCountdown } from "../shared/ui.tsx";
+import { useAfterAnswerWait } from "./after-answer-wait.ts";
 import { Feedback, StreamQuestion } from "./stream-question.tsx";
 
 type Send = (m: ClientMsg) => void;
@@ -71,7 +72,7 @@ function LandPlayerContent({ view, send }: { view: PlayerLandView; send: Send })
       </main>
     );
   } else if (board) {
-    body = <ClaimMode board={board} live={!!view.board} claims={view.claims} team={view.team.index} send={send} onLastTile={onLastTile} />;
+    body = <ClaimMode board={board} claimWait={view.claimWait} claims={view.claims} team={view.team.index} send={send} onLastTile={onLastTile} />;
   } else if (view.state === "empty") {
     body = <EmptyNotice ms={view.emptyMs} />;
   } else if (view.question) {
@@ -110,7 +111,7 @@ function LandPlayerContent({ view, send }: { view: PlayerLandView; send: Send })
         </span>
       </header>
       {body}
-      <Feedback feedback={view.feedback} rightText={view.state === "claim" ? "+1 tile. To the land!" : "+1 tile"} />
+      {!board && <Feedback feedback={view.feedback} rightText="+1 tile" />}
       <ConqueredNotice event={view.conquered} />
     </div>
   );
@@ -149,8 +150,17 @@ function ConqueredNotice({ event }: { event: PlayerLandView["conquered"] }) {
   );
 }
 
-function ClaimMode(props: { board: LandBoard; live: boolean; claims: number; team: number; send: Send; onLastTile: (board: LandBoard) => void }) {
-  const { board, live, claims, team, send } = props;
+function ClaimMode(props: {
+  board: LandBoard;
+  claimWait: PlayerLandView["claimWait"];
+  claims: number;
+  team: number;
+  send: Send;
+  onLastTile: (board: LandBoard) => void;
+}) {
+  const { board, claimWait, claims, team, send } = props;
+  const live = claimWait !== null;
+  const wait = useAfterAnswerWait(claimWait);
   const [selected, setSelected] = useState<number | null>(null);
   const cost = selected === null ? null : placementCost(board.owners, board.size, board.starts, team, selected, LAND_STEAL_COST, LAND_GUARD_COST);
   const steal = selected !== null && board.owners[selected] !== EMPTY;
@@ -177,7 +187,7 @@ function ClaimMode(props: { board: LandBoard; live: boolean; claims: number; tea
   }
 
   function place() {
-    if (selected === null || cost === null || cost > claims) return;
+    if (!live || wait.isWaiting() || selected === null || cost === null || cost > claims) return;
     send({ type: "land.place", tile: selected });
     navigator.vibrate?.(25);
     if (cost >= claims) {
@@ -198,12 +208,13 @@ function ClaimMode(props: { board: LandBoard; live: boolean; claims: number; tea
         <HexBoard board={board} viewer={team} selected={selected} />
       </PanZoom>
       <footer class="land-foot">
-        <div class="land-hint">{hint}</div>
+        <div class="land-hint">{wait.seconds > 0 ? `Claim or Steal available in ${wait.seconds}s · ${hint}` : hint}</div>
         <div class="land-actions">
           <button class="btn ghost" disabled={!live} onClick={() => send({ type: "land.done" })}>
             Done{claims > 0 && live ? ` (keep ${claims})` : ""}
           </button>
-          <button class="btn primary big" disabled={!action} onClick={place}>
+          {/* The countdown can lag a tap at expiry. Keep legal placements dispatchable; place() checks the clock. */}
+          <button class="btn primary big" disabled={!action} aria-disabled={action && wait.seconds > 0 ? true : undefined} onClick={place}>
             {action ?? "🚩 Claim"}
           </button>
         </div>

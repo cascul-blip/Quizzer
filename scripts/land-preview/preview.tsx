@@ -74,6 +74,7 @@ function Preview({ phone }: { phone: boolean }) {
     question: quiz ? { seq: 1, type: "multiple_choice", text: "Where does Santa live?", options: ["The North Pole", "The South Pole"] } : null,
     feedback: null,
     board: quiz ? null : board,
+    claimWait: quiz ? null : { activityKey: 9, remainingMs: 0 },
     conquered: null,
     result: null,
   };

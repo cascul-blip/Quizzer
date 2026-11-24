@@ -3,12 +3,13 @@ import { applyPatch } from "../../shared/view-patch.ts";
 
 interface PhoneScreenState {
   view: PlayerView | null;
+  resumeVersion: number;
   joining: boolean;
   kicked: boolean;
   error: string | null;
 }
 
-export const initialPhoneScreen: PhoneScreenState = { view: null, joining: false, kicked: false, error: null };
+export const initialPhoneScreen: PhoneScreenState = { view: null, resumeVersion: 0, joining: false, kicked: false, error: null };
 
 interface PhoneSessionEffects {
   send(message: ClientMsg): void;
@@ -77,8 +78,13 @@ export class PhoneSession {
     this.serverView = view;
     // The first snapshot can arrive before the server handles resume. Keep it as the patch
     // baseline while the phone continues showing the previous game (or its loading screen).
-    if (view.kind !== "none") this.resuming = false;
-    this.show({ view: this.resuming ? this.screen.view : view, joining: false });
+    const resumed = this.resuming && view.kind !== "none";
+    if (resumed) this.resuming = false;
+    this.show({
+      view: this.resuming ? this.screen.view : view,
+      resumeVersion: this.screen.resumeVersion + (resumed ? 1 : 0),
+      joining: false,
+    });
   }
 
   private show(update: Partial<PhoneScreenState>): void {

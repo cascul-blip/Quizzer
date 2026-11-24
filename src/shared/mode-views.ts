@@ -23,6 +23,13 @@ export interface StreamFeedbackView {
   penaltyMs: number;
 }
 
+/** The wait before an activity's first action, relative to this view. */
+export interface AfterAnswerWaitView {
+  /** Sequence of the Streamed question that opened the activity. */
+  activityKey: number;
+  remainingMs: number;
+}
+
 /** One row of the final screen's "Show errors" table. */
 export interface QuestionError {
   wrong: number;

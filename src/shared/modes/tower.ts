@@ -1,5 +1,5 @@
 import type { AvatarChoice } from "../avatars.ts";
-import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, TeamInfo } from "../mode-views.ts";
+import type { AfterAnswerWaitView, QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, TeamInfo } from "../mode-views.ts";
 import type { ModeProtocol } from "../shared-mode-entry.ts";
 import { sharedModeEntry } from "../shared-mode-entry.ts";
 import type { SeasonTheme } from "../themed-modes.ts";
@@ -77,7 +77,12 @@ export interface PlayerTowerView {
   /** Latest monster news for this player (shown once per seq). */
   monsterEvent: { seq: number; kind: "egg" | "hatched" | "smashed"; byTeam: string | null; target: string | null } | null;
   /** The team tower, while this player is building. */
-  build: { columns: number[]; floors: number; sweepMs: number } | null;
+  build: {
+    columns: number[];
+    floors: number;
+    sweepMs: number;
+    wait: AfterAnswerWaitView;
+  } | null;
   result: {
     teamRank: number;
     teamCount: number;
