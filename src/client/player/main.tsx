@@ -9,7 +9,7 @@ import type { ConnStatus } from "../shared/ws.ts";
 import { connect } from "../shared/ws.ts";
 import { Center } from "./common.tsx";
 import { LobbyScreen } from "./lobby.tsx";
-import { screenOf } from "./modes.tsx";
+import { PhoneModeScreen } from "./modes.tsx";
 import { initialPhoneScreen, PhoneSession } from "./session.ts";
 
 const TOKEN_KEY = "quizzer.token";
@@ -63,7 +63,7 @@ function savedAvatar(): AvatarChoice | null {
 
 function App() {
   const [status, setStatus] = useState<ConnStatus>("connecting");
-  const [{ view, joining, kicked, error }, show] = useState(initialPhoneScreen);
+  const [{ view, resumeVersion, joining, kicked, error }, show] = useState(initialPhoneScreen);
   const conn = useRef<{ send(m: ClientMsg): void } | null>(null);
   const send = (message: ClientMsg) => conn.current?.send(message);
   const [session] = useState(
@@ -141,8 +141,7 @@ function App() {
       />
     );
   } else {
-    const Screen = screenOf(view);
-    body = <Screen view={view} send={send} />;
+    body = <PhoneModeScreen view={view} send={send} resumeVersion={resumeVersion} />;
   }
 
   return (

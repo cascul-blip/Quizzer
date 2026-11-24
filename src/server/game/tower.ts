@@ -423,7 +423,7 @@ export class TowerGame {
       monsterEvent: this.monsterEventFor(p),
       build:
         playing && p.state === "build"
-          ? { columns: [...team.columns], floors: floorsOf(team), sweepMs: sweepMsFor(floorsOf(team)), remainingMs: this.stream.afterAnswerRemainingMs(p) }
+          ? { columns: [...team.columns], floors: floorsOf(team), sweepMs: sweepMsFor(floorsOf(team)), wait: this.stream.afterAnswerWaitView(p) }
           : null,
       result,
     };

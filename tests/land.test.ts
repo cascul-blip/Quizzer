@@ -137,7 +137,7 @@ describe("rounds of questions", () => {
     expect(game.playerView(a.id)!.question).not.toBeNull();
   });
 
-  test("Done banks claims during the wait without allowing an early answer; a later wrong answer opens claim play", () => {
+  test("Done banks claims during the after-answer wait without allowing an early answer; a later wrong answer opens claim play", () => {
     const { game, clock } = play(["A", "B"]);
     const a = byName(game, "A");
     answer(game, clock, a, true);
@@ -160,7 +160,7 @@ describe("rounds of questions", () => {
       state: "claim",
       claims: 1,
       board: { size: 10 },
-      claimWait: { id: 6, remainingMs: 1000 },
+      claimWait: { activityKey: 6, remainingMs: 1000 },
       question: null,
       feedback: null,
     });

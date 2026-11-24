@@ -1,5 +1,5 @@
 import type { AvatarChoice } from "../avatars.ts";
-import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, TeamInfo } from "../mode-views.ts";
+import type { AfterAnswerWaitView, QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, TeamInfo } from "../mode-views.ts";
 import type { ModeProtocol } from "../shared-mode-entry.ts";
 import { sharedModeEntry } from "../shared-mode-entry.ts";
 import type { SeasonTheme } from "../themed-modes.ts";
@@ -81,8 +81,7 @@ export interface PlayerTowerView {
     columns: number[];
     floors: number;
     sweepMs: number;
-    /** After-answer wait before the first drop, relative to this view. */
-    remainingMs: number;
+    wait: AfterAnswerWaitView;
   } | null;
   result: {
     teamRank: number;

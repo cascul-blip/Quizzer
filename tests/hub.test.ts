@@ -216,7 +216,7 @@ describe("Game mode: Tallest Tower", () => {
       kind: "tower",
       state: "build",
       blocksHeld: 4,
-      build: { columns: [0, 0, 0], floors: 0, sweepMs: 2500, remainingMs: 1000 },
+      build: { columns: [0, 0, 0], floors: 0, sweepMs: 2500, wait: { activityKey: 4, remainingMs: 1000 } },
       question: null,
       feedback: null,
     });
@@ -228,7 +228,7 @@ describe("Game mode: Tallest Tower", () => {
     const midway = new HubSocket(hub);
     midway.sendMsg({ type: "resume", token: ann.token! });
     const midWait = await midway.playerState((v) => v.kind === "tower");
-    expect(midWait.view).toMatchObject({ build: { remainingMs: 400 }, question: null, feedback: null });
+    expect(midWait.view).toMatchObject({ build: { wait: { activityKey: 4, remainingMs: 400 } }, question: null, feedback: null });
     clock.advance(399);
     midway.sendMsg({ type: "tower.drop", zone: 1 });
     midway.close();
@@ -236,7 +236,7 @@ describe("Game mode: Tallest Tower", () => {
     const ready = new HubSocket(hub);
     ready.sendMsg({ type: "resume", token: ann.token! });
     const afterWait = await ready.playerState((v) => v.kind === "tower");
-    expect(afterWait.view).toMatchObject({ blocksHeld: 4, build: { remainingMs: 0, columns: [0, 0, 0] } });
+    expect(afterWait.view).toMatchObject({ blocksHeld: 4, build: { wait: { activityKey: 4, remainingMs: 0 }, columns: [0, 0, 0] } });
     ready.close();
 
     let back!: Awaited<ReturnType<typeof ann.playerState>>;
@@ -760,7 +760,7 @@ describe("Game mode: Land Grab", () => {
       state: "claim",
       claims: 3,
       board: { size: 10 },
-      claimWait: { id: 3, remainingMs: 1000 },
+      claimWait: { activityKey: 3, remainingMs: 1000 },
       question: null,
       feedback: null,
     });
@@ -769,7 +769,7 @@ describe("Game mode: Land Grab", () => {
     const midway = new HubSocket(hub);
     midway.sendMsg({ type: "resume", token: ann.token! });
     const midWait = await midway.playerState((v) => v.kind === "land" && v.state === "claim");
-    expect(midWait.view).toMatchObject({ claimWait: { id: 3, remainingMs: 400 }, question: null, feedback: null });
+    expect(midWait.view).toMatchObject({ claimWait: { activityKey: 3, remainingMs: 400 }, question: null, feedback: null });
     clock.advance(399);
     midway.sendMsg({ type: "land.place", tile: 0 });
     midway.close();
@@ -777,7 +777,7 @@ describe("Game mode: Land Grab", () => {
     const ready = new HubSocket(hub);
     ready.sendMsg({ type: "resume", token: ann.token! });
     const afterWait = await ready.playerState((v) => v.kind === "land" && v.state === "claim");
-    expect(afterWait.view).toMatchObject({ claims: 3, claimWait: { id: 3, remainingMs: 0 } });
+    expect(afterWait.view).toMatchObject({ claims: 3, claimWait: { activityKey: 3, remainingMs: 0 } });
     expect(afterWait.view.kind === "land" && afterWait.view.board?.owners[0]).toBe(-1);
     ready.close();
 

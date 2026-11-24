@@ -49,7 +49,7 @@ button {
   cursor: pointer;
 }
 
-button:disabled {
+button:is(:disabled, [aria-disabled="true"]) {
   cursor: not-allowed;
   opacity: 0.55;
 }
@@ -70,7 +70,7 @@ button:disabled {
   transition: transform 0.05s;
 }
 
-.btn:active:not(:disabled) {
+.btn:active:not(:disabled, [aria-disabled="true"]) {
   transform: translateY(2px);
   box-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
 }

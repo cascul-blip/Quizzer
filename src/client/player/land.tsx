@@ -160,7 +160,7 @@ function ClaimMode(props: {
 }) {
   const { board, claimWait, claims, team, send } = props;
   const live = claimWait !== null;
-  const wait = useAfterAnswerWait(claimWait?.id ?? "last tile", claimWait?.remainingMs ?? 0);
+  const wait = useAfterAnswerWait(claimWait);
   const [selected, setSelected] = useState<number | null>(null);
   const cost = selected === null ? null : placementCost(board.owners, board.size, board.starts, team, selected, LAND_STEAL_COST, LAND_GUARD_COST);
   const steal = selected !== null && board.owners[selected] !== EMPTY;
@@ -213,7 +213,8 @@ function ClaimMode(props: {
           <button class="btn ghost" disabled={!live} onClick={() => send({ type: "land.done" })}>
             Done{claims > 0 && live ? ` (keep ${claims})` : ""}
           </button>
-          <button class="btn primary big" disabled={!action || wait.seconds > 0} onClick={place}>
+          {/* The countdown can lag a tap at expiry. Keep legal placements dispatchable; place() checks the clock. */}
+          <button class="btn primary big" disabled={!action} aria-disabled={action && wait.seconds > 0 ? true : undefined} onClick={place}>
             {action ?? "🚩 Claim"}
           </button>
         </div>

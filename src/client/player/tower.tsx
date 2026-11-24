@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
+import type { AfterAnswerWaitView } from "../../shared/mode-views.ts";
 import type { MonsterEgg, PlayerTowerView } from "../../shared/modes/tower.ts";
 import { BLOCKS_PER_BUILD, DROP_ZONES, MONSTER_DAMAGE, towerWords } from "../../shared/modes/tower.ts";
 import type { ClientMsg } from "../../shared/protocol.ts";
@@ -73,8 +74,7 @@ function TowerPlayerContent({ view, send }: { view: PlayerTowerView; send: Send 
     body = (
       <BuildMode
         build={build}
-        buildId={view.me.correct}
-        remainingMs={view.build?.remainingMs ?? 0}
+        waitView={view.build?.wait ?? null}
         blocksHeld={view.blocksHeld}
         color={view.team.color}
         team={view.team.index}
@@ -171,8 +171,7 @@ function Piece({ color, team }: { color: string; team: number }) {
 
 function BuildMode(props: {
   build: Build;
-  buildId: number;
-  remainingMs: number;
+  waitView: AfterAnswerWaitView | null;
   blocksHeld: number;
   color: string;
   team: number;
@@ -182,7 +181,7 @@ function BuildMode(props: {
 }) {
   const christmas = useChristmasTower();
   const { build, blocksHeld, color, team, egg, send } = props;
-  const wait = useAfterAnswerWait(props.buildId, props.remainingMs);
+  const wait = useAfterAnswerWait(props.waitView);
   const isFresh = useFreshKeys();
   const newFloor = useNewFloor(build.floors);
   const [puff, setPuff] = useState<{ x: number; y: number; id: number } | null>(null);

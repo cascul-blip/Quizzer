@@ -1,6 +1,6 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { LandStart } from "../land-board.ts";
-import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward, TeamInfo } from "../mode-views.ts";
+import type { AfterAnswerWaitView, QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward, TeamInfo } from "../mode-views.ts";
 import type { ModeProtocol } from "../shared-mode-entry.ts";
 import { sharedModeEntry } from "../shared-mode-entry.ts";
 import type { SeasonTheme } from "../themed-modes.ts";
@@ -104,8 +104,7 @@ export interface PlayerLandView {
   feedback: StreamFeedbackView | null;
   /** The land, while this player is placing tiles. */
   board: LandBoard | null;
-  /** This claim activity's answer number and remaining wait before placement. */
-  claimWait: { id: number; remainingMs: number } | null;
+  claimWait: AfterAnswerWaitView | null;
   /** Set once this player's first team was surrounded and they joined the conquerors. */
   conquered: { seq: number; from: string; by: string } | null;
   result: { teamRank: number; teamCount: number; tiles: number; won: boolean; awards: string[] } | null;
