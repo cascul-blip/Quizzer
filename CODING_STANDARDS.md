@@ -29,6 +29,8 @@ Judgement calls the reviewer applies to a diff. `bun run typecheck` and `bun tes
 
 ## Game modes
 
+- **Behavior changes**. Review the diff alongside the affected [game-mode guide](docs/agents/game-modes.md), [mode design notes](docs/modes/), and relevant [ADRs](docs/adr/). Check that guidance on ownership, sequencing, and extension points still fits the behavior in the diff. Update affected guidance and record any changed architecture decision in its ADR.
+
 - **One table per fact**: anything that varies by game mode (its display name, whether it carries pacing, how it starts, its results sheet) lives in one exhaustive `switch` ending in `satisfies never`, or in a `Record<GameMode, …>`, so adding or removing a mode is a compile error at every site. Flag new `instanceof` chains or hand-written lists of mode strings.
 - **Mode entries**: a game mode's server knowledge (its settings, how it starts, pacing, results sheet, phone messages) lives in its mode entry, exported from the mode's own file and collected in `MODES` (`src/server/game/modes.ts`). The hub, lobby and lobby handoff look the entry up and don't branch on the mode.
 - **Enforced by `tests/standards.test.ts`**: server code does not compare a mode against a literal, no client file that uses the mode entries compares a view's kind, mode or banner against a game mode, and server code does not use `instanceof` on a game class. Tests may use `instanceof` to narrow a game fixture. A suggested fix must pass these too.

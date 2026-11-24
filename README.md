@@ -441,6 +441,12 @@ The Racer pixel art in `src/client/shared/racer/` (the car, the skyline and the 
 
 The server runs the game state machine and timers and scores answers by server time. The projector receives snapshots. Each phone connection starts with a fresh snapshot and can receive patches during play. See the [View delivery ADR](docs/adr/0003-deliver-phone-views-from-per-socket-baselines.md).
 
+### Comment audits
+
+Run `bun run audit:comments` for a read-only JSON inventory of comments in tracked JavaScript and TypeScript files, including JSX and TSX. It reads the working tree, so an audit of a specific revision should start from a clean checkout. Each entry gives the file, line range, and text. Consecutive standalone line comments form one block, with cast and lint or type directives counted separately.
+
+Report the exact inventory total and its file scope. For sampled classifications, report the sample size and label category counts extrapolated from it as estimates. Use the [comment review standard](CODING_STANDARDS.md#comments) to judge what to keep, remove, or move into a guide or ADR.
+
 ### Building
 
 ```sh
