@@ -124,7 +124,9 @@ export class RobotGame {
       protect: settings.protect,
       clock: opts.clock,
       rng: opts.rng,
-      // Only in the quiz phase, so a wrong-answer wait never covers the arrows in the move phase.
+      countdownMs: COUNTDOWN_MS,
+      inPlay: (phase) => phase !== "countdown",
+      // why: only in the quiz phase, so a wrong-answer wait never covers the arrows in the move phase.
       canAnswer: () => this.phase === "quiz",
       cleanup: () => {
         this.marked = new Set();
@@ -135,19 +137,6 @@ export class RobotGame {
     });
   }
 
-  private get rng(): () => number {
-    return this.session.rng;
-  }
-
-  private get stream() {
-    return this.session.stream;
-  }
-
-  private get phases() {
-    return this.session.phases;
-  }
-
-  /** The lobby's choices, handed back when the game closes ("Play again"). */
   get choices(): LobbyChoices {
     return this.session.choices;
   }
@@ -165,11 +154,11 @@ export class RobotGame {
 
   /** When the current phase's countdown ends; 0 when it has none. */
   get phaseEndsAt(): number {
-    return this.phases.endsAt;
+    return this.session.phases.endsAt;
   }
 
   get phaseDurationMs(): number {
-    return this.phases.durationMs;
+    return this.session.phases.durationMs;
   }
 
   get players(): Map<string, RobotPlayer> {
@@ -194,11 +183,11 @@ export class RobotGame {
   }
 
   private shuffledTiles(): number[] {
-    return shuffle(this.playableTiles(), this.rng);
+    return shuffle(this.playableTiles(), this.session.rng);
   }
 
   start(): void {
-    this.session.start(COUNTDOWN_MS, () => this.beginRound());
+    this.session.start(() => this.beginRound());
   }
 
   private beginRound(): void {
@@ -206,10 +195,10 @@ export class RobotGame {
     this.marked = new Set();
     this.collapsing = new Set();
     const ms = robotQuizMs(this.round);
-    this.phases.set("quiz", ms, () => this.beginMove());
-    for (const p of this.players.values()) this.stream.open(p);
+    this.session.phases.set("quiz", ms, () => this.beginMove());
+    for (const p of this.players.values()) this.session.stream.open(p);
     if (ms <= ROBOT_WARN_MS) this.markTargets();
-    else this.phases.after("warn", ms - ROBOT_WARN_MS, () => this.markTargets());
+    else this.session.phases.after("warn", ms - ROBOT_WARN_MS, () => this.markTargets());
     this.session.changed();
   }
 
@@ -219,7 +208,7 @@ export class RobotGame {
    * Occupied tiles count toward the 3/4 first, so a quarter of the board stays safe however small it gets.
    */
   private markTargets(): void {
-    this.phases.cancel("warn");
+    this.session.phases.cancel("warn");
     if (this.phase !== "quiz") return;
     const shrink = this.round % ROBOT_SHRINK_EVERY === 0 && ROBOT_BOARD - 2 * this.inset > ROBOT_MIN_BOARD;
     this.collapsing = new Set(shrink ? this.playableTiles().filter((i) => robotRing(i) === this.inset) : []);
@@ -234,7 +223,7 @@ export class RobotGame {
 
   private beginMove(): void {
     if (this.marked.size === 0) this.markTargets();
-    this.phases.set("move", ROBOT_MOVE_MS, () => this.fire());
+    this.session.phases.set("move", ROBOT_MOVE_MS, () => this.fire());
     this.session.changed();
   }
 
@@ -259,7 +248,7 @@ export class RobotGame {
       for (const p of this.alive()) if (!robotInBounds(p.x, p.y, this.inset)) this.relocate(p);
     }
     this.lastAttack = { seq: this.attacks, round: this.round, hit, eliminated };
-    this.phases.set("attack", ROBOT_ATTACK_MS, () => (this.isOver() ? this.session.end() : this.beginRound()));
+    this.session.phases.set("attack", ROBOT_ATTACK_MS, () => (this.isOver() ? this.session.end() : this.beginRound()));
     this.session.changed();
   }
 
@@ -299,9 +288,8 @@ export class RobotGame {
   }
 
   join(rawNickname: unknown, avatar?: AvatarChoice | null): RobotPlayer {
-    const player = this.session.join(rawNickname, avatar, (base) => this.newPlayer(base));
-    // why: Robot Attack has no "playing" phase; a joiner gets a question in any round phase.
-    this.stream.openOnJoin(player, this.phase !== "countdown");
+    const player = this.session.addPlayer(rawNickname, avatar, (base) => this.newPlayer(base));
+    this.session.changed();
     return player;
   }
 
@@ -314,7 +302,9 @@ export class RobotGame {
   }
 
   kick(playerId: string): RobotPlayer | null {
-    return this.session.kick(playerId);
+    const p = this.session.removePlayer(playerId);
+    if (p) this.session.changed();
+    return p;
   }
 
   /** Answer during the quiz phase; a correct answer earns a movement point (players still in the game only). */
@@ -382,7 +372,7 @@ export class RobotGame {
       phase: this.phase,
       quiz: { id: this.quizId, title: this.title, questionCount: this.questions.length },
       round: this.round,
-      phaseRemainingMs: this.phases.remainingMs(),
+      phaseRemainingMs: this.session.phases.remainingMs(),
       phaseDurationMs: this.phaseDurationMs,
       marked: [...this.marked].sort((a, b) => a - b),
       inset: this.inset,
@@ -402,7 +392,7 @@ export class RobotGame {
       playerCount: this.players.size,
       standings: podium ? this.standings() : null,
       awards: podium ? this.podium.awards : null,
-      errors: this.stream.errorsWhen(podium),
+      errors: this.session.stream.errorsWhen(podium),
     };
   }
 
@@ -421,9 +411,9 @@ export class RobotGame {
       phase: this.phase,
       title: this.title,
       round: this.round,
-      phaseRemainingMs: this.phases.remainingMs(),
+      phaseRemainingMs: this.session.phases.remainingMs(),
       me: { id: p.id, nickname: p.nickname, avatar: p.avatar, lives: p.lives, out: p.outRound !== null, points: p.points, correct: p.correct, x: p.x, y: p.y },
-      ...this.stream.fragment(p),
+      ...this.session.stream.fragment(p),
       board: onBoard
         ? {
             marked: [...this.marked].sort((x, y) => x - y),

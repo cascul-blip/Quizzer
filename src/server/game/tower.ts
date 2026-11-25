@@ -110,6 +110,8 @@ export class TowerGame {
       protect: settings.protect,
       clock: opts.clock,
       rng: opts.rng,
+      countdownMs: COUNTDOWN_MS,
+      inPlay: (phase) => phase === "playing",
       minutes: settings.minutes,
       canAnswer: (p) => this.phase === "playing" && p.state === "question",
       cleanup: () => {
@@ -120,29 +122,12 @@ export class TowerGame {
     });
   }
 
-  private get clock(): Clock {
-    return this.session.clock;
-  }
-
-  private get rng(): () => number {
-    return this.session.rng;
-  }
-
-  private get stream() {
-    return this.session.stream;
-  }
-
-  private get phases() {
-    return this.session.phases;
-  }
-
   static fromLobby(lobby: LobbyFacts<"tower">, opts: TowerOptions = {}): TowerGame {
     const game = new TowerGame(lobby.quiz, { ...lobby.settings, shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
     game.session.adoptLobby(lobby, (base) => game.newPlayer(base, lobby.teams.get(base.id) ?? 0));
     return game;
   }
 
-  /** The lobby's choices, handed back when the game closes ("Play again"). */
   get choices(): LobbyChoices {
     return this.session.choices;
   }
@@ -169,16 +154,16 @@ export class TowerGame {
   }
 
   start(): void {
-    this.session.start(COUNTDOWN_MS, () => this.beginPlaying());
+    this.session.start(() => this.beginPlaying());
   }
 
   private beginPlaying(): void {
     if (this.phase !== "countdown") return;
     const ms = this.settings.minutes * 60_000;
     this.session.startGameLength("playing");
-    for (const p of this.players.values()) this.stream.open(p);
+    for (const p of this.players.values()) this.session.stream.open(p);
     if (this.monsterEnabled) {
-      MONSTER_AT.forEach((frac, i) => this.phases.after(monsterSlot(i), Math.round(ms * frac), () => this.announceMonster()));
+      MONSTER_AT.forEach((frac, i) => this.session.phases.after(monsterSlot(i), Math.round(ms * frac), () => this.announceMonster()));
     }
     this.session.changed();
   }
@@ -186,7 +171,7 @@ export class TowerGame {
   /** Time until the next egg announcement, or null if none is coming. */
   private nextMonsterRemainingMs(): number | null {
     for (let i = 0; i < MONSTER_AT.length; i++) {
-      const ms = this.phases.slotRemainingMs(monsterSlot(i));
+      const ms = this.session.phases.slotRemainingMs(monsterSlot(i));
       if (ms !== null) return ms;
     }
     return null;
@@ -213,7 +198,7 @@ export class TowerGame {
         const row = floorsOf(t) + EGG_LEVELS_ABOVE - 1;
         // A column is free if it hasn't been stacked up to that row yet (the shortest column always is).
         const free = [0, 1, 2].filter((c) => t.columns[c]! <= row);
-        return { col: free[Math.min(free.length - 1, Math.floor(this.rng() * free.length))]!, row };
+        return { col: free[Math.min(free.length - 1, Math.floor(this.session.rng() * free.length))]!, row };
       });
       this.egg = { seq, cells };
       this.lastMonsterEvent = { seq, kind: "egg" };
@@ -245,7 +230,9 @@ export class TowerGame {
   }
 
   join(rawNickname: unknown, avatar?: AvatarChoice | null): TowerPlayer {
-    return this.session.join(rawNickname, avatar, (base) => this.newPlayer(base, this.smallestTeam()));
+    const player = this.session.addPlayer(rawNickname, avatar, (base) => this.newPlayer(base, this.smallestTeam()));
+    this.session.changed();
+    return player;
   }
 
   private smallestTeam(): number {
@@ -263,7 +250,9 @@ export class TowerGame {
   }
 
   kick(playerId: string): TowerPlayer | null {
-    return this.session.kick(playerId);
+    const p = this.session.removePlayer(playerId);
+    if (p) this.session.changed();
+    return p;
   }
 
   answer(playerId: string, seq: number, option: AnswerValue): boolean {
@@ -281,8 +270,8 @@ export class TowerGame {
     const p = this.players.get(playerId);
     if (!p || this.phase !== "playing" || p.state !== "build" || p.blocksHeld <= 0) return null;
     if (!Number.isInteger(zone) || zone < 0 || zone >= DROP_ZONES) return null;
-    const now = this.clock.now();
-    if (now < this.stream.feedbackEndsAt(p) || now - p.lastDropAt < DROP_COOLDOWN_MS) return null;
+    const now = this.session.clock.now();
+    if (now < this.session.stream.feedbackEndsAt(p) || now - p.lastDropAt < DROP_COOLDOWN_MS) return null;
     p.lastDropAt = now;
     const team = this.teams[p.team]!;
     const landed = zone >= 1 && zone <= 3;
@@ -297,7 +286,7 @@ export class TowerGame {
     p.blocksHeld--;
     if (p.blocksHeld === 0) {
       p.state = "question";
-      this.stream.resume(p, now);
+      this.session.stream.resume(p, now);
     }
     this.dropCount++;
     this.session.activity(p.id);
@@ -346,7 +335,7 @@ export class TowerGame {
       theme: modeTheme("tower", this.settings.theme),
       phase: this.phase,
       quiz: { id: this.quizId, title: this.title, questionCount: this.questions.length },
-      remainingMs: this.phases.remainingMs(),
+      remainingMs: this.session.phases.remainingMs(),
       teams: this.teams.map((t) => ({
         index: t.index,
         name: t.name,
@@ -372,7 +361,7 @@ export class TowerGame {
       lastAttack: this.lastAttack,
       nextMonsterRemainingMs: this.phase === "playing" ? this.nextMonsterRemainingMs() : null,
       awards: podium ? this.podium.awards : null,
-      errors: this.stream.errorsWhen(this.phase === "podium"),
+      errors: this.session.stream.errorsWhen(this.phase === "podium"),
     };
   }
 
@@ -404,17 +393,22 @@ export class TowerGame {
       theme: modeTheme("tower", this.settings.theme),
       phase: this.phase,
       title: this.title,
-      remainingMs: this.phases.remainingMs(),
+      remainingMs: this.session.phases.remainingMs(),
       me: { id: p.id, nickname: p.nickname, avatar: p.avatar, correct: p.correct, placed: p.placed },
       team: teamInfo(team.index),
       state: p.state,
       blocksHeld: p.blocksHeld,
-      ...this.stream.fragment(p),
+      ...this.session.stream.fragment(p),
       egg: playing && this.egg ? { seq: this.egg.seq, ...this.egg.cells[p.team]! } : null,
       monsterEvent: this.monsterEventFor(p),
       build:
         playing && p.state === "build"
-          ? { columns: [...team.columns], floors: floorsOf(team), sweepDurationMs: sweepMsFor(floorsOf(team)), wait: this.stream.afterAnswerWaitView(p) }
+          ? {
+              columns: [...team.columns],
+              floors: floorsOf(team),
+              sweepDurationMs: sweepMsFor(floorsOf(team)),
+              wait: this.session.stream.afterAnswerWaitView(p),
+            }
           : null,
       result,
     };

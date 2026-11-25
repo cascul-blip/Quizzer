@@ -129,6 +129,8 @@ export class LandGame {
       shuffleAnswers: settings.shuffleAnswers,
       clock: opts.clock,
       rng: opts.rng,
+      countdownMs: COUNTDOWN_MS,
+      inPlay: (phase) => phase === "playing",
       minutes: settings.minutes,
       canAnswer: (p) => this.phase === "playing" && p.state === "question",
       podium: { build: () => this.buildPodium(), empty: () => emptyPodium(landShared.awards) },
@@ -136,19 +138,6 @@ export class LandGame {
     });
   }
 
-  private get clock(): Clock {
-    return this.session.clock;
-  }
-
-  private get stream() {
-    return this.session.stream;
-  }
-
-  private get phases() {
-    return this.session.phases;
-  }
-
-  /** The lobby's choices, handed back when the game closes ("Play again"). */
   get choices(): LobbyChoices {
     return this.session.choices;
   }
@@ -190,13 +179,13 @@ export class LandGame {
   }
 
   start(): void {
-    this.session.start(COUNTDOWN_MS, () => this.beginPlaying());
+    this.session.start(() => this.beginPlaying());
   }
 
   private beginPlaying(): void {
     if (this.phase !== "countdown") return;
     this.session.startGameLength("playing");
-    for (const p of this.players.values()) this.stream.open(p);
+    for (const p of this.players.values()) this.session.stream.open(p);
     this.session.changed();
   }
 
@@ -206,8 +195,8 @@ export class LandGame {
 
   /** Only one team is left: show the board for a moment, then the podium. */
   private conquer(): void {
-    this.phases.dispose();
-    this.phases.set("conquered", CONQUEST_MS, () => this.session.end());
+    this.session.phases.dispose();
+    this.session.phases.set("conquered", CONQUEST_MS, () => this.session.end());
   }
 
   dispose(): void {
@@ -220,7 +209,9 @@ export class LandGame {
   }
 
   join(rawNickname: unknown, avatar?: AvatarChoice | null): LandPlayer {
-    return this.session.join(rawNickname, avatar, (base) => this.newPlayer(base, this.smallestTeam()));
+    const player = this.session.addPlayer(rawNickname, avatar, (base) => this.newPlayer(base, this.smallestTeam()));
+    this.session.changed();
+    return player;
   }
 
   private smallestTeam(): number {
@@ -238,15 +229,18 @@ export class LandGame {
   }
 
   kick(playerId: string): LandPlayer | null {
-    const p = this.session.kick(playerId);
-    if (p) this.phases.cancel(this.playerSlot(p));
+    const p = this.session.removePlayer(playerId);
+    if (p) {
+      this.session.phases.cancel(this.playerSlot(p));
+      this.session.changed();
+    }
     return p;
   }
 
   private backToQuestions(p: LandPlayer): void {
-    this.phases.cancel(this.playerSlot(p));
+    this.session.phases.cancel(this.playerSlot(p));
     p.state = "question";
-    this.stream.resume(p);
+    this.session.stream.resume(p);
   }
 
   answer(playerId: string, seq: number, option: AnswerValue): boolean {
@@ -259,8 +253,8 @@ export class LandGame {
       if (p.claims === 0) {
         // The message starts once the ✗ flash is over.
         p.state = "empty";
-        p.emptyEndsAt = this.stream.feedbackEndsAt(p) + LAND_EMPTY_MS;
-        this.phases.after(this.playerSlot(p), p.emptyEndsAt - this.clock.now(), () => this.endEmpty(p.id));
+        p.emptyEndsAt = this.session.stream.feedbackEndsAt(p) + LAND_EMPTY_MS;
+        this.session.phases.after(this.playerSlot(p), p.emptyEndsAt - this.session.clock.now(), () => this.endEmpty(p.id));
       } else if (this.canPlace(p)) {
         p.state = "claim";
       }
@@ -291,7 +285,7 @@ export class LandGame {
   /** Put the player's team colour on a tile. Returns whether it was taken. */
   place(playerId: string, tile: number): boolean {
     const p = this.players.get(playerId);
-    if (!p || this.phase !== "playing" || p.state !== "claim" || this.clock.now() < this.stream.feedbackEndsAt(p)) return false;
+    if (!p || this.phase !== "playing" || p.state !== "claim" || this.session.clock.now() < this.session.stream.feedbackEndsAt(p)) return false;
     const cost = this.costFor(p.team, tile);
     if (cost === null || cost > p.claims) return false;
     const stolen = this.owners[tile] !== EMPTY;
@@ -424,7 +418,7 @@ export class LandGame {
       theme: modeTheme("land", this.settings.theme),
       phase: this.phase,
       quiz: { id: this.quizId, title: this.title, questionCount: this.questions.length },
-      remainingMs: this.phases.remainingMs(),
+      remainingMs: this.session.phases.remainingMs(),
       board: this.boardView(),
       teams: this.teams.map((t) => {
         const r = ranked.get(t.index)!;
@@ -447,14 +441,14 @@ export class LandGame {
       lastCapture: this.lastCapture,
       playerCount: players.length,
       awards: podium ? this.podium.awards : null,
-      errors: this.stream.errorsWhen(this.phase === "podium"),
+      errors: this.session.stream.errorsWhen(this.phase === "podium"),
     };
   }
 
   playerView(playerId: string): PlayerLandView | null {
     const p = this.players.get(playerId);
     if (!p) return null;
-    const now = this.clock.now();
+    const now = this.session.clock.now();
     const playing = this.phase === "playing";
     const state: LandState = playing ? p.state : "question";
     let result: PlayerLandView["result"] = null;
@@ -469,7 +463,7 @@ export class LandGame {
       theme: modeTheme("land", this.settings.theme),
       phase: this.phase,
       title: this.title,
-      remainingMs: this.phases.remainingMs(),
+      remainingMs: this.session.phases.remainingMs(),
       me: { id: p.id, nickname: p.nickname, avatar: p.avatar, correct: p.correct, placed: p.placed, stolen: p.stolen },
       team: teamInfo(p.team),
       teamTiles: this.teamTiles(p.team),
@@ -477,9 +471,9 @@ export class LandGame {
       claims: p.claims,
       answered: p.answered,
       emptyRemainingMs: state === "empty" ? Math.max(0, p.emptyEndsAt - now) : 0,
-      ...this.stream.fragment(p),
+      ...this.session.stream.fragment(p),
       board: state === "claim" ? this.boardView() : null,
-      claimWait: state === "claim" ? this.stream.afterAnswerWaitView(p) : null,
+      claimWait: state === "claim" ? this.session.stream.afterAnswerWaitView(p) : null,
       conquered: p.conquered,
       result,
     };

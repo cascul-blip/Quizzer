@@ -118,6 +118,8 @@ export class CupGame {
       protect: settings.protect,
       clock: opts.clock,
       rng: opts.rng,
+      countdownMs: COUNTDOWN_MS,
+      inPlay: (phase) => phase !== "countdown",
       canAnswer: (p) => this.answering(p),
       cleanup: () => {
         // Ending mid-reveal: the drinks already poured still count.
@@ -129,22 +131,6 @@ export class CupGame {
       podium: { build: () => this.buildPodium(), empty: () => emptyPodium(cupAwardLabels(this.theme)) },
       hub: { onChange: opts.onChange, onActivity: opts.onActivity, onFinish: () => opts.onFinish?.(this) },
     });
-  }
-
-  private get rng(): () => number {
-    return this.session.rng;
-  }
-
-  private get stream() {
-    return this.session.stream;
-  }
-
-  private get phases() {
-    return this.session.phases;
-  }
-
-  private changed(): void {
-    this.session.changed();
   }
 
   get choices(): LobbyChoices {
@@ -167,11 +153,11 @@ export class CupGame {
 
   /** When the current phase's countdown ends; 0 when it has none. */
   get phaseEndsAt(): number {
-    return this.phases.endsAt;
+    return this.session.phases.endsAt;
   }
 
   get phaseDurationMs(): number {
-    return this.phases.durationMs;
+    return this.session.phases.durationMs;
   }
 
   get players(): Map<string, CupPlayer> {
@@ -183,7 +169,7 @@ export class CupGame {
   }
 
   private rollDie(): number {
-    return 1 + Math.min(CUP_DIE_SIDES - 1, Math.floor(this.rng() * CUP_DIE_SIDES));
+    return 1 + Math.min(CUP_DIE_SIDES - 1, Math.floor(this.session.rng() * CUP_DIE_SIDES));
   }
 
   private newPlayer(base: BasePlayer): Omit<CupPlayer, keyof AnswerTotals> {
@@ -205,7 +191,7 @@ export class CupGame {
   }
 
   start(): void {
-    this.session.start(COUNTDOWN_MS, () => this.beginRound());
+    this.session.start(() => this.beginRound());
   }
 
   /** Everyone still alive rolls the die: that's how many questions they must get right. */
@@ -219,14 +205,14 @@ export class CupGame {
       p.safe = false;
       p.target = p.outRound === null ? this.rollDie() : 0;
     }
-    this.phases.set("roll", CUP_ROLL_MS, () => this.beginQuiz());
-    this.changed();
+    this.session.phases.set("roll", CUP_ROLL_MS, () => this.beginQuiz());
+    this.session.changed();
   }
 
   private beginQuiz(): void {
-    this.phases.set("quiz", cupQuizMs(this.round), () => this.endQuiz());
-    for (const p of this.players.values()) this.stream.open(p);
-    this.changed();
+    this.session.phases.set("quiz", cupQuizMs(this.round), () => this.endQuiz());
+    for (const p of this.players.values()) this.session.stream.open(p);
+    this.session.changed();
   }
 
   private maybeEndQuizEarly(): void {
@@ -241,17 +227,17 @@ export class CupGame {
     const drinkers = this.alive().filter((p) => !p.safe);
     this.drinkers = shuffle(
       drinkers.map((p) => p.id),
-      this.rng,
+      this.session.rng,
     );
     if (drinkers.length === 0) {
       this.reveal = { seq: ++this.reveals, round: this.round, drinks: [], step: 0 };
-      this.phases.set("reveal", CUP_ALL_SAFE_MS, () => this.afterReveal());
-      this.changed();
+      this.session.phases.set("reveal", CUP_ALL_SAFE_MS, () => this.afterReveal());
+      this.session.changed();
       return;
     }
     for (const p of drinkers) if (hasNoChoice(p)) p.pick = 0;
-    this.phases.set("drink", CUP_DRINK_MS, () => this.pour());
-    this.changed();
+    this.session.phases.set("drink", CUP_DRINK_MS, () => this.pour());
+    this.session.changed();
     this.maybeEndDrinkEarly();
   }
 
@@ -269,12 +255,12 @@ export class CupGame {
       const p = this.players.get(id);
       if (!p || p.outRound !== null) continue;
       const auto = p.pick === null || p.cups <= 1;
-      const cup = p.pick ?? Math.floor(this.rng() * p.cups);
-      const poison = Math.floor(this.rng() * p.cups);
+      const cup = p.pick ?? Math.floor(this.session.rng() * p.cups);
+      const poison = Math.floor(this.session.rng() * p.cups);
       drinks.push({ id, cup, cupsBefore: p.cups, auto, poisoned: cup === poison });
     }
     this.reveal = { seq: ++this.reveals, round: this.round, drinks, step: -1 };
-    this.phases.set("reveal", drinks.length * (CUP_SIP_MS + CUP_VERDICT_MS), () => this.afterReveal());
+    this.session.phases.set("reveal", drinks.length * (CUP_SIP_MS + CUP_VERDICT_MS), () => this.afterReveal());
     this.nextStep();
   }
 
@@ -284,8 +270,8 @@ export class CupGame {
     if (!r || this.phase !== "reveal") return;
     r.step++;
     if (r.step % 2 === 1) this.applyVerdict(r.drinks[(r.step - 1) / 2]!);
-    if (r.step < r.drinks.length * 2 - 1) this.phases.after("step", r.step % 2 === 0 ? CUP_SIP_MS : CUP_VERDICT_MS, () => this.nextStep());
-    this.changed();
+    if (r.step < r.drinks.length * 2 - 1) this.session.phases.after("step", r.step % 2 === 0 ? CUP_SIP_MS : CUP_VERDICT_MS, () => this.nextStep());
+    this.session.changed();
   }
 
   private applyVerdict(d: Drink): void {
@@ -304,7 +290,7 @@ export class CupGame {
     // Everything has been shown by now; make sure every verdict is in.
     const r = this.reveal;
     if (r) while (r.step < r.drinks.length * 2 - 1) this.forceStep(r);
-    this.phases.cancel("step");
+    this.session.phases.cancel("step");
     if (this.isOver()) this.session.end();
     else this.beginRound();
   }
@@ -329,9 +315,8 @@ export class CupGame {
   }
 
   join(rawNickname: unknown, avatar?: AvatarChoice | null): CupPlayer {
-    const player = this.session.join(rawNickname, avatar, (base) => this.newPlayer(base));
-    // why: Cup of Death plays in its round phases, not the session's "playing", so it opens the late joiner's question itself.
-    this.stream.openOnJoin(player, this.phase !== "countdown");
+    const player = this.session.addPlayer(rawNickname, avatar, (base) => this.newPlayer(base));
+    this.session.changed();
     return player;
   }
 
@@ -350,9 +335,10 @@ export class CupGame {
   }
 
   kick(playerId: string): CupPlayer | null {
-    const p = this.session.kick(playerId);
+    const p = this.session.removePlayer(playerId);
     if (!p) return null;
     this.drinkers = this.drinkers.filter((id) => id !== playerId);
+    this.session.changed();
     this.maybeEndQuizEarly();
     this.maybeEndDrinkEarly();
     return p;
@@ -474,7 +460,7 @@ export class CupGame {
       phase: this.phase,
       quiz: { id: this.quizId, title: this.title, questionCount: this.questions.length },
       round: this.round,
-      phaseRemainingMs: this.phases.remainingMs(),
+      phaseRemainingMs: this.session.phases.remainingMs(),
       phaseDurationMs: this.phaseDurationMs,
       players: [...this.players.values()].map((p) => ({
         id: p.id,
@@ -494,7 +480,7 @@ export class CupGame {
       playerCount: this.players.size,
       standings: podium ? this.standings() : null,
       awards: podium ? this.awards() : null,
-      errors: this.stream.errorsWhen(podium),
+      errors: this.session.stream.errorsWhen(podium),
     };
   }
 
@@ -520,7 +506,7 @@ export class CupGame {
       phase: this.phase,
       title: this.title,
       round: this.round,
-      phaseRemainingMs: this.phases.remainingMs(),
+      phaseRemainingMs: this.session.phases.remainingMs(),
       phaseDurationMs: this.phaseDurationMs,
       me: {
         id: p.id,
@@ -534,7 +520,7 @@ export class CupGame {
         correct: p.correct,
       },
       startCups: this.startCups,
-      ...this.stream.fragment(p),
+      ...this.session.stream.fragment(p),
       drink: this.phase === "drink" && this.drinkers.includes(p.id) ? { picked: p.pick } : null,
       myDrink: reveal && mineAt >= 0 ? { ...reveal.drinks[mineAt]!, seq: reveal.seq, turn: reveal.current === mineAt, waiting: reveal.current < mineAt } : null,
       alive: this.alive().length,

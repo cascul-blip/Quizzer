@@ -164,6 +164,8 @@ export class SiegeGame {
       protect: settings.protect,
       clock: opts.clock,
       rng: opts.rng,
+      countdownMs: SIEGE_COUNTDOWN_MS,
+      inPlay: () => this.playing,
       canAnswer: () => this.playing,
       cleanup: () => {
         this.stopBattle();
@@ -172,10 +174,10 @@ export class SiegeGame {
       podium: { build: () => this.buildPodium(), empty: () => emptyPodium(siegeAwardLabels(this.settings.theme)) },
       hub: { onChange: opts.onChange, onActivity: opts.onActivity, onFinish: () => opts.onFinish?.(this) },
     });
-    this.onTick = opts.onTick ?? (() => this.onChange());
+    this.onTick = opts.onTick ?? (() => this.session.changed());
     this.battlefield = new SiegeBattlefield<SiegePlayer>({
-      clock: this.clock,
-      rng: this.rng,
+      clock: this.session.clock,
+      rng: this.session.rng,
       endless: settings.waves === "endless",
       wave: () => this.wave,
       classSize: () => this.connectedCount(),
@@ -190,31 +192,6 @@ export class SiegeGame {
     return this.battlefield.hearts;
   }
 
-  private get clock(): Clock {
-    return this.session.clock;
-  }
-
-  private get rng(): () => number {
-    return this.session.rng;
-  }
-
-  private get stream() {
-    return this.session.stream;
-  }
-
-  private get phases() {
-    return this.session.phases;
-  }
-
-  private onChange(): void {
-    this.session.changed();
-  }
-
-  private onActivity(playerId: string): void {
-    this.session.activity(playerId);
-  }
-
-  /** The lobby's choices, handed back when the game closes ("Play again"). */
   get choices(): LobbyChoices {
     return this.session.choices;
   }
@@ -260,7 +237,7 @@ export class SiegeGame {
   }
 
   get phaseDurationMs(): number {
-    return this.phases.durationMs;
+    return this.session.phases.durationMs;
   }
 
   private get playing(): boolean {
@@ -272,16 +249,16 @@ export class SiegeGame {
   }
 
   start(): void {
-    this.session.start(SIEGE_COUNTDOWN_MS, () => this.beginOpening());
+    this.session.start(() => this.beginOpening());
   }
 
   /** The opening build break: questions start and the class places its first defenders. */
   private beginOpening(): void {
     this.wave = 1;
-    for (const p of this.players.values()) this.stream.open(p);
-    this.phases.set("build", SIEGE_OPENING_MS, () => this.beginWave(1));
+    for (const p of this.players.values()) this.session.stream.open(p);
+    this.session.phases.set("build", SIEGE_OPENING_MS, () => this.beginWave(1));
     this.scheduleTick();
-    this.onChange();
+    this.session.changed();
   }
 
   /**
@@ -314,8 +291,8 @@ export class SiegeGame {
     );
     this.battlefield.beginWave({ wave, budget, toughness, giantPace: siegeGiantPace(boost) });
     this.waveLog.push({ wave, scale: this.scale, defense, boost, budget, toughness, sent: 0, correct: 0, answered: 0, heartsLost: 0 });
-    this.phases.enter("wave");
-    this.onChange();
+    this.session.phases.enter("wave");
+    this.session.changed();
   }
 
   /** What the board is worth: the defenders (by health left) plus the gold the players haven't spent yet. */
@@ -324,18 +301,18 @@ export class SiegeGame {
   }
 
   private scheduleTick(): void {
-    this.phases.after("tick", SIEGE_TICK_MS, () => this.tick());
+    this.session.phases.after("tick", SIEGE_TICK_MS, () => this.tick());
   }
 
   private tick(): void {
     if (!this.playing) return;
-    const { changed, phones, map } = this.battlefield.tick(this.clock.now());
+    const { changed, phones, map } = this.battlefield.tick(this.session.clock.now());
     this.recordBattle();
     if (this.hearts <= 0) return this.fall();
     if (this.phase === "wave" && this.battlefield.waveCleared) return this.endWave();
     this.scheduleTick();
     // Shots, monster moves and defender hits are only on the projector: don't rebuild every phone's view for them.
-    if (phones || (map && [...this.players.values()].some((p) => p.mapOpen))) this.onChange();
+    if (phones || (map && [...this.players.values()].some((p) => p.mapOpen))) this.session.changed();
     else if (changed) this.onTick();
   }
 
@@ -351,9 +328,9 @@ export class SiegeGame {
     this.battlefield.endWave();
     const next = this.wave + 1;
     this.wave = next;
-    this.phases.set("build", SIEGE_BREAK_MS, () => this.beginWave(next));
+    this.session.phases.set("build", SIEGE_BREAK_MS, () => this.beginWave(next));
     this.scheduleTick();
-    this.onChange();
+    this.session.changed();
   }
 
   /** Place a defender, paid from the player's own purse. Returns null, or why it couldn't be placed. */
@@ -372,7 +349,7 @@ export class SiegeGame {
     p.lastPlaced = t;
     this.battlefield.place(t, Number(lane), Number(square), p);
     this.addEvent(p, `placed ${this.defenderName(t)}`);
-    this.onChange();
+    this.session.changed();
     return null;
   }
 
@@ -393,7 +370,7 @@ export class SiegeGame {
     if (d.type === "wall") p.wallUpgrades++;
     this.battlefield.upgrade(d);
     this.addEvent(p, `upgraded ${this.defenderName(d.type)} to Lv ${d.level}`);
-    this.onChange();
+    this.session.changed();
     return null;
   }
 
@@ -401,7 +378,7 @@ export class SiegeGame {
     const p = this.players.get(playerId);
     if (!p || p.mapOpen === open) return;
     p.mapOpen = open && this.playing;
-    this.onActivity(p.id);
+    this.session.activity(p.id);
   }
 
   private addEvent(p: SiegePlayer, text: string): void {
@@ -413,16 +390,16 @@ export class SiegeGame {
     this.closePeriod();
     this.outcome = "stands";
     this.stopBattle();
-    this.phases.set("stands", SIEGE_ENDING_MS, () => this.session.end());
-    this.onChange();
+    this.session.phases.set("stands", SIEGE_ENDING_MS, () => this.session.end());
+    this.session.changed();
   }
 
   private fall(): void {
     this.closePeriod();
     this.outcome = "fallen";
     this.stopBattle();
-    this.phases.set("fallen", SIEGE_ENDING_MS, () => this.session.end());
-    this.onChange();
+    this.session.phases.set("fallen", SIEGE_ENDING_MS, () => this.session.end());
+    this.session.changed();
   }
 
   /** Host ends the game now: straight to the podium, without a cinematic. */
@@ -445,7 +422,7 @@ export class SiegeGame {
   }
 
   private stopBattle(): void {
-    this.phases.cancel("tick");
+    this.session.phases.cancel("tick");
     this.battlefield.stop();
     for (const p of this.players.values()) p.mapOpen = false;
   }
@@ -456,11 +433,8 @@ export class SiegeGame {
   }
 
   join(rawNickname: unknown, avatar?: AvatarChoice | null): SiegePlayer {
-    const player = this.session.join(rawNickname, avatar, (base) => this.newPlayer(base));
-    if (this.playing) {
-      this.stream.open(player);
-      this.onChange();
-    }
+    const player = this.session.addPlayer(rawNickname, avatar, (base) => this.newPlayer(base));
+    this.session.changed();
     return player;
   }
 
@@ -476,11 +450,12 @@ export class SiegeGame {
 
   /** The player's defenders stay on the board; their unspent gold goes with them. */
   kick(playerId: string): SiegePlayer | null {
-    const p = this.session.kick(playerId);
+    const p = this.session.removePlayer(playerId);
     if (!p) return null;
     p.connected = false;
     p.mapOpen = false;
     this.kicked.push(p);
+    this.session.changed();
     return p;
   }
 
@@ -495,8 +470,8 @@ export class SiegeGame {
       p.goldEarned += SIEGE_GOLD_PER_CORRECT;
     }
     // The projector's gold total changes on a correct answer; only the answerer's screen otherwise.
-    if (correct) this.onChange();
-    else this.onActivity(p.id);
+    if (correct) this.session.changed();
+    else this.session.activity(p.id);
     return true;
   }
 
@@ -548,7 +523,7 @@ export class SiegeGame {
     if (waves === "endless") {
       const prev = this.previousRecord;
       newRecord = survived > 0 && (!prev || survived > prev.waves || (survived === prev.waves && avg > prev.avgScale));
-      record = newRecord ? { waves: survived, avgScale: avg, date: new Date(this.clock.now()).toISOString() } : prev;
+      record = newRecord ? { waves: survived, avgScale: avg, date: new Date(this.session.clock.now()).toISOString() } : prev;
     }
     return {
       outcome,
@@ -576,7 +551,7 @@ export class SiegeGame {
       gold: players.reduce((sum, p) => sum + p.gold, 0),
       hearts: this.hearts,
       maxHearts: SIEGE_HEARTS,
-      phaseRemainingMs: this.phase === "wave" || podium ? 0 : this.phases.remainingMs(),
+      phaseRemainingMs: this.phase === "wave" || podium ? 0 : this.session.phases.remainingMs(),
       phaseDurationMs: this.phaseDurationMs,
       ...this.battlefield.hostBoard(this.playing, ending),
       events: this.events,
@@ -585,7 +560,7 @@ export class SiegeGame {
       connectedCount: players.filter((p) => p.connected).length,
       result: ending && this.outcome ? this.result() : null,
       awards: podium ? this.podium.awards : null,
-      errors: this.stream.errorsWhen(podium),
+      errors: this.session.stream.errorsWhen(podium),
     };
   }
 
@@ -611,7 +586,7 @@ export class SiegeGame {
       kind: "siege",
       phase: this.phase,
       title: this.title,
-      phaseRemainingMs: this.phase === "wave" || podium ? 0 : this.phases.remainingMs(),
+      phaseRemainingMs: this.phase === "wave" || podium ? 0 : this.session.phases.remainingMs(),
       theme: modeTheme("siege", this.settings.theme),
       phaseDurationMs: this.phaseDurationMs,
       wave: this.wave,
@@ -620,7 +595,7 @@ export class SiegeGame {
       gold: p.gold,
       danger: this.playing ? this.battlefield.danger : [],
       me: { id: p.id, nickname: p.nickname, avatar: p.avatar, correct: p.correct, goldEarned: p.goldEarned },
-      ...this.stream.fragment(p),
+      ...this.session.stream.fragment(p),
       lastPlaced: p.lastPlaced,
       alert: this.playing ? this.battlefield.alert : null,
       map: p.mapOpen && this.playing ? this.battlefield.mapView() : null,

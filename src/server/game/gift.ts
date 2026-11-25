@@ -108,30 +108,16 @@ export class GiftGame {
       protect,
       clock: opts.clock,
       rng: opts.rng,
+      countdownMs: COUNTDOWN_MS,
+      inPlay: (phase) => phase === "playing",
       minutes,
-      canAnswer: (player) => !player.bonus && this.phase === "playing" && this.phases.remainingMs() > 0,
+      canAnswer: (player) => !player.bonus && this.phase === "playing" && this.session.phases.remainingMs() > 0,
       cleanup: () => {
         for (const player of this.players.values()) player.bonus = null;
       },
       podium: { build: () => this.buildPodium(), empty: () => emptyPodium(giftShared.awards) },
       hub: { onChange: opts.onChange, onActivity: opts.onActivity, onFinish: () => opts.onFinish?.(this) },
     });
-  }
-
-  private get clock(): Clock {
-    return this.session.clock;
-  }
-
-  private get rng(): () => number {
-    return this.session.rng;
-  }
-
-  private get stream() {
-    return this.session.stream;
-  }
-
-  private get phases() {
-    return this.session.phases;
   }
 
   private newPlayer(base: BasePlayer): Omit<GiftPlayer, keyof AnswerTotals> {
@@ -145,7 +131,6 @@ export class GiftGame {
     return game;
   }
 
-  /** The lobby's choices, handed back when the game closes ("Play again"). */
   get choices(): LobbyChoices {
     return this.session.choices;
   }
@@ -159,18 +144,18 @@ export class GiftGame {
   }
 
   start(): void {
-    this.session.start(COUNTDOWN_MS, () => this.beginPlaying());
+    this.session.start(() => this.beginPlaying());
   }
 
   private beginPlaying(): void {
     this.session.startGameLength("playing", () => this.expire());
-    for (const player of this.players.values()) this.stream.open(player);
+    for (const player of this.players.values()) this.session.stream.open(player);
     this.session.changed();
   }
 
   /** The deadline: the last bonus rounds play out before the game finishes. */
   private expire(): void {
-    this.phases.enter("finishing");
+    this.session.phases.enter("finishing");
     this.finishIfReady();
     this.session.changed();
   }
@@ -189,13 +174,15 @@ export class GiftGame {
   }
 
   private clearBonus(player: GiftPlayer): void {
-    this.phases.cancel(`bonus:${player.id}`);
+    this.session.phases.cancel(`bonus:${player.id}`);
     player.bonus = null;
   }
 
   join(rawNickname: unknown, avatar?: AvatarChoice | null): GiftPlayer {
-    if (this.phase === "finishing") throw new GameError("This game has finished accepting players");
-    return this.session.join(rawNickname, avatar, (base) => this.newPlayer(base));
+    if (this.phase === "podium" || this.phase === "finishing") throw new GameError("This game has finished accepting players");
+    const player = this.session.addPlayer(rawNickname, avatar, (base) => this.newPlayer(base));
+    this.session.changed();
+    return player;
   }
 
   byToken(token: unknown): GiftPlayer | null {
@@ -207,10 +194,11 @@ export class GiftGame {
   }
 
   kick(id: string): GiftPlayer | null {
-    const player = this.session.kick(id);
+    const player = this.session.removePlayer(id);
     if (player) {
       this.clearBonus(player);
       this.finishIfReady();
+      this.session.changed();
     }
     return player;
   }
@@ -225,18 +213,18 @@ export class GiftGame {
   }
 
   private earnBonus(player: GiftPlayer): void {
-    const start = this.stream.feedbackEndsAt(player) + GIFT_READY_MS;
+    const start = this.session.stream.feedbackEndsAt(player) + GIFT_READY_MS;
     const endsAt = start + GIFT_ROUND_MS;
     const round = ++player.rounds;
     player.bonus = {
       start,
       endsAt,
       multiplier: this.multiplier(),
-      items: launchSchedule(round, this.rng),
+      items: launchSchedule(round, this.session.rng),
       hits: new Map(),
       power: null,
     };
-    this.phases.after(`bonus:${player.id}`, endsAt - this.clock.now(), () => {
+    this.session.phases.after(`bonus:${player.id}`, endsAt - this.session.clock.now(), () => {
       this.clearBonus(player);
       this.finishIfReady();
       if (this.phase !== "podium") this.session.activity(player.id);
@@ -248,7 +236,7 @@ export class GiftGame {
     const bonus = player?.bonus;
     if (!player || !bonus || player.rounds !== round || !Number.isInteger(itemId) || bonus.hits.has(itemId)) return false;
     const item = bonus.items[itemId];
-    const now = this.clock.now();
+    const now = this.session.clock.now();
     const elapsed = now - bonus.start;
     if (!item || now >= bonus.endsAt || elapsed < item.from || elapsed >= item.until + GIFT_TAP_GRACE_MS) return false;
 
@@ -303,7 +291,7 @@ export class GiftGame {
 
   private multiplier(): number {
     if (this.phase === "countdown") return 1;
-    return giftMultiplier(this.durationMs - this.phases.remainingMs(), this.durationMs);
+    return giftMultiplier(this.durationMs - this.session.phases.remainingMs(), this.durationMs);
   }
 
   hostView(): HostGiftState {
@@ -313,11 +301,11 @@ export class GiftGame {
       kind: "gift",
       phase: this.phase,
       quiz: { id: this.quizId, title: this.title, questionCount: this.quiz.questions.length },
-      remainingMs: this.phases.remainingMs(),
+      remainingMs: this.session.phases.remainingMs(),
       standings,
       mostCorrect: final ? this.podium.awards.mostCorrect : null,
       // Gift's host view always carries a list, empty until the podium.
-      errors: this.stream.errorsWhen(final) ?? [],
+      errors: this.session.stream.errorsWhen(final) ?? [],
     };
   }
 
@@ -328,16 +316,16 @@ export class GiftGame {
     return {
       kind: "gift",
       phase: this.phase,
-      remainingMs: this.phases.remainingMs(),
+      remainingMs: this.session.phases.remainingMs(),
       score: player.score,
       correct: player.correct,
       progress: bonus ? GIFT_CORRECT_TO_PLAY : player.correct % GIFT_CORRECT_TO_PLAY,
       rank: this.phase === "podium" ? (this.podium.result(id)?.place ?? null) : null,
-      ...this.stream.fragment(player),
+      ...this.session.stream.fragment(player),
       bonus: bonus
         ? {
             round: player.rounds,
-            remainingMs: Math.max(0, bonus.endsAt - this.clock.now()),
+            remainingMs: Math.max(0, bonus.endsAt - this.session.clock.now()),
             multiplier: bonus.multiplier,
             items: bonus.items,
             hits: [...bonus.hits.values()],
