@@ -3,11 +3,11 @@
 The built-in music plays these recordings (trimmed, levelled and converted to MP3 by
 `scripts/music-samples.py`).
 
-| Instruments                                                                                                                                  | Source                                                                                                                      | License                                                       |
-| -------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| String sections (cello, viola, violin; also the pads), brass (French horn, trumpet), flute, harp, pipe organ, timpani                        | [VSCO 2 Community Edition](https://github.com/sgossner/VSCO-2-CE) by Versilian Studios                                      | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
-| Grand piano (Kawai), tubular bells, glockenspiel, concert bass drum (kick and taiko), snare drum, hi-hat, claps, suspended cymbal, woodblock | [VCSL, the Versilian Community Sample Library](https://github.com/sgossner/VCSL) by Versilian Studios                       | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
-| Finger bass (`bass`), acoustic bass (`tribass`), clean electric guitar (`twang`)                                                             | FluidR3_GM SoundFont by Frank Wen, as rendered by [gleitz/midi-js-soundfonts](https://github.com/gleitz/midi-js-soundfonts) | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/us/)  |
+| Instruments                                                                                                                                                           | Source                                                                                                                      | License                                                       |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| String sections (cello, viola, violin; also the pads), brass (French horn, trumpet), flute, harp, pipe organ, timpani                                                 | [VSCO 2 Community Edition](https://github.com/sgossner/VSCO-2-CE) by Versilian Studios                                      | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| Grand piano (Kawai), tubular bells, glockenspiel, concert bass drum (kick and taiko), snare drum, hi-hat, claps, suspended cymbal, woodblock                          | [VCSL, the Versilian Community Sample Library](https://github.com/sgossner/VCSL) by Versilian Studios                       | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| Finger bass (`bass`), acoustic bass (`tribass`), clean electric guitar (`twang`), nylon and steel acoustic guitars (`nylon`, `steel`), hammered dulcimer (`dulcimer`) | FluidR3_GM SoundFont by Frank Wen, as rendered by [gleitz/midi-js-soundfonts](https://github.com/gleitz/midi-js-soundfonts) | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/us/)  |
 
 ## Evil Snowman Christmas arrangements
 
@@ -130,6 +130,8 @@ libraries listed above. Classic Land Grab keeps its original soundtrack.
 
 `memory-christmas-play` uses John Henry Hopkins Jr.'s public-domain **We Three Kings**.
 The verse and chorus melody comes from the [1863 score reproduced by Hymnology Archive](https://www.hymnologyarchive.com/we-three-kings).
-The piano accompaniment is written for this game. Glockenspiel and piano use the
-existing CC0 VCSL samples, with the standard synthesized fallback. No third-party
-song recording is included.
+The accompaniment is written for this game: a nylon-string guitar on the tune over a
+fingerpicked steel-string guitar, with flute, hammered dulcimer and upright bass on the
+refrain. The guitars, dulcimer and upright bass are FluidR3_GM recordings (CC BY 3.0) and
+the flute is the CC0 VSCO 2 CE recording listed above, with the standard synthesized
+fallback. No third-party song recording is included.

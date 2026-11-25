@@ -30,4 +30,4 @@ The projector shows whose turn it is above the board and each player's matched-p
 
 ## Projector music
 
-“We Three Kings” plays on glockenspiel and soft piano during the Question phase and Reveal phase. One verse and refrain loop at a fixed tempo without restarting when the phase changes. The lobby and podium keep their shared Christmas tracks, and the question countdown ticks are unchanged.
+“We Three Kings” plays during the Question phase and Reveal phase. A nylon-string guitar carries the tune over a fingerpicked steel-string guitar; on the refrain a flute takes the tune with it, a hammered dulcimer adds off-beat chord tones and an upright bass joins. One verse and refrain loop at a fixed tempo without restarting when the phase changes. The lobby and podium keep their shared Christmas tracks, and the question countdown ticks are unchanged.

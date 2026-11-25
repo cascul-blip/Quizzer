@@ -3,14 +3,18 @@
 from free sample libraries. Needs numpy, scipy and ffmpeg. The MP3s are committed, so a normal
 build does not run this.
 
-    python3 scripts/music-samples.py [--cache DIR] [--out DIR]
+    python3 scripts/music-samples.py [--cache DIR] [--out DIR] [--only INSTRUMENT ...]
+
+--only rebuilds just the named instruments and keeps every other instrument's files and
+manifest entry as they are.
 
 Sources (see samples/CREDITS.md):
 - VSCO 2 Community Edition (CC0): string sections, brass, flute, harp, pipe organ, timpani.
 - VCSL, the Versilian Community Sample Library (CC0): grand piano, glockenspiel, tubular
   bells, concert bass drum, snare, hi-hat, claps, suspended cymbal, woodblock.
 - FluidR3_GM (CC BY 3.0, via gleitz/midi-js-soundfonts): finger and acoustic bass, clean
-  electric guitar, which the CC0 libraries don't have.
+  electric guitar, nylon- and steel-string acoustic guitars and hammered dulcimer, which the
+  CC0 libraries don't have.
 
 For each instrument it keeps about one note every 3-5 semitones over the range the tracks
 play (the player re-pitches the nearest one), checks each file's pitch against its name
@@ -110,6 +114,9 @@ PITCHED = {
     "bass": {"fluid": "electric_bass_finger", "lo": 28, "hi": 53, "length": 2.2, "step": 4},
     "tribass": {"fluid": "acoustic_bass", "lo": 21, "hi": 55, "length": 2.4, "step": 4},
     "twang": {"fluid": "electric_guitar_clean", "lo": 38, "hi": 64, "length": 2.2, "step": 4},
+    "nylon": {"fluid": "acoustic_guitar_nylon", "lo": 64, "hi": 74, "length": 2.4, "step": 4},
+    "steel": {"fluid": "acoustic_guitar_steel", "lo": 40, "hi": 66, "length": 2.4, "step": 4},
+    "dulcimer": {"fluid": "dulcimer", "lo": 57, "hi": 69, "length": 2.4, "step": 4},
 }
 
 # Drums: a normal hit and an accented one (louder, harder), each with how many seconds to keep.
@@ -284,17 +291,38 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--cache", type=Path, default=ROOT / "node_modules" / ".cache" / "music-samples")
     ap.add_argument("--out", type=Path, default=ROOT / "src" / "client" / "shared" / "music" / "samples")
+    ap.add_argument("--only", nargs="+", choices=[*PITCHED, *DRUMS], help="rebuild just these instruments")
     args = ap.parse_args()
     args.cache.mkdir(parents=True, exist_ok=True)
 
-    sets: dict = {}
+    sets: dict = read_manifest(args.out / "manifest.ts") if args.only else {}
+    wanted = set(args.only or [*PITCHED, *DRUMS])
     for name, spec in PITCHED.items():
+        if name not in wanted:
+            continue
         for old in (args.out / name).glob("*.mp3"):
             old.unlink()
         sets[name] = {"zones": build_pitched(name, spec, args.cache, args.out), "seconds": spec["length"]}
     for name, spec in DRUMS.items():
-        sets[name] = build_drum(name, spec, args.cache, args.out)
+        if name in wanted:
+            sets[name] = build_drum(name, spec, args.cache, args.out)
     write_manifest(sets, args.out / "manifest.ts")
+
+
+def read_manifest(path: Path) -> dict:
+    """The sets an existing manifest.ts lists, in the shape write_manifest takes."""
+    text = path.read_text()
+    files = dict(re.findall(r'import (\w+) from "\./\w+/([^"]+)";', text))
+    sets: dict = {}
+    for name, seconds, zones, hit, accent in re.findall(
+        r"(\w+): \{\s*seconds: ([\d.]+),\s*(?:zones: \[(.*?)\]|hit: (\w+),\s*accent: (\w+)),?\s*\}", text, re.S
+    ):
+        if zones:
+            pairs = re.findall(r"root: ([\d.]+), url: (\w+)", zones)
+            sets[name] = {"seconds": float(seconds), "zones": [(files[url], float(root) if "." in root else int(root)) for root, url in pairs]}
+        else:
+            sets[name] = {"seconds": float(seconds), "hit": files[hit], "accent": files[accent]}
+    return sets
 
 
 def write_manifest(sets: dict, path: Path) -> None:

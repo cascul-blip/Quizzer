@@ -98,7 +98,7 @@ function playLoop(ctx: FakeCtx & BaseAudioContext, track: Track, intensity: numb
 const nearestGap = (t: number, grid: number[]) => Math.min(...grid.map((g) => Math.abs(t - g)));
 
 describe("rich sound is opt-in", () => {
-  test("only Tower Fight and Kingdom Siege (acoustic) and Racer (arcade) tracks use it", () => {
+  test("only Tower Fight, Kingdom Siege and Memory Game (acoustic) and Racer (arcade) tracks use it", () => {
     const rich = Object.fromEntries(
       Object.values(TRACKS)
         .filter((t) => t.rich)
@@ -112,6 +112,7 @@ describe("rich sound is opt-in", () => {
       "siege-christmas-lobby": "acoustic",
       "siege-christmas-battle": "acoustic",
       "siege-christmas-results": "acoustic",
+      "memory-christmas-play": "acoustic",
       "racer-lobby": "arcade",
       "racer-drive": "arcade",
       "racer-results": "arcade",
