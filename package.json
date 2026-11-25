@@ -9,7 +9,7 @@
     "mcp": "bun src/server/main.ts mcp",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "check": "biome ci . && tsc --noEmit && scripts/check-new-casts.sh && bun test",
+    "check": "biome ci . && tsc --noEmit && scripts/check-new-casts.sh && bun scripts/check-new-comments.ts && bun test",
     "audit:comments": "bun scripts/comment-inventory.ts",
     "build": "bun scripts/build.ts",
     "format": "biome check --write ."
