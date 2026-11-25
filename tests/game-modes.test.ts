@@ -357,3 +357,111 @@ describe("Game modes", () => {
     expect(lobbyView().mode).toBe("cup");
   });
 });
+
+const STREAMED_MODES = ["tower", "gift", "submarine", "fight", "robot", "land", "cup", "siege"] as const satisfies readonly GameMode[];
+type StreamedMode = (typeof STREAMED_MODES)[number];
+
+// why: only Robot Attack, Cup of Death and Kingdom Siege show the countdown length; null where the host view has no such field.
+const COUNTDOWN_DURATION: { [M in StreamedMode]: number | null } = {
+  tower: null,
+  gift: null,
+  submarine: null,
+  fight: null,
+  robot: 3_000,
+  land: null,
+  cup: 3_000,
+  siege: 3_000,
+};
+
+const REMAINING_FIELD: { [M in StreamedMode]: "remainingMs" | "phaseRemainingMs" } = {
+  tower: "remainingMs",
+  gift: "remainingMs",
+  submarine: "phaseRemainingMs",
+  fight: "phaseRemainingMs",
+  robot: "phaseRemainingMs",
+  land: "remainingMs",
+  cup: "phaseRemainingMs",
+  siege: "phaseRemainingMs",
+};
+
+const PODIUM_JOIN_ERROR: { [M in StreamedMode]: string } = {
+  tower: "This game has finished",
+  gift: "This game has finished accepting players",
+  submarine: "This game has finished",
+  fight: "This game has finished",
+  robot: "This game has finished",
+  land: "This game has finished",
+  cup: "This game has finished",
+  siege: "This game has finished",
+};
+
+describe("Streamed modes' visible output", () => {
+  // why: building the game without the hub lets the suite count every broadcast it asks for, and see it before Start.
+  function streamedGame<M extends StreamedMode>(mode: M) {
+    const lobby = new Lobby(store.get(quizId), { mode });
+    lobby.join("Noel");
+    lobby.join("Holly");
+    const broadcasts = { count: 0 };
+    const { game } = MODES[mode].start(lobby.handoffFacts(mode), {
+      clock,
+      dataDir: data.dir,
+      onChange: () => broadcasts.count++,
+      onActivity: () => broadcasts.count++,
+      onTick: () => {},
+      onFinish: () => {},
+    });
+    return { game, broadcasts };
+  }
+
+  for (const mode of STREAMED_MODES) {
+    describe(SHARED_MODES[mode].name, () => {
+      test("a late join broadcasts exactly once, and so does a host kick", () => {
+        const { game, broadcasts } = streamedGame(mode);
+        game.start();
+        clock.advance(10_000);
+        broadcasts.count = 0;
+        const late = game.join("Ivy");
+        expect(broadcasts.count).toBe(1);
+        broadcasts.count = 0;
+        game.kick(late.id);
+        expect(broadcasts.count).toBe(1);
+        game.dispose();
+      });
+
+      test("before Start the host sees the real countdown, then counts it down", () => {
+        const { game } = streamedGame(mode);
+        const before = game.hostView();
+        expect(before.phase).toBe("countdown");
+        expect("phaseDurationMs" in before ? before.phaseDurationMs : null).toBe(COUNTDOWN_DURATION[mode]);
+        game.start();
+        const started = game.hostView();
+        expect(new Map(Object.entries(started)).get(REMAINING_FIELD[mode])).toBe(3_000);
+        game.dispose();
+      });
+
+      test("a join during the podium is refused with the mode's message", () => {
+        const { game } = streamedGame(mode);
+        game.start();
+        game.end();
+        expect(game.phase).toBe("podium");
+        expect(() => game.join("Ivy")).toThrow(PODIUM_JOIN_ERROR[mode]);
+        game.dispose();
+      });
+
+      test("a kick outside active play still broadcasts once, before Start and in the countdown", () => {
+        const { game, broadcasts } = streamedGame(mode);
+        const early = game.join("Ivy");
+        broadcasts.count = 0;
+        game.kick(early.id);
+        expect(broadcasts.count).toBe(1);
+        game.start();
+        expect(game.phase).toBe("countdown");
+        const late = game.join("Rudy");
+        broadcasts.count = 0;
+        game.kick(late.id);
+        expect(broadcasts.count).toBe(1);
+        game.dispose();
+      });
+    });
+  }
+});
