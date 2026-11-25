@@ -1,7 +1,6 @@
 import type { AnswerValue } from "../../shared/answer-match.ts";
 import { answerOf } from "../../shared/answer-match.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
-import { randomAvatar } from "../../shared/avatars.ts";
 import type { LandStart } from "../../shared/land-board.ts";
 import { EMPTY, enclosedBy, landBoardSize, placementCost, startTiles } from "../../shared/land-board.ts";
 import type {
@@ -28,21 +27,19 @@ import { MAX_TEAMS } from "../../shared/protocol.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import { modeTheme, THEMED_MODES } from "../../shared/themed-modes.ts";
 import type { Clock } from "./common.ts";
-import { GameError, realClock, teamInfo } from "./common.ts";
+import { GameError, teamInfo } from "./common.ts";
 import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
-import { GameFinish, GameLengthClock, PhaseTimer } from "./phase-timer.ts";
 import type { Podium } from "./podium.ts";
 import { buildPodium, emptyPodium } from "./podium.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
-import { Roster } from "./roster.ts";
 import type { RankKey } from "./standings.ts";
 import { fewest, most, rankBy } from "./standings.ts";
 import type { AnswerTotals } from "./stream.ts";
-import { QuestionStream } from "./stream.ts";
+import { StreamedSession } from "./streamed-session.ts";
 
 export { FEEDBACK_MS } from "./stream.ts";
 
@@ -110,21 +107,12 @@ export class LandGame {
   readonly size: number;
   /** owners[tile] is a team index, or EMPTY for grass. */
   readonly owners: number[];
-  readonly roster = new Roster<LandPlayer>();
   lastPlace: LandPlace | null = null;
   lastCapture: LandCapture | null = null;
   private eventSeq = 0;
   private outCount = 0;
 
-  private readonly clock: Clock;
-  private readonly rng: () => number;
-  private readonly stream: QuestionStream<LandPlayer>;
-  private readonly phases: PhaseTimer<LandPhase>;
-  private readonly gameLength: GameLengthClock<LandPhase>;
-  private readonly onChange: () => void;
-  private readonly onActivity: (playerId: string) => void;
-  private readonly onFinish: (game: LandGame) => void;
-  private readonly gameFinish: GameFinish<LandGame["phase"], LandPodium>;
+  private readonly session: StreamedSession<LandPlayer, LandPhase, LandPodium>;
 
   constructor(quiz: Quiz, settings: LandGameSettings, opts: LandOptions = {}) {
     if (quiz.questions.length === 0) throw new GameError("This quiz has no questions");
@@ -136,45 +124,53 @@ export class LandGame {
     this.owners = Array(this.size * this.size).fill(EMPTY);
     this.teams = startTiles(settings.teams).map((start, i) => ({ ...teamInfo(i), start, out: false, conqueredBy: null, outOrder: 0 }));
     for (const t of this.teams) this.owners[t.start] = t.index;
-    this.clock = opts.clock ?? realClock;
-    this.phases = new PhaseTimer(this.clock, "countdown");
-    this.rng = opts.rng ?? Math.random;
-    this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock, {
+    this.session = new StreamedSession({
+      questions: quiz.questions,
+      shuffleAnswers: settings.shuffleAnswers,
+      clock: opts.clock,
+      rng: opts.rng,
+      minutes: settings.minutes,
       canAnswer: (p) => this.phase === "playing" && p.state === "question",
-    });
-    this.onChange = opts.onChange ?? (() => {});
-    this.onActivity = opts.onActivity ?? (() => this.onChange());
-    this.onFinish = opts.onFinish ?? (() => {});
-    this.gameFinish = new GameFinish(this.phases, "podium", {
       podium: { build: () => this.buildPodium(), empty: () => emptyPodium(landShared.awards) },
-      onFinish: () => this.onFinish(this),
-      onChange: () => this.onChange(),
+      hub: { onChange: opts.onChange, onActivity: opts.onActivity, onFinish: () => opts.onFinish?.(this) },
     });
-    this.gameLength = new GameLengthClock(this.phases, this.gameFinish);
   }
 
-  choices!: LobbyChoices;
+  private get clock(): Clock {
+    return this.session.clock;
+  }
+
+  private get stream() {
+    return this.session.stream;
+  }
+
+  private get phases() {
+    return this.session.phases;
+  }
+
+  /** The lobby's choices, handed back when the game closes ("Play again"). */
+  get choices(): LobbyChoices {
+    return this.session.choices;
+  }
 
   /** Take over a lobby's players (same ids and tokens), on the teams shown in the lobby. */
   static fromLobby(lobby: LobbyFacts<"land">, opts: LandOptions = {}): LandGame {
     const game = new LandGame(lobby.quiz, { ...lobby.settings, shuffleAnswers: lobby.shuffle.answers }, opts);
-    const players = [...lobby.players];
     const teams = lobby.teams;
-    game.choices = lobby.choices;
-    game.roster.adoptFrom(players, (base) => game.newPlayer(base, teams.get(base.id) ?? 0));
+    game.session.adoptLobby(lobby, (base) => game.newPlayer(base, teams.get(base.id) ?? 0));
     return game;
   }
 
   get phase(): LandPhase {
-    return this.phases.phase;
+    return this.session.phase;
   }
 
   get players(): Map<string, LandPlayer> {
-    return this.roster.players;
+    return this.session.players;
   }
 
-  private newPlayer(base: BasePlayer, team: number): LandPlayer {
-    return this.stream.registerPlayer({
+  private newPlayer(base: BasePlayer, team: number): Omit<LandPlayer, keyof AnswerTotals> {
+    return {
       ...base,
       team,
       firstTeam: team,
@@ -186,43 +182,36 @@ export class LandGame {
       stolen: 0,
       captured: 0,
       conquered: null,
-    });
+    };
   }
 
   get starts(): LandStart[] {
     return this.teams.map((t) => ({ team: t.index, tile: t.start, out: t.out }));
   }
 
-  private started = false;
-
   start(): void {
-    if (this.started) throw new GameError("The game has already started");
-    if (this.players.size === 0) throw new GameError("Wait for at least one player to join");
-    this.started = true;
-    this.phases.set("countdown", COUNTDOWN_MS, () => this.beginPlaying());
-    this.onChange();
+    this.session.start(COUNTDOWN_MS, () => this.beginPlaying());
   }
 
   private beginPlaying(): void {
     if (this.phase !== "countdown") return;
-    const ms = this.settings.minutes * 60_000;
-    this.gameLength.start("playing", ms);
+    this.session.startGameLength("playing");
     for (const p of this.players.values()) this.stream.open(p);
-    this.onChange();
+    this.session.changed();
   }
 
   end(): void {
-    this.gameLength.end();
+    this.session.end();
   }
 
   /** Only one team is left: show the board for a moment, then the podium. */
   private conquer(): void {
     this.phases.dispose();
-    this.phases.set("conquered", CONQUEST_MS, () => this.gameLength.end());
+    this.phases.set("conquered", CONQUEST_MS, () => this.session.end());
   }
 
   dispose(): void {
-    this.phases.dispose();
+    this.session.dispose();
   }
 
   /** Each player's cooldown has its own slot on the phase timer. */
@@ -231,11 +220,7 @@ export class LandGame {
   }
 
   join(rawNickname: unknown, avatar?: AvatarChoice | null): LandPlayer {
-    if (this.phase === "podium") throw new GameError("This game has finished");
-    const player = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), (base) => this.newPlayer(base, this.smallestTeam()));
-    this.stream.openOnJoin(player, this.phase === "playing");
-    this.onChange();
-    return player;
+    return this.session.join(rawNickname, avatar, (base) => this.newPlayer(base, this.smallestTeam()));
   }
 
   private smallestTeam(): number {
@@ -245,19 +230,16 @@ export class LandGame {
   }
 
   byToken(token: unknown): LandPlayer | null {
-    return this.roster.byToken(token);
+    return this.session.byToken(token);
   }
 
   setConnected(playerId: string, connected: boolean): void {
-    if (this.roster.setConnected(playerId, connected)) this.onChange();
+    this.session.setConnected(playerId, connected);
   }
 
   kick(playerId: string): LandPlayer | null {
-    const p = this.roster.remove(playerId);
-    if (p) {
-      this.phases.cancel(this.playerSlot(p));
-      this.onChange();
-    }
+    const p = this.session.kick(playerId);
+    if (p) this.phases.cancel(this.playerSlot(p));
     return p;
   }
 
@@ -268,10 +250,9 @@ export class LandGame {
   }
 
   answer(playerId: string, seq: number, option: AnswerValue): boolean {
-    const p = this.players.get(playerId);
-    if (!p) return false;
-    const correct = this.stream.answer(p, seq, option);
-    if (correct === null) return false;
+    const answered = this.session.answer(playerId, seq, option);
+    if (!answered) return false;
+    const { player: p, correct } = answered;
     if (correct) p.claims++;
     if (++p.answered >= LAND_QUESTIONS_PER_ROUND) {
       p.answered = 0;
@@ -284,7 +265,7 @@ export class LandGame {
         p.state = "claim";
       }
     }
-    this.onActivity(p.id);
+    this.session.activity(p.id);
     return true;
   }
 
@@ -292,7 +273,7 @@ export class LandGame {
     const p = this.players.get(playerId);
     if (!p || p.state !== "empty") return;
     this.backToQuestions(p);
-    this.onActivity(p.id);
+    this.session.activity(p.id);
   }
 
   costFor(team: number, tile: number): number | null {
@@ -322,13 +303,13 @@ export class LandGame {
     this.resolveCaptures(p);
     if (this.teams.filter((t) => !t.out).length <= 1) {
       this.conquer();
-      this.onChange();
+      this.session.changed();
       return true;
     }
     if (!this.canPlace(p)) this.backToQuestions(p);
     // A capture changes everyone's board at once.
-    if (this.lastCapture?.seq === this.eventSeq) this.onChange();
-    else this.onActivity(p.id);
+    if (this.lastCapture?.seq === this.eventSeq) this.session.changed();
+    else this.session.activity(p.id);
     return true;
   }
 
@@ -337,7 +318,7 @@ export class LandGame {
     const p = this.players.get(playerId);
     if (!p || this.phase !== "playing" || p.state !== "claim") return false;
     this.backToQuestions(p);
-    this.onActivity(p.id);
+    this.session.activity(p.id);
     return true;
   }
 
@@ -421,7 +402,7 @@ export class LandGame {
 
   /** The finished game's Podium (GLOSSARY.md), worked out once in Game finish. */
   get podium(): LandPodium {
-    return this.gameFinish.podium;
+    return this.session.podium;
   }
 
   /** A team's totals and place on the Podium. */
