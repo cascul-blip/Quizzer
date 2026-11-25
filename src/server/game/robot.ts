@@ -1,7 +1,6 @@
 import type { AnswerValue } from "../../shared/answer-match.ts";
 import { answerOf } from "../../shared/answer-match.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
-import { randomAvatar } from "../../shared/avatars.ts";
 import type { HostRobotState, PlayerRobotView, RobotAttack, RobotAwardKey, RobotDir, RobotPhase, RobotStanding } from "../../shared/modes/robot.ts";
 import {
   ROBOT_ATTACK_MS,
@@ -20,20 +19,18 @@ import {
 } from "../../shared/modes/robot.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import type { Clock } from "./common.ts";
-import { GameError, realClock, shuffle } from "./common.ts";
+import { GameError, shuffle } from "./common.ts";
 import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, unhandled } from "./mode-entry.ts";
-import { GameFinish, PhaseTimer } from "./phase-timer.ts";
 import type { Podium } from "./podium.ts";
 import { buildPodium, emptyPodium } from "./podium.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
-import { Roster } from "./roster.ts";
 import { most } from "./standings.ts";
 import type { AnswerTotals } from "./stream.ts";
-import { QuestionStream } from "./stream.ts";
+import { StreamedSession } from "./streamed-session.ts";
 
 export { FEEDBACK_MS } from "./stream.ts";
 
@@ -105,7 +102,6 @@ export class RobotGame {
   readonly quizId: string;
   readonly title: string;
   readonly questions: Question[];
-  readonly roster = new Roster<RobotPlayer>();
   round = 0;
   attacks = 0;
   marked = new Set<number>();
@@ -115,79 +111,71 @@ export class RobotGame {
   collapsing = new Set<number>();
   lastAttack: RobotAttack | null = null;
 
-  private readonly clock: Clock;
-  private readonly rng: () => number;
-  private readonly stream: QuestionStream<RobotPlayer>;
-  private readonly phases: PhaseTimer<RobotPhase>;
-  private readonly onChange: () => void;
-  private readonly onActivity: (playerId: string) => void;
-  private readonly onFinish: (game: RobotGame) => void;
-  private readonly gameFinish: GameFinish<RobotGame["phase"], Podium<RobotPlayer, RobotPlayer, RobotAwardKey>>;
+  private readonly session: StreamedSession<RobotPlayer, RobotPhase, Podium<RobotPlayer, RobotPlayer, RobotAwardKey>>;
 
   constructor(quiz: Quiz, settings: RobotGameSettings, opts: RobotOptions = {}) {
     if (quiz.questions.length === 0) throw new GameError("This quiz has no questions");
     this.quizId = quiz.id;
     this.title = quiz.title;
     this.questions = quiz.questions;
-    this.clock = opts.clock ?? realClock;
-    this.phases = new PhaseTimer(this.clock, "countdown", COUNTDOWN_MS);
-    this.rng = opts.rng ?? Math.random;
-    this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock, {
-      penalizeGuessing: settings.protect, // Only in the quiz phase, so a wrong-answer wait never covers the arrows in the move phase.
+    this.session = new StreamedSession({
+      questions: quiz.questions,
+      shuffleAnswers: settings.shuffleAnswers,
+      protect: settings.protect,
+      clock: opts.clock,
+      rng: opts.rng,
+      countdownMs: COUNTDOWN_MS,
+      inPlay: (phase) => phase !== "countdown",
+      // why: only in the quiz phase, so a wrong-answer wait never covers the arrows in the move phase.
       canAnswer: () => this.phase === "quiz",
-    });
-    this.onChange = opts.onChange ?? (() => {});
-    this.onActivity = opts.onActivity ?? (() => this.onChange());
-    this.onFinish = opts.onFinish ?? (() => {});
-    this.gameFinish = new GameFinish(this.phases, "podium", {
       cleanup: () => {
         this.marked = new Set();
         this.collapsing = new Set();
       },
       podium: { build: () => this.buildPodium(), empty: () => emptyPodium(robotShared.awards) },
-      onFinish: () => this.onFinish(this),
-      onChange: () => this.onChange(),
+      hub: { onChange: opts.onChange, onActivity: opts.onActivity, onFinish: () => opts.onFinish?.(this) },
     });
   }
 
-  choices!: LobbyChoices;
+  get choices(): LobbyChoices {
+    return this.session.choices;
+  }
 
   /** Take over a lobby's players (same ids and tokens), spread out across the board. */
   static fromLobby(lobby: LobbyFacts<"robot">, opts: RobotOptions = {}): RobotGame {
     const game = new RobotGame(lobby.quiz, { shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
-    game.choices = lobby.choices;
-    game.roster.adoptFrom(lobby.players, (base) => game.newPlayer(base));
+    game.session.adoptLobby(lobby, (base) => game.newPlayer(base));
     return game;
   }
 
   get phase(): RobotPhase {
-    return this.phases.phase;
+    return this.session.phase;
   }
 
   /** When the current phase's countdown ends; 0 when it has none. */
   get phaseEndsAt(): number {
-    return this.phases.endsAt;
+    return this.session.phases.endsAt;
   }
 
   get phaseDurationMs(): number {
-    return this.phases.durationMs;
+    return this.session.phases.durationMs;
   }
 
   get players(): Map<string, RobotPlayer> {
-    return this.roster.players;
+    return this.session.players;
   }
 
   private alive(): RobotPlayer[] {
     return [...this.players.values()].filter((p) => p.outRound === null);
   }
 
-  private newPlayer(base: BasePlayer): RobotPlayer {
+  private newPlayer(base: BasePlayer): Omit<RobotPlayer, keyof AnswerTotals> {
     // Late joiners stay off the red Xs while there's no chance left to earn a way off them, and never start on a collapsing tile.
     const lateInDanger = this.phase === "move" || this.phase === "attack";
     const tile = spreadTile(this.alive(), this.shuffledTiles(), (i) => !this.collapsing.has(i) && !(lateInDanger && this.marked.has(i)));
     const { x, y } = tileXY(tile);
     if (this.phase === "quiz" && this.marked.size > 0) this.marked.add(tile);
-    return this.stream.registerPlayer({ ...base, x, y, lives: ROBOT_LIVES, outRound: null, points: 0, moves: 0, hits: 0 });
+    return { ...base, x, y, lives: ROBOT_LIVES, outRound: null, points: 0, moves: 0, hits: 0 };
   }
 
   private playableTiles(): number[] {
@@ -195,17 +183,11 @@ export class RobotGame {
   }
 
   private shuffledTiles(): number[] {
-    return shuffle(this.playableTiles(), this.rng);
+    return shuffle(this.playableTiles(), this.session.rng);
   }
 
-  private started = false;
-
   start(): void {
-    if (this.started) throw new GameError("The game has already started");
-    if (this.players.size === 0) throw new GameError("Wait for at least one player to join");
-    this.started = true;
-    this.phases.set("countdown", COUNTDOWN_MS, () => this.beginRound());
-    this.onChange();
+    this.session.start(() => this.beginRound());
   }
 
   private beginRound(): void {
@@ -213,11 +195,11 @@ export class RobotGame {
     this.marked = new Set();
     this.collapsing = new Set();
     const ms = robotQuizMs(this.round);
-    this.phases.set("quiz", ms, () => this.beginMove());
-    for (const p of this.players.values()) this.stream.open(p);
+    this.session.phases.set("quiz", ms, () => this.beginMove());
+    for (const p of this.players.values()) this.session.stream.open(p);
     if (ms <= ROBOT_WARN_MS) this.markTargets();
-    else this.phases.after("warn", ms - ROBOT_WARN_MS, () => this.markTargets());
-    this.onChange();
+    else this.session.phases.after("warn", ms - ROBOT_WARN_MS, () => this.markTargets());
+    this.session.changed();
   }
 
   /**
@@ -226,7 +208,7 @@ export class RobotGame {
    * Occupied tiles count toward the 3/4 first, so a quarter of the board stays safe however small it gets.
    */
   private markTargets(): void {
-    this.phases.cancel("warn");
+    this.session.phases.cancel("warn");
     if (this.phase !== "quiz") return;
     const shrink = this.round % ROBOT_SHRINK_EVERY === 0 && ROBOT_BOARD - 2 * this.inset > ROBOT_MIN_BOARD;
     this.collapsing = new Set(shrink ? this.playableTiles().filter((i) => robotRing(i) === this.inset) : []);
@@ -236,13 +218,13 @@ export class RobotGame {
     const free = staying.filter((i) => !occupied.has(i));
     const inside = staying.filter((i) => occupied.has(i)).length;
     this.marked = new Set([...occupied, ...this.collapsing, ...free.slice(0, Math.max(0, count - inside))]);
-    this.onChange();
+    this.session.changed();
   }
 
   private beginMove(): void {
     if (this.marked.size === 0) this.markTargets();
-    this.phases.set("move", ROBOT_MOVE_MS, () => this.fire());
-    this.onChange();
+    this.session.phases.set("move", ROBOT_MOVE_MS, () => this.fire());
+    this.session.changed();
   }
 
   private fire(): void {
@@ -266,8 +248,8 @@ export class RobotGame {
       for (const p of this.alive()) if (!robotInBounds(p.x, p.y, this.inset)) this.relocate(p);
     }
     this.lastAttack = { seq: this.attacks, round: this.round, hit, eliminated };
-    this.phases.set("attack", ROBOT_ATTACK_MS, () => (this.isOver() ? this.gameFinish.finish() : this.beginRound()));
-    this.onChange();
+    this.session.phases.set("attack", ROBOT_ATTACK_MS, () => (this.isOver() ? this.session.end() : this.beginRound()));
+    this.session.changed();
   }
 
   /** Their tile is gone: put the player on the closest free tile (in steps), or the least crowded one once the board is full. */
@@ -298,43 +280,40 @@ export class RobotGame {
   }
 
   end(): void {
-    this.gameFinish.finish();
+    this.session.end();
   }
 
   dispose(): void {
-    this.phases.dispose();
+    this.session.dispose();
   }
 
   join(rawNickname: unknown, avatar?: AvatarChoice | null): RobotPlayer {
-    if (this.phase === "podium") throw new GameError("This game has finished");
-    const player = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), (base) => this.newPlayer(base));
-    this.stream.openOnJoin(player, this.phase !== "countdown");
-    this.onChange();
+    const player = this.session.addPlayer(rawNickname, avatar, (base) => this.newPlayer(base));
+    this.session.changed();
     return player;
   }
 
   byToken(token: unknown): RobotPlayer | null {
-    return this.roster.byToken(token);
+    return this.session.byToken(token);
   }
 
   setConnected(playerId: string, connected: boolean): void {
-    if (this.roster.setConnected(playerId, connected)) this.onChange();
+    this.session.setConnected(playerId, connected);
   }
 
   kick(playerId: string): RobotPlayer | null {
-    const p = this.roster.remove(playerId);
-    if (p) this.onChange();
+    const p = this.session.removePlayer(playerId);
+    if (p) this.session.changed();
     return p;
   }
 
   /** Answer during the quiz phase; a correct answer earns a movement point (players still in the game only). */
   answer(playerId: string, seq: number, option: AnswerValue): boolean {
-    const p = this.players.get(playerId);
-    if (!p) return false;
-    const correct = this.stream.answer(p, seq, option);
-    if (correct === null) return false;
+    const answered = this.session.answer(playerId, seq, option);
+    if (!answered) return false;
+    const { player: p, correct } = answered;
     if (correct && p.outRound === null) p.points++;
-    this.onActivity(p.id);
+    this.session.activity(p.id);
     return true;
   }
 
@@ -352,7 +331,7 @@ export class RobotGame {
     p.y = y;
     p.points--;
     p.moves++;
-    this.onActivity(p.id);
+    this.session.activity(p.id);
     return true;
   }
 
@@ -371,7 +350,7 @@ export class RobotGame {
 
   /** The finished game's Podium (GLOSSARY.md), worked out once in Game finish. */
   get podium(): Podium<RobotPlayer, RobotPlayer, RobotAwardKey> {
-    return this.gameFinish.podium;
+    return this.session.podium;
   }
 
   private standings(): RobotStanding[] {
@@ -393,7 +372,7 @@ export class RobotGame {
       phase: this.phase,
       quiz: { id: this.quizId, title: this.title, questionCount: this.questions.length },
       round: this.round,
-      phaseRemainingMs: this.phases.remainingMs(),
+      phaseRemainingMs: this.session.phases.remainingMs(),
       phaseDurationMs: this.phaseDurationMs,
       marked: [...this.marked].sort((a, b) => a - b),
       inset: this.inset,
@@ -413,7 +392,7 @@ export class RobotGame {
       playerCount: this.players.size,
       standings: podium ? this.standings() : null,
       awards: podium ? this.podium.awards : null,
-      errors: this.stream.errorsWhen(podium),
+      errors: this.session.stream.errorsWhen(podium),
     };
   }
 
@@ -432,9 +411,9 @@ export class RobotGame {
       phase: this.phase,
       title: this.title,
       round: this.round,
-      phaseRemainingMs: this.phases.remainingMs(),
+      phaseRemainingMs: this.session.phases.remainingMs(),
       me: { id: p.id, nickname: p.nickname, avatar: p.avatar, lives: p.lives, out: p.outRound !== null, points: p.points, correct: p.correct, x: p.x, y: p.y },
-      ...this.stream.fragment(p),
+      ...this.session.stream.fragment(p),
       board: onBoard
         ? {
             marked: [...this.marked].sort((x, y) => x - y),

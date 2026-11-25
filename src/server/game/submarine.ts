@@ -1,26 +1,23 @@
 import type { AnswerValue } from "../../shared/answer-match.ts";
 import { answerOf } from "../../shared/answer-match.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
-import { randomAvatar } from "../../shared/avatars.ts";
 import { CHRISTMAS_GLYPHS, glyphId, parseGlyph, variantsOf } from "../../shared/glyphs.ts";
 import type { HostSubState, PlayerSubView, SubAwardKey, SubPhase } from "../../shared/modes/submarine.ts";
 import { CORRECT_PER_BOOST, submarineShared } from "../../shared/modes/submarine.ts";
 import type { Quiz } from "../../shared/quiz-schema.ts";
 import type { Clock } from "./common.ts";
-import { GameError, realClock, shuffle } from "./common.ts";
+import { GameError, shuffle } from "./common.ts";
 import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, unhandled } from "./mode-entry.ts";
-import { GameFinish, PhaseTimer } from "./phase-timer.ts";
 import type { Podium } from "./podium.ts";
 import { buildPodium, emptyPodium } from "./podium.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
-import { Roster } from "./roster.ts";
 import { most } from "./standings.ts";
 import type { AnswerTotals } from "./stream.ts";
-import { QuestionStream } from "./stream.ts";
+import { StreamedSession } from "./streamed-session.ts";
 
 export const COUNTDOWN_MS = 3000;
 const SUB_AWARD_VALUES: Record<SubAwardKey, (p: SubPlayer) => number> = {
@@ -94,7 +91,6 @@ export class SubGame {
   readonly quizId: string;
   readonly title: string;
   readonly questionCount: number;
-  readonly roster = new Roster<SubPlayer>();
   level = 1;
   levelsCleared = 0;
   diveMeters = 0;
@@ -107,48 +103,39 @@ export class SubGame {
   private gapAt = 0;
   private boostPower = BOOST_POWER;
   private boostSeq = 0;
-  private readonly phases: PhaseTimer<SubPhase>;
-  private readonly clock: Clock;
-  private readonly rng: () => number;
-  private readonly stream: QuestionStream<SubPlayer>;
-  private readonly onChange: () => void;
-  private readonly onActivity: (playerId: string) => void;
-  private readonly onFinish: (game: SubGame) => void;
-  private readonly gameFinish: GameFinish<SubGame["phase"], Podium<SubPlayer, SubPlayer, SubAwardKey>>;
+  private readonly session: StreamedSession<SubPlayer, SubPhase, Podium<SubPlayer, SubPlayer, SubAwardKey>>;
 
   constructor(quiz: Quiz, opts: SubOptions & { shuffleAnswers?: boolean; protect?: boolean } = {}) {
     if (quiz.questions.length === 0) throw new GameError("This quiz has no questions");
     this.quizId = quiz.id;
     this.title = quiz.title;
     this.questionCount = quiz.questions.length;
-    this.clock = opts.clock ?? realClock;
-    this.phases = new PhaseTimer(this.clock, "countdown");
-    this.rng = opts.rng ?? Math.random;
-    this.stream = new QuestionStream(quiz.questions, !!opts.shuffleAnswers, this.rng, this.clock, {
-      penalizeGuessing: opts.protect,
+    this.session = new StreamedSession({
+      questions: quiz.questions,
+      shuffleAnswers: !!opts.shuffleAnswers,
+      protect: opts.protect,
+      clock: opts.clock,
+      rng: opts.rng,
+      countdownMs: COUNTDOWN_MS,
+      inPlay: (phase) => phase === "chase",
       canAnswer: (p) => this.phase === "chase" && p.state === "question",
-    });
-    this.onChange = opts.onChange ?? (() => {});
-    this.onActivity = opts.onActivity ?? (() => this.onChange());
-    this.onFinish = opts.onFinish ?? (() => {});
-    this.gameFinish = new GameFinish(this.phases, "podium", {
       podium: { build: () => this.buildPodium(), empty: () => emptyPodium(submarineShared.awards) },
-      onFinish: () => this.onFinish(this),
-      onChange: () => this.onChange(),
+      hub: { onChange: opts.onChange, onActivity: opts.onActivity, onFinish: () => opts.onFinish?.(this) },
     });
   }
-
-  choices!: LobbyChoices;
 
   static fromLobby(lobby: LobbyFacts<"submarine">, opts: SubOptions = {}): SubGame {
     const game = new SubGame(lobby.quiz, { ...opts, shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect });
-    game.choices = lobby.choices;
-    game.roster.adoptFrom(lobby.players, (base) => game.newPlayer(base));
+    game.session.adoptLobby(lobby, (base) => game.newPlayer(base));
     return game;
   }
 
+  get choices(): LobbyChoices {
+    return this.session.choices;
+  }
+
   get players(): Map<string, SubPlayer> {
-    return this.roster.players;
+    return this.session.players;
   }
 
   get depth(): number {
@@ -159,8 +146,8 @@ export class SubGame {
     return speedFor(this.level);
   }
 
-  private newPlayer(base: BasePlayer): SubPlayer {
-    return this.stream.registerPlayer({
+  private newPlayer(base: BasePlayer): Omit<SubPlayer, keyof AnswerTotals> {
+    return {
       ...base,
       state: "question",
       towardBoost: 0,
@@ -170,25 +157,19 @@ export class SubGame {
       instructorRounds: 0,
       grid: [],
       lockedUntil: 0,
-    });
+    };
   }
 
-  private started = false;
-
   start(): void {
-    if (this.started) throw new GameError("The game has already started");
-    if (this.players.size === 0) throw new GameError("Wait for at least one player to join");
-    this.started = true;
-    this.phases.set("countdown", COUNTDOWN_MS, () => this.startChase());
-    this.onChange();
+    this.session.start(() => this.startChase());
   }
 
   end(): void {
-    this.gameFinish.finish();
+    this.session.end();
   }
 
   dispose(): void {
-    this.phases.dispose();
+    this.session.dispose();
   }
 
   /** An instructor's symbol timeout has its own slot on the phase timer. */
@@ -201,11 +182,11 @@ export class SubGame {
   }
 
   get phase(): SubPhase {
-    return this.phases.phase;
+    return this.session.phase;
   }
 
   /** Current distance to the fish in gap-seconds. */
-  gap(now = this.clock.now()): number {
+  gap(now = this.session.clock.now()): number {
     if (this.phase !== "chase") return this.gapValue;
     return Math.max(0, this.gapValue - (this.speed * (now - this.gapAt)) / 1000);
   }
@@ -213,53 +194,52 @@ export class SubGame {
   /** After a dive the fish starts as far back as a boost can push it. */
   private startChase(gap = GAP_START): void {
     const players = this.connectedCount();
-    this.phases.enter("chase");
+    this.session.phases.enter("chase");
     this.instructors = [];
     this.boosts = 0;
     this.required = BOOSTS_BASE + players;
     this.boostPower = BOOST_POWER / players;
     this.gapValue = gap;
-    this.gapAt = this.clock.now();
+    this.gapAt = this.session.clock.now();
     for (const p of this.players.values()) {
       if (p.state === "waiting") p.state = "question";
-      this.stream.open(p);
+      this.session.stream.open(p);
     }
     this.scheduleCatch();
-    this.onChange();
+    this.session.changed();
   }
 
   private scheduleCatch(): void {
     const ms = Math.ceil((this.gap() / this.speed) * 1000);
-    this.phases.after("catch", ms, () => {
+    this.session.phases.after("catch", ms, () => {
       if (this.phase === "chase") this.caught();
     });
   }
 
   private caught(): void {
-    this.phases.dispose();
+    this.session.phases.dispose();
     this.gapValue = 0;
-    this.phases.set("caught", CAUGHT_MS, () => this.gameFinish.finish());
-    this.onChange();
+    this.session.phases.set("caught", CAUGHT_MS, () => this.end());
+    this.session.changed();
   }
 
   answer(playerId: string, seq: number, option: AnswerValue): boolean {
-    const p = this.players.get(playerId);
-    if (!p) return false;
-    const correct = this.stream.answer(p, seq, option);
-    if (correct === null) return false;
+    const answered = this.session.answer(playerId, seq, option);
+    if (!answered) return false;
+    const { player: p, correct } = answered;
     if (correct && ++p.towardBoost >= CORRECT_PER_BOOST) {
       p.towardBoost = 0;
       p.state = "boost";
-      p.boostReadyAt = this.stream.feedbackEndsAt(p);
+      p.boostReadyAt = this.session.stream.feedbackEndsAt(p);
     }
-    this.onActivity(p.id);
+    this.session.activity(p.id);
     return true;
   }
 
   /** The phone's charge bar filled up: push the sub away from the fish. */
   boost(playerId: string): boolean {
     const p = this.players.get(playerId);
-    const now = this.clock.now();
+    const now = this.session.clock.now();
     if (!p || this.phase !== "chase" || p.state !== "boost" || now - p.boostReadyAt < BOOST_MIN_HOLD_MS) return false;
     this.gapValue = Math.min(GAP_MAX, this.gap(now) + this.boostPower);
     this.gapAt = now;
@@ -271,29 +251,29 @@ export class SubGame {
       this.escaped();
     } else {
       this.scheduleCatch();
-      this.onActivity(p.id);
+      this.session.activity(p.id);
     }
     return true;
   }
 
   private escaped(): void {
-    this.phases.cancel("catch");
+    this.session.phases.cancel("catch");
     this.gapValue = this.gap();
     this.levelsCleared++;
-    this.phases.set("escaped", ESCAPED_MS, () => this.startDive());
-    this.onChange();
+    this.session.phases.set("escaped", ESCAPED_MS, () => this.startDive());
+    this.session.changed();
   }
 
   private startDive(): void {
     const divers = shuffle(
       [...this.players.values()].filter((p) => p.connected),
-      this.rng,
+      this.session.rng,
     );
     if (divers.length === 0) return this.nextLevel();
     const count = divers.length === 1 ? 1 : Math.min(MAX_INSTRUCTORS, Math.max(1, Math.ceil(divers.length / PLAYERS_PER_INSTRUCTOR)), divers.length - 1);
     const leads = divers.slice(0, count);
     // Every symbol in this dive is different, across all instructors.
-    const symbols = shuffle(CHRISTMAS_GLYPHS.map(glyphId), this.rng);
+    const symbols = shuffle(CHRISTMAS_GLYPHS.map(glyphId), this.session.rng);
     const freshSymbols = () => symbols.splice(0, DIVE_SYMBOLS);
     const rest = divers.slice(count);
     this.instructors = leads.map((lead, i) => {
@@ -310,9 +290,9 @@ export class SubGame {
       };
     });
     for (const p of this.players.values()) p.lockedUntil = 0;
-    this.phases.set("dive", DIVE_MAX_MS, () => this.nextLevel());
+    this.session.phases.set("dive", DIVE_MAX_MS, () => this.nextLevel());
     for (const ins of this.instructors) this.beginSymbol(ins);
-    this.onChange();
+    this.session.changed();
   }
 
   private beginSymbol(ins: Instructor): void {
@@ -322,8 +302,8 @@ export class SubGame {
       const p = this.players.get(id);
       if (p) p.grid = this.makeGrid(target);
     }
-    ins.endsAt = this.clock.now() + DIVE_SYMBOL_TIMEOUT_MS;
-    this.phases.after(this.symbolSlot(ins), DIVE_SYMBOL_TIMEOUT_MS, () => {
+    ins.endsAt = this.session.clock.now() + DIVE_SYMBOL_TIMEOUT_MS;
+    this.session.phases.after(this.symbolSlot(ins), DIVE_SYMBOL_TIMEOUT_MS, () => {
       // Nobody left to describe the symbols, or nobody left to find them: skip to the last symbol,
       // so this advance ends the group's dive instead of sitting out every remaining symbol.
       if (!this.players.get(ins.playerId)?.connected || this.liveDivers(ins) === 0) ins.index = DIVE_SYMBOLS - 1;
@@ -347,12 +327,12 @@ export class SubGame {
    */
   makeGrid(target: string): string[] {
     const t = parseGlyph(target)!;
-    const near = shuffle(variantsOf(t).map(glyphId), this.rng).slice(0, LOOKALIKES);
+    const near = shuffle(variantsOf(t).map(glyphId), this.session.rng).slice(0, LOOKALIKES);
     const grid = [target, ...near];
     // Other families fill the remaining slots, keeping exactly three close matches.
-    const fillers = shuffle(CHRISTMAS_GLYPHS.filter((g) => g.family !== t.family).map(glyphId), this.rng);
+    const fillers = shuffle(CHRISTMAS_GLYPHS.filter((g) => g.family !== t.family).map(glyphId), this.session.rng);
     grid.push(...fillers.slice(0, GRID_SIZE - grid.length));
-    return shuffle(grid, this.rng);
+    return shuffle(grid, this.session.rng);
   }
 
   private instructorOf(playerId: string): Instructor | null {
@@ -363,63 +343,59 @@ export class SubGame {
   tap(playerId: string, symbol: string): boolean | null {
     const p = this.players.get(playerId);
     const ins = this.instructorOf(playerId);
-    const now = this.clock.now();
+    const now = this.session.clock.now();
     if (!p || !ins || this.phase !== "dive" || ins.index >= DIVE_SYMBOLS) return null;
     if (ins.found.has(playerId) || now < p.lockedUntil || !p.grid.includes(symbol)) return null;
     if (symbol !== ins.symbols[ins.index]) {
       p.lockedUntil = now + DIVE_WRONG_LOCK_MS;
-      this.onActivity(p.id);
+      this.session.activity(p.id);
       return false;
     }
     ins.found.add(playerId);
     p.diveHits++;
     this.diveMeters += DIVE_METERS_PER_HIT;
     if (this.enoughFound(ins)) this.advance(ins);
-    else this.onActivity(p.id);
+    else this.session.activity(p.id);
     return true;
   }
 
   private advance(ins: Instructor): void {
     if (this.phase !== "dive" || ins.index >= DIVE_SYMBOLS) return;
-    this.phases.cancel(this.symbolSlot(ins));
+    this.session.phases.cancel(this.symbolSlot(ins));
     ins.index++;
     if (ins.index < DIVE_SYMBOLS) this.beginSymbol(ins);
     if (this.instructors.every((i) => i.index >= DIVE_SYMBOLS)) return this.nextLevel();
-    this.onChange();
+    this.session.changed();
   }
 
   private nextLevel(): void {
-    for (const i of this.instructors) this.phases.cancel(this.symbolSlot(i));
+    for (const i of this.instructors) this.session.phases.cancel(this.symbolSlot(i));
     this.level++;
     this.startChase(GAP_MAX);
   }
 
   join(rawNickname: unknown, avatar?: AvatarChoice | null): SubPlayer {
-    if (this.phase === "podium") throw new GameError("This game has finished");
-    const p = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), (base) => this.newPlayer(base));
     // Joining mid-dive: wait for the next level (like Kahoot).
-    if (this.phase === "dive") p.state = "waiting";
-    else this.stream.openOnJoin(p, this.phase === "chase");
-    this.onChange();
+    const diving = this.phase === "dive";
+    const p = this.session.addPlayer(rawNickname, avatar, (base) => ({ ...this.newPlayer(base), state: diving ? "waiting" : "question" }));
+    this.session.changed();
     return p;
   }
 
   byToken(token: unknown): SubPlayer | null {
-    return this.roster.byToken(token);
+    return this.session.byToken(token);
   }
 
   setConnected(playerId: string, connected: boolean): void {
-    const p = this.players.get(playerId);
-    if (!p || p.connected === connected) return;
-    p.connected = connected;
+    if (!this.session.roster.setConnected(playerId, connected)) return;
     // A diver whose phone dropped no longer holds the group back.
     const ins = !connected && this.phase === "dive" ? this.instructorOf(playerId) : null;
     if (ins && ins.index < DIVE_SYMBOLS && this.enoughFound(ins)) return this.advance(ins);
-    this.onChange();
+    this.session.changed();
   }
 
   kick(playerId: string): SubPlayer | null {
-    const p = this.roster.remove(playerId);
+    const p = this.session.removePlayer(playerId);
     if (!p) return null;
     for (const ins of this.instructors) {
       ins.group = ins.group.filter((id) => id !== playerId);
@@ -428,7 +404,7 @@ export class SubGame {
       if (ins.playerId === playerId || ins.group.length === 0) ins.index = DIVE_SYMBOLS;
     }
     if (this.phase === "dive" && this.instructors.every((i) => i.index >= DIVE_SYMBOLS)) this.nextLevel();
-    else this.onChange();
+    else this.session.changed();
     return p;
   }
 
@@ -447,7 +423,7 @@ export class SubGame {
 
   /** The finished game's Podium (GLOSSARY.md), worked out once in Game finish. */
   get podium(): Podium<SubPlayer, SubPlayer, SubAwardKey> {
-    return this.gameFinish.podium;
+    return this.session.podium;
   }
 
   hostView(): HostSubState {
@@ -457,7 +433,7 @@ export class SubGame {
       quiz: { id: this.quizId, title: this.title, questionCount: this.questionCount },
       level: this.level,
       depthMeters: this.depth,
-      phaseRemainingMs: this.phases.remainingMs(),
+      phaseRemainingMs: this.session.phases.remainingMs(),
       gapSeconds: this.gap(),
       speed: this.speed,
       maxGap: GAP_MAX,
@@ -480,14 +456,14 @@ export class SubGame {
       players: [...this.players.values()].map((p) => ({ id: p.id, nickname: p.nickname, avatar: p.avatar, connected: p.connected, state: p.state })),
       playerCount: this.players.size,
       awards: this.phase === "podium" ? this.podium.awards : null,
-      errors: this.stream.errorsWhen(this.phase === "podium"),
+      errors: this.session.stream.errorsWhen(this.phase === "podium"),
     };
   }
 
   private diveView(p: SubPlayer): PlayerSubView["dive"] {
     if (this.phase !== "dive") return null;
     const timer = (i: Instructor) => ({
-      symbolRemainingMs: i.index >= DIVE_SYMBOLS ? 0 : Math.max(0, i.endsAt - this.clock.now()),
+      symbolRemainingMs: i.index >= DIVE_SYMBOLS ? 0 : Math.max(0, i.endsAt - this.session.clock.now()),
       symbolDurationMs: DIVE_SYMBOL_TIMEOUT_MS,
     });
     const lead = this.instructors.find((i) => i.playerId === p.id && !i.solo);
@@ -509,7 +485,7 @@ export class SubGame {
       grid: p.grid,
       index: ins.index,
       total: DIVE_SYMBOLS,
-      lockRemainingMs: Math.max(0, p.lockedUntil - this.clock.now()),
+      lockRemainingMs: Math.max(0, p.lockedUntil - this.session.clock.now()),
       done: ins.index >= DIVE_SYMBOLS || ins.found.has(p.id),
       hint: ins.solo ? (ins.symbols[ins.index] ?? null) : null,
       ...timer(ins),
@@ -529,11 +505,11 @@ export class SubGame {
       title: this.title,
       level: this.level,
       depth: this.depth,
-      phaseRemainingMs: this.phases.remainingMs(),
+      phaseRemainingMs: this.session.phases.remainingMs(),
       me: { id: p.id, nickname: p.nickname, avatar: p.avatar, correct: p.correct, boosts: p.boosts, diveHits: p.diveHits },
       state: p.state,
       towardBoost: p.towardBoost,
-      ...this.stream.fragment(p),
+      ...this.session.stream.fragment(p),
       dive: this.diveView(p),
       result,
     };

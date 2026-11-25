@@ -1,28 +1,25 @@
 import type { AnswerValue } from "../../shared/answer-match.ts";
 import { answerOf } from "../../shared/answer-match.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
-import { randomAvatar } from "../../shared/avatars.ts";
 import type { HostTowerState, MonsterAttack, MonsterEggs, PlayerTowerView, TowerAwardKey, TowerPhase, TowerSettings } from "../../shared/modes/tower.ts";
 import { BLOCKS_PER_BUILD, DROP_ZONES, EGG_LEVELS_ABOVE, MONSTER_DAMAGE, TOWER_MINUTES, towerShared } from "../../shared/modes/tower.ts";
 import { MAX_TEAMS } from "../../shared/protocol.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import { modeTheme, THEMED_MODES } from "../../shared/themed-modes.ts";
 import type { Clock } from "./common.ts";
-import { GameError, realClock, teamInfo } from "./common.ts";
+import { GameError, teamInfo } from "./common.ts";
 import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
-import { GameFinish, GameLengthClock, PhaseTimer } from "./phase-timer.ts";
 import type { Podium } from "./podium.ts";
 import { buildPodium, emptyPodium } from "./podium.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
-import { Roster } from "./roster.ts";
 import type { RankKey } from "./standings.ts";
 import { fewest, most, rankBy } from "./standings.ts";
 import type { AnswerTotals } from "./stream.ts";
-import { QuestionStream } from "./stream.ts";
+import { StreamedSession } from "./streamed-session.ts";
 
 export { FEEDBACK_MS } from "./stream.ts";
 
@@ -92,22 +89,13 @@ export class TowerGame {
   readonly questions: Question[];
   readonly teams: TowerTeam[];
   readonly settings: TowerGameSettings;
-  readonly roster = new Roster<TowerPlayer>();
   dropCount = 0;
   egg: MonsterEggs | null = null;
   lastAttack: MonsterAttack | null = null;
   private monsterSeq = 0;
   private lastMonsterEvent: { seq: number; kind: "egg" | "attack" } | null = null;
 
-  private readonly clock: Clock;
-  private readonly rng: () => number;
-  private readonly stream: QuestionStream<TowerPlayer>;
-  private readonly phases: PhaseTimer<TowerPhase>;
-  private readonly gameLength: GameLengthClock<TowerPhase>;
-  private readonly onChange: () => void;
-  private readonly onActivity: (playerId: string) => void;
-  private readonly onFinish: (game: TowerGame) => void;
-  private readonly gameFinish: GameFinish<TowerGame["phase"], TowerPodium>;
+  private readonly session: StreamedSession<TowerPlayer, TowerPhase, TowerPodium>;
 
   constructor(quiz: Quiz, settings: TowerGameSettings, opts: TowerOptions = {}) {
     if (quiz.questions.length === 0) throw new GameError("This quiz has no questions");
@@ -116,49 +104,44 @@ export class TowerGame {
     this.questions = quiz.questions;
     this.settings = settings;
     this.teams = Array.from({ length: settings.teams }, (_, i) => ({ ...teamInfo(i), columns: [0, 0, 0] }));
-    this.clock = opts.clock ?? realClock;
-    this.phases = new PhaseTimer(this.clock, "countdown");
-    this.rng = opts.rng ?? Math.random;
-    this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock, {
-      penalizeGuessing: settings.protect,
+    this.session = new StreamedSession({
+      questions: quiz.questions,
+      shuffleAnswers: settings.shuffleAnswers,
+      protect: settings.protect,
+      clock: opts.clock,
+      rng: opts.rng,
+      countdownMs: COUNTDOWN_MS,
+      inPlay: (phase) => phase === "playing",
+      minutes: settings.minutes,
       canAnswer: (p) => this.phase === "playing" && p.state === "question",
-    });
-    this.onChange = opts.onChange ?? (() => {});
-    this.onActivity = opts.onActivity ?? (() => this.onChange());
-    this.onFinish = opts.onFinish ?? (() => {});
-    this.gameFinish = new GameFinish(this.phases, "podium", {
       cleanup: () => {
         this.egg = null;
       },
       podium: { build: () => this.buildPodium(), empty: () => emptyPodium(towerShared.awards) },
-      onFinish: () => this.onFinish(this),
-      onChange: () => this.onChange(),
+      hub: { onChange: opts.onChange, onActivity: opts.onActivity, onFinish: () => opts.onFinish?.(this) },
     });
-    this.gameLength = new GameLengthClock(this.phases, this.gameFinish);
   }
-
-  /** Take over a lobby's players (same ids and tokens), on the teams shown in the lobby. */
-  choices!: LobbyChoices;
 
   static fromLobby(lobby: LobbyFacts<"tower">, opts: TowerOptions = {}): TowerGame {
     const game = new TowerGame(lobby.quiz, { ...lobby.settings, shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
-    const players = [...lobby.players];
-    const teams = lobby.teams;
-    game.choices = lobby.choices;
-    game.roster.adoptFrom(players, (base) => game.newPlayer(base, teams.get(base.id) ?? 0));
+    game.session.adoptLobby(lobby, (base) => game.newPlayer(base, lobby.teams.get(base.id) ?? 0));
     return game;
   }
 
+  get choices(): LobbyChoices {
+    return this.session.choices;
+  }
+
   get phase(): TowerPhase {
-    return this.phases.phase;
+    return this.session.phase;
   }
 
   get players(): Map<string, TowerPlayer> {
-    return this.roster.players;
+    return this.session.players;
   }
 
-  private newPlayer(base: BasePlayer, team: number): TowerPlayer {
-    return this.stream.registerPlayer({
+  private newPlayer(base: BasePlayer, team: number): Omit<TowerPlayer, keyof AnswerTotals> {
+    return {
       ...base,
       team,
       blocksHeld: 0,
@@ -167,34 +150,28 @@ export class TowerGame {
       hatched: 0,
       state: "question",
       lastDropAt: -Infinity,
-    });
+    };
   }
 
-  private started = false;
-
   start(): void {
-    if (this.started) throw new GameError("The game has already started");
-    if (this.players.size === 0) throw new GameError("Wait for at least one player to join");
-    this.started = true;
-    this.phases.set("countdown", COUNTDOWN_MS, () => this.beginPlaying());
-    this.onChange();
+    this.session.start(() => this.beginPlaying());
   }
 
   private beginPlaying(): void {
     if (this.phase !== "countdown") return;
     const ms = this.settings.minutes * 60_000;
-    this.gameLength.start("playing", ms);
-    for (const p of this.players.values()) this.stream.open(p);
+    this.session.startGameLength("playing");
+    for (const p of this.players.values()) this.session.stream.open(p);
     if (this.monsterEnabled) {
-      MONSTER_AT.forEach((frac, i) => this.phases.after(monsterSlot(i), Math.round(ms * frac), () => this.announceMonster()));
+      MONSTER_AT.forEach((frac, i) => this.session.phases.after(monsterSlot(i), Math.round(ms * frac), () => this.announceMonster()));
     }
-    this.onChange();
+    this.session.changed();
   }
 
   /** Time until the next egg announcement, or null if none is coming. */
   private nextMonsterRemainingMs(): number | null {
     for (let i = 0; i < MONSTER_AT.length; i++) {
-      const ms = this.phases.slotRemainingMs(monsterSlot(i));
+      const ms = this.session.phases.slotRemainingMs(monsterSlot(i));
       if (ms !== null) return ms;
     }
     return null;
@@ -221,12 +198,12 @@ export class TowerGame {
         const row = floorsOf(t) + EGG_LEVELS_ABOVE - 1;
         // A column is free if it hasn't been stacked up to that row yet (the shortest column always is).
         const free = [0, 1, 2].filter((c) => t.columns[c]! <= row);
-        return { col: free[Math.min(free.length - 1, Math.floor(this.rng() * free.length))]!, row };
+        return { col: free[Math.min(free.length - 1, Math.floor(this.session.rng() * free.length))]!, row };
       });
       this.egg = { seq, cells };
       this.lastMonsterEvent = { seq, kind: "egg" };
     }
-    this.onChange();
+    this.session.changed();
   }
 
   /** The first block on the egg hatches it: the monster smashes the tallest other tower. */
@@ -241,22 +218,20 @@ export class TowerGame {
     victim.columns = victim.columns.map((h) => Math.min(h, cap)) as TowerTeam["columns"];
     this.lastAttack = { seq: ++this.monsterSeq, byTeam: team.index, byNickname: p.nickname, target: victim.index, before, after: [...victim.columns] };
     this.lastMonsterEvent = { seq: this.lastAttack.seq, kind: "attack" };
-    this.onChange();
+    this.session.changed();
   }
 
   end(): void {
-    this.gameLength.end();
+    this.session.end();
   }
 
   dispose(): void {
-    this.phases.dispose();
+    this.session.dispose();
   }
 
   join(rawNickname: unknown, avatar?: AvatarChoice | null): TowerPlayer {
-    if (this.phase === "podium") throw new GameError("This game has finished");
-    const player = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), (base) => this.newPlayer(base, this.smallestTeam()));
-    this.stream.openOnJoin(player, this.phase === "playing");
-    this.onChange();
+    const player = this.session.addPlayer(rawNickname, avatar, (base) => this.newPlayer(base, this.smallestTeam()));
+    this.session.changed();
     return player;
   }
 
@@ -267,27 +242,26 @@ export class TowerGame {
   }
 
   byToken(token: unknown): TowerPlayer | null {
-    return this.roster.byToken(token);
+    return this.session.byToken(token);
   }
 
   setConnected(playerId: string, connected: boolean): void {
-    if (this.roster.setConnected(playerId, connected)) this.onChange();
+    this.session.setConnected(playerId, connected);
   }
 
   kick(playerId: string): TowerPlayer | null {
-    const p = this.roster.remove(playerId);
-    if (p) this.onChange();
+    const p = this.session.removePlayer(playerId);
+    if (p) this.session.changed();
     return p;
   }
 
   answer(playerId: string, seq: number, option: AnswerValue): boolean {
-    const p = this.players.get(playerId);
-    if (!p) return false;
-    const correct = this.stream.answer(p, seq, option);
-    if (correct === null) return false;
-    if (correct) p.blocksHeld++;
+    const answered = this.session.answer(playerId, seq, option);
+    if (!answered) return false;
+    const p = answered.player;
+    if (answered.correct) p.blocksHeld++;
     if (p.blocksHeld >= BLOCKS_PER_BUILD) p.state = "build";
-    this.onActivity(p.id);
+    this.session.activity(p.id);
     return true;
   }
 
@@ -296,8 +270,8 @@ export class TowerGame {
     const p = this.players.get(playerId);
     if (!p || this.phase !== "playing" || p.state !== "build" || p.blocksHeld <= 0) return null;
     if (!Number.isInteger(zone) || zone < 0 || zone >= DROP_ZONES) return null;
-    const now = this.clock.now();
-    if (now < this.stream.feedbackEndsAt(p) || now - p.lastDropAt < DROP_COOLDOWN_MS) return null;
+    const now = this.session.clock.now();
+    if (now < this.session.stream.feedbackEndsAt(p) || now - p.lastDropAt < DROP_COOLDOWN_MS) return null;
     p.lastDropAt = now;
     const team = this.teams[p.team]!;
     const landed = zone >= 1 && zone <= 3;
@@ -312,10 +286,10 @@ export class TowerGame {
     p.blocksHeld--;
     if (p.blocksHeld === 0) {
       p.state = "question";
-      this.stream.resume(p, now);
+      this.session.stream.resume(p, now);
     }
     this.dropCount++;
-    this.onActivity(p.id);
+    this.session.activity(p.id);
     return landed;
   }
 
@@ -344,7 +318,7 @@ export class TowerGame {
 
   /** The finished game's Podium (GLOSSARY.md), worked out once in Game finish. */
   get podium(): TowerPodium {
-    return this.gameFinish.podium;
+    return this.session.podium;
   }
 
   /** A team's totals and place on the Podium. */
@@ -361,7 +335,7 @@ export class TowerGame {
       theme: modeTheme("tower", this.settings.theme),
       phase: this.phase,
       quiz: { id: this.quizId, title: this.title, questionCount: this.questions.length },
-      remainingMs: this.gameLength.remainingMs(),
+      remainingMs: this.session.phases.remainingMs(),
       teams: this.teams.map((t) => ({
         index: t.index,
         name: t.name,
@@ -387,7 +361,7 @@ export class TowerGame {
       lastAttack: this.lastAttack,
       nextMonsterRemainingMs: this.phase === "playing" ? this.nextMonsterRemainingMs() : null,
       awards: podium ? this.podium.awards : null,
-      errors: this.stream.errorsWhen(this.phase === "podium"),
+      errors: this.session.stream.errorsWhen(this.phase === "podium"),
     };
   }
 
@@ -419,17 +393,22 @@ export class TowerGame {
       theme: modeTheme("tower", this.settings.theme),
       phase: this.phase,
       title: this.title,
-      remainingMs: this.gameLength.remainingMs(),
+      remainingMs: this.session.phases.remainingMs(),
       me: { id: p.id, nickname: p.nickname, avatar: p.avatar, correct: p.correct, placed: p.placed },
       team: teamInfo(team.index),
       state: p.state,
       blocksHeld: p.blocksHeld,
-      ...this.stream.fragment(p),
+      ...this.session.stream.fragment(p),
       egg: playing && this.egg ? { seq: this.egg.seq, ...this.egg.cells[p.team]! } : null,
       monsterEvent: this.monsterEventFor(p),
       build:
         playing && p.state === "build"
-          ? { columns: [...team.columns], floors: floorsOf(team), sweepDurationMs: sweepMsFor(floorsOf(team)), wait: this.stream.afterAnswerWaitView(p) }
+          ? {
+              columns: [...team.columns],
+              floors: floorsOf(team),
+              sweepDurationMs: sweepMsFor(floorsOf(team)),
+              wait: this.session.stream.afterAnswerWaitView(p),
+            }
           : null,
       result,
     };
