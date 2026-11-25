@@ -200,7 +200,7 @@ function DiveScreen({ view, send }: { view: PlayerSubView; send: Send }) {
   const dive = view.dive;
   const [, rerender] = useState(0);
   const lockedUntil = useRef(0);
-  if (dive?.role === "diver" && dive.lockedMs > 0) lockedUntil.current = performance.now() + dive.lockedMs;
+  if (dive?.role === "diver" && dive.lockRemainingMs > 0) lockedUntil.current = performance.now() + dive.lockRemainingMs;
   const locked = performance.now() < lockedUntil.current;
   useEffect(() => {
     if (!locked) return;
@@ -220,7 +220,7 @@ function DiveScreen({ view, send }: { view: PlayerSubView; send: Send }) {
   if (dive.role === "instructor") {
     return (
       <main class="center instructor">
-        {dive.index < dive.total && <SymbolTimer index={dive.index} remainingMs={dive.symbolRemainingMs} totalMs={dive.symbolMs} />}
+        {dive.index < dive.total && <SymbolTimer index={dive.index} remainingMs={dive.symbolRemainingMs} totalMs={dive.symbolDurationMs} />}
         <div class="role-tag">📣 You're an INSTRUCTOR</div>
         <p class="muted">Describe this symbol out loud so your teammates can find it!</p>
         <div class="big-symbol" key={dive.symbol}>
@@ -240,7 +240,7 @@ function DiveScreen({ view, send }: { view: PlayerSubView; send: Send }) {
           Tap the symbol being described · {Math.min(dive.index + 1, dive.total)} / {dive.total}
         </span>
       </div>
-      {dive.index < dive.total && <SymbolTimer index={dive.index} remainingMs={dive.symbolRemainingMs} totalMs={dive.symbolMs} />}
+      {dive.index < dive.total && <SymbolTimer index={dive.index} remainingMs={dive.symbolRemainingMs} totalMs={dive.symbolDurationMs} />}
       {dive.done ? (
         <div class="center">
           <div class="big-check">✓</div>

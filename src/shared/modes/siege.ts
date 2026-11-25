@@ -75,7 +75,7 @@ export interface HostSiegeMonster {
   x: number;
   /** Where it is walking to and how long it takes to get there (0 = standing still). */
   toX: number;
-  moveMs: number;
+  moveRemainingMs: number;
   state: "wait" | "walk" | "attack" | "leap";
   health: number;
   maxHealth: number;

@@ -245,7 +245,7 @@ function Battlefield({ view }: { view: SiegeView }) {
           />
         ))}
         {view.monsters.map((m) => {
-          const t = m.moveMs > 0 ? Math.min(1, since / m.moveMs) : 0;
+          const t = m.moveRemainingMs > 0 ? Math.min(1, since / m.moveRemainingMs) : 0;
           const x = m.x + (m.toX - m.x) * t;
           return <MonsterFigure key={m.id} m={m} x={x} posed={now - lastAttack(`m${m.id}`, m.attackSeq) < 450} />;
         })}

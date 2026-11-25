@@ -1,5 +1,6 @@
 import type { HostView, PlayerView, ServerMsg } from "../shared/protocol.ts";
 import { diffView } from "../shared/view-patch.ts";
+import { isCountdownField, isElapsedField } from "../shared/view-time-fields.ts";
 import type { Clock } from "./game/common.ts";
 import type { PhoneAttachments } from "./phone-attachments.ts";
 
@@ -11,28 +12,11 @@ type ViewSocket = {
   send(message: string, compress: boolean): number;
 };
 
-/** View fields holding "time left" (relative to when the message arrives). */
-const COUNTDOWN_KEYS = new Set([
-  "remainingMs",
-  "phaseRemainingMs",
-  "gameRemainingMs",
-  "decisionMs",
-  "repairMs",
-  "emptyMs",
-  "lockedMs",
-  "symbolRemainingMs",
-  "nextMonsterMs",
-  "protectedMs",
-  "fuelMs",
-]);
-/** View fields holding "time since" something started; phones only read them to place the start. */
-const ELAPSED_KEYS = new Set(["revealElapsedMs", "elapsedMs"]);
-
 export function viewKey(view: PlayerView, now: number): string {
   return JSON.stringify(view, (k, v) => {
     if (typeof v !== "number" || v <= 0) return v;
-    if (COUNTDOWN_KEYS.has(k)) return Math.round((now + v) / 100);
-    if (ELAPSED_KEYS.has(k)) return Math.round((now - v) / 100);
+    if (isCountdownField(k)) return Math.round((now + v) / 100);
+    if (isElapsedField(k)) return Math.round((now - v) / 100);
     return v;
   });
 }

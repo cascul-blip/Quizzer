@@ -99,9 +99,9 @@ export interface PlayerFightView {
   /** Correct answers toward the next decision (0 … CORRECT_PER_DECISION-1). */
   towardDecision: number;
   /** Time left to choose attack or rebuild (decide state). */
-  decisionMs: number;
+  decisionRemainingMs: number;
   /** Time left on this player's repair (repair state). */
-  repairMs: number;
+  repairRemainingMs: number;
   /** This player's most recently finished repair; repaired is false if teammates had already fixed the tower. */
   lastRepair: { seq: number; repaired: boolean } | null;
   question: StreamQuestionView | null;

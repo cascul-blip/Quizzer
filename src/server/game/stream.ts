@@ -41,7 +41,7 @@ interface QuestionState {
   wrongStreak: number;
   deck: number[];
   current: CurrentQuestion | null;
-  feedback: { seq: number; correct: boolean; answers: string[]; penaltyMs: number } | null;
+  feedback: { seq: number; correct: boolean; answers: string[]; penaltyDurationMs: number } | null;
   readyAt: number;
 }
 
@@ -167,9 +167,9 @@ export class QuestionStream<P extends AnswerTotals = AnswerTotals> {
       state.wrongStreak++;
       this.wrongCounts[cur.qIndex]!++;
     }
-    const penaltyMs = this.rules.penalizeGuessing ? wrongPenaltyMs(state.wrongStreak) : 0;
-    state.feedback = { seq, correct, answers: correct ? [] : cur.correct.map((i) => cur.options[i]!), penaltyMs };
-    state.readyAt = this.clock.now() + FEEDBACK_MS + penaltyMs;
+    const penaltyDurationMs = this.rules.penalizeGuessing ? wrongPenaltyMs(state.wrongStreak) : 0;
+    state.feedback = { seq, correct, answers: correct ? [] : cur.correct.map((i) => cur.options[i]!), penaltyDurationMs };
+    state.readyAt = this.clock.now() + FEEDBACK_MS + penaltyDurationMs;
     this.deal(state);
     return correct;
   }

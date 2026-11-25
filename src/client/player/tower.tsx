@@ -210,13 +210,13 @@ function BuildMode(props: {
   const visibleRows = Math.max(2, Math.floor((size.h - ground - sliderTop - cell * 1.6) / Math.max(cell, 1)));
   const baseRow = viewBaseRow(tallest, visibleRows, egg ? egg.row : null);
 
-  // Slide the block back and forth: one sweep across takes build.sweepMs.
+  // Slide the block back and forth: one sweep across takes build.sweepDurationMs.
   useEffect(() => {
     if (!size.w) return;
     let raf = 0;
     const start = performance.now();
     const loop = (t: number) => {
-      const x = ((t - start) / build.sweepMs) % 2;
+      const x = ((t - start) / build.sweepDurationMs) % 2;
       const f = x < 1 ? x : 2 - x;
       pos.current = 0.1 + 0.8 * f; // center of the block, as a fraction of the width
       if (sliderRef.current) sliderRef.current.style.transform = `translateX(${(pos.current - 0.1) * size.w}px)`;
@@ -224,7 +224,7 @@ function BuildMode(props: {
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [build.sweepMs, size.w]);
+  }, [build.sweepDurationMs, size.w]);
 
   // Animate the falling block from the slider to where it lands (or off the edge).
   useLayoutEffect(() => {

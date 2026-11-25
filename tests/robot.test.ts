@@ -187,7 +187,7 @@ describe("Robot Attack", () => {
     clock.advance(game.phaseEndsAt - clock.now() - 1);
     const question = game.playerView(a.id)!.question!;
     expect(game.answer(a.id, question.seq, 1)).toBe(true);
-    expect(game.playerView(a.id)!.feedback).toMatchObject({ remainingMs: 4000, penaltyMs: 3000 });
+    expect(game.playerView(a.id)!.feedback).toMatchObject({ remainingMs: 4000, penaltyDurationMs: 3000 });
     toMove(game, clock);
     expect(game.playerView(a.id)!.feedback).toBeNull();
     a.x = 5;

@@ -12,7 +12,7 @@ export const claimView: PlayerLandView = {
   state: "claim",
   claims: 2,
   answered: 0,
-  emptyMs: 0,
+  emptyRemainingMs: 0,
   question: null,
   feedback: null,
   board: {

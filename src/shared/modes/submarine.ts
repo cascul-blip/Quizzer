@@ -52,18 +52,27 @@ export interface PlayerSubView {
   towardBoost: number;
   question: StreamQuestionView | null;
   feedback: StreamFeedbackView | null;
-  dive: // symbolRemainingMs of symbolMs: time left to find the current symbol before the instructor moves on.
-    | { role: "instructor"; symbol: string; index: number; total: number; found: number; groupSize: number; symbolRemainingMs: number; symbolMs: number }
+  dive: // symbolRemainingMs of symbolDurationMs: time left to find the current symbol before the instructor moves on.
+    | {
+        role: "instructor";
+        symbol: string;
+        index: number;
+        total: number;
+        found: number;
+        groupSize: number;
+        symbolRemainingMs: number;
+        symbolDurationMs: number;
+      }
     | {
         role: "diver";
         grid: string[];
         index: number;
         total: number;
-        lockedMs: number;
+        lockRemainingMs: number;
         done: boolean;
         hint: string | null;
         symbolRemainingMs: number;
-        symbolMs: number;
+        symbolDurationMs: number;
       }
     | { role: "waiting" }
     | null;

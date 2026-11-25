@@ -78,7 +78,7 @@ export interface PlayerTowerView {
   build: {
     columns: number[];
     floors: number;
-    sweepMs: number;
+    sweepDurationMs: number;
     wait: AfterAnswerWaitView;
   } | null;
   result: {
@@ -112,7 +112,7 @@ export interface HostTowerState {
   egg: MonsterEggs | null;
   lastAttack: MonsterAttack | null;
   /** Time until the next egg announcement, or null if none is coming. */
-  nextMonsterMs: number | null;
+  nextMonsterRemainingMs: number | null;
   awards: TowerAwards | null;
   /** The questions answered wrongly most often (podium only). */
   errors: QuestionError[] | null;

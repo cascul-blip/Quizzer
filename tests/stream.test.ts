@@ -51,17 +51,17 @@ describe("QuestionStream", () => {
     expect(answer(-1)).toBeNull();
     expect(answer(99)).toBeNull();
     expect(answer(0)).toBe(false);
-    expect(stream.feedbackView(player)).toMatchObject({ remainingMs: 1000, penaltyMs: 0, answers: ["4"] });
+    expect(stream.feedbackView(player)).toMatchObject({ remainingMs: 1000, penaltyDurationMs: 0, answers: ["4"] });
     clock.advance(1000);
     expect(stream.answer(player, 1, 1)).toBeNull();
 
-    for (const penaltyMs of [3000, 4000, 4000]) {
+    for (const penaltyDurationMs of [3000, 4000, 4000]) {
       expect(answer(0)).toBe(false);
-      expect(stream.feedbackEndsAt(player)).toBe(clock.now() + 1000 + penaltyMs);
-      clock.advance(1000 + penaltyMs - 1);
+      expect(stream.feedbackEndsAt(player)).toBe(clock.now() + 1000 + penaltyDurationMs);
+      clock.advance(1000 + penaltyDurationMs - 1);
       stream.resume(player);
       expect(answer(1)).toBeNull();
-      expect(stream.feedbackView(player)).toMatchObject({ remainingMs: 1, penaltyMs });
+      expect(stream.feedbackView(player)).toMatchObject({ remainingMs: 1, penaltyDurationMs });
       clock.advance(1);
       expect(stream.feedbackView(player)).toBeNull();
     }
@@ -69,7 +69,7 @@ describe("QuestionStream", () => {
     expect(answer(1)).toBe(true);
     clock.advance(1000);
     expect(answer(0)).toBe(false);
-    expect(stream.feedbackView(player)).toMatchObject({ remainingMs: 1000, penaltyMs: 0 });
+    expect(stream.feedbackView(player)).toMatchObject({ remainingMs: 1000, penaltyDurationMs: 0 });
     expect([player.correct, player.wrong]).toEqual([1, 5]);
   });
 
@@ -80,7 +80,7 @@ describe("QuestionStream", () => {
     stream.open(player);
     for (let seq = 1; seq <= 4; seq++) {
       expect(stream.answer(player, seq, 0)).toBe(false);
-      expect(stream.feedbackView(player)).toMatchObject({ remainingMs: 1000, penaltyMs: 0 });
+      expect(stream.feedbackView(player)).toMatchObject({ remainingMs: 1000, penaltyDurationMs: 0 });
       clock.advance(1000);
     }
   });

@@ -26,7 +26,7 @@ function Preview({ phone, fixture }: { phone: boolean; fixture: { host: HostSieg
     lane,
     x: 5.5,
     toX: 5.5,
-    moveMs: 0,
+    moveRemainingMs: 0,
     state: seq % 2 ? "attack" : "walk",
     health: 10,
     maxHealth: 10,

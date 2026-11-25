@@ -17,7 +17,7 @@ export interface StreamFeedbackView {
   correct: boolean;
   remainingMs: number;
   answers: string[];
-  penaltyMs: number;
+  penaltyDurationMs: number;
 }
 
 /** The wait before an activity's first action, relative to this view. */

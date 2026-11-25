@@ -97,7 +97,7 @@ export interface PlayerLandView {
   /** Answers given in this round of questions (0 … LAND_QUESTIONS_PER_ROUND-1). */
   answered: number;
   /** Time left on the "no tiles to place" message (empty state). */
-  emptyMs: number;
+  emptyRemainingMs: number;
   question: StreamQuestionView | null;
   feedback: StreamFeedbackView | null;
   /** The land, while this player is placing tiles. */

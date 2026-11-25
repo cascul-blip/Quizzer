@@ -90,9 +90,9 @@ function FightPlayerContent({ view, send }: { view: PlayerFightView; send: Send 
   } else if (view.phase === "podium") {
     body = <FightResult view={view} />;
   } else if (view.state === "repair") {
-    body = <RepairWall color={view.team.color} repairMs={view.repairMs} />;
+    body = <RepairWall color={view.team.color} repairRemainingMs={view.repairRemainingMs} />;
   } else if (cleared) {
-    body = <RepairWall color={view.team.color} repairMs={0} done={cleared} />;
+    body = <RepairWall color={view.team.color} repairRemainingMs={0} done={cleared} />;
   } else if (view.state === "decide") {
     body = <DecideScreen view={view} send={send} />;
   } else if (view.state === "aim") {
@@ -145,7 +145,7 @@ function FightPlayerContent({ view, send }: { view: PlayerFightView; send: Send 
 
 function DecisionClock({ view }: { view: PlayerFightView }) {
   // The correct count doesn't change while choosing, so it keys this decision's countdown.
-  const secs = useCountdown(view.decisionMs, `decision-${view.me.correct}`);
+  const secs = useCountdown(view.decisionRemainingMs, `decision-${view.me.correct}`);
   return <div class={`fight-clock ${secs <= 3 ? "urgent" : ""}`}>{secs}</div>;
 }
 
@@ -295,11 +295,11 @@ function AimScreen({ view, send }: { view: PlayerFightView; send: Send }) {
  * Rebuilding: bricks stack up row by row until the wall fills the screen,
  * a progress bar for the repair. When done, the bricks tumble away.
  */
-function RepairWall({ color, repairMs, done }: { color: string; repairMs: number; done?: { repaired: boolean } }) {
+function RepairWall({ color, repairRemainingMs, done }: { color: string; repairRemainingMs: number; done?: { repaired: boolean } }) {
   const art = useFightPhoneUI();
   // The end time is set when the wall appears, relative to this phone's clock.
-  const endAt = useRef(performance.now() + repairMs);
-  const [progress, setProgress] = useState(done ? 1 : 1 - repairMs / REPAIR_MS);
+  const endAt = useRef(performance.now() + repairRemainingMs);
+  const [progress, setProgress] = useState(done ? 1 : 1 - repairRemainingMs / REPAIR_MS);
   const rowsBuzzed = useRef(0);
   useEffect(() => {
     if (done) return;

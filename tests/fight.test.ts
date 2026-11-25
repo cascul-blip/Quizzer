@@ -118,7 +118,7 @@ describe("decisions", () => {
     // Undamaged tower: nothing to rebuild, straight to the catapult (no time limit there).
     expect(a.state).toBe("aim");
     expect(game.playerView(a.id)!.question).toBeNull();
-    expect(game.playerView(a.id)!.decisionMs).toBe(0);
+    expect(game.playerView(a.id)!.decisionRemainingMs).toBe(0);
     expect(game.answer(a.id, nextSeq, 0)).toBe(false);
   });
 
@@ -132,7 +132,7 @@ describe("decisions", () => {
     expect(a.state).toBe("decide");
     expect(game.choose(a.id, "rebuild")).toBe(true);
     expect(a.state).toBe("repair");
-    expect(game.playerView(a.id)!.repairMs).toBe(REPAIR_MS);
+    expect(game.playerView(a.id)!.repairRemainingMs).toBe(REPAIR_MS);
     expect(game.hostView().teams.map((t) => t.repairing)).toEqual([true, false]);
     // No questions while repairing, and the decide timer no longer applies.
     expect(game.playerView(a.id)!.question).toBeNull();
@@ -191,7 +191,7 @@ describe("decisions", () => {
     shoot(game, clock, byName(game, "B"), 0);
     earnDecision(game, clock, a);
     expect(a.state).toBe("decide");
-    expect(game.playerView(a.id)!.decisionMs).toBe(DECISION_MS - FEEDBACK_MS);
+    expect(game.playerView(a.id)!.decisionRemainingMs).toBe(DECISION_MS - FEEDBACK_MS);
     clock.advance(DECISION_MS + DECISION_GRACE_MS);
     expect(a.state).toBe("question");
     expect(game.choose(a.id, "attack")).toBeNull();
@@ -215,7 +215,7 @@ describe("decisions", () => {
     expect(s.game.choose(c.id, "attack")).toBe(true);
     s.clock.advance(DECISION_MS * 10);
     expect(c.state).toBe("aim");
-    expect(s.game.playerView(c.id)!.decisionMs).toBe(0);
+    expect(s.game.playerView(c.id)!.decisionRemainingMs).toBe(0);
     expect(s.game.fire(c.id, -100, -100)).not.toBeNull();
   });
 
@@ -248,6 +248,20 @@ describe("shots", () => {
     clock.advance(RESULT_MS);
     expect(a.state).toBe("question");
     expect(game.hostView().events.at(-1)).toMatchObject({ kind: "hit", nickname: "A" });
+  });
+
+  test("a decider's view key ignores the decision countdown running down, so it isn't re-sent", () => {
+    const { game, clock } = setup(["A", "B"]);
+    const a = byName(game, "A");
+    shoot(game, clock, byName(game, "B"), 0);
+    earnDecision(game, clock, a);
+    expect(a.state).toBe("decide");
+    const before = game.playerView(a.id)!;
+    const key = viewKey(before, clock.now());
+    clock.t += 1000;
+    const after = game.playerView(a.id)!;
+    expect(after.decisionRemainingMs).toBe(before.decisionRemainingMs - 1000);
+    expect(viewKey(after, clock.now())).toBe(key);
   });
 
   test("a watcher's view key ignores the shot clock running up, so it isn't re-sent", () => {

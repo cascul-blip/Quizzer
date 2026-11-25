@@ -479,7 +479,7 @@ export class SubGame {
     if (this.phase !== "dive") return null;
     const timer = (i: Instructor) => ({
       symbolRemainingMs: i.index >= DIVE_SYMBOLS ? 0 : Math.max(0, i.endsAt - this.clock.now()),
-      symbolMs: DIVE_SYMBOL_TIMEOUT_MS,
+      symbolDurationMs: DIVE_SYMBOL_TIMEOUT_MS,
     });
     const lead = this.instructors.find((i) => i.playerId === p.id && !i.solo);
     if (lead) {
@@ -500,7 +500,7 @@ export class SubGame {
       grid: p.grid,
       index: ins.index,
       total: DIVE_SYMBOLS,
-      lockedMs: Math.max(0, p.lockedUntil - this.clock.now()),
+      lockRemainingMs: Math.max(0, p.lockedUntil - this.clock.now()),
       done: ins.index >= DIVE_SYMBOLS || ins.found.has(p.id),
       hint: ins.solo ? (ins.symbols[ins.index] ?? null) : null,
       ...timer(ins),

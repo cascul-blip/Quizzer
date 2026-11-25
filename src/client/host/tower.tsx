@@ -68,7 +68,7 @@ function TowerStageContent({ view, send }: { view: TowerView; send: Send }) {
   const eggNews = useEventFlash(view.egg, view.egg?.seq, 4000);
   useEffect(() => void (attack && play("roar")), [attack?.seq]);
   useEffect(() => void (eggNews && play("rumble")), [eggNews?.seq]);
-  const monsterSecs = useCountdown(view.nextMonsterMs ?? 0, `m${Math.round((performance.now() + (view.nextMonsterMs ?? 0)) / 2000)}`);
+  const monsterSecs = useCountdown(view.nextMonsterRemainingMs ?? 0, `m${Math.round((performance.now() + (view.nextMonsterRemainingMs ?? 0)) / 2000)}`);
   const teamName = (i: number) => `Team ${view.teams[i]?.name ?? "?"}`;
   let banner: string | null = null;
   if (attack) banner = `${words.creatureIcon} ${teamName(attack.byTeam)} ${words.action}! It smashed ${teamName(attack.target)} (−${MONSTER_DAMAGE} floors)`;
@@ -104,7 +104,7 @@ function TowerStageContent({ view, send }: { view: TowerView; send: Send }) {
             {words.itemIcon} {christmas ? "Bell" : "Egg"} is out!
           </div>
         )}
-        {view.phase === "playing" && !view.egg && view.nextMonsterMs !== null && (
+        {view.phase === "playing" && !view.egg && view.nextMonsterRemainingMs !== null && (
           <div class="pill monster-pill" title={`Next ${words.item}`}>
             {words.creatureIcon} {formatClock(monsterSecs)}
           </div>

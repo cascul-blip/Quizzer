@@ -93,7 +93,7 @@ export function Feedback({ feedback, rightText }: { feedback: StreamFeedbackView
           </b>
         </div>
       )}
-      {shown.penaltyMs > 0 && <PenaltyNote remainingMs={shown.remainingMs} seq={shown.seq} />}
+      {shown.penaltyDurationMs > 0 && <PenaltyNote remainingMs={shown.remainingMs} seq={shown.seq} />}
     </div>
   );
 }

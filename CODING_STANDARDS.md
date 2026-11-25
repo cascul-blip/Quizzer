@@ -33,6 +33,7 @@ Judgement calls the reviewer applies to a diff. `bun run typecheck` and `bun tes
 
 - **One table per fact**: anything that varies by game mode (its display name, whether it carries pacing, how it starts, its results sheet) lives in one exhaustive `switch` ending in `satisfies never`, or in a `Record<GameMode, …>`, so adding or removing a mode is a compile error at every site. Flag new `instanceof` chains or hand-written lists of mode strings.
 - **Mode entries**: a game mode's server knowledge (its settings, how it starts, pacing, results sheet, phone messages) lives in its mode entry, exported from the mode's own file and collected in `MODES` (`src/server/game/modes.ts`). The hub, lobby and lobby handoff look the entry up and don't branch on the mode.
+- **View time fields**: a time field in a phone or projector view ends in `RemainingMs` (time left), `ElapsedMs` (time since a start) or `DurationMs` (a fixed length); plain `remainingMs`, `elapsedMs` and `durationMs` count. View delivery recognises running timers by these suffixes, so a misnamed countdown resends a phone's view on every tick. `tests/standards.test.ts` checks the view types in `src/shared/modes/` and `src/shared/mode-views.ts`.
 - **Enforced by `tests/standards.test.ts`**: server code does not compare a mode against a literal, no client file that uses the mode entries compares a view's kind, mode or banner against a game mode, and server code does not use `instanceof` on a game class. Tests may use `instanceof` to narrow a game fixture. A suggested fix must pass these too.
 
 ## Imports

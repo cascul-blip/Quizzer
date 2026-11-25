@@ -52,7 +52,7 @@ function Preview({ phone }: { phone: boolean }) {
     monster: true,
     egg: phase === "playing" ? egg : null,
     lastAttack: seq ? { seq, byTeam: 1, byNickname: "Builder 2", target: 0, before: teams[0]!.columns.map((h) => h + 2), after: teams[0]!.columns } : null,
-    nextMonsterMs: null,
+    nextMonsterRemainingMs: null,
     awards: null,
     errors: null,
     join: { url: "http://localhost:8098/phone", qrSvg: "", address: "localhost", addresses: [], port: 8098 },
@@ -71,7 +71,7 @@ function Preview({ phone }: { phone: boolean }) {
     question: question ? { seq: 1, type: "multiple_choice", text: "What is 2 + 2?", options: ["3", "4", "5", "6"] } : null,
     egg: phase === "playing" ? { seq: 1, ...egg.cells[team.index]! } : null,
     monsterEvent: seq ? { seq, kind: "smashed", byTeam: "Blue", target: "Red" } : null,
-    build: question ? null : { columns: team.columns, floors: team.floors, sweepMs: 1800, wait: { activityKey: 4, remainingMs: 0 } },
+    build: question ? null : { columns: team.columns, floors: team.floors, sweepDurationMs: 1800, wait: { activityKey: 4, remainingMs: 0 } },
     result: { teamRank: 1, teamCount: count, floors: team.floors, placed: team.placed, awards: [] },
   };
   return (

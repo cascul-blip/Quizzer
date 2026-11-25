@@ -474,7 +474,7 @@ export class LandGame {
       state,
       claims: p.claims,
       answered: p.answered,
-      emptyMs: state === "empty" ? Math.max(0, p.emptyEndsAt - now) : 0,
+      emptyRemainingMs: state === "empty" ? Math.max(0, p.emptyEndsAt - now) : 0,
       ...this.stream.fragment(p),
       board: state === "claim" ? this.boardView() : null,
       claimWait: state === "claim" ? this.stream.afterAnswerWaitView(p) : null,
