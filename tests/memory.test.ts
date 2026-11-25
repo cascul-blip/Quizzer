@@ -356,7 +356,7 @@ describe("Memory Game", () => {
     ]);
     await Promise.resolve();
     const matchBoard = projector().board;
-    expect(holly!.view).toMatchObject({ phase: "feedback", turn: { step: null, board: matchBoard }, phaseRemainingMs: 1_000 });
+    expect(holly!.view).toMatchObject({ phase: "feedback", turn: { step: null, matched: true, board: matchBoard }, phaseRemainingMs: 1_000 });
     clock.advance(999);
     expect(facesUp()).toHaveLength(2);
     expect(holly!.view).toMatchObject({ turn: { board: matchBoard } });

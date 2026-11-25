@@ -1,0 +1,42 @@
+/* A turning card shows its face on the front and the theme's card back on a child turned away. */
+.memory-flip-up,
+.memory-flip-down {
+  position: relative;
+  transform-style: preserve-3d;
+  animation: 400ms ease-in-out both;
+}
+
+.memory-flip-up {
+  animation-name: memory-flip-up;
+}
+
+.memory-flip-down {
+  animation-name: memory-flip-down;
+}
+
+.memory-flip-back {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-color: #103d36;
+  transform: rotateY(180deg) translateZ(1px);
+  backface-visibility: hidden;
+}
+
+@keyframes memory-flip-up {
+  from {
+    transform: rotateY(180deg);
+  }
+  to {
+    transform: rotateY(0deg);
+  }
+}
+
+@keyframes memory-flip-down {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(180deg);
+  }
+}

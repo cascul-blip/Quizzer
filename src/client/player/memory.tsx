@@ -1,5 +1,7 @@
 import { useContext, useState } from "preact/hooks";
 import type { PlayerMemoryView } from "../../shared/modes/memory.ts";
+import type { CardFlip } from "../shared/memory/card-flips.ts";
+import { useCardFlips } from "../shared/memory/card-flips.ts";
 import { memoryFacePosition, memoryFaceSize, memoryThemeArt } from "../shared/memory/themes.ts";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
 import { PhoneResumeVersion } from "./after-answer-wait.ts";
@@ -59,7 +61,7 @@ function MemoryPhase({ view, send }: { view: PlayerMemoryView; send: Send }) {
     );
   }
   if (view.turn) {
-    return <MemoryPicks key={`${view.phase}:${view.turn.id}`} turn={view.turn} boardSize={view.boardSize} remainingMs={view.phaseRemainingMs} send={send} />;
+    return <MemoryTurn turn={view.turn} boardSize={view.boardSize} remainingMs={view.phaseRemainingMs} send={send} />;
   }
   return (
     <Center>
@@ -69,17 +71,18 @@ function MemoryPhase({ view, send }: { view: PlayerMemoryView; send: Send }) {
   );
 }
 
-function MemoryPicks({
-  turn,
-  boardSize,
-  remainingMs,
-  send,
-}: {
-  turn: NonNullable<PlayerMemoryView["turn"]>;
-  boardSize: number;
-  remainingMs: number;
-  send: Send;
-}) {
+type TurnProps = { turn: NonNullable<PlayerMemoryView["turn"]>; boardSize: number; remainingMs: number; send: Send };
+
+/** Outlives the phase change inside a turn, so a card confirmed second still flips up when the result shows. */
+function MemoryTurn(props: TurnProps) {
+  const { turn, remainingMs } = props;
+  const resumeVersion = useContext(PhoneResumeVersion);
+  const flipBack = turn.step !== null || turn.matched === false;
+  const flipOf = useCardFlips(turn.board, flipBack ? remainingMs : null, `${turn.step}:${turn.id}:${resumeVersion}`);
+  return <MemoryPicks key={`${turn.step === null ? "feedback" : "turn"}:${turn.id}`} {...props} flipOf={flipOf} />;
+}
+
+function MemoryPicks({ turn, boardSize, remainingMs, send, flipOf }: TurnProps & { flipOf: (position: number) => CardFlip }) {
   const [pending, setPending] = useState<{ step: 1 | 2; position: number } | null>(null);
   const { step } = turn;
   const choosing = step !== null;
@@ -111,18 +114,21 @@ function MemoryPicks({
             {turn.board.map((card, position) => {
               if (card.state === "empty") return <div key={position} aria-hidden="true" />;
               if (card.state === "up") {
+                const flip = flipOf(position);
                 return (
                   <div
                     key={position}
-                    class="memory-phone-face"
+                    class={flip ? `memory-phone-face ${flip}` : "memory-phone-face"}
                     role="img"
-                    aria-label={`Card ${position + 1}, ${names[card.face] ?? "revealed"}`}
+                    aria-label={`Card ${position + 1}, ${flip === "memory-flip-down" ? "face down" : (names[card.face] ?? "revealed")}`}
                     style={{
                       backgroundImage: `url("${image}")`,
                       backgroundSize: memoryFaceSize,
                       backgroundPosition: memoryFacePosition(card.face),
                     }}
-                  />
+                  >
+                    {flip && <span class={`memory-flip-back ${memoryThemeArt.cardBackClass}`} aria-hidden="true" />}
+                  </div>
                 );
               }
               return (

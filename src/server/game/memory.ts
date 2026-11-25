@@ -347,7 +347,14 @@ export class MemoryGame {
       myText: answer?.text ?? null,
       reveal: correct ? { choice, correct, wasCorrect: !!answer?.correct } : null,
       boardSize: this.boardSize,
-      turn: turn ? { id: turn.id, step: this.phase === "feedback" ? null : turn.first === null ? 1 : 2, board: this.boardView() } : null,
+      turn: turn
+        ? {
+            id: turn.id,
+            step: this.phase === "feedback" ? null : turn.first === null ? 1 : 2,
+            board: this.boardView(),
+            ...(this.feedback ? { matched: this.feedback.matched } : {}),
+          }
+        : null,
       phaseRemainingMs: this.paced.phases.remainingMs(),
       result: this.phase === "podium" ? { rank: this.ranked().find((p) => p.id === id)!.rank, playerCount: this.players.size } : null,
     };

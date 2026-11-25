@@ -285,3 +285,54 @@ test("Memory Game zooms by touch alone and tells the player to pinch to zoom", (
   pinchZoom();
   expect(dom.root.querySelector<HTMLDivElement>(".memory-board-pan")!.style.transform).toContain("scale(1.5)");
 });
+
+function upBoard(size: number, ups: Record<number, number>): MemoryCardView[] {
+  return board(size).map((c, p) => (p in ups ? { state: "up", face: ups[p]! } : c));
+}
+
+function face(position: number) {
+  return dom.root.querySelector<HTMLElement>(`[aria-label^="Card ${position + 1},"]`);
+}
+
+test("Memory Game flips a card face up on the phone when it is confirmed, not when it is selected", () => {
+  const { show } = phone();
+  show(turnView);
+  act(() => clickCard(3));
+  expect(card(3)?.classList.contains("memory-flip-up")).toBe(false);
+  expect(dom.root.querySelector(".memory-flip-up")).toBeNull();
+  show({ ...turnView, turn: { id: 4, step: 2, board: upBoard(6, { 3: 7 }) } });
+  expect(face(3)?.classList.contains("memory-flip-up")).toBe(true);
+  expect(face(3)?.getAttribute("aria-label")).toBe("Card 4, Gingerbread person");
+  show({ ...turnView, phase: "feedback", turn: { id: 4, step: null, matched: false, board: upBoard(6, { 3: 7, 9: 2 }) }, phaseRemainingMs: 2_000 });
+  expect(face(9)?.classList.contains("memory-flip-up")).toBe(true);
+  expect(face(3)?.classList.contains("memory-flip-up")).toBe(true);
+});
+
+test("Memory Game flips a missed pair back face down on the phone at the end of the 2 s result", () => {
+  const { show } = phone();
+  show({ ...turnView, phase: "feedback", turn: { id: 4, step: null, matched: false, board: upBoard(6, { 3: 7, 9: 2 }) }, phaseRemainingMs: 2_000 });
+  dom.advance(1_500);
+  expect(face(3)?.getAttribute("aria-label")).toBe("Card 4, Gingerbread person");
+  expect(dom.root.querySelector(".memory-flip-down")).toBeNull();
+  dom.advance(200);
+  expect(dom.root.querySelectorAll(".memory-flip-down")).toHaveLength(2);
+  expect(face(3)?.getAttribute("aria-label")).toBe("Card 4, face down");
+  expect(face(9)?.getAttribute("aria-label")).toBe("Card 10, face down");
+});
+
+test("Memory Game keeps a matched pair face up on the phone", () => {
+  const { show } = phone();
+  show({ ...turnView, phase: "feedback", turn: { id: 4, step: null, matched: true, board: upBoard(6, { 3: 7, 9: 7 }) }, phaseRemainingMs: 1_000 });
+  dom.advance(900);
+  expect(dom.root.querySelector(".memory-flip-down")).toBeNull();
+});
+
+test("Memory Game flips a lone confirmed card back face down on the phone when the turn runs out", () => {
+  const { show } = phone();
+  show({ ...turnView, turn: { id: 4, step: 2, board: upBoard(6, { 3: 7 }) }, phaseRemainingMs: 5_000 });
+  dom.advance(4_500);
+  expect(dom.root.querySelector(".memory-flip-down")).toBeNull();
+  dom.advance(200);
+  expect(face(3)?.classList.contains("memory-flip-down")).toBe(true);
+  expect(face(3)?.getAttribute("aria-label")).toBe("Card 4, face down");
+});
