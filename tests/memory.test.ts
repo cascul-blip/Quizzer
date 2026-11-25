@@ -356,8 +356,8 @@ describe("Memory Game", () => {
     ]);
     await Promise.resolve();
     const matchBoard = projector().board;
-    expect(holly!.view).toMatchObject({ phase: "feedback", turn: { step: null, matched: true, board: matchBoard }, phaseRemainingMs: 1_000 });
-    clock.advance(999);
+    expect(holly!.view).toMatchObject({ phase: "feedback", turn: { step: null, matched: true, board: matchBoard }, phaseRemainingMs: 1_400 });
+    clock.advance(1_399);
     expect(facesUp()).toHaveLength(2);
     expect(holly!.view).toMatchObject({ turn: { board: matchBoard } });
     clock.advance(1);
@@ -373,7 +373,9 @@ describe("Memory Game", () => {
     expect(player(noel!).me.chips).toBe(1);
     expect(facesUp()).toEqual([]);
     confirmPair(noel!, [2, 3]);
-    clock.advance(1_000);
+    clock.advance(1_399);
+    expect(projector()).toMatchObject({ phase: "feedback" });
+    clock.advance(1);
     expect(projector()).toMatchObject({ phase: "intro", question: { index: 3 } });
     expect(projector().board).toEqual([...Array.from<unknown, MemoryCardView>({ length: 4 }, () => ({ state: "empty" })), ...initialBoard.slice(4)]);
   });
@@ -448,7 +450,7 @@ describe("Memory Game", () => {
   });
 
   test.each([
-    ["match", 1, 0, 1_000],
+    ["match", 1, 0, 1_400],
     ["mismatch", 2, 1, 2_000],
   ] as const)("restores both confirmed faces on reconnect for the remainder of the %s delay", async (_outcome, position, face, delay) => {
     const {
@@ -599,7 +601,7 @@ describe("Memory Game", () => {
       expect(exposed).toEqual(positions.map((position) => [position, face]));
       revealedFaces.add(face!);
       expect(projector().players[0]?.pairs).toBe(pair + 1);
-      clock.advance(999);
+      clock.advance(1_399);
       expect(projector().phase).toBe("feedback");
       clock.advance(1);
       for (const position of positions) expectedBoard[position] = { state: "empty" };

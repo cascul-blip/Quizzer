@@ -1,7 +1,7 @@
 import { MEMORY_BOARD_SIZES, MEMORY_QUESTIONS_PER_PHASE } from "../../shared/modes/memory.ts";
 import type { HostView } from "../../shared/protocol.ts";
 import { themedLabel, themedTrack } from "../../shared/themed-modes.ts";
-import { useCardFlips } from "../shared/memory/card-flips.ts";
+import { useCardFlips, useSlideOff } from "../shared/memory/card-flips.ts";
 import { memoryThemeArt as art, memoryFacePosition, memoryFaceSize } from "../shared/memory/themes.ts";
 import type { MusicCue } from "../shared/music/index.ts";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
@@ -83,6 +83,7 @@ function MemoryBoard({ view }: { view: MemoryView }) {
   const { image, names } = art.faces;
   const flipBack = view.phase === "turn" || (view.phase === "feedback" && view.feedback?.matched === false);
   const flipOf = useCardFlips(view.board, flipBack ? view.phaseRemainingMs : null, `${view.phase}:${view.turn?.id}`);
+  const sliding = useSlideOff(view.phase === "feedback" && view.feedback?.matched === true, `${view.phase}:${view.turn?.id}`);
   return (
     <main class="memory-stage" style={{ "--memory-wood": `url("${art.table}")` }}>
       <section class="memory-table" aria-label="Memory board">
@@ -106,7 +107,7 @@ function MemoryBoard({ view }: { view: MemoryView }) {
             }}
           >
             {view.board.map((card, position) => {
-              const flip = flipOf(position);
+              const flip = sliding && card.state === "up" ? "memory-slide-off" : flipOf(position);
               return (
                 <div
                   key={position}
@@ -115,7 +116,7 @@ function MemoryBoard({ view }: { view: MemoryView }) {
                   aria-label={`Card ${position + 1}, ${card.state === "up" && flip !== "memory-flip-down" ? (names[card.face] ?? "revealed") : card.state === "empty" ? "empty" : "face down"}`}
                   style={card.state === "up" ? { backgroundPosition: memoryFacePosition(card.face) } : undefined}
                 >
-                  {flip && <span class={`memory-flip-back ${art.cardBackClass}`} aria-hidden="true" />}
+                  {flip && flip !== "memory-slide-off" && <span class={`memory-flip-back ${art.cardBackClass}`} aria-hidden="true" />}
                 </div>
               );
             })}

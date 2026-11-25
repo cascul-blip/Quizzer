@@ -44,7 +44,7 @@ interface Feedback {
   matched: boolean;
 }
 
-const MATCH_MS = 1_000;
+const MATCH_MS = 1_400;
 const MISS_MS = 2_000;
 
 export class MemoryGame {

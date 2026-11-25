@@ -7,6 +7,24 @@ export const MEMORY_FLIP_MS = 400;
 
 export type CardFlip = "memory-flip-up" | "memory-flip-down" | null;
 
+/** How long a matched pair stays face up after its flip before it slides off; keep in step with card-flips.css. */
+export const MEMORY_SLIDE_HOLD_MS = 500;
+
+/**
+ * Whether a matched pair has started sliding off the board: true once the second card's flip and the hold after it
+ * are over. Pass a new `resetKey` for each turn or phase.
+ */
+export function useSlideOff(matched: boolean, resetKey: string): boolean {
+  const key = matched ? resetKey : null;
+  const [sliding, setSliding] = useState<string | null>(null);
+  useEffect(() => {
+    if (key === null) return;
+    const timer = setTimeout(() => setSliding(key), MEMORY_FLIP_MS + MEMORY_SLIDE_HOLD_MS);
+    return () => clearTimeout(timer);
+  }, [key]);
+  return key !== null && sliding === key;
+}
+
 /**
  * Which cards on a Memory board are turning over. A card flips up when it turns face up between two boards,
  * and every face-up card flips back down in the last MEMORY_FLIP_MS before `flipBackInMs` runs out.

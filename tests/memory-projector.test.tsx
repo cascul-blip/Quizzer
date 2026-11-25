@@ -65,10 +65,22 @@ test("Memory board on the projector flips a missed pair back face down at the en
   expect(card(9).getAttribute("aria-label")).toBe("Card 10, face down");
 });
 
-test("Memory board on the projector keeps a matched pair face up", () => {
-  show({ ...turnView, phase: "feedback", feedback: { matched: true }, board: board({ 3: 7, 9: 7 }), phaseRemainingMs: 1_000 });
-  dom.advance(900);
+test("Memory board on the projector shows a matched pair face up, then slides it right under the scoreboard", () => {
+  show({ ...turnView, phase: "feedback", feedback: { matched: true }, board: board({ 3: 7, 9: 7 }), phaseRemainingMs: 1_400 });
+  dom.advance(850);
+  expect(dom.root.querySelector(".memory-slide-off")).toBeNull();
+  expect(card(9).getAttribute("aria-label")).toBe("Card 10, Gingerbread person");
+  dom.advance(100);
+  expect(card(3).classList.contains("memory-slide-off")).toBe(true);
+  expect(card(9).classList.contains("memory-slide-off")).toBe(true);
+  expect(dom.root.querySelectorAll(".memory-slide-off")).toHaveLength(2);
   expect(dom.root.querySelector(".memory-flip-down")).toBeNull();
+});
+
+test("Memory board on the projector does not slide a missed pair", () => {
+  show({ ...turnView, phase: "feedback", feedback: { matched: false }, board: board({ 3: 7, 9: 2 }), phaseRemainingMs: 2_000 });
+  dom.advance(1_900);
+  expect(dom.root.querySelector(".memory-slide-off")).toBeNull();
 });
 
 test("Memory board on the projector flips a lone confirmed card back face down when the turn runs out", () => {

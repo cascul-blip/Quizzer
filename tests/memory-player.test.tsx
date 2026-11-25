@@ -320,11 +320,25 @@ test("Memory Game flips a missed pair back face down on the phone at the end of 
   expect(face(9)?.getAttribute("aria-label")).toBe("Card 10, face down");
 });
 
-test("Memory Game keeps a matched pair face up on the phone", () => {
+test("Memory Game shows a matched pair face up on the phone, then slides it off the right edge", () => {
   const { show } = phone();
-  show({ ...turnView, phase: "feedback", turn: { id: 4, step: null, matched: true, board: upBoard(6, { 3: 7, 9: 7 }) }, phaseRemainingMs: 1_000 });
-  dom.advance(900);
+  show({ ...turnView, phase: "feedback", turn: { id: 4, step: null, matched: true, board: upBoard(6, { 3: 7, 9: 7 }) }, phaseRemainingMs: 1_400 });
+  dom.advance(850);
   expect(dom.root.querySelector(".memory-flip-down")).toBeNull();
+  expect(dom.root.querySelector(".memory-slide-off")).toBeNull();
+  expect(face(3)?.getAttribute("aria-label")).toBe("Card 4, Gingerbread person");
+  dom.advance(100);
+  expect(face(3)?.classList.contains("memory-slide-off")).toBe(true);
+  expect(face(9)?.classList.contains("memory-slide-off")).toBe(true);
+  expect(dom.root.querySelectorAll(".memory-slide-off")).toHaveLength(2);
+  expect(dom.root.querySelector(".memory-flip-down")).toBeNull();
+});
+
+test("Memory Game does not slide a missed pair off the phone board", () => {
+  const { show } = phone();
+  show({ ...turnView, phase: "feedback", turn: { id: 4, step: null, matched: false, board: upBoard(6, { 3: 7, 9: 2 }) }, phaseRemainingMs: 2_000 });
+  dom.advance(1_900);
+  expect(dom.root.querySelector(".memory-slide-off")).toBeNull();
 });
 
 test("Memory Game flips a lone confirmed card back face down on the phone when the turn runs out", () => {

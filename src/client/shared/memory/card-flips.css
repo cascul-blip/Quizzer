@@ -40,3 +40,18 @@
     transform: rotateY(180deg);
   }
 }
+
+/* A matched pair slides off to the right; the board's frame or the scoreboard above it hides it on the way out. */
+.memory-slide-off {
+  position: relative;
+  animation: memory-slide-off 500ms ease-in both;
+}
+
+@keyframes memory-slide-off {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100vw);
+  }
+}
