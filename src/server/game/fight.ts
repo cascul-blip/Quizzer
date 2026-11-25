@@ -522,7 +522,7 @@ export class FightGame {
 }
 
 /** Tower Fight: one row per player, winning team first. */
-type FightResultRow = { team: FightGame["teams"][number]; result: string; p: FightPlayer };
+type FightResultRow = { team: FightTeam; result: string; p: FightPlayer };
 
 const FIGHT_COLUMNS: Column<FightResultRow>[] = [
   { header: "Team", value: (r) => r.team.name },
@@ -539,12 +539,16 @@ const FIGHT_COLUMNS: Column<FightResultRow>[] = [
 ];
 
 export function buildFightResults(game: FightGame): ResultsSheet {
-  const winner = game.outcome?.winner ?? null;
-  const rows = game.podium.rows.map(({ player: p }) => {
-    const team = game.teams[p.team]!;
-    return { team, result: winner === null ? "Draw" : team.index === winner ? "Won" : "Lost", p };
-  });
-  return sheet(FIGHT_COLUMNS, rows);
+  const { places, rows } = game.podium;
+  // Every team sharing first place is a draw.
+  const draw = places.every((t) => t.place === 1);
+  return sheet(
+    FIGHT_COLUMNS,
+    rows.flatMap(({ place, player: p }) => {
+      const team = places.find((t) => t.index === p.team);
+      return team ? [{ team, result: place !== 1 ? "Lost" : draw ? "Draw" : "Won", p }] : [];
+    }),
+  );
 }
 
 export const fightMode: ModeEntry<"fight"> = {

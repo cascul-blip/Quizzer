@@ -23,6 +23,7 @@ describe("Tower Fight podium", () => {
       (id) => {
         player(id("Noel")).hits = 9;
         player(id("Holly")).rebuilds = 9;
+        game().teams[1]!.damage = 7;
       },
     );
     if (view.kind !== "fight") throw new Error("expected Tower Fight");
@@ -35,10 +36,10 @@ describe("Tower Fight podium", () => {
     expect(awards("Noel")).toEqual([]);
     expect(awards("Holly")).toEqual(["Master builder"]);
     expect(awards("Ivy")).toEqual(["Top gunner"]);
-    expect(sheet.map((r) => [r.Nickname, r.Result, r["Enemy hits"]])).toEqual([
-      ["Ivy", "Won", 2],
-      ["Noel", "Won", 1],
-      ["Holly", "Lost", 0],
+    expect(sheet.map((r) => [r.Nickname, r.Result, r["Enemy hits"], r["Tower damage"]])).toEqual([
+      ["Ivy", "Won", 2, 1],
+      ["Noel", "Won", 1, 1],
+      ["Holly", "Lost", 0, 2],
     ]);
   });
 });
