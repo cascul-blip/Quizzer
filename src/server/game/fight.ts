@@ -495,7 +495,7 @@ export class FightGame {
     const shot = state === "watch" ? this.shots.find((s) => s.id === p.shotId) : undefined;
     let result: PlayerFightView["result"] = null;
     if (this.phase === "podium" && this.outcome) {
-      result = { outcome: this.outcome, awards: this.podium.result(p.id)!.awards };
+      result = { outcome: this.outcome, awards: this.podium.result(p.id)?.awards ?? [] };
     }
     return {
       kind: "fight",

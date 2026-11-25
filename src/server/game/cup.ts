@@ -509,9 +509,9 @@ export class CupGame {
     if (!p) return null;
     let result: PlayerCupView["result"] = null;
     if (this.phase === "podium") {
-      const mine = this.podium.result(p.id)!;
+      const mine = this.podium.result(p.id);
       const unlucky = this.finalUnluckiest?.nicknames.includes(p.nickname) ? [CUP_UNLUCKIEST[this.theme === "christmas" ? "christmas" : "other"]] : [];
-      result = {
+      result = mine && {
         rank: mine.place,
         playerCount: mine.playerCount,
         won: mine.place === 1,

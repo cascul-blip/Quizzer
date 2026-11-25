@@ -424,8 +424,8 @@ export class RobotGame {
     const a = this.lastAttack;
     let result: PlayerRobotView["result"] = null;
     if (this.phase === "podium") {
-      const mine = this.podium.result(p.id)!;
-      result = { rank: mine.place, playerCount: mine.playerCount, won: mine.place === 1, outRound: p.outRound, awards: mine.awards };
+      const mine = this.podium.result(p.id);
+      result = mine && { rank: mine.place, playerCount: mine.playerCount, won: mine.place === 1, outRound: p.outRound, awards: mine.awards };
     }
     return {
       kind: "robot",

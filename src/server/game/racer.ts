@@ -446,7 +446,7 @@ export class RacerGame {
     const ans = this.paced.shownAnswer(p);
     let result: PlayerRacerView["result"] = null;
     if (this.phase === "podium") {
-      result = { ...this.result(), awards: this.podium.result(p.id)!.awards };
+      result = { ...this.result(), awards: this.podium.result(p.id)?.awards ?? [] };
     }
     return {
       kind: "racer",

@@ -343,7 +343,7 @@ export class GiftGame {
       score: player.score,
       correct: player.correct,
       progress: bonus ? GIFT_CORRECT_TO_PLAY : player.correct % GIFT_CORRECT_TO_PLAY,
-      rank: this.phase === "podium" ? this.podium.result(id)!.place : null,
+      rank: this.phase === "podium" ? (this.podium.result(id)?.place ?? null) : null,
       ...this.stream.fragment(player),
       bonus: bonus
         ? {

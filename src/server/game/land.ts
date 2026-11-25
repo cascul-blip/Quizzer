@@ -425,8 +425,8 @@ export class LandGame {
   }
 
   /** A team's totals and place on the Podium. */
-  podiumTeam(index: number): LandTeamTotals & { place: number } {
-    return this.podium.places.find((t) => t.index === index)!;
+  podiumTeam(index: number): (LandTeamTotals & { place: number }) | undefined {
+    return this.podium.places.find((t) => t.index === index);
   }
 
   private boardView(): LandBoard {
@@ -479,8 +479,9 @@ export class LandGame {
     let result: PlayerLandView["result"] = null;
     if (this.phase === "podium") {
       // A conquered player's result is the place of the team they started on, as on the podium and the results sheet.
-      const mine = this.podium.result(p.id)!;
-      result = { teamRank: mine.place, teamCount: this.teams.length, tiles: this.podiumTeam(p.firstTeam).tiles, won: mine.place === 1, awards: mine.awards };
+      const mine = this.podium.result(p.id);
+      const team = this.podiumTeam(p.firstTeam);
+      if (mine && team) result = { teamRank: mine.place, teamCount: this.teams.length, tiles: team.tiles, won: mine.place === 1, awards: mine.awards };
     }
     return {
       kind: "land",
@@ -526,7 +527,10 @@ function landColumns(game: LandGame): Column<LandResultRow>[] {
 export function buildLandResults(game: LandGame): ResultsSheet {
   return sheet(
     landColumns(game),
-    game.podium.rows.map((r) => ({ team: game.podiumTeam(r.player.firstTeam), p: r.player })),
+    game.podium.rows.flatMap((r) => {
+      const team = game.podiumTeam(r.player.firstTeam);
+      return team ? [{ team, p: r.player }] : [];
+    }),
   );
 }
 

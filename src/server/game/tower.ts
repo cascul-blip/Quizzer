@@ -348,8 +348,8 @@ export class TowerGame {
   }
 
   /** A team's totals and place on the Podium. */
-  podiumTeam(index: number): TowerTeamTotals & { place: number } {
-    return this.podium.places.find((t) => t.index === index)!;
+  podiumTeam(index: number): (TowerTeamTotals & { place: number }) | undefined {
+    return this.podium.places.find((t) => t.index === index);
   }
 
   hostView(): HostTowerState {
@@ -410,9 +410,9 @@ export class TowerGame {
     const playing = this.phase === "playing";
     let result: PlayerTowerView["result"] = null;
     if (this.phase === "podium") {
-      const mine = this.podium.result(p.id)!;
+      const mine = this.podium.result(p.id);
       const t = this.podiumTeam(p.team);
-      result = { teamRank: mine.place, teamCount: this.teams.length, floors: t.floors, placed: t.placed, awards: mine.awards };
+      if (mine && t) result = { teamRank: mine.place, teamCount: this.teams.length, floors: t.floors, placed: t.placed, awards: mine.awards };
     }
     return {
       kind: "tower",
@@ -456,7 +456,10 @@ const TOWER_COLUMNS: Column<TowerResultRow>[] = [
 export function buildTowerResults(game: TowerGame): ResultsSheet {
   return sheet(
     TOWER_COLUMNS,
-    game.podium.rows.map((r) => ({ team: game.podiumTeam(r.player.team), p: r.player })),
+    game.podium.rows.flatMap((r) => {
+      const team = game.podiumTeam(r.player.team);
+      return team ? [{ team, p: r.player }] : [];
+    }),
   );
 }
 

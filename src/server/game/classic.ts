@@ -357,7 +357,8 @@ export class ClassicGame {
   }
 
   private rankOf(playerId: string): number {
-    if (this.phase === "podium") return this.podium.result(playerId)!.place;
+    // Someone missing from the Podium shows last.
+    if (this.phase === "podium") return this.podium.result(playerId)?.place ?? this.players.size;
     if (!this.batch) return this.ranked().find((r) => r.id === playerId)!.rank;
     this.batch.rankById ??= new Map(this.rankedNow().map((r) => [r.id, r.rank]));
     return this.batch.rankById.get(playerId)!;

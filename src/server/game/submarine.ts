@@ -521,7 +521,7 @@ export class SubGame {
     if (!p) return null;
     let result: PlayerSubView["result"] = null;
     if (this.phase === "podium") {
-      result = { depth: this.depth, level: this.level, awards: this.podium.result(p.id)!.awards };
+      result = { depth: this.depth, level: this.level, awards: this.podium.result(p.id)?.awards ?? [] };
     }
     return {
       kind: "submarine",
