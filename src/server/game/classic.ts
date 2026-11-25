@@ -10,13 +10,13 @@ import { GameError, preparePlayOrder, realClock, topErrors } from "./common.ts";
 import type { LobbyChoices } from "./lobby-facts.ts";
 import { INTRO_MS, PacedRound } from "./paced-round.ts";
 import { GameFinish } from "./phase-timer.ts";
+import type { Podium } from "./podium.ts";
+import { buildPodium } from "./podium.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
 import { Roster } from "./roster.ts";
 import { scoreAnswer } from "./scoring.ts";
-import type { Podium } from "./podium.ts";
-import { buildPodium } from "./podium.ts";
 import { most, rankBy } from "./standings.ts";
 
 export { AUTO_REVEAL_MS, type Clock, GameError, GRACE_MS, preparePlayOrder } from "./common.ts";
@@ -300,17 +300,15 @@ export class ClassicGame {
 
   leaderboard(limit = LEADERBOARD_SIZE): RankedEntry[] {
     const ranked = this.phase === "podium" ? this.podium.places.map((p) => ({ ...p, rank: p.place })) : this.rankedNow();
-    return ranked
-      .slice(0, limit)
-      .map((p) => ({
-        id: p.id,
-        nickname: p.nickname,
-        avatar: p.avatar,
-        score: p.score,
-        rank: p.rank,
-        lastQuestionPoints: p.lastQuestionPoints,
-        streak: p.streak,
-      }));
+    return ranked.slice(0, limit).map((p) => ({
+      id: p.id,
+      nickname: p.nickname,
+      avatar: p.avatar,
+      score: p.score,
+      rank: p.rank,
+      lastQuestionPoints: p.lastQuestionPoints,
+      streak: p.streak,
+    }));
   }
 
   /** The most-missed questions: wrong answers only, a question left unanswered doesn't count. */

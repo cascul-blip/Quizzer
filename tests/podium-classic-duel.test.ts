@@ -100,8 +100,19 @@ describe("Podium", () => {
       const v = game.playerView(ids.get(n)!);
       return v.kind === "classic" ? { rank: v.me.rank, podium: v.podium?.map((e) => [e.nickname, e.rank]) } : null;
     };
-    for (const [n, rank] of [["Noel", 1], ["Holly", 2], ["Ivy", 2]] as const) {
-      expect(phone(n)).toEqual({ rank, podium: [["Noel", 1], ["Holly", 2], ["Ivy", 2]] });
+    for (const [n, rank] of [
+      ["Noel", 1],
+      ["Holly", 2],
+      ["Ivy", 2],
+    ] as const) {
+      expect(phone(n)).toEqual({
+        rank,
+        podium: [
+          ["Noel", 1],
+          ["Holly", 2],
+          ["Ivy", 2],
+        ],
+      });
     }
     const sheet = records(entryOf(game).results(game));
     expect(sheet.map((r) => [r.Nickname, r.Rank, r.Score === 0 ? 0 : "scored"])).toEqual([

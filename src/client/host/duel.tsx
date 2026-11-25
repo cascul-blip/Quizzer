@@ -2,7 +2,7 @@ import type { JSX } from "preact";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import type { DuelArena, DuelArenaResult, DuelistResult } from "../../shared/modes/duel.ts";
-import { DUEL_ROUNDS, duelArenaName } from "../../shared/modes/duel.ts";
+import { DUEL_ROUNDS, duelArenaName, duelShared } from "../../shared/modes/duel.ts";
 import type { HostView } from "../../shared/protocol.ts";
 import type { ScreenOf, SeasonTheme } from "../../shared/themed-modes.ts";
 import { modeTheme, themedLabel, themedName, themedTrack } from "../../shared/themed-modes.ts";
@@ -731,13 +731,25 @@ function DuelPodium({ view, send }: { view: DuelView; send: Send }) {
           <div class="awards">
             <Award
               icon="⭐"
-              title="Longest reign"
+              title={duelShared.awards.longestReign}
               award={a?.longestReign ?? null}
               unit=""
               valueText={(v) => `${v} round${v === 1 ? "" : "s"} at ${duelArenaName(1, view.theme)}`}
             />
-            <Award icon={christmas ? "❄️" : "🔫"} title="Most wins" award={a?.mostWins ?? null} unit="" valueText={(v) => `${v} win${v === 1 ? "" : "s"}`} />
-            <Award icon="⬆" title="Biggest climb" award={a?.biggestClimb ?? null} unit="" valueText={(v) => `${v} arena${v === 1 ? "" : "s"}`} />
+            <Award
+              icon={christmas ? "❄️" : "🔫"}
+              title={duelShared.awards.mostWins}
+              award={a?.mostWins ?? null}
+              unit=""
+              valueText={(v) => `${v} win${v === 1 ? "" : "s"}`}
+            />
+            <Award
+              icon="⬆"
+              title={duelShared.awards.biggestClimb}
+              award={a?.biggestClimb ?? null}
+              unit=""
+              valueText={(v) => `${v} arena${v === 1 ? "" : "s"}`}
+            />
           </div>
           {ranked.length > 3 && (
             <ol class="rest" start={4}>

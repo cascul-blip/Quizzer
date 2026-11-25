@@ -60,13 +60,11 @@ export interface DuelArena {
   duelists: (DuelPlayerRef & { connected: boolean; answered: boolean })[];
 }
 
-export interface DuelAwards {
-  /** Most rounds won in Arena 1. */
-  longestReign: SubAward | null;
-  mostWins: SubAward | null;
-  /** Most arenas climbed from where they started (start arena − final arena). */
-  biggestClimb: SubAward | null;
-}
+/** Longest reign: most rounds won in Arena 1. Biggest climb: most arenas climbed from where they started (start arena − final arena). */
+const DUEL_AWARDS = { longestReign: "Longest reign", mostWins: "Most wins", biggestClimb: "Biggest climb" } as const;
+
+export type DuelAwardKey = keyof typeof DUEL_AWARDS;
+export type DuelAwards = Record<DuelAwardKey, SubAward | null>;
 
 export interface HostDuelPlayer extends DuelPlayerRef {
   connected: boolean;
@@ -151,6 +149,7 @@ export const duelShared = sharedModeEntry<ModeProtocol<DuelMsg, DuelSettings, Ho
   flags: { paced: true, protect: false },
   lobbyBanner: false,
   msgTypes: ["duel.answer"],
+  awards: DUEL_AWARDS,
 });
 
 /** An arena's name; arena 1 has its own in each theme. */
