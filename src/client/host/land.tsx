@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { captureThreat } from "../../shared/land-board.ts";
 import type { HostLandTeam, LandBoard } from "../../shared/modes/land.ts";
-import { LAND_GUARD_COST, LAND_MIN_TEAMS, LAND_MINUTES, LAND_STEAL_COST } from "../../shared/modes/land.ts";
+import { LAND_GUARD_COST, LAND_MIN_TEAMS, LAND_MINUTES, LAND_STEAL_COST, landShared } from "../../shared/modes/land.ts";
 import type { HostView } from "../../shared/protocol.ts";
 import { MAX_TEAMS } from "../../shared/protocol.ts";
 import type { SeasonTheme } from "../../shared/themed-modes.ts";
@@ -202,9 +202,9 @@ function LandPodium({ view, send }: { view: LandView; send: Send }) {
             </ol>
           )}
           <div class="awards">
-            <Award icon="🎯" title="Most correct answers" award={a?.mostCorrect ?? null} unit="correct" />
-            <Award icon="🚩" title="Top settler" award={a?.topSettler ?? null} unit="tiles placed" />
-            <Award icon="🪢" title="Master surrounder" award={a?.topSurrounder ?? null} unit="tiles surrounded" />
+            <Award icon="🎯" title={landShared.awards.mostCorrect} award={a?.mostCorrect ?? null} unit="correct" />
+            <Award icon="🚩" title={landShared.awards.topSettler} award={a?.topSettler ?? null} unit="tiles placed" />
+            <Award icon="🪢" title={landShared.awards.topSurrounder} award={a?.topSurrounder ?? null} unit="tiles surrounded" />
           </div>
         </>
       )}

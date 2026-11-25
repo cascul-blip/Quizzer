@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { HostTowerTeam, MonsterAttack, MonsterEggs } from "../../shared/modes/tower.ts";
-import { EGG_LEVELS_ABOVE, MONSTER_DAMAGE, TOWER_MINUTES, towerWords } from "../../shared/modes/tower.ts";
+import { EGG_LEVELS_ABOVE, MONSTER_DAMAGE, TOWER_MINUTES, towerShared, towerWords } from "../../shared/modes/tower.ts";
 import type { HostView } from "../../shared/protocol.ts";
 import { MAX_TEAMS } from "../../shared/protocol.ts";
 import type { SeasonTheme } from "../../shared/themed-modes.ts";
@@ -383,8 +383,8 @@ function TowerPodium({ view, send }: { view: TowerView; send: Send }) {
             </ol>
           )}
           <div class="awards">
-            <Award icon="🎯" title="Most correct answers" award={a?.mostCorrect ?? null} unit="correct" />
-            <Award icon="🧱" title="Master builder" award={a?.masterBuilder ?? null} unit="blocks placed" />
+            <Award icon="🎯" title={towerShared.awards.mostCorrect} award={a?.mostCorrect ?? null} unit="correct" />
+            <Award icon="🧱" title={towerShared.awards.masterBuilder} award={a?.masterBuilder ?? null} unit="blocks placed" />
           </div>
         </>
       )}

@@ -2,7 +2,7 @@ import type { AnswerValue } from "../../shared/answer-match.ts";
 import { answerOf } from "../../shared/answer-match.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { randomAvatar } from "../../shared/avatars.ts";
-import type { HostTowerState, MonsterAttack, MonsterEggs, PlayerTowerView, TowerAwards, TowerPhase, TowerSettings } from "../../shared/modes/tower.ts";
+import type { HostTowerState, MonsterAttack, MonsterEggs, PlayerTowerView, TowerAwardKey, TowerPhase, TowerSettings } from "../../shared/modes/tower.ts";
 import { BLOCKS_PER_BUILD, DROP_ZONES, EGG_LEVELS_ABOVE, MONSTER_DAMAGE, TOWER_MINUTES, towerShared } from "../../shared/modes/tower.ts";
 import { MAX_TEAMS } from "../../shared/protocol.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
@@ -13,10 +13,13 @@ import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
 import { GameFinish, GameLengthClock, PhaseTimer } from "./phase-timer.ts";
+import type { Podium } from "./podium.ts";
+import { buildPodium } from "./podium.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
 import { Roster } from "./roster.ts";
+import type { RankKey } from "./standings.ts";
 import { fewest, most, rankBy } from "./standings.ts";
 import type { AnswerTotals } from "./stream.ts";
 import { QuestionStream } from "./stream.ts";
@@ -72,6 +75,12 @@ interface TowerGameSettings extends TowerSettings {
   protect?: boolean;
 }
 
+type TowerTeamTotals = TowerTeam & { floors: number; placed: number };
+type TowerPodium = Podium<TowerTeamTotals, TowerPlayer, TowerAwardKey>;
+const TOWER_ORDER: RankKey<TowerTeamTotals>[] = [most((t) => t.floors), most((t) => t.placed)];
+const TOWER_THEN: RankKey<TowerTeamTotals>[] = [fewest((t) => t.index)];
+const TOWER_AWARD_VALUES: Record<TowerAwardKey, (p: TowerPlayer) => number> = { mostCorrect: (p) => p.correct, masterBuilder: (p) => p.placed };
+
 /** Tallest Tower: teams answer at their own pace; every 4 correct answers are dropped onto the team tower. */
 /** The phase timer slot of the i-th egg announcement. */
 const monsterSlot = (i: number): string => `monster-${i}`;
@@ -120,6 +129,7 @@ export class TowerGame {
     this.gameFinish = new GameFinish(this.phases, "podium", {
       cleanup: () => {
         this.egg = null;
+        this.finalPodium = this.buildPodium();
       },
       onFinish: () => this.onFinish(this),
       onChange: () => this.onChange(),
@@ -129,6 +139,7 @@ export class TowerGame {
 
   /** Take over a lobby's players (same ids and tokens), on the teams shown in the lobby. */
   choices!: LobbyChoices;
+  private finalPodium: TowerPodium | null = null;
 
   static fromLobby(lobby: LobbyFacts<"tower">, opts: TowerOptions = {}): TowerGame {
     const game = new TowerGame(lobby.quiz, { ...lobby.settings, shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
@@ -309,23 +320,43 @@ export class TowerGame {
     return landed;
   }
 
-  /** Teams by floors, then blocks placed; equal teams share a rank. */
-  rankedTeams(): (TowerTeam & { rank: number; floors: number; placed: number })[] {
-    const withTotals = this.teams.map((t) => ({ ...t, floors: floorsOf(t), placed: placedOf(t) }));
-    return rankBy(withTotals, [most((t) => t.floors), most((t) => t.placed)], [fewest((t) => t.index)]);
+  private teamTotals(): TowerTeamTotals[] {
+    return this.teams.map((t) => ({ ...t, floors: floorsOf(t), placed: placedOf(t) }));
   }
 
-  awards(): TowerAwards {
-    const best = (value: (p: TowerPlayer) => number) => {
-      const players = [...this.players.values()];
-      const top = Math.max(0, ...players.map(value));
-      return top > 0 ? { value: top, nicknames: players.filter((p) => value(p) === top).map((p) => p.nickname) } : null;
-    };
-    return { mostCorrect: best((p) => p.correct), masterBuilder: best((p) => p.placed) };
+  /** Teams during play: by floors, then blocks placed; equal teams share a rank. */
+  rankedTeams(): (TowerTeamTotals & { rank: number })[] {
+    return rankBy(this.teamTotals(), TOWER_ORDER, TOWER_THEN);
+  }
+
+  /** Teams ranked as in play; each player finishes with their team; players listed by blocks placed, then correct answers. */
+  private buildPodium(): TowerPodium {
+    const entries = this.teamTotals();
+    const players = [...this.players.values()].sort((a, b) => b.placed - a.placed || b.correct - a.correct);
+    return buildPodium({
+      entries,
+      order: TOWER_ORDER,
+      then: TOWER_THEN,
+      players,
+      entryOf: (p) => entries[p.team]!,
+      awards: { labels: towerShared.awards, values: TOWER_AWARD_VALUES },
+    });
+  }
+
+  /** The finished game's Podium (GLOSSARY.md), worked out once in Game finish. */
+  get podium(): TowerPodium {
+    if (!this.finalPodium) throw new GameError("This game has not finished");
+    return this.finalPodium;
+  }
+
+  /** A team's totals and place on the Podium. */
+  podiumTeam(index: number): TowerTeamTotals & { place: number } {
+    return this.podium.places.find((t) => t.index === index)!;
   }
 
   hostView(): HostTowerState {
-    const ranked = new Map(this.rankedTeams().map((t) => [t.index, t.rank]));
+    const podium = this.phase === "podium";
+    const ranked = new Map(podium ? this.podium.places.map((t) => [t.index, t.place]) : this.rankedTeams().map((t) => [t.index, t.rank]));
     const players = [...this.players.values()];
     return {
       kind: "tower",
@@ -357,7 +388,7 @@ export class TowerGame {
       egg: this.egg,
       lastAttack: this.lastAttack,
       nextMonsterRemainingMs: this.phase === "playing" ? this.nextMonsterRemainingMs() : null,
-      awards: this.phase === "podium" ? this.awards() : null,
+      awards: podium ? this.podium.awards : null,
       errors: this.stream.errorsWhen(this.phase === "podium"),
     };
   }
@@ -381,18 +412,9 @@ export class TowerGame {
     const playing = this.phase === "playing";
     let result: PlayerTowerView["result"] = null;
     if (this.phase === "podium") {
-      const mine = this.rankedTeams().find((t) => t.index === p.team)!;
-      const awards = this.awards();
-      result = {
-        teamRank: mine.rank,
-        teamCount: this.teams.length,
-        floors: mine.floors,
-        placed: mine.placed,
-        awards: [
-          ...(awards.mostCorrect?.nicknames.includes(p.nickname) ? ["Most correct answers"] : []),
-          ...(awards.masterBuilder?.nicknames.includes(p.nickname) ? ["Master builder"] : []),
-        ],
-      };
+      const mine = this.podium.result(p.id)!;
+      const t = this.podiumTeam(p.team);
+      result = { teamRank: mine.place, teamCount: this.teams.length, floors: t.floors, placed: t.placed, awards: mine.awards };
     }
     return {
       kind: "tower",
@@ -417,11 +439,11 @@ export class TowerGame {
 }
 
 /** Tallest Tower: one row per player, grouped by team in final team order. */
-type TowerResultRow = { team: ReturnType<TowerGame["rankedTeams"]>[number]; p: TowerPlayer };
+type TowerResultRow = { team: TowerTeamTotals & { place: number }; p: TowerPlayer };
 
 const TOWER_COLUMNS: Column<TowerResultRow>[] = [
   { header: "Team", value: (r) => r.team.name },
-  { header: "Team rank", value: (r) => r.team.rank },
+  { header: "Team rank", value: (r) => r.team.place },
   { header: "Team floors", value: (r) => r.team.floors },
   { header: "Team blocks", value: (r) => r.team.placed },
   { header: "Nickname", value: (r) => r.p.nickname },
@@ -434,13 +456,10 @@ const TOWER_COLUMNS: Column<TowerResultRow>[] = [
 ];
 
 export function buildTowerResults(game: TowerGame): ResultsSheet {
-  const rows = game.rankedTeams().flatMap((team) =>
-    [...game.players.values()]
-      .filter((p) => p.team === team.index)
-      .sort((a, b) => b.placed - a.placed || b.correct - a.correct)
-      .map((p) => ({ team, p })),
+  return sheet(
+    TOWER_COLUMNS,
+    game.podium.rows.map((r) => ({ team: game.podiumTeam(r.player.team), p: r.player })),
   );
-  return sheet(TOWER_COLUMNS, rows);
 }
 
 export const towerMode: ModeEntry<"tower"> = {
