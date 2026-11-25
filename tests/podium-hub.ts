@@ -14,7 +14,7 @@ export const NICKNAMES = ["Noel", "Holly", "Ivy"] as const;
 export type Nickname = (typeof NICKNAMES)[number];
 
 /**
- * A hub with a host, for playing a game mode to its podium (as in tests/standings-agreement.test.ts).
+ * A hub with a host, for playing a game mode to its podium.
  * Call at the top level of a test file; it sets up and tears down around each test.
  */
 export function podiumHub() {

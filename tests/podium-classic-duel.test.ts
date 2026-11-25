@@ -13,7 +13,7 @@ import type { ClientMsg } from "../src/shared/protocol.ts";
 import { FakeClock, tempDir } from "./helpers.ts";
 import { fakeHub, HubSocket } from "./hub-harness.ts";
 
-// The hub harness of tests/standings-agreement.test.ts, for Classic and Showdown on the Podium (GLOSSARY.md).
+// A hub harness for Classic and Showdown on the Podium (GLOSSARY.md).
 const NICKNAMES = ["Noel", "Holly", "Ivy"];
 
 let data: ReturnType<typeof tempDir>;
