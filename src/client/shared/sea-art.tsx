@@ -22,8 +22,6 @@ import ringImg from "./sea/ring.webp";
 import hullImg from "./sea/sub-hull.webp";
 import propImg from "./sea/sub-prop.webp";
 
-// ---------- how deep it looks ----------
-
 interface Look {
   top: [number, number, number];
   bottom: [number, number, number];
@@ -88,8 +86,6 @@ export function oceanGradient(level: number, blend = 0): string {
   return seaLook(level, blend).background;
 }
 
-// ---------- anglerfish ----------
-
 /** Hinge, lure bulb and eye, as percentages of the fish picture (scripts/sea-art.py prints these). */
 const HINGE = { x: 64, y: 75.1 };
 const LURE = { x: 89, y: 20.9 };
@@ -116,8 +112,6 @@ export function Anglerfish({ openness, fish = 1, eye = 0, glint = 0 }: { opennes
     </div>
   );
 }
-
-// ---------- submarine ----------
 
 /** Someone looking out of a porthole; `key` restarts the peek animation. */
 export interface PortholeFace {
@@ -157,8 +151,6 @@ export function Submarine({ faces = [] }: { faces?: (PortholeFace | null)[] }) {
     </div>
   );
 }
-
-// ---------- the scrolling seabed ----------
 
 interface Sprite {
   src: string;

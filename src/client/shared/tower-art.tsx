@@ -30,8 +30,6 @@ export function hash01(...parts: number[]): number {
   return ((h >>> 0) % 10000) / 10000;
 }
 
-// ---------- sky ----------
-
 export const SKY_STAGES = [
   { name: "day", top: "#4aa3ff", bottom: "#c4e8ff" },
   { name: "afternoon", top: "#3a7fd6", bottom: "#ffe1a6" },
@@ -57,8 +55,6 @@ export function viewBaseRow(tallest: number, visibleRows: number, eggRow: number
 
 /** Meters shown on the height scale. */
 export const METERS_PER_FLOOR = 4;
-
-// ---------- "only animate blocks that appear after the first render" ----------
 
 /**
  * Returns isFresh(key): true for keys first seen after the initial render.
@@ -112,8 +108,6 @@ export function useNewFloor(floors: number): number | null {
   prev.current = floors;
   return last.current;
 }
-
-// ---------- building pieces ----------
 
 interface BlockProps {
   x: number;
@@ -323,8 +317,6 @@ export function SkylineSvg() {
     </svg>
   );
 }
-
-// ---------- monster ----------
 
 export const COLUMN_NAMES = ["left", "center", "right"] as const;
 

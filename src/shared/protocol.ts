@@ -11,8 +11,6 @@ export interface ShuffleOptions {
   answers: boolean;
 }
 
-// ---------- Game modes and team colours ----------
-
 /** Each team also has a shape, so teams can be told apart without relying on colour. */
 type TeamShape = "circle" | "square" | "triangle" | "diamond" | "star" | "heart";
 
@@ -25,8 +23,6 @@ export const TEAMS = [
   { name: "Pink", color: "#f0559e", shape: "heart" },
 ] as const satisfies readonly { name: string; color: string; shape: TeamShape }[];
 export const MAX_TEAMS = TEAMS.length;
-
-// ---------- client → server ----------
 
 export type PlayerMsg =
   /** avatar/accessory: the player's last pick, remembered on the phone (optional). */
@@ -58,8 +54,6 @@ export type HostMsg =
   | { type: "host.setAddress"; address: string };
 
 export type ClientMsg = PlayerMsg | HostMsg;
-
-// ---------- server → client ----------
 
 /** How many errors the final screen's "Show errors" table lists (rows are QuestionError, in mode-views.ts). */
 export const ERRORS_SHOWN = 10;

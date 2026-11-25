@@ -307,7 +307,7 @@ export class QuizStore {
     });
   }
 
-  // ----- question-level helpers (used by MCP) -----
+  // Question-level helpers (used by MCP).
 
   private editQuestions<T>(quizId: string, edit: (quiz: Quiz) => T) {
     return this.withWriteLock(() => {

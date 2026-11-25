@@ -365,7 +365,6 @@ export function play(sfx: Sfx): void {
     case "fanfare":
       [523.25, 523.25, 523.25, 698.46, 880, 1046.5].forEach((f, i) => tone(f, i * 0.14, i === 5 ? 0.9 : 0.16, "triangle", 0.18));
       return;
-    // ---------- Kingdom Siege ----------
     case "bowTwang":
       // A plucked bowstring bending down.
       tone(330, 0, 0.12, "triangle", 0.1);

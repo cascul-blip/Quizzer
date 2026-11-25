@@ -347,6 +347,21 @@ describe("Coding standards: checked casts", () => {
   });
 });
 
+const SECTION_DIVIDER = /^\s*(?:\/\/|\/\*)\s*[-=]{3,}/;
+
+describe("Coding standards: comments", () => {
+  test("finds a section divider", () => {
+    expect(SECTION_DIVIDER.test("  // ---------- the battle ----------")).toBe(true);
+    expect(SECTION_DIVIDER.test("/* ==== effects ==== */")).toBe(true);
+    expect(SECTION_DIVIDER.test("// a -> b")).toBe(false);
+  });
+
+  test("no code has a section divider comment", () => {
+    const files = ["src", "tests", "scripts"].flatMap((d) => codeFiles(join(ROOT, d))).map(read);
+    expect(offending(SECTION_DIVIDER, files)).toEqual([]);
+  });
+});
+
 const VIEW_TYPE_FILES = [
   join(ROOT, "src/shared/mode-views.ts"),
   ...readdirSync(join(ROOT, "src/shared/modes")).map((name) => join(ROOT, "src/shared/modes", name)),

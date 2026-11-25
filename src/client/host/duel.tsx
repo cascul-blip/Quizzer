@@ -41,7 +41,6 @@ import { Award } from "./tower.tsx";
 type DuelView = Extract<HostView, { kind: "duel" }>;
 type Facing = "left" | "right";
 
-// ---------- panel geometry ----------
 //
 // Every arena panel is a 16:9 box, and so is a Duelist box (the bodies share one 1280×720 canvas),
 // so a Duelist's width and height are the same share of the panel and every point below is in panel %.
@@ -58,7 +57,6 @@ const SIDE_X = 21;
 /** The mannequin head on the body canvas (facing right), % of the box: the manifest's (600, 177). */
 const HEAD = { x: (600 / 1280) * 100, y: (177 / 720) * 100 };
 
-// ---------- reveal timeline ----------
 //
 // Steps of a round's reveal, played once per lastRound.round:
 // 0 face-off (results shown) → 1 draw → 2 fire (flash, bullet, hat) → 3 settle (holster, badges) → 4 movers walk off.
