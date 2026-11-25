@@ -21,7 +21,7 @@ describe("Racer podium", () => {
       },
     );
     if (view.kind !== "racer") throw new Error("expected Racer");
-    expect(view.awards).toEqual({ mostCorrect: { value: 2, nicknames: ["Holly", "Ivy"] }, bestDriver: { value: 40, nicknames: ["Noel"] } });
+    expect(view.awards).toEqual({ mostCorrect: { value: 2, nicknames: ["Holly", "Ivy"] }, mostMphGained: { value: 40, nicknames: ["Noel"] } });
     const awards = (n: "Noel" | "Holly" | "Ivy") => {
       const v = phone(n);
       return v?.kind === "racer" ? v.result?.awards : null;

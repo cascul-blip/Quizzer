@@ -52,8 +52,7 @@ export interface RacerResult {
   turns: number;
 }
 
-/** Podium award labels; bestDriver is most mph gained while driving. */
-const RACER_AWARDS = { mostCorrect: "Most correct answers", bestDriver: "Best driver" } as const;
+const RACER_AWARDS = { mostCorrect: "Most correct answers", mostMphGained: "Best driver" } as const;
 
 export type RacerAwardKey = keyof typeof RACER_AWARDS;
 export type RacerAwards = Record<RacerAwardKey, SubAward | null>;

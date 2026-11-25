@@ -379,9 +379,9 @@ function RacerPodium({ view, send }: { view: RacerView; send: Send }) {
                 🏎
               </div>
               <div>
-                <div class="award-title">{racerShared.awards.bestDriver}</div>
-                <div class="award-who">{a?.bestDriver ? a.bestDriver.nicknames.join(", ") : "—"}</div>
-                {a?.bestDriver && <div class="award-value">+{a.bestDriver.value} mph</div>}
+                <div class="award-title">{racerShared.awards.mostMphGained}</div>
+                <div class="award-who">{a?.mostMphGained ? a.mostMphGained.nicknames.join(", ") : "—"}</div>
+                {a?.mostMphGained && <div class="award-value">+{a.mostMphGained.value} mph</div>}
               </div>
             </div>
           </div>

@@ -32,8 +32,8 @@ describe("Cup of Death podium", () => {
     ]);
     expect(view.awards).toMatchObject({
       mostCorrect: { value: 1, nicknames: ["Noel"] },
-      luckiest: { value: 2, nicknames: ["Holly"] },
-      neverThirsty: { value: 1, nicknames: ["Holly", "Ivy"] },
+      mostDrinksSurvived: { value: 2, nicknames: ["Holly"] },
+      mostSafeRounds: { value: 1, nicknames: ["Holly", "Ivy"] },
     });
     const result = (n: "Noel" | "Holly" | "Ivy") => {
       const v = phone(n);

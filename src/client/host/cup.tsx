@@ -268,15 +268,15 @@ function CupPodium({ view, send }: { view: CupView; send: Send }) {
             <Award icon="✅" title={cupShared.awards.mostCorrect} award={a?.mostCorrect ?? null} unit="correct" />
             <Award
               icon="🍀"
-              title={cupShared.awards.luckiest}
-              award={a?.luckiest ?? null}
+              title={cupShared.awards.mostDrinksSurvived}
+              award={a?.mostDrinksSurvived ?? null}
               unit=""
               valueText={(n) => `${n} drink${n === 1 ? "" : "s"} survived`}
             />
             <Award
               icon="🛡"
-              title={cupShared.awards.neverThirsty}
-              award={a?.neverThirsty ?? null}
+              title={cupShared.awards.mostSafeRounds}
+              award={a?.mostSafeRounds ?? null}
               unit=""
               valueText={(n) => `${n} round${n === 1 ? "" : "s"} safe`}
             />

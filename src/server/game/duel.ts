@@ -399,7 +399,7 @@ export class DuelGame {
       entryOf: (p) => p,
       awards: {
         labels: duelShared.awards,
-        values: { longestReign: (p) => p.reign, mostWins: (p) => p.wins, biggestClimb: (p) => this.climb(p, arenas) },
+        values: { mostArenaOneWins: (p) => p.reign, mostWins: (p) => p.wins, mostArenasClimbed: (p) => this.climb(p, arenas) },
       },
     });
   }

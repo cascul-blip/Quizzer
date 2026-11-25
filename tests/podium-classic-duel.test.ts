@@ -146,12 +146,12 @@ describe("Podium", () => {
       [ladder[1], 2],
     ]);
     expect(view.awards?.mostWins).toEqual({ value: 1, nicknames: ["Noel"] });
-    expect(view.awards?.longestReign).toEqual({ value: 1, nicknames: ["Noel"] });
+    expect(view.awards?.mostArenaOneWins).toEqual({ value: 1, nicknames: ["Noel"] });
     const result = (n: string) => {
       const v = game.playerView(ids.get(n)!);
       return v?.result;
     };
-    expect(result("Noel")).toEqual({ rank: 1, playerCount: 3, awards: [duelShared.awards.longestReign, duelShared.awards.mostWins] });
+    expect(result("Noel")).toEqual({ rank: 1, playerCount: 3, awards: [duelShared.awards.mostArenaOneWins, duelShared.awards.mostWins] });
     expect(result("Ivy")).toMatchObject({ rank: 2, playerCount: 3 });
     expect(result("Holly")).toMatchObject({ rank: 2, playerCount: 3 });
     const sheet = records(entryOf(game).results(game));

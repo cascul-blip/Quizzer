@@ -34,8 +34,7 @@ export function cupQuizMs(round: number): number {
   return Math.max(CUP_QUIZ_MIN_MS, CUP_QUIZ_START_MS - CUP_QUIZ_STEP_MS * (round - 1));
 }
 
-/** Podium award labels: luckiest is most drinks survived, neverThirsty most rounds made safe without drinking. */
-const CUP_AWARDS = { mostCorrect: "Most correct answers", luckiest: "Luckiest drinker", neverThirsty: "Never thirsty" } as const;
+const CUP_AWARDS = { mostCorrect: "Most correct answers", mostDrinksSurvived: "Luckiest drinker", mostSafeRounds: "Never thirsty" } as const;
 
 /** Unluckiest's label by theme; it is the lowest round, not a Podium award. */
 export const CUP_UNLUCKIEST = { christmas: "First flight", other: "Unluckiest" } as const;

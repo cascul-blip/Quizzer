@@ -33,7 +33,7 @@ export { INTRO_MS };
 /** The driver has this long to set the lever; then it is locked where it is. */
 export const CONFIDENCE_MS = 20_000;
 
-const RACER_AWARD_VALUES: Record<RacerAwardKey, (p: RacerPlayer) => number> = { mostCorrect: (p) => p.correct, bestDriver: (p) => p.mphGained };
+const RACER_AWARD_VALUES: Record<RacerAwardKey, (p: RacerPlayer) => number> = { mostCorrect: (p) => p.correct, mostMphGained: (p) => p.mphGained };
 
 export interface RacerAnswer {
   /** Chosen option index; -1 for a typed answer. */

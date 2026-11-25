@@ -731,8 +731,8 @@ function DuelPodium({ view, send }: { view: DuelView; send: Send }) {
           <div class="awards">
             <Award
               icon="⭐"
-              title={duelShared.awards.longestReign}
-              award={a?.longestReign ?? null}
+              title={duelShared.awards.mostArenaOneWins}
+              award={a?.mostArenaOneWins ?? null}
               unit=""
               valueText={(v) => `${v} round${v === 1 ? "" : "s"} at ${duelArenaName(1, view.theme)}`}
             />
@@ -745,8 +745,8 @@ function DuelPodium({ view, send }: { view: DuelView; send: Send }) {
             />
             <Award
               icon="⬆"
-              title={duelShared.awards.biggestClimb}
-              award={a?.biggestClimb ?? null}
+              title={duelShared.awards.mostArenasClimbed}
+              award={a?.mostArenasClimbed ?? null}
               unit=""
               valueText={(v) => `${v} arena${v === 1 ? "" : "s"}`}
             />

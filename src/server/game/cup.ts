@@ -41,8 +41,8 @@ export { FEEDBACK_MS } from "./stream.ts";
 export const COUNTDOWN_MS = 3000;
 const CUP_AWARD_VALUES: Record<CupAwardKey, (p: CupPlayer) => number> = {
   mostCorrect: (p) => p.correct,
-  luckiest: (p) => p.drinksSurvived,
-  neverThirsty: (p) => p.safeRounds,
+  mostDrinksSurvived: (p) => p.drinksSurvived,
+  mostSafeRounds: (p) => p.safeRounds,
 };
 
 export interface CupPlayer extends BasePlayer, AnswerTotals {

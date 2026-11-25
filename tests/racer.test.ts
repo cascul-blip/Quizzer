@@ -250,7 +250,7 @@ describe("Racer", () => {
     expect(game.hostView().players).toHaveLength(2);
     // Nobody left in the game drove that turn.
     game.end();
-    expect(game.hostView().awards!.bestDriver).toBeNull();
+    expect(game.hostView().awards!.mostMphGained).toBeNull();
   });
 
   test("host skip: locks the lever in during confidence, closes the question when open", () => {
@@ -771,8 +771,8 @@ describe("Racer", () => {
     expect(v.result!.distanceMiles).toBeCloseTo((50 + 70 + 70) / 6, 9);
     expect(v.result).toMatchObject({ topSpeedMph: 70, crashes: 0, turns: 3 });
     expect(v.awards!.mostCorrect).toEqual({ value: 3, nicknames: ["B", "=C"] });
-    expect(v.awards!.bestDriver!.value).toBe(20);
-    expect([...v.awards!.bestDriver!.nicknames].sort()).toEqual([...drivers.slice(0, 2)].sort());
+    expect(v.awards!.mostMphGained!.value).toBe(20);
+    expect([...v.awards!.mostMphGained!.nicknames].sort()).toEqual([...drivers.slice(0, 2)].sort());
     expect(v.errors).toEqual([{ wrong: 1, text: "Question 0", answers: ["yes"] }]);
     expect(v.phase).toBe("podium");
 
@@ -820,7 +820,7 @@ describe("Racer", () => {
     game.end();
     expect(game.hostView()).toMatchObject({
       phase: "podium",
-      awards: { mostCorrect: null, bestDriver: null },
+      awards: { mostCorrect: null, mostMphGained: null },
       errors: [],
       result: { distanceMiles: 0, topSpeedMph: 30, crashes: 0, turns: 0 },
     });

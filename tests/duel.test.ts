@@ -560,9 +560,9 @@ describe("Showdown", () => {
       ["C", 5, 0, 3, 2, 0, 0],
     ]);
     expect(v.awards).toEqual({
-      longestReign: { value: 1, nicknames: ["D", "A"] },
+      mostArenaOneWins: { value: 1, nicknames: ["D", "A"] },
       mostWins: { value: 2, nicknames: ["D", "F"] },
-      biggestClimb: { value: 2, nicknames: ["F"] },
+      mostArenasClimbed: { value: 2, nicknames: ["F"] },
     });
     expect(v.errors!.map((e) => [e.text, e.wrong])).toEqual([
       ["Question 0", 3],
@@ -575,9 +575,9 @@ describe("Showdown", () => {
       opponents: [],
       arena: 1,
       arenaCount: 3,
-      result: { rank: 2, playerCount: 6, awards: [duelShared.awards.mostWins, duelShared.awards.biggestClimb] },
+      result: { rank: 2, playerCount: 6, awards: [duelShared.awards.mostWins, duelShared.awards.mostArenasClimbed] },
     });
-    expect(game.playerView(byName(game, "D").id)!.result!.awards).toEqual([duelShared.awards.longestReign, duelShared.awards.mostWins]);
+    expect(game.playerView(byName(game, "D").id)!.result!.awards).toEqual([duelShared.awards.mostArenaOneWins, duelShared.awards.mostWins]);
     expect(game.playerView(byName(game, "C").id)!.result).toEqual({ rank: 5, playerCount: 6, awards: [] });
 
     const results = buildDuelResults(game);
@@ -689,7 +689,7 @@ describe("Showdown", () => {
     expect(game.phase).toBe("podium");
     expect(game.played).toBe(1);
     expect(ladderNames(game)).toEqual(["B", "A"]);
-    expect(game.hostView().awards).toEqual({ longestReign: { value: 1, nicknames: ["B"] }, mostWins: { value: 1, nicknames: ["B"] }, biggestClimb: null });
+    expect(game.hostView().awards).toEqual({ mostArenaOneWins: { value: 1, nicknames: ["B"] }, mostWins: { value: 1, nicknames: ["B"] }, mostArenasClimbed: null });
   });
 
   test("one player: an arena of their own, nobody moves", () => {

@@ -424,8 +424,8 @@ describe("Cup of Death", () => {
     game.end();
     const aw = game.hostView().awards!;
     expect(aw.mostCorrect!.nicknames).toEqual(["A"]);
-    expect(aw.luckiest).toEqual({ value: 1, nicknames: ["B"] });
-    expect(aw.neverThirsty).toEqual({ value: 1, nicknames: ["A"] });
+    expect(aw.mostDrinksSurvived).toEqual({ value: 1, nicknames: ["B"] });
+    expect(aw.mostSafeRounds).toEqual({ value: 1, nicknames: ["A"] });
     expect(aw.unluckiest).toEqual({ value: 1, nicknames: ["C"] });
     expect(game.playerView(c.id)!.result!.awards).toEqual(["Unluckiest"]);
   });
