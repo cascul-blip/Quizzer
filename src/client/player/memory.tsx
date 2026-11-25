@@ -1,5 +1,6 @@
 import { useContext, useState } from "preact/hooks";
 import type { PlayerMemoryView } from "../../shared/modes/memory.ts";
+import { MEMORY_URGENT_SECONDS_LEFT } from "../../shared/modes/memory.ts";
 import type { CardMotionView } from "../shared/memory/card-flips.ts";
 import { memoryMotionStyle, useCardMotion } from "../shared/memory/card-flips.ts";
 import { memoryFacePosition, memoryFaceSize, memoryThemeArt } from "../shared/memory/themes.ts";
@@ -13,7 +14,7 @@ import "./memory.css";
 
 export function MemoryPlayer({ view, send }: { view: PlayerMemoryView; send: Send }) {
   return (
-    <div class={view.turn ? "game memory-turn" : "game"}>
+    <div class={view.turn ? "game memory-fits-screen" : "game"}>
       <header class="bar">
         <span class="name">{view.me.nickname}</span>
         <span class="score">
@@ -77,20 +78,20 @@ type TurnProps = { turn: NonNullable<PlayerMemoryView["turn"]>; boardSize: numbe
 function MemoryTurn(props: TurnProps) {
   const { turn, remainingMs } = props;
   const resumeVersion = useContext(PhoneResumeVersion);
-  const matched = turn.step === null && turn.matched;
-  const flipBack = turn.step !== null || !turn.matched;
+  const matched = turn.stage === "result" && turn.matched;
+  const flipBack = turn.stage === "picking" || !turn.matched;
   const motionOf = useCardMotion({
     board: turn.board,
     flipBackInMs: flipBack ? remainingMs : null,
     matched,
-    resetKey: `${turn.step}:${turn.id}:${resumeVersion}`,
+    resetKey: `${turn.stage === "picking" ? turn.step : null}:${turn.id}:${resumeVersion}`,
   });
-  return <MemoryPicks key={`${turn.step === null ? "feedback" : "turn"}:${turn.id}`} {...props} motionOf={motionOf} />;
+  return <MemoryPicks key={`${turn.stage}:${turn.id}`} {...props} motionOf={motionOf} />;
 }
 
 function MemoryPicks({ turn, boardSize, remainingMs, send, motionOf }: TurnProps & { motionOf: (position: number) => CardMotionView }) {
   const [pending, setPending] = useState<{ step: 1 | 2; position: number } | null>(null);
-  const { step } = turn;
+  const step = turn.stage === "picking" ? turn.step : null;
   const choosing = step !== null;
   const resumeVersion = useContext(PhoneResumeVersion);
   const selected = pending?.step === step ? pending.position : null;
@@ -104,7 +105,7 @@ function MemoryPicks({ turn, boardSize, remainingMs, send, motionOf }: TurnProps
       <div class="memory-board-controls">
         <div class="memory-timer-slot">
           {choosing && (
-            <div class={`timer ${left <= 5 ? "urgent" : ""}`} role="timer" aria-label="Turn time remaining">
+            <div class={`timer ${left <= MEMORY_URGENT_SECONDS_LEFT ? "urgent" : ""}`} role="timer" aria-label="Turn time remaining">
               {left}
             </div>
           )}

@@ -329,7 +329,7 @@ describe("Memory Game", () => {
     await Promise.resolve();
     expect(noel!.view).toMatchObject({
       phase: "feedback",
-      turn: { id: firstTurnId, step: null, board: projector().board },
+      turn: { id: firstTurnId, stage: "result", board: projector().board },
       phaseRemainingMs: 2_000,
     });
     const mismatchBoard = projector().board;
@@ -356,7 +356,7 @@ describe("Memory Game", () => {
     ]);
     await Promise.resolve();
     const matchBoard = projector().board;
-    expect(holly!.view).toMatchObject({ phase: "feedback", turn: { step: null, matched: true, board: matchBoard }, phaseRemainingMs: 1_400 });
+    expect(holly!.view).toMatchObject({ phase: "feedback", turn: { stage: "result", matched: true, board: matchBoard }, phaseRemainingMs: 1_400 });
     clock.advance(1_399);
     expect(facesUp()).toHaveLength(2);
     expect(holly!.view).toMatchObject({ turn: { board: matchBoard } });
@@ -441,7 +441,7 @@ describe("Memory Game", () => {
     const reconnected = new HubSocket(hub);
     reconnected.sendMsg({ type: "resume", token: token! });
     expect(reconnected.view).toMatchObject({
-      turn: { id: turnId, step: 2, board: projector().board },
+      turn: { id: turnId, stage: "picking", step: 2, board: projector().board },
       phaseRemainingMs: 12_000,
     });
     expect(facesUp()).toEqual([[0, 0]]);
@@ -474,7 +474,7 @@ describe("Memory Game", () => {
     reconnected.sendMsg({ type: "resume", token: token! });
     expect(reconnected.view).toMatchObject({
       phase: "feedback",
-      turn: { id: turnId, step: null },
+      turn: { id: turnId, stage: "result" },
       phaseRemainingMs: 100,
     });
     expect(reconnected.view?.kind === "memory" && reconnected.view.turn?.board).toEqual(expectedBoard);
@@ -490,7 +490,7 @@ describe("Memory Game", () => {
     expect(projector().phase).toBe("feedback");
     clock.advance(1);
     await Promise.resolve();
-    expect(reconnected.view).toMatchObject({ phase: "turn", turn: { id: turnId + 1, step: 1 }, phaseRemainingMs: 20_000 });
+    expect(reconnected.view).toMatchObject({ phase: "turn", turn: { id: turnId + 1, stage: "picking", step: 1 }, phaseRemainingMs: 20_000 });
     expect(facesUp()).toEqual([]);
   });
 
@@ -506,7 +506,7 @@ describe("Memory Game", () => {
     await Promise.resolve();
     const turnId = projector().turn!.id;
     const hiddenBoard = Array.from({ length: 100 }, () => ({ state: "down" }));
-    expect(noel!.view).toMatchObject({ turn: { id: turnId, step: 1, board: hiddenBoard }, phaseRemainingMs: 20_000 });
+    expect(noel!.view).toMatchObject({ turn: { id: turnId, stage: "picking", step: 1, board: hiddenBoard }, phaseRemainingMs: 20_000 });
     expect(spectator!.view).toMatchObject({ turn: null });
     expect(facesUp()).toEqual([]);
 
@@ -518,7 +518,7 @@ describe("Memory Game", () => {
     expect(noel!.view).toMatchObject({
       phase: "turn",
       me: { chips: 1, pairs: 0 },
-      turn: { id: turnId, step: 2, board: [{ state: "up", face: 0 }, ...hiddenBoard.slice(1)] },
+      turn: { id: turnId, stage: "picking", step: 2, board: [{ state: "up", face: 0 }, ...hiddenBoard.slice(1)] },
     });
     const spectatorToken = spectator!.token;
     const resumedSpectator = new HubSocket(hub);
