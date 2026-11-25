@@ -42,4 +42,6 @@ Keep imports acyclic, including type-only imports. When two modules need the sam
 
 ## Comments
 
+When a comment explains what a name, constant or pattern means, rename or restructure the code until the comment says nothing new, then delete it. A comment that restates the code drifts away from it.
+
 Use inline comments for local contracts and context a reader needs at the point of use. Examples include units, sentinels, callback obligations, and ordering that affects behavior. Put maintenance procedures in the relevant guide and cross-module design rationale in an ADR. When a change affects an existing decision, update its ADR with the revised decision and reason.
