@@ -10,7 +10,6 @@ import { Feedback, StreamQuestion } from "./stream-question.tsx";
 
 type Send = (m: ClientMsg) => void;
 
-/** The painted storm sky behind every fight screen. */
 const BACKDROP = { "--fight-classic-backdrop": `url(${FIGHT_PHONE_UI.backdrop})` };
 
 function useFightPhoneUI() {

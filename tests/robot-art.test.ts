@@ -10,7 +10,6 @@ const dir = new URL("../src/client/shared/robot/", import.meta.url);
 const tilesDir = new URL("tiles/", dir);
 const snowTilesDir = new URL("../src/client/shared/snowman/tiles/", import.meta.url);
 
-/** Width and height from a WebP file's header (lossy, lossless or extended). */
 function webpSize(b: Buffer): [number, number] {
   expect(b.toString("latin1", 0, 4) + b.toString("latin1", 8, 12)).toBe("RIFFWEBP");
   const chunk = b.toString("latin1", 12, 16);

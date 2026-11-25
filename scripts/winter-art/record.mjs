@@ -21,7 +21,6 @@ async function record(name, query, duration) {
   console.log(`Captured ${name}`);
 }
 try {
-  // Functional review of all host phases at projector and smaller display sizes.
   const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("http://127.0.0.1:8097/");

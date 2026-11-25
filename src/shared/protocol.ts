@@ -28,10 +28,8 @@ export type PlayerMsg =
   /** avatar/accessory: the player's last pick, remembered on the phone (optional). */
   { type: "join"; nickname: string; avatar?: string; accessory?: string } | { type: "resume"; token: string } | ProtocolOf<GameMode>["msg"];
 
-/** The mode settings of every game mode, as the lobby holds them. */
 export type ModeSettingsMap = { [M in GameMode]: ProtocolOf<M>["settings"] };
 
-/** The settings the host can send for each game mode. */
 export type ModeSettingsInput = { [M in GameMode]: ProtocolOf<M>["settingsInput"] };
 
 export type ModeSettingsMsg = { [M in GameMode]: { type: "host.setModeSettings"; mode: M; settings: ModeSettingsInput[M] } }[GameMode];

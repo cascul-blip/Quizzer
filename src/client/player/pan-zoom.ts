@@ -9,7 +9,6 @@ interface PanZoomOptions {
   onTap?: (event: PointerEvent) => void;
 }
 
-/** Keep the viewport fixed and transform its inner surface. A focus opens the surface zoomed in. */
 export function usePanZoom({ focus, onTap }: PanZoomOptions = {}) {
   const box = useRef<HTMLDivElement>(null);
   const inner = useRef<HTMLDivElement>(null);

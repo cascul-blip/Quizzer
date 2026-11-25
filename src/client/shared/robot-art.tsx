@@ -276,7 +276,6 @@ function Board({ marked, inset, collapsing }: { marked: Set<number>; inset: numb
   }
   return (
     <g class="board">
-      {/* Front edge, for a bit of thickness. */}
       <polygon points={`${nl.x},${nl.y} ${nr.x},${nr.y} ${nr.x},${nr.y + EDGE} ${nl.x},${nl.y + EDGE}`} fill="#1a1412" />
       <defs>{clips}</defs>
       {tiles}
@@ -314,7 +313,6 @@ export function Pieces({
     const shown = list.slice(0, STACK_SHOWN);
     const c = project(u + 0.5, v + 0.62);
     const size = TILE * 0.95 * c.s;
-    // Fan a stack out sideways, back to front.
     shown
       .map((p, k) => ({ p, k }))
       .reverse()
@@ -514,7 +512,6 @@ const bodyLen = (px: number) => (px / 1024) * BODY.size;
 /** The mask's single optic: centre and glass radius, in source pixels. */
 const OPTICS = [{ x: 509, y: 116, r: 11 }].map((o) => ({ ...bodyPt(o.x, o.y), r: bodyLen(o.r) }));
 
-/** The robot: a hooded machine priest in a red robe with one glowing red optic and three mechadendrite back arms. */
 function Robot({ attacking, clock }: { attacking: boolean; clock: SwayClock }) {
   const still = prefersStill();
   const frozen = clock.frozenAt !== null;
@@ -533,12 +530,10 @@ function Robot({ attacking, clock }: { attacking: boolean; clock: SwayClock }) {
   const arms = [0, 1, 2].map((k) => armPose(k, t));
   return (
     <g class={`robot ${attacking ? "attacking" : ""}`}>
-      {/* back arms, behind the body */}
       {arms.map((pts, k) => (
         <MechArm key={k} pts={pts} k={k} />
       ))}
       <image href={bodyImg} x={BODY.x} y={BODY.y} width={BODY.size} height={BODY.size} />
-      {/* the shoulder sockets the arms grow out of */}
       {[0, 1, 2].map((k) => (
         <ArmSocket key={k} k={k} />
       ))}
@@ -550,7 +545,6 @@ function Robot({ attacking, clock }: { attacking: boolean; clock: SwayClock }) {
           <circle key={i} cx={o.x} cy={o.y} r={o.r * 0.75} fill="#ff3a2a" />
         ))}
       </g>
-      {/* the emitters, in front of the body */}
       {arms.map((pts, k) => (
         <Emitter key={k} at={pts.at(-1)!} attacking={attacking} />
       ))}

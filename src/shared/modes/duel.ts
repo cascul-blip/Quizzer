@@ -28,7 +28,6 @@ export interface DuelPlayerRef {
   avatar: AvatarChoice;
 }
 
-/** One duelist's part in a finished round. */
 export interface DuelistResult extends DuelPlayerRef {
   /** Null: didn't answer. */
   correct: boolean | null;
@@ -42,7 +41,6 @@ export interface DuelistResult extends DuelPlayerRef {
   nextArena: number;
 }
 
-/** One arena of a finished round. */
 export interface DuelArenaResult {
   /** 1-based; 1 is High Noon. */
   arena: number;
@@ -57,7 +55,6 @@ export interface DuelRound {
   arenas: DuelArenaResult[];
 }
 
-/** The arenas as they stand for the current round. */
 export interface DuelArena {
   arena: number;
   /** 2 duelists, or 3 in the bottom arena when the count is odd. Disconnected players stay in place. */
@@ -129,7 +126,6 @@ export interface PlayerDuelView {
   playerCount: number;
   round: number;
   rounds: number;
-  /** As HostDuelState.question. */
   question: QuestionView | null;
   phaseRemainingMs: number;
   phaseDurationMs: number;

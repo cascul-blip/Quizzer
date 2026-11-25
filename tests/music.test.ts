@@ -77,7 +77,7 @@ test("Tower Fight keeps the full fortress hymn audible while damage adds intensi
   const melody = track.layers.find((l) => l.inst === "brass")!;
   expect(track.bars).toBe(18);
   expect(melody.bars).toHaveLength(track.bars);
-  expect(melody.bars.slice(0, 4)).toEqual(melody.bars.slice(4, 8)); // repeated opening stanza
+  expect(melody.bars.slice(0, 4)).toEqual(melody.bars.slice(4, 8));
   expect(tokens(melody.bars[0]!).filter((n) => n !== "-")).toEqual(["C5", "C5", "C5", "G4", "A4"]);
   expect(tokens(melody.bars.at(-1)!).filter((n) => n !== "-")).toEqual(["A4", "F4", "E4", "D4", "C4"]);
   for (const intensity of [0, 0.15, 0.3, 0.6, 0.8, 1]) expect(layerActive(melody, intensity)).toBe(true);

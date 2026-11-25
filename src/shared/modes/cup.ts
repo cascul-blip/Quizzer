@@ -69,7 +69,6 @@ export interface HostCupPlayer {
   nickname: string;
   avatar: AvatarChoice;
   connected: boolean;
-  /** Cups still in front of them. */
   cups: number;
   out: boolean;
   /** This round's dice roll: correct answers needed (0 before the first roll). */
@@ -104,7 +103,6 @@ export interface HostCupState {
   /** Full length of the current phase, for the progress bar. */
   phaseDurationMs: number;
   players: HostCupPlayer[];
-  /** Cups each player started with. */
   startCups: number;
   /** The drinks of the current round (reveal phase), or null. */
   reveal: CupRevealView | null;
@@ -123,7 +121,6 @@ export interface PlayerCupView {
   phaseRemainingMs: number;
   phaseDurationMs: number;
   me: { id: string; nickname: string; avatar: AvatarChoice; cups: number; out: boolean; target: number; progress: number; safe: boolean; correct: number };
-  /** Cups each player started with. */
   startCups: number;
   /** Questions to answer: living players during the quiz until safe; poisoned players any time, for practice. */
   question: StreamQuestionView | null;
@@ -132,7 +129,6 @@ export interface PlayerCupView {
   drink: { picked: number | null } | null;
   /** Reveal phase, drinkers only: this player's own drink. `turn` is true while they are in the spotlight. */
   myDrink: (CupDrinkView & { seq: number; turn: boolean; waiting: boolean }) | null;
-  /** Players still alive. */
   alive: number;
   result: { rank: number; playerCount: number; won: boolean; outRound: number | null; awards: string[] } | null;
 }

@@ -222,7 +222,6 @@ describe("arcade style (Racer)", () => {
       ).toEqual(["lead"]);
       expect(leadNotes).toBeGreaterThan(0);
       expect(echo.inputs, track.id).toBe(leadNotes);
-      // Without the lead's echo amount, nothing reaches the echo.
       const dry = fake();
       const dryEcho = new FakeNode("echo", dry);
       playLoop(dry, { ...track, layers: track.layers.map((l) => ({ ...l, echo: undefined })) }, 1, dryEcho as unknown as AudioNode);

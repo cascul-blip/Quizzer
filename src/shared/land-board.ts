@@ -48,7 +48,6 @@ export function neighbors(size: number, tile: number): number[] {
   return cells.filter(([r, c]) => r >= 0 && r < size && c >= 0 && c < size).map(([r, c]) => r * size + c);
 }
 
-/** Steps between two tiles. */
 export function hexDistance(size: number, a: number, b: number): number {
   const axial = (t: number) => {
     const row = Math.floor(t / size);
@@ -286,7 +285,6 @@ interface BorderEdge {
   owner: number;
 }
 
-/** Every side of an owned tile whose neighbour has a different owner, or that is on the board edge. */
 export function borderEdges(owners: number[], size: number): BorderEdge[] {
   const edges: BorderEdge[] = [];
   for (let tile = 0; tile < owners.length; tile++) {

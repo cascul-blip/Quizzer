@@ -26,7 +26,6 @@ const LEADERBOARD_SIZE = 10;
 interface Answer {
   /** Chosen option index; -1 for a typed answer. */
   option: number;
-  /** What the player typed, for a typed question. */
   text?: string;
   correct: boolean;
   points: number;
@@ -372,7 +371,6 @@ function newPlayer(base: BasePlayer): Player {
 
 type ClassicPlayer = ReturnType<ClassicGame["ranked"]>[number];
 
-/** One row per player (by rank) with per-question answer, correctness, points and time. */
 function classicColumns(game: ClassicGame): Column<ClassicPlayer>[] {
   const columns: Column<ClassicPlayer>[] = [
     { header: "Rank", value: (p) => p.rank },

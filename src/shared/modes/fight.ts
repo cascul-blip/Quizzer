@@ -14,7 +14,6 @@ export const CORRECT_PER_DECISION = 4;
 export const FIGHT_MAX_DAMAGE = 5;
 /** Time to choose attack or rebuild before the move is forfeited (aiming has no time limit). */
 export const DECISION_MS = 10_000;
-/** How long a rebuild takes; the tower is repaired when it finishes. */
 export const REPAIR_MS = 4000;
 
 export interface FightSettings {
@@ -59,7 +58,6 @@ export interface FightOutcome {
 
 export interface HostFightTeam extends TeamInfo {
   damage: number;
-  /** Someone on the team is repairing the tower right now. */
   repairing: boolean;
   correct: number;
   members: { id: string; nickname: string; avatar: AvatarChoice; connected: boolean; state: FightState; hits: number; rebuilds: number }[];
@@ -106,7 +104,6 @@ export interface PlayerFightView {
   lastRepair: { seq: number; repaired: boolean } | null;
   question: StreamQuestionView | null;
   feedback: StreamFeedbackView | null;
-  /** Damage per team. */
   damage: number[];
   terrain: number[];
   /** This player's shot while watching it fly. */

@@ -117,7 +117,6 @@ function LandStageContent({ view, send }: { view: LandView; send: Send }) {
   );
 }
 
-/** The event ribbon across the top of the board, in the event's colour. */
 function LandBanner({ text, color }: { text: string; color: string }) {
   return (
     <div class="monster-banner land-banner" style={{ borderImageSource: useBanner(color), color: teamInk(color) }}>

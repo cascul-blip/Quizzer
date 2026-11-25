@@ -35,7 +35,6 @@ const CLIENT_MODE_LITERAL = new RegExp(
   `\\b\\w*(?:[mM]ode|[kK]ind|[bB]anner)\\s*[!=]==?\\s*${MODE}|${MODE}\\s*[!=]==?\\s*[\\w.]*(?:[mM]ode|[kK]ind|[bB]anner)\\b|\\bcase\\s+${MODE}\\s*:`,
 );
 
-/** Every line matching the pattern, as file:line and the line itself. */
 function offending(pattern: RegExp, files: Source[] = sources): string[] {
   return files.flatMap(({ path, lines }) => lines.flatMap((line, i) => (pattern.test(line) ? [`${relative(ROOT, path)}:${i + 1}: ${line.trim()}`] : [])));
 }
@@ -160,7 +159,6 @@ const AVOIDED_PHRASES = [...readFileSync(join(ROOT, "GLOSSARY.md"), "utf8").matc
     .filter((s) => s.includes(" ")),
 );
 
-/** The titles of every test and describe block in the file. */
 function titles(text: string): string[] {
   return [...text.matchAll(/\b(?:test|describe)\((["'`])(.*?)\1/g)].map((m) => m[2]!);
 }

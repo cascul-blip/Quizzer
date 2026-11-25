@@ -4,7 +4,6 @@ export type RacerConfidence = "low" | "mid" | "high";
 export const RACER_CONFIDENCE_LEVELS: readonly RacerConfidence[] = ["low", "mid", "high"];
 
 export const RACER_START_MPH = 30;
-/** Speed right after a repair. */
 export const RACER_REPAIR_MPH = 30;
 /** A car that ends a turn slower than this has crashed (speed drops to 0). */
 export const RACER_CRASH_BELOW_MPH = 20;
@@ -20,7 +19,6 @@ export const RACER_CONFIDENCE: Record<RacerConfidence, { label: string; gain: nu
   high: { label: "Extremely confident", gain: RACER_GAIN_MPH.high, needs: "+40 mph if everyone answers right." },
 };
 
-/** The class's shared car. */
 export interface RacerCar {
   /** Miles per hour; may be fractional (each fail halves it). 0 while crashed. */
   speed: number;
@@ -30,7 +28,6 @@ export interface RacerCar {
   distance: number;
   /** Highest speed a turn ended on. */
   topSpeed: number;
-  /** How many times the car has crashed. */
   crashes: number;
 }
 
@@ -67,13 +64,11 @@ export function racerRepairs(correct: number, total: number): boolean {
 interface RacerTurnInput {
   /** The driver's locked lever; null when the turn had no driver (car crashed, or nobody connected). */
   confidence: RacerConfidence | null;
-  /** Correct answers. */
   correct: number;
   /** Players who count: connected when the question closed, plus disconnected ones who answered. */
   total: number;
 }
 
-/** What one turn did to the car. */
 export interface RacerTurnResult {
   /** The lever that was played; null on a turn without a driver. */
   confidence: RacerConfidence | null;
@@ -85,9 +80,7 @@ export interface RacerTurnResult {
   fails: number;
   speedBefore: number;
   speedAfter: number;
-  /** This turn crashed the car. */
   crashed: boolean;
-  /** This turn repaired a crashed car. */
   repaired: boolean;
   /** Miles driven this turn (speedAfter for RACER_TURN_MINUTES). */
   distanceAdded: number;

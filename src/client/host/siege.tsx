@@ -214,7 +214,6 @@ function Battlefield({ view }: { view: SiegeView }) {
     now,
   );
 
-  // Defenders that disappeared leave a puff of dust.
   const prevDefenders = useRef(view.defenders);
   const dust = useRef<{ key: number; lane: number; x: number; at: number }[]>([]);
   if (prevDefenders.current !== view.defenders) {
@@ -277,7 +276,6 @@ function Battlefield({ view }: { view: SiegeView }) {
   );
 }
 
-/** "Ana placed an archer" pop-ups: only the last few. */
 function SiegeEvents({ view }: { view: SiegeView }) {
   return (
     <ul class="siege-events" aria-label="Latest building">
@@ -307,7 +305,6 @@ function Countdown({ view }: { view: SiegeView }) {
   );
 }
 
-/** "Build your defenses!" or "Wave N incoming", with a bar that drains. */
 function BuildBreak({ view }: { view: SiegeView }) {
   const opening = view.wave <= 1;
   const start = view.phaseDurationMs > 0 ? view.phaseRemainingMs / view.phaseDurationMs : 0;
@@ -343,7 +340,6 @@ function Fallen({ view }: { view: SiegeView }) {
   );
 }
 
-/** The empty diorama board with the castle wall, under the lobby's settings. */
 export function SiegeLobbyPreview({ theme }: { theme?: SeasonTheme }) {
   return (
     <SiegeThemeProvider theme={theme}>

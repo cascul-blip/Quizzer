@@ -3,7 +3,6 @@ import type { AvatarChoice } from "../../shared/avatars.ts";
 import { OFFERED_ACCESSORIES, OFFERED_AVATARS } from "../../shared/avatars.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 
-/** Lobby picker: a Character tab and an Accessory tab, each a grid previewing the option on the current look. */
 export function AvatarPicker({ value, onPick }: { value: AvatarChoice; onPick: (choice: AvatarChoice) => void }) {
   const [tab, setTab] = useState<"avatar" | "accessory">("avatar");
   const options =

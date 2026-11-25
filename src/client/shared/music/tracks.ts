@@ -27,13 +27,11 @@ import type { Track } from "./engine.ts";
 /** Notes with lengths in 16th steps; total the track's bar length (normally 16, or 12 for triple meter). */
 const seq = (...parts: [string, number][]) =>
   parts.flatMap(([tok, len]) => (tok === "." ? Array(len).fill(".") : [tok, ...Array(len - 1).fill("-")])).join(" ");
-/** A note or chord held for the whole bar. */
 const hold = (tok: string) => seq([tok, 16]);
 /** Drum pattern from a compact 16-character string like "x...x...x...x...". */
 const drum = (s: string) => s.split("").join(" ");
 /** A single hit/ping on step 0 (e.g. a sonar note), silent otherwise. */
 const once = (tok: string) => seq([tok, 1], [".", 15]);
-/** Cycle through notes, one every `every` steps. */
 const arp = (notes: string[], every = 1) => Array.from({ length: 16 }, (_, i) => (i % every === 0 ? notes[(i / every) % notes.length] : ".")).join(" ");
 /** Eighth-note bass bouncing between a low and a high note. */
 const bounce = (low: string, high: string) => arp([low, high], 2);
@@ -484,9 +482,7 @@ const fightResults: Track = {
 
 /** Move every note in these bars up (or down) by whole octaves. */
 const shift = (bars: string[], by: number) => bars.map((b) => b.replace(/\d/g, (d) => String(Number(d) + by)));
-/** Four quarter notes. */
 const quarters = (a: string, b: string, c: string, d: string) => seq([a, 4], [b, 4], [c, 4], [d, 4]);
-/** An 8-bar form: four bars of one pattern, then four of another. */
 const halves = (a: string, b: string) => [a, a, a, a, b, b, b, b];
 
 // Lobby: Beethoven, Symphony No. 7, Allegretto. The solemn long-short-short-long-long march in A minor.
@@ -651,7 +647,6 @@ const robotResults: Track = {
 
 /** One note every eighth, up through the chord and back down. */
 const rolled = (notes: string) => arp(notes.split(" "), 2);
-/** Steady eighth notes. */
 const eighths = (tok: string) => pump(tok, "x.x.x.x.x.x.x.x.");
 
 // North Pole: Silent Night (Gruber, 1818), original gentle C-major arrangement.
@@ -962,9 +957,7 @@ const landResults: Track = {
 // A major, in the IV-V-iii-vi mould of late-80s arcade racers: octave-hopping
 // triangle bass, syncopated square lead, pulse stabs and arpeggios, noise drums.
 
-/** Driving eighth-note octave bass: low low HIGH low low HIGH low HIGH. */
 const octaves = (low: string, high: string) => arp([low, low, high, low, low, high, low, high], 2);
-/** Short syncopated chord stabs. */
 const stabs = (notes: string) => pump(chord(notes), "..x..x..x...x.x.");
 
 const RACER_LOBBY_ROOTS = ["A1", "F#1", "D2", "E2"];
@@ -1126,7 +1119,6 @@ const racerResults: Track = {
 
 // Cup of Death: spaghetti western (original themes).
 
-/** Boom-chick bass: the root on the beat, the fifth in between. */
 const boomChick = (root: string, fifth: string) => seq([root, 4], [fifth, 4], [root, 4], [fifth, 4]);
 const GALLOP = drum("x.xxx.xxx.xxx.xx");
 const AM = chord("A3 C4 E4");
@@ -1271,7 +1263,6 @@ const siegeLobby: Track = {
   swing: 0.12,
   reverb: 0.3,
   layers: [
-    // The lute.
     {
       inst: "pluck",
       bars: [arp(["G3", "D4", "B4", "D4"], 2), arp(["C4", "G4", "E5", "G4"], 2), arp(["E3", "B3", "G4", "B3"], 2), arp(["D4", "A4", "F#5", "A4"], 2)],
@@ -1284,7 +1275,6 @@ const siegeLobby: Track = {
     },
     // A soft tabor.
     { inst: "woodblock", bars: [drum("x.....x.x.......")], vol: 0.25 },
-    // The recorder.
     {
       inst: "flute",
       bars: [
@@ -1345,7 +1335,6 @@ const siegeBattle: Track = {
     { inst: "brass", bars: SIEGE_MARCH.map((c) => pump(c, "x.......x.x.....")), vol: 0.45, from: 0.5 },
     { inst: "hat", bars: [drum("..x...x...x...x.")], vol: 0.35, from: 0.6 },
     { inst: "cymbal", bars: [once("x"), rest, rest, rest], vol: 0.45, from: 0.7 },
-    // The giant.
     {
       inst: "tribass",
       bars: SIEGE_ROOTS.map((r) =>
@@ -1510,7 +1499,6 @@ const christmasSiegeResults: Track = {
 const SHOW_CHORDS = ["D3 F3 A3", "F3 A3 C4", "C3 E3 G3", "D3 F3 A3", "G3 Bb3 D4", "D3 F3 A3", "C#3 E3 A3", "D3 F3 A3"].map(chord);
 /** Low guitar roots, one per bar. */
 const SHOW_BASS = ["D2", "F2", "C3", "D2", "G2", "D2", "A2", "D2"];
-/** Shimmering tremolo: the chord restruck on every 16th. */
 const tremolo = (chordTok: string) => pump(chordTok, "xxxxxxxxxxxxxxxx");
 /** The guitar's low root, held across beats 1 and 3. */
 const guitarPulse = (root: string) => seq([root, 4], [".", 4], [root, 4], [".", 4]);
@@ -1683,11 +1671,8 @@ const padBar = (q: string[]) => {
   }
   return seq(...parts);
 };
-/** The root on every beat. */
 const rootBeats = (q: string[]) => beats(q, "x---", (c) => XMAS_ROOTS[c]!);
-/** Eighth notes bouncing between the root and its octave. */
 const rootBounce = (q: string[]) => beats(q, "x.x.", (c, i) => (i % 4 === 0 ? XMAS_ROOTS[c]! : octaveUp(XMAS_ROOTS[c]!)));
-/** A chord on the off-beat ("oom-pah"), an octave up. */
 const offbeatChords = (q: string[]) =>
   beats(q, "..x.", (c) =>
     chord(
@@ -1696,7 +1681,6 @@ const offbeatChords = (q: string[]) =>
         .join(" "),
     ),
   );
-/** Broken chords in eighths, an octave up. */
 const brokenChords = (q: string[]) =>
   beats(q, "x.x.", (c, i) => {
     const notes = XMAS_CHORDS[c]!.split(" ");

@@ -1,7 +1,6 @@
 /** What a duel did to one duelist: "win" moves up a boundary, "lose" moves down. */
 export type DuelOutcome = "win" | "lose" | "stay";
 
-/** One duelist's answer as the rules see it. */
 export interface DuelAnswerInfo {
   /** Null: didn't answer (or was away). */
   correct: boolean | null;

@@ -2,7 +2,6 @@ import { expect, spyOn, test } from "bun:test";
 import type { Track } from "../src/client/shared/music/engine.ts";
 import { MusicPlayer } from "../src/client/shared/music/engine.ts";
 
-// A stand-in AudioContext with just what the player and the rich bus build.
 class FakeParam {
   value = 0;
   setValueAtTime() {}

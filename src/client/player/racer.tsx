@@ -30,7 +30,6 @@ const BOTTOM_STOP = 5 / 6;
 const plural = (n: number, word: string, many = `${word}s`) => `${n} ${n === 1 ? word : many}`;
 const qClass = (text: string) => (visibleLength(text) > LONG_QUESTION ? "long" : "");
 
-/** Phone screen for Racer: the driver's lever, then the question for everyone, then what it did to the car. */
 export function RacerPlayer({ view, send }: { view: PlayerRacerView; send: Send }) {
   const q = view.question;
 
@@ -76,7 +75,6 @@ export function RacerPlayer({ view, send }: { view: PlayerRacerView; send: Send 
   );
 }
 
-/** The driver's turn: set the lever, then hold Go to lock it in. */
 function DriverScreen({ view, send }: { view: PlayerRacerView; send: Send }) {
   const q = view.question!;
   const secs = useCountdown(view.phaseRemainingMs, `confidence:${q.index}`);
@@ -102,7 +100,6 @@ function DriverScreen({ view, send }: { view: PlayerRacerView; send: Send }) {
     navigator.vibrate?.(10);
     play("leverClick");
   };
-  // Arrow keys work too (handy when playing from a laptop).
   const changeRef = useRef(change);
   changeRef.current = change;
   useEffect(() => {
@@ -138,7 +135,6 @@ function DriverScreen({ view, send }: { view: PlayerRacerView; send: Send }) {
   );
 }
 
-/** Everyone else during the driver's turn: who drives, and their lever moving live. */
 function WatchScreen({ view }: { view: PlayerRacerView }) {
   const q = view.question!;
   return (
@@ -322,7 +318,6 @@ function GoButton({ onGo }: { onGo: () => void }) {
   );
 }
 
-/** The question for everyone, as in Classic, under a line that says what is at stake. */
 function RacerAnswering({ view, send }: { view: PlayerRacerView; send: Send }) {
   const q = view.question!;
   const [pending, setPending] = useState<number | null>(null);
@@ -407,7 +402,6 @@ function RacerAnswering({ view, send }: { view: PlayerRacerView; send: Send }) {
   );
 }
 
-/** The big line of the turn card: the one thing this turn did to the car. */
 function turnHeadline(t: RacerTurn, carCrashed: boolean): string {
   if (t.gain > 0) return `+${t.gain} mph`;
   if (t.crashed) return "Crashed!";

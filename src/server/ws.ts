@@ -55,7 +55,6 @@ export class GameHub {
   readonly serverId = crypto.randomUUID();
 
   private readonly phoneAttachments = new PhoneAttachments<WS>((id, connected) => this.game?.setConnected(id, connected));
-  /** Where players join: address, URL and QR code. */
   readonly join: JoinInformation;
   /** Image refs of the open quiz, sent to phones on join so they can preload them. */
   private images: string[] = [];
@@ -116,7 +115,6 @@ export class GameHub {
     this.views.broadcast();
   }
 
-  /** Another socket from this address would go over the per-device cap. */
   socketLimitReached(ip: string): boolean {
     return this.phoneAttachments.socketLimitReached(ip);
   }
@@ -184,7 +182,6 @@ export class GameHub {
     }
   }
 
-  /** What a Host command from this socket reaches beyond the game itself. */
   private hostCommandContext(ws: WS): HostCommandContext {
     const hub = this;
     return {

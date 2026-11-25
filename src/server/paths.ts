@@ -1,6 +1,5 @@
 import { dirname, join, resolve } from "node:path";
 
-/** True when running from a `bun build --compile` executable. */
 export function isCompiled(): boolean {
   return Bun.main.startsWith("/$bunfs/") || /^[A-Za-z]:[\\/]~BUN[\\/]/.test(Bun.main);
 }

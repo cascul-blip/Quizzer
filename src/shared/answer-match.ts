@@ -55,7 +55,6 @@ export function checkAnswer(q: { type: string; options: string[]; correct: numbe
   return q.correct.includes(answer);
 }
 
-/** The answer value in a client message: typed text if present, else the option index. */
 export function answerOf(msg: { option?: unknown; text?: unknown }): AnswerValue {
   return typeof msg.text === "string" ? msg.text : Number(msg.option);
 }

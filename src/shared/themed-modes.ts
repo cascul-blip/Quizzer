@@ -1,4 +1,3 @@
-/** The looks a themed mode can be played in. */
 export type SeasonTheme = "classic" | "christmas";
 export const SEASON_THEMES: readonly SeasonTheme[] = ["classic", "christmas"];
 export const isSeasonTheme = (value: unknown): value is SeasonTheme => SEASON_THEMES.some((theme) => theme === value);
@@ -133,12 +132,9 @@ export const THEMED_MODES = {
 
 export type ThemedMode = keyof typeof THEMED_MODES;
 type Looks<M extends ThemedMode> = (typeof THEMED_MODES)[M]["looks"];
-/** The themes a mode offers. */
 export type ThemeOf<M extends ThemedMode> = keyof Looks<M> & SeasonTheme;
-/** A themed mode's screens, each playing one track. */
 export type ScreenOf<M extends ThemedMode> = keyof (typeof THEMED_MODES)[M]["screens"] & string;
 type TracksOf<M extends ThemedMode> = { [T in ThemeOf<M>]: Looks<M>[T] extends { tracks: infer R } ? R[keyof R] : never }[ThemeOf<M>];
-/** Every track a themed mode's screen plays. */
 export type ThemedTrackId = { [M in ThemedMode]: TracksOf<M> }[ThemedMode] & string;
 
 /** The theme a mode is shown in: the one given if the mode offers it, else the mode's default. */
@@ -153,14 +149,11 @@ function lookOf<M extends ThemedMode>(mode: M, theme?: SeasonTheme): Look<Screen
   return (THEMED_MODES[mode].looks as Record<string, Look<ScreenOf<M>>>)[modeTheme(mode, theme)]!;
 }
 
-/** The mode's name in this theme, such as "Cup of Cheer". */
 export const themedName = (mode: ThemedMode, theme?: SeasonTheme): string => lookOf(mode, theme).name;
-/** The mode's icon in this theme. */
 export const themedIcon = (mode: ThemedMode, theme?: SeasonTheme): string => lookOf(mode, theme).icon;
 /** The icon and name, as the Game mode menu shows them. */
 export const themedLabel = (mode: ThemedMode, theme?: SeasonTheme): string => `${themedIcon(mode, theme)} ${themedName(mode, theme)}`;
 
-/** The track one of the mode's screens plays in this theme. */
 export function themedTrack<M extends ThemedMode>(mode: M, theme: SeasonTheme | undefined, screen: ScreenOf<M>): ThemedTrackId {
   // checked: ThemedTrackId is the union of every look's tracks
   return lookOf(mode, theme).tracks[screen] as ThemedTrackId;

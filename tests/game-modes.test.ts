@@ -59,7 +59,6 @@ const BANNER = new Set<GameMode>(["siege"]);
 /** Modes where Protect from abuse applies and the lobby offers it. */
 const PROTECT = new Set<GameMode>(["tower", "submarine", "fight", "robot", "cup", "siege", "gift"]);
 
-/** One phone message of each game mode. */
 const PHONE_MSG: { [M in GameMode]: ModeMsg<M> } = {
   classic: { type: "answer", qIndex: 0, option: 0 },
   tower: { type: "tower.drop", zone: 2 },

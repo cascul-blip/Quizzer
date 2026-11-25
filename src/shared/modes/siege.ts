@@ -202,7 +202,6 @@ export const siegeShared = sharedModeEntry<ModeProtocol<SiegeMsg, SiegeSettings,
   msgTypes: ["siege.answer", "siege.place", "siege.upgrade", "siege.map"],
 });
 
-/** Each defender's name in each theme. */
 const DEFENDER_LABELS: Record<SeasonTheme, Record<SiegeDefenderType, string>> = {
   christmas: { archer: "Elf archer", knight: "Nutcracker", wall: "Present barricade" },
   classic: { archer: "Archer", knight: "Knight", wall: "Stone wall" },

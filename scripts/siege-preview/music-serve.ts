@@ -1,4 +1,3 @@
-/** Local offline-audio QA using the production sequencer and sampled instruments. */
 import { resolve } from "node:path";
 
 const outdir = "/tmp/quizzer-siege-music-preview";

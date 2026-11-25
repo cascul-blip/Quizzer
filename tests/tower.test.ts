@@ -56,7 +56,6 @@ function play(names: string[], opts?: Parameters<typeof setup>[1]) {
 
 const byName = (game: TowerGame, name: string) => [...game.players.values()].find((p) => p.nickname === name)!;
 
-/** Answer the player's current question (right or wrong) and let the feedback flash pass. */
 function answer(game: TowerGame, clock: FakeClock, p: TowerPlayer, right: boolean) {
   const cur = game.playerView(p.id)!.question!;
   const option = right ? cur.options.indexOf("yes") : cur.options.findIndex((option) => option !== "yes");
@@ -101,7 +100,6 @@ describe("Lobby handoff", () => {
     const a = lobby.players.get([...lobby.players.keys()][0]!)!;
     const pv = lobby.playerView(a.id);
     expect(pv.kind === "lobby" && pv.team?.name).toBe("Red");
-    // Same ids and tokens after the handover.
     expect(game.byToken(a.token)?.id).toBe(a.id);
     expect([...game.players.values()].map((p) => [p.nickname, p.team])).toEqual([
       ["A", 0],
@@ -165,7 +163,7 @@ describe("questions", () => {
     expect(a.blocksHeld).toBe(1);
     const v = game.playerView(a.id)!;
     expect(v.feedback).toEqual({ seq, correct: true, remainingMs: 1000, answers: [], penaltyDurationMs: 0 });
-    expect(v.question!.seq).toBe(seq + 1); // next question is already waiting underneath
+    expect(v.question!.seq).toBe(seq + 1);
     // Too soon: still in the feedback window.
     expect(game.answer(a.id, game.playerView(a.id)!.question!.seq, 0)).toBe(false);
     clock.advance(FEEDBACK_MS);
@@ -257,7 +255,7 @@ describe("building", () => {
     expect(game.drop(a.id, 5)).toBeNull();
     expect(game.drop(a.id, 1.5)).toBeNull();
     expect(game.drop(a.id, 2)).toBe(true);
-    expect(game.drop(a.id, 2)).toBeNull(); // cooldown
+    expect(game.drop(a.id, 2)).toBeNull();
     clock.advance(DROP_COOLDOWN_MS);
     expect(game.drop(a.id, 2)).toBe(true);
   });
@@ -348,7 +346,6 @@ test("kick and reconnect keep the remaining players' state", () => {
 });
 
 describe("monster", () => {
-  /** Fill a team's columns directly, then land blocks through the real drop() path. */
   function dropInto(game: TowerGame, clock: FakeClock, p: TowerPlayer, zones: number[]) {
     for (const z of zones) {
       p.state = "build";
@@ -382,7 +379,6 @@ describe("monster", () => {
     clock.advance(36_000);
     expect(game.egg!.seq).toBe(first);
     expect(game.hostView().nextMonsterRemainingMs).toBeNull();
-    // Everyone hears about it and sees their own egg.
     for (const p of game.players.values()) {
       expect(game.playerView(p.id)!.monsterEvent).toMatchObject({ kind: "egg" });
       expect(game.playerView(p.id)!.egg).toEqual({ seq: first, col: 0, row: 3 });

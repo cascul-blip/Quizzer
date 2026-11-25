@@ -1,5 +1,4 @@
 import { keysOf } from "./keys-of.ts";
-/** Christmas picture symbols shared by the Sled Squad server and phones. */
 export const GLYPH_FAMILIES = {
   tree: ["star-baubles", "bow-baubles", "star-garland", "bells", "snow", "star-bow"],
   gift: ["square", "tall", "holly", "round", "dots", "heart"],

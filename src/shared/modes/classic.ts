@@ -13,7 +13,6 @@ export interface RankedEntry {
   rank: number;
   /** Points gained on the most recent question. */
   delta: number;
-  /** Current run of consecutive correct answers. */
   streak: number;
 }
 
@@ -31,7 +30,6 @@ export interface ClassicView {
   me: { id: string; nickname: string; avatar: AvatarChoice; score: number; rank: number; streak: number };
   playerCount: number;
   question: QuestionView | null;
-  /** The option chosen for the current question, if any. */
   myChoice: number | null;
   /** What was typed for the current question, if it is a typed one and answered. */
   myText: string | null;

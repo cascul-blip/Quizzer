@@ -45,11 +45,9 @@ function CupStageContent({ view, send }: { view: CupView; send: Send }) {
       if (view.phase === "podium") play("fanfare");
     }
     if (view.phase === "roll" && p.phase !== "roll" && view.round === 1) later(() => play("diceRoll"), 400);
-    // Someone just made it to safety.
     const safeBefore = new Set(p.players.filter((x) => x.safe).map((x) => x.id));
     if (view.phase === "quiz" && view.players.some((x) => x.safe && !safeBefore.has(x.id))) play("floor");
     if (view.phase === "drink" && view.players.filter((x) => x.picked).length > p.players.filter((x) => x.picked).length) play("clink");
-    // The reveal, one drinker at a time: a gulp, then the verdict.
     const r = view.reveal;
     const pr = p.reveal;
     if (r && r.drinks.length > 0) {
@@ -133,7 +131,6 @@ function CupStageContent({ view, send }: { view: CupView; send: Send }) {
   );
 }
 
-/** What's written on the table: the phase, or the drinker in the spotlight and their fate. */
 function TableText({ view, secs }: { view: CupView; secs: number }) {
   const christmas = useChristmasCup();
   const { x, y } = TABLE_CENTER;
@@ -188,7 +185,6 @@ function TableText({ view, secs }: { view: CupView; secs: number }) {
   );
 }
 
-/** The red bar across the top drains over each phase, with what to do right now. */
 function TimerBar({ view, secs }: { view: CupView; secs: number }) {
   const christmas = useChristmasCup();
   // Catch up once, when the phase starts (see Robot Attack's PhaseBar).
@@ -335,7 +331,6 @@ export function cupCue(view: CupView): MusicCue {
   if (modeTheme("cup", view.theme) === "christmas")
     return { track: track(view.phase === "podium" ? "results" : "quiz"), intensity: view.phase === "reveal" ? 0.8 : 0.35 };
   if (view.phase === "podium") return { track: track("results") };
-  // Holding your breath: tenser while the cups are drunk than while they're picked.
   if (view.phase === "drink" || (view.phase === "reveal" && (view.reveal?.drinks.length ?? 0) > 0))
     return { track: track("drink"), intensity: view.phase === "reveal" ? 0.7 : 0.3 };
   if (view.phase === "quiz") {

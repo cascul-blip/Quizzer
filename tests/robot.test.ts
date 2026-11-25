@@ -30,7 +30,6 @@ function quiz(): Quiz {
   });
 }
 
-/** Deterministic rng so boards are reproducible. */
 function seeded(seed = 42) {
   let s = seed;
   return () => (s = (s * 1664525 + 1013904223) % 2 ** 32) / 2 ** 32;
@@ -59,7 +58,6 @@ function answer(game: RobotGame, clock: FakeClock, p: RobotPlayer, right: boolea
   clock.advance(FEEDBACK_MS);
 }
 
-/** Skip to the end of the current quiz phase (the move phase starts). */
 function toMove(game: RobotGame, clock: FakeClock) {
   clock.advance(game.phaseEndsAt - clock.now());
   expect(game.phase).toBe("move");
@@ -247,7 +245,6 @@ describe("Robot Attack", () => {
     expect(game.lastAttack).toEqual({ seq: 1, round: 1, hit: [byName(game, "A").id], eliminated: [] });
     expect(game.playerView(byName(game, "A").id)!.lastAttack).toEqual({ seq: 1, hit: true, eliminated: false });
     expect(game.playerView(byName(game, "B").id)!.lastAttack).toEqual({ seq: 1, hit: false, eliminated: false });
-    // Marks are cleared for the next round.
     expect(game.marked.size).toBe(0);
   });
 

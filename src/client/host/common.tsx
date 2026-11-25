@@ -24,7 +24,6 @@ export function ScreenControls({ voice = false, join }: { voice?: boolean; join?
   const [voiceOn, setVoiceOn] = useState(voiceEnabled());
   const [qrOpen, setQrOpen] = useState(false);
 
-  // Keyboard: Q = toggle the join QR, Escape = close it.
   useEffect(() => {
     if (!join) {
       setQrOpen(false);
@@ -121,7 +120,6 @@ export function ScreenControls({ voice = false, join }: { voice?: boolean; join?
   );
 }
 
-/** The final screen's button that swaps the results for the most-missed questions and back. */
 export function ErrorsButton({ shown, onToggle }: { shown: boolean; onToggle: () => void }) {
   return (
     <button class="btn ghost" aria-pressed={shown} onClick={onToggle}>

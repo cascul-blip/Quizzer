@@ -44,7 +44,6 @@ function useLiveGap(view: SubView): number {
  */
 const GOBLIN_TOUCH_LEFT = 32;
 const GOBLIN_FAR_LEFT = -15;
-/** On a catch, the goblin lunges and the sled jolts to a stop. */
 const LUNGE_LEFT = 3;
 const LUNGE_MS = 450;
 const GRAB_MS = 140;
@@ -111,7 +110,6 @@ export function SubmarineStage({ view, send }: { view: SubView; send: Send }) {
   const gap = useLiveGap(view);
   const caught = view.phase === "caught";
   const closeness = caught ? 1 : Math.max(0, Math.min(1, 1 - gap / view.maxGap));
-  // Reach the sled, then bring it to a halt.
   const catchMs = useCatchClock(caught);
   const goblinLeft = caught
     ? GOBLIN_TOUCH_LEFT + LUNGE_LEFT * easeOut(catchMs / LUNGE_MS)
@@ -119,7 +117,6 @@ export function SubmarineStage({ view, send }: { view: SubView; send: Send }) {
   const grabbed = caught && catchMs >= GRAB_AT_MS;
   const secs = useCountdown(view.phaseRemainingMs, `${view.phase}:${view.level}`);
 
-  // Boost notices next to the sled, each with the booster's avatar.
   const boost = useEventFlash(view.lastBoost, view.lastBoost?.seq, 700);
   const [pops, setPops] = useState<NonNullable<SubView["lastBoost"]>[]>([]);
   // Each pop's removal timer lives here, not in the effect cleanup, which also runs when the flash ends.
@@ -211,7 +208,6 @@ export function SubmarineStage({ view, send }: { view: SubView; send: Send }) {
                 </div>
               </div>
               <div class={`fish-pos ${caught ? "biting" : ""}`} style={{ left: `${goblinLeft}%` }}>
-                {/* The supplied goblin speeds up and leans toward the sled as the gap closes. */}
                 <ChristmasGoblin closeness={closeness} caught={caught} />
               </div>
               <div
@@ -329,7 +325,6 @@ function Award({ icon, title, award, unit }: { icon: string; title: string; awar
   );
 }
 
-/** Sled Squad has no mode settings; the lobby shows how it plays. */
 function SubSettings() {
   return <span class="opt mode-hint">Everyone works together to outrun the Christmas goblin. The game ends when it catches you.</span>;
 }
@@ -339,7 +334,6 @@ export function submarineCue(view: SubView): MusicCue {
   if (view.phase === "dive") return { track: "submarine-dive" };
   if (view.phase === "countdown") return { track: "submarine-lobby" };
   if (view.phase === "caught") return { track: "submarine-chase", intensity: 1 };
-  // The closer the Christmas goblin, the faster and more layered the music.
   return { track: "submarine-chase", intensity: Math.max(0, Math.min(1, 1 - view.gap / view.maxGap)) };
 }
 

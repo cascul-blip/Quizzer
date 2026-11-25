@@ -66,7 +66,6 @@ function pullFor(game: FightGame, team: number, target: number | "ground") {
   throw new Error("no pull found");
 }
 
-/** Earn a decision, attack, and wait for the shot to land and the result to pass. */
 function shoot(game: FightGame, clock: FakeClock, p: FightPlayer, target: number | "ground") {
   earnDecision(game, clock, p);
   if (p.state === "decide") expect(game.choose(p.id, "attack")).toBe(true);

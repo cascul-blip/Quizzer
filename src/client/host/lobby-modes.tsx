@@ -17,7 +17,6 @@ export interface LobbyModeEntry<M extends GameMode> {
   label(settings: ModeSettingsMap[M]): string;
   /** The mode's settings panel, including its hint text. */
   Settings: ComponentType<LobbySettingsProps<M>>;
-  /** A picture of the game below the mode settings. */
   Preview?: ComponentType<{ settings: ModeSettingsMap[M] }>;
   /** The music the lobby plays while the mode is selected, which a seasonal theme may choose. */
   lobbyTrack(settings: ModeSettingsMap[M]): MusicTrackId;

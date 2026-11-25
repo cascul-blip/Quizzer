@@ -20,7 +20,6 @@ export function dispatchPhoneMessage<M extends GameMode>(
     return;
   }
 
-  // A late message from a different game mode is ignored.
   if (owner !== game.runningMode) return;
   // checked: the shared entry for game.runningMode lists exactly the message types its handler accepts.
   return MODES[game.runningMode].handle(game, playerId, msg as ModeMsg<M>);

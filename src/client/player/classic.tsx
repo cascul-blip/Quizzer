@@ -4,7 +4,6 @@ import type { ClassicView, Send } from "./common.tsx";
 import { Bar, Center } from "./common.tsx";
 import { PacedQuestionAnswering, PacedQuestionFeedback, PacedQuestionIntro } from "./paced-question.tsx";
 
-/** Phone screen for Classic: the question, the answer buttons, the result and the final rank. */
 export function ClassicPlayer({ view, send }: { view: ClassicView; send: Send }) {
   return (
     <div class="game">

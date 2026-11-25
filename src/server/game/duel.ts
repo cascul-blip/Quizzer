@@ -312,7 +312,6 @@ export class DuelGame {
     this.paced.intro(index);
   }
 
-  /** Settle every arena's duel on the round that just closed and move the ladder. */
   private settleRound(): void {
     const slot = this.qIndex;
     const results = this.arenas.map((arena) => {
@@ -538,7 +537,6 @@ function ref(p: DuelPlayer): DuelPlayerRef {
   return { id: p.id, nickname: p.nickname, avatar: p.avatar };
 }
 
-/** Showdown: one row per player in final ranking order, then each round's answer, correctness and time. */
 function duelColumns(game: DuelGame): Column<{ rank: number; p: DuelPlayer }>[] {
   const arenas = game.ladderArenas();
   const final = (p: DuelPlayer) => arenas.get(p.id) ?? "";

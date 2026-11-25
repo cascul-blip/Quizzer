@@ -4,8 +4,6 @@ import { GameHub } from "../src/server/ws.ts";
 import { FakeClock, tempDir } from "./helpers.ts";
 import { HubSocket } from "./hub-harness.ts";
 
-// Join information as the projector sees it, through the hub's host view.
-
 let t: ReturnType<typeof tempDir>;
 let hub: GameHub;
 let host: HubSocket;

@@ -11,7 +11,6 @@ game.start();
 clock.advance(3000);
 const fixture = { host: game.hostView(), phone: game.playerView(player.id) };
 
-/** bun scripts/siege-preview/serve.ts — standalone host/phone artwork preview. */
 import { resolve } from "node:path";
 
 const outdir = "/tmp/quizzer-siege-preview";

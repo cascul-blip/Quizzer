@@ -2,7 +2,6 @@ import { expect, test } from "bun:test";
 import { MusicPlayer } from "../src/client/shared/music/engine.ts";
 import { TRACKS } from "../src/client/shared/music/tracks.ts";
 
-// An AudioContext stand-in that counts every node it makes.
 class FakeParam {
   value = 0;
   setValueAtTime() {}

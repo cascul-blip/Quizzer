@@ -18,7 +18,6 @@ import {
 } from "../src/shared/fight-physics.ts";
 import { keysOf } from "../src/shared/keys-of.ts";
 
-/** Seeded RNG so terrain is reproducible. */
 function seeded(seed: number) {
   let s = seed;
   return () => (s = (s * 1664525 + 1013904223) % 4294967296) / 4294967296;

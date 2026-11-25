@@ -190,7 +190,6 @@ function hatStyle(hat: DuelHat, x: number, y: number): Style {
   return { left: pct(x + g.dx), top: pct(y + g.dy), width: pct(g.w), height: pct(g.h) };
 }
 
-/** Face, hat and (tip) hand at a head point; shared by Duelist and DuelistClip. */
 function Head({ avatar, hat, at, phone, hand }: { avatar: AvatarChoice; hat?: DuelHat | null; at: Point; phone: boolean; hand: boolean }) {
   return (
     <>

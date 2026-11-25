@@ -27,7 +27,6 @@ interface DeliveryState {
   waitingForDrain: boolean;
 }
 
-/** Delivers current views according to each socket's role. */
 export class ViewDelivery<S extends ViewSocket> {
   private readonly states = new WeakMap<S, DeliveryState>();
   private queuedBroadcast: (() => void) | null = null;

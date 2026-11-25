@@ -26,7 +26,6 @@ type Send = (m: ClientMsg) => void;
 const ALERT_MS = 2500;
 const ALERT_TEXT = { giant: "⚠️ A giant approaches!", wall: "💥 The wall was hit!" } as const;
 
-/** The castle banner on the phone's lobby screen. */
 export const siegeBanner: PhoneBanner = {
   avatarClass: "siege-banner-avatar",
   Line: () => <p class="siege-lobby-line">🛡️ Defend the kingdom! Watch the projector.</p>,
@@ -48,7 +47,6 @@ function SiegePlayerContent({ view, send }: { view: PlayerSiegeView; send: Send 
     setMapOpen(open);
     send({ type: "siege.map", open });
   };
-  // The map closes itself when the battle ends.
   useEffect(() => {
     if (!playing && mapOpen) setMapOpen(false);
   }, [playing]);
@@ -132,7 +130,6 @@ function Countdown({ view }: { view: PlayerSiegeView }) {
   );
 }
 
-/** The pre-selected defender: the last one this player placed if they can afford it, else the cheapest it can. */
 function defaultPick(view: PlayerSiegeView): SiegeDefenderType {
   const can = (t: SiegeDefenderType) => view.gold >= SIEGE_DEFENDERS[t].cost[0];
   if (view.lastPlaced && can(view.lastPlaced)) return view.lastPlaced;

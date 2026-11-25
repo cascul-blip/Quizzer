@@ -2,7 +2,6 @@
 
 export const MIN_OPTIONS = 2;
 export const MAX_OPTIONS = 4;
-/** Pin questions: how many labelled spots one image can have. */
 export const MAX_PIN_SPOTS = 20;
 export const TF_OPTIONS = ["True", "False"] as const;
 export const DEFAULT_TIME_LIMIT = 20;
@@ -12,7 +11,6 @@ export const QUIZ_ID_RE = /^[a-z0-9][a-z0-9-]{0,80}$/;
 export const QUESTION_ID_RE = /^[A-Za-z0-9_-]{1,40}$/;
 export const MEDIA_REF_RE = /^media\/[A-Za-z0-9_-]+\.(png|jpg|gif|webp)$/;
 
-/** Largest image file that can be uploaded. */
 export const MAX_MEDIA_BYTES = 5 * 1024 * 1024;
 /** Longest side of a stored question image; phones never show them bigger, and every phone downloads each one. */
 export const MAX_IMAGE_SIDE = 1280;
@@ -25,7 +23,6 @@ export interface PinSpot {
   y: number;
 }
 
-/** Default label for the i-th pin spot: A, B, C, … */
 export function pinLabel(i: number): string {
   return i < 26 ? String.fromCharCode(65 + i) : String(i + 1);
 }

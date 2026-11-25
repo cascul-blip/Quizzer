@@ -31,7 +31,6 @@ function quiz(): Quiz {
   });
 }
 
-/** Deterministic rng. */
 function seeded(seed = 42) {
   let s = seed;
   return () => (s = (s * 1664525 + 1013904223) % 2 ** 32) / 2 ** 32;
@@ -66,7 +65,6 @@ function answer(game: CupGame, clock: FakeClock, p: CupPlayer, right: boolean) {
   clock.advance(FEEDBACK_MS);
 }
 
-/** Answer enough right to be safe this round. */
 function makeSafe(game: CupGame, clock: FakeClock, p: CupPlayer) {
   while (!p.safe) answer(game, clock, p, true);
 }
@@ -76,7 +74,6 @@ function toQuiz(game: CupGame, clock: FakeClock) {
   expect(game.phase).toBe("quiz");
 }
 
-/** Run out the quiz clock. */
 function endQuiz(game: CupGame, clock: FakeClock) {
   clock.advance(game.phaseEndsAt - clock.now());
 }
@@ -96,7 +93,6 @@ describe("Cup of Death", () => {
       expect(p.safe).toBe(false);
     }
     expect(game.hostView().phaseDurationMs).toBe(CUP_ROLL_MS);
-    // No questions while the dice tumble.
     expect(game.playerView(byName(game, "A").id)!.question).toBeNull();
     toQuiz(game, clock);
     expect(game.phaseDurationMs).toBe(30_000);
@@ -116,7 +112,6 @@ describe("Cup of Death", () => {
     const lastQuestion = game.playerView(a.id)!.question!;
     answer(game, clock, a, true);
     expect(a.safe).toBe(true);
-    // Safe players stop getting questions and can't answer.
     expect(game.playerView(a.id)!.question).toBeNull();
     expect(game.answer(a.id, lastQuestion.seq + 1, 0)).toBe(false);
     expect(game.hostView().players.find((p) => p.id === a.id)).toMatchObject({ safe: true, progress: 2, target: 2 });

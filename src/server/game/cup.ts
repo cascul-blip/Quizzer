@@ -228,14 +228,12 @@ export class CupGame {
     this.onChange();
   }
 
-  /** Ends the quiz early once every connected living player is safe. */
   private maybeEndQuizEarly(): void {
     if (this.phase !== "quiz") return;
     const alive = this.alive();
     if (alive.some((p) => p.connected) && alive.every((p) => p.safe || !p.connected)) this.endQuiz();
   }
 
-  /** Time's up: whoever isn't safe has to drink. */
   private endQuiz(): void {
     if (this.phase !== "quiz") return;
     for (const p of this.alive()) if (p.safe && p.target > 0) p.safeRounds++;
@@ -388,7 +386,6 @@ export class CupGame {
     return true;
   }
 
-  /** Pick a cup to drink (drinkers only, drink phase only, once). */
   pick(playerId: string, cup: number): boolean {
     const p = this.players.get(playerId);
     if (!p || this.phase !== "drink" || !this.drinkers.includes(p.id) || p.pick !== null) return false;

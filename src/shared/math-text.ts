@@ -7,7 +7,6 @@ const MATH_RE = /\\\$|\$(?=\S)((?:\\.|[^$\\])+?)(?<=\S)\$(?!\d)/g;
 
 export type MathPart = string | { math: string };
 
-/** The text as plain strings and `{ math }` pieces, in order. */
 export function splitMath(text: string): MathPart[] {
   if (!text.includes("$")) return [text];
   const parts: MathPart[] = [];

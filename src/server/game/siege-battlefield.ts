@@ -165,7 +165,6 @@ export class SiegeBattlefield<O> {
     this.onDefeat = opts.onDefeat;
   }
 
-  /** Start a wave: plan its monsters and set how hard they hit. */
   beginWave(c: SiegeWaveConditions): void {
     this.toughness = c.toughness;
     this.giantPace = c.giantPace;
@@ -175,7 +174,6 @@ export class SiegeBattlefield<O> {
     this.pending = this.planWave(c.wave, c.budget);
   }
 
-  /** The wave has no monsters left to come or on the board. */
   get waveCleared(): boolean {
     return this.inWave && this.pending.length === 0 && this.monsters.length === 0;
   }
@@ -384,7 +382,6 @@ export class SiegeBattlefield<O> {
           continue;
         }
       }
-      // Walking.
       const stopAt = target ? Math.min(m.x, target.square + 1) : WALL_X;
       const next = m.x - (SIEGE_TICK_MS * m.pace) / stats.squareMs;
       if (next > stopAt + EPS) {
@@ -485,7 +482,6 @@ export class SiegeBattlefield<O> {
         }
         if (this.shots.length > SIEGE_SHOTS_SHOWN) this.shots.splice(0, this.shots.length - SIEGE_SHOTS_SHOWN);
       } else {
-        // The knight strikes the monster on the square in front of it.
         const t = this.monsters
           .filter((m) => m.lane === d.lane && m.state !== "leap" && m.x > d.square + EPS && m.x < d.square + 1.5 + EPS)
           .sort((a, b) => a.x - b.x)[0];
@@ -603,7 +599,6 @@ export class SiegeBattlefield<O> {
     };
   }
 
-  /** The board as a phone's lane map shows it. */
   mapView(): SiegeMapView {
     return {
       defenders: this.defenders.map((d) => ({ lane: d.lane, square: d.square, type: d.type, level: d.level })),

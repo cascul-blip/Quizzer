@@ -12,7 +12,6 @@ import { submarineShared } from "./modes/submarine.ts";
 import { towerShared } from "./modes/tower.ts";
 import type { EntryProtocol, SharedModeEntry, WithModeProtocol } from "./shared-mode-entry.ts";
 
-/** Collects the shared mode entries declared in modes/. */
 export const SHARED_MODES = {
   classic: classicShared,
   tower: towerShared,
@@ -30,7 +29,6 @@ export const SHARED_MODES = {
 
 export type GameMode = keyof typeof SHARED_MODES;
 
-/** One game mode's shared mode entry, with its literal types. */
 export type SharedOf<M extends GameMode> = (typeof SHARED_MODES)[M];
 
 export type ProtocolOf<M extends GameMode> = EntryProtocol<SharedOf<M>>;

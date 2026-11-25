@@ -231,7 +231,6 @@ function idle(t: number): Pose {
     wrist: 15 + 5 * Math.sin(2 * w + 2.5),
     hand: mixHand(POSE.open, POSE.half, 0.3 + 0.3 * Math.sin(2 * w + 1.7)),
   };
-  // The claws twitch.
   R.hand = [R.hand[0], R.hand[1] + 8 * Math.sin(4 * w), R.hand[2], R.hand[3]];
   L.hand = [L.hand[0], L.hand[1] + 8 * Math.sin(4 * w + 1.3), L.hand[2], L.hand[3]];
   return { arms: { L, R }, headDy: -2 * Math.sin(w), breathe: 0.006 * (1 + Math.sin(w)), eye: 0.75 + 0.25 * Math.sin(2 * w) };
@@ -706,7 +705,6 @@ function SweepFx({ clock, plan, players, hit }: { clock: Clock; plan: Plan; play
         />,
       );
     }
-    // Snow spray, kicked up from the tip while the claws are on the board.
     for (let n = 0; ; n++) {
       const born = KEY.reach + 0.03 + n * SPRAY_DT;
       if (born >= KEY.sweepEnd || born > t) break;
@@ -732,7 +730,6 @@ function SweepFx({ clock, plan, players, hit }: { clock: Clock; plan: Plan; play
       );
     }
   }
-  // A frost puff over each player the claws catch.
   for (const p of players) {
     if (!hit.has(p.id)) continue;
     const age = t - (plan.contact.get(p.y * ROBOT_BOARD + p.x) ?? KEY.reach);

@@ -5,7 +5,6 @@ import { StreakBadge } from "../shared/ui.tsx";
 
 export type Send = (m: ClientMsg) => void;
 
-/** A joined phone's gameplay view. */
 export type PhoneView = Exclude<PlayerView, { kind: "none" | "lobby" }>;
 
 /** A phone's view of a game of the mode; its kind is the mode. */
@@ -15,7 +14,6 @@ export type ClassicView = PhoneModeView<"classic">;
 
 /** What a mode's banner adds to the phone's lobby screen (Kingdom Siege's castle). */
 export interface PhoneBanner {
-  /** Extra class on the player's avatar. */
   avatarClass: string;
   /** The line under "You're in!". */
   Line: ComponentType;

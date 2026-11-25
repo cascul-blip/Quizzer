@@ -21,7 +21,6 @@ const qClass = (text: string) => (visibleLength(text) > LONG_QUESTION ? "long" :
 const arenaName = (n: number, theme?: SeasonTheme) => duelArenaName(n, theme);
 const secs = (ms: number) => `${(ms / 1000).toFixed(1)} s`;
 
-/** Phone screen for Showdown: a small face-off strip on top, the shared question underneath. */
 export function DuelPlayer({ view, send }: { view: PlayerDuelView; send: Send }) {
   const q = view.question;
   const watching = view.opponents.length === 0;
@@ -65,7 +64,6 @@ export function DuelPlayer({ view, send }: { view: PlayerDuelView; send: Send })
   );
 }
 
-/** What each figure in the strip does: from the round's result on the reveal, otherwise from the phase. */
 function poses(view: PlayerDuelView, me: DuelistResult | undefined): { mine: Pose; theirs: (o: DuelPlayerRef) => Pose } {
   if (view.phase === "reveal" && view.myDuel) {
     const by = new Map(view.myDuel.duelists.map((d) => [d.id, d]));
@@ -241,7 +239,6 @@ function DuelAnswering({ view, send }: { view: PlayerDuelView; send: Send }) {
   );
 }
 
-/** The line that says how the duel went and where this player goes next. */
 function duelLine(duel: DuelArenaResult, me: DuelistResult, theme?: SeasonTheme): { text: string; tone: "up" | "down" | "" } {
   const here = duel.arena;
   const next = me.nextArena;

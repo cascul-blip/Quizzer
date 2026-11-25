@@ -1,4 +1,3 @@
-/** Standalone visual QA for Tower Fight's actual host and phone components. */
 import { render } from "preact";
 import { useState } from "preact/hooks";
 import { FightStage } from "../../src/client/host/fight.tsx";

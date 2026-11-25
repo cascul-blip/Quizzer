@@ -412,7 +412,6 @@ describe("Showdown", () => {
     clock.advance(AUTO_REVEAL_MS);
     expect(game.phase).toBe("intro");
     expect(arenaNames(game)).toEqual([["B", "A"]]);
-    // Manual pacing waits for the host on the reveal.
     game.setPacing("manual");
     round(game, clock, []);
     clock.advance(60_000);

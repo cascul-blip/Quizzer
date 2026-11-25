@@ -320,7 +320,6 @@ function Layer({
   );
 }
 
-/** A detail whose foot point lands on a point of the canvas. */
 function footBox(detail: { w: number; h: number }, foot: readonly [number, number], at: readonly [number, number]): [number, number, number, number] {
   return [at[0] - foot[0], at[1] - foot[1], detail.w, detail.h];
 }
@@ -388,7 +387,6 @@ export function WarningArrow({ lane }: { lane: number }) {
   );
 }
 
-/** A thin health bar at a hurt figure's feet. */
 function healthBar(health: number, max: number) {
   if (health >= max) return null;
   return (
@@ -544,7 +542,6 @@ export function DustPuff({ at }: { at?: { lane: number; x: number } }) {
   );
 }
 
-/** An arrow flying from an archer to where it lands. */
 export function ArrowShot({ lane, from, to }: { lane: number; from: number; to: number }) {
   const a = boardPoint(lane, from);
   const b = boardPoint(lane, to);
@@ -568,7 +565,6 @@ export function ArrowShot({ lane, from, to }: { lane: number; from: number; to: 
   );
 }
 
-/** Confetti for "The kingdom stands!". */
 export function Confetti() {
   const colors = ["#1f4fa8", "#f5f1e6", "#d6a531", "#2f7d3a", "#b23a2e"];
   return (
