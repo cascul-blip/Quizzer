@@ -1,36 +1,63 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { MemoryCardView } from "../../../shared/modes/memory.ts";
+import { MEMORY_FLIP_MS, MEMORY_SLIDE_HOLD_MS, MEMORY_SLIDE_MS } from "../../../shared/modes/memory.ts";
 import "./card-flips.css";
 
-/** How long a card takes to turn over; keep in step with card-flips.css. */
-export const MEMORY_FLIP_MS = 400;
+export const MEMORY_FLIP_UP = "memory-flip-up";
+export const MEMORY_FLIP_DOWN = "memory-flip-down";
+export const MEMORY_SLIDE_OFF = "memory-slide-off";
 
-export type CardFlip = "memory-flip-up" | "memory-flip-down" | null;
+/** The class a face-up card animates with. */
+export type CardMotion = typeof MEMORY_FLIP_UP | typeof MEMORY_FLIP_DOWN | typeof MEMORY_SLIDE_OFF;
 
-/** How long a matched pair stays face up after its flip before it slides off; keep in step with card-flips.css. */
-export const MEMORY_SLIDE_HOLD_MS = 500;
+/** How one card on a Memory board is moving, and what it shows while it does. */
+export interface CardMotionView {
+  motion: CardMotion | null;
+  /** False while the card turns back down, so it reads as face down. */
+  showsFace: boolean;
+  /** Whether the card needs a turned-away back child for its flip. */
+  hasFlipBack: boolean;
+}
+
+/** The CSS custom properties that time card-flips.css from the shared Memory timings. */
+export const memoryMotionStyle = {
+  "--memory-flip-ms": `${MEMORY_FLIP_MS}ms`,
+  "--memory-slide-ms": `${MEMORY_SLIDE_MS}ms`,
+};
 
 /**
- * Whether a matched pair has started sliding off the board: true once the second card's flip and the hold after it
- * are over. Pass a new `resetKey` for each turn or phase.
+ * How each card on a Memory board moves. A card flips up when it turns face up between two boards,
+ * every face-up card flips back down in the last MEMORY_FLIP_MS before `flipBackInMs` runs out (null keeps them up),
+ * and when `matched` the face-up pair slides off once the second card's flip and the hold after it are over.
+ * Pass a new `resetKey` for each turn or phase.
  */
-export function useSlideOff(matched: boolean, resetKey: string): boolean {
-  const key = matched ? resetKey : null;
-  const [sliding, setSliding] = useState<string | null>(null);
-  useEffect(() => {
-    if (key === null) return;
-    const timer = setTimeout(() => setSliding(key), MEMORY_FLIP_MS + MEMORY_SLIDE_HOLD_MS);
-    return () => clearTimeout(timer);
-  }, [key]);
-  return key !== null && sliding === key;
+export function useCardMotion({
+  board,
+  flipBackInMs,
+  matched,
+  resetKey,
+}: {
+  board: MemoryCardView[];
+  flipBackInMs: number | null;
+  matched: boolean;
+  resetKey: string;
+}): (position: number) => CardMotionView {
+  const flipped = useFlippedUp(board);
+  const closing = useAfter(flipBackInMs === null ? null : Math.max(0, flipBackInMs - MEMORY_FLIP_MS), resetKey);
+  const sliding = useAfter(matched ? MEMORY_FLIP_MS + MEMORY_SLIDE_HOLD_MS : null, resetKey);
+  return (position) => {
+    const motion =
+      board[position]?.state !== "up" ? null : sliding ? MEMORY_SLIDE_OFF : closing ? MEMORY_FLIP_DOWN : flipped.has(position) ? MEMORY_FLIP_UP : null;
+    return { motion, showsFace: motion !== MEMORY_FLIP_DOWN, hasFlipBack: motion === MEMORY_FLIP_UP || motion === MEMORY_FLIP_DOWN };
+  };
 }
 
 /**
- * Which cards on a Memory board are turning over. A card flips up when it turns face up between two boards,
- * and every face-up card flips back down in the last MEMORY_FLIP_MS before `flipBackInMs` runs out.
- * Pass null to keep the cards up, and a new `resetKey` for each turn or phase.
+ * The positions that turned face up since the previous board, kept while the same board renders again.
+ * It compares with the last board rendered, so it records that board during render: rendering the same board twice
+ * gives the same answer.
  */
-export function useCardFlips(board: MemoryCardView[], flipBackInMs: number | null, resetKey: string): (position: number) => CardFlip {
+function useFlippedUp(board: MemoryCardView[]): Set<number> {
   const seen = useRef<{ board: MemoryCardView[]; flipped: Set<number> } | null>(null);
   const previous = seen.current;
   let flipped = previous?.flipped ?? new Set<number>();
@@ -42,19 +69,17 @@ export function useCardFlips(board: MemoryCardView[], flipBackInMs: number | nul
     });
   }
   seen.current = { board, flipped };
+  return flipped;
+}
 
-  const closeKey = flipBackInMs === null ? null : resetKey;
-  const [closed, setClosed] = useState<string | null>(null);
+/** True once `delayMs` has passed under `resetKey`; a new delay under the same key reschedules. Null never fires. */
+function useAfter(delayMs: number | null, resetKey: string): boolean {
+  const key = delayMs === null ? null : resetKey;
+  const [fired, setFired] = useState<string | null>(null);
   useEffect(() => {
-    if (closeKey === null || flipBackInMs === null) return;
-    const timer = setTimeout(() => setClosed(closeKey), Math.max(0, flipBackInMs - MEMORY_FLIP_MS));
+    if (key === null || delayMs === null) return;
+    const timer = setTimeout(() => setFired(key), delayMs);
     return () => clearTimeout(timer);
-  }, [closeKey]);
-  const closing = closeKey !== null && closed === closeKey;
-
-  return (position) => {
-    if (board[position]?.state !== "up") return null;
-    if (closing) return "memory-flip-down";
-    return flipped.has(position) ? "memory-flip-up" : null;
-  };
+  }, [key, delayMs]);
+  return key !== null && fired === key;
 }

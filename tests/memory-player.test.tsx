@@ -186,7 +186,7 @@ test("Memory Game restores the authoritative countdown on reconnect without rese
 });
 
 test.each([
-  ["match", 0, "Santa Claus", 1_000],
+  ["match", 0, "Santa Claus", 1_400],
   ["mismatch", 1, "Christmas tree", 2_000],
 ] as const)("Memory Game keeps the %s faces visible and locks selection until the next reveal turn", (outcome, secondFace, secondName, delay) => {
   const { show, send } = phone();
@@ -200,7 +200,7 @@ test.each([
   show({
     ...turnView,
     phase: "feedback",
-    turn: { id: 4, step: null, board: [firstCard, { state: "up", face: secondFace }, ...board(6).slice(2)] },
+    turn: { id: 4, step: null, matched: outcome === "match", board: [firstCard, { state: "up", face: secondFace }, ...board(6).slice(2)] },
     phaseRemainingMs: delay,
   });
   const faces = () => Array.from(dom.root.querySelectorAll('[role="img"]'), (face) => face.getAttribute("aria-label"));
@@ -230,11 +230,12 @@ test.each([
   expect(card(3)?.getAttribute("aria-pressed")).toBe("false");
   expect(send).not.toHaveBeenCalled();
 
-  dom.advance(delay - 1);
+  // A missed pair starts flipping back face down 400 ms before the result ends.
+  dom.advance(delay - 401);
   expect(faces()).toEqual(["Card 1, Santa Claus", `Card 2, ${secondName}`]);
   expect(confirmCard().disabled).toBe(true);
 
-  dom.advance(1);
+  dom.advance(401);
   const nextBoard = board(6);
   if (outcome === "match") nextBoard[0] = nextBoard[1] = { state: "empty" };
   show({ ...turnView, turn: { id: 5, step: 1, board: nextBoard } });

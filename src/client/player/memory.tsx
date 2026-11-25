@@ -1,7 +1,7 @@
 import { useContext, useState } from "preact/hooks";
 import type { PlayerMemoryView } from "../../shared/modes/memory.ts";
-import type { CardFlip } from "../shared/memory/card-flips.ts";
-import { useCardFlips, useSlideOff } from "../shared/memory/card-flips.ts";
+import type { CardMotionView } from "../shared/memory/card-flips.ts";
+import { memoryMotionStyle, useCardMotion } from "../shared/memory/card-flips.ts";
 import { memoryFacePosition, memoryFaceSize, memoryThemeArt } from "../shared/memory/themes.ts";
 import { ordinal, useCountdown } from "../shared/ui.tsx";
 import { PhoneResumeVersion } from "./after-answer-wait.ts";
@@ -71,22 +71,24 @@ function MemoryPhase({ view, send }: { view: PlayerMemoryView; send: Send }) {
   );
 }
 
-type CardMotion = CardFlip | "memory-slide-off";
-
 type TurnProps = { turn: NonNullable<PlayerMemoryView["turn"]>; boardSize: number; remainingMs: number; send: Send };
 
 /** Outlives the phase change inside a turn, so a card confirmed second still flips up when the result shows. */
 function MemoryTurn(props: TurnProps) {
   const { turn, remainingMs } = props;
   const resumeVersion = useContext(PhoneResumeVersion);
-  const flipBack = turn.step !== null || turn.matched === false;
-  const flipOf = useCardFlips(turn.board, flipBack ? remainingMs : null, `${turn.step}:${turn.id}:${resumeVersion}`);
-  const sliding = useSlideOff(turn.matched === true, `${turn.step}:${turn.id}:${resumeVersion}`);
-  const cardOf = (position: number): CardMotion => (sliding && turn.board[position]?.state === "up" ? "memory-slide-off" : flipOf(position));
-  return <MemoryPicks key={`${turn.step === null ? "feedback" : "turn"}:${turn.id}`} {...props} flipOf={cardOf} />;
+  const matched = turn.step === null && turn.matched;
+  const flipBack = turn.step !== null || !turn.matched;
+  const motionOf = useCardMotion({
+    board: turn.board,
+    flipBackInMs: flipBack ? remainingMs : null,
+    matched,
+    resetKey: `${turn.step}:${turn.id}:${resumeVersion}`,
+  });
+  return <MemoryPicks key={`${turn.step === null ? "feedback" : "turn"}:${turn.id}`} {...props} motionOf={motionOf} />;
 }
 
-function MemoryPicks({ turn, boardSize, remainingMs, send, flipOf }: TurnProps & { flipOf: (position: number) => CardMotion }) {
+function MemoryPicks({ turn, boardSize, remainingMs, send, motionOf }: TurnProps & { motionOf: (position: number) => CardMotionView }) {
   const [pending, setPending] = useState<{ step: 1 | 2; position: number } | null>(null);
   const { step } = turn;
   const choosing = step !== null;
@@ -114,24 +116,28 @@ function MemoryPicks({ turn, boardSize, remainingMs, send, flipOf }: TurnProps &
       </div>
       <div class="memory-board-fit">
         <div class="memory-board-viewport" ref={choosing ? box : undefined} {...(choosing ? pointerHandlers : undefined)}>
-          <div class="memory-board-pan" ref={choosing ? inner : undefined} style={{ gridTemplateColumns: `repeat(${boardSize}, minmax(0, 1fr))` }}>
+          <div
+            class="memory-board-pan"
+            ref={choosing ? inner : undefined}
+            style={{ gridTemplateColumns: `repeat(${boardSize}, minmax(0, 1fr))`, ...memoryMotionStyle }}
+          >
             {turn.board.map((card, position) => {
               if (card.state === "empty") return <div key={position} aria-hidden="true" />;
               if (card.state === "up") {
-                const flip = flipOf(position);
+                const { motion, showsFace, hasFlipBack } = motionOf(position);
                 return (
                   <div
                     key={position}
-                    class={flip ? `memory-phone-face ${flip}` : "memory-phone-face"}
+                    class={motion ? `memory-phone-face ${motion}` : "memory-phone-face"}
                     role="img"
-                    aria-label={`Card ${position + 1}, ${flip === "memory-flip-down" ? "face down" : (names[card.face] ?? "revealed")}`}
+                    aria-label={`Card ${position + 1}, ${showsFace ? (names[card.face] ?? "revealed") : "face down"}`}
                     style={{
                       backgroundImage: `url("${image}")`,
                       backgroundSize: memoryFaceSize,
                       backgroundPosition: memoryFacePosition(card.face),
                     }}
                   >
-                    {flip && flip !== "memory-slide-off" && <span class={`memory-flip-back ${memoryThemeArt.cardBackClass}`} aria-hidden="true" />}
+                    {hasFlipBack && <span class={`memory-flip-back ${memoryThemeArt.cardBackClass}`} aria-hidden="true" />}
                   </div>
                 );
               }

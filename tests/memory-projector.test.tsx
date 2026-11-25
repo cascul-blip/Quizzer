@@ -91,3 +91,11 @@ test("Memory board on the projector flips a lone confirmed card back face down w
   expect(card(3).classList.contains("memory-flip-down")).toBe(true);
   expect(card(3).getAttribute("aria-label")).toBe("Card 4, face down");
 });
+
+test("Memory board on the projector reschedules the flip back when the time left changes within a turn", () => {
+  show({ ...turnView, board: board({ 3: 7 }), phaseRemainingMs: 20_000 });
+  dom.advance(1_000);
+  show({ ...turnView, board: board({ 3: 7 }), phaseRemainingMs: 2_000 });
+  dom.advance(1_700);
+  expect(card(3).classList.contains("memory-flip-down")).toBe(true);
+});
