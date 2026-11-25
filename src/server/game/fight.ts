@@ -1,7 +1,6 @@
 import type { AnswerValue } from "../../shared/answer-match.ts";
 import { answerOf } from "../../shared/answer-match.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
-import { randomAvatar } from "../../shared/avatars.ts";
 import { gingerbreadTerrain } from "../../shared/fight-ground.ts";
 import type { HillHeight, ShotImpact } from "../../shared/fight-physics.ts";
 import { carve, HILL_HEIGHTS, launchVector, makeTerrain, simulate } from "../../shared/fight-physics.ts";
@@ -22,20 +21,18 @@ import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import type { SeasonTheme } from "../../shared/themed-modes.ts";
 import { modeTheme, THEMED_MODES } from "../../shared/themed-modes.ts";
 import type { Clock } from "./common.ts";
-import { GameError, realClock, teamInfo } from "./common.ts";
+import { GameError, teamInfo } from "./common.ts";
 import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
-import { GameFinish, PhaseTimer } from "./phase-timer.ts";
 import type { Podium } from "./podium.ts";
 import { buildPodium, emptyPodium } from "./podium.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
-import { Roster } from "./roster.ts";
 import { fewest, most } from "./standings.ts";
 import type { AnswerTotals } from "./stream.ts";
-import { QuestionStream } from "./stream.ts";
+import { StreamedSession } from "./streamed-session.ts";
 
 export { FEEDBACK_MS } from "./stream.ts";
 
@@ -106,7 +103,6 @@ export class FightGame {
   readonly teams: FightTeam[];
   readonly hill: HillHeight;
   readonly theme: SeasonTheme;
-  readonly roster = new Roster<FightPlayer>();
   terrain: number[];
   outcome: FightOutcome | null = null;
   private shots: Shot[] = [];
@@ -115,14 +111,7 @@ export class FightGame {
   private eventSeq = 0;
   private repairSeq = 0;
 
-  private readonly clock: Clock;
-  private readonly rng: () => number;
-  private readonly stream: QuestionStream<FightPlayer>;
-  private readonly phases: PhaseTimer<FightPhase>;
-  private readonly onChange: () => void;
-  private readonly onActivity: (playerId: string) => void;
-  private readonly onFinish: (game: FightGame) => void;
-  private readonly gameFinish: GameFinish<FightGame["phase"], Podium<FightTeam, FightPlayer, FightAwardKey>>;
+  private readonly session: StreamedSession<FightPlayer, FightPhase, Podium<FightTeam, FightPlayer, FightAwardKey>>;
 
   constructor(quiz: Quiz, settings: FightGameSettings, opts: FightOptions = {}) {
     if (quiz.questions.length === 0) throw new GameError("This quiz has no questions");
@@ -131,51 +120,72 @@ export class FightGame {
     this.theme = modeTheme("fight", settings.theme);
     this.questions = quiz.questions;
     this.teams = Array.from({ length: TEAM_COUNT }, (_, i) => ({ ...teamInfo(i), damage: 0 }));
-    this.clock = opts.clock ?? realClock;
-    this.phases = new PhaseTimer(this.clock, "countdown");
-    this.rng = opts.rng ?? Math.random;
-    const heights = keysOf(HILL_HEIGHTS);
-    this.hill = settings.hill === "random" ? heights[Math.min(heights.length - 1, Math.floor(this.rng() * heights.length))]! : settings.hill;
-    this.terrain = this.theme === "christmas" ? gingerbreadTerrain(this.hill) : makeTerrain(this.hill, this.rng);
-    this.stream = new QuestionStream(quiz.questions, settings.shuffleAnswers, this.rng, this.clock, {
-      penalizeGuessing: settings.protect,
+    this.session = new StreamedSession({
+      questions: quiz.questions,
+      shuffleAnswers: settings.shuffleAnswers,
+      protect: settings.protect,
+      clock: opts.clock,
+      rng: opts.rng,
       canAnswer: (p) => this.phase === "playing" && p.state === "question",
-    });
-    this.onChange = opts.onChange ?? (() => {});
-    this.onActivity = opts.onActivity ?? (() => this.onChange());
-    this.onFinish = opts.onFinish ?? (() => {});
-    this.gameFinish = new GameFinish(this.phases, "podium", {
       cleanup: () => {
         this.outcome ??= this.judge();
       },
       podium: { build: () => this.buildPodium((this.outcome ??= this.judge())), empty: () => emptyPodium(fightShared.awards) },
-      onFinish: () => this.onFinish(this),
-      onChange: () => this.onChange(),
+      hub: { onChange: opts.onChange, onActivity: opts.onActivity, onFinish: () => opts.onFinish?.(this) },
     });
+    const heights = keysOf(HILL_HEIGHTS);
+    this.hill = settings.hill === "random" ? heights[Math.min(heights.length - 1, Math.floor(this.rng() * heights.length))]! : settings.hill;
+    this.terrain = this.theme === "christmas" ? gingerbreadTerrain(this.hill) : makeTerrain(this.hill, this.rng);
   }
 
-  choices!: LobbyChoices;
+  private get clock(): Clock {
+    return this.session.clock;
+  }
+
+  private get rng(): () => number {
+    return this.session.rng;
+  }
+
+  private get stream() {
+    return this.session.stream;
+  }
+
+  private get phases() {
+    return this.session.phases;
+  }
+
+  private onChange(): void {
+    this.session.changed();
+  }
+
+  private onActivity(playerId: string): void {
+    this.session.activity(playerId);
+  }
+
+  /** The lobby's choices, handed back when the game closes ("Play again"). */
+  get choices(): LobbyChoices {
+    return this.session.choices;
+  }
 
   /** Take over a lobby's players (same ids and tokens), split Red/Blue as shown in the lobby. */
   static fromLobby(lobby: LobbyFacts<"fight">, opts: FightOptions = {}): FightGame {
     const game = new FightGame(lobby.quiz, { ...lobby.settings, shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
     const players = [...lobby.players];
     const teams = lobby.teams;
-    game.choices = lobby.choices;
-    game.roster.adoptFrom(players, (base) => game.newPlayer(base, teams.get(base.id) ?? 0));
+    game.session.adoptLobby({ players, choices: lobby.choices }, (base) => game.newPlayer(base, teams.get(base.id) ?? 0));
     return game;
   }
 
   get phase(): FightPhase {
-    return this.phases.phase;
+    return this.session.phase;
   }
 
   get players(): Map<string, FightPlayer> {
-    return this.roster.players;
+    return this.session.players;
   }
 
-  private newPlayer(base: BasePlayer, team: number): FightPlayer {
-    return this.stream.registerPlayer({
+  private newPlayer(base: BasePlayer, team: number): Omit<FightPlayer, keyof AnswerTotals> {
+    return {
       ...base,
       team,
       towardDecision: 0,
@@ -188,17 +198,11 @@ export class FightGame {
       shotId: null,
       repairEndsAt: 0,
       lastRepair: null,
-    });
+    };
   }
 
-  private started = false;
-
   start(): void {
-    if (this.started) throw new GameError("The game has already started");
-    if (this.players.size === 0) throw new GameError("Wait for at least one player to join");
-    this.started = true;
-    this.phases.set("countdown", COUNTDOWN_MS, () => this.beginPlaying());
-    this.onChange();
+    this.session.start(COUNTDOWN_MS, () => this.beginPlaying());
   }
 
   private beginPlaying(): void {
@@ -210,19 +214,19 @@ export class FightGame {
 
   /** Host ends the game: the least damaged tower wins. */
   end(): void {
-    if (this.gameFinish.finished) return;
+    if (this.session.finished) return;
     this.outcome ??= this.judge();
-    this.gameFinish.finish();
+    this.session.end();
   }
 
   dispose(): void {
-    this.phases.dispose();
+    this.session.dispose();
   }
 
   private collapse(destroyed: number): void {
     this.outcome = { winner: this.teams.find((t) => t.index !== destroyed)!.index, reason: "destroyed" };
     for (const p of this.players.values()) this.clearPlayerTimer(p);
-    this.phases.set("collapse", COLLAPSE_MS, () => this.gameFinish.finish());
+    this.phases.set("collapse", COLLAPSE_MS, () => this.session.end());
     this.onChange();
   }
 
@@ -245,11 +249,7 @@ export class FightGame {
   }
 
   join(rawNickname: unknown, avatar?: AvatarChoice | null): FightPlayer {
-    if (this.phase === "podium") throw new GameError("This game has finished");
-    const player = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), (base) => this.newPlayer(base, this.smallestTeam()));
-    this.stream.openOnJoin(player, this.phase === "playing");
-    this.onChange();
-    return player;
+    return this.session.join(rawNickname, avatar, (base) => this.newPlayer(base, this.smallestTeam()));
   }
 
   private smallestTeam(): number {
@@ -259,19 +259,16 @@ export class FightGame {
   }
 
   byToken(token: unknown): FightPlayer | null {
-    return this.roster.byToken(token);
+    return this.session.byToken(token);
   }
 
   setConnected(playerId: string, connected: boolean): void {
-    if (this.roster.setConnected(playerId, connected)) this.onChange();
+    this.session.setConnected(playerId, connected);
   }
 
   kick(playerId: string): FightPlayer | null {
-    const p = this.roster.remove(playerId);
-    if (p) {
-      this.clearPlayerTimer(p);
-      this.onChange();
-    }
+    const p = this.session.kick(playerId);
+    if (p) this.clearPlayerTimer(p);
     return p;
   }
 
@@ -292,10 +289,9 @@ export class FightGame {
   }
 
   answer(playerId: string, seq: number, option: AnswerValue): boolean {
-    const p = this.players.get(playerId);
-    if (!p) return false;
-    const correct = this.stream.answer(p, seq, option);
-    if (correct === null) return false;
+    const answered = this.session.answer(playerId, seq, option);
+    if (!answered) return false;
+    const { player: p, correct } = answered;
     if (correct && ++p.towardDecision >= CORRECT_PER_DECISION) {
       p.towardDecision = 0;
       if (this.teams[p.team]!.damage > 0) {
@@ -438,7 +434,7 @@ export class FightGame {
 
   /** The finished game's Podium (GLOSSARY.md), worked out once in Game finish. */
   get podium(): Podium<FightTeam, FightPlayer, FightAwardKey> {
-    return this.gameFinish.podium;
+    return this.session.podium;
   }
 
   private shotView(s: Shot, now = this.clock.now()): FightShot {
