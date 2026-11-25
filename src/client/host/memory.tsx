@@ -39,8 +39,7 @@ export const memoryLobby: LobbyModeEntry<"memory"> = {
 };
 
 export function memoryCue(view: MemoryView): MusicCue {
-  if (view.phase === "podium") return { track: themedTrack("memory", undefined, "results") };
-  return { track: themedTrack("memory", undefined, "play"), intensity: view.phase === "turn" ? 0.7 : 0.4 };
+  return { track: themedTrack("memory", undefined, view.phase === "podium" ? "results" : "play") };
 }
 
 export function MemoryStage({ view, send }: { view: MemoryView; send: Send }) {

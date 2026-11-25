@@ -27,3 +27,7 @@ During questions, phones use the standard paced question and answer view. The ho
 During the reveal phase, phones prompt spectators to look at the projector. The active player's phone opens each turn with the full board in view, showing card backs and empty spaces. The player can drag and pinch to zoom as in Land Grab. They start with no selection, tap another card to change the pending selection, or tap the same card again to clear it. Confirm card reveals the selected card. The first face stays visible while they select the second card. The phone fits the full board in view during the result delay and disables pan and zoom so both confirmed faces stay visible.
 
 The projector shows whose turn it is above the board and each player's matched-pair score to the right. The Christmas theme groups the wooden table, winter card back, and 50 distinct Christmas card face images together. Add a theme picker when another theme is available.
+
+## Projector music
+
+“We Three Kings” plays on glockenspiel and soft piano during the Question phase and Reveal phase. One verse and refrain loop at a fixed tempo without restarting when the phase changes. The lobby and podium keep their shared Christmas tracks, and the question countdown ticks are unchanged.

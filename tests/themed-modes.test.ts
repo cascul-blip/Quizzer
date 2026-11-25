@@ -36,7 +36,7 @@ const EXPECTED: Record<ThemedMode, Partial<Record<SeasonTheme, Record<string, st
     christmas: { lobby: "tower-christmas-lobby", play: "tower-christmas-play", results: "tower-christmas-results" },
   },
   memory: {
-    christmas: { lobby: "tower-christmas-lobby", play: "tower-christmas-play", results: "tower-christmas-results" },
+    christmas: { lobby: "tower-christmas-lobby", play: "memory-christmas-play", results: "tower-christmas-results" },
   },
   gift: {
     christmas: { lobby: "tower-christmas-lobby", play: "tower-christmas-play", results: "tower-christmas-results" },

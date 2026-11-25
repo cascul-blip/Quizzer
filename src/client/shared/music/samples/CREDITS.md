@@ -125,3 +125,11 @@ Lobby stays at 60 BPM; podium is a gentle 68 BPM arrangement.
 
 All instrument recordings used by these cues come from the CC0 VSCO 2 CE / VCSL
 libraries listed above. Classic Land Grab keeps its original soundtrack.
+
+## Memory Game: We Three Kings
+
+`memory-christmas-play` uses John Henry Hopkins Jr.'s public-domain **We Three Kings**.
+The verse and chorus melody comes from the [1863 score reproduced by Hymnology Archive](https://www.hymnologyarchive.com/we-three-kings).
+The piano accompaniment is written for this game. Glockenspiel and piano use the
+existing CC0 VCSL samples, with the standard synthesized fallback. No third-party
+song recording is included.

@@ -2195,6 +2195,65 @@ const christmasRacerResults: Track = {
   ],
 };
 
+// Hopkins's original 3/8 melody: the Gaspard verse and the chorus soprano, without the interlude.
+const WE_THREE_KINGS_OPENING = [seq(["B4", 4], ["A4", 2]), seq(["G4", 4], ["E4", 2]), seq(["F#4", 2], ["G4", 2], ["F#4", 2]), seq(["E4", 4], [".", 2])];
+const WE_THREE_KINGS_VERSE = [
+  ...WE_THREE_KINGS_OPENING,
+  ...WE_THREE_KINGS_OPENING,
+  seq(["G4", 4], ["G4", 2]),
+  seq(["A4", 4], ["A4", 2]),
+  seq(["B4", 4], ["B4", 2]),
+  seq(["D5", 2], ["C5", 2], ["B4", 2]),
+  seq(["A4", 2], ["B4", 2], ["A4", 2]),
+  seq(["G4", 4], ["F#4", 2]),
+  seq(["E4", 4], [".", 2]),
+];
+const WE_THREE_KINGS_REFRAIN = [
+  seq(["F#4", 4], ["A4", 2]),
+  seq(["G4", 4], ["G4", 2]),
+  seq(["G4", 4], ["D4", 2]),
+  seq(["G4", 4], ["E4", 2]),
+  seq(["G4", 4], [".", 2]),
+  seq(["G4", 4], ["G4", 2]),
+  seq(["G4", 4], ["D4", 2]),
+  seq(["G4", 4], ["E4", 2]),
+  seq(["G4", 4], [".", 2]),
+  seq(["G4", 4], ["G4", 2]),
+  seq(["A4", 4], ["B4", 2]),
+  seq(["C5", 4], ["B4", 2]),
+  seq(["A4", 4], ["B4", 2]),
+  seq(["G4", 4], ["G4", 2]),
+  seq(["G4", 4], ["D4", 2]),
+  seq(["G4", 4], ["E4", 2]),
+  seq(["G4", 6]),
+];
+const WE_THREE_KINGS_MELODY = [...WE_THREE_KINGS_VERSE, ...WE_THREE_KINGS_REFRAIN];
+const WE_THREE_KINGS_VERSE_HARMONY = ["Em", "Em", "B7", "Em", "Em", "Em", "B7", "Em", "G", "Am", "Em", "G", "Am", "B7", "Em"];
+const WE_THREE_KINGS_REFRAIN_HARMONY = ["D7", "G", "G", "C", "G", "G", "G", "C", "G", "G", "D7", "C", "D7", "G", "G", "C", "G"];
+const WE_THREE_KINGS_PIANO: Record<string, string> = {
+  Em: "E3+B3+G4",
+  B7: "B2+F#3+D#4",
+  G: "G2+D3+B3",
+  Am: "A2+E3+C4",
+  D7: "D3+C4+F#4",
+  C: "C3+G3+E4",
+};
+const christmasMemoryPlay: Track = {
+  id: "memory-christmas-play",
+  bpm: 78,
+  stepsPerBar: 6,
+  bars: WE_THREE_KINGS_MELODY.length,
+  reverb: 0.25,
+  layers: [
+    { inst: "bell", bars: WE_THREE_KINGS_MELODY, vol: 0.62 },
+    {
+      inst: "piano",
+      bars: [...WE_THREE_KINGS_VERSE_HARMONY, ...WE_THREE_KINGS_REFRAIN_HARMONY].map((key) => seq([WE_THREE_KINGS_PIANO[key]!, 4], [".", 2])),
+      vol: 0.25,
+    },
+  ],
+};
+
 type RobotMusicId = Extract<MusicTrackId, `robot-${string}`>;
 
 /** Keep custom file IDs stable while the seasonal skin changes the built-in arrangements. */
@@ -2216,6 +2275,7 @@ export const TRACKS: Record<MusicTrackId, Track> = {
   "tower-christmas-play": christmasTowerPlay,
   "tower-christmas-medley": christmasTowerMedley,
   "tower-christmas-results": christmasTowerResults,
+  "memory-christmas-play": christmasMemoryPlay,
   "submarine-lobby": submarineLobby,
   "submarine-chase": submarineChase,
   "submarine-dive": submarineDive,
