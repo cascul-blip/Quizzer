@@ -36,6 +36,10 @@ _Avoid_: results table, results CSV (the CSV is the file written from it)
 The places of a finished (or running) game: entries sorted by the game mode's comparison order, such as Tallest Tower's floors then blocks placed, with competition ranks (1, 2, 2, 4) where entries equal on every key share a place. One module (`src/server/game/standings.ts`) computes them; the podium, the phone's rank and the results sheet's Rank column all read from it. Showdown ranks by points, then correct answers; players equal on both share a place, listed higher on the ladder first.
 _Avoid_: leaderboard (Classic's between-question screen), ranking loop
 
+**Podium**:
+The finished game's places, awards and each player's result, worked out once when the game finishes and unchanged after. A game mode gives it its entries (players, or teams for Tallest Tower and Land Grab), its Standings order, a way to find a player's entry, and its awards. Each award is a label (declared in the mode's shared file, so the projector reads the same text) and a value: the highest value wins, everyone tied on it shares the award, and nobody gets it when the highest value is 0. The podium screen, the phone's result and the results sheet all read from it.
+_Avoid_: awards helper, results summary
+
 **Battlefield**:
 Kingdom Siege's lanes and squares, with the defenders players place on them, the monsters marching down them, and the castle's hearts. The battlefield decides who hits whom and what may stand where; the projector and the phone's lane map both show it.
 _Avoid_: board, map (the phone's lane map is only a view of it)
