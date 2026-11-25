@@ -12,8 +12,8 @@ import {
   CUP_MIN_CUPS,
   CUP_ROLL_MS,
   CUP_SIP_MS,
-  CUP_UNLUCKIEST,
   CUP_VERDICT_MS,
+  cupAwardLabels,
   cupQuizMs,
   cupShared,
 } from "../../shared/modes/cup.ts";
@@ -39,11 +39,6 @@ import { QuestionStream } from "./stream.ts";
 export { FEEDBACK_MS } from "./stream.ts";
 
 export const COUNTDOWN_MS = 3000;
-const CUP_AWARD_VALUES: Record<CupAwardKey, (p: CupPlayer) => number> = {
-  mostCorrect: (p) => p.correct,
-  mostDrinksSurvived: (p) => p.drinksSurvived,
-  mostSafeRounds: (p) => p.safeRounds,
-};
 
 export interface CupPlayer extends BasePlayer, AnswerTotals {
   cups: number;
@@ -58,7 +53,7 @@ export interface CupPlayer extends BasePlayer, AnswerTotals {
   pick: number | null;
   drinksSurvived: number;
   safeRounds: number;
-  /** Cups in front of them when they drank the poison (for "Unluckiest"). */
+  /** Cups in front of them when they drank the poison (for earliestFirstCupOut). */
   poisonedFrom: number | null;
 }
 
@@ -146,7 +141,7 @@ export class CupGame {
         this.drinkers = [];
         this.reveal = null;
       },
-      podium: { build: () => this.buildPodium(), empty: () => emptyPodium(cupShared.awards) },
+      podium: { build: () => this.buildPodium(), empty: () => emptyPodium(cupAwardLabels(this.theme)) },
       onFinish: () => this.onFinish(this),
       onChange: () => this.onChange(),
     });
@@ -406,19 +401,24 @@ export class CupGame {
     return true;
   }
 
-  private finalUnluckiest: CupAwards["unluckiest"] = null;
-
   /** Survivors first, then the latest poisoned; poisoned in the same round share a place. Ordered by correct answers within a place. */
   private buildPodium(): Podium<CupPlayer, CupPlayer, CupAwardKey> {
     const players = [...this.players.values()];
-    this.finalUnluckiest = this.unluckiest();
     return buildPodium({
       entries: players,
       order: [most((p) => p.outRound ?? Infinity)],
       then: [most((p) => p.correct)],
       players,
       entryOf: (p) => p,
-      awards: { labels: cupShared.awards, values: CUP_AWARD_VALUES },
+      awards: {
+        labels: cupAwardLabels(this.theme),
+        values: {
+          mostCorrect: (p) => p.correct,
+          mostDrinksSurvived: (p) => p.drinksSurvived,
+          mostSafeRounds: (p) => p.safeRounds,
+          earliestFirstCupOut: (p) => (this.poisonedByFirstCup(p) ? this.roundsFrom(p.outRound!) : 0),
+        },
+      },
     });
   }
 
@@ -439,18 +439,21 @@ export class CupGame {
     }));
   }
 
-  /** Unluckiest is the earliest round, not a Podium award (highest value), so the mode works it out beside the Podium. */
-  private unluckiest(): CupAwards["unluckiest"] {
-    const players = [...this.players.values()];
-    // With a single cup, every drink is certain death.
-    const isLuckless = this.startCups === 1;
-    const unlucky = !isLuckless ? players.filter((p) => p.poisonedFrom === this.startCups && p.outRound !== null) : [];
-    const first = Math.min(...unlucky.map((p) => p.outRound!));
-    return unlucky.length > 0 ? { value: first, nicknames: unlucky.filter((p) => p.outRound === first).map((p) => p.nickname) } : null;
+  /** Poisoned by the first cup they ever drank (a 1-in-N chance, N = the starting cups); with a single cup every drink is certain death, so not by luck. */
+  private poisonedByFirstCup(p: CupPlayer): boolean {
+    return this.startCups > 1 && p.poisonedFrom === this.startCups && p.outRound !== null;
   }
 
+  /** Rounds played from `round` to the last, counting both: higher for an earlier round. */
+  private roundsFrom(round: number): number {
+    return this.round + 1 - round;
+  }
+
+  /** The Podium's awards, with earliestFirstCupOut's value turned back into the round the projector shows. */
   private awards(): CupAwards {
-    return { ...this.podium.awards, unluckiest: this.finalUnluckiest };
+    const a = this.podium.awards;
+    const out = a.earliestFirstCupOut;
+    return { ...a, earliestFirstCupOut: out && { ...out, value: this.roundsFrom(out.value) } };
   }
 
   private revealView(): CupRevealView | null {
@@ -510,13 +513,12 @@ export class CupGame {
     let result: PlayerCupView["result"] = null;
     if (this.phase === "podium") {
       const mine = this.podium.result(p.id);
-      const unlucky = this.finalUnluckiest?.nicknames.includes(p.nickname) ? [CUP_UNLUCKIEST[this.theme === "christmas" ? "christmas" : "other"]] : [];
       result = mine && {
         rank: mine.place,
         playerCount: mine.playerCount,
         won: mine.place === 1,
         outRound: p.outRound,
-        awards: [...mine.awards, ...unlucky],
+        awards: mine.awards,
       };
     }
     const reveal = this.revealView();

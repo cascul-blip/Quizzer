@@ -1,10 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import type { CupGame } from "../src/server/game/cup.ts";
 import { COUNTDOWN_MS } from "../src/server/game/cup.ts";
-import { CUP_ROLL_MS } from "../src/shared/modes/cup.ts";
+import { CUP_DEFAULT_CUPS, CUP_ROLL_MS, cupAwardLabels } from "../src/shared/modes/cup.ts";
 import { podiumHub } from "./podium-hub.ts";
 
 const { ctx, running, finish, answerRight } = podiumHub();
+const labels = cupAwardLabels();
 
 describe("Cup of Death podium", () => {
   test("the podium screen, the phone and the results sheet agree on each place and award, and stay unchanged after the game finishes", async () => {
@@ -13,6 +14,7 @@ describe("Cup of Death podium", () => {
       "cup",
       (id) => {
         player(id("Ivy")).outRound = 1;
+        player(id("Ivy")).poisonedFrom = CUP_DEFAULT_CUPS;
         ctx.clock.advance(COUNTDOWN_MS + CUP_ROLL_MS);
         answerRight("cup", "Noel", id("Noel"), 1);
         player(id("Holly")).drinksSurvived = 2;
@@ -34,14 +36,15 @@ describe("Cup of Death podium", () => {
       mostCorrect: { value: 1, nicknames: ["Noel"] },
       mostDrinksSurvived: { value: 2, nicknames: ["Holly"] },
       mostSafeRounds: { value: 1, nicknames: ["Holly", "Ivy"] },
+      earliestFirstCupOut: { value: 1, nicknames: ["Ivy"] },
     });
     const result = (n: "Noel" | "Holly" | "Ivy") => {
       const v = phone(n);
       return v?.kind === "cup" ? v.result : null;
     };
-    expect(result("Noel")).toEqual({ rank: 1, playerCount: 3, won: true, outRound: null, awards: ["Most correct answers"] });
-    expect(result("Holly")).toMatchObject({ rank: 1, awards: ["Luckiest drinker", "Never thirsty"] });
-    expect(result("Ivy")).toMatchObject({ rank: 3, won: false, awards: ["Never thirsty"] });
+    expect(result("Noel")).toEqual({ rank: 1, playerCount: 3, won: true, outRound: null, awards: [labels.mostCorrect] });
+    expect(result("Holly")).toMatchObject({ rank: 1, awards: [labels.mostDrinksSurvived, labels.mostSafeRounds] });
+    expect(result("Ivy")).toMatchObject({ rank: 3, won: false, awards: [labels.mostSafeRounds, labels.earliestFirstCupOut] });
     expect(sheet.map((r) => [r.Nickname, r.Rank])).toEqual([
       ["Noel", 1],
       ["Holly", 1],
