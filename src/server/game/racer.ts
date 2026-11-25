@@ -137,7 +137,6 @@ export class RacerGame {
     });
   }
 
-  /** Take over a lobby's players (same ids and tokens), its shuffle choices and its pacing. */
   private setup!: LobbyChoices;
 
   /** The lobby's choices with the pacing as the host left it; the next lobby opens with them. */
@@ -145,6 +144,7 @@ export class RacerGame {
     return { ...this.setup, pacing: this.pacing };
   }
 
+  /** Take over a lobby's players (same ids and tokens), its shuffle choices and its pacing. */
   static fromLobby(lobby: LobbyFacts<"racer">, opts: RacerOptions = {}): RacerGame {
     const game = new RacerGame(lobby.quiz, { shuffle: lobby.shuffle, pacing: lobby.pacing, theme: lobby.settings.theme }, opts);
     game.setup = lobby.choices;

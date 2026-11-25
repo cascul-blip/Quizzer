@@ -142,9 +142,9 @@ export class FightGame {
     });
   }
 
-  /** Take over a lobby's players (same ids and tokens), split Red/Blue as shown in the lobby. */
   choices!: LobbyChoices;
 
+  /** Take over a lobby's players (same ids and tokens), split Red/Blue as shown in the lobby. */
   static fromLobby(lobby: LobbyFacts<"fight">, opts: FightOptions = {}): FightGame {
     const game = new FightGame(lobby.quiz, { ...lobby.settings, shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
     const players = [...lobby.players];

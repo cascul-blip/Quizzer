@@ -258,7 +258,7 @@ export function Duelist({
   );
 }
 
-/** Calls back with the frame to show, 12 fps, from mount or when `run` turns true. */
+/** Calls back with the frame to show, at `fps`, from mount or when `run` turns true. */
 function useFrames(frames: number, fps: number, run: boolean, loop: boolean, onEnd?: () => void, key?: unknown): number {
   const [frame, setFrame] = useState(0);
   const endRef = useRef(onEnd);

@@ -161,7 +161,6 @@ export class DuelGame {
     });
   }
 
-  /** Take over a lobby's players (same ids and tokens), its rounds, shuffle choices and pacing. */
   private setup!: LobbyChoices;
 
   /** The lobby's choices with the pacing as the host left it; the next lobby opens with them. */
@@ -169,6 +168,7 @@ export class DuelGame {
     return { ...this.setup, pacing: this.pacing };
   }
 
+  /** Take over a lobby's players (same ids and tokens), its rounds, shuffle choices and pacing. */
   static fromLobby(lobby: LobbyFacts<"duel">, opts: DuelOptions = {}): DuelGame {
     const game = new DuelGame(lobby.quiz, { shuffle: lobby.shuffle, rounds: lobby.settings.rounds, theme: lobby.settings.theme, pacing: lobby.pacing }, opts);
     game.setup = lobby.choices;
