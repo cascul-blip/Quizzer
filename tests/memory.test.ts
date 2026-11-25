@@ -291,6 +291,23 @@ describe("Memory Game", () => {
     expect(firstTurns).toEqual(["Noel", "Holly", "Holly", "Noel", "Noel"]);
   });
 
+  test("breaks equal averages and equal prior first turns by lobby join order", async () => {
+    const {
+      host,
+      phones: [holly, noel],
+    } = await launch(["Holly", "Noel"]);
+
+    const index = openQuestion(host);
+    clock.advance(100);
+    submit(noel!, index);
+    submit(holly!, index);
+    host.sendMsg({ type: "host.next" });
+    playQuestion(host);
+    playQuestion(host);
+
+    expect(projector().turn?.nickname).toBe("Holly");
+  });
+
   test("spends one chip for each pair, shows feedback at each deadline and gives everyone with chips one turn per pass", async () => {
     const {
       host,
@@ -329,7 +346,7 @@ describe("Memory Game", () => {
     await Promise.resolve();
     expect(noel!.view).toMatchObject({
       phase: "feedback",
-      turn: { id: firstTurnId, stage: "result", board: projector().board },
+      turn: { id: firstTurnId, stage: "feedback", board: projector().board },
       phaseRemainingMs: 2_000,
     });
     const mismatchBoard = projector().board;
@@ -356,7 +373,7 @@ describe("Memory Game", () => {
     ]);
     await Promise.resolve();
     const matchBoard = projector().board;
-    expect(holly!.view).toMatchObject({ phase: "feedback", turn: { stage: "result", matched: true, board: matchBoard }, phaseRemainingMs: 1_400 });
+    expect(holly!.view).toMatchObject({ phase: "feedback", turn: { stage: "feedback", matched: true, board: matchBoard }, phaseRemainingMs: 1_400 });
     clock.advance(1_399);
     expect(facesUp()).toHaveLength(2);
     expect(holly!.view).toMatchObject({ turn: { board: matchBoard } });
@@ -474,7 +491,7 @@ describe("Memory Game", () => {
     reconnected.sendMsg({ type: "resume", token: token! });
     expect(reconnected.view).toMatchObject({
       phase: "feedback",
-      turn: { id: turnId, stage: "result" },
+      turn: { id: turnId, stage: "feedback" },
       phaseRemainingMs: 100,
     });
     expect(reconnected.view?.kind === "memory" && reconnected.view.turn?.board).toEqual(expectedBoard);

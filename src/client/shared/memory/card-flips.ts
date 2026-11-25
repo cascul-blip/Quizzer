@@ -11,7 +11,7 @@ export type CardMotionClass = typeof MEMORY_FLIP_UP | typeof MEMORY_FLIP_DOWN | 
 
 export interface CardMotionView {
   motion: CardMotionClass | null;
-  showsFace: boolean;
+  readsFaceUp: boolean;
   hasFlipBack: boolean;
 }
 
@@ -37,12 +37,12 @@ export function useCardMotion({
   resetKey: string;
 }): (position: number) => CardMotionView {
   const flipped = useFlippedUp(board);
-  const closing = useDelayElapsed(flipBackInMs === null ? null : Math.max(0, flipBackInMs - MEMORY_FLIP_MS), resetKey);
-  const sliding = useDelayElapsed(matched ? MEMORY_FLIP_MS + MEMORY_PAUSE_BEFORE_SLIDE_MS : null, resetKey);
+  const closing = useDelayElapsed(flipBackInMs === null ? "never" : Math.max(0, flipBackInMs - MEMORY_FLIP_MS), resetKey);
+  const sliding = useDelayElapsed(matched ? MEMORY_FLIP_MS + MEMORY_PAUSE_BEFORE_SLIDE_MS : "never", resetKey);
   return (position) => {
     const motion =
       board[position]?.state !== "up" ? null : sliding ? MEMORY_SLIDE_OFF : closing ? MEMORY_FLIP_DOWN : flipped.has(position) ? MEMORY_FLIP_UP : null;
-    return { motion, showsFace: motion !== MEMORY_FLIP_DOWN, hasFlipBack: motion === MEMORY_FLIP_UP || motion === MEMORY_FLIP_DOWN };
+    return { motion, readsFaceUp: motion !== MEMORY_FLIP_DOWN, hasFlipBack: motion === MEMORY_FLIP_UP || motion === MEMORY_FLIP_DOWN };
   };
 }
 
@@ -67,11 +67,11 @@ function useFlippedUp(board: MemoryCardView[]): Set<number> {
 }
 
 /** A new delay under the same key reschedules. */
-function useDelayElapsed(delayMs: number | null, resetKey: string): boolean {
-  const key = delayMs === null ? null : resetKey;
+function useDelayElapsed(delayMs: number | "never", resetKey: string): boolean {
+  const key = delayMs === "never" ? null : resetKey;
   const [fired, setFired] = useState<string | null>(null);
   useEffect(() => {
-    if (key === null || delayMs === null) return;
+    if (key === null || delayMs === "never") return;
     const timer = setTimeout(() => setFired(key), delayMs);
     return () => clearTimeout(timer);
   }, [key, delayMs]);

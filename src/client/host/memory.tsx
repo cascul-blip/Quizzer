@@ -109,13 +109,13 @@ function MemoryBoard({ view }: { view: MemoryView }) {
             }}
           >
             {view.board.map((card, position) => {
-              const { motion, showsFace, hasFlipBack } = motionOf(position);
+              const { motion, readsFaceUp, hasFlipBack } = motionOf(position);
               return (
                 <div
                   key={position}
                   class={`memory-card memory-${card.state}${card.state === "down" ? ` ${art.cardBackClass}` : ""}${motion ? ` ${motion}` : ""}`}
                   role="img"
-                  aria-label={`Card ${position + 1}, ${card.state === "up" && showsFace ? (names[card.face] ?? "revealed") : card.state === "empty" ? "empty" : "face down"}`}
+                  aria-label={`Card ${position + 1}, ${card.state === "up" && readsFaceUp ? (names[card.face] ?? "revealed") : card.state === "empty" ? "empty" : "face down"}`}
                   style={card.state === "up" ? { backgroundPosition: memoryFacePosition(card.face) } : undefined}
                 >
                   {hasFlipBack && <span class={`memory-flip-back ${art.cardBackClass}`} aria-hidden="true" />}

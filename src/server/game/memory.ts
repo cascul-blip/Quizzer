@@ -238,15 +238,14 @@ export class MemoryGame {
   private beginRevealPhase(): void {
     const end = this.paced.qIndex + 1;
     const order = [...this.players.values()]
-      .filter((player) => player.chips > 0)
-      .map((player) => {
+      .map((player, joinOrder): RevealCandidate => {
         const answers = player.answers.slice(end - MEMORY_QUESTIONS_PER_PHASE, end);
         const correctMs = answers.reduce((total, answer) => total + (answer?.correct ? answer.msSinceOpen : 0), 0);
-        return { player, averageMs: correctMs / player.chips };
+        return { player, averageMs: correctMs / player.chips, joinOrder };
       })
+      .filter(({ player }) => player.chips > 0)
       .sort(fastestAverageThenFewestStartsThenJoinOrder);
-    const starter = order[0];
-    if (starter) starter.player.revealStarts++;
+    order[0]!.player.revealStarts++;
     this.turnOrder = order.map(({ player }) => player.id);
     this.nextInOrder = 0;
     this.nextTurn();
@@ -270,9 +269,8 @@ export class MemoryGame {
   }
 
   private afterFeedback(): void {
-    const feedback = this.feedback;
+    const feedback = this.feedback!;
     this.feedback = null;
-    if (!feedback) return;
     if (feedback.matched) {
       for (const position of feedback.positions) this.board[position] = null;
       if (this.board.every((face) => face === null)) {
@@ -322,11 +320,6 @@ export class MemoryGame {
     };
   }
 
-  private podiumResult(id: string): PlayerMemoryView["result"] {
-    const ranked = this.ranked().find((p) => p.id === id);
-    return ranked ? { rank: ranked.rank, playerCount: this.players.size } : null;
-  }
-
   private boardView(): MemoryCardView[] {
     return this.board.map((face, position) => {
       if (face === null) return { state: "empty" };
@@ -357,12 +350,12 @@ export class MemoryGame {
             id: turn.id,
             board: this.boardView(),
             ...(this.phase === "feedback" && this.feedback
-              ? { stage: "result", matched: this.feedback.matched }
+              ? { stage: "feedback", matched: this.feedback.matched }
               : { stage: "picking", step: turn.first === null ? 1 : 2 }),
           }
         : null,
       phaseRemainingMs: this.paced.phases.remainingMs(),
-      result: this.phase === "podium" ? this.podiumResult(id) : null,
+      result: this.phase === "podium" ? { rank: this.ranked().find((p) => p.id === id)!.rank, playerCount: this.players.size } : null,
     };
   }
 }
@@ -370,10 +363,11 @@ export class MemoryGame {
 interface RevealCandidate {
   player: MemoryParticipant;
   averageMs: number;
+  joinOrder: number;
 }
 
 function fastestAverageThenFewestStartsThenJoinOrder(a: RevealCandidate, b: RevealCandidate): number {
-  return a.averageMs - b.averageMs || a.player.revealStarts - b.player.revealStarts;
+  return a.averageMs - b.averageMs || a.player.revealStarts - b.player.revealStarts || a.joinOrder - b.joinOrder;
 }
 
 function newPlayer(base: BasePlayer): MemoryParticipant {

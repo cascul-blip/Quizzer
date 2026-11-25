@@ -51,7 +51,7 @@ export const MEMORY_SLIDE_MS = 500;
 export const MEMORY_MATCH_RESULT_MS = MEMORY_FLIP_MS + MEMORY_PAUSE_BEFORE_SLIDE_MS + MEMORY_SLIDE_MS;
 export const MEMORY_URGENT_SECONDS_LEFT = 5;
 
-export type PlayerMemoryTurnStage = { stage: "picking"; step: 1 | 2 } | { stage: "result"; matched: boolean };
+export type PlayerMemoryTurnStage = { stage: "picking"; step: 1 | 2 } | { stage: "feedback"; matched: boolean };
 
 export interface PlayerMemoryView {
   kind: "memory";
