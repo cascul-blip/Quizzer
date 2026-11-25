@@ -1,5 +1,6 @@
 import { useContext, useState } from "preact/hooks";
-import type { PlayerMemoryView } from "../../shared/modes/memory.ts";
+import type { PlayerMemoryTurnStage, PlayerMemoryView } from "../../shared/modes/memory.ts";
+import { MEMORY_URGENT_SECONDS_LEFT } from "../../shared/modes/memory.ts";
 import type { CardMotionView } from "../shared/memory/card-flips.ts";
 import { memoryMotionStyle, useCardMotion } from "../shared/memory/card-flips.ts";
 import { memoryFacePosition, memoryFaceSize, memoryThemeArt } from "../shared/memory/themes.ts";
@@ -13,7 +14,7 @@ import "./memory.css";
 
 export function MemoryPlayer({ view, send }: { view: PlayerMemoryView; send: Send }) {
   return (
-    <div class={view.turn ? "game memory-turn" : "game"}>
+    <div class={view.turn ? "game memory-fits-screen" : "game"}>
       <header class="bar">
         <span class="name">{view.me.nickname}</span>
         <span class="score">
@@ -77,23 +78,26 @@ type TurnProps = { turn: NonNullable<PlayerMemoryView["turn"]>; boardSize: numbe
 function MemoryTurn(props: TurnProps) {
   const { turn, remainingMs } = props;
   const resumeVersion = useContext(PhoneResumeVersion);
-  const matched = turn.step === null && turn.matched;
-  const flipBack = turn.step !== null || !turn.matched;
+  const matched = turn.stage === "feedback" && turn.matched;
+  const flipBack = turn.stage === "picking" || !turn.matched;
   const motionOf = useCardMotion({
     board: turn.board,
     flipBackInMs: flipBack ? remainingMs : null,
     matched,
-    resetKey: `${turn.step}:${turn.id}:${resumeVersion}`,
+    resetKey: `${stageKey(turn)}:${turn.id}:${resumeVersion}`,
   });
-  return <MemoryPicks key={`${turn.step === null ? "feedback" : "turn"}:${turn.id}`} {...props} motionOf={motionOf} />;
+  return <MemoryPicks key={`${turn.stage}:${turn.id}`} {...props} motionOf={motionOf} />;
+}
+
+function stageKey(stage: PlayerMemoryTurnStage): string {
+  return stage.stage === "picking" ? `picking ${stage.step}` : stage.stage;
 }
 
 function MemoryPicks({ turn, boardSize, remainingMs, send, motionOf }: TurnProps & { motionOf: (position: number) => CardMotionView }) {
   const [pending, setPending] = useState<{ step: 1 | 2; position: number } | null>(null);
-  const { step } = turn;
-  const choosing = step !== null;
+  const choosing = turn.stage === "picking";
   const resumeVersion = useContext(PhoneResumeVersion);
-  const selected = pending?.step === step ? pending.position : null;
+  const selected = turn.stage === "picking" && pending?.step === turn.step ? pending.position : null;
   const { box, inner, pointerHandlers, isTap } = usePanZoom();
   const left = useCountdown(choosing ? remainingMs : 0, `turn:${turn.id}:${resumeVersion}`);
   const canSelect = choosing && left > 0;
@@ -104,13 +108,13 @@ function MemoryPicks({ turn, boardSize, remainingMs, send, motionOf }: TurnProps
       <div class="memory-board-controls">
         <div class="memory-timer-slot">
           {choosing && (
-            <div class={`timer ${left <= 5 ? "urgent" : ""}`} role="timer" aria-label="Turn time remaining">
+            <div class={`timer ${left <= MEMORY_URGENT_SECONDS_LEFT ? "urgent" : ""}`} role="timer" aria-label="Turn time remaining">
               {left}
             </div>
           )}
         </div>
         <div class="memory-heading">
-          <h1>{step === null ? "Cards revealed" : step === 1 ? "Pick the first card" : "Pick the second card"}</h1>
+          <h1>{turn.stage === "feedback" ? "Cards revealed" : turn.step === 1 ? "Pick the first card" : "Pick the second card"}</h1>
           <p class={choosing ? "muted" : "muted memory-hint-reserved"}>Pinch to zoom</p>
         </div>
       </div>
@@ -124,13 +128,13 @@ function MemoryPicks({ turn, boardSize, remainingMs, send, motionOf }: TurnProps
             {turn.board.map((card, position) => {
               if (card.state === "empty") return <div key={position} aria-hidden="true" />;
               if (card.state === "up") {
-                const { motion, showsFace, hasFlipBack } = motionOf(position);
+                const { motion, readsFaceUp, hasFlipBack } = motionOf(position);
                 return (
                   <div
                     key={position}
                     class={motion ? `memory-phone-face ${motion}` : "memory-phone-face"}
                     role="img"
-                    aria-label={`Card ${position + 1}, ${showsFace ? (names[card.face] ?? "revealed") : "face down"}`}
+                    aria-label={`Card ${position + 1}, ${readsFaceUp ? (names[card.face] ?? "revealed") : "face down"}`}
                     style={{
                       backgroundImage: `url("${image}")`,
                       backgroundSize: memoryFaceSize,
@@ -149,7 +153,7 @@ function MemoryPicks({ turn, boardSize, remainingMs, send, motionOf }: TurnProps
                   aria-pressed={selected === position}
                   aria-disabled={!canSelect}
                   onClick={(e) => {
-                    if (canSelect && isTap(e)) setPending(selected === position ? null : { step, position });
+                    if (turn.stage === "picking" && canSelect && isTap(e)) setPending(selected === position ? null : { step: turn.step, position });
                   }}
                 />
               );
@@ -161,9 +165,9 @@ function MemoryPicks({ turn, boardSize, remainingMs, send, motionOf }: TurnProps
         class="btn primary memory-confirm"
         disabled={selected === null || !canSelect}
         onClick={() => {
-          if (selected === null || !canSelect) return;
+          if (turn.stage !== "picking" || selected === null || !canSelect) return;
           setPending(null);
-          send({ type: "memory.confirm", turnId: turn.id, step, position: selected });
+          send({ type: "memory.confirm", turnId: turn.id, step: turn.step, position: selected });
         }}
       >
         Confirm card

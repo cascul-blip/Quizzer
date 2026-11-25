@@ -1,5 +1,4 @@
-/* Keep the whole board visible beneath the turn controls, including on short screens. */
-.memory-turn {
+.memory-fits-screen {
   height: 100dvh;
   overflow: hidden;
 }

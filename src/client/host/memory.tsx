@@ -1,4 +1,4 @@
-import { MEMORY_BOARD_SIZES, MEMORY_QUESTIONS_PER_PHASE } from "../../shared/modes/memory.ts";
+import { MEMORY_BOARD_SIZES, MEMORY_QUESTIONS_PER_PHASE, MEMORY_URGENT_SECONDS_LEFT } from "../../shared/modes/memory.ts";
 import type { HostView } from "../../shared/protocol.ts";
 import { themedLabel, themedTrack } from "../../shared/themed-modes.ts";
 import { memoryMotionStyle, useCardMotion } from "../shared/memory/card-flips.ts";
@@ -91,7 +91,7 @@ function MemoryBoard({ view }: { view: MemoryView }) {
         <div class="memory-turn">
           <h1>{view.turn?.nickname}</h1>
           {view.phase === "turn" ? (
-            <span class={`memory-turn-clock${left <= 5 ? " urgent" : ""}`} aria-label={`${left} seconds left`}>
+            <span class={`memory-turn-clock${left <= MEMORY_URGENT_SECONDS_LEFT ? " urgent" : ""}`} aria-label={`${left} seconds left`}>
               {left}s
             </span>
           ) : (
@@ -109,13 +109,13 @@ function MemoryBoard({ view }: { view: MemoryView }) {
             }}
           >
             {view.board.map((card, position) => {
-              const { motion, showsFace, hasFlipBack } = motionOf(position);
+              const { motion, readsFaceUp, hasFlipBack } = motionOf(position);
               return (
                 <div
                   key={position}
                   class={`memory-card memory-${card.state}${card.state === "down" ? ` ${art.cardBackClass}` : ""}${motion ? ` ${motion}` : ""}`}
                   role="img"
-                  aria-label={`Card ${position + 1}, ${card.state === "up" && showsFace ? (names[card.face] ?? "revealed") : card.state === "empty" ? "empty" : "face down"}`}
+                  aria-label={`Card ${position + 1}, ${card.state === "up" && readsFaceUp ? (names[card.face] ?? "revealed") : card.state === "empty" ? "empty" : "face down"}`}
                   style={card.state === "up" ? { backgroundPosition: memoryFacePosition(card.face) } : undefined}
                 >
                   {hasFlipBack && <span class={`memory-flip-back ${art.cardBackClass}`} aria-hidden="true" />}

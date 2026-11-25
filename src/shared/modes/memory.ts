@@ -35,7 +35,6 @@ export interface HostMemoryState {
   question: QuestionView | null;
   correct: number[] | null;
   answeredCount: number;
-  /** Whether the current answer reveal advances to reveal turns. */
   revealTurnsNext: boolean;
   answerCounts: number[] | null;
   players: (MemoryPlayer & { connected: boolean; rank: number })[];
@@ -46,14 +45,13 @@ export interface HostMemoryState {
   phaseRemainingMs: number;
 }
 
-/** How long a Memory card takes to turn over. */
 export const MEMORY_FLIP_MS = 400;
-/** How long a matched pair stays face up after its second card has turned. */
-export const MEMORY_SLIDE_HOLD_MS = 500;
-/** How long a matched pair takes to slide off the board. */
+export const MEMORY_PAUSE_BEFORE_SLIDE_MS = 500;
 export const MEMORY_SLIDE_MS = 500;
-/** How long a matched pair's result shows: the second card's flip, the hold, then the slide-off. */
-export const MEMORY_MATCH_MS = MEMORY_FLIP_MS + MEMORY_SLIDE_HOLD_MS + MEMORY_SLIDE_MS;
+export const MEMORY_MATCH_RESULT_MS = MEMORY_FLIP_MS + MEMORY_PAUSE_BEFORE_SLIDE_MS + MEMORY_SLIDE_MS;
+export const MEMORY_URGENT_SECONDS_LEFT = 5;
+
+export type PlayerMemoryTurnStage = { stage: "picking"; step: 1 | 2 } | { stage: "feedback"; matched: boolean };
 
 export interface PlayerMemoryView {
   kind: "memory";
@@ -65,8 +63,7 @@ export interface PlayerMemoryView {
   myText: string | null;
   reveal: { choice: number | null; correct: number[]; wasCorrect: boolean } | null;
   boardSize: number;
-  /** A null step keeps the confirmed faces visible during feedback, with the turn's outcome. */
-  turn: ({ id: number; board: MemoryCardView[] } & ({ step: 1 | 2 } | { step: null; matched: boolean })) | null;
+  turn: ({ id: number; board: MemoryCardView[] } & PlayerMemoryTurnStage) | null;
   phaseRemainingMs: number;
   result: { rank: number; playerCount: number } | null;
 }
