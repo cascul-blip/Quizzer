@@ -923,7 +923,7 @@ describe("views", () => {
     expect(m.moveRemainingMs).toBe(8000);
   });
 
-  test("awards: Top Archer Captain (ties by archer upgrades), Master Mason and Most correct answers", () => {
+  test("awards: everyone tied on archer kills shares Top Archer Captain whatever their upgrades; Master Mason and Most correct answers", () => {
     const { game, clock } = setup();
     const [ana, ben, cal] = ["Ana", "Ben", "Cal"].map((n) => byName(game, n));
     ana!.archerKills = 3;
@@ -932,8 +932,11 @@ describe("views", () => {
     cal!.placed.wall = 2;
     cal!.wallUpgrades = 1;
     answer(game, clock, ana!, true);
-    const a = game.awards();
-    expect(a.topArcher).toEqual({ value: 3, nicknames: ["Ben"] });
+    game.end();
+    const a = game.hostView().awards!;
+    expect(a.topArcher).toEqual({ value: 3, nicknames: ["Ana", "Ben"] });
+    expect(game.playerView(ana!.id)!.result!.awards).toContain("Top Archer Captain");
+    expect(game.playerView(ben!.id)!.result!.awards).toContain("Top Archer Captain");
     expect(a.masterMason).toEqual({ value: 3, nicknames: ["Cal"] });
     expect(a.mostCorrect).toEqual({ value: 1, nicknames: ["Ana"] });
   });
@@ -941,13 +944,13 @@ describe("views", () => {
     const { game, clock } = quietWave({ theme: "christmas" });
     game.battlefield.hearts = 2;
     game.battlefield.spawn("troll", 0, 1);
+    const [ana, cal] = ["Ana", "Cal"].map((n) => byName(game, n));
+    ana!.archerKills = 3;
+    cal!.placed.wall = 2;
     clock.advance(4000);
     expect(game.result().headline).toBe("The toybox fell on wave 1 of 5.");
     clock.advance(SIEGE_ENDING_MS);
     expect(game.phase).toBe("podium");
-    const [ana, cal] = ["Ana", "Cal"].map((n) => byName(game, n));
-    ana!.archerKills = 3;
-    cal!.placed.wall = 2;
     expect(game.playerView(ana!.id)!.result!.awards).toContain("Top Elf Captain");
     expect(game.playerView(cal!.id)!.result!.awards).toContain("Master Wrapper");
     expect(siegeWords("christmas").home).toBe("toybox");
