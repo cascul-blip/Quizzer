@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { SiegeSettings } from "../../shared/modes/siege.ts";
-import { siegeWords } from "../../shared/modes/siege.ts";
+import { siegeAwardLabels, siegeWords } from "../../shared/modes/siege.ts";
 import type { HostView } from "../../shared/protocol.ts";
 import { SIEGE_HEARTS, SIEGE_WAVE_CHOICES } from "../../shared/siege-rules.ts";
 import type { SeasonTheme } from "../../shared/themed-modes.ts";
@@ -362,6 +362,7 @@ function SiegePodium({ view, send }: { view: SiegeView; send: Send }) {
   const r = view.result;
   const a = view.awards;
   const words = siegeWords(view.settings.theme);
+  const labels = siegeAwardLabels(view.settings.theme);
   const good = r?.outcome === "stands" || (r?.outcome === "ended" && r.hearts > 0);
   return (
     <main class="podium siege-podium">
@@ -391,13 +392,13 @@ function SiegePodium({ view, send }: { view: SiegeView; send: Send }) {
         <div class="awards siege-awards">
           <Award
             icon="🏹"
-            title={words.topArcher}
+            title={labels.topArcher}
             award={a?.topArcher ?? null}
             unit=""
             valueText={(n) => `${plural(n, "monster")} defeated by their ${words.archers}`}
           />
-          <Award icon="🧱" title={words.masterMason} award={a?.masterMason ?? null} unit="" valueText={(n) => `${plural(n, words.wall)} and upgrades`} />
-          <Award icon="🎯" title="Most correct answers" award={a?.mostCorrect ?? null} unit="correct" />
+          <Award icon="🧱" title={labels.masterMason} award={a?.masterMason ?? null} unit="" valueText={(n) => `${plural(n, words.wall)} and upgrades`} />
+          <Award icon="🎯" title={labels.mostCorrect} award={a?.mostCorrect ?? null} unit="correct" />
         </div>
       )}
       <footer class="controls">
