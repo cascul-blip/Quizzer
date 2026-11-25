@@ -20,4 +20,16 @@ describe("Podium", () => {
       expect(() => running().playerView("late")).not.toThrow();
     });
   }
+
+  test("in Showdown, the phone's player count is the Podium's, not the players left after the finish", async () => {
+    const { phone } = await finish(
+      "duel",
+      () => {},
+      (id) => {
+        running().players.delete(id("Ivy"));
+      },
+    );
+    const noel = phone("Noel");
+    expect(noel?.kind === "duel" && noel.result?.playerCount).toBe(3);
+  });
 });

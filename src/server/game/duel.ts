@@ -519,7 +519,7 @@ export class DuelGame {
     let result: PlayerDuelView["result"] = null;
     if (this.phase === "podium") {
       const mine = this.podium.result(p.id);
-      result = { rank, playerCount: this.players.size, awards: mine?.awards ?? [] };
+      result = mine && { rank: mine.place, playerCount: mine.playerCount, awards: mine.awards };
     }
     return {
       kind: "duel",
