@@ -186,6 +186,44 @@ describe("Podium in team modes", () => {
     ]);
   });
 
+  for (const mode of ["tower", "land"] as const) {
+    test(`in ${mode === "tower" ? "Tallest Tower" : "Land Grab"}, when everyone is tied they share first on the podium, the phone and the results sheet`, async () => {
+      const places = await finish(mode);
+      for (const n of NICKNAMES) expect({ n, ...places[n] }).toEqual({ n, podium: 1, phone: 1, sheet: 1 });
+    });
+  }
+
+  test("in Land Grab, knocked-out teams come last, the first one out at the bottom, with their out flags", async () => {
+    const places = await finish(
+      "land",
+      (phones, ids) => {
+        clock.advance(LAND_COUNTDOWN_MS);
+        const game = running() as LandGame;
+        const noel = game.players.get(ids.get("Noel")!)!;
+        noel.claims = 99;
+        noel.state = "claim";
+        const ring = (team: number) => game.owners.map((_, t) => t).filter((t) => hexDistance(game.size, game.teams[team]!.start, t) === 2);
+        // Yellow (Ivy) is knocked out first, then Blue (Holly).
+        for (const team of [2, 1]) {
+          for (const tile of ring(team)) phones.get("Noel")!.sendMsg({ type: "land.place", tile });
+          expect(game.teams[team]!.out).toBe(true);
+        }
+      },
+      { teams: 3, minutes: 5 },
+    );
+    const view = hub.hostView();
+    expect(view.kind === "land" && view.teams.map((t) => [t.name, t.rank, t.out, t.members.map((m) => m.nickname)])).toEqual([
+      ["Red", 1, false, ["Noel"]],
+      ["Blue", 2, true, ["Holly"]],
+      ["Yellow", 3, true, ["Ivy"]],
+    ]);
+    expect(places).toEqual({
+      Noel: { podium: 1, phone: 1, sheet: 1 },
+      Holly: { podium: 2, phone: 2, sheet: 2 },
+      Ivy: { podium: 3, phone: 3, sheet: 3 },
+    });
+  });
+
   test("in Land Grab, a conquered player is ranked with the team they started on, and every screen agrees on places and awards", async () => {
     let game!: LandGame;
     const places = await finish(

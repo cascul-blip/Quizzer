@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { RobotGame } from "../src/server/game/robot.ts";
 import { COUNTDOWN_MS } from "../src/server/game/robot.ts";
 import { robotShared } from "../src/shared/modes/robot.ts";
-import { podiumHub } from "./podium-hub.ts";
+import { NICKNAMES, podiumHub } from "./podium-hub.ts";
 
 const { ctx, running, finish, answerRight } = podiumHub();
 
@@ -48,5 +48,18 @@ describe("Robot Attack podium", () => {
       ["Ivy", 1, 3, 0],
       ["Holly", 3, 2, 3],
     ]);
+  });
+
+  test("when everyone is tied, they share first on the podium screen, the phone and the results sheet", async () => {
+    const { view, phone, sheet } = await finish("robot", () => {});
+    for (const n of NICKNAMES) {
+      const v = phone(n);
+      expect({
+        n,
+        podium: view.kind === "robot" ? view.standings?.find((s) => s.nickname === n)?.rank : undefined,
+        phone: v?.kind === "robot" ? v.result?.rank : undefined,
+        sheet: sheet.find((r) => r.Nickname === n)?.Rank,
+      }).toEqual({ n, podium: 1, phone: 1, sheet: 1 });
+    }
   });
 });
