@@ -12,7 +12,8 @@
     "check": "biome ci . && tsc --noEmit && scripts/check-new-casts.sh && bun scripts/check-new-comments.ts && bun test",
     "audit:comments": "bun scripts/comment-inventory.ts",
     "build": "bun scripts/build.ts",
-    "format": "biome check --write ."
+    "format": "biome check --write .",
+    "prepare": "git config core.hooksPath .githooks"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.1",
