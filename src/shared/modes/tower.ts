@@ -1,5 +1,5 @@
 import type { AvatarChoice } from "../avatars.ts";
-import type { AfterAnswerWaitView, QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, TeamInfo } from "../mode-views.ts";
+import type { AfterAnswerWaitView, QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward, TeamInfo } from "../mode-views.ts";
 import type { ModeProtocol } from "../shared-mode-entry.ts";
 import { sharedModeEntry } from "../shared-mode-entry.ts";
 import type { SeasonTheme } from "../themed-modes.ts";
@@ -52,10 +52,10 @@ export interface MonsterAttack {
   after: number[];
 }
 
-export interface TowerAwards {
-  mostCorrect: { value: number; nicknames: string[] } | null;
-  masterBuilder: { value: number; nicknames: string[] } | null;
-}
+const TOWER_AWARDS = { mostCorrect: "Most correct answers", masterBuilder: "Master builder" } as const;
+
+export type TowerAwardKey = keyof typeof TOWER_AWARDS;
+export type TowerAwards = Record<TowerAwardKey, SubAward | null>;
 
 export interface PlayerTowerView {
   kind: "tower";
@@ -127,6 +127,7 @@ export const towerShared = sharedModeEntry<
   flags: { paced: false, protect: true },
   lobbyBanner: false,
   msgTypes: ["tower.answer", "tower.drop"],
+  awards: TOWER_AWARDS,
 });
 
 /** Tallest Tower's words in each theme: its icon and name (THEMED_MODES), the creature, the item that summons it, and what that does. */

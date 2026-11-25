@@ -3,11 +3,11 @@ import { answerOf } from "../../shared/answer-match.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { randomAvatar } from "../../shared/avatars.ts";
 import { arenaOf, arenaPoints, climbLadder, duelOutcome, pairArenas } from "../../shared/duel-rules.ts";
-import type { Pacing, QuestionError, QuestionView, SubAward } from "../../shared/mode-views.ts";
+import type { Pacing, QuestionError, QuestionView } from "../../shared/mode-views.ts";
 import type {
   DuelArena,
   DuelArenaResult,
-  DuelAwards,
+  DuelAwardKey,
   DuelPhase,
   DuelPlayerRef,
   DuelRound,
@@ -27,6 +27,8 @@ import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
 import { INTRO_MS, PacedRound } from "./paced-round.ts";
 import { GameFinish } from "./phase-timer.ts";
+import type { Podium } from "./podium.ts";
+import { buildPodium } from "./podium.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
@@ -38,10 +40,6 @@ export { AUTO_REVEAL_MS, GRACE_MS } from "./common.ts";
 
 /** Each round shows the question this long before the options. */
 export { INTRO_MS };
-
-export const AWARD_LONGEST_REIGN = "Longest reign";
-export const AWARD_MOST_WINS = "Most wins";
-export const AWARD_BIGGEST_CLIMB = "Biggest climb";
 
 export interface DuelAnswer {
   /** Chosen option index; -1 for a typed answer. */
@@ -105,8 +103,8 @@ export class DuelGame {
     rankById?: Map<string, number>;
     ladderArenas?: Map<string, number>;
     arenaById?: Map<string, number>;
-    awards?: DuelAwards;
   } | null = null;
+  private finalPodium: Podium<DuelPlayer, DuelPlayer, DuelAwardKey> | null = null;
 
   private readonly source: Question[];
   /** Index into the quiz's questions for each slot. */
@@ -154,6 +152,7 @@ export class DuelGame {
     this.gameFinish = new GameFinish(this.paced.phases, "podium", {
       cleanup: () => {
         this.arenas = [];
+        this.finalPodium = this.buildPodium();
       },
       onFinish: () => this.onFinish(this),
       onChange: () => this.onChange(),
@@ -388,14 +387,28 @@ export class DuelGame {
     return this.shared("ranked", () => this.ranked());
   }
 
-  awards(): DuelAwards {
-    const players = this.rankedNow();
-    const arenas = this.shared("ladderArenas", () => this.ladderArenas());
-    const best = (value: (p: DuelPlayer) => number): SubAward | null => {
-      const top = Math.max(0, ...players.map(value));
-      return top > 0 ? { value: top, nicknames: players.filter((p) => value(p) === top).map((p) => p.nickname) } : null;
-    };
-    return { longestReign: best((p) => p.reign), mostWins: best((p) => p.wins), biggestClimb: best((p) => this.climb(p, arenas)) };
+  /** The standings order of `ranked()` and the three awards, on the final ladder. */
+  private buildPodium(): Podium<DuelPlayer, DuelPlayer, DuelAwardKey> {
+    const players = this.onLadder();
+    const pos = new Map(this.ladder.map((id, i) => [id, i]));
+    const arenas = this.ladderArenas();
+    return buildPodium({
+      entries: players,
+      order: [most((p) => p.points), most((p) => p.correct)],
+      then: [fewest((p) => pos.get(p.id) ?? Infinity)],
+      players,
+      entryOf: (p) => p,
+      awards: {
+        labels: duelShared.awards,
+        values: { longestReign: (p) => p.reign, mostWins: (p) => p.wins, biggestClimb: (p) => this.climb(p, arenas) },
+      },
+    });
+  }
+
+  /** The finished game's Podium (GLOSSARY.md), worked out once in Game finish. */
+  get podium(): Podium<DuelPlayer, DuelPlayer, DuelAwardKey> {
+    if (!this.finalPodium) throw new GameError("This game has not finished");
+    return this.finalPodium;
   }
 
   /** The most-missed questions (counted per quiz question, over every round it was asked); unanswered doesn't count. */
@@ -432,7 +445,8 @@ export class DuelGame {
         return { ...ref(p), connected: p.connected, answered: answering && !!p.answers[this.qIndex] };
       }),
     }));
-    const players: HostDuelPlayer[] = this.ranked().map((p) => ({
+    const ranked = podium ? this.podium.places.map((p) => ({ ...p, rank: p.place })) : this.ranked();
+    const players: HostDuelPlayer[] = ranked.map((p) => ({
       ...ref(p),
       connected: p.connected,
       arena: this.arenaNow(p.id, ladderArenas),
@@ -464,7 +478,7 @@ export class DuelGame {
       players,
       phaseRemainingMs: this.paced.phases.remainingMs(),
       phaseDurationMs: this.phaseDurationMs,
-      awards: podium ? this.awards() : null,
+      awards: podium ? this.podium.awards : null,
       errors: podium ? this.errors() : null,
     };
   }
@@ -492,9 +506,12 @@ export class DuelGame {
     if (!p) return null;
     const q = this.currentQuestion;
     const ladderArenas = this.shared("ladderArenas", () => this.ladderArenas());
-    const rank = this.batch
-      ? (this.shared("rankById", () => new Map(this.rankedNow().map((x) => [x.id, x.rank]))).get(p.id) ?? 0)
-      : (this.ranked().find((x) => x.id === p.id)?.rank ?? 0);
+    const rank =
+      this.phase === "podium"
+        ? (this.podium.result(p.id)?.place ?? 0)
+        : this.batch
+          ? (this.shared("rankById", () => new Map(this.rankedNow().map((x) => [x.id, x.rank]))).get(p.id) ?? 0)
+          : (this.ranked().find((x) => x.id === p.id)?.rank ?? 0);
     const arenaNow = this.arenaNow(p.id, ladderArenas);
     const k = this.arenaIndexOnReveal(p);
     const arena = k >= 0 ? k + 1 : arenaNow;
@@ -503,16 +520,8 @@ export class DuelGame {
     const revealed = this.phase === "reveal" && !!q;
     let result: PlayerDuelView["result"] = null;
     if (this.phase === "podium") {
-      const aw = this.shared("awards", () => this.awards());
-      result = {
-        rank,
-        playerCount: this.players.size,
-        awards: [
-          ...(aw.longestReign?.nicknames.includes(p.nickname) ? [AWARD_LONGEST_REIGN] : []),
-          ...(aw.mostWins?.nicknames.includes(p.nickname) ? [AWARD_MOST_WINS] : []),
-          ...(aw.biggestClimb?.nicknames.includes(p.nickname) ? [AWARD_BIGGEST_CLIMB] : []),
-        ],
-      };
+      const mine = this.podium.result(p.id);
+      result = { rank, playerCount: this.players.size, awards: mine?.awards ?? [] };
     }
     return {
       kind: "duel",
@@ -593,7 +602,7 @@ function duelColumns(game: DuelGame): Column<{ rank: number; p: DuelPlayer }>[] 
 export function buildDuelResults(game: DuelGame): ResultsSheet {
   return sheet(
     duelColumns(game),
-    game.ranked().map((p) => ({ rank: p.rank, p })),
+    game.podium.rows.map((r) => ({ rank: r.place, p: r.player })),
   );
 }
 

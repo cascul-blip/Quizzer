@@ -1,19 +1,10 @@
 import { describe, expect, spyOn, test } from "bun:test";
 import type { DuelPlayer } from "../src/server/game/duel.ts";
-import {
-  AUTO_REVEAL_MS,
-  AWARD_BIGGEST_CLIMB,
-  AWARD_LONGEST_REIGN,
-  AWARD_MOST_WINS,
-  buildDuelResults,
-  DuelGame,
-  GRACE_MS,
-  INTRO_MS,
-} from "../src/server/game/duel.ts";
+import { AUTO_REVEAL_MS, buildDuelResults, DuelGame, GRACE_MS, INTRO_MS } from "../src/server/game/duel.ts";
 import { Lobby } from "../src/server/game/lobby.ts";
 import { viewKey } from "../src/server/view-delivery.ts";
 import type { Pacing } from "../src/shared/mode-views.ts";
-import { DUEL_DEFAULT_ROUNDS } from "../src/shared/modes/duel.ts";
+import { DUEL_DEFAULT_ROUNDS, duelShared } from "../src/shared/modes/duel.ts";
 import type { ShuffleOptions } from "../src/shared/protocol.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
 import { FakeClock, sampleQuiz } from "./helpers.ts";
@@ -84,12 +75,9 @@ describe("Showdown", () => {
     const ids = [...game.players.keys()];
     const batched = () => {
       const ranked = spyOn(game, "ranked");
-      const awards = spyOn(game, "awards");
       const views = game.viewBatch(() => ids.map((id) => game.playerView(id)));
       expect(ranked.mock.calls.length).toBeLessThanOrEqual(1);
-      expect(awards.mock.calls.length).toBeLessThanOrEqual(1);
       ranked.mockRestore();
-      awards.mockRestore();
       return views;
     };
     expect(batched()).toEqual(ids.map((id) => game.playerView(id)));
@@ -587,9 +575,9 @@ describe("Showdown", () => {
       opponents: [],
       arena: 1,
       arenaCount: 3,
-      result: { rank: 2, playerCount: 6, awards: [AWARD_MOST_WINS, AWARD_BIGGEST_CLIMB] },
+      result: { rank: 2, playerCount: 6, awards: [duelShared.awards.mostWins, duelShared.awards.biggestClimb] },
     });
-    expect(game.playerView(byName(game, "D").id)!.result!.awards).toEqual([AWARD_LONGEST_REIGN, AWARD_MOST_WINS]);
+    expect(game.playerView(byName(game, "D").id)!.result!.awards).toEqual([duelShared.awards.longestReign, duelShared.awards.mostWins]);
     expect(game.playerView(byName(game, "C").id)!.result).toEqual({ rank: 5, playerCount: 6, awards: [] });
 
     const results = buildDuelResults(game);
@@ -701,7 +689,7 @@ describe("Showdown", () => {
     expect(game.phase).toBe("podium");
     expect(game.played).toBe(1);
     expect(ladderNames(game)).toEqual(["B", "A"]);
-    expect(game.awards()).toEqual({ longestReign: { value: 1, nicknames: ["B"] }, mostWins: { value: 1, nicknames: ["B"] }, biggestClimb: null });
+    expect(game.hostView().awards).toEqual({ longestReign: { value: 1, nicknames: ["B"] }, mostWins: { value: 1, nicknames: ["B"] }, biggestClimb: null });
   });
 
   test("one player: an arena of their own, nobody moves", () => {

@@ -49,11 +49,10 @@ export interface LandCapture {
   knockedOut: number[];
 }
 
-export interface LandAwards {
-  mostCorrect: SubAward | null;
-  topSettler: SubAward | null;
-  topSurrounder: SubAward | null;
-}
+const LAND_AWARDS = { mostCorrect: "Most correct answers", topSettler: "Top settler", topSurrounder: "Master surrounder" } as const;
+
+export type LandAwardKey = keyof typeof LAND_AWARDS;
+export type LandAwards = Record<LandAwardKey, SubAward | null>;
 
 export interface HostLandTeam extends TeamInfo {
   tiles: number;
@@ -118,4 +117,5 @@ export const landShared = sharedModeEntry<ModeProtocol<LandMsg, LandSettings, Ho
   flags: { paced: false, protect: false },
   lobbyBanner: false,
   msgTypes: ["land.answer", "land.place", "land.done"],
+  awards: LAND_AWARDS,
 });

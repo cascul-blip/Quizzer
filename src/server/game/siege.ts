@@ -5,14 +5,14 @@ import { randomAvatar } from "../../shared/avatars.ts";
 import type {
   HostSiegeState,
   PlayerSiegeView,
-  SiegeAwards,
+  SiegeAwardKey,
   SiegeEvent,
   SiegePhase,
   SiegeRecord,
   SiegeResult,
   SiegeSettings,
 } from "../../shared/modes/siege.ts";
-import { siegeDefenderPhrase, siegeShared, siegeWords } from "../../shared/modes/siege.ts";
+import { siegeAwardLabels, siegeDefenderPhrase, siegeShared, siegeWords } from "../../shared/modes/siege.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import type { SiegeDefenderType, SiegeWaves } from "../../shared/siege-rules.ts";
 import {
@@ -41,11 +41,14 @@ import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
 import { GameFinish, PhaseTimer } from "./phase-timer.ts";
+import type { Podium } from "./podium.ts";
+import { buildPodium } from "./podium.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
 import { Roster } from "./roster.ts";
 import { SiegeBattlefield } from "./siege-battlefield.ts";
+import { most } from "./standings.ts";
 import type { AnswerTotals } from "./stream.ts";
 import { QuestionStream } from "./stream.ts";
 
@@ -114,6 +117,12 @@ interface SiegeGameSettings extends SiegeSettings {
  * down its lanes. Each player earns gold with correct answers and spends their own purse on defenders.
  * The battle runs in fixed SIEGE_TICK_MS steps on the game clock.
  */
+const SIEGE_AWARD_VALUES: Record<SiegeAwardKey, (p: SiegePlayer) => number> = {
+  topArcher: (p) => p.archerKills,
+  masterMason: (p) => p.placed.wall + p.wallUpgrades,
+  mostCorrect: (p) => p.correct,
+};
+
 export class SiegeGame {
   readonly runningMode = "siege" as const;
   readonly quizId: string;
@@ -138,6 +147,7 @@ export class SiegeGame {
   private periodAnswered = 0;
   private seq = 0;
   private finishedResult: SiegeResult | null = null;
+  private finalPodium: Podium<SiegePlayer, SiegePlayer, SiegeAwardKey> | null = null;
 
   private readonly clock: Clock;
   private readonly rng: () => number;
@@ -175,6 +185,7 @@ export class SiegeGame {
       cleanup: () => {
         this.stopBattle();
         this.finishedResult = this.computeResult();
+        this.finalPodium = this.buildPodium();
       },
       onFinish: () => this.onFinish(this),
       onChange: () => this.onChange(),
@@ -490,26 +501,21 @@ export class SiegeGame {
     return true;
   }
 
-  awards(): SiegeAwards {
+  private buildPodium(): Podium<SiegePlayer, SiegePlayer, SiegeAwardKey> {
     const players = this.everyone;
-    const best = (value: (p: SiegePlayer) => number, tie?: (p: SiegePlayer) => number) => {
-      const top = Math.max(0, ...players.map(value));
-      if (top <= 0) return null;
-      let winners = players.filter((p) => value(p) === top);
-      if (tie) {
-        const t = Math.max(...winners.map(tie));
-        winners = winners.filter((p) => tie(p) === t);
-      }
-      return { value: top, nicknames: winners.map((p) => p.nickname) };
-    };
-    return {
-      topArcher: best(
-        (p) => p.archerKills,
-        (p) => p.archerUpgrades,
-      ),
-      masterMason: best((p) => p.placed.wall + p.wallUpgrades),
-      mostCorrect: best((p) => p.correct),
-    };
+    return buildPodium({
+      entries: players,
+      order: [most((p) => p.goldEarned), most((p) => p.correct)],
+      players,
+      entryOf: (p) => p,
+      awards: { labels: siegeAwardLabels(this.settings.theme), values: SIEGE_AWARD_VALUES },
+    });
+  }
+
+  /** The finished game's Podium (GLOSSARY.md), worked out once in Game finish: the awards, and the results sheet's order. */
+  get podium(): Podium<SiegePlayer, SiegePlayer, SiegeAwardKey> {
+    if (!this.finalPodium) throw new GameError("This game has not finished");
+    return this.finalPodium;
   }
 
   /** Waves fully beaten. */
@@ -580,7 +586,7 @@ export class SiegeGame {
       playerCount: players.length,
       connectedCount: players.filter((p) => p.connected).length,
       result: ending && this.outcome ? this.result() : null,
-      awards: podium ? this.awards() : null,
+      awards: podium ? this.podium.awards : null,
       errors: this.stream.errorsWhen(podium),
     };
   }
@@ -592,9 +598,6 @@ export class SiegeGame {
     let result: PlayerSiegeView["result"] = null;
     if ((podium || this.phase === "stands" || this.phase === "fallen") && this.outcome) {
       const r = this.result();
-      const a = this.awards();
-      const won = (x: { nicknames: string[] } | null) => !!x?.nicknames.includes(p.nickname);
-      const words = siegeWords(this.settings.theme);
       result = {
         outcome: r.outcome,
         headline: r.headline,
@@ -603,13 +606,7 @@ export class SiegeGame {
         placed: { ...p.placed },
         upgrades: p.upgrades,
         defeated: p.defeated,
-        awards: podium
-          ? [
-              ...(won(a.topArcher) ? [words.topArcher] : []),
-              ...(won(a.masterMason) ? [words.masterMason] : []),
-              ...(won(a.mostCorrect) ? ["Most correct answers"] : []),
-            ]
-          : [],
+        awards: podium ? (this.podium.result(p.id)?.awards ?? []) : [],
       };
     }
     return {
@@ -662,7 +659,7 @@ function siegeColumns(game: SiegeGame): Column<SiegePlayer>[] {
 }
 
 export function buildSiegeResults(game: SiegeGame): ResultsSheet {
-  const players = game.everyone.sort((a, b) => b.goldEarned - a.goldEarned || b.correct - a.correct);
+  const players = game.podium.rows.map((r) => r.player);
   const waves = sheet(SIEGE_WAVE_COLUMNS, game.waveLog);
   return sheet(siegeColumns(game), players, [waves.header, ...waves.rows]);
 }
