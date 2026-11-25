@@ -8,6 +8,7 @@ import { entryOf } from "../src/server/game/modes.ts";
 import { INTRO_MS } from "../src/server/game/paced-round.ts";
 import { records } from "../src/server/game/results.ts";
 import type { RobotGame } from "../src/server/game/robot.ts";
+import { COUNTDOWN_MS as ROBOT_COUNTDOWN_MS } from "../src/server/game/robot.ts";
 import { FEEDBACK_MS } from "../src/server/game/stream.ts";
 import { DROP_COOLDOWN_MS, COUNTDOWN_MS as TOWER_COUNTDOWN_MS } from "../src/server/game/tower.ts";
 import { QuizStore } from "../src/server/quiz/store.ts";
@@ -287,6 +288,48 @@ describe("Standings", () => {
       Holly: { podium: 3, phone: 3, sheet: 3 },
       Ivy: { podium: 1, phone: 1, sheet: 1 },
     });
+  });
+
+  test("in Robot Attack, the podium screen, the phone and the results sheet agree on each place and award, and stay unchanged after the game finishes", async () => {
+    let game!: RobotGame;
+    let hollyId = "";
+    const places = await finish("robot", (phones, ids) => {
+      game = running() as RobotGame;
+      clock.advance(ROBOT_COUNTDOWN_MS);
+      for (const n of ["Noel", "Ivy"]) answerRight("robot", phones.get(n)!, ids.get(n)!, 2);
+      hollyId = ids.get("Holly")!;
+      const p = (n: string) => game.players.get(ids.get(n)!)!;
+      p("Holly").lives--;
+      p("Holly").moves = 3;
+    });
+    // Changes after the finish do not reach the Podium.
+    const holly = game.players.get(hollyId)!;
+    holly.lives = 3;
+    holly.moves = 9;
+    const view = hub.hostView();
+    expect(view.kind === "robot" && view.awards).toEqual({
+      mostCorrect: { value: 2, nicknames: ["Noel", "Ivy"] },
+      mostMoves: { value: 3, nicknames: ["Holly"] },
+    });
+    expect(view.kind === "robot" && view.standings?.map((s) => [s.nickname, s.rank])).toEqual([
+      ["Noel", 1],
+      ["Ivy", 1],
+      ["Holly", 3],
+    ]);
+    const phone = (n: string) => {
+      const v = game.playerView([...game.players.values()].find((p) => p.nickname === n)!.id);
+      return v?.kind === "robot" ? v.result : null;
+    };
+    expect(phone("Holly")).toEqual({ rank: 3, playerCount: 3, won: false, outRound: null, awards: ["Fancy footwork"] });
+    expect(phone("Noel")?.awards).toEqual(["Most correct answers"]);
+    expect(phone("Ivy")?.awards).toEqual(["Most correct answers"]);
+    const sheet = records(entryOf(game).results(game));
+    expect(sheet.map((r) => [r.Nickname, r.Rank, r["Lives left"], r.Moves])).toEqual([
+      ["Noel", 1, 3, 0],
+      ["Ivy", 1, 3, 0],
+      ["Holly", 3, 2, 3],
+    ]);
+    expect(places.Holly).toEqual({ podium: 3, phone: 3, sheet: 3 });
   });
 
   test("in Cup of Death, a player knocked out comes after the survivors, who share first", async () => {

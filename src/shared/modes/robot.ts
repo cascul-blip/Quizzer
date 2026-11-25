@@ -41,10 +41,10 @@ export function robotInBounds(x: number, y: number, inset: number): boolean {
   return x >= inset && y >= inset && x < ROBOT_BOARD - inset && y < ROBOT_BOARD - inset;
 }
 
-export interface RobotAwards {
-  mostCorrect: SubAward | null;
-  mostMoves: SubAward | null;
-}
+const ROBOT_AWARDS = { mostCorrect: "Most correct answers", mostMoves: "Fancy footwork" } as const;
+
+export type RobotAwardKey = keyof typeof ROBOT_AWARDS;
+export type RobotAwards = Record<RobotAwardKey, SubAward | null>;
 
 /** The latest laser blast: who got hit and who was knocked out by it. */
 export interface RobotAttack {
@@ -123,4 +123,5 @@ export const robotShared = sharedModeEntry<ModeProtocol<RobotMsg, NoSettings, Ho
   flags: { paced: false, protect: true },
   lobbyBanner: false,
   msgTypes: ["robot.answer", "robot.move"],
+  awards: ROBOT_AWARDS,
 });

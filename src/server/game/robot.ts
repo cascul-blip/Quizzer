@@ -2,7 +2,7 @@ import type { AnswerValue } from "../../shared/answer-match.ts";
 import { answerOf } from "../../shared/answer-match.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { randomAvatar } from "../../shared/avatars.ts";
-import type { HostRobotState, PlayerRobotView, RobotAttack, RobotAwards, RobotDir, RobotPhase, RobotStanding } from "../../shared/modes/robot.ts";
+import type { HostRobotState, PlayerRobotView, RobotAttack, RobotAwardKey, RobotDir, RobotPhase, RobotStanding } from "../../shared/modes/robot.ts";
 import {
   ROBOT_ATTACK_MS,
   ROBOT_BOARD,
@@ -25,17 +25,20 @@ import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, unhandled } from "./mode-entry.ts";
 import { GameFinish, PhaseTimer } from "./phase-timer.ts";
+import type { Podium } from "./podium.ts";
+import { buildPodium } from "./podium.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
 import { Roster } from "./roster.ts";
-import { most, rankBy } from "./standings.ts";
+import { most } from "./standings.ts";
 import type { AnswerTotals } from "./stream.ts";
 import { QuestionStream } from "./stream.ts";
 
 export { FEEDBACK_MS } from "./stream.ts";
 
 export const COUNTDOWN_MS = 3000;
+const ROBOT_AWARD_VALUES: Record<RobotAwardKey, (p: RobotPlayer) => number> = { mostCorrect: (p) => p.correct, mostMoves: (p) => p.moves };
 const TILES = ROBOT_BOARD * ROBOT_BOARD;
 const STEP: Record<RobotDir, [number, number]> = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 
@@ -140,6 +143,7 @@ export class RobotGame {
       cleanup: () => {
         this.marked = new Set();
         this.collapsing = new Set();
+        this.finalPodium = this.buildPodium();
       },
       onFinish: () => this.onFinish(this),
       onChange: () => this.onChange(),
@@ -147,6 +151,7 @@ export class RobotGame {
   }
 
   choices!: LobbyChoices;
+  private finalPodium: Podium<RobotPlayer, RobotPlayer, RobotAwardKey> | null = null;
 
   /** Take over a lobby's players (same ids and tokens), spread out across the board. */
   static fromLobby(lobby: LobbyFacts<"robot">, opts: RobotOptions = {}): RobotGame {
@@ -352,27 +357,35 @@ export class RobotGame {
     return true;
   }
 
-  /** Survivors first, then the latest knocked out; lives break ties. Equal standing shares a rank, ordered by correct answers. */
-  standings(): RobotStanding[] {
-    const order = [most((p: RobotPlayer) => p.outRound ?? Infinity), most((p: RobotPlayer) => p.lives)];
-    return rankBy([...this.players.values()], order, [most((p) => p.correct)]).map((p) => ({
+  /** Survivors first, then the latest knocked out; lives break ties. Equal standing shares a place, ordered by correct answers. */
+  private buildPodium(): Podium<RobotPlayer, RobotPlayer, RobotAwardKey> {
+    const players = [...this.players.values()];
+    return buildPodium({
+      entries: players,
+      order: [most((p) => p.outRound ?? Infinity), most((p) => p.lives)],
+      then: [most((p) => p.correct)],
+      players,
+      entryOf: (p) => p,
+      awards: { labels: robotShared.awards, values: ROBOT_AWARD_VALUES },
+    });
+  }
+
+  /** The finished game's Podium (GLOSSARY.md), worked out once in Game finish. */
+  get podium(): Podium<RobotPlayer, RobotPlayer, RobotAwardKey> {
+    if (!this.finalPodium) throw new GameError("This game has not finished");
+    return this.finalPodium;
+  }
+
+  private standings(): RobotStanding[] {
+    return this.podium.places.map((p) => ({
       id: p.id,
       nickname: p.nickname,
       avatar: p.avatar,
-      rank: p.rank,
+      rank: p.place,
       lives: p.lives,
       outRound: p.outRound,
       correct: p.correct,
     }));
-  }
-
-  awards(): RobotAwards {
-    const best = (value: (p: RobotPlayer) => number) => {
-      const players = [...this.players.values()];
-      const top = Math.max(0, ...players.map(value));
-      return top > 0 ? { value: top, nicknames: players.filter((p) => value(p) === top).map((p) => p.nickname) } : null;
-    };
-    return { mostCorrect: best((p) => p.correct), mostMoves: best((p) => p.moves) };
   }
 
   hostView(): HostRobotState {
@@ -401,7 +414,7 @@ export class RobotGame {
       lastAttack: this.lastAttack,
       playerCount: this.players.size,
       standings: podium ? this.standings() : null,
-      awards: podium ? this.awards() : null,
+      awards: podium ? this.podium.awards : null,
       errors: this.stream.errorsWhen(podium),
     };
   }
@@ -413,19 +426,8 @@ export class RobotGame {
     const a = this.lastAttack;
     let result: PlayerRobotView["result"] = null;
     if (this.phase === "podium") {
-      const standings = this.standings();
-      const mine = standings.find((s) => s.id === p.id)!;
-      const aw = this.awards();
-      result = {
-        rank: mine.rank,
-        playerCount: standings.length,
-        won: mine.rank === 1,
-        outRound: p.outRound,
-        awards: [
-          ...(aw.mostCorrect?.nicknames.includes(p.nickname) ? ["Most correct answers"] : []),
-          ...(aw.mostMoves?.nicknames.includes(p.nickname) ? ["Fancy footwork"] : []),
-        ],
-      };
+      const mine = this.podium.result(p.id)!;
+      result = { rank: mine.place, playerCount: mine.playerCount, won: mine.place === 1, outRound: p.outRound, awards: mine.awards };
     }
     return {
       kind: "robot",
@@ -469,7 +471,7 @@ function robotColumns(game: RobotGame): Column<{ rank: number; p: RobotPlayer }>
 export function buildRobotResults(game: RobotGame): ResultsSheet {
   return sheet(
     robotColumns(game),
-    game.standings().map((s) => ({ rank: s.rank, p: game.players.get(s.id)! })),
+    game.podium.rows.map((r) => ({ rank: r.place, p: r.player })),
   );
 }
 
