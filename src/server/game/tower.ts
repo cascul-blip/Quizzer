@@ -182,7 +182,7 @@ export class TowerGame {
   }
 
   /** Time until the next egg announcement, or null if none is coming. */
-  private nextMonsterMs(): number | null {
+  private nextMonsterRemainingMs(): number | null {
     for (let i = 0; i < MONSTER_AT.length; i++) {
       const ms = this.phases.slotRemainingMs(monsterSlot(i));
       if (ms !== null) return ms;
@@ -355,7 +355,7 @@ export class TowerGame {
       monster: this.monsterEnabled,
       egg: this.egg,
       lastAttack: this.lastAttack,
-      nextMonsterMs: this.phase === "playing" ? this.nextMonsterMs() : null,
+      nextMonsterRemainingMs: this.phase === "playing" ? this.nextMonsterRemainingMs() : null,
       awards: this.phase === "podium" ? this.awards() : null,
       errors: this.stream.errorsWhen(this.phase === "podium"),
     };
@@ -408,7 +408,7 @@ export class TowerGame {
       monsterEvent: this.monsterEventFor(p),
       build:
         playing && p.state === "build"
-          ? { columns: [...team.columns], floors: floorsOf(team), sweepMs: sweepMsFor(floorsOf(team)), wait: this.stream.afterAnswerWaitView(p) }
+          ? { columns: [...team.columns], floors: floorsOf(team), sweepDurationMs: sweepMsFor(floorsOf(team)), wait: this.stream.afterAnswerWaitView(p) }
           : null,
       result,
     };

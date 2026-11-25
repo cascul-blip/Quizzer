@@ -919,7 +919,7 @@ describe("views", () => {
     const m = game.hostView().monsters[0]!;
     expect(m.x).toBe(8);
     expect(m.toX).toBe(4);
-    expect(m.moveMs).toBe(8000);
+    expect(m.moveRemainingMs).toBe(8000);
   });
 
   test("awards: Top Archer Captain (ties by archer upgrades), Master Mason and Most correct answers", () => {

@@ -14,7 +14,7 @@ function Preview() {
   const target = glyphId(symbol);
   const [done, setDone] = useState(false);
   const [locked, setLocked] = useState(false);
-  const timer = { index: 0, total: 5, symbolRemainingMs: 8000, symbolMs: 8000 };
+  const timer = { index: 0, total: 5, symbolRemainingMs: 8000, symbolDurationMs: 8000 };
   const same = CHRISTMAS_GLYPHS.filter((g) => g.family === symbol.family && glyphId(g) !== target).slice(0, 3);
   const other = CHRISTMAS_GLYPHS.filter((g) => g.family !== symbol.family).slice(0, 2);
   const grid = [glyphId(same[0]!), glyphId(other[0]!), target, glyphId(same[1]!), glyphId(other[1]!), glyphId(same[2]!)];
@@ -33,7 +33,7 @@ function Preview() {
     result: null,
     dive: query.has("instructor")
       ? { role: "instructor", symbol: target, found: 1, groupSize: 3, ...timer }
-      : { role: "diver", grid, done, lockedMs: locked ? 1000 : 0, hint: query.has("solo") ? target : null, ...timer },
+      : { role: "diver", grid, done, lockRemainingMs: locked ? 1000 : 0, hint: query.has("solo") ? target : null, ...timer },
   };
   return (
     <SubmarinePlayer

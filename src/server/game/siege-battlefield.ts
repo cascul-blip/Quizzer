@@ -573,14 +573,14 @@ export class SiegeBattlefield<O> {
       monsters: this.monsters.map((m) => {
         const x = this.monsterX(m);
         let toX = x;
-        let moveMs = 0;
+        let moveRemainingMs = 0;
         if (playing && m.state === "walk") {
           const target = this.blocker(m);
           toX = target ? Math.min(x, target.square + 1) : WALL_X;
-          moveMs = Math.round(((x - toX) * SIEGE_MONSTERS[m.type].squareMs) / m.pace);
+          moveRemainingMs = Math.round(((x - toX) * SIEGE_MONSTERS[m.type].squareMs) / m.pace);
         } else if (playing && m.state === "leap") {
           toX = m.leapTo;
-          moveMs = Math.max(0, m.leapEndsAt - now);
+          moveRemainingMs = Math.max(0, m.leapEndsAt - now);
         }
         return {
           id: m.id,
@@ -588,7 +588,7 @@ export class SiegeBattlefield<O> {
           lane: m.lane,
           x,
           toX,
-          moveMs,
+          moveRemainingMs,
           state: m.state,
           health: m.health,
           maxHealth: m.maxHealth,

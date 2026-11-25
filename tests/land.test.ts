@@ -128,7 +128,13 @@ describe("rounds of questions", () => {
     answer(game, clock, a, false);
     const cur = game.playerView(a.id)!.question!;
     game.answer(a.id, cur.seq, 1);
-    expect(game.playerView(a.id)!).toMatchObject({ state: "empty", emptyMs: FEEDBACK_MS + LAND_EMPTY_MS, question: null, board: null, claimWait: null });
+    expect(game.playerView(a.id)!).toMatchObject({
+      state: "empty",
+      emptyRemainingMs: FEEDBACK_MS + LAND_EMPTY_MS,
+      question: null,
+      board: null,
+      claimWait: null,
+    });
     clock.advance(FEEDBACK_MS + LAND_EMPTY_MS - 1);
     expect(a.state).toBe("empty");
     expect(game.place(a.id, 0)).toBe(false);

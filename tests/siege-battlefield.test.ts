@@ -168,8 +168,8 @@ describe("Battlefield: combat", () => {
 
   test("the projector sees monsters glide only while the battle runs", () => {
     field.spawn("goblin", 0, 6);
-    expect(field.hostBoard(true, false).monsters[0]).toMatchObject({ x: 6, toX: 0.5, moveMs: 11000 });
-    expect(field.hostBoard(false, false).monsters[0]).toMatchObject({ x: 6, toX: 6, moveMs: 0 });
+    expect(field.hostBoard(true, false).monsters[0]).toMatchObject({ x: 6, toX: 0.5, moveRemainingMs: 11000 });
+    expect(field.hostBoard(false, false).monsters[0]).toMatchObject({ x: 6, toX: 6, moveRemainingMs: 0 });
   });
 
   test("a stopped battle brings on no more monsters", () => {

@@ -70,7 +70,7 @@ function Preview({ phone }: { phone: boolean }) {
     state: quiz ? "question" : "claim",
     claims: 3,
     answered: 0,
-    emptyMs: 0,
+    emptyRemainingMs: 0,
     question: quiz ? { seq: 1, type: "multiple_choice", text: "Where does Santa live?", options: ["The North Pole", "The South Pole"] } : null,
     feedback: null,
     board: quiz ? null : board,

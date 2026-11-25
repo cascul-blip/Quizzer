@@ -69,4 +69,13 @@ The following checklist covers adding a mode. "Compiler" marks the places where 
 - [ ] Tests: in `tests/game-modes.test.ts`, the `CHANGED`, `TEAMS` and `PHONE_MSG` tables (compiler). Put the mode's own rules in `tests/<mode>.test.ts`.
 - [ ] `README.md`: the mode's section, and the list of modes under "Protect from abuse".
 
+The preview pages in `scripts/*-preview/` and `scripts/winter-art/` import the mode view types, so a renamed view field must be renamed there too. `bun run typecheck` covers them.
+
 To remove a mode, delete it from each of these places, then run `bun run typecheck`, which lists any references left.
+
+# Testing mode timers
+
+Tests run each mode on a `FakeClock` from its test file's `setup` and move time with `clock.advance(ms)`. Some timers run only in certain states:
+
+- Showdown's phase countdown runs only with `pacing: "auto"`. Under manual pacing the reveal waits for the host and `phaseRemainingMs` stays put.
+- In Tower Fight, a player reaches the `decide` state only after taking damage. Have another player shoot them before calling `earnDecision` (`tests/fight.test.ts`).

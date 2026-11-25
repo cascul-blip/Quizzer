@@ -72,7 +72,7 @@ function LandPlayerContent({ view, send }: { view: PlayerLandView; send: Send })
   } else if (board) {
     body = <ClaimMode board={board} claimWait={view.claimWait} claims={view.claims} team={view.team.index} send={send} onLastTile={onLastTile} />;
   } else if (view.state === "empty") {
-    body = <EmptyNotice ms={view.emptyMs} />;
+    body = <EmptyNotice ms={view.emptyRemainingMs} />;
   } else if (view.question) {
     body = <StreamQuestion question={view.question} onAnswer={(seq, option, text) => send({ type: "land.answer", seq, option, text })} />;
   } else {

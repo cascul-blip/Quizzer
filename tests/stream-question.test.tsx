@@ -56,7 +56,7 @@ describe("Streamed phone questions", () => {
 
   test("feedback appears immediately with the next question", () => {
     mount();
-    const feedback = { seq: 1, correct: false, remainingMs: 1000, answers: ["One"], penaltyMs: 0 };
+    const feedback = { seq: 1, correct: false, remainingMs: 1000, answers: ["One"], penaltyDurationMs: 0 };
     act(() =>
       render(
         <>
@@ -74,7 +74,7 @@ describe("Streamed phone questions", () => {
   test("Protect from abuse countdown decreases and feedback disappears", () => {
     jest.useFakeTimers();
     mount();
-    const feedback = { seq: 1, correct: false, remainingMs: 1100, answers: [], penaltyMs: 100 };
+    const feedback = { seq: 1, correct: false, remainingMs: 1100, answers: [], penaltyDurationMs: 100 };
     act(() => render(<Feedback feedback={feedback} rightText="Correct" />, root));
     expect(root.textContent).toContain("Next question in 2s");
     act(() => {

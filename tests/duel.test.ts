@@ -141,8 +141,8 @@ describe("Showdown", () => {
     game.dispose();
   });
 
-  test("a phone's view key ignores the reveal clock running up, so it isn't re-sent", () => {
-    const { game, clock } = setup(["A", "B"]);
+  test("a phone's view key ignores the phase countdown running down and the reveal clock running up, so it isn't re-sent", () => {
+    const { game, clock } = setup(["A", "B"], { pacing: "auto" });
     round(game, clock, [
       ["A", true],
       ["B", false],
@@ -154,6 +154,7 @@ describe("Showdown", () => {
     clock.t += 1000;
     const after = game.playerView(b)!;
     expect(after.revealElapsedMs).toBe(before.revealElapsedMs! + 1000);
+    expect(after.phaseRemainingMs).toBe(before.phaseRemainingMs - 1000);
     expect(viewKey(after, clock.now())).toBe(key);
   });
 

@@ -138,7 +138,7 @@ test("Land Grab keeps unaffordable or illegal placements unavailable after the a
 
 test("Land Grab shows the land and after-answer wait instead of lingering answer feedback", () => {
   const { show } = phone();
-  show({ ...questionView, feedback: { seq: 3, correct: true, remainingMs: 1000, answers: [], penaltyMs: 0 } });
+  show({ ...questionView, feedback: { seq: 3, correct: true, remainingMs: 1000, answers: [], penaltyDurationMs: 0 } });
   expect(dom.root.querySelector('.flash[role="status"]')).not.toBeNull();
   show(claimView);
   expect(dom.root.querySelector(".land-claim")).not.toBeNull();

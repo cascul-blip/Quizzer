@@ -216,7 +216,7 @@ describe("Game mode: Tallest Tower", () => {
       kind: "tower",
       state: "build",
       blocksHeld: 4,
-      build: { columns: [0, 0, 0], floors: 0, sweepMs: 2500, wait: { activityKey: 4, remainingMs: 1000 } },
+      build: { columns: [0, 0, 0], floors: 0, sweepDurationMs: 2500, wait: { activityKey: 4, remainingMs: 1000 } },
       question: null,
       feedback: null,
     });
@@ -382,7 +382,7 @@ describe("Game mode: Tower Fight", () => {
     // Undamaged tower: straight to aiming.
     const aiming = answered!;
     expect(aiming.view.kind === "fight" && aiming.view.state).toBe("aim");
-    expect(aiming.view.kind === "fight" && aiming.view.decisionMs).toBe(0);
+    expect(aiming.view.kind === "fight" && aiming.view.decisionRemainingMs).toBe(0);
 
     // A hard throw backwards: friendly fire on Red's own tower.
     red.sendMsg({ type: "fight.fire", dx: 170, dy: -20 });

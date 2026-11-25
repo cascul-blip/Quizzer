@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { SHARED_MODES } from "../src/shared/mode-entries.ts";
+import { isNamedTimeField } from "../src/shared/view-time-fields.ts";
 
 const ROOT = resolve(import.meta.dir, "..");
 const SERVER = join(ROOT, "src/server");
@@ -343,5 +344,27 @@ describe("Coding standards: checked casts", () => {
   test("no code casts Object.keys", () => {
     const files = ["src", "tests"].flatMap((d) => codeFiles(join(ROOT, d))).map(read);
     expect(offending(KEYS_CAST, files)).toEqual([]);
+  });
+});
+
+const VIEW_TYPE_FILES = [
+  join(ROOT, "src/shared/mode-views.ts"),
+  ...readdirSync(join(ROOT, "src/shared/modes")).map((name) => join(ROOT, "src/shared/modes", name)),
+].map(read);
+const TIME_FIELD = /\b(\w+Ms)\??\s*:/g;
+
+describe("Coding standards: view time fields", () => {
+  test("finds the view time fields", () => {
+    const fields = VIEW_TYPE_FILES.flatMap(({ lines }) => lines.flatMap((line) => [...line.matchAll(TIME_FIELD)].map((m) => m[1]!)));
+    expect(fields).toContain("phaseRemainingMs");
+  });
+
+  test("every view time field ends in RemainingMs, ElapsedMs or DurationMs", () => {
+    const misnamed = VIEW_TYPE_FILES.flatMap(({ path, lines }) =>
+      lines.flatMap((line, i) =>
+        [...line.matchAll(TIME_FIELD)].filter((m) => !isNamedTimeField(m[1]!)).map((m) => `${relative(ROOT, path)}:${i + 1}: ${m[1]}`),
+      ),
+    );
+    expect(misnamed).toEqual([]);
   });
 });

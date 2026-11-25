@@ -26,7 +26,7 @@ const buildView: PlayerTowerView = {
   feedback: null,
   egg: null,
   monsterEvent: null,
-  build: { columns: [1, 0, 0], floors: 0, sweepMs: 2500, wait: { activityKey: 4, remainingMs: 1000 } },
+  build: { columns: [1, 0, 0], floors: 0, sweepDurationMs: 2500, wait: { activityKey: 4, remainingMs: 1000 } },
   result: null,
 };
 

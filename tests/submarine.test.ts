@@ -281,7 +281,7 @@ describe("dive", () => {
     const timers = () =>
       [...game.players.values()].map((p) => {
         const d = game.playerView(p.id)!.dive!;
-        return d.role === "waiting" ? null : [d.role, d.index, d.symbolRemainingMs, d.symbolMs];
+        return d.role === "waiting" ? null : [d.role, d.index, d.symbolRemainingMs, d.symbolDurationMs];
       });
     expect(timers().sort()).toEqual([
       ["diver", 0, 8000, 8000],

@@ -164,7 +164,7 @@ describe("questions", () => {
     expect(game.answer(a.id, seq, 0)).toBe(true);
     expect(a.blocksHeld).toBe(1);
     const v = game.playerView(a.id)!;
-    expect(v.feedback).toEqual({ seq, correct: true, remainingMs: 1000, answers: [], penaltyMs: 0 });
+    expect(v.feedback).toEqual({ seq, correct: true, remainingMs: 1000, answers: [], penaltyDurationMs: 0 });
     expect(v.question!.seq).toBe(seq + 1); // next question is already waiting underneath
     // Too soon: still in the feedback window.
     expect(game.answer(a.id, game.playerView(a.id)!.question!.seq, 0)).toBe(false);
@@ -218,7 +218,7 @@ describe("building", () => {
     clock.advance(1);
     const v = game.playerView(a.id)!;
     expect(v.question).toBeNull();
-    expect(v.build).toEqual({ columns: [0, 0, 0], floors: 0, sweepMs: SWEEP_START_MS, wait: { activityKey: 4, remainingMs: 0 } });
+    expect(v.build).toEqual({ columns: [0, 0, 0], floors: 0, sweepDurationMs: SWEEP_START_MS, wait: { activityKey: 4, remainingMs: 0 } });
     expect(game.answer(a.id, cur.seq + 1, 0)).toBe(false);
     expect(game.drop(a.id, 2)).toBe(true);
   });
@@ -362,7 +362,7 @@ describe("monster", () => {
 
   test("eggs are announced 4 times per game, evenly spaced; none without the setting or with one team", () => {
     const { game, clock } = play(["A", "B"], { minutes: 3, monster: true, rng: () => 0 });
-    expect(game.hostView().nextMonsterMs).toBe(36_000);
+    expect(game.hostView().nextMonsterRemainingMs).toBe(36_000);
     clock.advance(36_000 - 1);
     expect(game.egg).toBeNull();
     clock.advance(1);
@@ -371,17 +371,17 @@ describe("monster", () => {
       { col: 0, row: 3 },
       { col: 0, row: 3 },
     ]);
-    expect(game.hostView().nextMonsterMs).toBe(36_000);
+    expect(game.hostView().nextMonsterRemainingMs).toBe(36_000);
     // Unhatched eggs stay put; the later announcements don't add more.
     const first = game.egg!.seq;
     clock.advance(36_000);
     expect(game.egg!.seq).toBe(first);
-    expect(game.hostView().nextMonsterMs).toBe(36_000);
+    expect(game.hostView().nextMonsterRemainingMs).toBe(36_000);
     clock.advance(36_000);
-    expect(game.hostView().nextMonsterMs).toBe(36_000);
+    expect(game.hostView().nextMonsterRemainingMs).toBe(36_000);
     clock.advance(36_000);
     expect(game.egg!.seq).toBe(first);
-    expect(game.hostView().nextMonsterMs).toBeNull();
+    expect(game.hostView().nextMonsterRemainingMs).toBeNull();
     // Everyone hears about it and sees their own egg.
     for (const p of game.players.values()) {
       expect(game.playerView(p.id)!.monsterEvent).toMatchObject({ kind: "egg" });
@@ -465,7 +465,7 @@ describe("monster", () => {
     expect(game.egg).not.toBeNull();
     game.end();
     expect(game.egg).toBeNull();
-    expect(game.hostView().nextMonsterMs).toBeNull();
+    expect(game.hostView().nextMonsterRemainingMs).toBeNull();
     clock.advance(10 * 60_000); // no timers left to fire
     expect(game.lastAttack).toBeNull();
   });
