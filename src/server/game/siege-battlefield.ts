@@ -518,8 +518,6 @@ export class SiegeBattlefield<O> {
     return [...lanes].sort((a, b) => a - b);
   }
 
-  // ---------- occupancy ----------
-
   /** Why a defender can't go on a square, or null when it can. */
   placementError(type: unknown, lane: unknown, square: unknown): string | null {
     if (typeof type !== "string" || !(SIEGE_DEFENDER_TYPES as readonly string[]).includes(type)) return "Unknown defender.";
@@ -548,8 +546,6 @@ export class SiegeBattlefield<O> {
     d.health += maxHealth - d.maxHealth;
     d.maxHealth = maxHealth;
   }
-
-  // ---------- observations ----------
 
   /** The board as the projector shows it. Monsters only glide toward their target while the battle runs. */
   hostBoard(

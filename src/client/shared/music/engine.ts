@@ -123,8 +123,6 @@ export function tokens(bar: string): string[] {
   return bar.trim().split(/\s+/);
 }
 
-// ---------- instruments ----------
-
 type Ctx = BaseAudioContext;
 const noiseBuffers = new WeakMap<Ctx, AudioBuffer>();
 const pulseWaves = new WeakMap<Ctx, PeriodicWave>();

@@ -307,8 +307,6 @@ export class SiegeGame {
     this.phases.after("tick", SIEGE_TICK_MS, () => this.tick());
   }
 
-  // ---------- the battle ----------
-
   private tick(): void {
     if (!this.playing) return;
     const { changed, phones, map } = this.battlefield.tick(this.clock.now());
@@ -392,8 +390,6 @@ export class SiegeGame {
     this.events.push({ seq: ++this.seq, nickname: p.nickname, text });
     if (this.events.length > SIEGE_EVENTS_SHOWN) this.events.splice(0, this.events.length - SIEGE_EVENTS_SHOWN);
   }
-
-  // ---------- the end ----------
 
   private stand(): void {
     this.closePeriod();

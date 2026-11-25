@@ -484,7 +484,7 @@ export function HexBoard({ board, viewer, selected, placed, capture, label }: He
   );
 }
 
-// ---------- the projector's HUD: shapes, team cards, banners, plinths ----------
+// The projector's HUD: shapes, team cards, banners, plinths.
 
 /** A team's painted shape token (white, outlined): the second cue besides colour. */
 export function LandShape({ team, class: cls = "" }: { team: number; class?: string }) {

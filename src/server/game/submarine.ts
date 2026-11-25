@@ -20,7 +20,6 @@ import { Roster } from "./roster.ts";
 import type { AnswerTotals } from "./stream.ts";
 import { QuestionStream } from "./stream.ts";
 
-// ---------- tuning (all in one place) ----------
 export const COUNTDOWN_MS = 3000;
 export const ESCAPED_MS = 3500;
 export const CAUGHT_MS = 4000;
@@ -194,8 +193,6 @@ export class SubGame {
     return Math.max(1, [...this.players.values()].filter((p) => p.connected).length);
   }
 
-  // ---------- chase ----------
-
   get phase(): SubPhase {
     return this.phases.phase;
   }
@@ -279,8 +276,6 @@ export class SubGame {
     this.phases.set("escaped", ESCAPED_MS, () => this.startDive());
     this.onChange();
   }
-
-  // ---------- dive ----------
 
   private startDive(): void {
     const divers = shuffle(
@@ -429,8 +424,6 @@ export class SubGame {
     else this.onChange();
     return p;
   }
-
-  // ---------- results + views ----------
 
   awards(): SubAwards {
     const players = [...this.players.values()];

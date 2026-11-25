@@ -23,8 +23,6 @@ export type RichStyle = "acoustic" | "arcade";
 /** The style a track's `rich` flag asks for, or null for the plain sound. */
 export const richStyle = (rich: boolean | RichStyle | undefined): RichStyle | null => (rich === true ? "acoustic" : rich || null);
 
-// ---------- humanising ----------
-
 /** Timing offsets stay within ±HUMAN_TIME_S; velocity within ±HUMAN_GAIN of the written level. */
 export const HUMAN_TIME_S = 0.008;
 export const HUMAN_GAIN = 0.1;
@@ -69,8 +67,6 @@ export const panFor = (inst: string, style: RichStyle = "acoustic"): number => P
 
 /** Lute chords are strummed: each note of a chord this much later than the one below. */
 export const STRUM_S = 0.012;
-
-// ---------- shared pieces ----------
 
 const noiseBuffers = new WeakMap<Ctx, AudioBuffer>();
 const pulseWaves = new WeakMap<Ctx, Map<number, PeriodicWave>>();
@@ -206,8 +202,6 @@ function pluckBuffer(ctx: Ctx, period: number): AudioBuffer {
   }
   return b;
 }
-
-// ---------- instruments ----------
 
 /**
  * Play one note or hit in a rich style. Returns false for instruments the style has no rich version of,
@@ -391,7 +385,7 @@ export function playRich(
   return false;
 }
 
-// ---------- arcade instruments (Racer) ----------
+// Arcade instruments (Racer).
 
 /** An 808-style metallic hat: six detuned squares through a high band, short or open. */
 function metalHat(ctx: Ctx, dest: AudioNode, t: number, peak: number, decay: number) {
@@ -584,7 +578,7 @@ export function createEcho(ctx: BaseAudioContext, dest: AudioNode, stepSeconds: 
   };
 }
 
-// ---------- the bus: saturation, compression, reverb ----------
+// The bus: saturation, compression, reverb.
 
 const REVERB_S = 3.2;
 const PREDELAY_S = 0.025;

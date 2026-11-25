@@ -195,8 +195,6 @@ export class TowerGame {
     return this.settings.monster && this.teams.length >= 2;
   }
 
-  // ---------- monster ----------
-
   /**
    * Give every tower its own egg, EGG_LEVELS_ABOVE levels above its highest
    * complete floor (10 floors → level 14), in a random column where that cell

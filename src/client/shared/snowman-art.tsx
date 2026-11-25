@@ -31,7 +31,7 @@ import { TILE_ART } from "./snowman/tiles.ts";
 
 type Pt = { x: number; y: number };
 
-// ---------- rig (rig.py) ----------
+// Rig (rig.py).
 
 /** Arm thickness at the upper arm; the forearm is 0.8 of it. */
 const H = 40;
@@ -367,8 +367,6 @@ export function planAttack(marked: number[], players: ArenaPlayer[], hit: Set<st
   return { rakes, contact };
 }
 
-// ---------- clocks ----------
-
 /** Re-renders every animation frame while `on`; returns the current time (ms). */
 function useFrame(on: boolean): number {
   const [, tick] = useState(0);
@@ -428,8 +426,6 @@ function frame(clock: Clock, plan: Plan | null, now: number, still: boolean): { 
   }
   return { pose, t, over };
 }
-
-// ---------- the arena ----------
 
 /** The snowman's four layers share one rect. */
 const BODY = { x: 464.1509433962264, y: 40, w: 271.6981132075472, h: 600 };

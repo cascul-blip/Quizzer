@@ -22,7 +22,7 @@ import type { RobotSkin } from "../robot-skin.ts";
 import { ROBOT_SKIN } from "../robot-skin.ts";
 import type { Track } from "./engine.ts";
 
-// ---------- composing helpers (each returns one 16-step bar) ----------
+// Composing helpers (each returns one 16-step bar).
 
 /** Notes with lengths in 16th steps; total the track's bar length (normally 16, or 12 for triple meter). */
 const seq = (...parts: [string, number][]) =>
@@ -46,7 +46,7 @@ const pump = (note: string, pattern: string) =>
 const chord = (notes: string) => notes.split(" ").join("+");
 const rest = drum("................");
 
-// ---------- Classic: upbeat game show ----------
+// Classic: upbeat game show.
 
 const classicLobby: Track = {
   id: "classic-lobby",
@@ -179,7 +179,7 @@ const classicResults: Track = {
   ],
 };
 
-// ---------- Tallest Tower: retro arcade (chiptune, so it keeps the synth voices) ----------
+// Tallest Tower: retro arcade (chiptune, so it keeps the synth voices).
 
 const towerLobby: Track = {
   id: "tower-lobby",
@@ -270,7 +270,7 @@ const towerResults: Track = {
   ],
 };
 
-// ---------- Sled Squad: original arrangements of the public-domain Jingle Bells ----------
+// Sled Squad: original arrangements of the public-domain Jingle Bells.
 // James Lord Pierpont, 1857/1859. Familiar refrain in C major, with new accompaniment.
 // Source/provenance: samples/CREDITS.md. Keep the tune present even at zero intensity.
 const JINGLE_BELLS = [
@@ -372,7 +372,7 @@ const submarineResults: Track = {
   ],
 };
 
-// ---------- Tower Fight: medieval battle ----------
+// Tower Fight: medieval battle.
 
 const fightLobby: Track = {
   id: "fight-lobby",
@@ -478,7 +478,7 @@ const fightResults: Track = {
   ],
 };
 
-// ---------- Robot Attack: Romantic orchestra ----------
+// Robot Attack: Romantic orchestra.
 // Famous public-domain themes arranged for a synth orchestra: strings, brass, flute,
 // pizzicato (pluck), double bass (tribass), timpani and cymbals.
 
@@ -645,7 +645,7 @@ const robotResults: Track = {
   ],
 };
 
-// ---------- Land Grab: calm ambient piano that grows into an orchestra ----------
+// Land Grab: calm ambient piano that grows into an orchestra.
 // Sparse piano in a big hall while the land is quiet. As a team gets close to closing
 // a ring the same four chords (Am F C G) speed up and gather strings, brass and drums.
 
@@ -958,7 +958,7 @@ const landResults: Track = {
   ],
 };
 
-// ---------- Racer: sunny coastal-drive arcade chiptune ----------
+// Racer: sunny coastal-drive arcade chiptune.
 // A major, in the IV-V-iii-vi mould of late-80s arcade racers: octave-hopping
 // triangle bass, syncopated square lead, pulse stabs and arpeggios, noise drums.
 
@@ -1124,7 +1124,7 @@ const racerResults: Track = {
   ],
 };
 
-// ---------- Cup of Death: spaghetti western (original themes) ----------
+// Cup of Death: spaghetti western (original themes).
 
 /** Boom-chick bass: the root on the beat, the fifth in between. */
 const boomChick = (root: string, fifth: string) => seq([root, 4], [fifth, 4], [root, 4], [fifth, 4]);
@@ -1256,7 +1256,7 @@ const cupResults: Track = {
   ],
 };
 
-// ---------- Kingdom Siege: a tabletop kingdom under siege ----------
+// Kingdom Siege: a tabletop kingdom under siege.
 
 const SIEGE_G = chord("G3 B3 D4");
 const SIEGE_C = chord("C4 E4 G4");
@@ -1396,7 +1396,7 @@ const siegeResults: Track = {
   ],
 };
 
-// ---------- Christmas Toybox: Patapan, with flute, toy percussion and bells ----------
+// Christmas Toybox: Patapan, with flute, toy percussion and bells.
 // Traditional Burgundian melody, A minor. Soprano transcription from the score explicitly
 // released to the public domain by Douglas D. Anderson; see samples/CREDITS.md.
 // The two-beat pickup starts the loop; the final two beats complete twelve 4/4 bars.
@@ -1500,7 +1500,7 @@ const christmasSiegeResults: Track = {
   ],
 };
 
-// ---------- Showdown: a quick-draw standoff at High Noon ----------
+// Showdown: a quick-draw standoff at High Noon.
 // Original title-theme shape, not a transcription of any film cue. D minor: a 16th-note electric-guitar
 // tremolo on the chord, a low root on beats 1 and 3, and a sparse whistle that leaves gaps for the flute.
 // The trumpet takes the same tune an octave down as the clock runs out. The podium lifts the first half
@@ -1638,7 +1638,7 @@ const showdownResults: Track = {
   ],
 };
 
-// ---------- Shared Christmas carol melodies and arrangements ----------
+// Shared Christmas carol melodies and arrangements.
 
 /** Close-voiced triads (around middle C) for the carols' chords. */
 const XMAS_CHORDS: Record<string, string> = {
@@ -1923,7 +1923,7 @@ const christmasTowerResults: Track = {
   ],
 };
 
-// ---------- Evil Snowman: original arrangements of traditional Christian carols ----------
+// Evil Snowman: original arrangements of traditional Christian carols.
 // Melody sources and CC0 instrument provenance: samples/CREDITS.md.
 // Keep the tune present at zero intensity: late rounds can last only seven seconds.
 const snowmanLobby: Track = {
@@ -1998,7 +1998,7 @@ const snowmanResults: Track = {
   ],
 };
 
-// ---------- North Pole Tower: recognizable carols with CC0 instruments ----------
+// North Pole Tower: recognizable carols with CC0 instruments.
 // Reuse the traditional melodies and our arrangements; provenance: samples/CREDITS.md.
 const christmasTowerLobby: Track = { ...snowmanLobby, id: "tower-christmas-lobby" };
 
@@ -2106,7 +2106,7 @@ const christmasTowerMedley: Track = {
   layers: christmasTowerLayers(true),
 };
 
-// ---------- Neon Noel Racer: carols over the arcade rhythm section ----------
+// Neon Noel Racer: carols over the arcade rhythm section.
 // Traditional GLORIA in G, 4/4, including both cascading Gloria refrains.
 // Public-domain melody sources and original arrangement credits: samples/CREDITS.md.
 const GLORIA_VERSE = [

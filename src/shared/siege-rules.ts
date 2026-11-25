@@ -45,8 +45,6 @@ export const SIEGE_MAP_IDLE_MS = 8000;
 export type SiegeWaves = 5 | 10 | "endless";
 export const SIEGE_WAVE_CHOICES: readonly SiegeWaves[] = [5, 10, "endless"];
 
-// ---------- defenders ----------
-
 export type SiegeDefenderType = "archer" | "knight" | "wall";
 export const SIEGE_DEFENDER_TYPES: readonly SiegeDefenderType[] = ["archer", "knight", "wall"];
 const SIEGE_MAX_LEVEL = 3;
@@ -78,8 +76,6 @@ export const SIEGE_CHEAPEST = Math.min(...SIEGE_DEFENDER_TYPES.map((t) => SIEGE_
 export function siegeUpgradeCost(type: SiegeDefenderType, level: number): number | null {
   return level >= 1 && level < SIEGE_MAX_LEVEL ? SIEGE_DEFENDERS[type].cost[level]! : null;
 }
-
-// ---------- monsters ----------
 
 export type SiegeMonsterType = "goblin" | "wolf" | "troll" | "giant";
 
@@ -132,8 +128,6 @@ export const SIEGE_STOMP_SPLASH = 2;
 export const SIEGE_LEAP_MS = 700;
 /** Budget monsters' relative odds when a wave buys its monsters. */
 export const SIEGE_MONSTER_ODDS: Record<Exclude<SiegeMonsterType, "giant">, number> = { goblin: 5, wolf: 3, troll: 2 };
-
-// ---------- waves ----------
 
 /** The fixed part of a wave's monster budget: 6 + 3 per wave, and +4 per wave after wave 10. */
 export function siegeBaseBudget(wave: number): number {

@@ -42,6 +42,13 @@ Keep imports acyclic, including type-only imports. When two modules need the sam
 
 ## Comments
 
-When a comment explains what a name, constant or pattern means, rename or restructure the code until the comment says nothing new, then delete it. A comment that restates the code drifts away from it.
+When a comment explains what a name, constant or pattern means, rename or restructure the code until the comment says nothing new, then delete it. A comment that restates the code drifts away from it. The common cases:
+
+- **Units in the name**: `distanceMiles`, `cooldownMs`, `heightVh`, not `distance` with `/** Miles. */`.
+- **Named constants**: a number whose meaning needs a comment gets a constant (`LOSER_SPOT_X = 0.79`).
+- **Named conditions**: a condition that needs a comment becomes a variable or function (`const showsTumbleweed = …`).
+- **Named values over codes**: return named constants or a union, not `0`/`1`/`2` explained in a comment.
+- **Doc comments add something**: a doc comment that repeats its name (`/** Five health pips. */` on `HealthBar`) or narrates the next line (`// Walking.`) goes.
+- **No section dividers**: split a file that needs `// ---------- monsters ----------` banners, or let its declarations read in order. `tests/standards.test.ts` rejects them.
 
 Use inline comments for local contracts and context a reader needs at the point of use. Examples include units, sentinels, callback obligations, and ordering that affects behavior. Put maintenance procedures in the relevant guide and cross-module design rationale in an ADR. When a change affects an existing decision, update its ADR with the revised decision and reason.

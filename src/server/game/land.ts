@@ -281,8 +281,6 @@ export class LandGame {
     this.onActivity(p.id);
   }
 
-  // ---------- the land ----------
-
   costFor(team: number, tile: number): number | null {
     return placementCost(this.owners, this.size, this.starts, team, tile, LAND_STEAL_COST, LAND_GUARD_COST);
   }

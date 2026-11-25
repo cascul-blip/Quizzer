@@ -139,7 +139,7 @@ function ArtImage({ src, ...props }: JSX.IntrinsicElements["img"]) {
   return <img {...props} src={christmas && typeof src === "string" ? (TOYBOX_ART[src] ?? src) : src} />;
 }
 
-// ---------- the numbers from ./siege/manifest.md ----------
+// The numbers come from ./siege/manifest.md.
 
 /** board.webp, in px. Everything on the board is placed in these pixels and drawn in % of them. */
 const BOARD = { w: 1344, h: 768 };
@@ -251,8 +251,6 @@ const KNIGHT_PENNANT = { foot: [10, 95], at: [114, 118] } as const;
 const WALL_COURSE = { w: 130, h: 53, foot: [65, 39], at: [96, 52] } as const;
 const WALL_SPIKES = { w: 110, h: 79, foot: [55, 62], at: [96, 32] } as const;
 
-// ---------- placing things on the board ----------
-
 const pct = (v: number, of: number) => `${(v / of) * 100}%`;
 
 /** A square's centre x on a lane, for any position in squares (k = square k's centre, 0.5 = the wall face). */
@@ -330,8 +328,6 @@ function footBox(detail: { w: number; h: number }, foot: readonly [number, numbe
 /** Alternating animation names restart a CSS animation each time a counter changes. */
 const flip = (name: string, seq: number) => (seq > 0 ? `${name}-${seq % 2 ? "a" : "b"}` : "");
 
-// ---------- the board ----------
-
 export function SiegeBoard({
   hearts,
   castle = "auto",
@@ -402,8 +398,6 @@ function healthBar(health: number, max: number) {
   );
 }
 
-// ---------- defenders ----------
-
 export function DefenderFigure({ d, fresh, drawing }: { d: HostSiegeDefender; fresh: boolean; drawing: boolean }) {
   const c = FIGURES[d.type];
   const p = boardPoint(d.lane, d.square);
@@ -468,8 +462,6 @@ function StoneWall({ level, cracked }: { level: number; cracked: boolean }) {
     </>
   );
 }
-
-// ---------- monsters ----------
 
 /** A monster at position x (in squares). Walking ones bob; attacking ones switch pose on each hit. */
 export function MonsterFigure({ m, x, posed }: { m: HostSiegeMonster; x: number; posed: boolean }) {
@@ -576,8 +568,6 @@ export function ArrowShot({ lane, from, to }: { lane: number; from: number; to: 
   );
 }
 
-// ---------- the endings ----------
-
 /** Confetti for "The kingdom stands!". */
 export function Confetti() {
   const colors = ["#1f4fa8", "#f5f1e6", "#d6a531", "#2f7d3a", "#b23a2e"];
@@ -610,7 +600,7 @@ export function RisingBanners() {
   );
 }
 
-// ---------- icons (projector and phone) ----------
+// Icons (projector and phone).
 
 const DEFENDER_ICON: Record<SiegeDefenderType, string> = {
   archer: phoneArcherIconImg,

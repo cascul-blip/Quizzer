@@ -345,7 +345,6 @@ export function DuelistClip({
   );
 }
 
-// ---- effects -------------------------------------------------------------------------
 // Each plays once when mounted (give it a new key to replay). By default an effect fills its
 // positioned parent (the picture contained and centred), so size and place the parent. Or pass
 // x/y: the effect's own anchor (flash core, barrel end, ground point) goes on that point, % of
