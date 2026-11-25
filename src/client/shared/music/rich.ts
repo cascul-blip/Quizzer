@@ -40,12 +40,10 @@ export function seeded(seed: number): () => number {
 }
 
 interface Human {
-  /** Seconds to move the note by. */
-  dt: number;
+  timeOffsetS: number;
   /** Multiplies the note's volume. */
   gain: number;
-  /** Cents of detune for this note. */
-  detune: number;
+  detuneCents: number;
 }
 
 /** Drum machines and sequenced synths are tighter than players: arcade timing moves this fraction as much. */
@@ -55,7 +53,7 @@ export const ARCADE_TIGHTNESS = 0.4;
 export function humanize(step: number, layer: number, style: RichStyle = "acoustic"): Human {
   const r = seeded(step * 7919 + layer * 104729 + 17);
   const time = style === "arcade" ? HUMAN_TIME_S * ARCADE_TIGHTNESS : HUMAN_TIME_S;
-  return { dt: (r() * 2 - 1) * time, gain: 1 + (r() * 2 - 1) * HUMAN_GAIN, detune: (r() * 2 - 1) * 4 };
+  return { timeOffsetS: (r() * 2 - 1) * time, gain: 1 + (r() * 2 - 1) * HUMAN_GAIN, detuneCents: (r() * 2 - 1) * 4 };
 }
 
 /** Where each instrument sits, -1 (left) … 1 (right), per style. */

@@ -179,8 +179,9 @@ describe("Cup of Death", () => {
       makeSafe(game, clock, c);
       endQuiz(game, clock);
       const b = byName(game, "B");
-      values.push(0); // poison in cup 0
-      game.pick(b.id, 0);
+      const POISON_CUP = 0;
+      values.push(POISON_CUP);
+      game.pick(b.id, POISON_CUP);
       clock.advance(CUP_SIP_MS);
       expect(b.outRound).toBe(1);
       expect(b.poisonedFrom).toBe(CUP_DEFAULT_CUPS);

@@ -6,6 +6,9 @@ import { SAMPLE_SETS } from "../src/client/shared/music/samples/manifest.ts";
 import { loadSamples, nearestZone, playSample, samplesReady, setSamplesEnabled, urlsFor, VOICES } from "../src/client/shared/music/samples.ts";
 import { TRACKS } from "../src/client/shared/music/tracks.ts";
 
+/** The fade at the end of each recording, in seconds. */
+const RECORDING_FADE_S = 0.25;
+
 // A stand-in for an AudioContext (tests have none) that counts the nodes made.
 
 class FakeParam {
@@ -102,8 +105,7 @@ describe("the recordings", () => {
       if (!("zones" in set)) throw new Error(inst);
       for (const { midi, len } of notesOf(inst)) {
         const rate = 2 ** ((midi - nearestZone(set.zones, midi).root) / 12);
-        // The last quarter second of each recording is its fade.
-        expect((len + voice.ring + voice.release) * rate).toBeLessThan(set.seconds - 0.25);
+        expect((len + voice.ring + voice.release) * rate).toBeLessThan(set.seconds - RECORDING_FADE_S);
       }
     }
   });

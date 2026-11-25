@@ -148,13 +148,14 @@ describe("rules", () => {
     expect(siegeDefenderGold("archer", 3, 4, 4)).toBe(250);
     expect(siegeDefenderGold("knight", 2, 8, 16)).toBe(87.5);
     expect(siegeDefenderGold("wall", 1, 0, 15)).toBe(0);
-    // Par is 60 gold per budget point: a board at or below it changes nothing.
-    expect(siegeWaveStrength(10, 600)).toEqual({ boost: 1, budget: 10, toughness: 1 });
+    const GOLD_PER_BUDGET_POINT = 60;
+    // A board at or below par changes nothing.
+    expect(siegeWaveStrength(10, 10 * GOLD_PER_BUDGET_POINT)).toEqual({ boost: 1, budget: 10, toughness: 1 });
     expect(siegeWaveStrength(10, 0, 3)).toEqual({ boost: 1, budget: 10, toughness: 1 });
     // Twice par calls for 4×, reached 0.35 at a time; mostly as health.
-    expect(siegeWaveStrength(10, 1200)).toEqual({ boost: 1.35, budget: 11, toughness: 1.23 });
-    expect(siegeWaveStrength(10, 1200, 2, false).boost).toBe(2);
-    expect(siegeWaveStrength(10, 1200, 3.9)).toEqual({ boost: 4, budget: 15, toughness: 2.64 });
+    expect(siegeWaveStrength(10, 2 * 10 * GOLD_PER_BUDGET_POINT)).toEqual({ boost: 1.35, budget: 11, toughness: 1.23 });
+    expect(siegeWaveStrength(10, 2 * 10 * GOLD_PER_BUDGET_POINT, 2, false).boost).toBe(2);
+    expect(siegeWaveStrength(10, 2 * 10 * GOLD_PER_BUDGET_POINT, 3.9)).toEqual({ boost: 4, budget: 15, toughness: 2.64 });
     expect(siegeWaveStrength(10, 6000, 4).boost).toBe(4);
     expect(siegeWaveStrength(10, 900, 3).boost).toBe(2.25);
     // The giant gets faster instead of tougher: 1× with no boost, 2× at the top boost.
@@ -288,9 +289,10 @@ describe("the battle", () => {
     game.place(byName(game, "Ana").id, "archer", 1, 1);
     sturdy(game.battlefield.spawn("goblin", 1, 9));
     const [c0, t0] = [changes, ticks];
-    // The archer shoots and the goblin walks: projector news only.
-    clock.advance(3000);
-    expect(ticks - t0).toBeGreaterThanOrEqual(2); // an arrow every 1.5 s
+    const ARCHER_SHOT_INTERVAL_MS = 1500;
+    // Projector news only.
+    clock.advance(2 * ARCHER_SHOT_INTERVAL_MS);
+    expect(ticks - t0).toBeGreaterThanOrEqual(2);
     expect(changes - c0).toBe(0);
     // A goblin reaching the wall costs a heart, which every phone shows.
     const hearts = game.hearts;
@@ -536,7 +538,7 @@ describe("waves", () => {
     clock.advance(SIEGE_MONSTERS.giant.squareMs / 2);
     expect(g.x).toBeCloseTo(6, 1);
     expect(g.state).toBe("attack");
-    clock.advance(SIEGE_MONSTERS.giant.attackMs);
+    clock.advance(SIEGE_MONSTERS.giant.hitIntervalMs);
     expect(g.attackSeq).toBe(2);
   });
 

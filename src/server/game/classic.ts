@@ -29,13 +29,13 @@ interface Answer {
   text?: string;
   correct: boolean;
   points: number;
-  ms: number;
+  msSinceOpen: number;
 }
 
 interface Player extends BasePlayer {
   score: number;
-  /** Points gained on the most recently closed question. */
-  lastDelta: number;
+  /** On the most recently closed question. */
+  lastQuestionPoints: number;
   /** Consecutive correct answers up to the most recently closed question. */
   streak: number;
   answers: (Answer | undefined)[];
@@ -180,7 +180,7 @@ export class ClassicGame {
 
   answer(playerId: string, qIndex: number, answer: AnswerValue): boolean {
     const limitSec = this.currentQuestion?.timeLimitSec ?? 0;
-    const taken = this.paced.take(this.players.get(playerId), qIndex, answer, (a) => ({ ...a, points: scoreAnswer(a.correct, a.ms, limitSec) }));
+    const taken = this.paced.take(this.players.get(playerId), qIndex, answer, (a) => ({ ...a, points: scoreAnswer(a.correct, a.msSinceOpen, limitSec) }));
     if (!taken) return false;
     this.onActivity(playerId);
     this.paced.closeIfAllAnswered();
@@ -248,7 +248,7 @@ export class ClassicGame {
     for (const p of this.players.values()) {
       const ans = p.answers[this.qIndex];
       p.score += ans?.points ?? 0;
-      p.lastDelta = ans?.points ?? 0;
+      p.lastQuestionPoints = ans?.points ?? 0;
       p.streak = ans?.correct ? p.streak + 1 : 0;
     }
   }
@@ -276,14 +276,22 @@ export class ClassicGame {
     const picks = [...this.players.values()]
       .map((p) => ({ p, a: p.answers[this.qIndex] }))
       .filter((x): x is { p: Player; a: Answer } => !!x.a)
-      .sort((x, y) => x.a.ms - y.a.ms);
+      .sort((x, y) => x.a.msSinceOpen - y.a.msSinceOpen);
     return Array.from({ length: optionCount }, (_, i) => picks.filter((x) => x.a.option === i).map((x) => x.p.avatar));
   }
 
   leaderboard(limit = LEADERBOARD_SIZE): RankedEntry[] {
     return this.rankedNow()
       .slice(0, limit)
-      .map((p) => ({ id: p.id, nickname: p.nickname, avatar: p.avatar, score: p.score, rank: p.rank, delta: p.lastDelta, streak: p.streak }));
+      .map((p) => ({
+        id: p.id,
+        nickname: p.nickname,
+        avatar: p.avatar,
+        score: p.score,
+        rank: p.rank,
+        lastQuestionPoints: p.lastQuestionPoints,
+        streak: p.streak,
+      }));
   }
 
   /** The most-missed questions: wrong answers only, a question left unanswered doesn't count. */
@@ -366,7 +374,7 @@ export class ClassicGame {
 }
 
 function newPlayer(base: BasePlayer): Player {
-  return { ...base, score: 0, lastDelta: 0, streak: 0, answers: [] };
+  return { ...base, score: 0, lastQuestionPoints: 0, streak: 0, answers: [] };
 }
 
 type ClassicPlayer = ReturnType<ClassicGame["ranked"]>[number];
@@ -400,7 +408,7 @@ function classicColumns(game: ClassicGame): Column<ClassicPlayer>[] {
         header: `Q${n} time (s)`,
         value: (p) => {
           const a = p.answers[i];
-          return a ? (a.ms / 1000).toFixed(2) : "";
+          return a ? (a.msSinceOpen / 1000).toFixed(2) : "";
         },
       },
     );

@@ -26,6 +26,7 @@ type Send = (m: ClientMsg) => void;
 type Build = NonNullable<PlayerTowerView["build"]>;
 
 const FALL_MS = 450;
+const HALF_BLOCK_WIDTH = 0.1;
 const LAST_BLOCK_PAUSE_MS = 500;
 
 /** Phone screen for Tallest Tower: own questions at own pace, then build mode every 4 correct answers. */
@@ -185,7 +186,7 @@ function BuildMode(props: {
   const areaRef = useRef<HTMLDivElement>(null);
   const sliderRef = useRef<HTMLDivElement>(null);
   const fallRef = useRef<HTMLDivElement>(null);
-  const pos = useRef(0.5);
+  const blockCentreFraction = useRef(0.5);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [falling, setFalling] = useState<{ zone: number; columns: number[]; id: number } | null>(null);
 
@@ -214,8 +215,8 @@ function BuildMode(props: {
     const loop = (t: number) => {
       const x = ((t - start) / build.sweepDurationMs) % 2;
       const f = x < 1 ? x : 2 - x;
-      pos.current = 0.1 + 0.8 * f; // center of the block, as a fraction of the width
-      if (sliderRef.current) sliderRef.current.style.transform = `translateX(${(pos.current - 0.1) * size.w}px)`;
+      blockCentreFraction.current = HALF_BLOCK_WIDTH + (1 - 2 * HALF_BLOCK_WIDTH) * f;
+      if (sliderRef.current) sliderRef.current.style.transform = `translateX(${(blockCentreFraction.current - HALF_BLOCK_WIDTH) * size.w}px)`;
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
@@ -241,7 +242,7 @@ function BuildMode(props: {
 
   function drop() {
     if (wait.isWaiting() || falling || blocksHeld <= 0 || !size.w) return;
-    const zone = Math.min(DROP_ZONES - 1, Math.max(0, Math.floor(pos.current * DROP_ZONES)));
+    const zone = Math.min(DROP_ZONES - 1, Math.max(0, Math.floor(blockCentreFraction.current * DROP_ZONES)));
     send({ type: "tower.drop", zone });
     navigator.vibrate?.(25);
     setFalling({ zone, columns: [...build.columns], id: performance.now() });

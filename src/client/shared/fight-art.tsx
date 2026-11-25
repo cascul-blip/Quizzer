@@ -108,8 +108,8 @@ export function Battlefield(props: {
       <defs>
         {/* The grass texture is tiled in field units so it doesn't stretch with the terrain. */}
         {!christmas && (
-          <pattern id="bf-grass" patternUnits="userSpaceOnUse" width={GRASS_TILE} height={GRASS_TILE}>
-            <image href={pickArt(grassImg, phoneGrassImg)} width={GRASS_TILE} height={GRASS_TILE} />
+          <pattern id="bf-grass" patternUnits="userSpaceOnUse" width={GRASS_TILE_FIELD_UNITS} height={GRASS_TILE_FIELD_UNITS}>
+            <image href={pickArt(grassImg, phoneGrassImg)} width={GRASS_TILE_FIELD_UNITS} height={GRASS_TILE_FIELD_UNITS} />
           </pattern>
         )}
         {christmas && (
@@ -157,10 +157,8 @@ export function Battlefield(props: {
   );
 }
 
-/** Size of one grass tile in field units. */
-const GRASS_TILE = 56;
-/** Depth of the grass band below the surface, in field units. */
-const GRASS_DEPTH = 10;
+const GRASS_TILE_FIELD_UNITS = 56;
+const GRASS_DEPTH_FIELD_UNITS = 10;
 
 function Terrain({ terrain, hill }: { terrain: number[]; hill: HillHeight }) {
   const christmas = useGingerbread();
@@ -194,8 +192,8 @@ function Terrain({ terrain, hill }: { terrain: number[]; hill: HillHeight }) {
       {!christmas && (
         <>
           <g clip-path="url(#bf-ground)" fill="none" stroke-linejoin="round">
-            <path d={`M${pts}`} stroke="#2a1608" stroke-opacity="0.35" stroke-width={GRASS_DEPTH * 2 + 8} />
-            <path d={`M${pts}`} stroke="url(#bf-grass)" stroke-width={GRASS_DEPTH * 2} />
+            <path d={`M${pts}`} stroke="#2a1608" stroke-opacity="0.35" stroke-width={GRASS_DEPTH_FIELD_UNITS * 2 + 8} />
+            <path d={`M${pts}`} stroke="url(#bf-grass)" stroke-width={GRASS_DEPTH_FIELD_UNITS * 2} />
           </g>
           <path d={`M${pts}`} fill="none" stroke="#24561a" stroke-width="3" stroke-linejoin="round" />
         </>
@@ -206,10 +204,10 @@ function Terrain({ terrain, hill }: { terrain: number[]; hill: HillHeight }) {
 
 // Proportions of the castle image (width / height), measured on the art build's castle-0.webp.
 const CASTLE_ASPECT = 0.403;
-/** Share of the image height above the battlements (roof and pennant). */
-const CASTLE_FLAG_PART = 0.198;
+// Roof and pennant.
+const ROOF_SHARE_ABOVE_BATTLEMENTS = 0.198;
 /** Drawn so the stonework is as tall as the tower's hit box. */
-const CASTLE_H = TOWER_H / (1 - CASTLE_FLAG_PART);
+const CASTLE_H = TOWER_H / (1 - ROOF_SHARE_ABOVE_BATTLEMENTS);
 const CASTLE_W = CASTLE_H * CASTLE_ASPECT;
 const CASTLE_STAGES = [castle0, castle1, castle2, castle3, castle4];
 const PHONE_CASTLE_STAGES = [phoneCastle0, phoneCastle1, phoneCastle2, phoneCastle3, phoneCastle4];

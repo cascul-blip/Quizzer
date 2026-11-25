@@ -12,18 +12,18 @@ export const MAX_TYPED_ANSWER = 100;
 const NUMBER_MARK = /(?<![\p{L}\p{N}])-(?=\.?\d)|(?<!\p{L})\.(?=\d)|(?<=\d)\/(?=\d)/u;
 const STRIPPED = new RegExp(`(?!${NUMBER_MARK.source})[^\\p{L}\\p{N}\\s]`, "gu");
 
+const MINUS_SIGN = "−";
+/** NFKD turns ½ and the like into digits around this. */
+const FRACTION_SLASH = "⁄";
+
+/** 1,000 → 1000 */
+const stripThousandsSeparators = (s: string) => s.replace(/(?<=\d),(?=\d{3}(?!\d))/g, "");
+/** 1,5 → 1.5 */
+const normalizeDecimalComma = (s: string) => s.replace(/(?<=\d),(?=\d)/g, ".");
+
 function normalize(s: string): string {
-  return s
-    .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .replace(/−/g, "-") // − minus sign
-    .replace(/⁄/g, "/") // ⁄ fraction slash, from ½ etc.
-    .replace(/(?<=\d),(?=\d{3}(?!\d))/g, "") // 1,000 → 1000
-    .replace(/(?<=\d),(?=\d)/g, ".") // decimal comma: 1,5 → 1.5
-    .replace(STRIPPED, "")
-    .replace(/\s+/g, " ")
-    .trim();
+  const folded = s.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replaceAll(MINUS_SIGN, "-").replaceAll(FRACTION_SLASH, "/");
+  return normalizeDecimalComma(stripThousandsSeparators(folded)).replace(STRIPPED, "").replace(/\s+/g, " ").trim();
 }
 
 /** Strip a plural ending: berries → berry, boxes → box, airplanes → airplane. Leaves "bus"/"glass" alone. */

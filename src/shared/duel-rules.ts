@@ -22,13 +22,13 @@ export function pairArenas<T>(order: readonly T[]): T[][] {
   return arenas;
 }
 
-/** 0 right, 1 wrong, 2 no answer. */
-const tier = (d: DuelAnswerInfo) => (d.correct === true ? 0 : d.correct === false ? 1 : 2);
+const AnswerRank = { RIGHT: 0, WRONG: 1, NO_ANSWER: 2 } as const;
+const tier = (d: DuelAnswerInfo) => (d.correct === true ? AnswerRank.RIGHT : d.correct === false ? AnswerRank.WRONG : AnswerRank.NO_ANSWER);
 
 /** Negative when `a` did better: right before wrong before no answer, then the faster one. */
 export function compareDuelists(a: DuelAnswerInfo, b: DuelAnswerInfo): number {
   const t = tier(a) - tier(b);
-  if (t !== 0 || tier(a) === 2) return t;
+  if (tier(a) !== tier(b) || tier(a) === AnswerRank.NO_ANSWER) return t;
   const am = a.ms ?? Number.MAX_SAFE_INTEGER;
   const bm = b.ms ?? Number.MAX_SAFE_INTEGER;
   return am - bm;

@@ -65,7 +65,7 @@ function viewFor(mode: ThemedMode, theme: SeasonTheme, screen: string) {
     result: { outcome: "stands" },
     round: 1,
     teams: [],
-    car: { speed: 0, crashed: false },
+    car: { speedMph: 0, crashed: false },
     phaseRemainingMs: 0,
     phaseDurationMs: 1,
     remainingMs: 0,

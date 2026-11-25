@@ -265,10 +265,9 @@ function DuelReveal({ view }: { view: PlayerDuelView }) {
   const heading = !answered ? "No answer" : good ? "Correct!" : "Wrong";
   const line = duel && me ? duelLine(duel, me, view.theme) : null;
 
-  // A light buzz once per round: a double tap for a win, one for a loss.
   useEffect(() => {
     if (!me) return;
-    navigator.vibrate?.(me.outcome === "win" ? [40, 40, 80] : me.outcome === "lose" ? 120 : 30);
+    navigator.vibrate?.(me.outcome === "win" ? WIN_BUZZ : me.outcome === "lose" ? LOSE_BUZZ : DRAW_BUZZ);
   }, [view.round]);
 
   const correctSet = new Set(r?.correct ?? []);
@@ -277,7 +276,7 @@ function DuelReveal({ view }: { view: PlayerDuelView }) {
       <div class="verdict">
         <div class="verdict-icon">{good ? "✓" : "✗"}</div>
         <h1>{heading}</h1>
-        {r?.ms != null && <div class="points duel-num">{secs(r.ms)}</div>}
+        {r?.answerDurationMs != null && <div class="points duel-num">{secs(r.answerDurationMs)}</div>}
       </div>
       {line ? <div class={`duel-line ${line.tone}`}>{line.text}</div> : <div class="duel-line">You'll join the bottom arena next round</div>}
       {!good && r && (
@@ -319,6 +318,11 @@ function DuelReveal({ view }: { view: PlayerDuelView }) {
     </main>
   );
 }
+
+/** Vibration patterns (ms) for the once-per-round buzz. */
+const WIN_BUZZ = [40, 40, 80];
+const LOSE_BUZZ = 120;
+const DRAW_BUZZ = 30;
 
 function DuelPodium({ view }: { view: PlayerDuelView }) {
   const r = view.result;

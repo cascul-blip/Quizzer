@@ -13,8 +13,14 @@ import {
   sweepMsFor,
   TowerGame,
 } from "../src/server/game/tower.ts";
+import { EGG_LEVELS_ABOVE } from "../src/shared/modes/tower.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
 import { FakeClock, sampleQuiz } from "./helpers.ts";
+
+/** Rows are 0-based, so the egg EGG_LEVELS_ABOVE levels above `floors` full floors sits in this row. */
+function eggRowFor(floors: number): number {
+  return floors + EGG_LEVELS_ABOVE - 1;
+}
 
 /** 6 questions whose correct answer is always "yes" (index 0 unless shuffled). */
 function quiz(): Quiz {
@@ -396,13 +402,13 @@ describe("monster", () => {
 
   test("each tower's egg is 4 levels above its highest full floor, never on a placed block", () => {
     const { game, clock } = play(["A", "B", "C"], { teams: 3, minutes: 3, monster: true, rng: () => 0 });
-    game.teams[0]!.columns = [10, 10, 10]; // 10 floors → level 14
-    game.teams[1]!.columns = [8, 9, 8]; // 8 floors → level 12
-    game.teams[2]!.columns = [20, 5, 13]; // 5 floors → level 9 (row 8); left and right are already stacked past it
+    game.teams[0]!.columns = [10, 10, 10];
+    game.teams[1]!.columns = [8, 9, 8];
+    game.teams[2]!.columns = [20, 5, 13]; // left and right are already stacked past the egg
     clock.advance(60_000);
-    expect(egg(game, 0)).toEqual({ col: 0, row: 13 });
-    expect(egg(game, 1)).toEqual({ col: 0, row: 11 });
-    expect(egg(game, 2)).toEqual({ col: 1, row: 8 });
+    expect(egg(game, 0)).toEqual({ col: 0, row: eggRowFor(10) });
+    expect(egg(game, 1)).toEqual({ col: 0, row: eggRowFor(8) });
+    expect(egg(game, 2)).toEqual({ col: 1, row: eggRowFor(5) });
     // With any random draw, the chosen cell is always empty.
     for (const r of [0, 0.34, 0.67, 0.99]) {
       const g = play(["A", "B"], { minutes: 3, monster: true, rng: () => r });
@@ -422,7 +428,7 @@ describe("monster", () => {
     blue!.columns = [4, 4, 5]; // leader: 4 floors
     yellow!.columns = [3, 3, 3];
     clock.advance(60_000);
-    expect(egg(game, 0)).toEqual({ col: 1, row: 4 }); // red: 1 floor → level 5
+    expect(egg(game, 0)).toEqual({ col: 1, row: eggRowFor(1) });
 
     const r = byName(game, "Red1");
     red!.columns = [1, 4, 1];

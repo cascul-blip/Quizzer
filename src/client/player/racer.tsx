@@ -68,7 +68,7 @@ export function RacerPlayer({ view, send }: { view: PlayerRacerView; send: Send 
             Question {q.index + 1} / {q.total}
           </span>
         )}
-        <span class="score racer-num">{view.car.crashed ? "Crashed" : `${Math.round(view.car.speed)} mph`}</span>
+        <span class="score racer-num">{view.car.crashed ? "Crashed" : `${Math.round(view.car.speedMph)} mph`}</span>
       </header>
       {body}
     </div>
@@ -403,7 +403,7 @@ function RacerAnswering({ view, send }: { view: PlayerRacerView; send: Send }) {
 }
 
 function turnHeadline(t: RacerTurn, carCrashed: boolean): string {
-  if (t.gain > 0) return `+${t.gain} mph`;
+  if (t.gainMph > 0) return `+${t.gainMph} mph`;
   if (t.crashed) return "Crashed!";
   if (t.fails > 0) return plural(t.fails, "fail point");
   if (t.repaired) return "Repaired!";
@@ -417,7 +417,7 @@ function RacerReveal({ view }: { view: PlayerRacerView }) {
   const t = view.lastTurn;
   const good = !!r?.wasCorrect;
   const heading = !r || (r.choice === null && view.myText === null) ? "No answer" : good ? "Correct!" : "Wrong";
-  const tone = t ? (t.gain > 0 || t.repaired ? "up" : t.crashed || t.fails > 0 ? "down" : "") : "";
+  const tone = t ? (t.gainMph > 0 || t.repaired ? "up" : t.crashed || t.fails > 0 ? "down" : "") : "";
   return (
     <main class={`result racer-reveal ${good ? "good" : "bad"}`}>
       <div class="racer-reveal-body">
@@ -461,7 +461,7 @@ function RacerReveal({ view }: { view: PlayerRacerView }) {
       <div class="racer-strip">
         <RacerScene
           theme={view.theme}
-          speed={view.car.speed}
+          speed={view.car.speedMph}
           crashed={view.car.crashed}
           ejected={!good && t ? { key: t.index, riders: [{ avatar: view.me.avatar, name: view.me.nickname }] } : undefined}
         />
@@ -477,10 +477,10 @@ function RacerPodium({ view }: { view: PlayerRacerView }) {
     <main class="center racer-podium">
       <p class="muted">Final result</p>
       <div class="final-rank top racer-num">
-        {r.distance.toFixed(1)} <span class="unit">miles</span>
+        {r.distanceMiles.toFixed(1)} <span class="unit">miles</span>
       </div>
       <p class="big-score">
-        Top speed {Math.round(r.topSpeed)} mph · {plural(r.crashes, "crash", "crashes")}
+        Top speed {Math.round(r.topSpeedMph)} mph · {plural(r.crashes, "crash", "crashes")}
       </p>
       <div class="racer-card racer-mine">
         <div>{plural(view.me.correct, "correct answer")}</div>

@@ -287,24 +287,35 @@ function TimerBar({ view, secs }: { view: DuelView; secs: number }) {
  * How to lay out `n` arena panels. Up to 3 sit in one row (Arena 1 wider); more make a grid
  * where Arena 1 takes a 2×2 block, with the column count picked to keep the panels near 16:9.
  */
+const MAX_FIRST_ARENA_HEIGHT_VH = 46;
+/** Width:height of the whole arena grid on a 16:9 projector below the question. */
+const TARGET_GRID_ASPECT = 3;
+/** Where a moving token lands on its new street, as fractions of the panel. */
+const LOSER_SPOT_X = 0.79;
+const WINNER_SPOT_X = 0.21;
+const LANDING_Y = 0.45;
+
+/** About a third of the streets, while everyone sizes each other up. */
+function showsTumbleweed(view: DuelView, arena: number, round: number): boolean {
+  return view.phase === "intro" && (arena + round) % 3 === 0;
+}
+
 function gridFor(n: number): { row: true; columns: string; maxWidth: string } | { row: false; cols: number; rows: number } {
   if (n <= 3) {
     const big = n === 1 ? 1 : 1.35;
     const sum = big + (n - 1);
-    // The tallest (Arena 1) panel stays under 46vh: its height is width × big/sum × 9/16.
+    // Arena 1's panel height is width × big/sum × 9/16.
     return {
       row: true,
       columns: [`${big}fr`, ...Array.from({ length: n - 1 }, () => "1fr")].join(" "),
-      maxWidth: `min(100%, ${(((46 * 16) / 9 / big) * sum).toFixed(1)}vh)`,
+      maxWidth: `min(100%, ${(((MAX_FIRST_ARENA_HEIGHT_VH * 16) / 9 / big) * sum).toFixed(1)}vh)`,
     };
   }
-  // The grid's own shape, about 3 wide to 1 tall on a 16:9 projector below the question.
-  const shape = 3;
   const cells = n + 3;
   let best = { cols: 4, rows: Math.ceil(cells / 4), score: Infinity };
   for (let cols = 3; cols <= 9; cols++) {
     const rows = Math.max(2, Math.ceil(cells / cols));
-    const aspect = (shape * rows) / cols;
+    const aspect = (TARGET_GRID_ASPECT * rows) / cols;
     const score = Math.abs(Math.log(aspect / (16 / 9))) + 0.12 * (cols * rows - cells);
     if (score < best.score) best = { cols, rows, score };
   }
@@ -341,10 +352,10 @@ function Arenas({ view, step }: { view: DuelView; step: number }) {
         const to = panels.current.get(d.nextArena)?.getBoundingClientRect();
         if (d.nextArena === a.arena || !from || !to) return;
         const x = from.left - base.left + (from.width * slotCentreX(slot)) / 100;
-        const y = from.top - base.top + from.height * 0.45;
-        // Into the side of the new street they will stand on: winners take the loser's spot and vice versa.
-        const tx = to.left - base.left + to.width * (slot === 0 ? 0.79 : 0.21);
-        const ty = to.top - base.top + to.height * 0.45;
+        const y = from.top - base.top + from.height * LANDING_Y;
+        // Winners take the loser's spot and vice versa.
+        const tx = to.left - base.left + to.width * (slot === 0 ? LOSER_SPOT_X : WINNER_SPOT_X);
+        const ty = to.top - base.top + to.height * LANDING_Y;
         list.push({ key: d.id, avatar: d.avatar, up: d.nextArena < a.arena, x, y, dx: tx - x, dy: ty - y });
       });
     }
@@ -498,8 +509,7 @@ function ArenaPanel({
     return base;
   });
 
-  // A tumbleweed rolls through about a third of the streets while everyone sizes each other up.
-  const tumble = view.phase === "intro" && (arena.arena + round) % 3 === 0;
+  const tumble = showsTumbleweed(view, arena.arena, round);
 
   return (
     <div class={`duel-panel ${throne ? "throne" : ""}`} ref={panelRef}>
@@ -668,7 +678,7 @@ function NameTag({
       )}
       {result && (
         <span class={`duel-name-result ${result.correct ? "right" : "wrong"}`}>
-          {result.correct ? "✓" : "✗"} {result.ms !== null ? `${(result.ms / 1000).toFixed(1)} s` : "—"}
+          {result.correct ? "✓" : "✗"} {result.answerDurationMs !== null ? `${(result.answerDurationMs / 1000).toFixed(1)} s` : "—"}
         </span>
       )}
       {result && result.points > 0 && step >= STEP_SETTLE && <span class="duel-name-points">+{result.points}</span>}

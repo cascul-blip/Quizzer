@@ -34,7 +34,7 @@ export interface RacerDriver {
 }
 
 /**
- * Summary of the most recently finished turn: confidence, correct, total, gain, fails, speedBefore,
+ * Summary of the most recently finished turn: confidence, correct, total, gainMph, fails, speedBefore,
  * speedAfter, crashed, repaired and distanceAdded come from RacerTurnResult.
  */
 export interface RacerTurn extends RacerTurnResult {
@@ -45,10 +45,8 @@ export interface RacerTurn extends RacerTurnResult {
 }
 
 export interface RacerResult {
-  /** Miles. */
-  distance: number;
-  /** Mph. */
-  topSpeed: number;
+  distanceMiles: number;
+  topSpeedMph: number;
   crashes: number;
   /** Turns played to the end (fewer than the quiz has questions if the host ended the game early). */
   turns: number;

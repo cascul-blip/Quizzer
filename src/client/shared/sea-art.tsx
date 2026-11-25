@@ -156,15 +156,13 @@ interface Sprite {
   src: string;
   /** Position along one loop of the floor, 0–100. */
   x: number;
-  /** Height in vh. */
-  h: number;
+  heightVh: number;
   flip?: boolean;
 }
 
 interface Band {
   floor: string;
-  /** How tall the strip is drawn, in vh. */
-  floorH: number;
+  floorHeightVh: number;
   /** How many copies of the floor fill one loop. Keeps the repeat on the loop boundary. */
   repeats?: number;
   props: Sprite[];
@@ -177,66 +175,66 @@ const LOOP = "240vw";
 const BANDS: Band[] = [
   {
     floor: floor1,
-    floorH: 17,
+    floorHeightVh: 17,
     repeats: 9,
     props: [
-      { src: kelpImg, x: 6, h: 18 },
-      { src: kelpImg, x: 14, h: 14, flip: true },
-      { src: ringImg, x: 22, h: 8 },
-      { src: kelpImg, x: 32, h: 20 },
-      { src: kelpImg, x: 44, h: 13, flip: true },
-      { src: kelpImg, x: 56, h: 17 },
-      { src: ringImg, x: 68, h: 7 },
-      { src: kelpImg, x: 80, h: 15, flip: true },
-      { src: kelpImg, x: 92, h: 19 },
+      { src: kelpImg, x: 6, heightVh: 18 },
+      { src: kelpImg, x: 14, heightVh: 14, flip: true },
+      { src: ringImg, x: 22, heightVh: 8 },
+      { src: kelpImg, x: 32, heightVh: 20 },
+      { src: kelpImg, x: 44, heightVh: 13, flip: true },
+      { src: kelpImg, x: 56, heightVh: 17 },
+      { src: ringImg, x: 68, heightVh: 7 },
+      { src: kelpImg, x: 80, heightVh: 15, flip: true },
+      { src: kelpImg, x: 92, heightVh: 19 },
     ],
     far: [],
   },
   {
     floor: floor2,
-    floorH: 16,
+    floorHeightVh: 16,
     props: [
-      { src: kelpImg, x: 8, h: 13 },
-      { src: boatImg, x: 24, h: 15 },
-      { src: kelpImg, x: 40, h: 11, flip: true },
-      { src: kelpImg, x: 62, h: 14 },
-      { src: boatImg, x: 84, h: 13 },
+      { src: kelpImg, x: 8, heightVh: 13 },
+      { src: boatImg, x: 24, heightVh: 15 },
+      { src: kelpImg, x: 40, heightVh: 11, flip: true },
+      { src: kelpImg, x: 62, heightVh: 14 },
+      { src: boatImg, x: 84, heightVh: 13 },
     ],
-    far: [{ src: hulkImg, x: 52, h: 12 }],
+    far: [{ src: hulkImg, x: 52, heightVh: 12 }],
   },
   {
     floor: floor3,
-    floorH: 15,
+    floorHeightVh: 15,
     props: [
-      { src: boatImg, x: 10, h: 11 },
-      { src: pirateImg, x: 36, h: 32 },
-      { src: kelpImg, x: 68, h: 12 },
+      { src: boatImg, x: 10, heightVh: 11 },
+      { src: pirateImg, x: 36, heightVh: 32 },
+      { src: kelpImg, x: 68, heightVh: 12 },
     ],
-    far: [{ src: hulkImg, x: 78, h: 13 }],
+    far: [{ src: hulkImg, x: 78, heightVh: 13 }],
   },
   {
     floor: floor4,
-    floorH: 20,
+    floorHeightVh: 20,
     props: [],
     far: [
-      { src: caveImg, x: 16, h: 32 },
-      { src: hulkImg, x: 34, h: 16 },
-      { src: caveImg, x: 62, h: 36 },
-      { src: hulkImg, x: 88, h: 18 },
+      { src: caveImg, x: 16, heightVh: 32 },
+      { src: hulkImg, x: 34, heightVh: 16 },
+      { src: caveImg, x: 62, heightVh: 36 },
+      { src: hulkImg, x: 88, heightVh: 18 },
     ],
   },
   {
     floor: floor5,
-    floorH: 22,
+    floorHeightVh: 22,
     props: [
-      { src: linerImg, x: 32, h: 26 },
-      { src: hulkImg, x: 58, h: 14 },
-      { src: linerImg, x: 84, h: 30 },
+      { src: linerImg, x: 32, heightVh: 26 },
+      { src: hulkImg, x: 58, heightVh: 14 },
+      { src: linerImg, x: 84, heightVh: 30 },
     ],
     far: [
-      { src: caveImg, x: 20, h: 30 },
-      { src: hulkImg, x: 46, h: 12 },
-      { src: caveImg, x: 74, h: 34 },
+      { src: caveImg, x: 20, heightVh: 30 },
+      { src: hulkImg, x: 46, heightVh: 12 },
+      { src: caveImg, x: 74, heightVh: 34 },
     ],
   },
 ];
@@ -245,7 +243,7 @@ function Tiles({ band, sprites, showFloor }: { band: Band; sprites: Sprite[]; sh
   return (
     <>
       {[0, 1].map((copy) => (
-        <div key={copy} class="floor-tile" style={{ width: LOOP, height: `${band.floorH}vh` }}>
+        <div key={copy} class="floor-tile" style={{ width: LOOP, height: `${band.floorHeightVh}vh` }}>
           {showFloor && (
             <div
               class="floor-fill"
@@ -256,7 +254,14 @@ function Tiles({ band, sprites, showFloor }: { band: Band; sprites: Sprite[]; sh
             />
           )}
           {sprites.map((s, n) => (
-            <img key={n} class={`sea-prop${s.flip ? " flip" : ""}`} src={s.src} alt="" draggable={false} style={{ left: `${s.x}%`, height: `${s.h}vh` }} />
+            <img
+              key={n}
+              class={`sea-prop${s.flip ? " flip" : ""}`}
+              src={s.src}
+              alt=""
+              draggable={false}
+              style={{ left: `${s.x}%`, height: `${s.heightVh}vh` }}
+            />
           ))}
         </div>
       ))}
@@ -266,7 +271,7 @@ function Tiles({ band, sprites, showFloor }: { band: Band; sprites: Sprite[]; sh
 
 function BandView({ band, fade }: { band: Band; fade: number }) {
   return (
-    <div class="sea-band" style={{ opacity: fade, "--h": `${band.floorH}vh` }}>
+    <div class="sea-band" style={{ opacity: fade, "--h": `${band.floorHeightVh}vh` }}>
       <div class="far-track" data-rate="0.36">
         <Tiles band={band} sprites={band.far} showFloor={false} />
       </div>

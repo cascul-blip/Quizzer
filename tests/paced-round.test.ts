@@ -195,8 +195,8 @@ describe("Paced question round", () => {
       const p = answerer();
       const { clock, paced } = openAt(0, [p, answerer()]);
       clock.advance(10_499);
-      expect(paced.take(p, 0, 1, keep)).toEqual({ option: 1, correct: false, ms: 10_499 });
-      expect(p.answers[0]).toEqual({ option: 1, correct: false, ms: 10_499 });
+      expect(paced.take(p, 0, 1, keep)).toEqual({ option: 1, correct: false, msSinceOpen: 10_499 });
+      expect(p.answers[0]).toEqual({ option: 1, correct: false, msSinceOpen: 10_499 });
     });
 
     test("an answer after grace is refused", () => {

@@ -62,9 +62,8 @@ function TowerStageContent({ view, send }: { view: TowerView; send: Send }) {
     else if (view.dropCount > p.dropCount) play("thud");
   }, [view]);
 
-  // Monster: replay each new attack once (~3.4 s), announce new eggs.
-  const attack = useEventFlash(view.lastAttack, view.lastAttack?.seq, 3600);
-  const eggNews = useEventFlash(view.egg, view.egg?.seq, 4000);
+  const attack = useEventFlash(view.lastAttack, view.lastAttack?.seq, ATTACK_REPLAY_MS);
+  const eggNews = useEventFlash(view.egg, view.egg?.seq, EGG_NOTICE_MS);
   useEffect(() => void (attack && play("roar")), [attack?.seq]);
   useEffect(() => void (eggNews && play("rumble")), [eggNews?.seq]);
   const monsterSecs = useCountdown(view.nextMonsterRemainingMs ?? 0, `m${Math.round((performance.now() + (view.nextMonsterRemainingMs ?? 0)) / 2000)}`);
@@ -141,9 +140,11 @@ function TowerStageContent({ view, send }: { view: TowerView; send: Send }) {
   );
 }
 
+/** How long the host replays a new monster attack (its animation runs about 3.4 s). */
+const ATTACK_REPLAY_MS = 3600;
+const EGG_NOTICE_MS = 4000;
 const UNIT = 10;
-/** Margin beside each tower for trees and the height scale. */
-const SIDE = 9;
+const TOWER_SIDE_MARGIN = 9;
 
 interface MonsterProps {
   egg?: MonsterEggs | null;
@@ -251,14 +252,14 @@ function TowerSvg({ team, rows, phase, egg, attack }: { team: HostTowerTeam; row
   const christmas = useChristmasTower();
   const isFresh = useFreshKeys();
   const newFloor = useNewFloor(team.floors);
-  const W = 3 * UNIT + 2 * SIDE;
+  const W = 3 * UNIT + 2 * TOWER_SIDE_MARGIN;
   const H = rows * UNIT;
   const blocks = [];
   const puffs = [];
   for (let c = 0; c < 3; c++) {
     for (let r = 0; r < team.columns[c]!; r++) {
       const key = `${c}-${r}`;
-      const x = SIDE + c * UNIT;
+      const x = TOWER_SIDE_MARGIN + c * UNIT;
       const y = H - (r + 1) * UNIT;
       const fresh = isFresh(key);
       blocks.push(
@@ -274,8 +275,8 @@ function TowerSvg({ team, rows, phase, egg, attack }: { team: HostTowerTeam; row
     const y = H - f * UNIT;
     marks.push(
       <g key={f} class="mark">
-        <line x1={SIDE - 1.5} x2={W - SIDE + 1.5} y1={y} y2={y} />
-        <text x={SIDE - 2} y={y + labelSize * 0.35} text-anchor="end" font-size={labelSize}>
+        <line x1={TOWER_SIDE_MARGIN - 1.5} x2={W - TOWER_SIDE_MARGIN + 1.5} y1={y} y2={y} />
+        <text x={TOWER_SIDE_MARGIN - 2} y={y + labelSize * 0.35} text-anchor="end" font-size={labelSize}>
           {f * METERS_PER_FLOOR} m
         </text>
       </g>,
@@ -283,15 +284,17 @@ function TowerSvg({ team, rows, phase, egg, attack }: { team: HostTowerTeam; row
   }
   const top = Math.max(...team.columns);
   const topCol = team.columns.indexOf(top);
-  const roofX = SIDE + topCol * UNIT + UNIT / 2;
+  const roofX = TOWER_SIDE_MARGIN + topCol * UNIT + UNIT / 2;
   const roofY = H - top * UNIT;
   return (
     <svg class="tower-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMax meet" role="img" aria-label={`Team ${team.name}: ${team.floors} floors`}>
       {marks}
-      {!christmas && <Tree x={SIDE / 2 - 0.5} y={H} size={7} seed={team.index * 2} />}
-      {!christmas && <Tree x={W - SIDE / 2 + 0.5} y={H} size={7} seed={team.index * 2 + 1} />}
+      {!christmas && <Tree x={TOWER_SIDE_MARGIN / 2 - 0.5} y={H} size={7} seed={team.index * 2} />}
+      {!christmas && <Tree x={W - TOWER_SIDE_MARGIN / 2 + 0.5} y={H} size={7} seed={team.index * 2 + 1} />}
       {blocks}
-      {newFloor !== null && newFloor <= team.floors && <FloorSparkle key={`s${newFloor}`} x={SIDE} y={H - newFloor * UNIT} width={3 * UNIT} size={UNIT} />}
+      {newFloor !== null && newFloor <= team.floors && (
+        <FloorSparkle key={`s${newFloor}`} x={TOWER_SIDE_MARGIN} y={H - newFloor * UNIT} width={3 * UNIT} size={UNIT} />
+      )}
       {puffs}
       {attack &&
         attack.before.flatMap((top, c) =>
@@ -308,15 +311,24 @@ function TowerSvg({ team, rows, phase, egg, attack }: { team: HostTowerTeam; row
                   animationDelay: `${1300 + k * 40}ms`,
                 }}
               >
-                <BuildingBlock x={SIDE + c * UNIT} y={H - (r + 1) * UNIT} size={UNIT} color={team.color} team={team.index} col={c} row={r} fullFloor={false} />
+                <BuildingBlock
+                  x={TOWER_SIDE_MARGIN + c * UNIT}
+                  y={H - (r + 1) * UNIT}
+                  size={UNIT}
+                  color={team.color}
+                  team={team.index}
+                  col={c}
+                  row={r}
+                  fullFloor={false}
+                />
               </g>
             );
           }),
         )}
-      {phase === "playing" && <Crane x={roofX} y={roofY} x0={SIDE - 3} x1={W - SIDE + 3} size={UNIT} color={team.color} />}
+      {phase === "playing" && <Crane x={roofX} y={roofY} x0={TOWER_SIDE_MARGIN - 3} x1={W - TOWER_SIDE_MARGIN + 3} size={UNIT} color={team.color} />}
       {phase === "podium" && top > 0 && <RoofFlag x={roofX} y={roofY} size={UNIT} color={team.color} />}
       {egg?.cells[team.index] && phase === "playing" && (
-        <EggCell x={SIDE + egg.cells[team.index]!.col * UNIT} y={H - (egg.cells[team.index]!.row + 1) * UNIT} size={UNIT} />
+        <EggCell x={TOWER_SIDE_MARGIN + egg.cells[team.index]!.col * UNIT} y={H - (egg.cells[team.index]!.row + 1) * UNIT} size={UNIT} />
       )}
     </svg>
   );
@@ -488,11 +500,13 @@ function TowerSettings({ settings, send }: LobbySettingsProps<"tower">) {
   );
 }
 
+/** The music builds over the last five minutes of the timer. */
+const BUILD_UP_MS = 300_000;
+
 export function towerCue(view: TowerView): MusicCue {
   const playTrack = themedTrack("tower", view.theme, "play");
   if (view.phase === "podium") return { track: themedTrack("tower", view.theme, "results") };
-  // Builds over the last few minutes of the timer.
-  const start = Math.max(0, Math.min(1, 1 - view.remainingMs / 300_000));
+  const start = Math.max(0, Math.min(1, 1 - view.remainingMs / BUILD_UP_MS));
   return view.phase === "playing"
     ? { track: playTrack, intensity: start, rampTo: 1, rampMs: view.remainingMs, key: "tower-playing" }
     : { track: playTrack, intensity: 0, key: "tower-countdown" };

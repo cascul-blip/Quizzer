@@ -149,7 +149,13 @@ export function PacedQuestionScreen({
         </div>
         <div class="center-media">
           {pin ? (
-            <PinBoard image={pin.image} spots={pin.spots} labels={q.options} correct={open ? undefined : [...correct]} counts={open ? undefined : counts} />
+            <PinBoard
+              image={pin.image}
+              spots={pin.spots}
+              labels={q.options}
+              correct={open ? undefined : [...correct]}
+              pickCountsBySpot={open ? undefined : counts}
+            />
           ) : !open && q.type !== "text" ? (
             <div class="bars" role="img" aria-label="Answer distribution">
               {q.options.map((_, i) => {

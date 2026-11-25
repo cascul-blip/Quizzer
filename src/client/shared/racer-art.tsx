@@ -208,14 +208,15 @@ export function RacerScene({ speed, crashed, onLand, ejected, theme, class: cls 
     /** Share of the scene's width a star crosses per second. */
     const starSpeed = (s: Star) => ((m.shown * ROAD_RATE) / 1000) * STAR_RATE * s.depth;
 
+    const isTrailOffRightEdge = (star: Star, trailLength: number) => star.x - trailLength > 1;
+
     const moveStars = (dt: number) => {
       if (!space && !landing) return;
       const trail = starTrailSeconds(m.shown);
       for (const s of sky) {
         const v = starSpeed(s);
         s.x += v * dt;
-        // Gone once its whole trail is off the right edge: back in on the left at a new height.
-        if (s.x - v * trail > 1) Object.assign(s, newStar(-Math.random() * 0.2));
+        if (isTrailOffRightEdge(s, v * trail)) Object.assign(s, newStar(-Math.random() * 0.2)); // back in on the left at a new height
       }
     };
 

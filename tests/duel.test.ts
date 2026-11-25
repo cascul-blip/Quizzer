@@ -264,7 +264,9 @@ describe("Showdown", () => {
       ["E", "F"],
     ]);
     expect(v.lastRound!.round).toBe(1);
-    expect(v.lastRound!.arenas.map((a) => [a.arena, a.draw, a.duelists.map((d) => [d.nickname, d.correct, d.ms, d.outcome, d.nextArena])])).toEqual([
+    expect(
+      v.lastRound!.arenas.map((a) => [a.arena, a.draw, a.duelists.map((d) => [d.nickname, d.correct, d.answerDurationMs, d.outcome, d.nextArena])]),
+    ).toEqual([
       [
         1,
         false,
@@ -305,7 +307,7 @@ describe("Showdown", () => {
       phase: "reveal",
       arena: 2,
       myChoice: 0,
-      reveal: { choice: 0, correct: [0], wasCorrect: true, ms: 100 },
+      reveal: { choice: 0, correct: [0], wasCorrect: true, answerDurationMs: 100 },
       me: { arena: 1, rank: 2, wins: 1 },
     });
     expect(d.opponents.map((o) => o.nickname)).toEqual(["C"]);
@@ -403,7 +405,7 @@ describe("Showdown", () => {
     expect(game.lastRound).toBeNull();
     clock.advance(GRACE_MS);
     expect(game.phase).toBe("reveal");
-    expect(game.lastRound!.arenas[0]!.duelists.map((d) => [d.nickname, d.ms, d.outcome])).toEqual([
+    expect(game.lastRound!.arenas[0]!.duelists.map((d) => [d.nickname, d.answerDurationMs, d.outcome])).toEqual([
       ["A", null, "lose"],
       ["B", 20_000, "win"],
     ]);

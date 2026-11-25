@@ -253,7 +253,7 @@ export class RacerGame {
 
   /** One answer per player per question, the driver included. Returns whether it was accepted. */
   answer(playerId: string, qIndex: number, answer: AnswerValue): boolean {
-    const taken = this.paced.take(this.players.get(playerId), qIndex, answer, ({ ms: _ms, ...a }): RacerAnswer => a);
+    const taken = this.paced.take(this.players.get(playerId), qIndex, answer, ({ msSinceOpen: _ms, ...a }): RacerAnswer => a);
     if (!taken) return false;
     if (!this.paced.closeIfAllAnswered()) this.onActivity(playerId);
     return true;
@@ -330,9 +330,11 @@ export class RacerGame {
     this.ejected = [];
     for (const p of players) {
       const ans = p.answers[this.qIndex];
-      // Everyone here counts, and so does anyone who answered before dropping out; no answer is a wrong answer.
-      if (p.connected || ans) total++;
-      if ((p.connected || ans) && !ans?.correct) this.ejected.push({ id: p.id, nickname: p.nickname, avatar: p.avatar });
+      const participated = p.connected || !!ans;
+      // No answer counts as wrong, so idle players can't ride out a question.
+      const failed = participated && !ans?.correct;
+      if (participated) total++;
+      if (failed) this.ejected.push({ id: p.id, nickname: p.nickname, avatar: p.avatar });
       if (!ans) continue;
       if (ans.correct) {
         correct++;
@@ -346,7 +348,7 @@ export class RacerGame {
     const driver = this.driver ? this.players.get(this.driver.id) : undefined;
     if (driver) {
       driver.turnsDriven++;
-      driver.mphGained += summary.gain;
+      driver.mphGained += summary.gainMph;
       driver.failsAsDriver += summary.fails;
     }
     this.lastTurn = { index: this.qIndex, driver: this.driver, ...summary };
@@ -360,7 +362,7 @@ export class RacerGame {
   }
 
   result(): RacerResult {
-    return { distance: this.car.distance, topSpeed: this.car.topSpeed, crashes: this.car.crashes, turns: this.turns };
+    return { distanceMiles: this.car.distanceMiles, topSpeedMph: this.car.topSpeedMph, crashes: this.car.crashes, turns: this.turns };
   }
 
   awards(): RacerAwards {
@@ -485,8 +487,8 @@ function racerColumns(game: RacerGame): Column<RacerPlayer>[] {
     { header: "Turns driven", value: (p) => p.turnsDriven },
     { header: "Mph gained", value: (p) => p.mphGained },
     { header: "Fail points as driver", value: (p) => p.failsAsDriver },
-    { header: "Class distance (miles)", value: () => round(game.car.distance) },
-    { header: "Top speed (mph)", value: () => round(game.car.topSpeed) },
+    { header: "Class distance (miles)", value: () => round(game.car.distanceMiles) },
+    { header: "Top speed (mph)", value: () => round(game.car.topSpeedMph) },
     { header: "Crashes", value: () => game.car.crashes },
   ];
 }

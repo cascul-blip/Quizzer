@@ -24,15 +24,14 @@ export const ARENA_H = 860;
 const CX = ARENA_W / 2;
 // The granite tiles in robot/tiles/ are pre-rendered for these values (and ROBOT_BOARD):
 // changing any of them misplaces every tile. tests/robot-art.test.ts checks this.
-/** Screen y of the board's near edge and far edge. */
-const NEAR_Y = 800;
-const FAR_Y = 360;
+const NEAR_EDGE_SCREEN_Y = 800;
+const FAR_EDGE_SCREEN_Y = 360;
 /** How much farther away the far row is than the near row (perspective strength). */
 const DEPTH = 0.55;
 /** Tile width at the near edge. */
 export const TILE = 84;
-const H0 = (NEAR_Y - FAR_Y) / (1 - 1 / (1 + DEPTH));
-const HORIZON = NEAR_Y - H0;
+const H0 = (NEAR_EDGE_SCREEN_Y - FAR_EDGE_SCREEN_Y) / (1 - 1 / (1 + DEPTH));
+const HORIZON = NEAR_EDGE_SCREEN_Y - H0;
 export const EDGE = 18;
 /** Avatars drawn on one tile before the rest collapse into a "+N" chip. */
 const STACK_SHOWN = 3;

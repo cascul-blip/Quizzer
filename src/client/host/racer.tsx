@@ -32,7 +32,7 @@ export function RacerStage({ view, send }: { view: RacerView; send: Send }) {
   const secs = useCountdown(view.phaseRemainingMs, `${view.phase}:${q?.index ?? -1}`);
   const prev = useRef<RacerView | null>(null);
   const connected = view.players.filter((p) => p.connected).length;
-  const shownSpeed = useCountUp(view.car.speed, SPEED_COUNT_MS);
+  const shownSpeed = useCountUp(view.car.speedMph, SPEED_COUNT_MS);
 
   useEffect(() => {
     const p = prev.current;
@@ -42,7 +42,7 @@ export function RacerStage({ view, send }: { view: RacerView; send: Send }) {
     if (view.phase === "podium") play("fanfare");
     if (view.phase === "reveal") {
       const t = view.lastTurn;
-      if (t && t.gain > 0) play("gearUp");
+      if (t && t.gainMph > 0) play("gearUp");
       else if (t?.crashed) play("crash");
       else if (t && t.fails > 0) play("skid");
       else if (t?.repaired) play("repair");
@@ -126,7 +126,7 @@ export function RacerStage({ view, send }: { view: RacerView; send: Send }) {
           <section class="racer-lower">
             <RacerScene
               theme={view.theme}
-              speed={view.car.speed}
+              speed={view.car.speedMph}
               crashed={view.car.crashed}
               onLand={() => play("land")}
               ejected={
@@ -149,7 +149,7 @@ export function RacerStage({ view, send }: { view: RacerView; send: Send }) {
               </div>
               <div class="racer-hud">
                 {view.car.crashed ? <div class="racer-hud-speed crashed">CRASHED</div> : <div class="racer-hud-speed">{Math.round(shownSpeed)} mph</div>}
-                <div class="racer-hud-line">{view.car.distance.toFixed(1)} miles driven</div>
+                <div class="racer-hud-line">{view.car.distanceMiles.toFixed(1)} miles driven</div>
               </div>
             </div>
           </section>
@@ -240,7 +240,13 @@ function Turn({ view, send, secs }: { view: RacerView; send: Send; secs: number 
           <Tex text={q.text} />
         </h1>
         {pin ? (
-          <PinBoard image={pin.image} spots={pin.spots} labels={q.options} correct={reveal ? [...correct] : undefined} counts={reveal ? counts : undefined} />
+          <PinBoard
+            image={pin.image}
+            spots={pin.spots}
+            labels={q.options}
+            correct={reveal ? [...correct] : undefined}
+            pickCountsBySpot={reveal ? counts : undefined}
+          />
         ) : (
           q.image && <img src={`/${q.image}`} alt="" />
         )}
@@ -321,9 +327,9 @@ function ResultBanner({ turn, stillCrashed }: { turn: RacerTurn; stillCrashed: b
   const withLabel = (text: string) => (label ? `${label}: ${text}` : text);
   let kind = "held";
   let line: string;
-  if (turn.gain > 0) {
+  if (turn.gainMph > 0) {
     kind = "gain";
-    line = withLabel(`+${turn.gain} mph`);
+    line = withLabel(`+${turn.gainMph} mph`);
   } else if (turn.crashed) {
     kind = "crash";
     line = withLabel(`${fails} · Crashed!`);
@@ -356,13 +362,13 @@ function RacerPodium({ view, send }: { view: RacerView; send: Send }) {
   const players = [...view.players].sort((x, y) => y.correct - x.correct || y.turnsDriven - x.turnsDriven || x.nickname.localeCompare(y.nickname));
   return (
     <main class="podium tower-podium racer-podium">
-      <h1>🏁 {(r?.distance ?? view.car.distance).toFixed(1)} miles</h1>
+      <h1>🏁 {(r?.distanceMiles ?? view.car.distanceMiles).toFixed(1)} miles</h1>
       {showErrors ? (
         <ErrorsTable errors={view.errors ?? []} />
       ) : (
         <>
           <div class="racer-stats">
-            Top speed {Math.round(r?.topSpeed ?? view.car.topSpeed)} mph · Crashes {r?.crashes ?? view.car.crashes} · Questions {r?.turns ?? 0}
+            Top speed {Math.round(r?.topSpeedMph ?? view.car.topSpeedMph)} mph · Crashes {r?.crashes ?? view.car.crashes} · Questions {r?.turns ?? 0}
           </div>
           <div class="awards">
             <Award icon="✅" title="Most correct answers" award={a?.mostCorrect ?? null} unit="correct" />
@@ -432,8 +438,8 @@ export function racerCue(view: RacerView): MusicCue {
   if (view.phase === "podium") return { track: themedTrack("racer", view.theme, "results") };
   // One continuous drive: tempo and layers follow the car's speed. No key, so the
   // music never restarts between questions; useMusic glides to each new intensity.
-  const { speed, crashed } = view.car;
-  return { track: themedTrack("racer", view.theme, "play"), intensity: crashed ? 0.03 : Math.max(0.1, Math.min(1, speed / 150)) };
+  const { speedMph, crashed } = view.car;
+  return { track: themedTrack("racer", view.theme, "play"), intensity: crashed ? 0.03 : Math.max(0.1, Math.min(1, speedMph / 150)) };
 }
 
 export const racerLobby: LobbyModeEntry<"racer"> = {

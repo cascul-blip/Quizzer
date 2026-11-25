@@ -23,6 +23,7 @@ import {
   speedFor,
 } from "../src/server/game/submarine.ts";
 import { CHRISTMAS_GLYPHS, glyphId, parseGlyph } from "../src/shared/glyphs.ts";
+import { CORRECT_PER_BOOST } from "../src/shared/modes/submarine.ts";
 import { FakeClock, sampleQuiz } from "./helpers.ts";
 
 function setup(names: string[], rng?: () => number) {
@@ -45,12 +46,13 @@ function answerRight(game: SubGame, clock: FakeClock, p: SubPlayer) {
   clock.advance(FEEDBACK_MS);
 }
 
-/** Earn a boost (4 correct answers), hold it, and fire it. */
-function boostOnce(game: SubGame, clock: FakeClock, p: SubPlayer) {
-  for (let i = 0; i < 4; i++) answerRight(game, clock, p);
+/** Earn a boost, hold it, and fire it. Returns the ms the boost took. */
+function boostOnce(game: SubGame, clock: FakeClock, p: SubPlayer): number {
+  for (let i = 0; i < CORRECT_PER_BOOST; i++) answerRight(game, clock, p);
   expect(p.state).toBe("boost");
   clock.advance(BOOST_MIN_HOLD_MS);
   expect(game.boost(p.id)).toBe(true);
+  return CORRECT_PER_BOOST * FEEDBACK_MS + BOOST_MIN_HOLD_MS;
 }
 
 describe("chase", () => {
@@ -132,8 +134,9 @@ describe("chase", () => {
   test("a boost postpones the catch", () => {
     const { game, clock } = setup(["A"]);
     const a = byName(game, "A");
-    clock.advance(20_000); // gap 10
-    boostOnce(game, clock, a); // spends 4 s answering + 1.5 s holding
+    const gapTenMs = (GAP_START - 10) * 1000;
+    clock.advance(gapTenMs);
+    boostOnce(game, clock, a);
     expect(game.phase).toBe("chase");
     const gap = game.gap();
     clock.advance(gap * 1000 - 1);
@@ -158,7 +161,8 @@ describe("chase", () => {
 function toDive(names: string[], rng?: () => number) {
   const s = setup(names, rng);
   const p = [...s.game.players.values()][0]!;
-  s.game.boosts = s.game.required - 1; // the rest of the squad has been boosting
+  const squadBoostsBeforeLast = s.game.required - 1;
+  s.game.boosts = squadBoostsBeforeLast;
   boostOnce(s.game, s.clock, p);
   s.clock.advance(ESCAPED_MS);
   expect(s.game.phase).toBe("dive");
@@ -239,8 +243,9 @@ describe("dive", () => {
     expect(game.depth).toBe(depth0 + DIVE_METERS_PER_HIT);
     expect(game.tap(d1!, target)).toBeNull(); // already found
     expect(ins.index).toBe(0);
-    expect(game.tap(d2!, target)).toBe(true); // 2 of 3 found; 70% of 3 rounds up to 3 → not yet
-    expect(ins.index).toBe(0);
+    expect(game.tap(d2!, target)).toBe(true); // 70% of 3 rounds up to 3
+    const twoOfThreeFoundStaysOnSymbol = ins.index === 0;
+    expect(twoOfThreeFoundStaysOnSymbol).toBe(true);
     expect(game.tap(ins.group[2]!, target)).toBe(true);
     expect(ins.index).toBe(1);
   });
@@ -258,8 +263,9 @@ describe("dive", () => {
     // Dropping after the others have found it moves the group on at once.
     expect(game.tap(d1!, ins.symbols[1]!)).toBe(true);
     game.setConnected(d3!, true);
-    expect(game.tap(d2!, ins.symbols[1]!)).toBe(true); // 2 of 3: not yet
-    expect(ins.index).toBe(1);
+    expect(game.tap(d2!, ins.symbols[1]!)).toBe(true);
+    const twoOfThreeFoundStaysOnSymbol = ins.index === 1;
+    expect(twoOfThreeFoundStaysOnSymbol).toBe(true);
     game.setConnected(d3!, false);
     expect(ins.index).toBe(2);
   });

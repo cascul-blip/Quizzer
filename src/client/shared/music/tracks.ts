@@ -1497,8 +1497,7 @@ const christmasSiegeResults: Track = {
 
 /** Chords per bar: Dm F C Dm | Gm Dm A Dm. */
 const SHOW_CHORDS = ["D3 F3 A3", "F3 A3 C4", "C3 E3 G3", "D3 F3 A3", "G3 Bb3 D4", "D3 F3 A3", "C#3 E3 A3", "D3 F3 A3"].map(chord);
-/** Low guitar roots, one per bar. */
-const SHOW_BASS = ["D2", "F2", "C3", "D2", "G2", "D2", "A2", "D2"];
+const SHOW_GUITAR_ROOTS_PER_BAR = ["D2", "F2", "C3", "D2", "G2", "D2", "A2", "D2"];
 const tremolo = (chordTok: string) => pump(chordTok, "xxxxxxxxxxxxxxxx");
 /** The guitar's low root, held across beats 1 and 3. */
 const guitarPulse = (root: string) => seq([root, 4], [".", 4], [root, 4], [".", 4]);
@@ -1547,7 +1546,7 @@ const showdownLobby: Track = {
   layers: [
     // An empty street: tremolo guitar, the low root, and the whistle's first phrase. No hooves, no whip.
     { inst: "twang", bars: SHOW_CHORDS.slice(0, 4).map(tremolo), vol: 0.4 },
-    { inst: "twang", bars: SHOW_BASS.slice(0, 4).map(guitarPulse), vol: 0.52 },
+    { inst: "twang", bars: SHOW_GUITAR_ROOTS_PER_BAR.slice(0, 4).map(guitarPulse), vol: 0.52 },
     { inst: "whistle", bars: SHOW_THEME.slice(0, 4), vol: 0.55 },
     { inst: "jawharp", bars: [SHOW_BOING, rest, SHOW_BOING, rest], vol: 0.32 },
     { inst: "bell", bars: [anvil("x..............."), rest, rest, rest], vol: 0.28 },
@@ -1564,7 +1563,7 @@ const showdown: Track = {
   layers: [
     // Always there: the tremolo bed, the low root, hooves at a walk, an anvil ping, the jaw harp.
     { inst: "twang", bars: SHOW_CHORDS.map(tremolo), vol: 0.26 },
-    { inst: "twang", bars: SHOW_BASS.map(guitarPulse), vol: 0.58 },
+    { inst: "twang", bars: SHOW_GUITAR_ROOTS_PER_BAR.map(guitarPulse), vol: 0.58 },
     { inst: "woodblock", bars: [drum("x.......x.......")], vol: 0.3, to: 0.45 },
     { inst: "bell", bars: [anvil("x..............."), rest, rest, rest], vol: 0.32, to: 0.7 },
     { inst: "jawharp", bars: [SHOW_BOING], vol: 0.45 },
@@ -1573,7 +1572,7 @@ const showdown: Track = {
     { inst: "flute", bars: SHOW_FLUTE, vol: 0.32, from: 0.35 },
     // Into a gallop, with the timpani on the roots.
     { inst: "woodblock", bars: [GALLOP], vol: 0.45, from: 0.45 },
-    { inst: "timpani", bars: SHOW_BASS.map((r) => pump(r, "x.......x.......")), vol: 0.45, from: 0.45 },
+    { inst: "timpani", bars: SHOW_GUITAR_ROOTS_PER_BAR.map((r) => pump(r, "x.......x.......")), vol: 0.45, from: 0.45 },
     // Whip cracks and the chanted "hup!" (low brass stab and a drum).
     { inst: "clap", bars: SHOW_WHIP, vol: 0.55, from: 0.55 },
     { inst: "taiko", bars: SHOW_HUP, vol: 0.5, from: 0.55 },
@@ -1686,8 +1685,7 @@ const brokenChords = (q: string[]) =>
     const notes = XMAS_CHORDS[c]!.split(" ");
     return octaveUp(notes[(i / 2) % 3]!);
   });
-/** Sleigh bells. */
-const BELLS_8THS = drum("o.x.x.x.o.x.x.x.");
+const SLEIGH_BELLS_8THS = drum("o.x.x.x.o.x.x.x.");
 const BELLS_16THS = drum("o.xxx.xxo.xxx.xx");
 
 // O Come, All Ye Faithful in G, 4/4. Bar 20 ends with the pickup "O" back into bar 1.
@@ -1896,7 +1894,7 @@ const christmasTowerResults: Track = {
     { inst: "strings", bars: HARK_HARMONY.map(padBar), vol: 0.4 },
     { inst: "piano", bars: HARK_HARMONY.map(rootBeats), vol: 0.7 },
     { inst: "piano", bars: HARK_HARMONY.map(offbeatChords), vol: 0.25 },
-    { inst: "hat", bars: [BELLS_8THS], vol: 0.4 },
+    { inst: "hat", bars: [SLEIGH_BELLS_8THS], vol: 0.4 },
     { inst: "kick", bars: [drum("x.......x.......")], vol: 0.55 },
     { inst: "timpani", bars: HARK_HARMONY.map((q) => seq([XMAS_ROOTS[q[0]!]!, 8], [".", 8])), vol: 0.4 },
     { inst: "cymbal", bars: [once("x"), ...Array(11).fill(rest), once("x"), ...Array(7).fill(rest)], vol: 0.4 },
@@ -1921,7 +1919,7 @@ const snowmanLobby: Track = {
     { inst: "strings", bars: ADESTE_HARMONY.map(padBar), vol: 0.35 },
     { inst: "piano", bars: ADESTE_HARMONY.map(rootBeats), vol: 0.45 },
     { inst: "pluck", bars: ADESTE_HARMONY.map(brokenChords), vol: 0.25 },
-    { inst: "hat", bars: [BELLS_8THS], vol: 0.22 },
+    { inst: "hat", bars: [SLEIGH_BELLS_8THS], vol: 0.22 },
   ],
 };
 
@@ -1935,7 +1933,7 @@ const snowmanQuiz: Track = {
     { inst: "pluck", bars: GOD_REST, vol: 0.65 },
     { inst: "strings", bars: GOD_REST_HARMONY.map(padBar), vol: 0.3 },
     { inst: "piano", bars: GOD_REST_HARMONY.map(rootBeats), vol: 0.4 },
-    { inst: "hat", bars: [BELLS_8THS], vol: 0.25 },
+    { inst: "hat", bars: [SLEIGH_BELLS_8THS], vol: 0.25 },
     { inst: "strings", bars: GOD_REST, vol: 0.35, from: 0.3 },
     { inst: "piano", bars: GOD_REST_HARMONY.map(offbeatChords), vol: 0.25, from: 0.4 },
     { inst: "timpani", bars: GOD_REST_HARMONY.map((q) => once(XMAS_ROOTS[q[0]!]!)), vol: 0.4, from: 0.5 },
@@ -1958,7 +1956,7 @@ const snowmanMove: Track = {
     { inst: "strings", bars: EMMANUEL_HARMONY.map(padBar), vol: 0.3 },
     { inst: "piano", bars: EMMANUEL_HARMONY.map(rootBounce), vol: 0.5 },
     { inst: "timpani", bars: EMMANUEL_HARMONY.map((q) => seq([XMAS_ROOTS[q[0]!]!, 4], [".", 4], [XMAS_ROOTS[q[2]!]!, 4], [".", 4])), vol: 0.35 },
-    { inst: "hat", bars: [BELLS_8THS], vol: 0.3 },
+    { inst: "hat", bars: [SLEIGH_BELLS_8THS], vol: 0.3 },
     { inst: "snare", bars: EMMANUEL_SNARE, vol: 0.3 },
   ],
 };
@@ -1975,7 +1973,7 @@ const snowmanResults: Track = {
     { inst: "strings", bars: ANTIOCH_HARMONY.map(padBar), vol: 0.35 },
     { inst: "piano", bars: ANTIOCH_HARMONY.map(rootBeats), vol: 0.5 },
     { inst: "pluck", bars: ANTIOCH_HARMONY.map(brokenChords), vol: 0.25 },
-    { inst: "hat", bars: [BELLS_8THS], vol: 0.3 },
+    { inst: "hat", bars: [SLEIGH_BELLS_8THS], vol: 0.3 },
     { inst: "kick", bars: [drum("x.......x.......")], vol: 0.4 },
     { inst: "snare", bars: [drum("....x.......x...")], vol: 0.3 },
     { inst: "cymbal", bars: [once("x"), ...Array(ANTIOCH.length - 1).fill(rest)], vol: 0.3 },
@@ -2057,7 +2055,7 @@ function christmasTowerLayers(includeHolyNight: boolean): Track["layers"] {
     { inst: "strings", bars: followWith(ANTIOCH_HARMONY.map(padBar), HOLY_NIGHT_HARMONY.map(padBar)), vol: 0.3 },
     { inst: "piano", bars: followWith(ANTIOCH_HARMONY.map(rootBounce), HOLY_NIGHT_HARMONY.map(rootBeats)), vol: 0.45 },
     { inst: "pluck", bars: followWith(ANTIOCH_HARMONY.map(brokenChords), HOLY_NIGHT_HARMONY.map(brokenChords)), vol: 0.25 },
-    { inst: "hat", bars: followWith([BELLS_8THS]), vol: 0.25 },
+    { inst: "hat", bars: followWith([SLEIGH_BELLS_8THS]), vol: 0.25 },
     { inst: "piano", bars: followWith(ANTIOCH_HARMONY.map(offbeatChords)), vol: 0.22, from: 0.3 },
     {
       inst: "brass",
@@ -2151,7 +2149,7 @@ const christmasRacerLobby: Track = {
     { inst: "pulse", bars: GLORIA_HARMONY.map(carolArcadeStabs), vol: 0.25 },
     { inst: "kick", bars: [drum("x.......x.......")], vol: 0.5 },
     { inst: "chipnoise", bars: [drum("....o.......o...")], vol: 0.35 },
-    { inst: "hat", bars: [BELLS_8THS], vol: 0.35 },
+    { inst: "hat", bars: [SLEIGH_BELLS_8THS], vol: 0.35 },
   ],
 };
 
@@ -2166,7 +2164,7 @@ const christmasRacerDrive: Track = {
     { inst: "lead", bars: GOD_REST, vol: 0.7, echo: 0.25 },
     { inst: "kick", bars: [drum("x.......x.......")], vol: 0.65, to: 0.15 },
     { inst: "tribass", bars: GOD_REST_HARMONY.map(rootBeats), vol: 0.6, to: 0.15 },
-    { inst: "hat", bars: [BELLS_8THS], vol: 0.3, to: 0.75 },
+    { inst: "hat", bars: [SLEIGH_BELLS_8THS], vol: 0.3, to: 0.75 },
     { inst: "kick", bars: [drum("x...x...x...x...")], vol: 0.75, from: 0.15 },
     { inst: "tribass", bars: GOD_REST_HARMONY.map(rootBounce), vol: 0.85, from: 0.15 },
     { inst: "chipnoise", bars: [drum("....o.......o...")], vol: 0.55, from: 0.15 },
@@ -2193,7 +2191,7 @@ const christmasRacerResults: Track = {
     { inst: "pulse", bars: HARK_HARMONY.map(carolArcadeArp), vol: 0.2 },
     { inst: "kick", bars: [drum("x...x...x...x...")], vol: 0.65 },
     { inst: "chipnoise", bars: [drum("....o.......o...")], vol: 0.45 },
-    { inst: "hat", bars: [BELLS_8THS], vol: 0.4 },
+    { inst: "hat", bars: [SLEIGH_BELLS_8THS], vol: 0.4 },
   ],
 };
 

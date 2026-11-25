@@ -11,8 +11,7 @@ export interface RankedEntry {
   avatar: AvatarChoice;
   score: number;
   rank: number;
-  /** Points gained on the most recent question. */
-  delta: number;
+  lastQuestionPoints: number;
   streak: number;
 }
 

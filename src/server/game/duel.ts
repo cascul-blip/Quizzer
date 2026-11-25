@@ -48,8 +48,7 @@ export interface DuelAnswer {
   option: number;
   text?: string;
   correct: boolean;
-  /** From the question opening. */
-  ms: number;
+  msSinceOpen: number;
 }
 
 export interface DuelPlayer extends BasePlayer {
@@ -223,6 +222,15 @@ export class DuelGame {
     return this.arenas.findIndex((a) => a.includes(playerId));
   }
 
+  /**
+   * This round's arena (still this round's on the reveal), or -1 on the podium and for a late joiner
+   * waiting for the next round, who gets the arena the ladder puts them in and no opponents.
+   */
+  private arenaIndexOnReveal(p: DuelPlayer): number {
+    if (this.phase === "podium") return -1;
+    return this.batch ? (this.shared("arenaById", () => this.arenaIndexes()).get(p.id) ?? -1) : this.arenaIndex(p.id);
+  }
+
   private arenaIndexes(): Map<string, number> {
     const out = new Map<string, number>();
     this.arenas.forEach((a, i) => a.forEach((id) => out.has(id) || out.set(id, i)));
@@ -316,7 +324,7 @@ export class DuelGame {
     const slot = this.qIndex;
     const results = this.arenas.map((arena) => {
       const answers = arena.map((id) => this.players.get(id)!.answers[slot]);
-      return duelOutcome(answers.map((a) => ({ correct: a ? a.correct : null, ms: a ? a.ms : null })));
+      return duelOutcome(answers.map((a) => ({ correct: a ? a.correct : null, ms: a ? a.msSinceOpen : null })));
     });
     this.ladder = climbLadder(
       this.ladder,
@@ -342,7 +350,7 @@ export class DuelGame {
           if (outcome === "lose") p.losses++;
           if (draw) p.draws++;
           if (outcome === "win" && k === 0) p.reign++;
-          return { ...ref(p), correct: a ? a.correct : null, ms: a ? a.ms : null, outcome, points, nextArena: next.get(id) ?? 0 };
+          return { ...ref(p), correct: a ? a.correct : null, answerDurationMs: a ? a.msSinceOpen : null, outcome, points, nextArena: next.get(id) ?? 0 };
         }),
       };
     });
@@ -488,9 +496,7 @@ export class DuelGame {
       ? (this.shared("rankById", () => new Map(this.rankedNow().map((x) => [x.id, x.rank]))).get(p.id) ?? 0)
       : (this.ranked().find((x) => x.id === p.id)?.rank ?? 0);
     const arenaNow = this.arenaNow(p.id, ladderArenas);
-    // This round's arena and opponents (still this round's on the reveal); a late joiner waiting for the next round
-    // gets the arena the ladder puts them in and no opponents.
-    const k = this.phase === "podium" ? -1 : this.batch ? (this.shared("arenaById", () => this.arenaIndexes()).get(p.id) ?? -1) : this.arenaIndex(p.id);
+    const k = this.arenaIndexOnReveal(p);
     const arena = k >= 0 ? k + 1 : arenaNow;
     const opponents = k >= 0 ? this.arenas[k]!.filter((id) => id !== p.id).map((id) => ref(this.players.get(id)!)) : [];
     const ans = this.paced.shownAnswer(p);
@@ -526,7 +532,9 @@ export class DuelGame {
       opponents,
       myChoice: ans && ans.option >= 0 ? ans.option : null,
       myText: ans?.text ?? null,
-      reveal: revealed ? { choice: ans && ans.option >= 0 ? ans.option : null, correct: q!.correct, wasCorrect: !!ans?.correct, ms: ans?.ms ?? null } : null,
+      reveal: revealed
+        ? { choice: ans && ans.option >= 0 ? ans.option : null, correct: q!.correct, wasCorrect: !!ans?.correct, answerDurationMs: ans?.msSinceOpen ?? null }
+        : null,
       myDuel: revealed && this.lastRound?.round === this.round ? (this.lastRound.arenas.find((a) => a.duelists.some((d) => d.id === p.id)) ?? null) : null,
       result,
     };
@@ -574,7 +582,7 @@ function duelColumns(game: DuelGame): Column<{ rank: number; p: DuelPlayer }>[] 
         header: `R${n} time (s)`,
         value: (r) => {
           const a = r.p.answers[slot];
-          return a ? (a.ms / 1000).toFixed(2) : "";
+          return a ? (a.msSinceOpen / 1000).toFixed(2) : "";
         },
       },
     );

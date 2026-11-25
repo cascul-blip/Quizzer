@@ -308,8 +308,10 @@ describe("surrounding", () => {
     expect(game.owners[game.teams[1]!.start]).toBe(0);
     expect(game.owners[far]).toBe(0);
     expect(game.owners.includes(1)).toBe(false);
-    // 12 placed + the start and its 6 neighbours + Blue's far tile.
-    expect(game.teamTiles(0)).toBe(1 + 12 + 7 + 1);
+    const ownStart = 1;
+    const blueStartAndNeighbours = 7;
+    const blueFarTile = 1;
+    expect(game.teamTiles(0)).toBe(ownStart + ring.length + blueStartAndNeighbours + blueFarTile);
     expect(game.hostView().lastCapture).toMatchObject({ team: 0, knockedOut: [1] });
     expect(game.phase).toBe("playing");
     expect(finished()).toBe(0);
