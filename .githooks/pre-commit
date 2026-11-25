@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# The fast gates from `bun run check`; typecheck and tests stay in CI and the full check.
+set -euo pipefail
+bunx biome ci .
+scripts/check-new-casts.sh
+bun scripts/check-new-comments.ts

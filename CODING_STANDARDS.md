@@ -16,6 +16,7 @@ Judgement calls the reviewer applies to a diff. `bun run typecheck` and `bun tes
 
 - **Single owner**: after an extraction, each piece of state has one owner; the other side reads it through a getter or callback. A copy kept in step by hand (a sync method, a guard comparing the two) is a finding. Check every state the extracted module reads at a phase boundary (a build break, before the first round) against the original.
 - **Direct coverage**: each rule the extracted module owns has a test against its own interface. Existing tests redirected through a new field don't count.
+- **Unchanged output**: an extraction that promises no visible change lists each output the moved code produced (broadcasts, phone messages, timer and countdown values, refusal messages) and confirms each is unchanged, including how many times and in what order it happens. Passing existing tests is not evidence: they may not observe that output.
 - **Lifecycle helper names**. Compare the name with the effects the caller relies on. For example, `installAndActivate` tells the caller that the helper both installs the game and starts its lifecycle. Review the failure path for effects such as restoring the lobby and disposing of the game.
 
 ## Game end
