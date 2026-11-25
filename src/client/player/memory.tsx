@@ -85,7 +85,7 @@ function MemoryPicks({
   const choosing = step !== null;
   const resumeVersion = useContext(PhoneResumeVersion);
   const selected = pending?.step === step ? pending.position : null;
-  const { box, inner, zoomIn, zoomOut, pointerHandlers, isTap } = usePanZoom();
+  const { box, inner, pointerHandlers, isTap } = usePanZoom();
   const left = useCountdown(choosing ? remainingMs : 0, `turn:${turn.id}:${resumeVersion}`);
   const canSelect = choosing && left > 0;
   const { image, names } = memoryThemeArt.faces;
@@ -93,22 +93,17 @@ function MemoryPicks({
     <main class="memory-picks">
       <link rel="preload" as="image" href={image} />
       <div class="memory-board-controls">
-        {choosing && (
-          <div class={`timer ${left <= 5 ? "urgent" : ""}`} role="timer" aria-label="Turn time remaining">
-            {left}
-          </div>
-        )}
-        <h1>{step === null ? "Cards revealed" : step === 1 ? "Pick the first card" : "Pick the second card"}</h1>
-        {choosing && (
-          <>
-            <button class="btn ghost" aria-label="Zoom in" onClick={zoomIn}>
-              +
-            </button>
-            <button class="btn ghost" aria-label="Zoom out" onClick={zoomOut}>
-              −
-            </button>
-          </>
-        )}
+        <div class="memory-timer-slot">
+          {choosing && (
+            <div class={`timer ${left <= 5 ? "urgent" : ""}`} role="timer" aria-label="Turn time remaining">
+              {left}
+            </div>
+          )}
+        </div>
+        <div class="memory-heading">
+          <h1>{step === null ? "Cards revealed" : step === 1 ? "Pick the first card" : "Pick the second card"}</h1>
+          <p class={choosing ? "muted" : "muted memory-hint-reserved"}>Pinch to zoom</p>
+        </div>
       </div>
       <div class="memory-board-fit">
         <div class="memory-board-viewport" ref={choosing ? box : undefined} {...(choosing ? pointerHandlers : undefined)}>
