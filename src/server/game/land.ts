@@ -139,9 +139,9 @@ export class LandGame {
     this.gameLength = new GameLengthClock(this.phases, this.gameFinish);
   }
 
-  /** Take over a lobby's players (same ids and tokens), on the teams shown in the lobby. */
   choices!: LobbyChoices;
 
+  /** Take over a lobby's players (same ids and tokens), on the teams shown in the lobby. */
   static fromLobby(lobby: LobbyFacts<"land">, opts: LandOptions = {}): LandGame {
     const game = new LandGame(lobby.quiz, { ...lobby.settings, shuffleAnswers: lobby.shuffle.answers }, opts);
     const players = [...lobby.players];

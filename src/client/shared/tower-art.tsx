@@ -53,7 +53,6 @@ export function viewBaseRow(tallest: number, visibleRows: number, eggRow: number
   return Math.max(0, Math.min(Math.max(topBase, eggRow + 2 - visibleRows), eggRow - 1));
 }
 
-/** Meters shown on the height scale. */
 export const METERS_PER_FLOOR = 4;
 
 /**

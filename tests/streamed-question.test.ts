@@ -46,8 +46,8 @@ function lobbyFor(mode: "tower" | "land" | "fight" | "submarine" | "cup" | "robo
 interface StreamedMode {
   /** The game for the first player's scenario, not started. */
   game(clock: FakeClock): StreamedGame;
-  /** How long after the start the first question can be answered. */
-  toAnswering(clock: FakeClock, game: StreamedGame): void;
+  /** Advance the clock from the start to the first moment the first question can be answered. */
+  advanceToAnswering(clock: FakeClock, game: StreamedGame): void;
   /** Leave answering for a phase that is not the end, with the feedback flash of an answer still showing; null when the mode has none. */
   toBetween: ((scenario: Scenario) => void) | null;
 }
@@ -83,30 +83,30 @@ function answerThenQuizEnds({ clock, game, id }: Scenario) {
 const MODES: Record<string, StreamedMode> = {
   "Tallest Tower": {
     game: (clock) => TowerGame.fromLobby(lobbyFor("tower").handoffFacts("tower"), { clock }),
-    toAnswering: (clock) => clock.advance(3_000),
+    advanceToAnswering: (clock) => clock.advance(3_000),
     // Its only phases are the countdown, playing and the podium.
     toBetween: null,
   },
   "Land Grab": {
     game: (clock) => LandGame.fromLobby(lobbyFor("land").handoffFacts("land"), { clock }),
-    toAnswering: (clock) => clock.advance(3_000),
+    advanceToAnswering: (clock) => clock.advance(3_000),
     toBetween: null,
   },
   "Hill Fight": {
     game: (clock) => FightGame.fromLobby(lobbyFor("fight").handoffFacts("fight"), { clock }),
-    toAnswering: (clock) => clock.advance(3_000),
+    advanceToAnswering: (clock) => clock.advance(3_000),
     // The collapse is the only phase after playing; tests/fight.test.ts covers it with a tower that falls.
     toBetween: null,
   },
   Submarine: {
     game: (clock) => SubGame.fromLobby(lobbyFor("submarine").handoffFacts("submarine"), { clock }),
-    toAnswering: (clock) => clock.advance(3_000),
+    advanceToAnswering: (clock) => clock.advance(3_000),
     // Caught by the fish.
     toBetween: (scenario) => answerUntilLeft(scenario, ["chase"]),
   },
   "Cup of Death": {
     game: (clock) => CupGame.fromLobby(lobbyFor("cup").handoffFacts("cup"), { clock }),
-    toAnswering: (clock, game) => {
+    advanceToAnswering: (clock, game) => {
       clock.advance(3_000);
       clock.advance(game.phaseEndsAt! - clock.now());
     },
@@ -115,18 +115,18 @@ const MODES: Record<string, StreamedMode> = {
   },
   "Robot Attack": {
     game: (clock) => RobotGame.fromLobby(lobbyFor("robot").handoffFacts("robot"), { clock }),
-    toAnswering: (clock) => clock.advance(3_000),
+    advanceToAnswering: (clock) => clock.advance(3_000),
     toBetween: answerThenQuizEnds,
   },
   "Kingdom Siege": {
     game: (clock) => SiegeGame.fromLobby(lobbyFor("siege").handoffFacts("siege"), { clock }),
-    toAnswering: (clock) => clock.advance(3_000),
+    advanceToAnswering: (clock) => clock.advance(3_000),
     // Its build breaks count as answering; the ending cinematic (the wall stands or falls) does not.
     toBetween: (scenario) => answerUntilLeft(scenario, ["build", "wave"]),
   },
   "Gift Grab": {
     game: (clock) => GiftGame.fromLobby(lobbyFor("gift").handoffFacts("gift"), { clock }),
-    toAnswering: (clock) => clock.advance(3_000),
+    advanceToAnswering: (clock) => clock.advance(3_000),
     // Its bonus round hides question and flash too, but within playing, not a phase between; see its own test below.
     toBetween: null,
   },
@@ -155,7 +155,7 @@ describe("Streamed question feedback", () => {
 
     test(`${name} shows feedback while answering and hides it once the game has finished`, () => {
       const scenario = started(mode);
-      mode.toAnswering(scenario.clock, scenario.game);
+      mode.advanceToAnswering(scenario.clock, scenario.game);
       // Wrong, so no mode moves the player off answering (Cup's safe step, Gift's bonus round).
       answerOnce(scenario, WRONG);
       expect(scenario.game.playerView(scenario.id)!.feedback).not.toBeNull();
@@ -168,7 +168,7 @@ describe("Streamed question feedback", () => {
     if (mode.toBetween) {
       test(`${name} hides the question and the feedback flash between rounds, once the quiz is over`, () => {
         const scenario = started(mode);
-        mode.toAnswering(scenario.clock, scenario.game);
+        mode.advanceToAnswering(scenario.clock, scenario.game);
         mode.toBetween!(scenario);
         expect(scenario.game.phase).not.toBe("podium");
         expect(scenario.game.playerView(scenario.id)).toMatchObject({ question: null, feedback: null });
@@ -180,7 +180,7 @@ describe("Streamed question feedback", () => {
     const clock = new FakeClock();
     const game = CupGame.fromLobby(lobbyFor("cup").handoffFacts("cup"), { clock });
     game.start();
-    MODES["Cup of Death"]!.toAnswering(clock, game);
+    MODES["Cup of Death"]!.advanceToAnswering(clock, game);
     const ana = [...game.players.values()][0]!;
     while (!ana.safe) {
       answerOnce({ clock, game, id: ana.id });

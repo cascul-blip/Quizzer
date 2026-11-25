@@ -147,9 +147,9 @@ export class RobotGame {
     });
   }
 
-  /** Take over a lobby's players (same ids and tokens), spread out across the board. */
   choices!: LobbyChoices;
 
+  /** Take over a lobby's players (same ids and tokens), spread out across the board. */
   static fromLobby(lobby: LobbyFacts<"robot">, opts: RobotOptions = {}): RobotGame {
     const game = new RobotGame(lobby.quiz, { shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
     game.choices = lobby.choices;
