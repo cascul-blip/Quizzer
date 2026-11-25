@@ -20,11 +20,7 @@ export const memoryMotionStyle = {
   "--memory-slide-ms": `${MEMORY_SLIDE_MS}ms`,
 };
 
-/**
- * A card flips up when it turns face up between two boards, every face-up card flips back down in the last
- * MEMORY_FLIP_MS before `flipBackInMs` runs out (null keeps them up), and a matched pair slides off after its pause.
- * Pass a new `resetKey` for each turn or phase.
- */
+/** why: pass a new `resetKey` for each turn or phase, or a timer from the previous one fires in this one. */
 export function useCardMotion({
   board,
   flipBackInMs,
@@ -66,7 +62,6 @@ function useFlippedUp(board: MemoryCardView[]): Set<number> {
   return flipped;
 }
 
-/** A new delay under the same key reschedules. */
 function useDelayElapsed(delayMs: number | "never", resetKey: string): boolean {
   const key = delayMs === "never" ? null : resetKey;
   const [fired, setFired] = useState<string | null>(null);
