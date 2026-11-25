@@ -26,7 +26,7 @@ import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, unhandled } from "./mode-entry.ts";
 import { GameFinish, PhaseTimer } from "./phase-timer.ts";
 import type { Podium } from "./podium.ts";
-import { buildPodium } from "./podium.ts";
+import { buildPodium, emptyPodium } from "./podium.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
@@ -122,7 +122,7 @@ export class RobotGame {
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: RobotGame) => void;
-  private readonly gameFinish: GameFinish<RobotGame["phase"]>;
+  private readonly gameFinish: GameFinish<RobotGame["phase"], Podium<RobotPlayer, RobotPlayer, RobotAwardKey>>;
 
   constructor(quiz: Quiz, settings: RobotGameSettings, opts: RobotOptions = {}) {
     if (quiz.questions.length === 0) throw new GameError("This quiz has no questions");
@@ -143,15 +143,14 @@ export class RobotGame {
       cleanup: () => {
         this.marked = new Set();
         this.collapsing = new Set();
-        this.finalPodium = this.buildPodium();
       },
+      podium: { build: () => this.buildPodium(), empty: () => emptyPodium(robotShared.awards) },
       onFinish: () => this.onFinish(this),
       onChange: () => this.onChange(),
     });
   }
 
   choices!: LobbyChoices;
-  private finalPodium: Podium<RobotPlayer, RobotPlayer, RobotAwardKey> | null = null;
 
   /** Take over a lobby's players (same ids and tokens), spread out across the board. */
   static fromLobby(lobby: LobbyFacts<"robot">, opts: RobotOptions = {}): RobotGame {
@@ -372,8 +371,7 @@ export class RobotGame {
 
   /** The finished game's Podium (GLOSSARY.md), worked out once in Game finish. */
   get podium(): Podium<RobotPlayer, RobotPlayer, RobotAwardKey> {
-    if (!this.finalPodium) throw new GameError("This game has not finished");
-    return this.finalPodium;
+    return this.gameFinish.podium;
   }
 
   private standings(): RobotStanding[] {

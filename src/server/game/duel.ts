@@ -28,7 +28,7 @@ import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
 import { INTRO_MS, PacedRound } from "./paced-round.ts";
 import { GameFinish } from "./phase-timer.ts";
 import type { Podium } from "./podium.ts";
-import { buildPodium } from "./podium.ts";
+import { buildPodium, emptyPodium } from "./podium.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
@@ -104,7 +104,6 @@ export class DuelGame {
     ladderArenas?: Map<string, number>;
     arenaById?: Map<string, number>;
   } | null = null;
-  private finalPodium: Podium<DuelPlayer, DuelPlayer, DuelAwardKey> | null = null;
 
   private readonly source: Question[];
   /** Index into the quiz's questions for each slot. */
@@ -115,7 +114,7 @@ export class DuelGame {
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: DuelGame) => void;
-  private readonly gameFinish: GameFinish<DuelGame["phase"]>;
+  private readonly gameFinish: GameFinish<DuelGame["phase"], Podium<DuelPlayer, DuelPlayer, DuelAwardKey>>;
 
   constructor(quiz: Quiz, settings: DuelGameSettings, opts: DuelOptions = {}) {
     if (quiz.questions.length === 0) throw new GameError("This quiz has no questions");
@@ -152,8 +151,8 @@ export class DuelGame {
     this.gameFinish = new GameFinish(this.paced.phases, "podium", {
       cleanup: () => {
         this.arenas = [];
-        this.finalPodium = this.buildPodium();
       },
+      podium: { build: () => this.buildPodium(), empty: () => emptyPodium(duelShared.awards) },
       onFinish: () => this.onFinish(this),
       onChange: () => this.onChange(),
     });
@@ -407,8 +406,7 @@ export class DuelGame {
 
   /** The finished game's Podium (GLOSSARY.md), worked out once in Game finish. */
   get podium(): Podium<DuelPlayer, DuelPlayer, DuelAwardKey> {
-    if (!this.finalPodium) throw new GameError("This game has not finished");
-    return this.finalPodium;
+    return this.gameFinish.podium;
   }
 
   /** The most-missed questions (counted per quiz question, over every round it was asked); unanswered doesn't count. */

@@ -53,6 +53,22 @@ function winners<P extends PodiumPlayer>(players: readonly P[], value: (p: P) =>
   return top > 0 ? { value: top, players: players.filter((_, i) => values[i] === top) } : null;
 }
 
+/** The Podium of a game whose own one could not be worked out: no places, rows or award winners, and no result for anyone. */
+export function emptyPodium<E extends object, P extends PodiumPlayer, K extends string>(labels: Readonly<Record<K, string>>): Podium<E, P, K> {
+  // checked: the loop below fills every key of the labels.
+  const values = {} as Record<K, () => number>;
+  for (const k of keysOf(labels)) values[k] = () => 0;
+  return buildPodium<E, P, K>({
+    entries: [],
+    order: [],
+    players: [],
+    entryOf: () => {
+      throw new Error("An empty podium has no players");
+    },
+    awards: { labels, values },
+  });
+}
+
 /** Work out the finished game's Podium once; nothing about it changes after. */
 export function buildPodium<E extends object, P extends PodiumPlayer, K extends string>(spec: PodiumSpec<E, P, K>): Podium<E, P, K> {
   const wrap = (keys: RankKey<E>[]): RankKey<{ entry: E }>[] => keys.map((key) => (a, b) => key(a.entry, b.entry));

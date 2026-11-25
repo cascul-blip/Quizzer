@@ -13,7 +13,7 @@ import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, unhandled } from "./mode-entry.ts";
 import { GameFinish, PhaseTimer } from "./phase-timer.ts";
 import type { Podium } from "./podium.ts";
-import { buildPodium } from "./podium.ts";
+import { buildPodium, emptyPodium } from "./podium.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
@@ -114,7 +114,7 @@ export class SubGame {
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: SubGame) => void;
-  private readonly gameFinish: GameFinish<SubGame["phase"]>;
+  private readonly gameFinish: GameFinish<SubGame["phase"], Podium<SubPlayer, SubPlayer, SubAwardKey>>;
 
   constructor(quiz: Quiz, opts: SubOptions & { shuffleAnswers?: boolean; protect?: boolean } = {}) {
     if (quiz.questions.length === 0) throw new GameError("This quiz has no questions");
@@ -132,9 +132,7 @@ export class SubGame {
     this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
     this.gameFinish = new GameFinish(this.phases, "podium", {
-      cleanup: () => {
-        this.finalPodium = this.buildPodium();
-      },
+      podium: { build: () => this.buildPodium(), empty: () => emptyPodium(submarineShared.awards) },
       onFinish: () => this.onFinish(this),
       onChange: () => this.onChange(),
     });
@@ -434,8 +432,6 @@ export class SubGame {
     return p;
   }
 
-  private finalPodium: Podium<SubPlayer, SubPlayer, SubAwardKey> | null = null;
-
   /** The squad shares one depth, so every player shares one place; the results sheet lists the top boosters first, then the most correct. */
   private buildPodium(): Podium<SubPlayer, SubPlayer, SubAwardKey> {
     const players = [...this.players.values()];
@@ -451,8 +447,7 @@ export class SubGame {
 
   /** The finished game's Podium (GLOSSARY.md), worked out once in Game finish. */
   get podium(): Podium<SubPlayer, SubPlayer, SubAwardKey> {
-    if (!this.finalPodium) throw new GameError("This game has not finished");
-    return this.finalPodium;
+    return this.gameFinish.podium;
   }
 
   hostView(): HostSubState {

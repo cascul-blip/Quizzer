@@ -34,7 +34,7 @@ import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
 import { GameFinish, GameLengthClock, PhaseTimer } from "./phase-timer.ts";
 import type { Podium } from "./podium.ts";
-import { buildPodium } from "./podium.ts";
+import { buildPodium, emptyPodium } from "./podium.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
@@ -124,7 +124,7 @@ export class LandGame {
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: LandGame) => void;
-  private readonly gameFinish: GameFinish<LandGame["phase"]>;
+  private readonly gameFinish: GameFinish<LandGame["phase"], LandPodium>;
 
   constructor(quiz: Quiz, settings: LandGameSettings, opts: LandOptions = {}) {
     if (quiz.questions.length === 0) throw new GameError("This quiz has no questions");
@@ -146,9 +146,7 @@ export class LandGame {
     this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
     this.gameFinish = new GameFinish(this.phases, "podium", {
-      cleanup: () => {
-        this.finalPodium = this.buildPodium();
-      },
+      podium: { build: () => this.buildPodium(), empty: () => emptyPodium(landShared.awards) },
       onFinish: () => this.onFinish(this),
       onChange: () => this.onChange(),
     });
@@ -156,7 +154,6 @@ export class LandGame {
   }
 
   choices!: LobbyChoices;
-  private finalPodium: LandPodium | null = null;
 
   /** Take over a lobby's players (same ids and tokens), on the teams shown in the lobby. */
   static fromLobby(lobby: LobbyFacts<"land">, opts: LandOptions = {}): LandGame {
@@ -424,8 +421,7 @@ export class LandGame {
 
   /** The finished game's Podium (GLOSSARY.md), worked out once in Game finish. */
   get podium(): LandPodium {
-    if (!this.finalPodium) throw new GameError("This game has not finished");
-    return this.finalPodium;
+    return this.gameFinish.podium;
   }
 
   /** A team's totals and place on the Podium. */

@@ -19,7 +19,7 @@ import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
 import { INTRO_MS, PacedRound } from "./paced-round.ts";
 import { GameFinish } from "./phase-timer.ts";
 import type { Podium } from "./podium.ts";
-import { buildPodium } from "./podium.ts";
+import { buildPodium, emptyPodium } from "./podium.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
@@ -104,7 +104,7 @@ export class RacerGame {
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: RacerGame) => void;
-  private readonly gameFinish: GameFinish<RacerGame["phase"]>;
+  private readonly gameFinish: GameFinish<RacerGame["phase"], Podium<RacerPlayer, RacerPlayer, RacerAwardKey>>;
 
   constructor(quiz: Quiz, settings: RacerGameSettings, opts: RacerOptions = {}) {
     if (quiz.questions.length === 0) throw new GameError("This quiz has no questions");
@@ -132,15 +132,14 @@ export class RacerGame {
         this.driver = null;
         this.lever = null;
         this.confidence = null;
-        this.finalPodium = this.buildPodium();
       },
+      podium: { build: () => this.buildPodium(), empty: () => emptyPodium(racerShared.awards) },
       onFinish: () => this.onFinish(this),
       onChange: () => this.onChange(),
     });
   }
 
   private setup!: LobbyChoices;
-  private finalPodium: Podium<RacerPlayer, RacerPlayer, RacerAwardKey> | null = null;
 
   /** The lobby's choices with the pacing as the host left it; the next lobby opens with them. */
   get choices(): LobbyChoices {
@@ -384,8 +383,7 @@ export class RacerGame {
 
   /** The finished game's Podium (GLOSSARY.md), worked out once in Game finish. */
   get podium(): Podium<RacerPlayer, RacerPlayer, RacerAwardKey> {
-    if (!this.finalPodium) throw new GameError("This game has not finished");
-    return this.finalPodium;
+    return this.gameFinish.podium;
   }
 
   /** The most-missed questions: wrong answers only, a question left unanswered doesn't count. */

@@ -11,7 +11,7 @@ import type { LobbyChoices } from "./lobby-facts.ts";
 import { INTRO_MS, PacedRound } from "./paced-round.ts";
 import { GameFinish } from "./phase-timer.ts";
 import type { Podium } from "./podium.ts";
-import { buildPodium } from "./podium.ts";
+import { buildPodium, emptyPodium } from "./podium.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
@@ -71,9 +71,8 @@ export class ClassicGame {
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: ClassicGame) => void;
-  private readonly gameFinish: GameFinish<ClassicGame["phase"]>;
+  private readonly gameFinish: GameFinish<ClassicGame["phase"], Podium<Player, Player, never>>;
   private batch: { ranked?: (Player & { rank: number })[]; rankById?: Map<string, number> } | null = null;
-  private finalPodium: Podium<Player, Player, never> | null = null;
 
   constructor(quiz: Quiz, opts: GameOptions = {}) {
     this.quiz = quiz;
@@ -99,9 +98,7 @@ export class ClassicGame {
     this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
     this.gameFinish = new GameFinish(this.paced.phases, "podium", {
-      cleanup: () => {
-        this.finalPodium = this.buildPodium();
-      },
+      podium: { build: () => this.buildPodium(), empty: () => emptyPodium({}) },
       onFinish: () => this.onFinish(this),
       onChange: () => this.onChange(),
     });
@@ -294,8 +291,7 @@ export class ClassicGame {
 
   /** The finished game's Podium (GLOSSARY.md), worked out once in Game finish. */
   get podium(): Podium<Player, Player, never> {
-    if (!this.finalPodium) throw new GameError("This game has not finished");
-    return this.finalPodium;
+    return this.gameFinish.podium;
   }
 
   leaderboard(limit = LEADERBOARD_SIZE): RankedEntry[] {

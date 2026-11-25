@@ -14,7 +14,7 @@ import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
 import { GameFinish, GameLengthClock, PhaseTimer } from "./phase-timer.ts";
 import type { Podium } from "./podium.ts";
-import { buildPodium } from "./podium.ts";
+import { buildPodium, emptyPodium } from "./podium.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
@@ -107,7 +107,7 @@ export class TowerGame {
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: TowerGame) => void;
-  private readonly gameFinish: GameFinish<TowerGame["phase"]>;
+  private readonly gameFinish: GameFinish<TowerGame["phase"], TowerPodium>;
 
   constructor(quiz: Quiz, settings: TowerGameSettings, opts: TowerOptions = {}) {
     if (quiz.questions.length === 0) throw new GameError("This quiz has no questions");
@@ -129,8 +129,8 @@ export class TowerGame {
     this.gameFinish = new GameFinish(this.phases, "podium", {
       cleanup: () => {
         this.egg = null;
-        this.finalPodium = this.buildPodium();
       },
+      podium: { build: () => this.buildPodium(), empty: () => emptyPodium(towerShared.awards) },
       onFinish: () => this.onFinish(this),
       onChange: () => this.onChange(),
     });
@@ -139,7 +139,6 @@ export class TowerGame {
 
   /** Take over a lobby's players (same ids and tokens), on the teams shown in the lobby. */
   choices!: LobbyChoices;
-  private finalPodium: TowerPodium | null = null;
 
   static fromLobby(lobby: LobbyFacts<"tower">, opts: TowerOptions = {}): TowerGame {
     const game = new TowerGame(lobby.quiz, { ...lobby.settings, shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
@@ -345,8 +344,7 @@ export class TowerGame {
 
   /** The finished game's Podium (GLOSSARY.md), worked out once in Game finish. */
   get podium(): TowerPodium {
-    if (!this.finalPodium) throw new GameError("This game has not finished");
-    return this.finalPodium;
+    return this.gameFinish.podium;
   }
 
   /** A team's totals and place on the Podium. */

@@ -28,7 +28,7 @@ import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
 import { GameFinish, PhaseTimer } from "./phase-timer.ts";
 import type { Podium } from "./podium.ts";
-import { buildPodium } from "./podium.ts";
+import { buildPodium, emptyPodium } from "./podium.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
@@ -122,7 +122,7 @@ export class FightGame {
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: FightGame) => void;
-  private readonly gameFinish: GameFinish<FightGame["phase"]>;
+  private readonly gameFinish: GameFinish<FightGame["phase"], Podium<FightTeam, FightPlayer, FightAwardKey>>;
 
   constructor(quiz: Quiz, settings: FightGameSettings, opts: FightOptions = {}) {
     if (quiz.questions.length === 0) throw new GameError("This quiz has no questions");
@@ -147,8 +147,8 @@ export class FightGame {
     this.gameFinish = new GameFinish(this.phases, "podium", {
       cleanup: () => {
         this.outcome ??= this.judge();
-        this.finalPodium = this.buildPodium(this.outcome);
       },
+      podium: { build: () => this.buildPodium((this.outcome ??= this.judge())), empty: () => emptyPodium(fightShared.awards) },
       onFinish: () => this.onFinish(this),
       onChange: () => this.onChange(),
     });
@@ -423,8 +423,6 @@ export class FightGame {
     if (this.events.length > MAX_EVENTS) this.events.shift();
   }
 
-  private finalPodium: Podium<FightTeam, FightPlayer, FightAwardKey> | null = null;
-
   /** The winning team first (both share first in a draw); players listed by enemy hits, then correct answers. */
   private buildPodium(outcome: FightOutcome): Podium<FightTeam, FightPlayer, FightAwardKey> {
     const players = [...this.players.values()].sort((a, b) => b.hits - a.hits || b.correct - a.correct);
@@ -440,8 +438,7 @@ export class FightGame {
 
   /** The finished game's Podium (GLOSSARY.md), worked out once in Game finish. */
   get podium(): Podium<FightTeam, FightPlayer, FightAwardKey> {
-    if (!this.finalPodium) throw new GameError("This game has not finished");
-    return this.finalPodium;
+    return this.gameFinish.podium;
   }
 
   private shotView(s: Shot, now = this.clock.now()): FightShot {

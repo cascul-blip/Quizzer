@@ -25,7 +25,7 @@ import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, unhandled } from "./mode-entry.ts";
 import { GameFinish, GameLengthClock, PhaseTimer } from "./phase-timer.ts";
 import type { Podium } from "./podium.ts";
-import { buildPodium } from "./podium.ts";
+import { buildPodium, emptyPodium } from "./podium.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
@@ -101,7 +101,7 @@ export class GiftGame {
   private readonly onChange: () => void;
   private readonly onActivity: (id: string) => void;
   private readonly onFinish: (game: GiftGame) => void;
-  private readonly gameFinish: GameFinish<GiftGame["phase"]>;
+  private readonly gameFinish: GameFinish<GiftGame["phase"], Podium<GiftPlayer, GiftPlayer, GiftAwardKey>>;
   private readonly phases: PhaseTimer<GiftPhase>;
   private readonly gameLength: GameLengthClock<GiftPhase>;
 
@@ -128,8 +128,8 @@ export class GiftGame {
     this.gameFinish = new GameFinish(this.phases, "podium", {
       cleanup: () => {
         for (const player of this.players.values()) player.bonus = null;
-        this.finalPodium = this.buildPodium();
       },
+      podium: { build: () => this.buildPodium(), empty: () => emptyPodium(giftShared.awards) },
       onFinish: () => this.onFinish(this),
       onChange: () => this.onChange(),
     });
@@ -285,8 +285,6 @@ export class GiftGame {
     return true;
   }
 
-  private finalPodium: Podium<GiftPlayer, GiftPlayer, GiftAwardKey> | null = null;
-
   /** Highest score first; correct answers split equal scores. */
   private buildPodium(): Podium<GiftPlayer, GiftPlayer, GiftAwardKey> {
     const players = [...this.players.values()];
@@ -301,8 +299,7 @@ export class GiftGame {
 
   /** The finished game's Podium (GLOSSARY.md), worked out once in Game finish. */
   get podium(): Podium<GiftPlayer, GiftPlayer, GiftAwardKey> {
-    if (!this.finalPodium) throw new GameError("This game has not finished");
-    return this.finalPodium;
+    return this.gameFinish.podium;
   }
 
   /** Live Standings during play; the Podium's places once the game has finished. */

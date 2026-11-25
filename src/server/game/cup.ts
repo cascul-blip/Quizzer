@@ -27,7 +27,7 @@ import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
 import { GameFinish, PhaseTimer } from "./phase-timer.ts";
 import type { Podium } from "./podium.ts";
-import { buildPodium } from "./podium.ts";
+import { buildPodium, emptyPodium } from "./podium.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
@@ -119,7 +119,7 @@ export class CupGame {
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: CupGame) => void;
-  private readonly gameFinish: GameFinish<CupGame["phase"]>;
+  private readonly gameFinish: GameFinish<CupGame["phase"], Podium<CupPlayer, CupPlayer, CupAwardKey>>;
 
   constructor(quiz: Quiz, settings: CupGameSettings, opts: CupOptions = {}) {
     if (quiz.questions.length === 0) throw new GameError("This quiz has no questions");
@@ -145,8 +145,8 @@ export class CupGame {
         if (this.phase === "reveal" && r) while (r.step < r.drinks.length * 2 - 1) this.forceStep(r);
         this.drinkers = [];
         this.reveal = null;
-        this.finalPodium = this.buildPodium();
       },
+      podium: { build: () => this.buildPodium(), empty: () => emptyPodium(cupShared.awards) },
       onFinish: () => this.onFinish(this),
       onChange: () => this.onChange(),
     });
@@ -406,7 +406,6 @@ export class CupGame {
     return true;
   }
 
-  private finalPodium: Podium<CupPlayer, CupPlayer, CupAwardKey> | null = null;
   private finalUnluckiest: CupAwards["unluckiest"] = null;
 
   /** Survivors first, then the latest poisoned; poisoned in the same round share a place. Ordered by correct answers within a place. */
@@ -425,8 +424,7 @@ export class CupGame {
 
   /** The finished game's Podium (GLOSSARY.md), worked out once in Game finish. */
   get podium(): Podium<CupPlayer, CupPlayer, CupAwardKey> {
-    if (!this.finalPodium) throw new GameError("This game has not finished");
-    return this.finalPodium;
+    return this.gameFinish.podium;
   }
 
   private standings(): CupStanding[] {

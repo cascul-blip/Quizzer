@@ -42,7 +42,7 @@ import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
 import { GameFinish, PhaseTimer } from "./phase-timer.ts";
 import type { Podium } from "./podium.ts";
-import { buildPodium } from "./podium.ts";
+import { buildPodium, emptyPodium } from "./podium.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
@@ -147,7 +147,6 @@ export class SiegeGame {
   private periodAnswered = 0;
   private seq = 0;
   private finishedResult: SiegeResult | null = null;
-  private finalPodium: Podium<SiegePlayer, SiegePlayer, SiegeAwardKey> | null = null;
 
   private readonly clock: Clock;
   private readonly rng: () => number;
@@ -157,7 +156,7 @@ export class SiegeGame {
   private readonly onActivity: (playerId: string) => void;
   private readonly onTick: () => void;
   private readonly onFinish: (game: SiegeGame) => void;
-  private readonly gameFinish: GameFinish<SiegeGame["phase"]>;
+  private readonly gameFinish: GameFinish<SiegeGame["phase"], Podium<SiegePlayer, SiegePlayer, SiegeAwardKey>>;
 
   private defenderName(type: SiegeDefenderType): string {
     return siegeDefenderPhrase(type, this.settings.theme);
@@ -185,8 +184,8 @@ export class SiegeGame {
       cleanup: () => {
         this.stopBattle();
         this.finishedResult = this.computeResult();
-        this.finalPodium = this.buildPodium();
       },
+      podium: { build: () => this.buildPodium(), empty: () => emptyPodium(siegeAwardLabels(this.settings.theme)) },
       onFinish: () => this.onFinish(this),
       onChange: () => this.onChange(),
     });
@@ -514,8 +513,7 @@ export class SiegeGame {
 
   /** The finished game's Podium (GLOSSARY.md), worked out once in Game finish: the awards, and the results sheet's order. */
   get podium(): Podium<SiegePlayer, SiegePlayer, SiegeAwardKey> {
-    if (!this.finalPodium) throw new GameError("This game has not finished");
-    return this.finalPodium;
+    return this.gameFinish.podium;
   }
 
   /** Waves fully beaten. */
