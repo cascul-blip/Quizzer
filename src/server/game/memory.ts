@@ -3,7 +3,7 @@ import type { AvatarChoice } from "../../shared/avatars.ts";
 import { randomAvatar } from "../../shared/avatars.ts";
 import type { Pacing } from "../../shared/mode-views.ts";
 import type { HostMemoryState, MemoryBoardSize, MemoryCardView, MemoryPlayer, PlayerMemoryView } from "../../shared/modes/memory.ts";
-import { MEMORY_FACE_COUNT, MEMORY_QUESTIONS_PER_PHASE, MEMORY_TURN_MS } from "../../shared/modes/memory.ts";
+import { MEMORY_FACE_COUNT, MEMORY_MATCH_MS, MEMORY_QUESTIONS_PER_PHASE, MEMORY_TURN_MS } from "../../shared/modes/memory.ts";
 import type { Question } from "../../shared/quiz-schema.ts";
 import type { Clock } from "./common.ts";
 import { GameError, preparePlayOrder, realClock, shuffle } from "./common.ts";
@@ -44,7 +44,6 @@ interface Feedback {
   matched: boolean;
 }
 
-const MATCH_MS = 1_000;
 const MISS_MS = 2_000;
 
 export class MemoryGame {
@@ -203,7 +202,7 @@ export class MemoryGame {
     const matched = this.board[first] === this.board[position];
     if (matched) player.pairs++;
     this.feedback = { matched, positions: [first, position] };
-    this.paced.phases.set("feedback", matched ? MATCH_MS : MISS_MS, () => this.afterFeedback());
+    this.paced.phases.set("feedback", matched ? MEMORY_MATCH_MS : MISS_MS, () => this.afterFeedback());
     this.onChange();
     return true;
   }
@@ -347,7 +346,13 @@ export class MemoryGame {
       myText: answer?.text ?? null,
       reveal: correct ? { choice, correct, wasCorrect: !!answer?.correct } : null,
       boardSize: this.boardSize,
-      turn: turn ? { id: turn.id, step: this.phase === "feedback" ? null : turn.first === null ? 1 : 2, board: this.boardView() } : null,
+      turn: turn
+        ? {
+            id: turn.id,
+            board: this.boardView(),
+            ...(this.phase === "feedback" && this.feedback ? { step: null, matched: this.feedback.matched } : { step: turn.first === null ? 1 : 2 }),
+          }
+        : null,
       phaseRemainingMs: this.paced.phases.remainingMs(),
       result: this.phase === "podium" ? { rank: this.ranked().find((p) => p.id === id)!.rank, playerCount: this.players.size } : null,
     };

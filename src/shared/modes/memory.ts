@@ -46,6 +46,15 @@ export interface HostMemoryState {
   phaseRemainingMs: number;
 }
 
+/** How long a Memory card takes to turn over. */
+export const MEMORY_FLIP_MS = 400;
+/** How long a matched pair stays face up after its second card has turned. */
+export const MEMORY_SLIDE_HOLD_MS = 500;
+/** How long a matched pair takes to slide off the board. */
+export const MEMORY_SLIDE_MS = 500;
+/** How long a matched pair's result shows: the second card's flip, the hold, then the slide-off. */
+export const MEMORY_MATCH_MS = MEMORY_FLIP_MS + MEMORY_SLIDE_HOLD_MS + MEMORY_SLIDE_MS;
+
 export interface PlayerMemoryView {
   kind: "memory";
   phase: MemoryPhase;
@@ -56,8 +65,8 @@ export interface PlayerMemoryView {
   myText: string | null;
   reveal: { choice: number | null; correct: number[]; wasCorrect: boolean } | null;
   boardSize: number;
-  /** A null step keeps the confirmed faces visible during feedback. */
-  turn: { id: number; step: 1 | 2 | null; board: MemoryCardView[] } | null;
+  /** A null step keeps the confirmed faces visible during feedback, with the turn's outcome. */
+  turn: ({ id: number; board: MemoryCardView[] } & ({ step: 1 | 2 } | { step: null; matched: boolean })) | null;
   phaseRemainingMs: number;
   result: { rank: number; playerCount: number } | null;
 }

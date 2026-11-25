@@ -1,0 +1,57 @@
+/* A turning card shows its face on the front and the theme's card back on a child turned away. */
+.memory-flip-up,
+.memory-flip-down {
+  position: relative;
+  transform-style: preserve-3d;
+  animation: var(--memory-flip-ms) ease-in-out both;
+}
+
+.memory-flip-up {
+  animation-name: memory-flip-up;
+}
+
+.memory-flip-down {
+  animation-name: memory-flip-down;
+}
+
+.memory-flip-back {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-color: #103d36;
+  transform: rotateY(180deg) translateZ(1px);
+  backface-visibility: hidden;
+}
+
+@keyframes memory-flip-up {
+  from {
+    transform: rotateY(180deg);
+  }
+  to {
+    transform: rotateY(0deg);
+  }
+}
+
+@keyframes memory-flip-down {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(180deg);
+  }
+}
+
+/* A matched pair slides off to the right; the board's frame or the scoreboard above it hides it on the way out. */
+.memory-slide-off {
+  position: relative;
+  animation: memory-slide-off var(--memory-slide-ms) ease-in both;
+}
+
+@keyframes memory-slide-off {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100vw);
+  }
+}
