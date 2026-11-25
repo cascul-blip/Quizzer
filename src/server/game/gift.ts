@@ -1,7 +1,6 @@
 import type { AnswerValue } from "../../shared/answer-match.ts";
 import { answerOf } from "../../shared/answer-match.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
-import { randomAvatar } from "../../shared/avatars.ts";
 import type { GiftItem, GiftItemKind, GiftPower } from "../../shared/gift-rules.ts";
 import {
   GIFT_CORRECT_TO_PLAY,
@@ -19,20 +18,18 @@ import type { GiftAwardKey, GiftHit, GiftPhase, GiftStanding, HostGiftState, Pla
 import { giftShared } from "../../shared/modes/gift.ts";
 import type { Quiz } from "../../shared/quiz-schema.ts";
 import type { Clock } from "./common.ts";
-import { GameError, realClock, shuffle } from "./common.ts";
+import { GameError, shuffle } from "./common.ts";
 import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, unhandled } from "./mode-entry.ts";
-import { GameFinish, GameLengthClock, PhaseTimer } from "./phase-timer.ts";
 import type { Podium } from "./podium.ts";
 import { buildPodium, emptyPodium } from "./podium.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
-import { Roster } from "./roster.ts";
 import { most, rankBy } from "./standings.ts";
 import type { AnswerTotals } from "./stream.ts";
-import { QuestionStream } from "./stream.ts";
+import { StreamedSession } from "./streamed-session.ts";
 
 const COUNTDOWN_MS = 3_000;
 const GIFT_ORDER = [most((p: GiftPlayer) => p.score), most((p: GiftPlayer) => p.correct)];
@@ -92,18 +89,8 @@ export class GiftGame {
   readonly runningMode = "gift" as const;
   readonly quizId: string;
   readonly title: string;
-  readonly roster = new Roster<GiftPlayer>();
-
-  private readonly clock: Clock;
-  private readonly rng: () => number;
-  private readonly stream: QuestionStream<GiftPlayer>;
   private readonly durationMs: number;
-  private readonly onChange: () => void;
-  private readonly onActivity: (id: string) => void;
-  private readonly onFinish: (game: GiftGame) => void;
-  private readonly gameFinish: GameFinish<GiftGame["phase"], Podium<GiftPlayer, GiftPlayer, GiftAwardKey>>;
-  private readonly phases: PhaseTimer<GiftPhase>;
-  private readonly gameLength: GameLengthClock<GiftPhase>;
+  private readonly session: StreamedSession<GiftPlayer, GiftPhase, Podium<GiftPlayer, GiftPlayer, GiftAwardKey>>;
 
   private constructor(
     private readonly quiz: Quiz,
@@ -114,71 +101,78 @@ export class GiftGame {
   ) {
     this.quizId = quiz.id;
     this.title = quiz.title;
-    this.clock = opts.clock ?? realClock;
-    this.phases = new PhaseTimer(this.clock, "countdown");
-    this.rng = opts.rng ?? Math.random;
-    this.stream = new QuestionStream(quiz.questions, shuffleAnswers, this.rng, this.clock, {
-      penalizeGuessing: protect,
-      canAnswer: (player) => !player.bonus && this.phase === "playing" && this.phases.remainingMs() > 0,
-    });
     this.durationMs = minutes * 60_000;
-    this.onChange = opts.onChange ?? (() => {});
-    this.onActivity = opts.onActivity ?? this.onChange;
-    this.onFinish = opts.onFinish ?? (() => {});
-    this.gameFinish = new GameFinish(this.phases, "podium", {
+    this.session = new StreamedSession({
+      questions: quiz.questions,
+      shuffleAnswers,
+      protect,
+      clock: opts.clock,
+      rng: opts.rng,
+      minutes,
+      canAnswer: (player) => !player.bonus && this.phase === "playing" && this.phases.remainingMs() > 0,
       cleanup: () => {
         for (const player of this.players.values()) player.bonus = null;
       },
       podium: { build: () => this.buildPodium(), empty: () => emptyPodium(giftShared.awards) },
-      onFinish: () => this.onFinish(this),
-      onChange: () => this.onChange(),
+      hub: { onChange: opts.onChange, onActivity: opts.onActivity, onFinish: () => opts.onFinish?.(this) },
     });
-    this.gameLength = new GameLengthClock(this.phases, this.gameFinish);
   }
 
-  private newPlayer(base: BasePlayer): GiftPlayer {
-    return this.stream.registerPlayer({ ...base, score: 0, rounds: 0, goodTaps: 0, dudTaps: 0, powerups: 0, bonus: null });
+  private get clock(): Clock {
+    return this.session.clock;
   }
 
-  choices!: LobbyChoices;
+  private get rng(): () => number {
+    return this.session.rng;
+  }
+
+  private get stream() {
+    return this.session.stream;
+  }
+
+  private get phases() {
+    return this.session.phases;
+  }
+
+  private newPlayer(base: BasePlayer): Omit<GiftPlayer, keyof AnswerTotals> {
+    return { ...base, score: 0, rounds: 0, goodTaps: 0, dudTaps: 0, powerups: 0, bonus: null };
+  }
 
   static fromLobby(lobby: LobbyFacts<"gift">, opts: GiftOptions = {}): GiftGame {
     if (!lobby.quiz.questions.length) throw new GameError("This quiz has no questions");
     const game = new GiftGame(lobby.quiz, lobby.settings.minutes, lobby.shuffle.answers, lobby.protect, opts);
-    game.choices = lobby.choices;
-    game.roster.adoptFrom(lobby.players, (base) => game.newPlayer(base));
+    game.session.adoptLobby(lobby, (base) => game.newPlayer(base));
     return game;
   }
 
+  /** The lobby's choices, handed back when the game closes ("Play again"). */
+  get choices(): LobbyChoices {
+    return this.session.choices;
+  }
+
   get phase(): GiftPhase {
-    return this.phases.phase;
+    return this.session.phase;
   }
 
   get players(): Map<string, GiftPlayer> {
-    return this.roster.players;
+    return this.session.players;
   }
 
-  private started = false;
-
   start(): void {
-    if (this.started) throw new GameError("The game has already started");
-    if (!this.players.size) throw new GameError("Wait for at least one player to join");
-    this.started = true;
-    this.phases.set("countdown", COUNTDOWN_MS, () => this.beginPlaying());
-    this.onChange();
+    this.session.start(COUNTDOWN_MS, () => this.beginPlaying());
   }
 
   private beginPlaying(): void {
-    this.gameLength.start("playing", this.durationMs, () => this.expire());
+    this.session.startGameLength("playing", () => this.expire());
     for (const player of this.players.values()) this.stream.open(player);
-    this.onChange();
+    this.session.changed();
   }
 
   /** The deadline: the last bonus rounds play out before the game finishes. */
   private expire(): void {
     this.phases.enter("finishing");
     this.finishIfReady();
-    this.onChange();
+    this.session.changed();
   }
 
   private finishIfReady(): void {
@@ -186,11 +180,11 @@ export class GiftGame {
   }
 
   end(): void {
-    this.gameLength.end();
+    this.session.end();
   }
 
   dispose(): void {
-    this.phases.dispose();
+    this.session.dispose();
     for (const player of this.players.values()) player.bonus = null;
   }
 
@@ -200,38 +194,33 @@ export class GiftGame {
   }
 
   join(rawNickname: unknown, avatar?: AvatarChoice | null): GiftPlayer {
-    if (this.phase === "podium" || this.phase === "finishing") throw new GameError("This game has finished accepting players");
-    const player = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), (base) => this.newPlayer(base));
-    this.stream.openOnJoin(player, this.phase === "playing");
-    this.onChange();
-    return player;
+    if (this.phase === "finishing") throw new GameError("This game has finished accepting players");
+    return this.session.join(rawNickname, avatar, (base) => this.newPlayer(base));
   }
 
   byToken(token: unknown): GiftPlayer | null {
-    return this.roster.byToken(token);
+    return this.session.byToken(token);
   }
 
   setConnected(id: string, connected: boolean): void {
-    if (this.roster.setConnected(id, connected)) this.onChange();
+    this.session.setConnected(id, connected);
   }
 
   kick(id: string): GiftPlayer | null {
-    const player = this.roster.remove(id);
+    const player = this.session.kick(id);
     if (player) {
       this.clearBonus(player);
       this.finishIfReady();
-      this.onChange();
     }
     return player;
   }
 
   answer(id: string, seq: number, answer: AnswerValue): boolean {
-    const player = this.players.get(id);
-    if (!player) return false;
-    const correct = this.stream.answer(player, seq, answer);
-    if (correct === null) return false;
+    const answered = this.session.answer(id, seq, answer);
+    if (!answered) return false;
+    const { player, correct } = answered;
     if (correct && player.correct % GIFT_CORRECT_TO_PLAY === 0) this.earnBonus(player);
-    this.onActivity(id);
+    this.session.activity(id);
     return true;
   }
 
@@ -250,7 +239,7 @@ export class GiftGame {
     this.phases.after(`bonus:${player.id}`, endsAt - this.clock.now(), () => {
       this.clearBonus(player);
       this.finishIfReady();
-      if (this.phase !== "podium") this.onActivity(player.id);
+      if (this.phase !== "podium") this.session.activity(player.id);
     });
   }
 
@@ -281,7 +270,7 @@ export class GiftGame {
       if (bonus.power === "star") bonus.power = null;
     }
     bonus.hits.set(itemId, { item: itemId, delta: player.score - before, effect });
-    this.onActivity(id);
+    this.session.activity(id);
     return true;
   }
 
@@ -299,7 +288,7 @@ export class GiftGame {
 
   /** The finished game's Podium (GLOSSARY.md), worked out once in Game finish. */
   get podium(): Podium<GiftPlayer, GiftPlayer, GiftAwardKey> {
-    return this.gameFinish.podium;
+    return this.session.podium;
   }
 
   /** Live Standings during play; the Podium's places once the game has finished. */
