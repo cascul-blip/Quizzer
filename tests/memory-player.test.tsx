@@ -3,7 +3,6 @@ import { render } from "preact";
 import { act } from "preact/test-utils";
 import { PhoneModeScreen } from "../src/client/player/modes.tsx";
 import type { MemoryCardView, PlayerMemoryView } from "../src/shared/modes/memory.ts";
-import { MEMORY_FLIP_MS } from "../src/shared/modes/memory.ts";
 import type { ClientMsg } from "../src/shared/protocol.ts";
 import { usePhoneDom } from "./phone-dom.ts";
 
@@ -187,66 +186,68 @@ test("Memory Game restores the authoritative countdown on reconnect without rese
 });
 
 test.each([
-  ["match", 0, "Santa Claus", 1_400],
-  ["mismatch", 1, "Christmas tree", 2_000],
-] as const)("Memory Game keeps the %s faces visible and locks selection until the next reveal turn", (outcome, secondFace, secondName, delay) => {
-  const { show, send } = phone();
-  const firstCard: MemoryCardView = { state: "up", face: 0 };
-  show({ ...turnView, turn: { id: 4, stage: "picking", step: 2, board: [firstCard, ...board(6).slice(1)] } });
-  act(() => card(2)?.click());
-  expect(confirmCard().disabled).toBe(false);
-  pinchZoom();
-  expect(dom.root.querySelector<HTMLDivElement>(".memory-board-pan")?.style.transform).toContain("scale(1.5)");
+  ["match", 0, "Santa Claus", 1_400, 999],
+  ["mismatch", 1, "Christmas tree", 2_000, 1_599],
+] as const)(
+  "Memory Game keeps the %s faces visible and locks selection until the next reveal turn",
+  (outcome, secondFace, secondName, delay, facesStillShownAfterMs) => {
+    const { show, send } = phone();
+    const firstCard: MemoryCardView = { state: "up", face: 0 };
+    show({ ...turnView, turn: { id: 4, stage: "picking", step: 2, board: [firstCard, ...board(6).slice(1)] } });
+    act(() => card(2)?.click());
+    expect(confirmCard().disabled).toBe(false);
+    pinchZoom();
+    expect(dom.root.querySelector<HTMLDivElement>(".memory-board-pan")?.style.transform).toContain("scale(1.5)");
 
-  show({
-    ...turnView,
-    phase: "feedback",
-    turn: { id: 4, stage: "result", matched: outcome === "match", board: [firstCard, { state: "up", face: secondFace }, ...board(6).slice(2)] },
-    phaseRemainingMs: delay,
-  });
-  const faces = () => Array.from(dom.root.querySelectorAll('[role="img"]'), (face) => face.getAttribute("aria-label"));
-  expect(faces()).toEqual(["Card 1, Santa Claus", `Card 2, ${secondName}`]);
-  expect(dom.root.querySelectorAll('[role="timer"]')).toHaveLength(0);
-  expect(dom.root.querySelector('button[aria-label="Zoom in"]')).toBeNull();
-  expect(dom.root.querySelector('button[aria-label="Zoom out"]')).toBeNull();
-  const viewport = dom.root.querySelector(".memory-board-viewport")!;
-  const pan = dom.root.querySelector<HTMLDivElement>(".memory-board-pan")!;
-  expect(pan.style.transform).toBe("");
-  act(() => {
-    viewport.dispatchEvent(Object.assign(new Event("wheel", { bubbles: true, cancelable: true }), { deltaY: -1 }));
-    pointer(viewport, "pointerdown", 1, 30, 30);
-    pointer(viewport, "pointerdown", 2, 90, 30);
-    pointer(viewport, "pointermove", 2, 150, 30);
-    pointer(viewport, "pointerup", 2, 150, 30);
-    pointer(viewport, "pointerup", 1, 30, 30);
-  });
-  expect(pan.style.transform).toBe("");
-  expect(card(2)?.getAttribute("aria-pressed")).toBe("false");
-  expect(card(2)?.getAttribute("aria-disabled")).toBe("true");
-  expect(confirmCard().disabled).toBe(true);
-  act(() => {
-    card(3)?.click();
-    confirmCard().click();
-  });
-  expect(card(3)?.getAttribute("aria-pressed")).toBe("false");
-  expect(send).not.toHaveBeenCalled();
+    show({
+      ...turnView,
+      phase: "feedback",
+      turn: { id: 4, stage: "result", matched: outcome === "match", board: [firstCard, { state: "up", face: secondFace }, ...board(6).slice(2)] },
+      phaseRemainingMs: delay,
+    });
+    const faces = () => Array.from(dom.root.querySelectorAll('[role="img"]'), (face) => face.getAttribute("aria-label"));
+    expect(faces()).toEqual(["Card 1, Santa Claus", `Card 2, ${secondName}`]);
+    expect(dom.root.querySelectorAll('[role="timer"]')).toHaveLength(0);
+    expect(dom.root.querySelector('button[aria-label="Zoom in"]')).toBeNull();
+    expect(dom.root.querySelector('button[aria-label="Zoom out"]')).toBeNull();
+    const viewport = dom.root.querySelector(".memory-board-viewport")!;
+    const pan = dom.root.querySelector<HTMLDivElement>(".memory-board-pan")!;
+    expect(pan.style.transform).toBe("");
+    act(() => {
+      viewport.dispatchEvent(Object.assign(new Event("wheel", { bubbles: true, cancelable: true }), { deltaY: -1 }));
+      pointer(viewport, "pointerdown", 1, 30, 30);
+      pointer(viewport, "pointerdown", 2, 90, 30);
+      pointer(viewport, "pointermove", 2, 150, 30);
+      pointer(viewport, "pointerup", 2, 150, 30);
+      pointer(viewport, "pointerup", 1, 30, 30);
+    });
+    expect(pan.style.transform).toBe("");
+    expect(card(2)?.getAttribute("aria-pressed")).toBe("false");
+    expect(card(2)?.getAttribute("aria-disabled")).toBe("true");
+    expect(confirmCard().disabled).toBe(true);
+    act(() => {
+      card(3)?.click();
+      confirmCard().click();
+    });
+    expect(card(3)?.getAttribute("aria-pressed")).toBe("false");
+    expect(send).not.toHaveBeenCalled();
 
-  const justBeforeMissFlipsBack = delay - MEMORY_FLIP_MS - 1;
-  dom.advance(justBeforeMissFlipsBack);
-  expect(faces()).toEqual(["Card 1, Santa Claus", `Card 2, ${secondName}`]);
-  expect(confirmCard().disabled).toBe(true);
+    dom.advance(facesStillShownAfterMs);
+    expect(faces()).toEqual(["Card 1, Santa Claus", `Card 2, ${secondName}`]);
+    expect(confirmCard().disabled).toBe(true);
 
-  dom.advance(delay - justBeforeMissFlipsBack);
-  const nextBoard = board(6);
-  if (outcome === "match") nextBoard[0] = nextBoard[1] = { state: "empty" };
-  show({ ...turnView, turn: { id: 5, stage: "picking", step: 1, board: nextBoard } });
-  expect(faces()).toEqual([]);
-  expect(card(0) === null).toBe(outcome === "match");
-  expect(card(1) === null).toBe(outcome === "match");
-  expect(dom.root.querySelector('[role="timer"]')?.textContent).toBe("20");
-  act(() => card(3)?.click());
-  expect(confirmCard().disabled).toBe(false);
-});
+    dom.advance(delay - facesStillShownAfterMs);
+    const nextBoard = board(6);
+    if (outcome === "match") nextBoard[0] = nextBoard[1] = { state: "empty" };
+    show({ ...turnView, turn: { id: 5, stage: "picking", step: 1, board: nextBoard } });
+    expect(faces()).toEqual([]);
+    expect(card(0) === null).toBe(outcome === "match");
+    expect(card(1) === null).toBe(outcome === "match");
+    expect(dom.root.querySelector('[role="timer"]')?.textContent).toBe("20");
+    act(() => card(3)?.click());
+    expect(confirmCard().disabled).toBe(false);
+  },
+);
 
 test("Memory Game does not submit local selections when the turn expires", () => {
   const { show, send } = phone();
