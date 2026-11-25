@@ -190,9 +190,12 @@ export class TowerGame {
     return null;
   }
 
-  /** The monster needs another team to attack. */
   get monsterEnabled(): boolean {
-    return this.settings.monster && this.teams.length >= 2;
+    return this.settings.monster && this.hasAttackTarget;
+  }
+
+  private get hasAttackTarget(): boolean {
+    return this.teams.length >= 2;
   }
 
   /**

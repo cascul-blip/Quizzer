@@ -53,11 +53,9 @@ const TEAMS: { [M in GameMode]: number | null } = {
 /** Modes played question by question, whose pacing the host sets and the next lobby keeps. */
 const PACED = new Set<GameMode>(["classic", "racer", "duel", "memory"]);
 
-/** Modes whose phones show a banner in the lobby. */
-const BANNER = new Set<GameMode>(["siege"]);
+const MODES_WITH_LOBBY_BANNER = new Set<GameMode>(["siege"]);
 
-/** Modes where Protect from abuse applies and the lobby offers it. */
-const PROTECT = new Set<GameMode>(["tower", "submarine", "fight", "robot", "cup", "siege", "gift"]);
+const MODES_WITH_PROTECT_FROM_ABUSE = new Set<GameMode>(["tower", "submarine", "fight", "robot", "cup", "siege", "gift"]);
 
 const PHONE_MSG: { [M in GameMode]: ModeMsg<M> } = {
   classic: { type: "answer", qIndex: 0, option: 0 },
@@ -254,11 +252,11 @@ describe("Game modes", () => {
         expect(phoneLobbyView(noel!.playerId).team !== null).toBe(TEAMS[mode] !== null);
       });
 
-      test(`is declared ${PACED.has(mode) ? "paced" : "not paced"}, ${PROTECT.has(mode) ? "protected" : "not protected"}, ${BANNER.has(mode) ? "with" : "without"} a lobby banner`, () => {
+      test(`is declared ${PACED.has(mode) ? "paced" : "not paced"}, ${MODES_WITH_PROTECT_FROM_ABUSE.has(mode) ? "protected" : "not protected"}, ${MODES_WITH_LOBBY_BANNER.has(mode) ? "with" : "without"} a lobby banner`, () => {
         expect(SHARED_MODES[mode].flags.paced).toBe(PACED.has(mode));
-        expect(SHARED_MODES[mode].flags.protect).toBe(PROTECT.has(mode));
-        expect(MODES[mode].lobbyBanner).toBe(BANNER.has(mode));
-        expect(PLAYER_MODES[mode].banner !== null).toBe(BANNER.has(mode));
+        expect(SHARED_MODES[mode].flags.protect).toBe(MODES_WITH_PROTECT_FROM_ABUSE.has(mode));
+        expect(MODES[mode].lobbyBanner).toBe(MODES_WITH_LOBBY_BANNER.has(mode));
+        expect(PLAYER_MODES[mode].banner !== null).toBe(MODES_WITH_LOBBY_BANNER.has(mode));
       });
 
       test("the phone lobby view carries the selected mode", () => {

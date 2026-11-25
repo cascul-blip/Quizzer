@@ -247,8 +247,8 @@ describe("arcade style (Racer)", () => {
 
   test("timing is tighter than the acoustic style", () => {
     for (let step = 0; step < 128; step++) {
-      expect(Math.abs(humanize(step, 3, "arcade").dt)).toBeLessThanOrEqual(HUMAN_TIME_S * ARCADE_TIGHTNESS);
-      expect(humanize(step, 3, "arcade").dt).toBeCloseTo(humanize(step, 3).dt * ARCADE_TIGHTNESS, 12);
+      expect(Math.abs(humanize(step, 3, "arcade").timeOffsetS)).toBeLessThanOrEqual(HUMAN_TIME_S * ARCADE_TIGHTNESS);
+      expect(humanize(step, 3, "arcade").timeOffsetS).toBeCloseTo(humanize(step, 3).timeOffsetS * ARCADE_TIGHTNESS, 12);
     }
   });
 });
@@ -258,16 +258,16 @@ describe("humanising", () => {
     for (let step = 0; step < 256; step++) {
       for (let layer = 0; layer < 12; layer++) {
         const h = humanize(step, layer);
-        expect(Math.abs(h.dt)).toBeLessThanOrEqual(HUMAN_TIME_S);
+        expect(Math.abs(h.timeOffsetS)).toBeLessThanOrEqual(HUMAN_TIME_S);
         expect(Math.abs(h.gain - 1)).toBeLessThanOrEqual(HUMAN_GAIN);
-        expect(Math.abs(h.detune)).toBeLessThanOrEqual(4);
+        expect(Math.abs(h.detuneCents)).toBeLessThanOrEqual(4);
         expect(humanize(step, layer)).toEqual(h);
       }
     }
   });
 
   test("actually varies", () => {
-    const dts = new Set(Array.from({ length: 64 }, (_, s) => humanize(s, 0).dt));
+    const dts = new Set(Array.from({ length: 64 }, (_, s) => humanize(s, 0).timeOffsetS));
     expect(dts.size).toBeGreaterThan(60);
   });
 

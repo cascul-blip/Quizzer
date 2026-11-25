@@ -88,6 +88,8 @@ interface CupGameSettings {
 }
 
 /** Cup of Death: roll a die, answer that many questions in time, or drink one of your cups. One is poisoned. Last one standing wins. */
+const hasNoChoice = (p: CupPlayer) => p.cups <= 1;
+
 export class CupGame {
   readonly runningMode = "cup" as const;
   readonly theme: SeasonTheme;
@@ -248,8 +250,7 @@ export class CupGame {
       this.onChange();
       return;
     }
-    // A last cup needs no choosing.
-    for (const p of drinkers) if (p.cups <= 1) p.pick = 0;
+    for (const p of drinkers) if (hasNoChoice(p)) p.pick = 0;
     this.phases.set("drink", CUP_DRINK_MS, () => this.pour());
     this.onChange();
     this.maybeEndDrinkEarly();
@@ -415,8 +416,9 @@ export class CupGame {
       const top = Math.max(0, ...players.map(value));
       return top > 0 ? { value: top, nicknames: players.filter((p) => value(p) === top).map((p) => p.nickname) } : null;
     };
-    // With a single cup, every drink is certain death: no luck involved.
-    const unlucky = this.startCups > 1 ? players.filter((p) => p.poisonedFrom === this.startCups && p.outRound !== null) : [];
+    // With a single cup, every drink is certain death.
+    const isLuckless = this.startCups === 1;
+    const unlucky = !isLuckless ? players.filter((p) => p.poisonedFrom === this.startCups && p.outRound !== null) : [];
     const first = Math.min(...unlucky.map((p) => p.outRound!));
     return {
       mostCorrect: best((p) => p.correct),

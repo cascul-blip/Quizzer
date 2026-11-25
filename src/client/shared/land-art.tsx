@@ -101,7 +101,7 @@ const ART = {
   "claimed-1": [claimed1Img, phoneClaimed1Img],
   "claimed-2": [claimed2Img, phoneClaimed2Img],
   "claimed-3": [claimed3Img, phoneClaimed3Img],
-  // The maps are big, and even the phone copies (about 112 px per R) are twice what a 1080p projector needs, so both use them.
+  // The maps are big, and even the phone copies (about 112 px per HEX_CORNER_RADIUS_SVG) are twice what a 1080p projector needs, so both use them.
   "map-10": [phoneMap10Img, phoneMap10Img],
   "map-12": [phoneMap12Img, phoneMap12Img],
   "map-14": [phoneMap14Img, phoneMap14Img],
@@ -142,12 +142,10 @@ type LandArtId = keyof typeof ART;
 
 export const landArt = (id: LandArtId): string => pickArt(ART[id][0], ART[id][1]);
 
-/** Corner radius of one hex in SVG units. */
-const R = 10;
-/** The manifest gives the board's offsets in tenths of R. */
-const D = R / 10;
+const HEX_CORNER_RADIUS_SVG = 10;
+const TENTH_OF_HEX_RADIUS = HEX_CORNER_RADIUS_SVG / 10;
 /** Tiles are drawn a little smaller than their cell, so the parchment edge shows between them as ink lines. */
-const TILE_R = R * 0.95;
+const TILE_R = HEX_CORNER_RADIUS_SVG * 0.95;
 const TILE_W = TILE_R * Math.sqrt(3);
 const hexCorners = (r: number) =>
   Array.from({ length: 6 }, (_, k) => {
@@ -160,29 +158,28 @@ const hexPoints = (r: number, x = 0, y = 0) =>
     .join(" ");
 const TILE = hexPoints(TILE_R);
 
-/** The ink line where land changes hands, on the tile's edge. */
-const BORDER_CORNERS = hexCorners(TILE_R);
+const OWNER_BORDER_CORNERS = hexCorners(TILE_R);
 /** The parchment edge: every cell a little bigger, an ink outline under a darker paper band, so its outline follows the board. */
-const EDGE_INK_R = 1.17 * R;
-const EDGE_R = 1.12 * R;
+const EDGE_INK_R = 1.17 * HEX_CORNER_RADIUS_SVG;
+const EDGE_R = 1.12 * HEX_CORNER_RADIUS_SVG;
 const INK = "#3a2412";
-/** Size of one repeat of the edge paper. */
-const WOOD = 40;
-/** Room around the board for the edge and its shadow. */
-const MARGIN = 5 * D;
+const EDGE_PAPER_TILE_SIZE = 40;
+const EDGE_AND_SHADOW_MARGIN = 5 * TENTH_OF_HEX_RADIUS;
 /** The keep is 1.24 tiles wide; its anchor (the middle of its base) goes on the tile centre. */
 const KEEP_W = 1.24 * TILE_W;
 const KEEP_H = (KEEP_W * 801) / 552;
 const KEEP_ANCHOR = { x: 0.496, y: 0.85 };
-/** The cost badge's disc is 0.27 tiles high and fills 80% of its picture. */
-const BADGE = (0.27 * 2 * TILE_R) / 0.8;
-/** The selection and the capture flash are pictures 1.2 and 1.3 times the tile; the placing pop is square, 2 tiles wide. */
-const SELECTED = 1.2;
+const BADGE_DISC_TILE_HEIGHT = 0.27;
+const BADGE_DISC_PICTURE_FILL = 0.8;
+const BADGE = (BADGE_DISC_TILE_HEIGHT * 2 * TILE_R) / BADGE_DISC_PICTURE_FILL;
+const SELECTED_SCALE = 1.2;
 /** The selected tile is also hatched in the map's own ink, so it reads at a glance on a phone. */
 const HATCH_INK = "#1c130a";
 const HATCH = 1.6;
-const FLASH = 1.3;
-const POP = 2 * TILE_W;
+const CAPTURE_FLASH_SCALE = 1.3;
+/** The placing pop is square. */
+const PLACE_POP_TILES = 2;
+const POP = PLACE_POP_TILES * TILE_W;
 
 const GRASS: LandArtId[] = ["grass-1", "grass-2", "grass-3", "grass-4"];
 const CLAIMED: LandArtId[] = ["claimed-1", "claimed-2", "claimed-3"];
@@ -262,14 +259,14 @@ export function HexBoard({ board, viewer, selected, placed, capture, label }: He
   const { width, height } = boardExtent(size);
   const centres = owners.map((_, tile) => {
     const c = hexCenter(size, tile);
-    return { x: c.x * R, y: c.y * R };
+    return { x: c.x * HEX_CORNER_RADIUS_SVG, y: c.y * HEX_CORNER_RADIUS_SVG };
   });
   const top = (tile: number) => centres[tile]!;
   const [mapFailed, setMapFailed] = useState<string | null>(null);
   const mapId = christmas ? "north-pole" : MAPS[size];
   const map = mapId !== undefined && mapFailed !== mapId ? (christmas ? northPoleArt().map : landArt(mapId as LandArtId)) : null;
-  const mapW = (width * R).toFixed(2);
-  const mapH = (height * R).toFixed(2);
+  const mapW = (width * HEX_CORNER_RADIUS_SVG).toFixed(2);
+  const mapH = (height * HEX_CORNER_RADIUS_SVG).toFixed(2);
   const flipped = capture ? new Map(capture.tiles.map((t, i) => [t, i])) : null;
   const flipDelay = (i: number) => ({ animationDelay: `${Math.min(i * 25, 600)}ms` });
 
@@ -332,8 +329,8 @@ export function HexBoard({ board, viewer, selected, placed, capture, label }: He
 
   const borders = borderEdges(owners, size).map(({ tile, side, owner }) => {
     const c = centres[tile]!;
-    const a = BORDER_CORNERS[side]!;
-    const b = BORDER_CORNERS[(side + 1) % 6]!;
+    const a = OWNER_BORDER_CORNERS[side]!;
+    const b = OWNER_BORDER_CORNERS[(side + 1) % 6]!;
     return (
       <line
         key={`${tile}-${side}`}
@@ -400,13 +397,13 @@ export function HexBoard({ board, viewer, selected, placed, capture, label }: He
     .filter((t) => t < owners.length)
     .map((t, i) => {
       const c = top(t);
-      return <TileImage key={`${capture.seq}-${t}`} id="capture-flash" x={c.x} y={c.y} scale={FLASH} class="fx-flash" style={flipDelay(i)} />;
+      return <TileImage key={`${capture.seq}-${t}`} id="capture-flash" x={c.x} y={c.y} scale={CAPTURE_FLASH_SCALE} class="fx-flash" style={flipDelay(i)} />;
     });
 
   return (
     <svg
       class={`hex-board ${christmas ? "hex-north-pole" : ""}`}
-      viewBox={`${-MARGIN} ${-MARGIN} ${(width * R + 2 * MARGIN).toFixed(2)} ${(height * R + 2 * MARGIN).toFixed(2)}`}
+      viewBox={`${-EDGE_AND_SHADOW_MARGIN} ${-EDGE_AND_SHADOW_MARGIN} ${(width * HEX_CORNER_RADIUS_SVG + 2 * EDGE_AND_SHADOW_MARGIN).toFixed(2)} ${(height * HEX_CORNER_RADIUS_SVG + 2 * EDGE_AND_SHADOW_MARGIN).toFixed(2)}`}
       preserveAspectRatio="xMidYMid meet"
       role="img"
       aria-label={label ?? (christmas ? "North Pole territory map" : "The land")}
@@ -420,11 +417,17 @@ export function HexBoard({ board, viewer, selected, placed, capture, label }: He
         <clipPath id={CLIP_ID}>
           <polygon points={TILE} />
         </clipPath>
-        <pattern id={WOOD_ID} width={WOOD} height={WOOD} patternUnits="userSpaceOnUse">
-          <image href={landArt("tray-wood")} width={WOOD} height={WOOD} />
+        <pattern id={WOOD_ID} width={EDGE_PAPER_TILE_SIZE} height={EDGE_PAPER_TILE_SIZE} patternUnits="userSpaceOnUse">
+          <image href={landArt("tray-wood")} width={EDGE_PAPER_TILE_SIZE} height={EDGE_PAPER_TILE_SIZE} />
         </pattern>
         <filter id={SHADOW_ID} x="-10%" y="-10%" width="125%" height="125%">
-          <feDropShadow dx={0.6 * D} dy={0.8 * D} stdDeviation={D} flood-color="rgb(60,35,12)" flood-opacity="0.35" />
+          <feDropShadow
+            dx={0.6 * TENTH_OF_HEX_RADIUS}
+            dy={0.8 * TENTH_OF_HEX_RADIUS}
+            stdDeviation={TENTH_OF_HEX_RADIUS}
+            flood-color="rgb(60,35,12)"
+            flood-opacity="0.35"
+          />
         </filter>
         <pattern id={HATCH_ID} width={HATCH} height={HATCH} patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
           <line x1={HATCH / 2} y1="0" x2={HATCH / 2} y2={HATCH} stroke={HATCH_INK} stroke-width={HATCH * 0.4} />
@@ -463,7 +466,7 @@ export function HexBoard({ board, viewer, selected, placed, capture, label }: He
         <g class="hex-overlay">
           {states}
           {sel && <polygon class="hex-hatch" points={hexPoints(TILE_R, sel.x, sel.y)} style={{ fill: `url(#${HATCH_ID})` }} />}
-          {sel && <TileImage id="state-selected" x={sel.x} y={sel.y} scale={SELECTED} class="hex-selected" />}
+          {sel && <TileImage id="state-selected" x={sel.x} y={sel.y} scale={SELECTED_SCALE} class="hex-selected" />}
         </g>
         <g class="hex-overlay hex-fx">
           {pop && (

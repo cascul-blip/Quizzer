@@ -20,19 +20,18 @@ export const RACER_CONFIDENCE: Record<RacerConfidence, { label: string; gain: nu
 };
 
 export interface RacerCar {
-  /** Miles per hour; may be fractional (each fail halves it). 0 while crashed. */
-  speed: number;
+  /** May be fractional (each fail halves it). 0 while crashed. */
+  speedMph: number;
   /** A crashed car has no driver; it stays put until the class repairs it. */
   crashed: boolean;
-  /** Miles driven so far. */
-  distance: number;
+  distanceMiles: number;
   /** Highest speed a turn ended on. */
-  topSpeed: number;
+  topSpeedMph: number;
   crashes: number;
 }
 
 export function newRacerCar(): RacerCar {
-  return { speed: RACER_START_MPH, crashed: false, distance: 0, topSpeed: RACER_START_MPH, crashes: 0 };
+  return { speedMph: RACER_START_MPH, crashed: false, distanceMiles: 0, topSpeedMph: RACER_START_MPH, crashes: 0 };
 }
 
 /**
@@ -74,8 +73,8 @@ export interface RacerTurnResult {
   confidence: RacerConfidence | null;
   correct: number;
   total: number;
-  /** Mph gained: 0, 20 or 40. */
-  gain: number;
+  /** 0, 20 or 40. */
+  gainMph: number;
   /** Fail points, 0 to 3; each one halved the speed. */
   fails: number;
   speedBefore: number;
@@ -91,8 +90,8 @@ export interface RacerTurnResult {
  * A crashed car ignores the lever and can only be repaired; a car without a driver keeps its speed.
  */
 export function applyRacerTurn(car: RacerCar, turn: RacerTurnInput): { car: RacerCar; summary: RacerTurnResult } {
-  const speedBefore = car.speed;
-  let speed = car.speed;
+  const speedBefore = car.speedMph;
+  let speed = car.speedMph;
   let confidence: RacerConfidence | null = null;
   let gain = 0;
   let fails = 0;
@@ -116,12 +115,12 @@ export function applyRacerTurn(car: RacerCar, turn: RacerTurnInput): { car: Race
   const distanceAdded = (speed * RACER_TURN_MINUTES) / 60;
   return {
     car: {
-      speed,
+      speedMph: speed,
       crashed: crashed || (car.crashed && !repaired),
-      distance: car.distance + distanceAdded,
-      topSpeed: Math.max(car.topSpeed, speed),
+      distanceMiles: car.distanceMiles + distanceAdded,
+      topSpeedMph: Math.max(car.topSpeedMph, speed),
       crashes: car.crashes + (crashed ? 1 : 0),
     },
-    summary: { confidence, correct: turn.correct, total: turn.total, gain, fails, speedBefore, speedAfter: speed, crashed, repaired, distanceAdded },
+    summary: { confidence, correct: turn.correct, total: turn.total, gainMph: gain, fails, speedBefore, speedAfter: speed, crashed, repaired, distanceAdded },
   };
 }

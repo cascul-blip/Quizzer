@@ -8,12 +8,17 @@ export interface LanAddress {
 const VIRTUAL_IFACE =
   /docker|veth|^br-|virbr|vbox|virtualbox|vmnet|vmware|vethernet|hyper-v|wsl|tailscale|^zt|zerotier|^wg|wireguard|^tun|^tap|^utun|loopback/i;
 
+/** Self-assigned when no DHCP server answered. */
+function isLinkLocal(ip: string): boolean {
+  return ip.startsWith("169.254.");
+}
+
 function score(a: LanAddress): number {
   let s = 0;
   if (a.address.startsWith("192.168.")) s += 30;
   else if (a.address.startsWith("10.")) s += 20;
   else if (/^172\.(1[6-9]|2\d|3[01])\./.test(a.address)) s += 10;
-  else if (a.address.startsWith("169.254.")) s -= 50; // link-local: no DHCP
+  else if (isLinkLocal(a.address)) s -= 50;
   if (VIRTUAL_IFACE.test(a.iface)) s -= 40;
   if (/^(wl|wi-?fi|wlan|en|eth|ethernet)/i.test(a.iface)) s += 5;
   return s;

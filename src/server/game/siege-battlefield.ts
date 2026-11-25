@@ -44,8 +44,7 @@ export interface SiegeDefender<O> {
   maxHealth: number;
   /** The player who placed it (kept after a kick, for the results). */
   owner: O;
-  /** Ms until it can attack again. */
-  cooldown: number;
+  cooldownMs: number;
   hitSeq: number;
   attackSeq: number;
 }
@@ -59,8 +58,8 @@ export interface SiegeMonster {
   state: "wait" | "walk" | "attack" | "leap";
   health: number;
   maxHealth: number;
-  /** Ms until its next hit, while attacking. */
-  cooldown: number;
+  /** While attacking. */
+  cooldownMs: number;
   /** The giant waits on the entry square until then. */
   waitUntil: number;
   /** Walk and attack speed multiplier (the giant's goes up with the wave's boost). */
@@ -312,7 +311,7 @@ export class SiegeBattlefield<O> {
       state: type === "giant" ? "wait" : "walk",
       health,
       maxHealth: health,
-      cooldown: stats.attackMs / pace,
+      cooldownMs: stats.hitIntervalMs / pace,
       waitUntil: type === "giant" ? now + SIEGE_GIANT_WAIT_MS : 0,
       pace,
       leapt: false,
@@ -373,9 +372,9 @@ export class SiegeBattlefield<O> {
           m.state = "walk";
           changed = true;
         } else {
-          m.cooldown -= SIEGE_TICK_MS;
-          if (m.cooldown <= EPS) {
-            m.cooldown += stats.attackMs / m.pace;
+          m.cooldownMs -= SIEGE_TICK_MS;
+          if (m.cooldownMs <= EPS) {
+            m.cooldownMs += stats.hitIntervalMs / m.pace;
             this.strike(m, target);
             changed = true;
           }
@@ -413,14 +412,14 @@ export class SiegeBattlefield<O> {
 
   private startAttack(m: SiegeMonster): void {
     m.state = "attack";
-    m.cooldown = SIEGE_MONSTERS[m.type].attackMs / m.pace;
+    m.cooldownMs = SIEGE_MONSTERS[m.type].hitIntervalMs / m.pace;
   }
 
   /** One hit from a monster: the giant's stomp also hits the squares just above and below. */
   private strike(m: SiegeMonster, target: SiegeDefender<O>): void {
     const stats = SIEGE_MONSTERS[m.type];
     m.attackSeq++;
-    this.damageDefender(target, stats.damage * (target.type === "wall" ? stats.wallFactor : 1), m);
+    this.damageDefender(target, stats.hitDamage * (target.type === "wall" ? stats.wallFactor : 1), m);
     if (m.type === "giant") {
       for (const lane of [target.lane - 1, target.lane + 1]) {
         const d = this.defenderAt(lane, target.square);
@@ -469,8 +468,8 @@ export class SiegeBattlefield<O> {
       const stats = SIEGE_DEFENDERS[d.type];
       const attackMs = stats.attackMs[d.level - 1]!;
       if (attackMs <= 0) continue;
-      d.cooldown = Math.max(0, d.cooldown - SIEGE_TICK_MS);
-      if (d.cooldown > EPS) continue;
+      d.cooldownMs = Math.max(0, d.cooldownMs - SIEGE_TICK_MS);
+      if (d.cooldownMs > EPS) continue;
       if (d.type === "archer") {
         if (!this.archerTarget(d)) continue;
         for (let i = 0; i < stats.arrows[d.level - 1]!; i++) {
@@ -489,7 +488,7 @@ export class SiegeBattlefield<O> {
         this.damageMonster(t, stats.damage[d.level - 1]!, d);
       }
       d.attackSeq++;
-      d.cooldown = attackMs;
+      d.cooldownMs = attackMs;
       changed = true;
     }
     return changed;
@@ -528,7 +527,7 @@ export class SiegeBattlefield<O> {
   /** Put a level 1 defender on a square that placementError allowed. */
   place(type: SiegeDefenderType, lane: number, square: number, owner: O): SiegeDefender<O> {
     const health = SIEGE_DEFENDERS[type].health[0];
-    const d: SiegeDefender<O> = { id: ++this.ids, type, lane, square, level: 1, health, maxHealth: health, owner, cooldown: 0, hitSeq: 0, attackSeq: 0 };
+    const d: SiegeDefender<O> = { id: ++this.ids, type, lane, square, level: 1, health, maxHealth: health, owner, cooldownMs: 0, hitSeq: 0, attackSeq: 0 };
     this.defenders.push(d);
     return d;
   }

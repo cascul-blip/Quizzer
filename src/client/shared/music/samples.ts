@@ -50,7 +50,7 @@ export const VOICES: Record<string, Voice> = {
 };
 
 /** An accented drum hit uses the harder stroke, a little louder too. */
-const ACCENT = 1.15;
+const ACCENT_GAIN_FACTOR = 1.15;
 
 const setOf = (inst: string): SampleSet | undefined => SAMPLE_SETS[VOICES[inst]?.set ?? inst];
 
@@ -143,7 +143,7 @@ export function playSample(ctx: Ctx, dest: AudioNode, inst: string, t: number, f
     src.playbackRate.value = 2 ** ((midiOf(freq) - zone.root) / 12);
   } else {
     src.buffer = done.get(accent ? set.accent : set.hit)!;
-    if (accent) level *= ACCENT;
+    if (accent) level *= ACCENT_GAIN_FACTOR;
   }
   src.detune.value = detune;
   const g = ctx.createGain();

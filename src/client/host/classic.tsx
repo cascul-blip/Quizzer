@@ -96,7 +96,7 @@ function Leaderboard({ view, send }: { view: GameView; send: Send }) {
               {p.nickname}
               <StreakBadge streak={p.streak} />
             </span>
-            {p.delta > 0 && <span class="lb-delta">+{p.delta}</span>}
+            {p.lastQuestionPoints > 0 && <span class="lb-delta">+{p.lastQuestionPoints}</span>}
             <span class="lb-score">{p.score.toLocaleString()}</span>
           </li>
         ))}

@@ -23,7 +23,7 @@ export function PinBoard({
   hot = null,
   correct,
   wrong = null,
-  counts,
+  pickCountsBySpot,
   onSpotClick,
   onImageClick,
   boardRef,
@@ -39,8 +39,8 @@ export function PinBoard({
   correct?: number[];
   /** A wrong pick to mark red. */
   wrong?: number | null;
-  /** How many players picked each spot (host reveal). */
-  counts?: number[];
+  /** Host reveal only. */
+  pickCountsBySpot?: number[];
   onSpotClick?: (index: number) => void;
   /** Click on the image itself, with the position as fractions of the image. */
   onImageClick?: (x: number, y: number) => void;
@@ -94,7 +94,7 @@ export function PinBoard({
             onClick={onSpotClick ? () => onSpotClick(i) : undefined}
           >
             {labels[i]}
-            {counts && <span class="pin-count">{counts[i] ?? 0}</span>}
+            {pickCountsBySpot && <span class="pin-count">{pickCountsBySpot[i] ?? 0}</span>}
           </button>
         );
       })}

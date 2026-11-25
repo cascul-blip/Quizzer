@@ -16,6 +16,8 @@ import { useDelayedCues } from "./delayed-cues.ts";
 import type { LobbyModeEntry, LobbySettingsProps } from "./lobby-modes.tsx";
 import { Award } from "./tower.tsx";
 
+const TICK_SECONDS = 3;
+
 type CupView = Extract<HostView, { kind: "cup" }>;
 
 /** Projector screen for Cup of Death: countdown → (roll → quiz → drink → reveal)… → podium. */
@@ -58,9 +60,9 @@ function CupStageContent({ view, send }: { view: CupView; send: Send }) {
     }
   }, [view]);
 
-  // The last seconds of the quiz and of picking tick down.
   useEffect(() => {
-    if ((view.phase === "quiz" || view.phase === "drink") && secs > 0 && secs <= 3) play("tick");
+    const isLastSeconds = (view.phase === "quiz" || view.phase === "drink") && secs > 0 && secs <= TICK_SECONDS;
+    if (isLastSeconds) play("tick");
   }, [secs, view.phase]);
 
   useEffect(() => {
@@ -334,9 +336,8 @@ export function cupCue(view: CupView): MusicCue {
   if (view.phase === "drink" || (view.phase === "reveal" && (view.reveal?.drinks.length ?? 0) > 0))
     return { track: track("drink"), intensity: view.phase === "reveal" ? 0.7 : 0.3 };
   if (view.phase === "quiz") {
-    // The less time left to answer, the faster the gallop.
-    const start = Math.max(0, Math.min(1, 1 - view.phaseRemainingMs / Math.max(1, view.phaseDurationMs)));
-    return { track: track("quiz"), intensity: 0.15 + start * 0.85, rampTo: 1, rampMs: view.phaseRemainingMs, key: `cup-q${view.round}` };
+    const elapsedShare = Math.max(0, Math.min(1, 1 - view.phaseRemainingMs / Math.max(1, view.phaseDurationMs)));
+    return { track: track("quiz"), intensity: 0.15 + elapsedShare * 0.85, rampTo: 1, rampMs: view.phaseRemainingMs, key: `cup-q${view.round}` };
   }
   return { track: track("quiz"), intensity: 0, key: `cup-${view.phase}-${view.round}` };
 }

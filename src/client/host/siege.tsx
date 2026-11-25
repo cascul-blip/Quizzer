@@ -102,6 +102,14 @@ function Treasury({ gold, hearts }: { gold: number; hearts: number }) {
   );
 }
 
+const DRUM_ROLL_LEAD_MS = 1500;
+
+/** The drum roll leads into the next wave: it starts once the build break is this close to its end. */
+function isDrumRollMoment(view: SiegeView, p: SiegeView): boolean {
+  const inLead = (v: SiegeView) => v.phase === "build" && v.phaseRemainingMs <= DRUM_ROLL_LEAD_MS;
+  return view.wave > 0 && inLead(view) && !inLead(p);
+}
+
 function useSiegeSounds(view: SiegeView) {
   const prev = useRef<SiegeView | null>(null);
   const later = useDelayedCues(view.phase);
@@ -116,8 +124,7 @@ function useSiegeSounds(view: SiegeView) {
       if (view.phase === "fallen") play("castleCrumble");
       if (view.phase === "podium" && p.phase !== "stands" && p.phase !== "fallen") play("fanfare");
     }
-    // The drum roll leads into the next wave.
-    if (view.phase === "build" && view.phaseRemainingMs <= 1500 && (p.phase !== "build" || p.phaseRemainingMs > 1500) && view.wave > 0) play("drumRoll");
+    if (isDrumRollMoment(view, p)) play("drumRoll");
     if (view.giantSeq > p.giantSeq) play("giantHorn");
     if (view.wallHitSeq > p.wallHitSeq) play("heartLost");
     const newShots = view.shots.filter((s) => s.seq > (p.shots.at(-1)?.seq ?? 0));
@@ -450,6 +457,9 @@ function SiegeSettings({ settings, send }: LobbySettingsProps<"siege">) {
   );
 }
 
+/** Monsters on the board at which a wave's music is at its busiest. */
+const MONSTERS_FOR_FULL_BUSY = 10;
+
 export function siegeCue(view: SiegeView): MusicCue {
   const outcome = view.result?.outcome;
   const battle = themedTrack("siege", view.settings.theme, "play");
@@ -460,11 +470,11 @@ export function siegeCue(view: SiegeView): MusicCue {
   if (view.phase === "countdown") return { track: battle, intensity: 0.05, key: "siege-count" };
   // Build break: drums and a held chord, rising into a drum roll before the next wave.
   if (view.phase === "build") return { track: battle, intensity: 0.05, rampTo: 0.14, rampMs: view.phaseRemainingMs, key: `siege-break-${view.wave}` };
-  // A wave: more layers as monsters fill the board and as hearts are lost; a giant brings low brass and timpani.
-  const lost = 1 - view.hearts / Math.max(1, view.maxHearts);
+  // A giant brings low brass and timpani.
+  const lostHeartsShare = 1 - view.hearts / Math.max(1, view.maxHearts);
   const giant = view.monsters.some((m) => m.type === "giant");
-  const busy = Math.min(1, view.monsterCount / 10);
-  const intensity = Math.max(0.2, Math.min(giant ? 1 : 0.84, 0.2 + busy * 0.35 + lost * 0.45), giant ? 0.85 : 0);
+  const busyShare = Math.min(1, view.monsterCount / MONSTERS_FOR_FULL_BUSY);
+  const intensity = Math.max(0.2, Math.min(giant ? 1 : 0.84, 0.2 + busyShare * 0.35 + lostHeartsShare * 0.45), giant ? 0.85 : 0);
   return { track: battle, intensity, key: `siege-wave-${view.wave}` };
 }
 

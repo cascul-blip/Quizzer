@@ -22,6 +22,9 @@ function useFightPhoneUI() {
 const PREVIEW_S = 0.45;
 /** How far the loaded avatar is drawn back at full power, in field units. */
 const PULL_DRAW = 55;
+/** A drag across this share of the screen width pulls the catapult back all the way. */
+const FULL_POWER_SCREEN_SHARE = 0.4;
+const MIN_FULL_POWER_PX = 90;
 /** Rows of the repair wall, and whole bricks per row (odd rows are offset by half a brick). */
 const WALL_ROWS = 12;
 const WALL_COLS = 5;
@@ -204,10 +207,9 @@ function AimScreen({ view, send }: { view: PlayerFightView; send: Send }) {
   const [fired, setFired] = useState(false);
   const team = view.team.index;
 
-  /** Screen drag → field pull: full power at ~40% of the screen width. */
   const toPull = (e: PointerEvent) => {
     const s = start.current!;
-    const fullPx = Math.max(90, (areaRef.current?.clientWidth ?? 360) * 0.4);
+    const fullPx = Math.max(MIN_FULL_POWER_PX, (areaRef.current?.clientWidth ?? 360) * FULL_POWER_SCREEN_SHARE);
     const k = MAX_PULL / fullPx;
     return { dx: (e.clientX - s.x) * k, dy: -(e.clientY - s.y) * k };
   };

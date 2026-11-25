@@ -46,13 +46,17 @@ export const RS: Pt = { x: 670.3855619360131, y: 321.5422477440525 };
 const SPREAD = 22;
 const CLAW_LS = [1.0, 1.08, 0.95];
 
-/** Hand pose: knuckle curl °, tip curl °, spread, thumb close. */
-type Hand = [number, number, number, number];
-export const POSE = {
-  open: [0, 0, 1.3, 0] as Hand,
-  half: [30, 35, 1.0, 0.45] as Hand,
-  closed: [65, 80, 0.55, 1.0] as Hand,
-  grasp: [40, 55, 0.75, 0.7] as Hand,
+interface Hand {
+  knuckleCurlDeg: number;
+  tipCurlDeg: number;
+  spread: number;
+  thumbClose: number;
+}
+export const POSE: Record<"open" | "half" | "closed" | "grasp", Hand> = {
+  open: { knuckleCurlDeg: 0, tipCurlDeg: 0, spread: 1.3, thumbClose: 0 },
+  half: { knuckleCurlDeg: 30, tipCurlDeg: 35, spread: 1.0, thumbClose: 0.45 },
+  closed: { knuckleCurlDeg: 65, tipCurlDeg: 80, spread: 0.55, thumbClose: 1.0 },
+  grasp: { knuckleCurlDeg: 40, tipCurlDeg: 55, spread: 0.75, thumbClose: 0.7 },
 };
 
 /** One arm's joint angles (degrees): shoulder, elbow bend, wrist, plus the hand pose. Right-arm space. */
@@ -64,7 +68,12 @@ interface Arm {
 }
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-const mixHand = (p: Hand, q: Hand, t: number): Hand => p.map((v, i) => lerp(v, q[i]!, t)) as Hand;
+const mixHand = (p: Hand, q: Hand, t: number): Hand => ({
+  knuckleCurlDeg: lerp(p.knuckleCurlDeg, q.knuckleCurlDeg, t),
+  tipCurlDeg: lerp(p.tipCurlDeg, q.tipCurlDeg, t),
+  spread: lerp(p.spread, q.spread, t),
+  thumbClose: lerp(p.thumbClose, q.thumbClose, t),
+});
 const mixArm = (a: Arm, b: Arm, t: number): Arm => ({
   shoulder: lerp(a.shoulder, b.shoulder, t),
   elbow: lerp(a.elbow, b.elbow, t),
@@ -133,7 +142,7 @@ function seg(name: PieceName, A: Pt, B: Pt, thick: number): Op {
 
 /** The right arm's pieces in draw order (rig.layout), and the middle claw's tip: the contact point. */
 export function layout(S: Pt, arm: Arm): { ops: Op[]; tip: Pt } {
-  const [kc, tc, sp, th] = arm.hand;
+  const { knuckleCurlDeg: kc, tipCurlDeg: tc, spread: sp, thumbClose: th } = arm.hand;
   const E = at(S, arm.shoulder, L1);
   const fa = arm.shoulder + arm.elbow;
   const W = at(E, fa, L2);
@@ -231,8 +240,8 @@ function idle(t: number): Pose {
     wrist: 15 + 5 * Math.sin(2 * w + 2.5),
     hand: mixHand(POSE.open, POSE.half, 0.3 + 0.3 * Math.sin(2 * w + 1.7)),
   };
-  R.hand = [R.hand[0], R.hand[1] + 8 * Math.sin(4 * w), R.hand[2], R.hand[3]];
-  L.hand = [L.hand[0], L.hand[1] + 8 * Math.sin(4 * w + 1.3), L.hand[2], L.hand[3]];
+  R.hand = { ...R.hand, tipCurlDeg: R.hand.tipCurlDeg + 8 * Math.sin(4 * w) };
+  L.hand = { ...L.hand, tipCurlDeg: L.hand.tipCurlDeg + 8 * Math.sin(4 * w + 1.3) };
   return { arms: { L, R }, headDy: -2 * Math.sin(w), breathe: 0.006 * (1 + Math.sin(w)), eye: 0.75 + 0.25 * Math.sin(2 * w) };
 }
 

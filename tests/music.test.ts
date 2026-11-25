@@ -141,7 +141,7 @@ describe("Sled Squad Christmas music", () => {
 });
 
 test("Sled Squad routes the intro, chase, trail challenge, and score screen to their arrangements", () => {
-  const view = (phase: SubPhase) => ({ kind: "submarine", phase, gap: 10, maxGap: 20 }) as Extract<HostView, { kind: "submarine" }>;
+  const view = (phase: SubPhase) => ({ kind: "submarine", phase, gapSeconds: 10, maxGap: 20 }) as Extract<HostView, { kind: "submarine" }>;
   expect(musicFor(view("countdown")).track).toBe("submarine-lobby");
   expect(musicFor(view("chase"))).toEqual({ track: "submarine-chase", intensity: 0.5 });
   expect(musicFor(view("dive")).track).toBe("submarine-dive");
@@ -255,7 +255,7 @@ describe("Neon Noel Racer Christmas music", () => {
           [150, false, 1],
           [200, false, 1],
         ] as const) {
-          const view = { kind: "racer", theme, phase, car: { speed, crashed } } as HostView;
+          const view = { kind: "racer", theme, phase, car: { speedMph: speed, crashed } } as HostView;
           // No per-question key: phase changes must not restart the melody.
           expect(musicFor(view)).toEqual({ track: `${prefix}-drive`, intensity });
         }

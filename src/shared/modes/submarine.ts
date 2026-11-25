@@ -17,12 +17,12 @@ export interface HostSubState {
   phase: SubPhase;
   quiz: { id: string; title: string; questionCount: number };
   level: number;
-  /** Meters below the surface; the final score. */
-  depth: number;
+  /** The final score. */
+  depthMeters: number;
   /** Time left in the countdown / cut-scene / dive. */
   phaseRemainingMs: number;
   /** Distance to the fish in seconds of fish travel, as of when this was sent. */
-  gap: number;
+  gapSeconds: number;
   /** How fast the gap closes (gap-seconds per second). */
   speed: number;
   maxGap: number;

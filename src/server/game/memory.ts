@@ -177,7 +177,7 @@ export class MemoryGame {
     if (!player) return false;
     const answer = this.paced.take(player, index, value, (accepted) => accepted);
     if (!answer) return false;
-    player.totalMs += answer.ms;
+    player.totalMs += answer.msSinceOpen;
     if (answer.correct) {
       player.correct++;
       player.chips++;
@@ -242,7 +242,7 @@ export class MemoryGame {
       .filter((player) => player.chips > 0)
       .map((player) => {
         const answers = player.answers.slice(end - MEMORY_QUESTIONS_PER_PHASE, end);
-        const correctMs = answers.reduce((total, answer) => total + (answer?.correct ? answer.ms : 0), 0);
+        const correctMs = answers.reduce((total, answer) => total + (answer?.correct ? answer.msSinceOpen : 0), 0);
         return { player, averageMs: correctMs / player.chips };
       })
       // The roster starts in join order, which a stable sort preserves for remaining ties.

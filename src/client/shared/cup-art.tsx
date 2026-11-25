@@ -285,16 +285,19 @@ interface Seat {
 /** Spread the players evenly around the table, starting at the far side. */
 function seats(players: SeatPlayer[]): Seat[] {
   const n = players.length;
-  // The ring is about this long; leave room between neighbours.
-  const ring = 2 * Math.PI * Math.sqrt((SEAT_RX ** 2 + SEAT_RY ** 2) / 2);
-  const base = Math.max(54, Math.min(128, (ring / Math.max(1, n)) * 0.92));
+  const ringCircumference = 2 * Math.PI * Math.sqrt((SEAT_RX ** 2 + SEAT_RY ** 2) / 2);
+  const base = Math.max(54, Math.min(128, (ringCircumference / Math.max(1, n)) * 0.92));
   return players.map((p, i) => {
     const angle = -Math.PI / 2 + (2 * Math.PI * i) / Math.max(1, n);
-    const near = (Math.sin(angle) + 1) / 2; // 0 far side … 1 near side
-    return { p, angle, x: CX + SEAT_RX * Math.cos(angle), y: CY + SEAT_RY * Math.sin(angle), size: base * (0.82 + 0.18 * near) };
+    const nearness = (Math.sin(angle) + 1) / 2;
+    return { p, angle, x: CX + SEAT_RX * Math.cos(angle), y: CY + SEAT_RY * Math.sin(angle), size: base * (0.82 + 0.18 * nearness) };
   });
 }
 
+const NEAR_FRONT_SIN = 0.7;
+const isNearFront = (s: Seat) => Math.sin(s.angle) > NEAR_FRONT_SIN;
+/** Fraction of the way from the cup to the drinker's mouth. */
+const CUP_LIFT = 0.72;
 const farSide = (s: Seat) => Math.sin(s.angle) < -0.3;
 
 /** The cups in front of one seat: screen positions, left to right. */
@@ -350,8 +353,8 @@ function SeatAvatar({ s, cls, children }: { s: Seat; cls: string; children?: Com
 function SeatBadge({ s, mode }: { s: Seat; mode: SaloonMode }) {
   const { p, size } = s;
   const d = Math.max(26, size * 0.34);
-  // Near the front of the table, above the head is where the cups are: put it beside the player instead.
-  const beside = Math.sin(s.angle) > 0.7;
+  // Above the head of a near-front player is where the cups are: put it beside them instead.
+  const beside = isNearFront(s);
   return (
     <g transform={beside ? `translate(${size * 0.55 + d * 1.1} ${size * 0.15 + d})` : undefined}>
       <BadgeContent p={p} size={size} d={d} y={-size / 2 - 6 - (farSide(s) ? Math.max(13, size * 0.17) + 6 : 0)} mode={mode} />
@@ -468,9 +471,8 @@ export function SaloonScene({
     return spots.map((c, k) => {
       const drunk = r && r.d.cup === k;
       const lifted = drunk && (r.i === current || r.d.verdict !== null);
-      // Lift the cup most of the way to the drinker's mouth.
-      const tx = lifted ? (s.x - c.x) * 0.72 : 0;
-      const ty = lifted ? (s.y - c.y) * 0.72 + s.size * 0.12 : 0;
+      const tx = lifted ? (s.x - c.x) * CUP_LIFT : 0;
+      const ty = lifted ? (s.y - c.y) * CUP_LIFT + s.size * 0.12 : 0;
       const cls = [
         "table-cup",
         drunk ? "chosen" : "",

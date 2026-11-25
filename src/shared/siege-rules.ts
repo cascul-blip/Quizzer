@@ -78,9 +78,8 @@ interface SiegeMonsterStats {
   /** Extra health per connected player (the giant). */
   healthPerPlayer: number;
   squareMs: number;
-  /** Damage per hit and ms between hits. */
-  damage: number;
-  attackMs: number;
+  hitDamage: number;
+  hitIntervalMs: number;
   /** Damage multiplier against stone walls. */
   wallFactor: number;
   /** Share of an arrow's damage it takes (armor). */
@@ -94,10 +93,21 @@ interface SiegeMonsterStats {
 }
 
 export const SIEGE_MONSTERS: Record<SiegeMonsterType, SiegeMonsterStats> = {
-  goblin: { health: 3, healthPerPlayer: 0, squareMs: 2000, damage: 1, attackMs: 1000, wallFactor: 1, arrowFactor: 1, hearts: 1, cost: 1, fromWave: 1 },
-  wolf: { health: 3, healthPerPlayer: 0, squareMs: 1000, damage: 1, attackMs: 1000, wallFactor: 1, arrowFactor: 1, hearts: 1, cost: 2, fromWave: 2 },
-  troll: { health: 12, healthPerPlayer: 0, squareMs: 3500, damage: 2, attackMs: 1000, wallFactor: 3, arrowFactor: 0.5, hearts: 2, cost: 4, fromWave: 3 },
-  giant: { health: 40, healthPerPlayer: 5, squareMs: 4000, damage: 6, attackMs: 3000, wallFactor: 1, arrowFactor: 1, hearts: 5, cost: 12, fromWave: 5 },
+  goblin: { health: 3, healthPerPlayer: 0, squareMs: 2000, hitDamage: 1, hitIntervalMs: 1000, wallFactor: 1, arrowFactor: 1, hearts: 1, cost: 1, fromWave: 1 },
+  wolf: { health: 3, healthPerPlayer: 0, squareMs: 1000, hitDamage: 1, hitIntervalMs: 1000, wallFactor: 1, arrowFactor: 1, hearts: 1, cost: 2, fromWave: 2 },
+  troll: {
+    health: 12,
+    healthPerPlayer: 0,
+    squareMs: 3500,
+    hitDamage: 2,
+    hitIntervalMs: 1000,
+    wallFactor: 3,
+    arrowFactor: 0.5,
+    hearts: 2,
+    cost: 4,
+    fromWave: 3,
+  },
+  giant: { health: 40, healthPerPlayer: 5, squareMs: 4000, hitDamage: 6, hitIntervalMs: 3000, wallFactor: 1, arrowFactor: 1, hearts: 5, cost: 12, fromWave: 5 },
 };
 
 /** Monsters get this much tougher every wave after the first (+10% health per wave). */

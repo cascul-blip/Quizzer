@@ -137,8 +137,7 @@ function noise(ctx: Ctx): AudioBuffer {
   return b;
 }
 
-/** 25% duty pulse wave: the classic chiptune lead sound. */
-function pulseWave(ctx: Ctx): PeriodicWave {
+function pulseWave25(ctx: Ctx): PeriodicWave {
   let w = pulseWaves.get(ctx);
   if (!w) {
     const n = 32;
@@ -171,7 +170,7 @@ function osc(
   detune = 0,
 ) {
   const o = ctx.createOscillator();
-  if (type === "pulse") o.setPeriodicWave(pulseWave(ctx));
+  if (type === "pulse") o.setPeriodicWave(pulseWave25(ctx));
   else o.type = type;
   o.frequency.setValueAtTime(freq, t);
   o.detune.value = detune;
@@ -559,9 +558,9 @@ export function scheduleStep(ctx: Ctx, dest: AudioNode, track: Track, step: numb
     if (style) {
       // A player's small unevenness, the same each time round; and the instrument's place in the stereo field.
       const h = humanize(step, li, style);
-      at = Math.max(ctx.currentTime, t + h.dt);
+      at = Math.max(ctx.currentTime, t + h.timeOffsetS);
       vol *= h.gain;
-      detune = h.detune;
+      detune = h.detuneCents;
       const pan = ctx.createStereoPanner();
       pan.pan.value = panFor(layer.inst, style);
       pan.connect(dest);
@@ -623,8 +622,11 @@ interface Playing {
   echo?: Echo;
 }
 
-/** How far duck() dips the music (0.15 of the usual 0.55). */
-const DUCK_LEVEL = 0.15 / 0.55;
+const USUAL_LEVEL = 0.55;
+const DUCKED_LEVEL = 0.15;
+const DUCK_LEVEL = DUCKED_LEVEL / USUAL_LEVEL;
+/** Send to the shared reverb for rich tracks without their own amount: a hall (acoustic) or a tighter room (arcade). */
+const DEFAULT_REVERB_SEND = { acoustic: 0.3, arcade: 0.18 };
 
 export class MusicPlayer {
   private master: GainNode | null = null;
@@ -656,7 +658,7 @@ export class MusicPlayer {
     const was = this.level;
     this.level = Math.max(0, Math.min(1, level));
     const ctx = this.getCtx();
-    if (this.master && ctx) this.master.gain.setTargetAtTime(this.level * 0.55, ctx.currentTime, 0.15);
+    if (this.master && ctx) this.master.gain.setTargetAtTime(this.level * USUAL_LEVEL, ctx.currentTime, 0.15);
     // Recordings aren't decoded while music is off or muted: fetch the playing track's once it's audible.
     const track = this.current?.track;
     if (was === 0 && this.level > 0 && ctx && track && usesSamples(track)) void loadSamples(ctx, instrumentsOf(track));
@@ -742,7 +744,7 @@ export class MusicPlayer {
       comp.threshold.value = -14;
       comp.ratio.value = 4;
       this.master = ctx.createGain();
-      this.master.gain.value = this.level * 0.55;
+      this.master.gain.value = this.level * USUAL_LEVEL;
       this.ducker = ctx.createGain();
       this.master.connect(this.ducker).connect(comp).connect(ctx.destination);
     }
@@ -841,8 +843,7 @@ export class MusicPlayer {
       this.richUsers++;
       gain.connect(this.rich.input);
       const send = ctx.createGain();
-      // Tracks without their own reverb amount get a hall (acoustic) or a tighter room's worth (arcade).
-      send.gain.value = track.reverb ?? (richStyle(track.rich) === "arcade" ? 0.18 : 0.3);
+      send.gain.value = track.reverb ?? (richStyle(track.rich) === "arcade" ? DEFAULT_REVERB_SEND.arcade : DEFAULT_REVERB_SEND.acoustic);
       gain.connect(send).connect(this.rich.reverb);
       // The echo hangs off the track's own gain, so it fades out with the track.
       const echo = track.layers.some((l) => l.echo) ? createEcho(ctx, gain, stepSeconds(track, this.intensity)) : undefined;

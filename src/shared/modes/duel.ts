@@ -31,8 +31,7 @@ export interface DuelPlayerRef {
 export interface DuelistResult extends DuelPlayerRef {
   /** Null: didn't answer. */
   correct: boolean | null;
-  /** Answer time from the question opening, ms; null if they didn't answer. */
-  ms: number | null;
+  answerDurationMs: number | null;
   /** "win" moves up a boundary, "lose" moves down; a 3-way duel's middle player and everyone in a draw get "stay". */
   outcome: "win" | "lose" | "stay";
   /** Points won this round: a win in the bottom arena is worth 1, each arena above it 1 more; 0 without a win. */
@@ -136,7 +135,7 @@ export interface PlayerDuelView {
   myChoice: number | null;
   myText: string | null;
   /** Reveal only. */
-  reveal: { choice: number | null; correct: number[]; wasCorrect: boolean; ms: number | null } | null;
+  reveal: { choice: number | null; correct: number[]; wasCorrect: boolean; answerDurationMs: number | null } | null;
   /** Reveal only: this player's arena result (the whole duel, so the phone can show the face-off). */
   myDuel: DuelArenaResult | null;
   /** Podium only. */

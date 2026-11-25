@@ -834,7 +834,14 @@ describe("Game mode: Racer", () => {
     host.sendMsg({ type: "host.start", pacing: "manual" });
     const started = await host.hostState((v) => v.kind === "racer" && v.phase === "confidence");
     const first = started.view.kind === "racer" ? started.view : null;
-    expect(first).toMatchObject({ theme: "christmas", pacing: "manual", lever: "low", confidence: null, playerCount: 2, car: { speed: 30, crashed: false } });
+    expect(first).toMatchObject({
+      theme: "christmas",
+      pacing: "manual",
+      lever: "low",
+      confidence: null,
+      playerCount: 2,
+      car: { speedMph: 30, crashed: false },
+    });
     expect(first!.question).toMatchObject({ index: 0, total: 3, text: "Q1", options: [] });
     const driverName = first!.driver!.nickname;
     const driver = players[names.indexOf(driverName)]!;
@@ -871,14 +878,14 @@ describe("Game mode: Racer", () => {
       correct: [0],
       answerCounts: [2, 0],
       answeredCount: 2,
-      car: { speed: 50, crashed: false, topSpeed: 50 },
-      lastTurn: { index: 0, driver: { nickname: driverName }, confidence: "mid", correct: 2, total: 2, gain: 20, fails: 0, speedBefore: 30, speedAfter: 50 },
+      car: { speedMph: 50, crashed: false, topSpeedMph: 50 },
+      lastTurn: { index: 0, driver: { nickname: driverName }, confidence: "mid", correct: 2, total: 2, gainMph: 20, fails: 0, speedBefore: 30, speedAfter: 50 },
     });
     const mine = await other.playerState((v) => v.kind === "racer" && v.phase === "reveal");
     expect(mine.view.kind === "racer" && mine.view).toMatchObject({
       reveal: { choice: 0, correct: [0], wasCorrect: true },
       me: { correct: 1 },
-      car: { speed: 50 },
+      car: { speedMph: 50 },
     });
 
     // Pacing can change mid-game: on auto the reveal moves on by itself.
@@ -899,7 +906,7 @@ describe("Game mode: Racer", () => {
     host.sendMsg({ type: "host.skip" });
     const failed = await host.hostState((v) => v.kind === "racer" && v.phase === "reveal" && v.lastTurn?.index === 1);
     expect(failed.view.kind === "racer" && failed.view).toMatchObject({
-      car: { speed: 25, crashed: false },
+      car: { speedMph: 25, crashed: false },
       lastTurn: { correct: 0, total: 2, fails: 1, speedBefore: 50, speedAfter: 25 },
     });
     // Too late: the answer is rejected and the phone gets its state again.
@@ -915,14 +922,14 @@ describe("Game mode: Racer", () => {
     host.sendMsg({ type: "host.end" });
     const podium = await host.hostState((v) => v.kind === "racer" && v.phase === "podium");
     expect(podium.view.kind === "racer" && podium.view).toMatchObject({
-      result: { distance: 12.5, topSpeed: 50, crashes: 0, turns: 2 },
+      result: { distanceMiles: 12.5, topSpeedMph: 50, crashes: 0, turns: 2 },
       awards: { mostCorrect: { value: 1, nicknames: ["Ann", "Bob"] }, bestDriver: { value: 20, nicknames: [driverName] } },
       errors: [{ wrong: 1, text: "Q2", answers: ["right"] }],
     });
     const end = await driver.playerState((v) => v.kind === "racer" && v.phase === "podium" && !!v.result);
     expect(end.view.kind === "racer" && end.view.result).toEqual({
-      distance: 12.5,
-      topSpeed: 50,
+      distanceMiles: 12.5,
+      topSpeedMph: 50,
       crashes: 0,
       turns: 2,
       awards: ["Most correct answers", "Best driver"],

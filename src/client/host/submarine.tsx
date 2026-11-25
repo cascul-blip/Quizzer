@@ -17,11 +17,11 @@ type SubView = Extract<HostView, { kind: "submarine" }>;
 
 /** Distance to the goblin, animated locally between server updates. */
 function useLiveGap(view: SubView): number {
-  const base = useRef({ gap: view.gap, at: performance.now() });
+  const base = useRef({ gap: view.gapSeconds, at: performance.now() });
   const last = useRef(view);
   if (last.current !== view) {
     last.current = view;
-    base.current = { gap: view.gap, at: performance.now() };
+    base.current = { gap: view.gapSeconds, at: performance.now() };
   }
   const [, tick] = useState(0);
   useEffect(() => {
@@ -34,7 +34,7 @@ function useLiveGap(view: SubView): number {
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
   }, [view.phase]);
-  if (view.phase !== "chase") return view.gap;
+  if (view.phase !== "chase") return view.gapSeconds;
   return Math.max(0, base.current.gap - (view.speed * (performance.now() - base.current.at)) / 1000);
 }
 
@@ -179,7 +179,7 @@ export function SubmarineStage({ view, send }: { view: SubView; send: Send }) {
         <div class="pill">🛷 Sled Squad</div>
         <div class="spacer" />
         <div class="depth-badge">
-          Level {view.level} · <b>{view.depth} m</b>
+          Level {view.level} · <b>{view.depthMeters} m</b>
         </div>
         <div class="spacer" />
         <div class="pill">👥 {view.playerCount}</div>
@@ -236,7 +236,7 @@ export function SubmarineStage({ view, send }: { view: SubView; send: Send }) {
                 </div>
               )}
               {view.phase === "escaped" && <div class="sea-banner good">🎉 Level {view.level} cleared! Get ready for the trail challenge!</div>}
-              {view.phase === "caught" && <div class="sea-banner bad">SNATCH! The Christmas goblin caught the sled at {view.depth} m</div>}
+              {view.phase === "caught" && <div class="sea-banner bad">SNATCH! The Christmas goblin caught the sled at {view.depthMeters} m</div>}
             </>
           )}
         </main>
@@ -277,13 +277,13 @@ function SubPodium({ view, send }: { view: SubView; send: Send }) {
   const a = view.awards;
   return (
     <main class="podium sub-podium winter-podium" style={{ background: winterGradient() }}>
-      <h1>🛷 Caught at {view.depth} m</h1>
+      <h1>🛷 Caught at {view.depthMeters} m</h1>
       {showErrors ? (
         <ErrorsTable errors={view.errors ?? []} />
       ) : (
         <>
           <div class="sub-final">
-            <div class="sub-final-depth">{view.depth} m</div>
+            <div class="sub-final-depth">{view.depthMeters} m</div>
             <div class="sub-final-level">The squad reached level {view.level}</div>
           </div>
           <div class="awards">
@@ -334,7 +334,7 @@ export function submarineCue(view: SubView): MusicCue {
   if (view.phase === "dive") return { track: "submarine-dive" };
   if (view.phase === "countdown") return { track: "submarine-lobby" };
   if (view.phase === "caught") return { track: "submarine-chase", intensity: 1 };
-  return { track: "submarine-chase", intensity: Math.max(0, Math.min(1, 1 - view.gap / view.maxGap)) };
+  return { track: "submarine-chase", intensity: Math.max(0, Math.min(1, 1 - view.gapSeconds / view.maxGap)) };
 }
 
 export const submarineLobby: LobbyModeEntry<"submarine"> = {

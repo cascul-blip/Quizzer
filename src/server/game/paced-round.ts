@@ -19,8 +19,7 @@ export interface PacedAnswer {
   /** The typed text, cut to MAX_TYPED_ANSWER. */
   text?: string;
   correct: boolean;
-  /** Milliseconds from the question opening to the answer. */
-  ms: number;
+  msSinceOpen: number;
 }
 
 /** A player as the round sees them: whether they are connected, and their answers by question index. */
@@ -116,7 +115,7 @@ export class PacedRound<Extra extends string = never> {
     const correct = checkAnswer(q, value);
     if (correct === null) return null;
     const choice = typeof value === "string" ? { option: -1, text: value.slice(0, MAX_TYPED_ANSWER) } : { option: value };
-    const answer = build({ ...choice, correct, ms: this.elapsedMs() });
+    const answer = build({ ...choice, correct, msSinceOpen: this.elapsedMs() });
     player.answers[qIndex] = answer;
     return answer;
   }
@@ -195,6 +194,7 @@ export class PacedRound<Extra extends string = never> {
     if (!q) return null;
     const phase = this.phase;
     const beforeOpen = phase === "intro" || this.isOneOf(phase, this.opts.opensFrom);
+    const hidesAcceptedAnswers = q.type === "text" && !this.revealed;
     return {
       index: this.qIndex,
       total: this.opts.questions().length,
@@ -202,8 +202,7 @@ export class PacedRound<Extra extends string = never> {
       text: q.text,
       ...(q.image ? { image: q.image } : {}),
       timeLimitSec: q.timeLimitSec,
-      // A typed question's accepted answers stay hidden until the reveal.
-      options: beforeOpen || (q.type === "text" && !this.revealed) ? [] : q.options,
+      options: beforeOpen || hidesAcceptedAnswers ? [] : q.options,
       ...(q.spots && !beforeOpen ? { spots: q.spots } : {}),
       remainingMs: this.revealed ? 0 : this.phases.remainingMs(),
     };

@@ -111,7 +111,7 @@ interface SiegeGameSettings extends SiegeSettings {
 
 /**
  * Kingdom Siege: the whole class defends one castle wall against waves of monsters marching
- * down 5 lanes. Each player earns gold with correct answers and spends their own purse on defenders.
+ * down its lanes. Each player earns gold with correct answers and spends their own purse on defenders.
  * The battle runs in fixed SIEGE_TICK_MS steps on the game clock.
  */
 export class SiegeGame {
@@ -271,8 +271,11 @@ export class SiegeGame {
     this.onChange();
   }
 
-  private beginWave(wave: number): void {
-    // The wave just gone (and the break after it) sets this wave's difficulty.
+  /**
+   * Records the battle, stores the answers from the wave just gone and the break after it on its log entry,
+   * rescales difficulty from them, resets the answer counters, and returns that entry.
+   */
+  private closePreviousWave(): (typeof this.waveLog)[number] | undefined {
     this.recordBattle();
     const prev = this.waveLog[this.waveLog.length - 1];
     if (prev) {
@@ -282,6 +285,11 @@ export class SiegeGame {
     }
     this.periodCorrect = 0;
     this.periodAnswered = 0;
+    return prev;
+  }
+
+  private beginWave(wave: number): void {
+    const prev = this.closePreviousWave();
     this.wave = wave;
     const defense = Math.round(this.defenseGold());
     // A board stronger than par makes the wave stronger; the boost only climbs after a wave that cost no hearts.
