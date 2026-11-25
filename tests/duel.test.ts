@@ -689,7 +689,11 @@ describe("Showdown", () => {
     expect(game.phase).toBe("podium");
     expect(game.played).toBe(1);
     expect(ladderNames(game)).toEqual(["B", "A"]);
-    expect(game.hostView().awards).toEqual({ mostArenaOneWins: { value: 1, nicknames: ["B"] }, mostWins: { value: 1, nicknames: ["B"] }, mostArenasClimbed: null });
+    expect(game.hostView().awards).toEqual({
+      mostArenaOneWins: { value: 1, nicknames: ["B"] },
+      mostWins: { value: 1, nicknames: ["B"] },
+      mostArenasClimbed: null,
+    });
   });
 
   test("one player: an arena of their own, nobody moves", () => {

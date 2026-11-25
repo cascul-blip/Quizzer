@@ -2,7 +2,7 @@ import type { AvatarChoice } from "../avatars.ts";
 import type { PacedAnswerMsg, Pacing, QuestionError, QuestionView, SubAward } from "../mode-views.ts";
 import type { RacerCar, RacerConfidence, RacerTurnResult } from "../racer-rules.ts";
 import type { ModeProtocol } from "../shared-mode-entry.ts";
-import { sharedModeEntry } from "../shared-mode-entry.ts";
+import { MOST_CORRECT_LABEL, sharedModeEntry } from "../shared-mode-entry.ts";
 import type { SeasonTheme } from "../themed-modes.ts";
 
 // Racer protocol types.
@@ -52,7 +52,7 @@ export interface RacerResult {
   turns: number;
 }
 
-const RACER_AWARDS = { mostCorrect: "Most correct answers", mostMphGained: "Best driver" } as const;
+const RACER_AWARDS = { mostCorrect: MOST_CORRECT_LABEL, mostMphGained: "Best driver" } as const;
 
 export type RacerAwardKey = keyof typeof RACER_AWARDS;
 export type RacerAwards = Record<RacerAwardKey, SubAward | null>;

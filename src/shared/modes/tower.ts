@@ -1,7 +1,7 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { AfterAnswerWaitView, QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward, TeamInfo } from "../mode-views.ts";
 import type { ModeProtocol } from "../shared-mode-entry.ts";
-import { sharedModeEntry } from "../shared-mode-entry.ts";
+import { MOST_CORRECT_LABEL, sharedModeEntry } from "../shared-mode-entry.ts";
 import type { SeasonTheme } from "../themed-modes.ts";
 import { modeTheme, themedIcon, themedName } from "../themed-modes.ts";
 
@@ -52,7 +52,7 @@ export interface MonsterAttack {
   after: number[];
 }
 
-const TOWER_AWARDS = { mostCorrect: "Most correct answers", masterBuilder: "Master builder" } as const;
+const TOWER_AWARDS = { mostCorrect: MOST_CORRECT_LABEL, masterBuilder: "Master builder" } as const;
 
 export type TowerAwardKey = keyof typeof TOWER_AWARDS;
 export type TowerAwards = Record<TowerAwardKey, SubAward | null>;

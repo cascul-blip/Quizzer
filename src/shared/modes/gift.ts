@@ -2,9 +2,9 @@ import type { AvatarChoice } from "../avatars.ts";
 import type { GiftItem, GiftPower } from "../gift-rules.ts";
 import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward } from "../mode-views.ts";
 import type { ModeProtocol } from "../shared-mode-entry.ts";
-import { sharedModeEntry } from "../shared-mode-entry.ts";
+import { MOST_CORRECT_LABEL, sharedModeEntry } from "../shared-mode-entry.ts";
 
-const GIFT_AWARDS = { mostCorrect: "Most correct answers" } as const;
+const GIFT_AWARDS = { mostCorrect: MOST_CORRECT_LABEL } as const;
 
 export type GiftAwardKey = keyof typeof GIFT_AWARDS;
 

@@ -16,6 +16,9 @@ export interface SharedModeEntry<T extends string = string> {
   awards?: Readonly<Record<string, string>>;
 }
 
+/** The label of the award most modes give for correct answers. */
+export const MOST_CORRECT_LABEL = "Most correct answers";
+
 export type NoSettings = Record<string, never>;
 
 interface GameplayView {

@@ -1,7 +1,7 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward } from "../mode-views.ts";
 import type { ModeProtocol } from "../shared-mode-entry.ts";
-import { sharedModeEntry } from "../shared-mode-entry.ts";
+import { MOST_CORRECT_LABEL, sharedModeEntry } from "../shared-mode-entry.ts";
 import type { SiegeDefenderType, SiegeMonsterType, SiegeWaves } from "../siege-rules.ts";
 import type { SeasonTheme } from "../themed-modes.ts";
 import { modeTheme } from "../themed-modes.ts";
@@ -232,5 +232,5 @@ export function siegeWords(theme?: SeasonTheme) {
 /** The Podium award labels (GLOSSARY.md) in a theme, read by the server and the projector alike. */
 export function siegeAwardLabels(theme?: SeasonTheme): Record<SiegeAwardKey, string> {
   const words = siegeWords(theme);
-  return { topArcher: words.topArcher, masterMason: words.masterMason, mostCorrect: "Most correct answers" };
+  return { topArcher: words.topArcher, masterMason: words.masterMason, mostCorrect: MOST_CORRECT_LABEL };
 }

@@ -1,7 +1,7 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward } from "../mode-views.ts";
 import type { ModeProtocol, NoSettings } from "../shared-mode-entry.ts";
-import { sharedModeEntry } from "../shared-mode-entry.ts";
+import { MOST_CORRECT_LABEL, sharedModeEntry } from "../shared-mode-entry.ts";
 
 export type RobotPhase = "countdown" | "quiz" | "move" | "attack" | "podium";
 export type RobotDir = "up" | "down" | "left" | "right";
@@ -41,7 +41,7 @@ export function robotInBounds(x: number, y: number, inset: number): boolean {
   return x >= inset && y >= inset && x < ROBOT_BOARD - inset && y < ROBOT_BOARD - inset;
 }
 
-const ROBOT_AWARDS = { mostCorrect: "Most correct answers", mostMoves: "Fancy footwork" } as const;
+const ROBOT_AWARDS = { mostCorrect: MOST_CORRECT_LABEL, mostMoves: "Fancy footwork" } as const;
 
 export type RobotAwardKey = keyof typeof ROBOT_AWARDS;
 export type RobotAwards = Record<RobotAwardKey, SubAward | null>;

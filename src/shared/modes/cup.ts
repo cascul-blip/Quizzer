@@ -1,7 +1,7 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward } from "../mode-views.ts";
 import type { ModeProtocol } from "../shared-mode-entry.ts";
-import { sharedModeEntry } from "../shared-mode-entry.ts";
+import { MOST_CORRECT_LABEL, sharedModeEntry } from "../shared-mode-entry.ts";
 import type { SeasonTheme } from "../themed-modes.ts";
 
 export type CupPhase = "countdown" | "roll" | "quiz" | "drink" | "reveal" | "podium";
@@ -34,7 +34,7 @@ export function cupQuizMs(round: number): number {
   return Math.max(CUP_QUIZ_MIN_MS, CUP_QUIZ_START_MS - CUP_QUIZ_STEP_MS * (round - 1));
 }
 
-const CUP_AWARDS = { mostCorrect: "Most correct answers", mostDrinksSurvived: "Luckiest drinker", mostSafeRounds: "Never thirsty" } as const;
+const CUP_AWARDS = { mostCorrect: MOST_CORRECT_LABEL, mostDrinksSurvived: "Luckiest drinker", mostSafeRounds: "Never thirsty" } as const;
 
 /** Unluckiest's label by theme; it is the lowest round, not a Podium award. */
 export const CUP_UNLUCKIEST = { christmas: "First flight", other: "Unluckiest" } as const;

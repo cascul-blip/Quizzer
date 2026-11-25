@@ -2,7 +2,7 @@ import type { AvatarChoice } from "../avatars.ts";
 import type { LandStart } from "../land-board.ts";
 import type { AfterAnswerWaitView, QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward, TeamInfo } from "../mode-views.ts";
 import type { ModeProtocol } from "../shared-mode-entry.ts";
-import { sharedModeEntry } from "../shared-mode-entry.ts";
+import { MOST_CORRECT_LABEL, sharedModeEntry } from "../shared-mode-entry.ts";
 import type { SeasonTheme } from "../themed-modes.ts";
 
 export type LandPhase = "countdown" | "playing" | "conquered" | "podium";
@@ -49,7 +49,7 @@ export interface LandCapture {
   knockedOut: number[];
 }
 
-const LAND_AWARDS = { mostCorrect: "Most correct answers", topSettler: "Top settler", topSurrounder: "Master surrounder" } as const;
+const LAND_AWARDS = { mostCorrect: MOST_CORRECT_LABEL, topSettler: "Top settler", topSurrounder: "Master surrounder" } as const;
 
 export type LandAwardKey = keyof typeof LAND_AWARDS;
 export type LandAwards = Record<LandAwardKey, SubAward | null>;
