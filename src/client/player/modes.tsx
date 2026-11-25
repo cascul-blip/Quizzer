@@ -24,7 +24,6 @@ type BannerFlag<M extends GameMode> = SharedOf<M>["lobbyBanner"];
 type BannerOf<M extends GameMode> = [BannerFlag<M>] extends [true] ? PhoneBanner : [BannerFlag<M>] extends [false] ? null : PhoneBanner | null;
 
 export interface PlayerModeEntry<M extends GameMode> {
-  /** The phone screen while the mode's game runs. */
   Screen: ComponentType<ScreenProps<M>>;
   /** What the mode adds to the lobby screen: required when its shared mode entry sets lobbyBanner, null otherwise. */
   banner: BannerOf<M>;

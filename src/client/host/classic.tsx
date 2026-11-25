@@ -14,7 +14,6 @@ type GameView = Extract<HostView, { kind: "classic" }>;
 export function classicCue(view: GameView): MusicCue {
   if (view.phase === "podium") return { track: "classic-results" };
   if (view.phase === "reveal" || view.phase === "leaderboard") return { track: "classic-leaderboard" };
-  // Questions: tension builds over the time limit.
   const q = view.question;
   if (view.phase === "open" && q) {
     return { track: "classic-question", intensity: 0.2, rampTo: 1, rampMs: q.remainingMs, key: `q${q.index}-open` };

@@ -17,7 +17,6 @@ type Send = (m: ClientMsg) => void;
 /** After the last tile goes down, keep the land on screen this long before the questions come back. */
 const LAST_TILE_PAUSE_MS = 900;
 
-/** Phone screen for Land Grab: three questions, then place the tiles they earned. */
 export function LandPlayer({ view, send }: { view: PlayerLandView; send: Send }) {
   return (
     <LandThemeProvider theme={view.theme}>
@@ -221,14 +220,12 @@ function ClaimMode(props: {
   );
 }
 
-/** The tiles the board opens on: the team's land, or its starting point if it holds none. */
 function focusTiles(board: LandBoard, team: number): number[] {
   const own = board.owners.flatMap((o, t) => (o === team ? [t] : []));
   if (own.length) return own;
   return board.starts.filter((s) => s.team === team).map((s) => s.tile);
 }
 
-/** The Land Grab board opens zoomed in on the team's land. */
 function PanZoom({ children, focus, onTap }: { children: ComponentChildren; focus?: () => number[]; onTap: (tile: number) => void }) {
   const christmas = useNorthPole();
   const { box, inner, zoomIn, zoomOut, pointerHandlers } = usePanZoom({

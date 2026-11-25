@@ -60,9 +60,7 @@ import { isPhoneArt, pickArt } from "./phone-art.ts";
 /** Field height → SVG y. */
 export const sy = (y: number) => FIELD_H - y;
 const BASE = sy(GROUND);
-/** How long an impact burst shows after a shot lands. */
 const IMPACT_MS = 1200;
-/** Art for the phone's own screens around the battlefield (backdrop, choice icons, repair bricks). */
 export const FIGHT_PHONE_UI = { backdrop: phoneBackdropImg, attack: phoneUiAttackImg, rebuild: phoneUiRebuildImg, brick: phoneBrickImg };
 
 /** The painted sky and earth cover the field once; mirrored copies either side fill wide screens seamlessly. */
@@ -78,7 +76,6 @@ function Mirrored({ href, y, height }: { href: string; y: number; height: number
   );
 }
 
-/** The whole scene: sky, terrain, both towers and catapults; extra layers go on top. */
 export function Battlefield(props: {
   shots?: FightShot[];
   hill?: HillHeight;
@@ -214,7 +211,6 @@ const CASTLE_FLAG_PART = 0.198;
 /** Drawn so the stonework is as tall as the tower's hit box. */
 const CASTLE_H = TOWER_H / (1 - CASTLE_FLAG_PART);
 const CASTLE_W = CASTLE_H * CASTLE_ASPECT;
-/** The tower at each damage stage, intact first. */
 const CASTLE_STAGES = [castle0, castle1, castle2, castle3, castle4];
 const PHONE_CASTLE_STAGES = [phoneCastle0, phoneCastle1, phoneCastle2, phoneCastle3, phoneCastle4];
 /** The team-cloth mask for each stage; damaged stages lose roof and banner, so one mask won't do. */
@@ -273,7 +269,6 @@ function CastleTower({
           </>
         )}
         {!christmas && damage >= 4 && (
-          // Burning in the broken-off corner of the last stage.
           <g class="castle-fire">
             <path d={`M${cx + 16},${top + 8} q10,-26 4,-44 q18,18 12,44 Z`} fill="#ff8a00" />
             <path d={`M${cx + 20},${top + 8} q6,-16 2,-28 q10,12 6,28 Z`} fill="#ffd23f" />
@@ -393,7 +388,6 @@ function GingerbreadStripes({
   );
 }
 
-/** Wooden scaffolding and a busy hammer while someone repairs the tower. */
 function Scaffold({ team }: { team: number }) {
   const cx = TOWER_X[team]!;
   const top = BASE - TOWER_H + 20;
@@ -544,7 +538,6 @@ export function AvatarSprite({ choice, x, y, r = SHOT_R * 1.5, spin = 0 }: { cho
   );
 }
 
-/** Burst where a shot landed: a spray of dirt on the ground, a big bang on a tower. */
 function ImpactBurst({ impact }: { impact: ShotImpact }) {
   const christmas = useGingerbread();
   if (impact.kind === "offscreen") return null;
@@ -624,7 +617,6 @@ function useShotClock(shots: FightShot[]): { now: number; startOf: (s: FightShot
   return { now: Math.max(now, active ? 0 : performance.now()), startOf };
 }
 
-/** Every shot's flight (avatar tumbling along its arc with a dotted trail), then its burst. */
 export function ShotLayer({ shots, onLand, spriteR }: { shots: FightShot[]; onLand?: (s: FightShot) => void; spriteR?: number }) {
   const { now, startOf } = useShotClock(shots);
   const landed = useRef(new Set<number>());
@@ -659,7 +651,6 @@ export function ShotLayer({ shots, onLand, spriteR }: { shots: FightShot[]; onLa
   return <g class="shots">{out}</g>;
 }
 
-/** Five health pips for a tower. */
 export function HealthBar({ damage, color, label }: { damage: number; color: string; label?: string }) {
   const left = FIGHT_MAX_DAMAGE - damage;
   return (

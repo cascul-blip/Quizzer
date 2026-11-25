@@ -405,7 +405,6 @@ describe("Racer", () => {
     clock.advance(1);
     expect(game.phase).toBe("open");
 
-    // Nobody right: still a wreck.
     for (const p of game.players.values()) answer(game, p, false);
     expect(game.lastTurn).toMatchObject({
       index: 1,
@@ -424,7 +423,7 @@ describe("Racer", () => {
     // Half the class right: repaired, back at 30 mph.
     game.next();
     expect(game.phase).toBe("intro");
-    game.skip(); // the host can cut the intro short
+    game.skip();
     expect(game.phase).toBe("open");
     answer(game, byName(game, "A"), true);
     answer(game, byName(game, "B"), false);

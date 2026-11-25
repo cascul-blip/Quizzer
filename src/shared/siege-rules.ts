@@ -13,18 +13,14 @@ export const SIEGE_CRACKED_HEARTS = 5;
 export const SIEGE_START_GOLD = 50;
 export const SIEGE_GOLD_PER_CORRECT = 25;
 
-/** The battle runs in fixed steps of this many ms. */
 export const SIEGE_TICK_MS = 100;
 export const SIEGE_COUNTDOWN_MS = 3000;
-/** The opening build break, after the countdown. */
 export const SIEGE_OPENING_MS = 15_000;
-/** The "Wave N incoming" break between waves. */
 export const SIEGE_BREAK_MS = 10_000;
 /** A warning arrow shows this long before a monster comes onto its lane. */
 export const SIEGE_WARNING_MS = 2000;
 /** The giant waits on the entry square this long (horn, lane flash) before it walks. */
 export const SIEGE_GIANT_WAIT_MS = 3000;
-/** The victory or crumble cinematic, before the podium. */
 export const SIEGE_ENDING_MS = 5000;
 /** A lane is in danger while a monster is within this many squares of the wall. */
 export const SIEGE_DANGER_SQUARES = 2;
@@ -32,9 +28,7 @@ export const SIEGE_DANGER_SQUARES = 2;
 const SIEGE_MAX_ENTERING = 2;
 const SIEGE_CROWD_FROM_WAVE = 5;
 export const SIEGE_GROUP_GAP_MS = 2500;
-/** How often an open phone lane map gets new monster dots. */
 export const SIEGE_MAP_DOTS_MS = 1000;
-/** Projector pop-ups ("Ana placed an archer") kept. */
 export const SIEGE_EVENTS_SHOWN = 4;
 /** Arrows and fallen monsters kept for the projector's animations. */
 export const SIEGE_SHOTS_SHOWN = 16;
@@ -83,7 +77,6 @@ interface SiegeMonsterStats {
   health: number;
   /** Extra health per connected player (the giant). */
   healthPerPlayer: number;
-  /** Ms to walk one square. */
   squareMs: number;
   /** Damage per hit and ms between hits. */
   damage: number;

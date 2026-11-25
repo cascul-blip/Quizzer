@@ -3,7 +3,6 @@ import { isLoopbackAddress } from "./network.ts";
 
 type Socket = { data: { ip: string } };
 
-/** Tracks open sockets and the player identities attached to them. */
 export class PhoneAttachments<S extends Socket> {
   private readonly sockets = new Map<S, string | null>();
 

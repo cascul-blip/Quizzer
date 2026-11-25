@@ -6,12 +6,10 @@ const cmp = (x: number, y: number) => (x < y ? -1 : x > y ? 1 : 0);
 /** An entry with its place in the standings. */
 export type Ranked<T> = T & { rank: number };
 
-/** The larger value ranks higher. */
 export function most<T>(value: (t: T) => number): RankKey<T> {
   return (a, b) => cmp(value(b), value(a));
 }
 
-/** The smaller value ranks higher. */
 export function fewest<T>(value: (t: T) => number): RankKey<T> {
   return (a, b) => cmp(value(a), value(b));
 }

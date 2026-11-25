@@ -94,7 +94,6 @@ export const ACCESSORIES = [
   { id: "beret", name: "Beret" },
   { id: "scarf", name: "Scarf" },
   { id: "tiara", name: "Tiara" },
-  // Christmas set.
   { id: "santahat", name: "Santa Hat" },
   { id: "elfhat", name: "Elf Hat" },
   { id: "bobble", name: "Bobble Beanie" },

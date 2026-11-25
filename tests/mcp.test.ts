@@ -90,7 +90,6 @@ describe("MCP tools", () => {
     expect((await call("delete_question", { quizId: id, questionId: q0.id })).ok).toBe(true);
     expect(store.get(id).questions).toHaveLength(2);
 
-    // images
     const png = join(t.dir, "x.png");
     writeFileSync(png, new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 9]));
     const img = await call("set_question_image", { quizId: id, questionId: q1.id, path: png });

@@ -70,7 +70,6 @@ interface Instructor {
   group: string[];
   found: Set<string>;
   solo: boolean;
-  /** When the current symbol times out. */
   endsAt: number;
 }
 

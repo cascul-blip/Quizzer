@@ -84,14 +84,12 @@ describe("Game mode: Classic", () => {
       if (joined.type !== "joined") throw new Error("expected joined");
       tokens.push(joined.token);
     }
-    // Duplicate nickname → error.
     const dup = new HubSocket(hub);
     dup.sendMsg({ type: "join", nickname: "ann" });
     expect(await dup.waitFor((m) => m.type === "error")).toMatchObject({ message: expect.stringContaining("taken") });
     dup.close();
 
     await host.hostState((v) => v.kind === "lobby" && v.players.length === 3);
-    // Avatars: picked in the lobby, shown on the host.
     const look = { avatar: OFFERED_AVATARS[0]!.id, accessory: OFFERED_ACCESSORIES[1]!.id };
     players[0]!.sendMsg({ type: "setAvatar", ...look });
     await host.hostState(
@@ -128,19 +126,19 @@ describe("Game mode: Classic", () => {
     expect(resumed.view.kind === "classic" && resumed.view.me.nickname).toBe("Bob");
     players[1] = bob2;
 
-    host.sendMsg({ type: "host.next" }); // leaderboard
+    host.sendMsg({ type: "host.next" });
     const lb = await host.hostState((v) => v.phase === "leaderboard");
     expect(lb.view.kind === "classic" && lb.view.leaderboard.map((e) => e.nickname).slice(2)).toEqual(["Bob"]);
-    host.sendMsg({ type: "host.next" }); // intro Q2
+    host.sendMsg({ type: "host.next" });
     await host.hostState((v) => v.phase === "intro");
-    host.sendMsg({ type: "host.next" }); // open now
+    host.sendMsg({ type: "host.next" });
     await host.hostState((v) => v.phase === "open");
     host.sendMsg({ type: "host.kick", playerId: (lb.view.kind === "classic" && lb.view.players.find((p) => p.nickname === "Cy")!.id) as string });
     await players[2]!.waitFor((m) => m.type === "kicked");
     players[0]!.sendMsg({ type: "answer", qIndex: 1, option: 1 });
     players[1]!.sendMsg({ type: "answer", qIndex: 1, option: 1 });
     await host.hostState((v) => v.phase === "reveal");
-    host.sendMsg({ type: "host.next" }); // last question → podium
+    host.sendMsg({ type: "host.next" });
     const podium = await host.hostState((v) => v.phase === "podium");
     expect(podium.view.kind).toBe("classic");
     // Bob got the first question wrong: the "Show errors" table has it.
@@ -259,7 +257,6 @@ describe("Game mode: Tallest Tower", () => {
     expect(eggView.view.kind === "tower" && eggView.view.monster).toBe(true);
     await players[1]!.playerState((v) => v.kind === "tower" && v.monsterEvent?.kind === "egg" && !!v.egg);
 
-    // Time runs out.
     clock.advance(2 * 60_000);
     const podium = await host.hostState((v) => v.kind === "tower" && v.phase === "podium");
     expect(podium.view.kind === "tower" && podium.view.awards).toEqual({
@@ -272,7 +269,6 @@ describe("Game mode: Tallest Tower", () => {
     expect(csv).toContain("Team,Team rank,Team floors");
     expect(csv).toContain("Red,1,1,3,Ann,4,0,100,3,1,0");
 
-    // Play again keeps Tallest Tower selected.
     host.sendMsg({ type: "host.open", quizId: quiz.id });
     await host.hostState((v) => v.kind === "lobby" && v.mode === "tower" && v.settings.tower.teams === 2 && v.settings.tower.theme === "classic");
     host.sendMsg({ type: "host.close" });
@@ -408,7 +404,6 @@ describe("Game mode: Tower Fight", () => {
     expect(csv).toContain("Blue,Won,0,Blue1,");
     expect(csv).toContain("Red,Lost,1,Red1,4,0,100,1,0,1,0");
 
-    // Play again keeps Tower Fight and the hill.
     host.sendMsg({ type: "host.open", quizId: quiz.id });
     await host.hostState((v) => v.kind === "lobby" && v.mode === "fight" && v.settings.fight.hill === "low");
     host.sendMsg({ type: "host.close" });
@@ -567,7 +562,6 @@ describe("Game mode: Cup of Death", () => {
     expect(csv).toContain("Rank,Nickname,Status,Cups left");
     expect(csv).toContain("Bob,");
 
-    // Play again keeps the Cup of Cheer theme and cup count.
     host.sendMsg({ type: "host.open", quizId: quiz.id });
     await host.hostState((v) => v.kind === "lobby" && v.mode === "cup" && v.settings.cup.theme === "christmas" && v.settings.cup.cups === 5);
     host.sendMsg({ type: "host.close" });
@@ -684,7 +678,6 @@ describe("Game mode: Kingdom Siege", () => {
     const records = JSON.parse(await Bun.file(`${t.dir}/siege-records.json`).text());
     expect(records[quiz.id]).toMatchObject({ waves: 1, avgScale: 100 });
 
-    // Play again keeps Kingdom Siege and Endless, and the next run knows the record.
     host.sendMsg({ type: "host.open", quizId: quiz.id });
     const siegeAgain = await host.hostState((v) => v.kind === "lobby" && v.mode === "siege" && v.settings.siege.waves === "endless");
     expect(siegeAgain.view.kind === "lobby" && siegeAgain.view.settings.siege.theme).toBe("classic");
@@ -740,7 +733,6 @@ describe("Game mode: Land Grab", () => {
     clock.advance(LAND_COUNTDOWN_MS);
     hub.broadcast();
 
-    // Ann answers her three questions correctly, then is on the land with 3 tiles to place.
     const ann = players[0]!;
     let answered: PlayerStateMsg | undefined;
     for (let i = 0; i < 3; i++) {
@@ -794,7 +786,6 @@ describe("Game mode: Land Grab", () => {
     const back = await ann.playerState((v) => v.kind === "land" && v.state === "question");
     expect(back.view.kind === "land" && [back.view.claims, back.view.board]).toEqual([2, null]);
 
-    // Time runs out.
     clock.advance(3 * 60_000);
     const podium = await host.hostState((v) => v.kind === "land" && v.phase === "podium");
     expect(podium.view.kind === "land" && podium.view.teams.map((t) => [t.name, t.rank, t.tiles])).toEqual([
@@ -806,7 +797,6 @@ describe("Game mode: Land Grab", () => {
     const csv = await resultsCsv();
     expect(csv).toContain("Red,1,2,,Ann,3,0,100,1,0,0");
 
-    // Play again keeps Land Grab and its settings.
     host.sendMsg({ type: "host.open", quizId: quiz.id });
     await host.hostState((v) => v.kind === "lobby" && v.mode === "land" && v.settings.land.minutes === 3);
     host.sendMsg({ type: "host.close" });
@@ -942,7 +932,6 @@ describe("Game mode: Racer", () => {
     expect(csv).toContain("Ann,1,1,50,1,");
     expect(csv).toContain(",12.5,50,0");
 
-    // Play again keeps Racer and the pacing.
     host.sendMsg({ type: "host.open", quizId: quiz.id });
     await host.hostState((v) => v.kind === "lobby" && v.mode === "racer" && v.pacing === "auto" && v.settings.racer.theme === "christmas");
     host.sendMsg({ type: "host.setPacing", pacing: "manual" });
@@ -1031,7 +1020,6 @@ describe("Game mode: Showdown", () => {
     expect(csv).toContain("Rank,Nickname,Points,Final arena,Start arena,Wins,Losses,Draws,Rounds won in Arena 1,Correct,Wrong,R1 answer (Q1)");
     expect(csv).toContain("1,Ann,1,1,1,1,0,0,1,1,0,right,yes,");
 
-    // Play again keeps Showdown and its rounds.
     host.sendMsg({ type: "host.open", quizId: quiz.id });
     await host.hostState((v) => v.kind === "lobby" && v.mode === "duel" && v.settings.duel.rounds === 10 && v.settings.duel.theme === "classic");
     host.sendMsg({ type: "host.close" });

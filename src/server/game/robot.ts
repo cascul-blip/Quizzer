@@ -104,7 +104,6 @@ export class RobotGame {
   readonly questions: Question[];
   readonly roster = new Roster<RobotPlayer>();
   round = 0;
-  /** Laser attacks fired so far. */
   attacks = 0;
   marked = new Set<number>();
   /** Rings of tiles destroyed so far. */
@@ -187,7 +186,6 @@ export class RobotGame {
     return this.stream.registerPlayer({ ...base, x, y, lives: ROBOT_LIVES, outRound: null, points: 0, moves: 0, hits: 0 });
   }
 
-  /** The tiles still on the board. */
   private playableTiles(): number[] {
     return Array.from({ length: TILES }, (_, i) => i).filter((i) => robotRing(i) >= this.inset);
   }

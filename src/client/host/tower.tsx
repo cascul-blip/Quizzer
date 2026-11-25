@@ -33,7 +33,6 @@ import type { LobbyModeEntry, LobbySettingsProps } from "./lobby-modes.tsx";
 
 type TowerView = Extract<HostView, { kind: "tower" }>;
 
-/** Projector screen for Tallest Tower: countdown → live towers → podium. */
 export function TowerStage(props: { view: TowerView; send: Send }) {
   return (
     <TowerThemeProvider theme={props.view.theme}>
@@ -282,7 +281,6 @@ function TowerSvg({ team, rows, phase, egg, attack }: { team: HostTowerTeam; row
       </g>,
     );
   }
-  // Crane (while building) or flag (at the end) on the tallest column.
   const top = Math.max(...team.columns);
   const topCol = team.columns.indexOf(top);
   const roofX = SIDE + topCol * UNIT + UNIT / 2;

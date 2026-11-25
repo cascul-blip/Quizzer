@@ -24,7 +24,6 @@ const ENGINE_MAX = 0.5;
 const ENGINE_FULL_MPH = 150;
 /** How loud the hum is next to the Submarine boost rev it borrows. */
 const ENGINE_VOLUME = 0.5;
-/** How long the speed readout takes to reach a new value. */
 const SPEED_COUNT_MS = 1000;
 
 /** Projector screen for Racer: (intro or confidence → open → reveal)… → podium. */
@@ -60,7 +59,6 @@ export function RacerStage({ view, send }: { view: RacerView; send: Send }) {
 
   useEngineHum(view.phase !== "podium" && !view.car.crashed && shownSpeed > 0, Math.min(1, shownSpeed / ENGINE_FULL_MPH) * ENGINE_MAX);
 
-  // Keyboard: Space / → = next, S = skip, F = fullscreen.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement)?.closest?.("input, select, textarea")) return;
@@ -176,7 +174,6 @@ function useCountUp(target: number, ms: number): number {
     const t0 = performance.now();
     let raf = requestAnimationFrame(function step(now) {
       const k = Math.min(1, (now - t0) / ms);
-      // Ease out: quick at first, settling on the value.
       at.current = from + (target - from) * (1 - (1 - k) ** 3);
       setShown(at.current);
       if (k < 1) raf = requestAnimationFrame(step);
@@ -410,7 +407,6 @@ function RacerPodium({ view, send }: { view: RacerView; send: Send }) {
   );
 }
 
-/** Racer's mode settings in the lobby, around the shared rows it is given. */
 function RacerSettings({ settings, send, children }: LobbySettingsProps<"racer">) {
   return (
     <>

@@ -14,7 +14,6 @@ export interface SharedModeEntry<T extends string = string> {
   msgTypes: readonly T[];
 }
 
-/** A game mode without mode settings. */
 export type NoSettings = Record<string, never>;
 
 interface GameplayView {

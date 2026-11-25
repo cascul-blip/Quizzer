@@ -861,7 +861,6 @@ function PinSpotsEditor({ q, onChange, onRemove }: { q: Question; onChange: (q: 
 
 render(<App />, document.getElementById("app")!);
 
-/** How `$…$` maths in the question and answers will look on the projector and phones. */
 function TexPreview({ q }: { q: Question }) {
   const parts = [q.text, ...(q.type === "pin" ? [] : q.options)];
   if (!parts.some((t) => t.includes("$"))) return null;

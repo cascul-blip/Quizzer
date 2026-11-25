@@ -1,4 +1,3 @@
-/** Interactive review fixture for both themes, all team colors and gameplay phases. */
 import { render } from "preact";
 import { useState } from "preact/hooks";
 import { TowerStage } from "../../src/client/host/tower.tsx";

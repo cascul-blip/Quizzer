@@ -44,7 +44,6 @@ export interface RacerTurn extends RacerTurnResult {
   driver: RacerDriver | null;
 }
 
-/** The shared final result. */
 export interface RacerResult {
   /** Miles. */
   distance: number;
@@ -66,7 +65,6 @@ export interface HostRacerPlayer {
   nickname: string;
   avatar: AvatarChoice;
   connected: boolean;
-  /** Has answered the current question. */
   answered: boolean;
   /** Totals over the questions closed so far. A question left unanswered counts as neither. */
   correct: number;

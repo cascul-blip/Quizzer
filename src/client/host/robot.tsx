@@ -18,7 +18,6 @@ import { Award } from "./tower.tsx";
 
 type RobotView = Extract<HostView, { kind: "robot" }>;
 
-/** The seasonal skin picks the arena; the game is the same. */
 const Arena = ROBOT_SKIN === "snowman" ? SnowmanArena : RobotArena;
 
 /** Projector screen for Robot Attack: countdown → (quiz → move → attack)… → podium. */
@@ -239,7 +238,6 @@ function RobotPodium({ view, send }: { view: RobotView; send: Send }) {
   );
 }
 
-/** Robot Attack has no mode settings; the lobby shows how it plays. */
 function RobotSettings() {
   return <span class="opt mode-hint">Answer questions to earn moves, then dodge the robot's lasers. Last one standing wins.</span>;
 }

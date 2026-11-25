@@ -155,7 +155,6 @@ describe("chase", () => {
   });
 });
 
-/** Get a game straight into diving mode. */
 function toDive(names: string[], rng?: () => number) {
   const s = setup(names, rng);
   const p = [...s.game.players.values()][0]!;

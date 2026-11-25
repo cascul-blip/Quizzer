@@ -11,7 +11,6 @@ import { MessageLog, pastThrottle, withoutTimers } from "./hub-harness.ts";
 // Only what a real socket can show lives here: HTTP routes, the WebSocket upgrade, patches over the wire and
 // resume after a reconnect. Hub logic runs on fake sockets in tests/hub.test.ts and tests/game-modes.test.ts.
 
-/** A phone or projector on a real WebSocket to the running server. */
 class TestSocket extends MessageLog {
   private constructor(readonly ws: WebSocket) {
     super(2_000);
@@ -45,7 +44,6 @@ class TestSocket extends MessageLog {
   }
 }
 
-/** The view a phone built from patches matches a fresh snapshot of the same player. */
 async function expectInSync(s: TestSocket, wsUrl: string) {
   pastThrottle(clock);
   await s.delivered();
@@ -278,7 +276,6 @@ describe("WebSocket transport", () => {
     bob!.sendMsg({ type: "tower.drop", zone: 2 });
     await bob!.playerState((v) => v.kind === "tower" && v.state === "question");
 
-    // The view Ann built from patches over the wire matches what a phone reconnecting with her token gets.
     await expectInSync(ann!, wsUrl);
 
     host.sendMsg({ type: "host.close" });

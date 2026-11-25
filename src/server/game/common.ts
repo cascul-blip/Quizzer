@@ -68,7 +68,6 @@ export function teamInfo(index: number): TeamInfo {
   return { index, name: t.name, color: t.color };
 }
 
-/** Round-robin by join order: 1st player → team 0, 2nd → team 1, … */
 export function assignTeams(count: number, teamCount: number): number[] {
   return Array.from({ length: count }, (_, i) => i % Math.max(1, teamCount));
 }

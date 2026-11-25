@@ -32,7 +32,6 @@ export function PinBoard({
   image: string;
   spots: PinSpot[];
   labels: string[];
-  /** Spot the pin sits on. */
   pinAt?: number | null;
   /** Spot the dragged pin would snap to. */
   hot?: number | null;

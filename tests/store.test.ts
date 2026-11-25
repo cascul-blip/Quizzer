@@ -194,9 +194,7 @@ describe("QuizStore", () => {
     const a2 = await store.updateQuestion(q.id, a.id, { text: "A2?", correct: [1] });
     expect(a2).toMatchObject({ id: a.id, text: "A2?", correct: [1], options: ["x", "y"] });
 
-    // switching to true/false resets options and picks a valid answer
     expect(await store.updateQuestion(q.id, a.id, { type: "true_false" })).toMatchObject({ options: ["True", "False"], correct: [0] });
-    // …and back to multiple choice keeps True/False as editable options.
     expect(await store.updateQuestion(q.id, b.id, { type: "multiple_choice" })).toMatchObject({ options: ["True", "False"], correct: [0] });
 
     await store.reorderQuestions(q.id, [a.id, b.id]);

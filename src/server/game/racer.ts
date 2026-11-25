@@ -50,7 +50,6 @@ export interface RacerPlayer extends BasePlayer {
   turnsDriven: number;
   /** Mph gained on the turns this player drove. */
   mphGained: number;
-  /** Fail points on the turns this player drove. */
   failsAsDriver: number;
 }
 

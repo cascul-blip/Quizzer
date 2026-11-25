@@ -101,7 +101,6 @@ function DieFace({ value }: { value: number }) {
   );
 }
 
-/** A die showing `value` (an <svg> of its own). */
 export function Die({ value, class: cls }: { value: number; class?: string }) {
   return (
     <svg class={`die ${cls ?? ""}`} viewBox="0 0 100 100" role="img" aria-label={`Dice: ${value}`}>
@@ -121,13 +120,11 @@ function useTumblingFace(spinning: boolean): number {
   return face;
 }
 
-/** The face a seat badge shows: random faces while the dice roll, the real one once they land. */
 function BadgeDieFace({ value, rolling }: { value: number; rolling: boolean }) {
   const face = useTumblingFace(rolling);
   return <DieFace value={rolling ? face : value} />;
 }
 
-/** A die that tumbles through random faces for `rollMs`, then lands on `value`. */
 export function RollingDie({ value, rollMs, class: cls, onLand }: { value: number; rollMs: number; class?: string; onLand?: () => void }) {
   const [landed, setLanded] = useState(rollMs <= 0);
   const face = useTumblingFace(!landed);
@@ -350,7 +347,6 @@ function SeatAvatar({ s, cls, children }: { s: Seat; cls: string; children?: Com
   );
 }
 
-/** Above a player's head: their die and progress, a SAFE ribbon, or whether they've picked a cup. */
 function SeatBadge({ s, mode }: { s: Seat; mode: SaloonMode }) {
   const { p, size } = s;
   const d = Math.max(26, size * 0.34);
@@ -412,10 +408,6 @@ function SafeRibbon({ y, size }: { y: number; size: number }) {
   );
 }
 
-/**
- * The saloon table with everyone still alive around it. During the reveal the
- * drinker in the spotlight lifts their cup, then survives or keels over.
- */
 export function SaloonScene({
   players,
   mode,
@@ -550,10 +542,8 @@ export function SaloonScene({
   );
 }
 
-/** Table centre, for text drawn on the table. */
 export const TABLE_CENTER = { x: CX, y: CY };
 
-/** Head-only avatars power up, then leave a sparkling rocket trail. */
 export function RocketHead({ choice }: { choice: AvatarChoice }) {
   const art = AVATAR_ART[choice.avatar] ?? AVATAR_ART.cat;
   const extra = ACCESSORY_ART[choice.accessory] ?? ACCESSORY_ART.none;

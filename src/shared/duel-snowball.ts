@@ -1,4 +1,3 @@
-/** Shared reveal timing and outcomes for host and phone snowball scenes. */
 export const SNOW_RELEASE_MS = 930;
 export const SNOW_IMPACT_MS = 1450;
 export const SNOW_PUFF_MS = 650;

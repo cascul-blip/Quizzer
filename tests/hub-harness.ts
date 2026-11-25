@@ -91,7 +91,6 @@ export class HubSocket extends MessageLog {
   getBufferedAmount() {
     return this.bufferedAmount;
   }
-  /** Sends a message from this phone or projector to the hub. */
   sendMsg(m: ClientMsg) {
     if (!this.closed) this.hub.onMessage(this, JSON.stringify(m));
   }
@@ -102,7 +101,6 @@ export class HubSocket extends MessageLog {
   }
 }
 
-/** A hub on a fake port, as the server would run it. */
 export function fakeHub(store: QuizStore, clock: FakeClock, port = 4321, rng?: () => number) {
   const hub = new Hub(store, { address: "127.0.0.1", discoverAddresses: () => [], clock, rng });
   hub.join.port = port;

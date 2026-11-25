@@ -89,7 +89,6 @@ export class QuestionStream<P extends AnswerTotals = AnswerTotals> {
     return state;
   }
 
-  /** Give a player their first question, preserving a question already dealt. */
   open(player: AnswerTotals): void {
     const state = this.state(player);
     if (!state.current) this.deal(state);
@@ -130,7 +129,6 @@ export class QuestionStream<P extends AnswerTotals = AnswerTotals> {
     state.readyAt = Math.max(state.readyAt, now);
   }
 
-  /** Deal from a personal shuffled deck, reshuffling when used up. */
   private deal(state: QuestionState): void {
     const last = state.current?.qIndex;
     if (state.deck.length === 0) {
@@ -174,7 +172,6 @@ export class QuestionStream<P extends AnswerTotals = AnswerTotals> {
     return correct;
   }
 
-  /** The most-missed questions, for the final screen. */
   errors(): QuestionError[] {
     return topErrors(this.questions, this.wrongCounts);
   }

@@ -112,7 +112,6 @@ export interface PlayerRobotView {
   feedback: StreamFeedbackView | null;
   /** The board, during movement and the attack only (quiz time is for questions). */
   board: { marked: number[]; inset: number; collapsing: number[]; others: { x: number; y: number }[] } | null;
-  /** This player's part in the latest attack. */
   lastAttack: { seq: number; hit: boolean; eliminated: boolean } | null;
   result: { rank: number; playerCount: number; won: boolean; outRound: number | null; awards: string[] } | null;
 }

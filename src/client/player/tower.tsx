@@ -25,9 +25,7 @@ import { Feedback, StreamQuestion } from "./stream-question.tsx";
 type Send = (m: ClientMsg) => void;
 type Build = NonNullable<PlayerTowerView["build"]>;
 
-/** How long the dropped block takes to fall, in ms. */
 const FALL_MS = 450;
-/** After the last block lands, keep the tower on screen this long before returning to questions. */
 const LAST_BLOCK_PAUSE_MS = 500;
 
 /** Phone screen for Tallest Tower: own questions at own pace, then build mode every 4 correct answers. */
@@ -160,7 +158,6 @@ function MonsterNotice({ event, egg }: { event: PlayerTowerView["monsterEvent"];
   );
 }
 
-/** A single building piece (the sliding / falling block). */
 function Piece({ color, team }: { color: string; team: number }) {
   return (
     <svg viewBox="0 0 10 10" aria-hidden="true">
@@ -210,7 +207,6 @@ function BuildMode(props: {
   const visibleRows = Math.max(2, Math.floor((size.h - ground - sliderTop - cell * 1.6) / Math.max(cell, 1)));
   const baseRow = viewBaseRow(tallest, visibleRows, egg ? egg.row : null);
 
-  // Slide the block back and forth: one sweep across takes build.sweepDurationMs.
   useEffect(() => {
     if (!size.w) return;
     let raf = 0;
@@ -226,7 +222,6 @@ function BuildMode(props: {
     return () => cancelAnimationFrame(raf);
   }, [build.sweepDurationMs, size.w]);
 
-  // Animate the falling block from the slider to where it lands (or off the edge).
   useLayoutEffect(() => {
     const el = fallRef.current;
     if (!falling || !el) return;

@@ -12,9 +12,7 @@ const PACINGS = new Set<Pacing>(["manual", "auto"]);
 
 /** What a host command can reach beyond the lobby or live game itself; the hub provides it. */
 export interface HostCommandContext {
-  /** The open lobby or live game, if any. */
   readonly game: Lobby | LiveGame | null;
-  /** Promote the sending socket and send its first projector snapshot. */
   promoteAndSendHostSnapshot(): void;
   loadQuiz(quizId: string): Quiz;
   /** Close the current game and open a lobby for this quiz. */
@@ -38,7 +36,6 @@ export function applyHostCommand(msg: ClientMsg, ctx: HostCommandContext): void 
     const entry = entryOf(current);
     throw new GameError(entry.lobbyControlError?.(typeof closedMessage === "string" ? closedMessage : closedMessage()) ?? `Not available in ${entry.name}`);
   };
-  /** Paced games go question by question. */
   const paced = (g: LiveGame) => {
     const entry = entryOf(g);
     if (!entry.pacing) throw new GameError(`Not available in ${entry.name}`);

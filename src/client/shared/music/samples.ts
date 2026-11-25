@@ -14,7 +14,6 @@ import { SAMPLE_SETS } from "./samples/manifest.ts";
 
 type Ctx = BaseAudioContext;
 
-/** How each instrument is played from its recordings. */
 interface Voice {
   /** Which recordings to use (default: the instrument's own). */
   set?: string;

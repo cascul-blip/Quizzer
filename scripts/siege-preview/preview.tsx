@@ -1,4 +1,3 @@
-/** Review production screens, pose swaps, articulated attacks, endings and phone building. */
 import { render } from "preact";
 import { useState } from "preact/hooks";
 import { SiegeLobbyPreview, SiegeStage } from "../../src/client/host/siege.tsx";

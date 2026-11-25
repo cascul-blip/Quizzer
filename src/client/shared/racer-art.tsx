@@ -40,7 +40,6 @@ const PALMS = [7, 35, 78];
 /** Above this many mph the car bobs, and above the second it bobs quicker. */
 const BOB_MPH = 2;
 const BOB_FAST_MPH = 60;
-/** Above this many mph the car is in space. */
 export const SPACE_MPH = 200;
 /** How long the world takes to slide out of view, or back. */
 const SLIDE_MS = 1600;
@@ -71,7 +70,6 @@ const EJECT_GAP_MS = 140;
 const EJECT_SPREAD_MS = 1400;
 const STAR_COLORS = ["#ffffff", "#ffffff", "#cfe3ff", "#9fc4ff", "#ffc23d", "#ff8a1f"];
 
-/** How long a star's trail lasts at this speed: longer the faster the car goes. */
 export function starTrailSeconds(mph: number): number {
   const k = Math.max(0, Math.min(1, (mph - SPACE_MPH) / (TRAIL_FULL_MPH - SPACE_MPH)));
   return TRAIL_MIN_S + (TRAIL_MAX_S - TRAIL_MIN_S) * k;

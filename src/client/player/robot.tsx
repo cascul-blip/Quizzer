@@ -12,7 +12,6 @@ type Send = (m: ClientMsg) => void;
 const ARROW_KEYS: Record<string, RobotDir> = { ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right" };
 const STEP: Record<RobotDir, [number, number]> = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 
-/** Phone screen for Robot Attack: questions during the quiz phase, arrows during movement. */
 export function RobotPlayer({ view, send }: { view: PlayerRobotView; send: Send }) {
   const secs = useCountdown(view.phaseRemainingMs, `${view.phase}-${view.round}`);
 
@@ -94,7 +93,6 @@ function MoveScreen({ view, secs, send }: { view: PlayerRobotView; secs: number;
     navigator.vibrate?.(15);
     send({ type: "robot.move", dir });
   };
-  // Arrow keys work too (handy when playing from a laptop).
   const moveRef = useRef(move);
   moveRef.current = move;
   useEffect(() => {

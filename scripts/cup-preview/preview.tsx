@@ -1,4 +1,3 @@
-/** Interactive preview using the production host and phone components. */
 import { render } from "preact";
 import { useState } from "preact/hooks";
 import { CupStage } from "../../src/client/host/cup.tsx";

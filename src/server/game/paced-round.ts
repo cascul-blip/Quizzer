@@ -79,7 +79,6 @@ export class PacedRound<Extra extends string = never> {
     return this.opts.questions()[this.qIndex] ?? null;
   }
 
-  /** Show question `index` for the intro, then open it. */
   intro(index: number): void {
     this.qIndex = index;
     this.phases.set("intro", INTRO_MS, () => this.open());
@@ -140,7 +139,6 @@ export class PacedRound<Extra extends string = never> {
     return Math.max(0, this.clock.now() - this.openedAt);
   }
 
-  /** Close the open question: the mode settles it, and the reveal starts. */
   close(): void {
     if (this.phase !== "open") return;
     this.opts.settle();
@@ -156,7 +154,6 @@ export class PacedRound<Extra extends string = never> {
     else if (this.phase === "reveal") this.moveOn();
   }
 
-  /** Cut the intro or the open question short. */
   skip(): void {
     if (this.phase === "intro") this.open();
     else if (this.phase === "open") this.close();

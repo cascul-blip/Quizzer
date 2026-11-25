@@ -207,7 +207,6 @@ export class FightGame {
     this.phases.dispose();
   }
 
-  /** A tower fell: play the collapse, then the podium. */
   private collapse(destroyed: number): void {
     this.outcome = { winner: this.teams.find((t) => t.index !== destroyed)!.index, reason: "destroyed" };
     for (const p of this.players.values()) this.clearPlayerTimer(p);
@@ -312,12 +311,10 @@ export class FightGame {
     const p = this.players.get(playerId);
     if (!p || p.state !== "decide" || this.phase !== "playing" || this.clock.now() > p.deadline + DECISION_GRACE_MS) return null;
     if (action === "attack") {
-      // The clock stops once they're at the catapult.
       this.clearPlayerTimer(p);
       p.state = "aim";
     } else if (action === "rebuild") {
       if (this.teams[p.team]!.damage <= 0) return null;
-      // Repairing takes a while; the tower is fixed when it finishes.
       this.clearPlayerTimer(p);
       p.state = "repair";
       p.repairEndsAt = this.clock.now() + REPAIR_MS;

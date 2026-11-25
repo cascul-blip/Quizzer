@@ -103,7 +103,6 @@ export interface Track {
   layers: Layer[];
 }
 
-/** Whether a track's instruments play from recordings. */
 export const usesSamples = (track: Track): boolean => track.samples ?? richStyle(track.rich) !== "arcade";
 
 export const STEPS_PER_BAR = 16;
@@ -536,7 +535,6 @@ export function stepSeconds(track: Track, intensity: number): number {
   return 60 / (track.bpm * (1 + (track.tempoBoost ?? 0) * intensity)) / 4;
 }
 
-/** Where rich tracks can send layers besides `dest`. */
 interface Sends {
   echo?: AudioNode;
 }
@@ -679,7 +677,6 @@ export class MusicPlayer {
     this.tick();
   }
 
-  /** Briefly dip the music (e.g. under a fanfare). */
   duck(ms = 1500): void {
     const ctx = this.getCtx();
     if (!ctx || !this.ducker) return;

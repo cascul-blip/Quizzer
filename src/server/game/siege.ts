@@ -131,7 +131,6 @@ export class SiegeGame {
   outcome: SiegeResult["outcome"] | null = null;
   readonly waveLog: SiegeWaveLog[] = [];
   events: SiegeEvent[] = [];
-  /** The lanes, defenders, monsters and hearts. */
   readonly battlefield: SiegeBattlefield<SiegePlayer>;
   readonly previousRecord: SiegeRecord | null;
 
@@ -319,7 +318,6 @@ export class SiegeGame {
     else if (changed) this.onTick();
   }
 
-  /** Copy the wave's monsters sent and hearts lost into its log. */
   private recordBattle(): void {
     const log = this.waveLog[this.waveLog.length - 1];
     if (!log) return;
@@ -378,7 +376,6 @@ export class SiegeGame {
     return null;
   }
 
-  /** The phone's lane map opened or closed. */
   setMap(playerId: string, open: boolean): void {
     const p = this.players.get(playerId);
     if (!p || p.mapOpen === open) return;

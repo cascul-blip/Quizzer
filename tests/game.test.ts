@@ -53,7 +53,7 @@ describe("question flow", () => {
 
     clock.advance(2000);
     expect(game.answer(a.id, 0, 1)).toBe(true); // correct at 2s of 20s → 950
-    expect(game.answer(a.id, 0, 2)).toBe(false); // no second answer
+    expect(game.answer(a.id, 0, 2)).toBe(false);
     expect(game.phase).toBe("open");
     // Scores are hidden until the reveal.
     expect(a.score).toBe(0);
@@ -142,7 +142,6 @@ describe("question flow", () => {
     expect(seen).toEqual(["intro", "open", "reveal", "leaderboard", "intro", "open", "reveal", "leaderboard", "intro", "open", "reveal"]);
     expect(game.phase).toBe("podium");
     expect(finished()).toBe(1);
-    // Manual pacing never advances on its own.
     clock.advance(60_000);
     expect(game.phase).toBe("podium");
   });
@@ -214,7 +213,6 @@ describe("question flow", () => {
     game.kick(a.id);
     expect(game.players.size).toBe(0);
     expect(game.byToken(a.token)).toBeNull();
-    // Nickname becomes available again.
     expect(game.join("A").nickname).toBe("A");
   });
 });
@@ -293,7 +291,6 @@ describe("preparePlayOrder", () => {
     }
     // The correct answer really moves around (not always the 2nd, blue tile).
     expect(q1Positions.size).toBeGreaterThan(1);
-    // The source quiz is untouched.
     expect(quiz.questions[0]!.options).toEqual(["3", "4", "5", "22"]);
   });
 
@@ -335,7 +332,6 @@ describe("lobby shuffle options", () => {
     const quiz = sampleQuiz({ settings: { shuffleQuestions: true, shuffleAnswers: false } });
     const game = classicGame(quiz, { clock, rng: () => 0 });
     expect(game.shuffle).toEqual({ questions: true, answers: false });
-    // Lobby keeps the authored order until Start.
     expect(game.questions.map((q) => q.id)).toEqual(["q1", "q2", "q3"]);
     game.join("A");
     game.start();
@@ -376,7 +372,6 @@ describe("lobby teams", () => {
     game.setMode("tower");
     game.setModeSettings("tower", { teams, minutes: 5 });
     const ids = names.map((n) => game.join(n).id);
-    /** Nicknames per team, in join order. */
     const layout = () => game.hostView().teams!.map((t) => t.members.map((p) => p.nickname));
     const badge = (id: string) => {
       const v = game.playerView(id);

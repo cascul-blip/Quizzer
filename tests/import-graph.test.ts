@@ -73,7 +73,6 @@ function allImports(file: string): string[] {
   return [...source.matchAll(/(?:import|export)\s[^;]*?\bfrom\s+["'](\.[^"']+)["']/g)].map((m) => resolve(dirname(file), m[1]!));
 }
 
-/** Names a file declares with `export type|interface|const|function|enum|class`. */
 function exportedNames(source: string): string[] {
   return [...source.matchAll(/^export\s+(?:declare\s+)?(?:type|interface|const|let|function|enum|class)\s+([A-Za-z_$][\w$]*)/gm)].map((m) => m[1]!);
 }

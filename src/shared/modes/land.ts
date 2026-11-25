@@ -33,7 +33,6 @@ export interface LandBoard {
   starts: LandStart[];
 }
 
-/** The latest tile a player placed. */
 export interface LandPlace {
   seq: number;
   tile: number;

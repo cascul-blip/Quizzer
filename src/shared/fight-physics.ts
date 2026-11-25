@@ -18,7 +18,6 @@ const TOWER_W = 92;
 export const TOWER_H = 190;
 /** Tower centers: Red (team 0) on the left, Blue (team 1) on the right. */
 export const TOWER_X = [90, 910] as const;
-/** Where each team's catapult throws from. */
 export const CATAPULT_X = [190, 810] as const;
 export const LAUNCH_Y = GROUND + 34;
 
@@ -28,7 +27,6 @@ export const MAX_SPEED = 860;
 export const MAX_PULL = 180;
 /** Pulls shorter than this are treated as a cancelled aim. */
 export const MIN_PULL = 12;
-/** Radius of the flying avatar. */
 export const SHOT_R = 14;
 const MAX_FLIGHT_S = 8;
 const STEP_S = 1 / 240;

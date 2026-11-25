@@ -120,7 +120,6 @@ export function DuelStage({ view, send }: { view: DuelView; send: Send }) {
     if (secs > 0 && secs <= 5) play(secs <= 3 ? "tickHigh" : "tick");
   }, [secs, view.phase]);
 
-  // Keyboard: Space / → = next, S = skip, F = fullscreen.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement)?.closest?.("input, select, textarea")) return;
@@ -198,7 +197,6 @@ function useRevealStep(round: number | null, elapsed = 0): number {
   const [at, setAt] = useState<{ round: number | null; step: number }>({ round, step: 0 });
   useEffect(() => {
     if (round === null) return;
-    // Reduced motion: straight to the settled result, nobody walks.
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
       setAt({ round, step: STEP_SETTLE });
       return;
@@ -331,7 +329,6 @@ function Arenas({ view, step }: { view: DuelView; step: number }) {
   const panels = useRef(new Map<number, HTMLElement>());
   const [tokens, setTokens] = useState<{ round: number; list: Token[]; delay: number } | null>(null);
 
-  // When the movers set off, measure where each one stands and where its new arena is.
   useLayoutEffect(() => {
     if (!reveal || step !== STEP_MOVE || !wrap.current) return;
     const delay = modeTheme("duel", view.theme) === "christmas" ? Math.max(0, (view.revealElapsedMs ?? 0) - STEP_AT_MS[3]!) : 0;
@@ -420,7 +417,6 @@ function boxPoint(box: { left: number; top: number; size: number }, facing: Faci
   return [box.left + (x * box.size) / 100, box.top + (p.y * box.size) / 100];
 }
 
-/** What one duelist is doing at this moment of the reveal. */
 interface Act {
   pose: DuelPose;
   clip?: "stagger" | "holster-spin" | "walk";
@@ -432,7 +428,6 @@ interface Act {
   leaving?: "up" | "down";
 }
 
-/** One arena: the street, its duelists, their names, and on the reveal the shoot-out. */
 function ArenaPanel({
   arena,
   result,
@@ -478,7 +473,6 @@ function ArenaPanel({
     const moving = r.nextArena !== result.arena;
     if (step >= STEP_MOVE && moving) {
       const up = r.nextArena < result.arena;
-      // Walk off up or down the street, toward the new arena's side of the screen.
       return { ...base, pose: "walk1", clip: "walk", facing: up ? "left" : "right", hat: slot === loser ? undefined : hat, leaving: up ? "up" : "down" };
     }
     if (result.draw) {
@@ -687,7 +681,6 @@ function NameTag({
   );
 }
 
-/** A small stable number from a player id. */
 function hash(s: string): number {
   let h = 0;
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
@@ -765,7 +758,6 @@ function DuelPodium({ view, send }: { view: DuelView; send: Send }) {
   );
 }
 
-/** Showdown's mode settings in the lobby, after the shared rows it is given. */
 function DuelSettings({ settings, send, children }: LobbySettingsProps<"duel">) {
   return (
     <>

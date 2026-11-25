@@ -6,13 +6,11 @@ export type Cell = string | number;
 /** Byte order mark the results CSV starts with, so Excel opens UTF-8 correctly. */
 export const BOM = "\ufeff";
 
-/** One results column: its header and how to read its cell from a row. */
 export interface Column<Row> {
   header: string;
   value(row: Row): Cell;
 }
 
-/** A mode's finished results, ready to write as a CSV. */
 export interface ResultsSheet {
   header: string[];
   rows: Cell[][];

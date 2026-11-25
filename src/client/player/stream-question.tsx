@@ -4,7 +4,6 @@ import { PinDragger } from "../shared/pin.tsx";
 import { Tex, TexList } from "../shared/tex.tsx";
 import { optionColor, Shape, TextAnswer, useCountdown } from "../shared/ui.tsx";
 
-/** A self-paced question shared by the streamed game modes. */
 export function StreamQuestion({ question, onAnswer }: { question: StreamQuestionView; onAnswer: (seq: number, option: number, text?: string) => void }) {
   const [sentSeq, setSentSeq] = useState<number | null>(null);
   const sent = useRef<number | null>(null);

@@ -86,7 +86,6 @@ function quietWave(opts: Parameters<typeof setup>[0] = {}) {
 const sturdy = (m: SiegeMonster) => Object.assign(m, { health: 12, maxHealth: 12 });
 
 const byName = (game: SiegeGame, name: string) => [...game.players.values()].find((p) => p.nickname === name)!;
-/** Give every player plenty of gold. */
 const fund = (game: SiegeGame, gold = 1000) => {
   for (const p of game.players.values()) p.gold = gold;
 };

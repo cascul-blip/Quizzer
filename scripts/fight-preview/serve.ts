@@ -1,4 +1,3 @@
-/** bun scripts/fight-preview/serve.ts — standalone host/phone artwork preview. */
 import { resolve } from "node:path";
 
 const outdir = "/tmp/quizzer-fight-preview";

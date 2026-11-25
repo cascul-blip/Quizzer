@@ -245,7 +245,7 @@ export function play(sfx: Sfx): void {
       return tone(70, 0.3, 0.9, "triangle", 0.2);
     case "roar":
       [90, 118, 140, 75].forEach((f, i) => tone(f, i * 0.05, 1.1 - i * 0.1, "sawtooth", 0.13));
-      return tone(45, 0.55, 0.6, "square", 0.2); // the smash
+      return tone(45, 0.55, 0.6, "square", 0.2);
     case "whoosh":
       [200, 320, 480, 640].forEach((f, i) => tone(f, i * 0.04, 0.3, "sawtooth", 0.05));
       return;

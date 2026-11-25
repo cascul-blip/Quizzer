@@ -66,7 +66,6 @@ function load(id: VoiceLineId): Promise<ArrayBuffer | null> {
   return p;
 }
 
-/** Start downloading lines a screen is going to need. */
 export function preloadVoice(ids: VoiceLineId[]): void {
   for (const id of ids) void load(id);
 }

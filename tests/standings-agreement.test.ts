@@ -70,7 +70,6 @@ const READERS: Partial<Record<GameMode, RankReaders>> = {
 };
 
 const NICKNAMES = ["Noel", "Holly", "Ivy"];
-/** Gift Grab's countdown before play (3 s). */
 const GIFT_COUNTDOWN_MS = 3_000;
 
 let data: ReturnType<typeof tempDir>;

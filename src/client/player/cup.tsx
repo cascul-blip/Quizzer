@@ -22,7 +22,6 @@ function RollScreen({ round, target, rollMs }: { round: number; target: number; 
   );
 }
 
-/** Phone screen for Cup of Death: roll, answer, and (if you fall short) pick a cup. */
 export function CupPlayer({ view, send }: { view: PlayerCupView; send: Send }) {
   return (
     <CupThemeProvider theme={view.theme}>

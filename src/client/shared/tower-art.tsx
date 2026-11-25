@@ -118,7 +118,6 @@ interface BlockProps {
   row: number;
   /** Part of a completed floor: draws the ledge. */
   fullFloor: boolean;
-  /** Animate as a newly landed block. */
   fresh?: boolean;
 }
 
@@ -175,7 +174,6 @@ export function DustPuff({ x, y, size: s }: { x: number; y: number; size: number
   );
 }
 
-/** Sparkles along a newly completed floor. */
 export function FloorSparkle({ x, y, width, size: s }: { x: number; y: number; width: number; size: number }) {
   const christmas = useChristmasTower();
   const stars = Array.from({ length: 7 }, (_, i) => {
@@ -365,9 +363,7 @@ export function MonsterSvg() {
     );
   return (
     <svg class="monster-svg" viewBox="0 0 200 220" aria-hidden="true">
-      {/* tail */}
       <path d="M150,150 Q195,150 196,110 Q185,135 150,128 Z" fill="#6a2fb0" />
-      {/* legs */}
       <g class="m-leg-back">
         <rect x="118" y="165" width="26" height="42" rx="10" fill="#5b2799" />
         <path d="M112,204 h40 v10 h-40 z" fill="#4a1f80" />
@@ -377,20 +373,17 @@ export function MonsterSvg() {
         <path d="M64,206 h42 v10 h-42 z" fill="#4a1f80" />
         <path d="M64,216 l6,-8 l6,8 l6,-8 l6,8" fill="#fff" />
       </g>
-      {/* body */}
       <ellipse cx="112" cy="140" rx="52" ry="50" fill="#7b3cc8" />
       <ellipse cx="100" cy="150" rx="30" ry="34" fill="#c6a2f2" />
       {[0, 1, 2, 3].map((i) => (
         <path key={i} d={`M${86},${128 + i * 13} q14,5 28,0`} stroke="#a47ddc" stroke-width="2.5" fill="none" />
       ))}
-      {/* back spikes */}
       <path d="M130,92 l12,-16 l4,20 l12,-12 l2,20 l12,-8 l-2,22 z" fill="#3fd18b" />
       {/* arm (swings on smash) */}
       <g class="m-arm" style={{ transformOrigin: "88px 128px" }}>
         <path d="M88,124 Q58,120 44,136 l10,8 Q66,134 90,140 z" fill="#6a2fb0" />
         <path d="M44,136 l-10,-4 l6,8 l-8,2 l10,4 l-4,6 l12,-4 z" fill="#fff" />
       </g>
-      {/* head */}
       <g class="m-head" style={{ transformOrigin: "95px 90px" }}>
         <path d="M60,40 Q70,18 100,20 Q134,22 138,54 Q140,82 118,92 L64,92 Q42,86 40,66 Q40,48 60,40 Z" fill="#7b3cc8" />
         <path d="M64,24 l-12,-18 l22,10 z M104,20 l4,-20 l12,18 z" fill="#f2e6c9" />

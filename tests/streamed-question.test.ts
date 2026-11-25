@@ -70,7 +70,6 @@ function answerUntilLeft(scenario: Scenario, answering: readonly string[]) {
   expect(clock.now() - answeredAt).toBeLessThan(FEEDBACK_MS);
 }
 
-/** Answer wrong just before the quiz phase ends, then let it end. */
 function answerThenQuizEnds({ clock, game, id }: Scenario) {
   clock.advance(game.phaseEndsAt! - clock.now() - 500);
   const question = game.playerView(id)!.question!;
@@ -79,7 +78,6 @@ function answerThenQuizEnds({ clock, game, id }: Scenario) {
   clock.advance(500);
 }
 
-/** Each Streamed question mode. */
 const MODES: Record<string, StreamedMode> = {
   "Tallest Tower": {
     game: (clock) => TowerGame.fromLobby(lobbyFor("tower").handoffFacts("tower"), { clock }),
