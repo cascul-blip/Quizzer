@@ -31,6 +31,9 @@ import clap_accent from "./clap/accent.mp3";
 import clap_hit from "./clap/hit.mp3";
 import cymbal_accent from "./cymbal/accent.mp3";
 import cymbal_hit from "./cymbal/hit.mp3";
+import dulcimer_A4 from "./dulcimer/A4.mp3";
+import dulcimer_B3 from "./dulcimer/B3.mp3";
+import dulcimer_E4 from "./dulcimer/E4.mp3";
 import flute_A4 from "./flute/A4.mp3";
 import flute_A5 from "./flute/A5.mp3";
 import flute_C5 from "./flute/C5.mp3";
@@ -41,6 +44,9 @@ import hat_accent from "./hat/accent.mp3";
 import hat_hit from "./hat/hit.mp3";
 import kick_accent from "./kick/accent.mp3";
 import kick_hit from "./kick/hit.mp3";
+import nylon_B4 from "./nylon/B4.mp3";
+import nylon_E5 from "./nylon/E5.mp3";
+import nylon_Fs4 from "./nylon/Fs4.mp3";
 import organ_A2 from "./organ/A2.mp3";
 import organ_A3 from "./organ/A3.mp3";
 import organ_A4 from "./organ/A4.mp3";
@@ -76,6 +82,12 @@ import pluck_G3 from "./pluck/G3.mp3";
 import pluck_G5 from "./pluck/G5.mp3";
 import snare_accent from "./snare/accent.mp3";
 import snare_hit from "./snare/hit.mp3";
+import steel_A3 from "./steel/A3.mp3";
+import steel_B2 from "./steel/B2.mp3";
+import steel_D4 from "./steel/D4.mp3";
+import steel_E3 from "./steel/E3.mp3";
+import steel_Fs2 from "./steel/Fs2.mp3";
+import steel_G4 from "./steel/G4.mp3";
 import strings_A3 from "./strings/A3.mp3";
 import strings_B5 from "./strings/B5.mp3";
 import strings_C2 from "./strings/C2.mp3";
@@ -162,6 +174,14 @@ export const SAMPLE_SETS: Record<string, SampleSet> = {
   },
   clap: { seconds: 0.45, hit: clap_hit, accent: clap_accent },
   cymbal: { seconds: 2.6, hit: cymbal_hit, accent: cymbal_accent },
+  dulcimer: {
+    seconds: 2.4,
+    zones: [
+      { root: 59, url: dulcimer_B3 },
+      { root: 64, url: dulcimer_E4 },
+      { root: 69, url: dulcimer_A4 },
+    ],
+  },
   flute: {
     seconds: 3.8,
     zones: [
@@ -175,6 +195,14 @@ export const SAMPLE_SETS: Record<string, SampleSet> = {
   },
   hat: { seconds: 0.3, hit: hat_hit, accent: hat_accent },
   kick: { seconds: 0.6, hit: kick_hit, accent: kick_accent },
+  nylon: {
+    seconds: 2.4,
+    zones: [
+      { root: 66, url: nylon_Fs4 },
+      { root: 71, url: nylon_B4 },
+      { root: 76, url: nylon_E5 },
+    ],
+  },
   organ: {
     seconds: 3.6,
     zones: [
@@ -224,6 +252,17 @@ export const SAMPLE_SETS: Record<string, SampleSet> = {
     ],
   },
   snare: { seconds: 0.5, hit: snare_hit, accent: snare_accent },
+  steel: {
+    seconds: 2.4,
+    zones: [
+      { root: 42, url: steel_Fs2 },
+      { root: 47, url: steel_B2 },
+      { root: 52, url: steel_E3 },
+      { root: 57, url: steel_A3 },
+      { root: 62, url: steel_D4 },
+      { root: 67, url: steel_G4 },
+    ],
+  },
   strings: {
     seconds: 5.2,
     zones: [

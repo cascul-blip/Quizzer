@@ -36,6 +36,9 @@ type Instrument =
   | "strings"
   | "flute"
   | "twang"
+  | "nylon"
+  | "steel"
+  | "dulcimer"
   | "whistle"
   | "jawharp"
   | "timpani"
@@ -290,6 +293,9 @@ function playInstrument(ctx: Ctx, dest: AudioNode, inst: Instrument, t: number, 
     case "pulse":
       osc(ctx, dest, "pulse", freq, t, 0.14 * v, 0.003, Math.max(0, len - 0.03), 0.04);
       return;
+    case "nylon":
+    case "steel":
+    case "dulcimer":
     case "pluck":
       osc(ctx, dest, "triangle", freq, t, 0.3 * v, 0.003, 0.01, Math.min(0.5, len + 0.15));
       osc(ctx, dest, "sine", freq * 2, t, 0.08 * v, 0.003, 0.005, 0.12);

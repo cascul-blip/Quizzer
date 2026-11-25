@@ -337,7 +337,7 @@ Every game mode has **built-in background music** on the projector (phones stay 
 | Kingdom Siege | A pastoral lobby with recorder, lute and tabor; a marching battle theme with snare, recorders and brass | The march adds layers as monsters fill the board and as hearts are lost; low brass and timpani for a giant; drums and a held chord during breaks. Church bells and a fanfare if the kingdom stands; a low brass lament if the castle falls |
 | Christmas Toybox | Public-domain *Patapan*, arranged for flute, bells, plucked strings and toy percussion | Gentle in the lobby and build breaks; adds marching drums, strings, brass and giant timpani during waves. Bells and brass for victory, quiet flute and piano after the castle falls |
 | Showdown | Original Spaghetti Western music: a whistled tune over a twangy guitar's habanera, a jaw harp and anvil pings; a lone rider's whistle in the lobby | Builds from the intro on (rounds are quick) and peaks halfway through the question: the guitar, a gallop, timpani, whip cracks, chanted "hup!" stabs and strings, then the trumpet takes the tune. A whip-and-anvil "draw" sting on each reveal; a sunset trumpet-and-whistle tune on the podium |
-| Memory Game | The Christmas lobby, play and podium tracks shared with Gift Grab | The music grows more intense during reveal turns |
+| Memory Game | *We Three Kings* on nylon- and fingerpicked steel-string guitars, with flute, hammered dulcimer and upright bass joining on the refrain, during play; shared Christmas tracks in the lobby and on the podium | One verse and refrain loop at a fixed tempo through questions and card reveals |
 
 The lobby plays the music of whichever game mode is selected. Use the **🎵 button and slider** in the projector's top bar to turn music off or change its volume. The 🔊 button still mutes everything.
 
@@ -361,6 +361,7 @@ Put audio files (MP3, OGG, M4A, WAV, WebM or FLAC) in the **`data/music`** folde
 | `siege-lobby` · `siege-battle` · `siege-results` | Kingdom Siege: lobby; countdown, build breaks and waves; the kingdom stands or the castle falls, and the podium |
 | `siege-christmas-lobby` · `siege-christmas-battle` · `siege-christmas-results` | Christmas Toybox: Patapan in the lobby, battle, and results |
 | `showdown-lobby` · `showdown` · `showdown-draw` · `showdown-results` | Showdown: lobby, the standoff (question and reveal), the draw sting (plays once on each reveal), final podium |
+| `memory-christmas-play` | Memory Game: Question phase and Reveal phase. The lobby and podium still use `tower-christmas-lobby` and `tower-christmas-results`. |
 
 For example, `data/music/submarine-chase.mp3`. Your files loop; they don't speed up with the game like the built-in music does. Only use music you're allowed to play: royalty-free or Creative Commons tracks (e.g. Pixabay Music, OpenGameArt, or incompetech with credit). Delete a file to go back to the built-in track.
 

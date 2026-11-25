@@ -119,12 +119,12 @@ export const THEMED_MODES = {
   }),
   memory: themedMode({
     default: "christmas",
-    screens: { lobby: "Lobby", play: "Questions and card reveals", results: "Final podium" },
+    screens: { lobby: "Lobby", play: "Questions and card reveals — We Three Kings", results: "Final podium" },
     looks: {
       christmas: {
         name: "Memory Game",
         icon: "🃏",
-        tracks: { lobby: "tower-christmas-lobby", play: "tower-christmas-play", results: "tower-christmas-results" },
+        tracks: { lobby: "tower-christmas-lobby", play: "memory-christmas-play", results: "tower-christmas-results" },
       },
     },
   }),

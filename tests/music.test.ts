@@ -5,6 +5,7 @@ import { robotTracksForSkin, TRACKS } from "../src/client/shared/music/tracks.ts
 import { ROBOT_SKIN } from "../src/client/shared/robot-skin.ts";
 import { keysOf } from "../src/shared/keys-of.ts";
 import { hexDistance, startTiles } from "../src/shared/land-board.ts";
+import type { MemoryPhase } from "../src/shared/modes/memory.ts";
 import type { SubPhase } from "../src/shared/modes/submarine.ts";
 import { MUSIC_TRACKS, musicTrackForFile } from "../src/shared/music-tracks.ts";
 import type { HostView } from "../src/shared/protocol.ts";
@@ -60,6 +61,42 @@ describe("built-in tracks", () => {
     expect(stepSeconds(chase, 1)).toBeLessThan(stepSeconds(chase, 0));
     expect(chase.layers.filter((l) => layerActive(l, 1)).length).toBeGreaterThan(chase.layers.filter((l) => layerActive(l, 0)).length);
   });
+});
+
+test("Memory Game keeps a single fixed music cue across gameplay phases", () => {
+  const phases = ["intro", "open", "reveal", "turn", "feedback"] as const satisfies readonly MemoryPhase[];
+  for (const phase of phases) expect(musicFor({ kind: "memory", phase } as HostView)).toEqual({ track: "memory-christmas-play" });
+});
+
+test("Memory Game loops the We Three Kings verse and refrain at a fixed tempo with the same instruments", () => {
+  const track = TRACKS["memory-christmas-play"];
+  expect(stepsPerBar(track)).toBe(6);
+  expect(track.layers.map((layer) => layer.inst).sort()).toEqual(["dulcimer", "flute", "nylon", "steel", "tribass"]);
+  const melody = track.layers.find((layer) => layer.inst === "nylon")!;
+  expect(melody.bars).toHaveLength(32);
+  expect(melody.bars).toHaveLength(track.bars);
+  expect(tokens(melody.bars[0]!)).toEqual(["B4", "-", "-", "-", "A4", "-"]);
+  expect(tokens(melody.bars[15]!)).toEqual(["F#4", "-", "-", "-", "A4", "-"]);
+  expect(tokens(melody.bars.at(-1)!)).toEqual(["G4", "-", "-", "-", "-", "-"]);
+  for (const layer of track.layers) expect(layer.bars).toHaveLength(32);
+});
+
+test("Memory Game's We Three Kings keeps the guitar throughout and brings in flute, dulcimer and bass on the refrain", () => {
+  const track = TRACKS["memory-christmas-play"];
+  const layer = (inst: string) => track.layers.find((l) => l.inst === inst)!;
+  const sounds = (bar: string) => tokens(bar).some((tok) => tok !== "." && tok !== "-");
+  const verse = (inst: string) => layer(inst).bars.slice(0, 15);
+  const refrain = (inst: string) => layer(inst).bars.slice(15);
+  for (const inst of ["nylon", "steel"]) expect(layer(inst).bars.every(sounds)).toBe(true);
+  for (const inst of ["flute", "dulcimer", "tribass"]) {
+    expect(verse(inst).some(sounds)).toBe(false);
+    expect(refrain(inst).every(sounds)).toBe(true);
+  }
+  expect(refrain("flute")).toEqual(refrain("nylon"));
+  for (const intensity of [0, 0.4, 0.7, 1]) {
+    expect(stepSeconds(track, intensity)).toBe(stepSeconds(track, 0));
+    expect(track.layers.every((layer) => layerActive(layer, intensity))).toBe(true);
+  }
 });
 
 test("custom music files map to track ids", () => {

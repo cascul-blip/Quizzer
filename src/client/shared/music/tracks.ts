@@ -2195,6 +2195,98 @@ const christmasRacerResults: Track = {
   ],
 };
 
+// Hopkins's original 3/8 melody: the Gaspard verse and the chorus soprano, without the interlude.
+const WE_THREE_KINGS_OPENING = [seq(["B4", 4], ["A4", 2]), seq(["G4", 4], ["E4", 2]), seq(["F#4", 2], ["G4", 2], ["F#4", 2]), seq(["E4", 4], [".", 2])];
+const WE_THREE_KINGS_VERSE = [
+  ...WE_THREE_KINGS_OPENING,
+  ...WE_THREE_KINGS_OPENING,
+  seq(["G4", 4], ["G4", 2]),
+  seq(["A4", 4], ["A4", 2]),
+  seq(["B4", 4], ["B4", 2]),
+  seq(["D5", 2], ["C5", 2], ["B4", 2]),
+  seq(["A4", 2], ["B4", 2], ["A4", 2]),
+  seq(["G4", 4], ["F#4", 2]),
+  seq(["E4", 4], [".", 2]),
+];
+const WE_THREE_KINGS_REFRAIN = [
+  seq(["F#4", 4], ["A4", 2]),
+  seq(["G4", 4], ["G4", 2]),
+  seq(["G4", 4], ["D4", 2]),
+  seq(["G4", 4], ["E4", 2]),
+  seq(["G4", 4], [".", 2]),
+  seq(["G4", 4], ["G4", 2]),
+  seq(["G4", 4], ["D4", 2]),
+  seq(["G4", 4], ["E4", 2]),
+  seq(["G4", 4], [".", 2]),
+  seq(["G4", 4], ["G4", 2]),
+  seq(["A4", 4], ["B4", 2]),
+  seq(["C5", 4], ["B4", 2]),
+  seq(["A4", 4], ["B4", 2]),
+  seq(["G4", 4], ["G4", 2]),
+  seq(["G4", 4], ["D4", 2]),
+  seq(["G4", 4], ["E4", 2]),
+  seq(["G4", 6]),
+];
+const WE_THREE_KINGS_MELODY = [...WE_THREE_KINGS_VERSE, ...WE_THREE_KINGS_REFRAIN];
+type WeThreeKingsChord = "Em" | "B7" | "G" | "Am" | "D7" | "C";
+const WE_THREE_KINGS_VERSE_HARMONY: WeThreeKingsChord[] = ["Em", "Em", "B7", "Em", "Em", "Em", "B7", "Em", "G", "Am", "Em", "G", "Am", "B7", "Em"];
+const WE_THREE_KINGS_REFRAIN_HARMONY: WeThreeKingsChord[] = ["D7", "G", "G", "C", "G", "G", "G", "C", "G", "G", "D7", "C", "D7", "G", "G", "C", "G"];
+const WE_THREE_KINGS_HARMONY = [...WE_THREE_KINGS_VERSE_HARMONY, ...WE_THREE_KINGS_REFRAIN_HARMONY];
+const weThreeKingsRefrain = (bar: number) => bar >= WE_THREE_KINGS_VERSE.length;
+const WE_THREE_KINGS_REST = seq([".", 6]);
+/** Open-position guitar shapes: the thumb takes the bass note, the fingers roll the top three strings. */
+const WE_THREE_KINGS_GUITAR: Record<WeThreeKingsChord, [bass: string, string, string, string]> = {
+  Em: ["E2", "G3", "B3", "E4"],
+  B7: ["B2", "F#3", "A3", "D#4"],
+  G: ["G2", "G3", "B3", "D4"],
+  Am: ["A2", "A3", "C4", "E4"],
+  D7: ["D3", "A3", "C4", "F#4"],
+  C: ["C3", "G3", "C4", "E4"],
+};
+/** The hammered dulcimer's off-beat chord tones around the refrain's flute. */
+const WE_THREE_KINGS_DULCIMER: Record<WeThreeKingsChord, [string, string, string]> = {
+  Em: ["B3", "E4", "G4"],
+  B7: ["A3", "D#4", "F#4"],
+  G: ["B3", "D4", "G4"],
+  Am: ["C4", "E4", "A4"],
+  D7: ["C4", "F#4", "A4"],
+  C: ["C4", "E4", "G4"],
+};
+const WE_THREE_KINGS_BASS: Record<WeThreeKingsChord, string> = { Em: "E2", B7: "B1", G: "G2", Am: "A2", D7: "D2", C: "C2" };
+const christmasMemoryPlay: Track = {
+  id: "memory-christmas-play",
+  bpm: 76,
+  stepsPerBar: 6,
+  bars: WE_THREE_KINGS_MELODY.length,
+  rich: true,
+  reverb: 0.24,
+  layers: [
+    { inst: "nylon", bars: WE_THREE_KINGS_MELODY, vol: 0.45 },
+    { inst: "flute", bars: WE_THREE_KINGS_MELODY.map((bar, i) => (weThreeKingsRefrain(i) ? bar : WE_THREE_KINGS_REST)), vol: 0.55 },
+    {
+      inst: "dulcimer",
+      bars: WE_THREE_KINGS_HARMONY.map((chord, i) => {
+        const [low, mid, high] = WE_THREE_KINGS_DULCIMER[chord];
+        return weThreeKingsRefrain(i) ? `. ${low} . ${mid} . ${high}` : WE_THREE_KINGS_REST;
+      }),
+      vol: 0.3,
+    },
+    {
+      inst: "steel",
+      bars: WE_THREE_KINGS_HARMONY.map((chord) => {
+        const [bass, low, mid, high] = WE_THREE_KINGS_GUITAR[chord];
+        return `${bass} - ${low} ${mid} ${high} ${mid}`;
+      }),
+      vol: 0.43,
+    },
+    {
+      inst: "tribass",
+      bars: WE_THREE_KINGS_HARMONY.map((chord, i) => (weThreeKingsRefrain(i) ? seq([WE_THREE_KINGS_BASS[chord], 4], [".", 2]) : WE_THREE_KINGS_REST)),
+      vol: 0.43,
+    },
+  ],
+};
+
 type RobotMusicId = Extract<MusicTrackId, `robot-${string}`>;
 
 /** Keep custom file IDs stable while the seasonal skin changes the built-in arrangements. */
@@ -2216,6 +2308,7 @@ export const TRACKS: Record<MusicTrackId, Track> = {
   "tower-christmas-play": christmasTowerPlay,
   "tower-christmas-medley": christmasTowerMedley,
   "tower-christmas-results": christmasTowerResults,
+  "memory-christmas-play": christmasMemoryPlay,
   "submarine-lobby": submarineLobby,
   "submarine-chase": submarineChase,
   "submarine-dive": submarineDive,
