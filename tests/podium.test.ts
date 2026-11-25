@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { buildPodium } from "../src/server/game/podium.ts";
+import { buildPodium, emptyPodium } from "../src/server/game/podium.ts";
 import { most } from "../src/server/game/standings.ts";
 
 type Player = { id: string; nickname: string; score: number; correct: number; moves: number; team: string };
@@ -84,5 +84,10 @@ describe("Podium", () => {
 
   test("a player not in the game has no result", () => {
     expect(solo([player("Ann", 1)]).result("Zed")).toBeNull();
+  });
+
+  test("an empty Podium has no places, rows or award winners, and no result for anyone", () => {
+    const podium = emptyPodium<Player, Player, "mostCorrect">({ mostCorrect: "Most correct answers" });
+    expect([podium.places, podium.rows, podium.awards, podium.result("Ann")]).toEqual([[], [], { mostCorrect: null }, null]);
   });
 });
