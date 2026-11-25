@@ -51,4 +51,4 @@ When a comment explains what a name, constant or pattern means, rename or restru
 - **Doc comments add something**: a doc comment that repeats its name (`/** Five health pips. */` on `HealthBar`) or narrates the next line (`// Walking.`) goes.
 - **No section dividers**: split a file that needs `// ---------- monsters ----------` banners, or let its declarations read in order. `tests/standards.test.ts` rejects them.
 
-Use inline comments for local contracts and context a reader needs at the point of use. Examples include units, sentinels, callback obligations, and ordering that affects behavior. Put maintenance procedures in the relevant guide and cross-module design rationale in an ADR. When a change affects an existing decision, update its ADR with the revised decision and reason.
+Avoid using comments when possible.  The code should be the explanation of what it does.  If something requires a comment to be understandable then the code should be refactored to make it explanatory what it does.
