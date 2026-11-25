@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { RacerTurn } from "../../shared/modes/racer.ts";
+import { racerShared } from "../../shared/modes/racer.ts";
 import type { HostView } from "../../shared/protocol.ts";
 import { RACER_CONFIDENCE, RACER_CONFIDENCE_LEVELS, RACER_REPAIR_MPH } from "../../shared/racer-rules.ts";
 import type { SeasonTheme } from "../../shared/themed-modes.ts";
@@ -371,14 +372,14 @@ function RacerPodium({ view, send }: { view: RacerView; send: Send }) {
             Top speed {Math.round(r?.topSpeedMph ?? view.car.topSpeedMph)} mph · Crashes {r?.crashes ?? view.car.crashes} · Questions {r?.turns ?? 0}
           </div>
           <div class="awards">
-            <Award icon="✅" title="Most correct answers" award={a?.mostCorrect ?? null} unit="correct" />
+            <Award icon="✅" title={racerShared.awards.mostCorrect} award={a?.mostCorrect ?? null} unit="correct" />
             {/* As Award, but the value reads "+40 mph". */}
             <div class="award">
               <div class="award-icon" aria-hidden="true">
                 🏎
               </div>
               <div>
-                <div class="award-title">Best driver</div>
+                <div class="award-title">{racerShared.awards.bestDriver}</div>
                 <div class="award-who">{a?.bestDriver ? a.bestDriver.nicknames.join(", ") : "—"}</div>
                 {a?.bestDriver && <div class="award-value">+{a.bestDriver.value} mph</div>}
               </div>

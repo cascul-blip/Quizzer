@@ -7,7 +7,7 @@ import type { HillHeight, ShotImpact } from "../../shared/fight-physics.ts";
 import { carve, HILL_HEIGHTS, launchVector, makeTerrain, simulate } from "../../shared/fight-physics.ts";
 import { keysOf } from "../../shared/keys-of.ts";
 import type {
-  FightAwards,
+  FightAwardKey,
   FightEvent,
   FightOutcome,
   FightPhase,
@@ -27,16 +27,24 @@ import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
 import { GameFinish, PhaseTimer } from "./phase-timer.ts";
+import type { Podium } from "./podium.ts";
+import { buildPodium } from "./podium.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
 import { Roster } from "./roster.ts";
+import { fewest, most } from "./standings.ts";
 import type { AnswerTotals } from "./stream.ts";
 import { QuestionStream } from "./stream.ts";
 
 export { FEEDBACK_MS } from "./stream.ts";
 
 export const COUNTDOWN_MS = 3000;
+const FIGHT_AWARD_VALUES: Record<FightAwardKey, (p: FightPlayer) => number> = {
+  topGunner: (p) => p.hits,
+  masterBuilder: (p) => p.rebuilds,
+  mostCorrect: (p) => p.correct,
+};
 /** Late choices (sent right at the deadline) are still accepted this long after it. */
 export const DECISION_GRACE_MS = 500;
 /** After a shot lands, the thrower sees the result this long before questions come back. */
@@ -137,6 +145,10 @@ export class FightGame {
     this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
     this.gameFinish = new GameFinish(this.phases, "podium", {
+      cleanup: () => {
+        this.outcome ??= this.judge();
+        this.finalPodium = this.buildPodium(this.outcome);
+      },
       onFinish: () => this.onFinish(this),
       onChange: () => this.onChange(),
     });
@@ -411,13 +423,25 @@ export class FightGame {
     if (this.events.length > MAX_EVENTS) this.events.shift();
   }
 
-  awards(): FightAwards {
-    const best = (value: (p: FightPlayer) => number) => {
-      const players = [...this.players.values()];
-      const top = Math.max(0, ...players.map(value));
-      return top > 0 ? { value: top, nicknames: players.filter((p) => value(p) === top).map((p) => p.nickname) } : null;
-    };
-    return { topGunner: best((p) => p.hits), masterBuilder: best((p) => p.rebuilds), mostCorrect: best((p) => p.correct) };
+  private finalPodium: Podium<FightTeam, FightPlayer, FightAwardKey> | null = null;
+
+  /** The winning team first (both share first in a draw); players listed by enemy hits, then correct answers. */
+  private buildPodium(outcome: FightOutcome): Podium<FightTeam, FightPlayer, FightAwardKey> {
+    const players = [...this.players.values()].sort((a, b) => b.hits - a.hits || b.correct - a.correct);
+    return buildPodium({
+      entries: this.teams,
+      order: [most((t) => Number(t.index === outcome.winner))],
+      then: [fewest((t) => t.index)],
+      players,
+      entryOf: (p) => this.teams[p.team]!,
+      awards: { labels: fightShared.awards, values: FIGHT_AWARD_VALUES },
+    });
+  }
+
+  /** The finished game's Podium (GLOSSARY.md), worked out once in Game finish. */
+  get podium(): Podium<FightTeam, FightPlayer, FightAwardKey> {
+    if (!this.finalPodium) throw new GameError("This game has not finished");
+    return this.finalPodium;
   }
 
   private shotView(s: Shot, now = this.clock.now()): FightShot {
@@ -460,7 +484,7 @@ export class FightGame {
       events: [...this.events],
       outcome: this.phase === "collapse" || this.phase === "podium" ? this.outcome : null,
       playerCount: players.length,
-      awards: this.phase === "podium" ? this.awards() : null,
+      awards: this.phase === "podium" ? this.podium.awards : null,
       errors: this.stream.errorsWhen(this.phase === "podium"),
     };
   }
@@ -474,15 +498,7 @@ export class FightGame {
     const shot = state === "watch" ? this.shots.find((s) => s.id === p.shotId) : undefined;
     let result: PlayerFightView["result"] = null;
     if (this.phase === "podium" && this.outcome) {
-      const a = this.awards();
-      result = {
-        outcome: this.outcome,
-        awards: [
-          ...(a.topGunner?.nicknames.includes(p.nickname) ? ["Top gunner"] : []),
-          ...(a.masterBuilder?.nicknames.includes(p.nickname) ? ["Master builder"] : []),
-          ...(a.mostCorrect?.nicknames.includes(p.nickname) ? ["Most correct answers"] : []),
-        ],
-      };
+      result = { outcome: this.outcome, awards: this.podium.result(p.id)!.awards };
     }
     return {
       kind: "fight",
@@ -526,14 +542,10 @@ const FIGHT_COLUMNS: Column<FightResultRow>[] = [
 ];
 
 export function buildFightResults(game: FightGame): ResultsSheet {
-  const outcome = game.outcome ?? game.judge();
-  const order = [...game.teams].sort((a, b) => Number(b.index === outcome.winner) - Number(a.index === outcome.winner) || a.index - b.index);
-  const rows = order.flatMap((team) => {
-    const result = outcome.winner === null ? "Draw" : team.index === outcome.winner ? "Won" : "Lost";
-    return [...game.players.values()]
-      .filter((p) => p.team === team.index)
-      .sort((a, b) => b.hits - a.hits || b.correct - a.correct)
-      .map((p) => ({ team, result, p }));
+  const winner = game.outcome?.winner ?? null;
+  const rows = game.podium.rows.map(({ player: p }) => {
+    const team = game.teams[p.team]!;
+    return { team, result: winner === null ? "Draw" : team.index === winner ? "Won" : "Lost", p };
   });
   return sheet(FIGHT_COLUMNS, rows);
 }

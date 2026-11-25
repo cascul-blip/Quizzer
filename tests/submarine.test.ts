@@ -340,7 +340,11 @@ test("awards and results sheet", () => {
   answerRight(game, clock, byName(game, "Bob"));
   game.end();
   expect(game.phase).toBe("podium");
-  expect(game.awards()).toMatchObject({ topBooster: { value: 1, nicknames: ["Ann"] }, mostCorrect: { value: 4, nicknames: ["Ann"] }, sharpestEyes: null });
+  expect(game.hostView().awards).toMatchObject({
+    topBooster: { value: 1, nicknames: ["Ann"] },
+    mostCorrect: { value: 4, nicknames: ["Ann"] },
+    sharpestEyes: null,
+  });
   expect(game.playerView(byName(game, "Ann").id)!.result).toEqual({ depth: 0, level: 1, awards: ["Top booster", "Most correct answers"] });
   expect(records(buildSubResults(game))[0]).toEqual({
     Nickname: "Ann",

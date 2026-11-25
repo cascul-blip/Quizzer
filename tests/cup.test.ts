@@ -256,7 +256,7 @@ describe("Cup of Death", () => {
       expect(b.poisonedFrom).toBe(1);
       expect(game.phase).toBe("podium");
       // B survived their first cup, or (with one cup) there was no luck in it: no "Unluckiest".
-      expect(game.awards().unluckiest).toBeNull();
+      expect(game.hostView().awards!.unluckiest).toBeNull();
     });
   }
 
@@ -318,7 +318,7 @@ describe("Cup of Death", () => {
     clock.advance(CUP_SIP_MS + CUP_VERDICT_MS);
     expect(game.phase).toBe("podium");
     expect(finished()).toBe(1);
-    const s = game.standings();
+    const s = game.hostView().standings!;
     expect(s.map((x) => [x.nickname, x.rank])).toEqual([
       ["A", 1],
       ["B", 2],
@@ -349,7 +349,7 @@ describe("Cup of Death", () => {
     game.pick(game.drinkers[1]!, 0);
     clock.advance(game.phaseEndsAt - clock.now());
     expect(game.phase).toBe("podium");
-    const s = game.standings();
+    const s = game.hostView().standings!;
     expect(
       s
         .filter((x) => x.rank === 1)
@@ -379,7 +379,7 @@ describe("Cup of Death", () => {
     game.pick(p.id, 0);
     clock.advance(CUP_SIP_MS + CUP_VERDICT_MS);
     expect(game.phase).toBe("podium");
-    expect(game.standings()[0]).toMatchObject({ rank: 1, outRound: 2 });
+    expect(game.hostView().standings![0]).toMatchObject({ rank: 1, outRound: 2 });
   });
 
   test("the drink phase doesn't wait for disconnected players", () => {
@@ -422,7 +422,7 @@ describe("Cup of Death", () => {
     }
     clock.advance(game.phaseEndsAt - clock.now());
     game.end();
-    const aw = game.awards();
+    const aw = game.hostView().awards!;
     expect(aw.mostCorrect!.nicknames).toEqual(["A"]);
     expect(aw.luckiest).toEqual({ value: 1, nicknames: ["B"] });
     expect(aw.neverThirsty).toEqual({ value: 1, nicknames: ["A"] });

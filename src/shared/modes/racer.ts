@@ -52,11 +52,11 @@ export interface RacerResult {
   turns: number;
 }
 
-export interface RacerAwards {
-  mostCorrect: SubAward | null;
-  /** Most mph gained while driving. */
-  bestDriver: SubAward | null;
-}
+/** Podium award labels; bestDriver is most mph gained while driving. */
+const RACER_AWARDS = { mostCorrect: "Most correct answers", bestDriver: "Best driver" } as const;
+
+export type RacerAwardKey = keyof typeof RACER_AWARDS;
+export type RacerAwards = Record<RacerAwardKey, SubAward | null>;
 
 export interface HostRacerPlayer {
   id: string;
@@ -159,4 +159,5 @@ export const racerShared = sharedModeEntry<ModeProtocol<RacerMsg, RacerSettings,
   flags: { paced: true, protect: false },
   lobbyBanner: false,
   msgTypes: ["racer.lever", "racer.go", "racer.answer"],
+  awards: RACER_AWARDS,
 });

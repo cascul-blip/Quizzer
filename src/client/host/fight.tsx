@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { FightEvent, FightShot, HillSetting } from "../../shared/modes/fight.ts";
-import { CORRECT_PER_DECISION, FIGHT_MAX_DAMAGE, HILL_SETTINGS } from "../../shared/modes/fight.ts";
+import { CORRECT_PER_DECISION, FIGHT_MAX_DAMAGE, fightShared, HILL_SETTINGS } from "../../shared/modes/fight.ts";
 import type { HostView } from "../../shared/protocol.ts";
 import type { SeasonTheme } from "../../shared/themed-modes.ts";
 import { modeTheme, themedLabel, themedTrack } from "../../shared/themed-modes.ts";
@@ -199,9 +199,9 @@ function FightPodium({ view, send }: { view: FightView; send: Send }) {
             ))}
           </div>
           <div class="awards">
-            <Award icon="🎯" title="Top gunner" award={a?.topGunner ?? null} unit="tower hits" />
-            <Award icon="🧱" title="Master builder" award={a?.masterBuilder ?? null} unit="rebuilds" />
-            <Award icon="✅" title="Most correct answers" award={a?.mostCorrect ?? null} unit="correct" />
+            <Award icon="🎯" title={fightShared.awards.topGunner} award={a?.topGunner ?? null} unit="tower hits" />
+            <Award icon="🧱" title={fightShared.awards.masterBuilder} award={a?.masterBuilder ?? null} unit="rebuilds" />
+            <Award icon="✅" title={fightShared.awards.mostCorrect} award={a?.mostCorrect ?? null} unit="correct" />
           </div>
         </>
       )}

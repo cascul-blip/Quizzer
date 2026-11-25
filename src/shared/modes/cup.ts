@@ -34,12 +34,14 @@ export function cupQuizMs(round: number): number {
   return Math.max(CUP_QUIZ_MIN_MS, CUP_QUIZ_START_MS - CUP_QUIZ_STEP_MS * (round - 1));
 }
 
-export interface CupAwards {
-  mostCorrect: SubAward | null;
-  /** Most drinks survived. */
-  luckiest: SubAward | null;
-  /** Most rounds made safe without drinking. */
-  neverThirsty: SubAward | null;
+/** Podium award labels: luckiest is most drinks survived, neverThirsty most rounds made safe without drinking. */
+const CUP_AWARDS = { mostCorrect: "Most correct answers", luckiest: "Luckiest drinker", neverThirsty: "Never thirsty" } as const;
+
+/** Unluckiest's label by theme; it is the lowest round, not a Podium award. */
+export const CUP_UNLUCKIEST = { christmas: "First flight", other: "Unluckiest" } as const;
+
+export type CupAwardKey = keyof typeof CUP_AWARDS;
+export interface CupAwards extends Record<CupAwardKey, SubAward | null> {
   /** Poisoned by the first cup they ever drank (a 1-in-N chance, N = the starting cups), earliest round; value = that round. */
   unluckiest: SubAward | null;
 }
@@ -143,4 +145,5 @@ export const cupShared = sharedModeEntry<ModeProtocol<CupMsg, CupSettings, HostC
   flags: { paced: false, protect: true },
   lobbyBanner: false,
   msgTypes: ["cup.answer", "cup.pick"],
+  awards: CUP_AWARDS,
 });

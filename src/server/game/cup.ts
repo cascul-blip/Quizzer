@@ -2,7 +2,7 @@ import type { AnswerValue } from "../../shared/answer-match.ts";
 import { answerOf } from "../../shared/answer-match.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { randomAvatar } from "../../shared/avatars.ts";
-import type { CupAwards, CupPhase, CupRevealView, CupStanding, HostCupState, PlayerCupView } from "../../shared/modes/cup.ts";
+import type { CupAwardKey, CupAwards, CupPhase, CupRevealView, CupStanding, HostCupState, PlayerCupView } from "../../shared/modes/cup.ts";
 import {
   CUP_ALL_SAFE_MS,
   CUP_DEFAULT_CUPS,
@@ -12,6 +12,7 @@ import {
   CUP_MIN_CUPS,
   CUP_ROLL_MS,
   CUP_SIP_MS,
+  CUP_UNLUCKIEST,
   CUP_VERDICT_MS,
   cupQuizMs,
   cupShared,
@@ -25,17 +26,24 @@ import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
 import { GameFinish, PhaseTimer } from "./phase-timer.ts";
+import type { Podium } from "./podium.ts";
+import { buildPodium } from "./podium.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
 import { Roster } from "./roster.ts";
-import { most, rankBy } from "./standings.ts";
+import { most } from "./standings.ts";
 import type { AnswerTotals } from "./stream.ts";
 import { QuestionStream } from "./stream.ts";
 
 export { FEEDBACK_MS } from "./stream.ts";
 
 export const COUNTDOWN_MS = 3000;
+const CUP_AWARD_VALUES: Record<CupAwardKey, (p: CupPlayer) => number> = {
+  mostCorrect: (p) => p.correct,
+  luckiest: (p) => p.drinksSurvived,
+  neverThirsty: (p) => p.safeRounds,
+};
 
 export interface CupPlayer extends BasePlayer, AnswerTotals {
   cups: number;
@@ -137,6 +145,7 @@ export class CupGame {
         if (this.phase === "reveal" && r) while (r.step < r.drinks.length * 2 - 1) this.forceStep(r);
         this.drinkers = [];
         this.reveal = null;
+        this.finalPodium = this.buildPodium();
       },
       onFinish: () => this.onFinish(this),
       onChange: () => this.onChange(),
@@ -397,35 +406,53 @@ export class CupGame {
     return true;
   }
 
-  /** Survivors first, then the latest poisoned; poisoned in the same round share a rank. Ordered by correct answers within a rank. */
-  standings(): CupStanding[] {
-    return rankBy([...this.players.values()], [most((p: CupPlayer) => p.outRound ?? Infinity)], [most((p) => p.correct)]).map((p) => ({
+  private finalPodium: Podium<CupPlayer, CupPlayer, CupAwardKey> | null = null;
+  private finalUnluckiest: CupAwards["unluckiest"] = null;
+
+  /** Survivors first, then the latest poisoned; poisoned in the same round share a place. Ordered by correct answers within a place. */
+  private buildPodium(): Podium<CupPlayer, CupPlayer, CupAwardKey> {
+    const players = [...this.players.values()];
+    this.finalUnluckiest = this.unluckiest();
+    return buildPodium({
+      entries: players,
+      order: [most((p) => p.outRound ?? Infinity)],
+      then: [most((p) => p.correct)],
+      players,
+      entryOf: (p) => p,
+      awards: { labels: cupShared.awards, values: CUP_AWARD_VALUES },
+    });
+  }
+
+  /** The finished game's Podium (GLOSSARY.md), worked out once in Game finish. */
+  get podium(): Podium<CupPlayer, CupPlayer, CupAwardKey> {
+    if (!this.finalPodium) throw new GameError("This game has not finished");
+    return this.finalPodium;
+  }
+
+  private standings(): CupStanding[] {
+    return this.podium.places.map((p) => ({
       id: p.id,
       nickname: p.nickname,
       avatar: p.avatar,
-      rank: p.rank,
+      rank: p.place,
       cups: p.cups,
       outRound: p.outRound,
       correct: p.correct,
     }));
   }
 
-  awards(): CupAwards {
+  /** Unluckiest is the earliest round, not a Podium award (highest value), so the mode works it out beside the Podium. */
+  private unluckiest(): CupAwards["unluckiest"] {
     const players = [...this.players.values()];
-    const best = (value: (p: CupPlayer) => number) => {
-      const top = Math.max(0, ...players.map(value));
-      return top > 0 ? { value: top, nicknames: players.filter((p) => value(p) === top).map((p) => p.nickname) } : null;
-    };
     // With a single cup, every drink is certain death.
     const isLuckless = this.startCups === 1;
     const unlucky = !isLuckless ? players.filter((p) => p.poisonedFrom === this.startCups && p.outRound !== null) : [];
     const first = Math.min(...unlucky.map((p) => p.outRound!));
-    return {
-      mostCorrect: best((p) => p.correct),
-      luckiest: best((p) => p.drinksSurvived),
-      neverThirsty: best((p) => p.safeRounds),
-      unluckiest: unlucky.length > 0 ? { value: first, nicknames: unlucky.filter((p) => p.outRound === first).map((p) => p.nickname) } : null,
-    };
+    return unlucky.length > 0 ? { value: first, nicknames: unlucky.filter((p) => p.outRound === first).map((p) => p.nickname) } : null;
+  }
+
+  private awards(): CupAwards {
+    return { ...this.podium.awards, unluckiest: this.finalUnluckiest };
   }
 
   private revealView(): CupRevealView | null {
@@ -484,21 +511,14 @@ export class CupGame {
     if (!p) return null;
     let result: PlayerCupView["result"] = null;
     if (this.phase === "podium") {
-      const standings = this.standings();
-      const mine = standings.find((s) => s.id === p.id)!;
-      const aw = this.awards();
-      const won = (a: { nicknames: string[] } | null) => !!a?.nicknames.includes(p.nickname);
+      const mine = this.podium.result(p.id)!;
+      const unlucky = this.finalUnluckiest?.nicknames.includes(p.nickname) ? [CUP_UNLUCKIEST[this.theme === "christmas" ? "christmas" : "other"]] : [];
       result = {
-        rank: mine.rank,
-        playerCount: standings.length,
-        won: mine.rank === 1,
+        rank: mine.place,
+        playerCount: mine.playerCount,
+        won: mine.place === 1,
         outRound: p.outRound,
-        awards: [
-          ...(won(aw.mostCorrect) ? ["Most correct answers"] : []),
-          ...(won(aw.luckiest) ? ["Luckiest drinker"] : []),
-          ...(won(aw.neverThirsty) ? ["Never thirsty"] : []),
-          ...(won(aw.unluckiest) ? [this.theme === "christmas" ? "First flight" : "Unluckiest"] : []),
-        ],
+        awards: [...mine.awards, ...unlucky],
       };
     }
     const reveal = this.revealView();
@@ -551,7 +571,7 @@ function cupColumns(game: CupGame): Column<{ rank: number; p: CupPlayer }>[] {
 export function buildCupResults(game: CupGame): ResultsSheet {
   return sheet(
     cupColumns(game),
-    game.standings().map((s) => ({ rank: s.rank, p: game.players.get(s.id)! })),
+    game.podium.rows.map((r) => ({ rank: r.place, p: r.player })),
   );
 }
 

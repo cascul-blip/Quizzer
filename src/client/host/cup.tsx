@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import { CUP_MAX_CUPS, CUP_MIN_CUPS } from "../../shared/modes/cup.ts";
+import { CUP_MAX_CUPS, CUP_MIN_CUPS, CUP_UNLUCKIEST, cupShared } from "../../shared/modes/cup.ts";
 import type { HostView } from "../../shared/protocol.ts";
 import type { ScreenOf, SeasonTheme } from "../../shared/themed-modes.ts";
 import { modeTheme, themedLabel, themedTrack } from "../../shared/themed-modes.ts";
@@ -265,12 +265,24 @@ function CupPodium({ view, send }: { view: CupView; send: Send }) {
             ))}
           </ol>
           <div class="awards cup-awards">
-            <Award icon="✅" title="Most correct answers" award={a?.mostCorrect ?? null} unit="correct" />
-            <Award icon="🍀" title="Luckiest drinker" award={a?.luckiest ?? null} unit="" valueText={(n) => `${n} drink${n === 1 ? "" : "s"} survived`} />
-            <Award icon="🛡" title="Never thirsty" award={a?.neverThirsty ?? null} unit="" valueText={(n) => `${n} round${n === 1 ? "" : "s"} safe`} />
+            <Award icon="✅" title={cupShared.awards.mostCorrect} award={a?.mostCorrect ?? null} unit="correct" />
+            <Award
+              icon="🍀"
+              title={cupShared.awards.luckiest}
+              award={a?.luckiest ?? null}
+              unit=""
+              valueText={(n) => `${n} drink${n === 1 ? "" : "s"} survived`}
+            />
+            <Award
+              icon="🛡"
+              title={cupShared.awards.neverThirsty}
+              award={a?.neverThirsty ?? null}
+              unit=""
+              valueText={(n) => `${n} round${n === 1 ? "" : "s"} safe`}
+            />
             <Award
               icon={christmas ? "🚀" : "⚰️"}
-              title={christmas ? "First flight" : "Unluckiest"}
+              title={christmas ? CUP_UNLUCKIEST.christmas : CUP_UNLUCKIEST.other}
               award={a?.unluckiest ?? null}
               unit=""
               valueText={(round) => `${christmas ? "launched" : "poisoned"} by their first cup in round ${round}`}

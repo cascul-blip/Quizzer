@@ -15,7 +15,7 @@ import {
   GIFT_TAP_GRACE_MS,
   giftMultiplier,
 } from "../../shared/gift-rules.ts";
-import type { GiftHit, GiftPhase, GiftStanding, HostGiftState, PlayerGiftView } from "../../shared/modes/gift.ts";
+import type { GiftAwardKey, GiftHit, GiftPhase, GiftStanding, HostGiftState, PlayerGiftView } from "../../shared/modes/gift.ts";
 import { giftShared } from "../../shared/modes/gift.ts";
 import type { Quiz } from "../../shared/quiz-schema.ts";
 import type { Clock } from "./common.ts";
@@ -24,6 +24,8 @@ import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, unhandled } from "./mode-entry.ts";
 import { GameFinish, GameLengthClock, PhaseTimer } from "./phase-timer.ts";
+import type { Podium } from "./podium.ts";
+import { buildPodium } from "./podium.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
@@ -33,6 +35,8 @@ import type { AnswerTotals } from "./stream.ts";
 import { QuestionStream } from "./stream.ts";
 
 const COUNTDOWN_MS = 3_000;
+const GIFT_ORDER = [most((p: GiftPlayer) => p.score), most((p: GiftPlayer) => p.correct)];
+const GIFT_AWARD_VALUES: Record<GiftAwardKey, (p: GiftPlayer) => number> = { mostCorrect: (p) => p.correct };
 
 interface Bonus {
   start: number;
@@ -124,6 +128,7 @@ export class GiftGame {
     this.gameFinish = new GameFinish(this.phases, "podium", {
       cleanup: () => {
         for (const player of this.players.values()) player.bonus = null;
+        this.finalPodium = this.buildPodium();
       },
       onFinish: () => this.onFinish(this),
       onChange: () => this.onChange(),
@@ -280,11 +285,33 @@ export class GiftGame {
     return true;
   }
 
-  standings(): GiftStanding[] {
-    const order = [most((p: GiftPlayer) => p.score), most((p: GiftPlayer) => p.correct)];
-    return rankBy([...this.players.values()], order).map((player) => {
-      const { id, nickname, avatar, rank, score, correct, connected } = player;
-      return { id, nickname, avatar, rank, score, correct, connected, inBonus: player.bonus !== null };
+  private finalPodium: Podium<GiftPlayer, GiftPlayer, GiftAwardKey> | null = null;
+
+  /** Highest score first; correct answers split equal scores. */
+  private buildPodium(): Podium<GiftPlayer, GiftPlayer, GiftAwardKey> {
+    const players = [...this.players.values()];
+    return buildPodium({
+      entries: players,
+      order: GIFT_ORDER,
+      players,
+      entryOf: (p) => p,
+      awards: { labels: giftShared.awards, values: GIFT_AWARD_VALUES },
+    });
+  }
+
+  /** The finished game's Podium (GLOSSARY.md), worked out once in Game finish. */
+  get podium(): Podium<GiftPlayer, GiftPlayer, GiftAwardKey> {
+    if (!this.finalPodium) throw new GameError("This game has not finished");
+    return this.finalPodium;
+  }
+
+  /** Live Standings during play; the Podium's places once the game has finished. */
+  private standings(): GiftStanding[] {
+    const ranked = this.phase === "podium" ? this.podium.places.map((p) => ({ ...p, rank: p.place })) : rankBy([...this.players.values()], GIFT_ORDER);
+    return ranked.map((player) => {
+      const { id, nickname, avatar, rank, score, correct } = player;
+      const live = this.players.get(id);
+      return { id, nickname, avatar, rank, score, correct, connected: live?.connected ?? false, inBonus: !!live?.bonus };
     });
   }
 
@@ -296,14 +323,13 @@ export class GiftGame {
   hostView(): HostGiftState {
     const standings = this.standings();
     const final = this.phase === "podium";
-    const value = final ? Math.max(0, ...standings.map((player) => player.correct)) : 0;
     return {
       kind: "gift",
       phase: this.phase,
       quiz: { id: this.quizId, title: this.title, questionCount: this.quiz.questions.length },
       remainingMs: this.phases.remainingMs(),
       standings,
-      mostCorrect: value ? { value, nicknames: standings.filter((player) => player.correct === value).map((player) => player.nickname) } : null,
+      mostCorrect: final ? this.podium.awards.mostCorrect : null,
       // Gift's host view always carries a list, empty until the podium.
       errors: this.stream.errorsWhen(final) ?? [],
     };
@@ -320,7 +346,7 @@ export class GiftGame {
       score: player.score,
       correct: player.correct,
       progress: bonus ? GIFT_CORRECT_TO_PLAY : player.correct % GIFT_CORRECT_TO_PLAY,
-      rank: this.phase === "podium" ? this.standings().find((standing) => standing.id === id)!.rank : null,
+      rank: this.phase === "podium" ? this.podium.result(id)!.place : null,
       ...this.stream.fragment(player),
       bonus: bonus
         ? {
@@ -351,7 +377,7 @@ const GIFT_COLUMNS: Column<{ rank: number; p: GiftPlayer }>[] = [
 export function buildGiftResults(game: GiftGame): ResultsSheet {
   return sheet(
     GIFT_COLUMNS,
-    game.standings().map(({ id, rank }) => ({ rank, p: game.players.get(id)! })),
+    game.podium.rows.map((r) => ({ rank: r.place, p: r.player })),
   );
 }
 

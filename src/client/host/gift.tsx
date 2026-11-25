@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { GIFT_MINUTES } from "../../shared/gift-rules.ts";
 import type { GiftStanding } from "../../shared/modes/gift.ts";
+import { giftShared } from "../../shared/modes/gift.ts";
 import type { HostView } from "../../shared/protocol.ts";
 import { themedLabel, themedTrack } from "../../shared/themed-modes.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
@@ -114,7 +115,7 @@ export function GiftStage({ view, send }: { view: GiftView; send: Send }) {
                 <GiftStation key={player.id} player={player} position={scoringPositions.get(player.id)!} final={final} />
               ))}
             </ul>
-            {final && view.mostCorrect && <Award icon="✓" title="Most correct answers" award={view.mostCorrect} unit="correct" />}
+            {final && view.mostCorrect && <Award icon="✓" title={giftShared.awards.mostCorrect} award={view.mostCorrect} unit="correct" />}
           </>
         )}
         {final && (

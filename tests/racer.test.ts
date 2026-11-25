@@ -1,16 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { Lobby } from "../src/server/game/lobby.ts";
 import type { RacerPlayer } from "../src/server/game/racer.ts";
-import {
-  AUTO_REVEAL_MS,
-  AWARD_BEST_DRIVER,
-  AWARD_MOST_CORRECT,
-  buildRacerResults,
-  CONFIDENCE_MS,
-  GRACE_MS,
-  INTRO_MS,
-  RacerGame,
-} from "../src/server/game/racer.ts";
+import { AUTO_REVEAL_MS, buildRacerResults, CONFIDENCE_MS, GRACE_MS, INTRO_MS, RacerGame } from "../src/server/game/racer.ts";
 import { records } from "../src/server/game/results.ts";
 import type { Pacing } from "../src/shared/mode-views.ts";
 import type { ShuffleOptions } from "../src/shared/protocol.ts";
@@ -258,7 +249,8 @@ describe("Racer", () => {
     expect(game.lastTurn).toMatchObject({ driver: { id: driver.id, nickname: driver.nickname }, confidence: "mid", correct: 2, total: 2, gainMph: 20 });
     expect(game.hostView().players).toHaveLength(2);
     // Nobody left in the game drove that turn.
-    expect(game.awards().bestDriver).toBeNull();
+    game.end();
+    expect(game.hostView().awards!.bestDriver).toBeNull();
   });
 
   test("host skip: locks the lever in during confidence, closes the question when open", () => {
@@ -790,8 +782,8 @@ describe("Racer", () => {
       expect(pv.result).toMatchObject({ topSpeedMph: 70, crashes: 0, turns: 3 });
       expect(pv.result!.distanceMiles).toBeCloseTo(190 / 6, 9);
       expect(pv.result!.awards).toEqual([
-        ...(p.nickname === "A" ? [] : [AWARD_MOST_CORRECT]),
-        ...(drivers.slice(0, 2).includes(p.nickname) ? [AWARD_BEST_DRIVER] : []),
+        ...(p.nickname === "A" ? [] : ["Most correct answers"]),
+        ...(drivers.slice(0, 2).includes(p.nickname) ? ["Best driver"] : []),
       ]);
       expect(pv.me).toMatchObject({
         correct: p.nickname === "A" ? 2 : 3,

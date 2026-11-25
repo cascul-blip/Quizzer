@@ -1,8 +1,12 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { GiftItem, GiftPower } from "../gift-rules.ts";
-import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView } from "../mode-views.ts";
+import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward } from "../mode-views.ts";
 import type { ModeProtocol } from "../shared-mode-entry.ts";
 import { sharedModeEntry } from "../shared-mode-entry.ts";
+
+const GIFT_AWARDS = { mostCorrect: "Most correct answers" } as const;
+
+export type GiftAwardKey = keyof typeof GIFT_AWARDS;
 
 export type GiftPhase = "countdown" | "playing" | "finishing" | "podium";
 
@@ -27,7 +31,7 @@ export interface HostGiftState {
   quiz: { id: string; title: string; questionCount: number };
   remainingMs: number;
   standings: GiftStanding[];
-  mostCorrect: { value: number; nicknames: string[] } | null;
+  mostCorrect: SubAward | null;
   errors: QuestionError[];
 }
 
@@ -64,4 +68,5 @@ export const giftShared = sharedModeEntry<ModeProtocol<GiftMsg, GiftSettings, Ho
   flags: { paced: false, protect: true },
   lobbyBanner: false,
   msgTypes: ["gift.answer", "gift.tap"],
+  awards: GIFT_AWARDS,
 });

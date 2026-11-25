@@ -6,11 +6,10 @@ import { sharedModeEntry } from "../shared-mode-entry.ts";
 export type SubPhase = "countdown" | "chase" | "escaped" | "dive" | "caught" | "podium";
 export const CORRECT_PER_BOOST = 4;
 
-export interface SubAwards {
-  topBooster: SubAward | null;
-  sharpestEyes: SubAward | null;
-  mostCorrect: SubAward | null;
-}
+const SUB_AWARDS = { topBooster: "Top booster", sharpestEyes: "Sharpest eyes", mostCorrect: "Most correct answers" } as const;
+
+export type SubAwardKey = keyof typeof SUB_AWARDS;
+export type SubAwards = Record<SubAwardKey, SubAward | null>;
 
 export interface HostSubState {
   kind: "submarine";
@@ -86,4 +85,5 @@ export const submarineShared = sharedModeEntry<ModeProtocol<SubMsg, NoSettings, 
   flags: { paced: false, protect: true },
   lobbyBanner: false,
   msgTypes: ["sub.answer", "sub.boost", "sub.tap"],
+  awards: SUB_AWARDS,
 });
