@@ -61,6 +61,17 @@ function pointer(target: Element, type: string, pointerId: number, clientX: numb
   target.dispatchEvent(Object.assign(new Event(type, { bubbles: true }), { pointerId, clientX, clientY }));
 }
 
+function pinchZoom() {
+  const viewport = dom.root.querySelector(".memory-board-viewport")!;
+  act(() => {
+    pointer(viewport, "pointerdown", 91, 30, 30);
+    pointer(viewport, "pointerdown", 92, 90, 30);
+    pointer(viewport, "pointermove", 92, 120, 30);
+    pointer(viewport, "pointerup", 92, 120, 30);
+    pointer(viewport, "pointerup", 91, 30, 30);
+  });
+}
+
 function clickCard(position: number) {
   const button = card(position)!;
   button.dispatchEvent(Object.assign(new Event("click", { bubbles: true }), { detail: 1 }));
@@ -125,7 +136,7 @@ test("Memory Game replaces or clears a selection and confirms one card at a time
   expect(confirmCard().disabled).toBe(true);
   expect(send).not.toHaveBeenCalled();
 
-  act(() => dom.root.querySelector<HTMLButtonElement>('button[aria-label="Zoom in"]')?.click());
+  pinchZoom();
   act(() => card(0)?.click());
   act(() => confirmCard().click());
   expect(send.mock.calls).toEqual([[{ type: "memory.confirm", turnId: 4, step: 1, position: 0 }]]);
@@ -158,7 +169,7 @@ test("Memory Game restores the authoritative countdown on reconnect without rese
   };
   show(secondPick);
   const pan = dom.root.querySelector<HTMLDivElement>(".memory-board-pan")!;
-  act(() => dom.root.querySelector<HTMLButtonElement>('button[aria-label="Zoom in"]')?.click());
+  pinchZoom();
   const transform = pan.style.transform;
   expect(transform).toContain("scale(1.5)");
   act(() => card(3)?.click());
@@ -183,7 +194,7 @@ test.each([
   show({ ...turnView, turn: { id: 4, step: 2, board: [firstCard, ...board(6).slice(1)] } });
   act(() => card(2)?.click());
   expect(confirmCard().disabled).toBe(false);
-  act(() => dom.root.querySelector<HTMLButtonElement>('button[aria-label="Zoom in"]')?.click());
+  pinchZoom();
   expect(dom.root.querySelector<HTMLDivElement>(".memory-board-pan")?.style.transform).toContain("scale(1.5)");
 
   show({
@@ -265,14 +276,12 @@ test("Memory Game prompts spectators to watch the projector and uses the standar
   expect(send.mock.calls).toEqual([[{ type: "memory.answer", index: 3, option: 0, text: undefined }]]);
 });
 
-test("Memory Game provides zoom buttons", () => {
+test("Memory Game zooms by touch alone and tells the player to pinch to zoom", () => {
   const { show } = phone();
   show(turnView);
-  const zoomIn = dom.root.querySelector<HTMLButtonElement>('button[aria-label="Zoom in"]')!;
-  const zoomOut = dom.root.querySelector<HTMLButtonElement>('button[aria-label="Zoom out"]')!;
-  const pan = dom.root.querySelector<HTMLDivElement>(".memory-board-pan")!;
-  act(() => zoomIn.click());
-  expect(pan.style.transform).toContain("scale(1.5)");
-  act(() => zoomOut.click());
-  expect(pan.style.transform).toBe("");
+  expect(dom.root.querySelector('button[aria-label="Zoom in"]')).toBeNull();
+  expect(dom.root.querySelector('button[aria-label="Zoom out"]')).toBeNull();
+  expect(dom.root.querySelector(".memory-board-controls")?.textContent?.toLowerCase()).toContain("pinch to zoom");
+  pinchZoom();
+  expect(dom.root.querySelector<HTMLDivElement>(".memory-board-pan")!.style.transform).toContain("scale(1.5)");
 });

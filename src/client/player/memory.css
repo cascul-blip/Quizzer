@@ -16,7 +16,17 @@
 
 .memory-picks h1 {
   margin: 0;
+  overflow: hidden;
   font-size: clamp(1rem, 5vw, 1.3rem);
+  line-height: 1.3;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.memory-heading p {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.2;
 }
 
 .memory-board-fit {
@@ -64,16 +74,28 @@
 }
 
 .memory-board-controls {
-  display: flex;
+  --memory-timer-slot: 48px;
+  --memory-header-height: max(var(--memory-timer-slot), 3rem);
+  display: grid;
+  grid-template-columns: var(--memory-timer-slot) minmax(0, 1fr) var(--memory-timer-slot);
   align-items: center;
   gap: 0.5rem;
+  width: 100%;
+  height: var(--memory-header-height);
   text-align: center;
 }
 
-.memory-board-controls .btn {
-  min-width: 44px;
-  min-height: 44px;
-  padding: 0;
+.memory-timer-slot {
+  display: grid;
+  place-items: center;
+}
+
+.memory-heading {
+  min-width: 0;
+}
+
+.memory-hint-reserved {
+  visibility: hidden;
 }
 
 .memory-phone-face {
