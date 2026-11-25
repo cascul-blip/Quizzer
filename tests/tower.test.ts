@@ -308,7 +308,7 @@ describe("end of game", () => {
     expect(game.phase).toBe("podium");
     expect(finished()).toBe(1);
     expect(game.rankedTeams().map((t) => t.rank)).toEqual([1, 1]);
-    expect(game.awards()).toEqual({ mostCorrect: null, masterBuilder: null });
+    expect(game.hostView().awards).toEqual({ mostCorrect: null, masterBuilder: null });
   });
 
   test("results sheet", () => {

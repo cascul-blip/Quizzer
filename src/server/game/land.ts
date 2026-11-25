@@ -6,7 +6,7 @@ import type { LandStart } from "../../shared/land-board.ts";
 import { EMPTY, enclosedBy, landBoardSize, placementCost, startTiles } from "../../shared/land-board.ts";
 import type {
   HostLandState,
-  LandAwards,
+  LandAwardKey,
   LandBoard,
   LandCapture,
   LandPhase,
@@ -33,10 +33,13 @@ import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
 import { GameFinish, GameLengthClock, PhaseTimer } from "./phase-timer.ts";
+import type { Podium } from "./podium.ts";
+import { buildPodium, emptyPodium } from "./podium.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
 import { Roster } from "./roster.ts";
+import type { RankKey } from "./standings.ts";
 import { fewest, most, rankBy } from "./standings.ts";
 import type { AnswerTotals } from "./stream.ts";
 import { QuestionStream } from "./stream.ts";
@@ -86,6 +89,16 @@ interface LandGameSettings extends LandSettings {
   shuffleAnswers: boolean;
 }
 
+type LandTeamTotals = LandTeam & { tiles: number; correct: number };
+type LandPodium = Podium<LandTeamTotals, LandPlayer, LandAwardKey>;
+const LAND_ORDER: RankKey<LandTeamTotals>[] = [fewest((t) => Number(t.out)), most((t) => t.outOrder), most((t) => t.tiles), most((t) => t.correct)];
+const LAND_THEN: RankKey<LandTeamTotals>[] = [fewest((t) => t.index)];
+const LAND_AWARD_VALUES: Record<LandAwardKey, (p: LandPlayer) => number> = {
+  mostCorrect: (p) => p.correct,
+  topSettler: (p) => p.placed,
+  topSurrounder: (p) => p.captured,
+};
+
 /** Land Grab: teams answer at their own pace; every 3 answers, the correct ones become tiles on a shared hex board. */
 export class LandGame {
   readonly runningMode = "land" as const;
@@ -111,7 +124,7 @@ export class LandGame {
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: LandGame) => void;
-  private readonly gameFinish: GameFinish<LandGame["phase"]>;
+  private readonly gameFinish: GameFinish<LandGame["phase"], LandPodium>;
 
   constructor(quiz: Quiz, settings: LandGameSettings, opts: LandOptions = {}) {
     if (quiz.questions.length === 0) throw new GameError("This quiz has no questions");
@@ -133,6 +146,7 @@ export class LandGame {
     this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
     this.gameFinish = new GameFinish(this.phases, "podium", {
+      podium: { build: () => this.buildPodium(), empty: () => emptyPodium(landShared.awards) },
       onFinish: () => this.onFinish(this),
       onChange: () => this.onChange(),
     });
@@ -382,19 +396,37 @@ export class LandGame {
     return n;
   }
 
-  /** Teams by tiles, then correct answers; equal teams share a rank. Knocked-out teams come last, the first one out at the bottom. */
-  rankedTeams(): (LandTeam & { rank: number; tiles: number; correct: number })[] {
-    const withTotals = this.teams.map((t) => ({ ...t, tiles: this.teamTiles(t.index), correct: this.teamCorrect(t.index) }));
-    return rankBy(withTotals, [fewest((t) => Number(t.out)), most((t) => t.outOrder), most((t) => t.tiles), most((t) => t.correct)], [fewest((t) => t.index)]);
+  private teamTotals(): LandTeamTotals[] {
+    return this.teams.map((t) => ({ ...t, tiles: this.teamTiles(t.index), correct: this.teamCorrect(t.index) }));
   }
 
-  awards(): LandAwards {
-    const best = (value: (p: LandPlayer) => number) => {
-      const players = [...this.players.values()];
-      const top = Math.max(0, ...players.map(value));
-      return top > 0 ? { value: top, nicknames: players.filter((p) => value(p) === top).map((p) => p.nickname) } : null;
-    };
-    return { mostCorrect: best((p) => p.correct), topSettler: best((p) => p.placed), topSurrounder: best((p) => p.captured) };
+  /** Teams during play: by tiles, then correct answers; equal teams share a rank. Knocked-out teams come last, the first one out at the bottom. */
+  rankedTeams(): (LandTeamTotals & { rank: number })[] {
+    return rankBy(this.teamTotals(), LAND_ORDER, LAND_THEN);
+  }
+
+  /** Teams ranked as in play; a conquered player finishes with the team they started on; players listed by tiles placed, then correct answers. */
+  private buildPodium(): LandPodium {
+    const entries = this.teamTotals();
+    const players = [...this.players.values()].sort((a, b) => b.placed - a.placed || b.correct - a.correct);
+    return buildPodium({
+      entries,
+      order: LAND_ORDER,
+      then: LAND_THEN,
+      players,
+      entryOf: (p) => entries[p.firstTeam]!,
+      awards: { labels: landShared.awards, values: LAND_AWARD_VALUES },
+    });
+  }
+
+  /** The finished game's Podium (GLOSSARY.md), worked out once in Game finish. */
+  get podium(): LandPodium {
+    return this.gameFinish.podium;
+  }
+
+  /** A team's totals and place on the Podium. */
+  podiumTeam(index: number): (LandTeamTotals & { place: number }) | undefined {
+    return this.podium.places.find((t) => t.index === index);
   }
 
   private boardView(): LandBoard {
@@ -402,7 +434,8 @@ export class LandGame {
   }
 
   hostView(): HostLandState {
-    const ranked = new Map(this.rankedTeams().map((t) => [t.index, t]));
+    const podium = this.phase === "podium";
+    const ranked = new Map(podium ? this.podium.places.map((t) => [t.index, { ...t, rank: t.place }]) : this.rankedTeams().map((t) => [t.index, t]));
     const players = [...this.players.values()];
     const playing = this.phase === "playing";
     return {
@@ -425,14 +458,14 @@ export class LandGame {
           conqueredBy: t.conqueredBy,
           // At the podium players stand with the team they started on, so a conquered team keeps its players and its place.
           members: players
-            .filter((p) => (this.phase === "podium" ? p.firstTeam : p.team) === t.index)
+            .filter((p) => (podium ? p.firstTeam : p.team) === t.index)
             .map((p) => ({ id: p.id, nickname: p.nickname, avatar: p.avatar, connected: p.connected, claiming: playing && p.state === "claim" })),
         };
       }),
       lastPlace: this.lastPlace,
       lastCapture: this.lastCapture,
       playerCount: players.length,
-      awards: this.phase === "podium" ? this.awards() : null,
+      awards: podium ? this.podium.awards : null,
       errors: this.stream.errorsWhen(this.phase === "podium"),
     };
   }
@@ -446,19 +479,9 @@ export class LandGame {
     let result: PlayerLandView["result"] = null;
     if (this.phase === "podium") {
       // A conquered player's result is the place of the team they started on, as on the podium and the results sheet.
-      const mine = this.rankedTeams().find((t) => t.index === p.firstTeam)!;
-      const a = this.awards();
-      result = {
-        teamRank: mine.rank,
-        teamCount: this.teams.length,
-        tiles: mine.tiles,
-        won: mine.rank === 1,
-        awards: [
-          ...(a.mostCorrect?.nicknames.includes(p.nickname) ? ["Most correct answers"] : []),
-          ...(a.topSettler?.nicknames.includes(p.nickname) ? ["Top settler"] : []),
-          ...(a.topSurrounder?.nicknames.includes(p.nickname) ? ["Master surrounder"] : []),
-        ],
-      };
+      const mine = this.podium.result(p.id);
+      const team = this.podiumTeam(p.firstTeam);
+      if (mine && team) result = { teamRank: mine.place, teamCount: this.teams.length, tiles: team.tiles, won: mine.place === 1, awards: mine.awards };
     }
     return {
       kind: "land",
@@ -483,12 +506,12 @@ export class LandGame {
 }
 
 /** Land Grab: one row per player, grouped by the team they started on, in final team order. */
-type LandResultRow = { team: ReturnType<LandGame["rankedTeams"]>[number]; p: LandPlayer };
+type LandResultRow = { team: LandTeamTotals & { place: number }; p: LandPlayer };
 
 function landColumns(game: LandGame): Column<LandResultRow>[] {
   return [
     { header: "Team", value: (r) => r.team.name },
-    { header: "Team rank", value: (r) => r.team.rank },
+    { header: "Team rank", value: (r) => r.team.place },
     { header: "Team tiles", value: (r) => r.team.tiles },
     { header: "Knocked out by", value: (r) => (r.team.conqueredBy === null ? "" : game.teams[r.team.conqueredBy]!.name) },
     { header: "Nickname", value: (r) => r.p.nickname },
@@ -502,13 +525,13 @@ function landColumns(game: LandGame): Column<LandResultRow>[] {
 }
 
 export function buildLandResults(game: LandGame): ResultsSheet {
-  const rows = game.rankedTeams().flatMap((team) =>
-    [...game.players.values()]
-      .filter((p) => p.firstTeam === team.index)
-      .sort((a, b) => b.placed - a.placed || b.correct - a.correct)
-      .map((p) => ({ team, p })),
+  return sheet(
+    landColumns(game),
+    game.podium.rows.flatMap((r) => {
+      const team = game.podiumTeam(r.player.firstTeam);
+      return team ? [{ team, p: r.player }] : [];
+    }),
   );
-  return sheet(landColumns(game), rows);
 }
 
 export const landMode: ModeEntry<"land"> = {

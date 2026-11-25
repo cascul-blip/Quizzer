@@ -2,7 +2,7 @@ import type { AvatarChoice } from "../avatars.ts";
 import type { HillHeight, ShotImpact } from "../fight-physics.ts";
 import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward, TeamInfo } from "../mode-views.ts";
 import type { ModeProtocol } from "../shared-mode-entry.ts";
-import { sharedModeEntry } from "../shared-mode-entry.ts";
+import { MOST_CORRECT_LABEL, sharedModeEntry } from "../shared-mode-entry.ts";
 import type { SeasonTheme } from "../themed-modes.ts";
 
 export type FightPhase = "countdown" | "playing" | "collapse" | "podium";
@@ -44,11 +44,10 @@ export interface FightEvent {
   team: number;
 }
 
-export interface FightAwards {
-  topGunner: SubAward | null;
-  masterBuilder: SubAward | null;
-  mostCorrect: SubAward | null;
-}
+const FIGHT_AWARDS = { topGunner: "Top gunner", masterBuilder: "Master builder", mostCorrect: MOST_CORRECT_LABEL } as const;
+
+export type FightAwardKey = keyof typeof FIGHT_AWARDS;
+export type FightAwards = Record<FightAwardKey, SubAward | null>;
 
 export interface FightOutcome {
   /** Winning team, or null for a draw. */
@@ -122,4 +121,5 @@ export const fightShared = sharedModeEntry<ModeProtocol<FightMsg, FightSettings,
   flags: { paced: false, protect: true },
   lobbyBanner: false,
   msgTypes: ["fight.answer", "fight.choose", "fight.fire"],
+  awards: FIGHT_AWARDS,
 });

@@ -3,7 +3,7 @@ import { answerOf } from "../../shared/answer-match.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { randomAvatar } from "../../shared/avatars.ts";
 import type { Pacing, QuestionError, QuestionView } from "../../shared/mode-views.ts";
-import type { HostRacerState, PlayerRacerView, RacerAwards, RacerDriver, RacerPhase, RacerResult, RacerTurn } from "../../shared/modes/racer.ts";
+import type { HostRacerState, PlayerRacerView, RacerAwardKey, RacerDriver, RacerPhase, RacerResult, RacerTurn } from "../../shared/modes/racer.ts";
 import { racerShared } from "../../shared/modes/racer.ts";
 import type { ShuffleOptions } from "../../shared/protocol.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
@@ -18,10 +18,13 @@ import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
 import { INTRO_MS, PacedRound } from "./paced-round.ts";
 import { GameFinish } from "./phase-timer.ts";
+import type { Podium } from "./podium.ts";
+import { buildPodium, emptyPodium } from "./podium.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
 import { Roster } from "./roster.ts";
+import { most } from "./standings.ts";
 
 export { AUTO_REVEAL_MS, GRACE_MS } from "./common.ts";
 
@@ -30,8 +33,7 @@ export { INTRO_MS };
 /** The driver has this long to set the lever; then it is locked where it is. */
 export const CONFIDENCE_MS = 20_000;
 
-export const AWARD_MOST_CORRECT = "Most correct answers";
-export const AWARD_BEST_DRIVER = "Best driver";
+const RACER_AWARD_VALUES: Record<RacerAwardKey, (p: RacerPlayer) => number> = { mostCorrect: (p) => p.correct, mostMphGained: (p) => p.mphGained };
 
 export interface RacerAnswer {
   /** Chosen option index; -1 for a typed answer. */
@@ -102,7 +104,7 @@ export class RacerGame {
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: RacerGame) => void;
-  private readonly gameFinish: GameFinish<RacerGame["phase"]>;
+  private readonly gameFinish: GameFinish<RacerGame["phase"], Podium<RacerPlayer, RacerPlayer, RacerAwardKey>>;
 
   constructor(quiz: Quiz, settings: RacerGameSettings, opts: RacerOptions = {}) {
     if (quiz.questions.length === 0) throw new GameError("This quiz has no questions");
@@ -131,6 +133,7 @@ export class RacerGame {
         this.lever = null;
         this.confidence = null;
       },
+      podium: { build: () => this.buildPodium(), empty: () => emptyPodium(racerShared.awards) },
       onFinish: () => this.onFinish(this),
       onChange: () => this.onChange(),
     });
@@ -365,13 +368,22 @@ export class RacerGame {
     return { distanceMiles: this.car.distanceMiles, topSpeedMph: this.car.topSpeedMph, crashes: this.car.crashes, turns: this.turns };
   }
 
-  awards(): RacerAwards {
-    const best = (value: (p: RacerPlayer) => number) => {
-      const players = [...this.players.values()];
-      const top = Math.max(0, ...players.map(value));
-      return top > 0 ? { value: top, nicknames: players.filter((p) => value(p) === top).map((p) => p.nickname) } : null;
-    };
-    return { mostCorrect: best((p) => p.correct), bestDriver: best((p) => p.mphGained) };
+  /** The class shares one result, so every player shares one place; the results sheet lists the most correct first, then the best driver. */
+  private buildPodium(): Podium<RacerPlayer, RacerPlayer, RacerAwardKey> {
+    const players = [...this.players.values()];
+    return buildPodium({
+      entries: players,
+      order: [],
+      then: [most((p) => p.correct), most((p) => p.mphGained)],
+      players,
+      entryOf: (p) => p,
+      awards: { labels: racerShared.awards, values: RACER_AWARD_VALUES },
+    });
+  }
+
+  /** The finished game's Podium (GLOSSARY.md), worked out once in Game finish. */
+  get podium(): Podium<RacerPlayer, RacerPlayer, RacerAwardKey> {
+    return this.gameFinish.podium;
   }
 
   /** The most-missed questions: wrong answers only, a question left unanswered doesn't count. */
@@ -422,7 +434,7 @@ export class RacerGame {
       phaseRemainingMs: this.paced.phases.remainingMs(),
       phaseDurationMs: this.phaseDurationMs,
       result: podium ? this.result() : null,
-      awards: podium ? this.awards() : null,
+      awards: podium ? this.podium.awards : null,
       errors: podium ? this.errors() : null,
     };
   }
@@ -434,14 +446,7 @@ export class RacerGame {
     const ans = this.paced.shownAnswer(p);
     let result: PlayerRacerView["result"] = null;
     if (this.phase === "podium") {
-      const aw = this.awards();
-      result = {
-        ...this.result(),
-        awards: [
-          ...(aw.mostCorrect?.nicknames.includes(p.nickname) ? [AWARD_MOST_CORRECT] : []),
-          ...(aw.bestDriver?.nicknames.includes(p.nickname) ? [AWARD_BEST_DRIVER] : []),
-        ],
-      };
+      result = { ...this.result(), awards: this.podium.result(p.id)?.awards ?? [] };
     }
     return {
       kind: "racer",
@@ -496,7 +501,7 @@ function racerColumns(game: RacerGame): Column<RacerPlayer>[] {
 export function buildRacerResults(game: RacerGame): ResultsSheet {
   return sheet(
     racerColumns(game),
-    [...game.players.values()].sort((a, b) => b.correct - a.correct || b.mphGained - a.mphGained),
+    game.podium.rows.map((r) => r.player),
   );
 }
 

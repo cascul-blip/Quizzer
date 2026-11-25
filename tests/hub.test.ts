@@ -923,7 +923,7 @@ describe("Game mode: Racer", () => {
     const podium = await host.hostState((v) => v.kind === "racer" && v.phase === "podium");
     expect(podium.view.kind === "racer" && podium.view).toMatchObject({
       result: { distanceMiles: 12.5, topSpeedMph: 50, crashes: 0, turns: 2 },
-      awards: { mostCorrect: { value: 1, nicknames: ["Ann", "Bob"] }, bestDriver: { value: 20, nicknames: [driverName] } },
+      awards: { mostCorrect: { value: 1, nicknames: ["Ann", "Bob"] }, mostMphGained: { value: 20, nicknames: [driverName] } },
       errors: [{ wrong: 1, text: "Q2", answers: ["right"] }],
     });
     const end = await driver.playerState((v) => v.kind === "racer" && v.phase === "podium" && !!v.result);
@@ -1018,7 +1018,7 @@ describe("Game mode: Showdown", () => {
     host.sendMsg({ type: "host.end" });
     const podium = await host.hostState((v) => v.kind === "duel" && v.phase === "podium");
     expect(podium.view.kind === "duel" && podium.view).toMatchObject({
-      awards: { longestReign: { value: 1, nicknames: ["Ann"] } },
+      awards: { mostArenaOneWins: { value: 1, nicknames: ["Ann"] } },
       errors: [{ wrong: 1, text: "Q1" }],
     });
     const end = await players[0]!.playerState((v) => v.kind === "duel" && v.phase === "podium" && !!v.result);

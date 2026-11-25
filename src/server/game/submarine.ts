@@ -3,8 +3,7 @@ import { answerOf } from "../../shared/answer-match.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { randomAvatar } from "../../shared/avatars.ts";
 import { CHRISTMAS_GLYPHS, glyphId, parseGlyph, variantsOf } from "../../shared/glyphs.ts";
-import type { SubAward } from "../../shared/mode-views.ts";
-import type { HostSubState, PlayerSubView, SubAwards, SubPhase } from "../../shared/modes/submarine.ts";
+import type { HostSubState, PlayerSubView, SubAwardKey, SubPhase } from "../../shared/modes/submarine.ts";
 import { CORRECT_PER_BOOST, submarineShared } from "../../shared/modes/submarine.ts";
 import type { Quiz } from "../../shared/quiz-schema.ts";
 import type { Clock } from "./common.ts";
@@ -13,14 +12,22 @@ import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, unhandled } from "./mode-entry.ts";
 import { GameFinish, PhaseTimer } from "./phase-timer.ts";
+import type { Podium } from "./podium.ts";
+import { buildPodium, emptyPodium } from "./podium.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
 import { Roster } from "./roster.ts";
+import { most } from "./standings.ts";
 import type { AnswerTotals } from "./stream.ts";
 import { QuestionStream } from "./stream.ts";
 
 export const COUNTDOWN_MS = 3000;
+const SUB_AWARD_VALUES: Record<SubAwardKey, (p: SubPlayer) => number> = {
+  topBooster: (p) => p.boosts,
+  sharpestEyes: (p) => p.diveHits,
+  mostCorrect: (p) => p.correct,
+};
 export const ESCAPED_MS = 3500;
 export const CAUGHT_MS = 4000;
 /** Distance to the fish, in seconds of fish travel. */
@@ -107,7 +114,7 @@ export class SubGame {
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: SubGame) => void;
-  private readonly gameFinish: GameFinish<SubGame["phase"]>;
+  private readonly gameFinish: GameFinish<SubGame["phase"], Podium<SubPlayer, SubPlayer, SubAwardKey>>;
 
   constructor(quiz: Quiz, opts: SubOptions & { shuffleAnswers?: boolean; protect?: boolean } = {}) {
     if (quiz.questions.length === 0) throw new GameError("This quiz has no questions");
@@ -125,6 +132,7 @@ export class SubGame {
     this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
     this.gameFinish = new GameFinish(this.phases, "podium", {
+      podium: { build: () => this.buildPodium(), empty: () => emptyPodium(submarineShared.awards) },
       onFinish: () => this.onFinish(this),
       onChange: () => this.onChange(),
     });
@@ -424,13 +432,22 @@ export class SubGame {
     return p;
   }
 
-  awards(): SubAwards {
+  /** The squad shares one depth, so every player shares one place; the results sheet lists the top boosters first, then the most correct. */
+  private buildPodium(): Podium<SubPlayer, SubPlayer, SubAwardKey> {
     const players = [...this.players.values()];
-    const best = (value: (p: SubPlayer) => number): SubAward | null => {
-      const top = Math.max(0, ...players.map(value));
-      return top > 0 ? { value: top, nicknames: players.filter((p) => value(p) === top).map((p) => p.nickname) } : null;
-    };
-    return { topBooster: best((p) => p.boosts), sharpestEyes: best((p) => p.diveHits), mostCorrect: best((p) => p.correct) };
+    return buildPodium({
+      entries: players,
+      order: [],
+      then: [most((p) => p.boosts), most((p) => p.correct)],
+      players,
+      entryOf: (p) => p,
+      awards: { labels: submarineShared.awards, values: SUB_AWARD_VALUES },
+    });
+  }
+
+  /** The finished game's Podium (GLOSSARY.md), worked out once in Game finish. */
+  get podium(): Podium<SubPlayer, SubPlayer, SubAwardKey> {
+    return this.gameFinish.podium;
   }
 
   hostView(): HostSubState {
@@ -462,7 +479,7 @@ export class SubGame {
           : null,
       players: [...this.players.values()].map((p) => ({ id: p.id, nickname: p.nickname, avatar: p.avatar, connected: p.connected, state: p.state })),
       playerCount: this.players.size,
-      awards: this.phase === "podium" ? this.awards() : null,
+      awards: this.phase === "podium" ? this.podium.awards : null,
       errors: this.stream.errorsWhen(this.phase === "podium"),
     };
   }
@@ -504,13 +521,7 @@ export class SubGame {
     if (!p) return null;
     let result: PlayerSubView["result"] = null;
     if (this.phase === "podium") {
-      const a = this.awards();
-      const won = (x: SubAward | null, label: string) => (x?.nicknames.includes(p.nickname) ? [label] : []);
-      result = {
-        depth: this.depth,
-        level: this.level,
-        awards: [...won(a.topBooster, "Top booster"), ...won(a.sharpestEyes, "Sharpest eyes"), ...won(a.mostCorrect, "Most correct answers")],
-      };
+      result = { depth: this.depth, level: this.level, awards: this.podium.result(p.id)?.awards ?? [] };
     }
     return {
       kind: "submarine",
@@ -546,7 +557,7 @@ function subColumns(game: SubGame): Column<SubPlayer>[] {
 export function buildSubResults(game: SubGame): ResultsSheet {
   return sheet(
     subColumns(game),
-    [...game.players.values()].sort((a, b) => b.boosts - a.boosts || b.correct - a.correct),
+    game.podium.rows.map((r) => r.player),
   );
 }
 

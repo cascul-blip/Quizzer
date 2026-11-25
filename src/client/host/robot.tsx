@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import { ROBOT_LIVES, ROBOT_SHRINK_EVERY } from "../../shared/modes/robot.ts";
+import { ROBOT_LIVES, ROBOT_SHRINK_EVERY, robotShared } from "../../shared/modes/robot.ts";
 import type { HostView } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import type { MusicCue } from "../shared/music/index.ts";
@@ -220,8 +220,8 @@ function RobotPodium({ view, send }: { view: RobotView; send: Send }) {
             ))}
           </ol>
           <div class="awards">
-            <Award icon="✅" title="Most correct answers" award={a?.mostCorrect ?? null} unit="correct" />
-            <Award icon="👟" title="Fancy footwork" award={a?.mostMoves ?? null} unit="moves" />
+            <Award icon="✅" title={robotShared.awards.mostCorrect} award={a?.mostCorrect ?? null} unit="correct" />
+            <Award icon="👟" title={robotShared.awards.mostMoves} award={a?.mostMoves ?? null} unit="moves" />
           </div>
         </>
       )}

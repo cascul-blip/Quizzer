@@ -63,6 +63,54 @@ describe("Game finish", () => {
     expect([timer.phase, fired, calls]).toEqual(["podium", [], ["change"]]);
   });
 
+  test("works out the podium after the clean-up, before handing the game over", () => {
+    const clock = new FakeClock();
+    const timer = new PhaseTimer<Phase>(clock, "playing");
+    const calls: string[] = [];
+    const finish = new GameFinish(timer, "podium", {
+      cleanup: () => calls.push("cleanup"),
+      podium: { build: () => (calls.push("podium"), "built"), empty: () => "empty" },
+      onFinish: () => calls.push(`finish:${finish.podium}`),
+      onChange: () => calls.push("change"),
+    });
+    expect(() => finish.podium).toThrow("This game has not finished");
+    finish.finish();
+    expect(calls).toEqual(["cleanup", "podium", "finish:built", "change"]);
+  });
+
+  test("a podium that fails to build leaves an empty podium, still hands the game over, and reaches the caller", () => {
+    const clock = new FakeClock();
+    const timer = new PhaseTimer<Phase>(clock, "playing");
+    const calls: string[] = [];
+    const finish = new GameFinish(timer, "podium", {
+      podium: {
+        build: (): string => {
+          throw new Error("podium");
+        },
+        empty: () => "empty",
+      },
+      onFinish: () => calls.push(`finish:${finish.podium}`),
+      onChange: () => calls.push("change"),
+    });
+    expect(() => finish.finish()).toThrow("podium");
+    expect([timer.phase, finish.podium, calls]).toEqual(["podium", "empty", ["finish:empty", "change"]]);
+  });
+
+  test("a clean-up that throws still works out the podium", () => {
+    const clock = new FakeClock();
+    const timer = new PhaseTimer<Phase>(clock, "playing");
+    const finish = new GameFinish(timer, "podium", {
+      cleanup: () => {
+        throw new Error("cleanup");
+      },
+      podium: { build: () => "built", empty: () => "empty" },
+      onFinish: () => {},
+      onChange: () => {},
+    });
+    expect(() => finish.finish()).toThrow("cleanup");
+    expect(finish.podium).toBe("built");
+  });
+
   test("an onFinish that throws still broadcasts and reaches the caller", () => {
     const { finish, calls, timer } = setup(() => {
       throw new Error("boom");

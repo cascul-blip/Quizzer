@@ -256,7 +256,7 @@ describe("Cup of Death", () => {
       expect(b.poisonedFrom).toBe(1);
       expect(game.phase).toBe("podium");
       // B survived their first cup, or (with one cup) there was no luck in it: no "Unluckiest".
-      expect(game.awards().unluckiest).toBeNull();
+      expect(game.hostView().awards!.earliestFirstCupOut).toBeNull();
     });
   }
 
@@ -318,7 +318,7 @@ describe("Cup of Death", () => {
     clock.advance(CUP_SIP_MS + CUP_VERDICT_MS);
     expect(game.phase).toBe("podium");
     expect(finished()).toBe(1);
-    const s = game.standings();
+    const s = game.hostView().standings!;
     expect(s.map((x) => [x.nickname, x.rank])).toEqual([
       ["A", 1],
       ["B", 2],
@@ -349,7 +349,7 @@ describe("Cup of Death", () => {
     game.pick(game.drinkers[1]!, 0);
     clock.advance(game.phaseEndsAt - clock.now());
     expect(game.phase).toBe("podium");
-    const s = game.standings();
+    const s = game.hostView().standings!;
     expect(
       s
         .filter((x) => x.rank === 1)
@@ -379,7 +379,7 @@ describe("Cup of Death", () => {
     game.pick(p.id, 0);
     clock.advance(CUP_SIP_MS + CUP_VERDICT_MS);
     expect(game.phase).toBe("podium");
-    expect(game.standings()[0]).toMatchObject({ rank: 1, outRound: 2 });
+    expect(game.hostView().standings![0]).toMatchObject({ rank: 1, outRound: 2 });
   });
 
   test("the drink phase doesn't wait for disconnected players", () => {
@@ -408,27 +408,31 @@ describe("Cup of Death", () => {
     expect(byName(game, "C").outRound).toBe(1);
   });
 
-  test("awards", () => {
-    const { rng, values } = scripted([]);
-    const { game, clock } = setup(["A", "B", "C"], rng);
-    const [a, c] = ["A", "C"].map((n) => byName(game, n)) as [CupPlayer, CupPlayer];
-    toQuiz(game, clock);
-    makeSafe(game, clock, a);
-    endQuiz(game, clock);
-    // B survives, C is poisoned by the first cup they drink.
-    for (const id of game.drinkers) {
-      values.push(id === c.id ? 0 : 0.999);
-      game.pick(id, 0);
-    }
-    clock.advance(game.phaseEndsAt - clock.now());
-    game.end();
-    const aw = game.awards();
-    expect(aw.mostCorrect!.nicknames).toEqual(["A"]);
-    expect(aw.luckiest).toEqual({ value: 1, nicknames: ["B"] });
-    expect(aw.neverThirsty).toEqual({ value: 1, nicknames: ["A"] });
-    expect(aw.unluckiest).toEqual({ value: 1, nicknames: ["C"] });
-    expect(game.playerView(c.id)!.result!.awards).toEqual(["Unluckiest"]);
-  });
+  for (const [theme, unluckiest] of [
+    ["classic", "Unluckiest"],
+    ["christmas", "First flight"],
+  ] as const)
+    test(`awards (${theme})`, () => {
+      const { rng, values } = scripted([]);
+      const { game, clock } = setup(["A", "B", "C"], rng, CUP_DEFAULT_CUPS, theme);
+      const [a, c] = ["A", "C"].map((n) => byName(game, n)) as [CupPlayer, CupPlayer];
+      toQuiz(game, clock);
+      makeSafe(game, clock, a);
+      endQuiz(game, clock);
+      // B survives, C is poisoned by the first cup they drink.
+      for (const id of game.drinkers) {
+        values.push(id === c.id ? 0 : 0.999);
+        game.pick(id, 0);
+      }
+      clock.advance(game.phaseEndsAt - clock.now());
+      game.end();
+      const aw = game.hostView().awards!;
+      expect(aw.mostCorrect!.nicknames).toEqual(["A"]);
+      expect(aw.mostDrinksSurvived).toEqual({ value: 1, nicknames: ["B"] });
+      expect(aw.mostSafeRounds).toEqual({ value: 1, nicknames: ["A"] });
+      expect(aw.earliestFirstCupOut).toEqual({ value: 1, nicknames: ["C"] });
+      expect(game.playerView(c.id)!.result!.awards).toEqual([unluckiest]);
+    });
 
   test("late joiners roll in during the quiz, and sit out a drink already under way", () => {
     const { game, clock } = setup(["A", "B"]);

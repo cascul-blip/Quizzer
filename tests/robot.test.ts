@@ -276,7 +276,7 @@ describe("Robot Attack", () => {
     for (let i = 0; i < ROBOT_LIVES; i++) round(game, clock, ["A", "B"]);
     expect(game.phase).toBe("podium");
     expect(finished()).toBe(1);
-    const s = game.standings();
+    const s = game.hostView().standings!;
     expect(s.map((x) => [x.nickname, x.rank])).toEqual([
       ["C", 1],
       ["A", 2],
@@ -294,7 +294,7 @@ describe("Robot Attack", () => {
     expect(byName(game, "C").outRound).toBe(3);
     for (let i = 0; i < ROBOT_LIVES; i++) round(game, clock, ["A", "B"]);
     expect(game.phase).toBe("podium");
-    const ranks = Object.fromEntries(game.standings().map((s) => [s.nickname, s.rank]));
+    const ranks = Object.fromEntries(game.hostView().standings!.map((s) => [s.nickname, s.rank]));
     expect(ranks).toEqual({ A: 1, B: 1, C: 3 });
   });
 
@@ -306,7 +306,7 @@ describe("Robot Attack", () => {
     round(game, clock, ["Solo"]);
     round(game, clock, ["Solo"]);
     expect(game.phase).toBe("podium");
-    expect(game.standings()[0]).toMatchObject({ nickname: "Solo", rank: 1, outRound: 4 });
+    expect(game.hostView().standings![0]).toMatchObject({ nickname: "Solo", rank: 1, outRound: 4 });
   });
 
   test("host ends early: survivors rank by lives left", () => {
@@ -315,7 +315,7 @@ describe("Robot Attack", () => {
     game.end();
     expect(game.phase).toBe("podium");
     expect(finished()).toBe(1);
-    expect(game.standings().map((s) => [s.nickname, s.rank])).toEqual([
+    expect(game.hostView().standings!.map((s) => [s.nickname, s.rank])).toEqual([
       ["B", 1],
       ["C", 1],
       ["A", 3],

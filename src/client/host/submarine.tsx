@@ -1,6 +1,7 @@
 import type { RefObject } from "preact";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { SubAward } from "../../shared/mode-views.ts";
+import { submarineShared } from "../../shared/modes/submarine.ts";
 import type { HostView } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import type { MusicCue } from "../shared/music/index.ts";
@@ -287,9 +288,9 @@ function SubPodium({ view, send }: { view: SubView; send: Send }) {
             <div class="sub-final-level">The squad reached level {view.level}</div>
           </div>
           <div class="awards">
-            <Award icon="⚡" title="Top booster" award={a?.topBooster ?? null} unit="boosts" />
-            <Award icon="👀" title="Sharpest eyes" award={a?.sharpestEyes ?? null} unit="symbols found" />
-            <Award icon="🎯" title="Most correct answers" award={a?.mostCorrect ?? null} unit="correct" />
+            <Award icon="⚡" title={submarineShared.awards.topBooster} award={a?.topBooster ?? null} unit="boosts" />
+            <Award icon="👀" title={submarineShared.awards.sharpestEyes} award={a?.sharpestEyes ?? null} unit="symbols found" />
+            <Award icon="🎯" title={submarineShared.awards.mostCorrect} award={a?.mostCorrect ?? null} unit="correct" />
           </div>
         </>
       )}

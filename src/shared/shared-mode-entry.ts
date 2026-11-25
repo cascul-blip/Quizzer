@@ -12,7 +12,12 @@ export interface SharedModeEntry<T extends string = string> {
   lobbyBanner: boolean;
   /** The type of every phone message the mode handles; the hub routes each one to the mode. */
   msgTypes: readonly T[];
+  /** Each Podium award's label by key (GLOSSARY.md: Podium), read by the server and the projector alike. */
+  awards?: Readonly<Record<string, string>>;
 }
+
+/** The label of the award most modes give for correct answers. */
+export const MOST_CORRECT_LABEL = "Most correct answers";
 
 export type NoSettings = Record<string, never>;
 

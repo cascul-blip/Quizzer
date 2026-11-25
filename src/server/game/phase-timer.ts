@@ -1,4 +1,5 @@
 import type { Clock } from "./common.ts";
+import { GameError } from "./common.ts";
 
 /** How a phase's deadline relates to the timer that ends it. */
 interface PhaseOptions {
@@ -125,9 +126,11 @@ export class PhaseTimer<P extends string> {
 }
 
 /** What a game mode does when its game ends, besides the timers and the podium. */
-interface GameFinishSteps {
+interface GameFinishSteps<T> {
   /** The mode's own clean-up, run before the timers are cancelled and the podium is entered (which happen even if it throws). */
   cleanup?: () => void;
+  /** The finished game's Podium (GLOSSARY.md), built once after the clean-up; `empty` stands in when `build` throws. */
+  podium?: { build: () => T; empty: () => T };
   /** Hands the finished game to the hub. */
   onFinish: () => void;
   /** Broadcasts the change; runs even when an earlier step throws. */
@@ -138,33 +141,56 @@ interface GameFinishSteps {
  * The one step that ends a game: the mode's clean-up, cancel every timer, enter the podium,
  * hand the game to the hub and broadcast. Runs once; later calls do nothing.
  */
-export class GameFinish<P extends string> {
+export class GameFinish<P extends string, T = never> {
   private done = false;
+  private result: { podium: T } | null = null;
 
   constructor(
     private readonly timer: PhaseTimer<P>,
-    private readonly podium: P,
-    private readonly steps: GameFinishSteps,
+    private readonly podiumPhase: P,
+    private readonly steps: GameFinishSteps<T>,
   ) {}
 
   get finished(): boolean {
     return this.done;
   }
 
+  /** The Podium worked out as the game finished. */
+  get podium(): T {
+    if (!this.result) throw new GameError("This game has not finished");
+    return this.result.podium;
+  }
+
   finish(): void {
     if (this.done) return;
     this.done = true;
+    let podiumError: unknown = null;
     try {
       try {
         this.steps.cleanup?.();
       } finally {
-        // A failed clean-up must not leave the game short of the podium: later calls do nothing.
+        // A failed clean-up or podium must not leave the game short of the podium: later calls do nothing.
+        podiumError = this.buildPodium();
         this.timer.dispose();
-        this.timer.enter(this.podium);
+        this.timer.enter(this.podiumPhase);
       }
       this.steps.onFinish();
     } finally {
       this.steps.onChange();
+    }
+    if (podiumError) throw podiumError;
+  }
+
+  /** Builds the podium, or the empty one when that throws; returns what it threw. */
+  private buildPodium(): unknown {
+    const steps = this.steps.podium;
+    if (!steps) return null;
+    try {
+      this.result = { podium: steps.build() };
+      return null;
+    } catch (e) {
+      this.result = { podium: steps.empty() };
+      return e;
     }
   }
 }
@@ -176,7 +202,7 @@ export class GameFinish<P extends string> {
 export class GameLengthClock<P extends string> {
   constructor(
     private readonly timer: PhaseTimer<P>,
-    private readonly gameFinish: GameFinish<P>,
+    private readonly gameFinish: GameFinish<P, unknown>,
   ) {}
 
   get ended(): boolean {

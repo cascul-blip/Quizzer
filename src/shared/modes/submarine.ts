@@ -1,16 +1,15 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward } from "../mode-views.ts";
 import type { ModeProtocol, NoSettings } from "../shared-mode-entry.ts";
-import { sharedModeEntry } from "../shared-mode-entry.ts";
+import { MOST_CORRECT_LABEL, sharedModeEntry } from "../shared-mode-entry.ts";
 
 export type SubPhase = "countdown" | "chase" | "escaped" | "dive" | "caught" | "podium";
 export const CORRECT_PER_BOOST = 4;
 
-export interface SubAwards {
-  topBooster: SubAward | null;
-  sharpestEyes: SubAward | null;
-  mostCorrect: SubAward | null;
-}
+const SUB_AWARDS = { topBooster: "Top booster", sharpestEyes: "Sharpest eyes", mostCorrect: MOST_CORRECT_LABEL } as const;
+
+export type SubAwardKey = keyof typeof SUB_AWARDS;
+export type SubAwards = Record<SubAwardKey, SubAward | null>;
 
 export interface HostSubState {
   kind: "submarine";
@@ -86,4 +85,5 @@ export const submarineShared = sharedModeEntry<ModeProtocol<SubMsg, NoSettings, 
   flags: { paced: false, protect: true },
   lobbyBanner: false,
   msgTypes: ["sub.answer", "sub.boost", "sub.tap"],
+  awards: SUB_AWARDS,
 });

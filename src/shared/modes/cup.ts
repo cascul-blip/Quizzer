@@ -1,8 +1,9 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward } from "../mode-views.ts";
 import type { ModeProtocol } from "../shared-mode-entry.ts";
-import { sharedModeEntry } from "../shared-mode-entry.ts";
+import { MOST_CORRECT_LABEL, sharedModeEntry } from "../shared-mode-entry.ts";
 import type { SeasonTheme } from "../themed-modes.ts";
+import { modeTheme } from "../themed-modes.ts";
 
 export type CupPhase = "countdown" | "roll" | "quiz" | "drink" | "reveal" | "podium";
 /** Cups in front of each player at the start (a lobby setting); one is drunk (and gone) each time they survive a drink. */
@@ -34,15 +35,21 @@ export function cupQuizMs(round: number): number {
   return Math.max(CUP_QUIZ_MIN_MS, CUP_QUIZ_START_MS - CUP_QUIZ_STEP_MS * (round - 1));
 }
 
-export interface CupAwards {
-  mostCorrect: SubAward | null;
-  /** Most drinks survived. */
-  luckiest: SubAward | null;
-  /** Most rounds made safe without drinking. */
-  neverThirsty: SubAward | null;
-  /** Poisoned by the first cup they ever drank (a 1-in-N chance, N = the starting cups), earliest round; value = that round. */
-  unluckiest: SubAward | null;
+const EARLIEST_FIRST_CUP_OUT = { christmas: "First flight", classic: "Unluckiest" } satisfies Record<SeasonTheme, string>;
+
+/** The Podium award labels (GLOSSARY.md) in a theme, read by the server and the projector alike. */
+export function cupAwardLabels(theme?: SeasonTheme) {
+  return {
+    mostCorrect: MOST_CORRECT_LABEL,
+    mostDrinksSurvived: "Luckiest drinker",
+    mostSafeRounds: "Never thirsty",
+    earliestFirstCupOut: EARLIEST_FIRST_CUP_OUT[modeTheme("cup", theme)],
+  };
 }
+
+export type CupAwardKey = keyof ReturnType<typeof cupAwardLabels>;
+/** Each award's winners; earliestFirstCupOut's value is the round their first cup poisoned them. */
+export type CupAwards = Record<CupAwardKey, SubAward | null>;
 
 /** One drinker in the reveal, in the order they are revealed. */
 export interface CupDrinkView {
@@ -143,4 +150,7 @@ export const cupShared = sharedModeEntry<ModeProtocol<CupMsg, CupSettings, HostC
   flags: { paced: false, protect: true },
   lobbyBanner: false,
   msgTypes: ["cup.answer", "cup.pick"],
+  get awards() {
+    return cupAwardLabels();
+  },
 });

@@ -1,7 +1,7 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward } from "../mode-views.ts";
 import type { ModeProtocol } from "../shared-mode-entry.ts";
-import { sharedModeEntry } from "../shared-mode-entry.ts";
+import { MOST_CORRECT_LABEL, sharedModeEntry } from "../shared-mode-entry.ts";
 import type { SiegeDefenderType, SiegeMonsterType, SiegeWaves } from "../siege-rules.ts";
 import type { SeasonTheme } from "../themed-modes.ts";
 import { modeTheme } from "../themed-modes.ts";
@@ -18,13 +18,12 @@ export interface SiegeSettings {
   waves: SiegeWaves;
 }
 
-export interface SiegeAwards {
-  /** Most monsters defeated by archers the player placed (ties: most archer upgrades). */
-  topArcher: SubAward | null;
-  /** Most stone walls placed plus wall upgrades. */
-  masterMason: SubAward | null;
-  mostCorrect: SubAward | null;
-}
+/**
+ * Each award's label: topArcher is most monsters defeated by archers the player placed,
+ * masterMason most stone walls placed plus wall upgrades.
+ */
+export type SiegeAwardKey = "topArcher" | "masterMason" | "mostCorrect";
+export type SiegeAwards = Record<SiegeAwardKey, SubAward | null>;
 
 /** The class's best Endless run on this quiz, saved on the host computer. */
 export interface SiegeRecord {
@@ -200,6 +199,9 @@ export const siegeShared = sharedModeEntry<ModeProtocol<SiegeMsg, SiegeSettings,
   flags: { paced: false, protect: true },
   lobbyBanner: true,
   msgTypes: ["siege.answer", "siege.place", "siege.upgrade", "siege.map"],
+  get awards() {
+    return siegeAwardLabels();
+  },
 });
 
 const DEFENDER_LABELS: Record<SeasonTheme, Record<SiegeDefenderType, string>> = {
@@ -225,4 +227,10 @@ const SIEGE_WORDS = {
 
 export function siegeWords(theme?: SeasonTheme) {
   return SIEGE_WORDS[modeTheme("siege", theme)];
+}
+
+/** The Podium award labels (GLOSSARY.md) in a theme, read by the server and the projector alike. */
+export function siegeAwardLabels(theme?: SeasonTheme): Record<SiegeAwardKey, string> {
+  const words = siegeWords(theme);
+  return { topArcher: words.topArcher, masterMason: words.masterMason, mostCorrect: MOST_CORRECT_LABEL };
 }

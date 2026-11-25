@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import { CUP_MAX_CUPS, CUP_MIN_CUPS } from "../../shared/modes/cup.ts";
+import { CUP_MAX_CUPS, CUP_MIN_CUPS, cupAwardLabels } from "../../shared/modes/cup.ts";
 import type { HostView } from "../../shared/protocol.ts";
 import type { ScreenOf, SeasonTheme } from "../../shared/themed-modes.ts";
 import { modeTheme, themedLabel, themedTrack } from "../../shared/themed-modes.ts";
@@ -234,6 +234,7 @@ function CupPodium({ view, send }: { view: CupView; send: Send }) {
   const standings = view.standings ?? [];
   const winners = standings.filter((s) => s.rank === 1);
   const a = view.awards;
+  const labels = cupAwardLabels(view.theme);
   const title =
     winners.length === 0
       ? "Game over"
@@ -265,13 +266,19 @@ function CupPodium({ view, send }: { view: CupView; send: Send }) {
             ))}
           </ol>
           <div class="awards cup-awards">
-            <Award icon="✅" title="Most correct answers" award={a?.mostCorrect ?? null} unit="correct" />
-            <Award icon="🍀" title="Luckiest drinker" award={a?.luckiest ?? null} unit="" valueText={(n) => `${n} drink${n === 1 ? "" : "s"} survived`} />
-            <Award icon="🛡" title="Never thirsty" award={a?.neverThirsty ?? null} unit="" valueText={(n) => `${n} round${n === 1 ? "" : "s"} safe`} />
+            <Award icon="✅" title={labels.mostCorrect} award={a?.mostCorrect ?? null} unit="correct" />
+            <Award
+              icon="🍀"
+              title={labels.mostDrinksSurvived}
+              award={a?.mostDrinksSurvived ?? null}
+              unit=""
+              valueText={(n) => `${n} drink${n === 1 ? "" : "s"} survived`}
+            />
+            <Award icon="🛡" title={labels.mostSafeRounds} award={a?.mostSafeRounds ?? null} unit="" valueText={(n) => `${n} round${n === 1 ? "" : "s"} safe`} />
             <Award
               icon={christmas ? "🚀" : "⚰️"}
-              title={christmas ? "First flight" : "Unluckiest"}
-              award={a?.unluckiest ?? null}
+              title={labels.earliestFirstCupOut}
+              award={a?.earliestFirstCupOut ?? null}
               unit=""
               valueText={(round) => `${christmas ? "launched" : "poisoned"} by their first cup in round ${round}`}
             />

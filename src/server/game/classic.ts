@@ -10,6 +10,8 @@ import { GameError, preparePlayOrder, realClock, topErrors } from "./common.ts";
 import type { LobbyChoices } from "./lobby-facts.ts";
 import { INTRO_MS, PacedRound } from "./paced-round.ts";
 import { GameFinish } from "./phase-timer.ts";
+import type { Podium } from "./podium.ts";
+import { buildPodium, emptyPodium } from "./podium.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
@@ -69,8 +71,8 @@ export class ClassicGame {
   private readonly onChange: () => void;
   private readonly onActivity: (playerId: string) => void;
   private readonly onFinish: (game: ClassicGame) => void;
-  private readonly gameFinish: GameFinish<ClassicGame["phase"]>;
-  private batch: { ranked?: (Player & { rank: number })[]; rankById?: Map<string, number>; podium?: RankedEntry[] } | null = null;
+  private readonly gameFinish: GameFinish<ClassicGame["phase"], Podium<Player, Player, never>>;
+  private batch: { ranked?: (Player & { rank: number })[]; rankById?: Map<string, number> } | null = null;
 
   constructor(quiz: Quiz, opts: GameOptions = {}) {
     this.quiz = quiz;
@@ -96,6 +98,7 @@ export class ClassicGame {
     this.onActivity = opts.onActivity ?? (() => this.onChange());
     this.onFinish = opts.onFinish ?? (() => {});
     this.gameFinish = new GameFinish(this.paced.phases, "podium", {
+      podium: { build: () => this.buildPodium(), empty: () => emptyPodium({}) },
       onFinish: () => this.onFinish(this),
       onChange: () => this.onChange(),
     });
@@ -280,18 +283,28 @@ export class ClassicGame {
     return Array.from({ length: optionCount }, (_, i) => picks.filter((x) => x.a.option === i).map((x) => x.p.avatar));
   }
 
+  /** Most points first; equal points share a place. Classic gives no awards. */
+  private buildPodium(): Podium<Player, Player, never> {
+    const players = [...this.players.values()];
+    return buildPodium({ entries: players, order: [most((p) => p.score)], players, entryOf: (p) => p, awards: { labels: {}, values: {} } });
+  }
+
+  /** The finished game's Podium (GLOSSARY.md), worked out once in Game finish. */
+  get podium(): Podium<Player, Player, never> {
+    return this.gameFinish.podium;
+  }
+
   leaderboard(limit = LEADERBOARD_SIZE): RankedEntry[] {
-    return this.rankedNow()
-      .slice(0, limit)
-      .map((p) => ({
-        id: p.id,
-        nickname: p.nickname,
-        avatar: p.avatar,
-        score: p.score,
-        rank: p.rank,
-        lastQuestionPoints: p.lastQuestionPoints,
-        streak: p.streak,
-      }));
+    const ranked = this.phase === "podium" ? this.podium.places.map((p) => ({ ...p, rank: p.place })) : this.rankedNow();
+    return ranked.slice(0, limit).map((p) => ({
+      id: p.id,
+      nickname: p.nickname,
+      avatar: p.avatar,
+      score: p.score,
+      rank: p.rank,
+      lastQuestionPoints: p.lastQuestionPoints,
+      streak: p.streak,
+    }));
   }
 
   /** The most-missed questions: wrong answers only, a question left unanswered doesn't count. */
@@ -344,6 +357,8 @@ export class ClassicGame {
   }
 
   private rankOf(playerId: string): number {
+    // Someone missing from the Podium shows last.
+    if (this.phase === "podium") return this.podium.result(playerId)?.place ?? this.players.size;
     if (!this.batch) return this.ranked().find((r) => r.id === playerId)!.rank;
     this.batch.rankById ??= new Map(this.rankedNow().map((r) => [r.id, r.rank]));
     return this.batch.rankById.get(playerId)!;
@@ -368,7 +383,7 @@ export class ClassicGame {
         this.revealed && q
           ? { choice: ans && ans.option >= 0 ? ans.option : null, correct: q.correct, wasCorrect: !!ans?.correct, points: ans?.points ?? 0 }
           : null,
-      podium: this.phase === "podium" ? (this.batch ? (this.batch.podium ??= this.leaderboard(5)) : this.leaderboard(5)) : null,
+      podium: this.phase === "podium" ? this.leaderboard(5) : null,
     };
   }
 }
@@ -417,5 +432,8 @@ function classicColumns(game: ClassicGame): Column<ClassicPlayer>[] {
 }
 
 export function buildClassicResults(game: ClassicGame): ResultsSheet {
-  return sheet(classicColumns(game), game.ranked());
+  return sheet(
+    classicColumns(game),
+    game.podium.rows.map((r) => ({ ...r.player, rank: r.place })),
+  );
 }

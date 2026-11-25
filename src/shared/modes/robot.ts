@@ -1,7 +1,7 @@
 import type { AvatarChoice } from "../avatars.ts";
 import type { QuestionError, StreamAnswerMsg, StreamFeedbackView, StreamQuestionView, SubAward } from "../mode-views.ts";
 import type { ModeProtocol, NoSettings } from "../shared-mode-entry.ts";
-import { sharedModeEntry } from "../shared-mode-entry.ts";
+import { MOST_CORRECT_LABEL, sharedModeEntry } from "../shared-mode-entry.ts";
 
 export type RobotPhase = "countdown" | "quiz" | "move" | "attack" | "podium";
 export type RobotDir = "up" | "down" | "left" | "right";
@@ -41,10 +41,10 @@ export function robotInBounds(x: number, y: number, inset: number): boolean {
   return x >= inset && y >= inset && x < ROBOT_BOARD - inset && y < ROBOT_BOARD - inset;
 }
 
-export interface RobotAwards {
-  mostCorrect: SubAward | null;
-  mostMoves: SubAward | null;
-}
+const ROBOT_AWARDS = { mostCorrect: MOST_CORRECT_LABEL, mostMoves: "Fancy footwork" } as const;
+
+export type RobotAwardKey = keyof typeof ROBOT_AWARDS;
+export type RobotAwards = Record<RobotAwardKey, SubAward | null>;
 
 /** The latest laser blast: who got hit and who was knocked out by it. */
 export interface RobotAttack {
@@ -123,4 +123,5 @@ export const robotShared = sharedModeEntry<ModeProtocol<RobotMsg, NoSettings, Ho
   flags: { paced: false, protect: true },
   lobbyBanner: false,
   msgTypes: ["robot.answer", "robot.move"],
+  awards: ROBOT_AWARDS,
 });
