@@ -20,7 +20,6 @@ type FightView = Extract<HostView, { kind: "fight" }>;
 const STATE_ICON = { question: "", decide: "🤔", aim: "🎯", watch: "🚀", repair: "🔨" } as const;
 const HILL_NAME = { low: "Low hill", medium: "Medium hill", high: "High hill" } as const;
 
-/** Projector screen for Tower Fight: countdown → live battlefield → collapse → podium. */
 export function FightStage(props: { view: FightView; send: Send }) {
   return (
     <FightThemeProvider theme={props.view.theme}>
@@ -58,7 +57,6 @@ function FightStageContent({ view, send }: { view: FightView; send: Send }) {
 
   const onLand = (s: FightShot) => play(s.impact.kind === "tower" ? "roar" : s.impact.kind === "ground" ? "thud" : "bubble");
   const destroyed = view.teams.find((t) => t.damage >= FIGHT_MAX_DAMAGE)?.index ?? null;
-  // The first player aiming on each team sits in that team's catapult.
   const loaded = view.teams.map((t) => t.members.find((m) => m.state === "aim")?.avatar ?? null);
 
   return (
