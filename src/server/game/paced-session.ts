@@ -114,6 +114,11 @@ export class PacedSession<P extends BasePlayer & PacedAnswerer<unknown>, Extra e
     else this.left();
   }
 
+  // why: a mode whose own follow-up step broadcasts marks the disconnect here, so screens update once.
+  markDisconnectedQuietly(playerId: string): boolean {
+    return this.roster.setConnected(playerId, false) !== null;
+  }
+
   left(): void {
     if (!this.paced.closeIfAllAnswered()) this.onChange();
   }

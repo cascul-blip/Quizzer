@@ -1,7 +1,6 @@
 import type { AnswerValue } from "../../shared/answer-match.ts";
 import { answerOf } from "../../shared/answer-match.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
-import { randomAvatar } from "../../shared/avatars.ts";
 import type { Pacing, QuestionError, QuestionView } from "../../shared/mode-views.ts";
 import type { HostRacerState, PlayerRacerView, RacerAwardKey, RacerDriver, RacerPhase, RacerResult, RacerTurn } from "../../shared/modes/racer.ts";
 import { racerShared } from "../../shared/modes/racer.ts";
@@ -12,18 +11,18 @@ import { applyRacerTurn, newRacerCar, RACER_CONFIDENCE_LEVELS } from "../../shar
 import type { SeasonTheme } from "../../shared/themed-modes.ts";
 import { modeTheme, THEMED_MODES } from "../../shared/themed-modes.ts";
 import type { Clock } from "./common.ts";
-import { GameError, preparePlayOrder, realClock, shuffle, topErrors } from "./common.ts";
+import { GameError, preparePlayOrder, shuffle, topErrors } from "./common.ts";
 import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
-import { INTRO_MS, PacedRound } from "./paced-round.ts";
-import { GameFinish } from "./phase-timer.ts";
+import type { PacedRound } from "./paced-round.ts";
+import { INTRO_MS } from "./paced-round.ts";
+import { PacedSession } from "./paced-session.ts";
 import type { Podium } from "./podium.ts";
 import { buildPodium, emptyPodium } from "./podium.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { accuracy, sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
-import { Roster } from "./roster.ts";
 import { most } from "./standings.ts";
 
 export { AUTO_REVEAL_MS, GRACE_MS } from "./common.ts";
@@ -82,7 +81,6 @@ export class RacerGame {
   readonly title: string;
   /** Play order, shuffled if the lobby asked for it. */
   readonly questions: Question[];
-  readonly roster = new Roster<RacerPlayer>();
   car: RacerCar = newRacerCar();
   /** This turn's driver, as they were when the turn started. */
   driver: RacerDriver | null = null;
@@ -96,47 +94,42 @@ export class RacerGame {
   /** Turns played to the end. */
   turns = 0;
 
-  private readonly clock: Clock;
-  private readonly rng: () => number;
   /** Player ids still to drive in this round of the bag. */
   private bag: string[] = [];
-  private readonly paced: PacedRound<"confidence" | "podium">;
-  private readonly onChange: () => void;
-  private readonly onActivity: (playerId: string) => void;
-  private readonly onFinish: (game: RacerGame) => void;
-  private readonly gameFinish: GameFinish<RacerGame["phase"], Podium<RacerPlayer, RacerPlayer, RacerAwardKey>>;
+  private readonly session: PacedSession<RacerPlayer, "confidence", Podium<RacerPlayer, RacerPlayer, RacerAwardKey>>;
 
   constructor(quiz: Quiz, settings: RacerGameSettings, opts: RacerOptions = {}) {
     if (quiz.questions.length === 0) throw new GameError("This quiz has no questions");
     this.theme = modeTheme("racer", settings.theme);
     this.quizId = quiz.id;
     this.title = quiz.title;
-    this.clock = opts.clock ?? realClock;
-    this.paced = new PacedRound<"confidence" | "podium">(this.clock, {
+    const onFinish = opts.onFinish;
+    this.session = new PacedSession<RacerPlayer, "confidence", Podium<RacerPlayer, RacerPlayer, RacerAwardKey>>({
+      clock: opts.clock,
+      rng: opts.rng,
       initial: "intro",
       pacing: settings.pacing ?? "manual",
       questions: () => this.questions,
-      asked: () => this.players.values(),
       opensFrom: ["confidence"],
       settle: () => this.settleQuestion(),
       advance: () => this.afterReveal(),
-      onChange: () => this.onChange(),
-    });
-    this.rng = opts.rng ?? Math.random;
-    this.questions = preparePlayOrder(quiz.questions, settings.shuffle, this.rng);
-    this.onChange = opts.onChange ?? (() => {});
-    this.onActivity = opts.onActivity ?? (() => this.onChange());
-    this.onFinish = opts.onFinish ?? (() => {});
-    this.gameFinish = new GameFinish(this.paced.phases, "podium", {
       cleanup: () => {
         this.driver = null;
         this.lever = null;
         this.confidence = null;
       },
       podium: { build: () => this.buildPodium(), empty: () => emptyPodium(racerShared.awards) },
-      onFinish: () => this.onFinish(this),
-      onChange: () => this.onChange(),
+      hub: { onChange: opts.onChange, onActivity: opts.onActivity, onFinish: onFinish && (() => onFinish(this)) },
     });
+    this.questions = preparePlayOrder(quiz.questions, settings.shuffle, this.rng);
+  }
+
+  private get paced(): PacedRound<"confidence" | "podium"> {
+    return this.session.paced;
+  }
+
+  private get rng(): () => number {
+    return this.session.rng;
   }
 
   private setup!: LobbyChoices;
@@ -150,7 +143,7 @@ export class RacerGame {
   static fromLobby(lobby: LobbyFacts<"racer">, opts: RacerOptions = {}): RacerGame {
     const game = new RacerGame(lobby.quiz, { shuffle: lobby.shuffle, pacing: lobby.pacing, theme: lobby.settings.theme }, opts);
     game.setup = lobby.choices;
-    game.roster.adoptFrom(lobby.players, (base) => game.newPlayer(base));
+    game.session.adoptPlayers(lobby.players, (base) => game.newPlayer(base));
     return game;
   }
 
@@ -176,7 +169,7 @@ export class RacerGame {
   }
 
   get players(): Map<string, RacerPlayer> {
-    return this.roster.players;
+    return this.session.players;
   }
 
   get currentQuestion(): Question | null {
@@ -188,37 +181,38 @@ export class RacerGame {
   }
 
   join(rawNickname: unknown, avatar?: AvatarChoice | null): RacerPlayer {
-    if (this.phase === "podium") throw new GameError("This game has finished");
-    const player = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), (base) => this.newPlayer(base));
+    const player = this.session.addPlayer(rawNickname, avatar, (base) => this.newPlayer(base));
     // Late joiners get their turn at the wheel in this round of the bag.
     this.bag.splice(Math.floor(this.rng() * (this.bag.length + 1)), 0, player.id);
-    this.onChange();
+    this.session.changed();
     return player;
   }
 
   byToken(token: unknown): RacerPlayer | null {
-    return this.roster.byToken(token);
+    return this.session.byToken(token);
   }
 
   setConnected(playerId: string, connected: boolean): void {
-    if (!this.roster.setConnected(playerId, connected)) return;
-    this.onChange();
-    if (!connected) this.afterPlayerLeft(playerId);
+    if (!connected && this.isChoosing(playerId)) {
+      if (this.session.markDisconnectedQuietly(playerId)) this.lockIn();
+    } else {
+      this.session.setConnected(playerId, connected);
+    }
   }
 
   kick(playerId: string): RacerPlayer | null {
-    const p = this.roster.remove(playerId);
+    const choosing = this.isChoosing(playerId);
+    const p = this.session.removePlayer(playerId);
     if (!p) return null;
     this.bag = this.bag.filter((id) => id !== playerId);
-    this.onChange();
-    this.afterPlayerLeft(playerId);
+    if (choosing) this.lockIn();
+    else this.session.left();
     return p;
   }
 
-  /** A driver who leaves while choosing is taken at their word so far; otherwise the question may be complete now. */
-  private afterPlayerLeft(playerId: string): void {
-    if (this.phase === "confidence" && this.driver?.id === playerId) this.lockIn();
-    else this.paced.closeIfAllAnswered();
+  // why: a driver who leaves while choosing is taken at their word so far, so their leaving locks the lever in.
+  private isChoosing(playerId: string): boolean {
+    return this.phase === "confidence" && this.driver?.id === playerId;
   }
 
   /**
@@ -242,7 +236,7 @@ export class RacerGame {
     if (!RACER_CONFIDENCE_LEVELS.includes(level)) return false;
     if (this.lever !== level) {
       this.lever = level;
-      this.onChange();
+      this.session.changed();
     }
     return true;
   }
@@ -258,20 +252,19 @@ export class RacerGame {
   answer(playerId: string, qIndex: number, answer: AnswerValue): boolean {
     const taken = this.paced.take(this.players.get(playerId), qIndex, answer, ({ msSinceOpen: _ms, ...a }): RacerAnswer => a);
     if (!taken) return false;
-    if (!this.paced.closeIfAllAnswered()) this.onActivity(playerId);
+    this.session.answered(playerId);
     return true;
   }
 
   start(pacing?: Pacing): void {
-    if (this.qIndex >= 0) throw new GameError("The game has already started");
-    if (this.players.size === 0) throw new GameError("Wait for at least one player to join");
-    if (pacing) this.paced.pacing = pacing;
-    this.beginTurn(0);
+    this.session.start(() => {
+      if (pacing) this.paced.pacing = pacing;
+      this.beginTurn(0);
+    });
   }
 
   setPacing(pacing: Pacing): void {
-    this.paced.setPacing(pacing);
-    this.onChange();
+    this.session.setPacing(pacing);
   }
 
   next(): void {
@@ -295,13 +288,11 @@ export class RacerGame {
 
   /** Host ends the game now. An open question is settled first; a turn that hadn't opened yet is dropped. */
   end(): void {
-    if (this.gameFinish.finished) return;
-    if (this.phase === "open") this.paced.close();
-    this.gameFinish.finish();
+    this.session.end();
   }
 
   dispose(): void {
-    this.paced.phases.dispose();
+    this.session.dispose();
   }
 
   private beginTurn(index: number): void {
@@ -313,7 +304,7 @@ export class RacerGame {
     if (driver) {
       this.lever = RACER_CONFIDENCE_LEVELS[0]!;
       this.paced.phases.set("confidence", CONFIDENCE_MS, () => this.lockIn());
-      this.onChange();
+      this.session.changed();
     } else {
       this.paced.intro(index);
     }
@@ -360,7 +351,7 @@ export class RacerGame {
 
   private afterReveal(): void {
     if (this.phase !== "reveal") return;
-    if (this.qIndex >= this.questions.length - 1) return this.gameFinish.finish();
+    if (this.qIndex >= this.questions.length - 1) return this.session.end();
     this.beginTurn(this.qIndex + 1);
   }
 
@@ -383,7 +374,7 @@ export class RacerGame {
 
   /** The finished game's Podium (GLOSSARY.md), worked out once in Game finish. */
   get podium(): Podium<RacerPlayer, RacerPlayer, RacerAwardKey> {
-    return this.gameFinish.podium;
+    return this.session.podium;
   }
 
   /** The most-missed questions: wrong answers only, a question left unanswered doesn't count. */
