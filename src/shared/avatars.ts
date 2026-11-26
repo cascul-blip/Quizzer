@@ -37,7 +37,6 @@ export const AVATARS = [
   { id: "hedgehog", name: "Hedgehog" },
   { id: "bee", name: "Bee" },
   { id: "capybara", name: "Capybara" },
-  // why: keep the Christmas set at the end; the phone sheets follow this order.
   { id: "snowman", name: "Snowman" },
   { id: "reindeer", name: "Reindeer" },
   { id: "polarbear", name: "Polar Bear" },
@@ -123,7 +122,6 @@ export interface AvatarChoice {
 
 export type AvatarSet = "classic" | "christmas";
 
-/** why: the set the lobby offers; "classic" brings the original characters back. */
 export const AVATAR_SET = "christmas" as AvatarSet;
 
 const CHRISTMAS_AVATARS = new Set<string>([
@@ -173,7 +171,6 @@ const CHRISTMAS_ACCESSORIES = new Set<string>([
 
 const inSet = (christmas: Set<string>) => (item: { id: string }) => item.id === "none" || christmas.has(item.id) === (AVATAR_SET === "christmas");
 
-/** why: "none" is always offered. */
 export const OFFERED_AVATARS = AVATARS.filter(inSet(CHRISTMAS_AVATARS));
 export const OFFERED_ACCESSORIES = ACCESSORIES.filter(inSet(CHRISTMAS_ACCESSORIES));
 
@@ -188,7 +185,6 @@ export function cleanAvatar(avatar: unknown, accessory: unknown): AvatarChoice |
   return isAvatarId(avatar) && isAccessoryId(accessory) ? { avatar, accessory } : null;
 }
 
-/** why: no accessory, so players see there's more to pick. */
 export function randomAvatar(rng: () => number = Math.random): AvatarChoice {
   return { avatar: OFFERED_AVATARS[Math.floor(rng() * OFFERED_AVATARS.length) % OFFERED_AVATARS.length]!.id, accessory: "none" };
 }

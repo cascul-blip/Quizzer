@@ -7,3 +7,5 @@ Shared protocol pieces and themed mode facts live outside the individual mode fi
 Code outside a mode's entry looks the entry up by `game.runningMode` instead of asking which mode is running, and `tests/standards.test.ts` rejects comparing a mode (or a client view's kind, mode or banner) against a literal. A game mode times its phases, its game length and its other timers on its Phase timer, not on the Clock directly, so tests control every timer through one injected Clock and no mode keeps its own copy of a phase deadline.
 
 See the [mode guide](../agents/game-modes.md) for the current wiring and checks.
+
+Tower Fight shares its deterministic shot simulation between the server and screens so that the rendered arc matches the impact the server decides. Both use terrain sampled from the same painted ground profiles. Each game gets a copy so it can carve craters without changing the profile for future games.

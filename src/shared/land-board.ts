@@ -8,7 +8,6 @@ export const START_MARGIN = 2;
 export interface LandStart {
   team: number;
   tile: number;
-  /** why: once surrounded, the start is ordinary land. */
   out: boolean;
 }
 
@@ -25,7 +24,6 @@ export function hexCenter(size: number, tile: number): { x: number; y: number } 
   return { x: SQRT3 * (col + 0.5 + (row & 1) * 0.5), y: 1.5 * row + 1 };
 }
 
-/** why: same units as hexCenter. */
 export function boardExtent(size: number): { width: number; height: number } {
   return { width: SQRT3 * (size + 0.5), height: 1.5 * size + 0.5 };
 }
@@ -57,12 +55,11 @@ export function hexDistance(size: number, a: number, b: number): number {
   return (Math.abs(dq) + Math.abs(dr) + Math.abs(dq + dr)) / 2;
 }
 
-/** why: radius in tiles, angle in degrees; starts sit evenly around the centre tile. */
-const START_RINGS: Record<number, { radius: number; angle: number }> = {
-  3: { radius: 3, angle: 0 },
-  4: { radius: 3.5, angle: 45 },
-  5: { radius: 3.5, angle: -90 },
-  6: { radius: 4, angle: 0 },
+const START_RINGS: Record<number, { radiusTiles: number; angleDeg: number }> = {
+  3: { radiusTiles: 3, angleDeg: 0 },
+  4: { radiusTiles: 3.5, angleDeg: 45 },
+  5: { radiusTiles: 3.5, angleDeg: -90 },
+  6: { radiusTiles: 4, angleDeg: 0 },
 };
 
 /** why: a hex grid can't space 4 or 5 starts evenly, so those take the nearest tiles to an even ring. */
@@ -75,8 +72,8 @@ export function startTiles(teams: number): number[] {
   const ring = START_RINGS[Math.min(6, teams)]!;
   const centre = hexCenter(size, (size / 2) * size + size / 2);
   return Array.from({ length: teams }, (_, i) => {
-    const a = ((ring.angle + (360 / teams) * i) * Math.PI) / 180;
-    return nearestTile(size, centre.x + ring.radius * SQRT3 * Math.cos(a), centre.y + ring.radius * SQRT3 * Math.sin(a));
+    const a = ((ring.angleDeg + (360 / teams) * i) * Math.PI) / 180;
+    return nearestTile(size, centre.x + ring.radiusTiles * SQRT3 * Math.cos(a), centre.y + ring.radiusTiles * SQRT3 * Math.sin(a));
   });
 }
 
@@ -94,19 +91,16 @@ function nearestTile(size: number, x: number, y: number): number {
   return best;
 }
 
-/** why: on or next to another live team's start. */
 export function isProtected(size: number, starts: LandStart[], team: number, tile: number): boolean {
   return starts.some((s) => !s.out && s.team !== team && (s.tile === tile || neighbors(size, s.tile).includes(tile)));
 }
 
-/** why: just outside the protected tiles, where the smallest surrounding ring goes. */
 const GUARD_DISTANCE = 2;
 
 export function isGuarded(size: number, starts: LandStart[], team: number, tile: number): boolean {
   return starts.some((s) => !s.out && s.team !== team && hexDistance(size, s.tile, tile) === GUARD_DISTANCE);
 }
 
-/** why: in claims; null if it can't be taken. A guarded tile costs at least `guardCost`, whoever holds it. */
 export function placementCost(
   owners: number[],
   size: number,
@@ -123,7 +117,7 @@ export function placementCost(
   return isGuarded(size, starts, team, tile) ? Math.max(cost, guardCost) : cost;
 }
 
-/** why: the board edge never counts as wall, so land against it is never enclosed. */
+/** why: Flood from the edge because only a ring of owned tiles can enclose land. */
 export function enclosedBy(owners: number[], size: number, team: number): number[] {
   const open = new Uint8Array(owners.length);
   const queue: number[] = [];
@@ -150,7 +144,7 @@ const THREAT_CAPTURE_BASE = 0.35;
 const THREAT_CAPTURE_PER_TILE = 0.05;
 const THREAT_CAPTURE_MAX = 0.75;
 
-/** why: a minimum cut (max flow) from `target` to the board edge, weighted by claim cost; stops at `limit`. */
+/** why: Minimum cut can price a ring that uses irregular stretches of land the team already owns. */
 function claimsToEnclose(
   owners: number[],
   size: number,
@@ -210,7 +204,6 @@ function claimsToEnclose(
   return Math.min(flow, limit);
 }
 
-/** why: 0 … 1; the larger of how close a team is to ringing a start and what one more tile would capture. */
 export function captureThreat(owners: number[], size: number, starts: LandStart[], stealCost: number, guardCost: number): number {
   const alive = starts.filter((s) => !s.out);
   const trial = [...owners];

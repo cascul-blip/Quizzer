@@ -1,5 +1,3 @@
-// why: Zod-free so browser bundles can import it.
-
 export type AnswerValue = number | string;
 
 export const MAX_TYPED_ANSWER = 100;
@@ -20,7 +18,6 @@ function normalize(s: string): string {
   return normalizeDecimalComma(stripThousandsSeparators(folded)).replace(STRIPPED, "").replace(/\s+/g, " ").trim();
 }
 
-/** why: leaves "bus"/"glass" alone. */
 function singular(word: string): string {
   if (word.length <= 3) return word;
   if (word.endsWith("ies")) return word.slice(0, -3) + "y";
@@ -33,13 +30,12 @@ function canonical(s: string): string {
   return normalize(s).split(" ").map(singular).join(" ");
 }
 
-/** why: ignores case, punctuation and plural endings. */
 export function matchesAnswer(typed: string, accepted: string[]): boolean {
   const t = canonical(typed);
   return t !== "" && accepted.some((a) => canonical(a) === t);
 }
 
-/** why: null when the answer is malformed for the question's type, so callers can reject it. */
+/** why: Invalid input must stay distinct from a wrong answer so the caller can reject it. */
 export function checkAnswer(q: { type: string; options: string[]; correct: number[] }, answer: AnswerValue): boolean | null {
   if (q.type === "text") return typeof answer === "string" ? matchesAnswer(answer.slice(0, MAX_TYPED_ANSWER), q.options) : null;
   if (typeof answer !== "number" || !Number.isInteger(answer) || answer < 0 || answer >= q.options.length) return null;

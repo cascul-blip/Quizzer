@@ -30,7 +30,6 @@ export interface ClassicView {
   playerCount: number;
   question: QuestionView | null;
   myChoice: number | null;
-  /** why: null unless the current question is typed and answered. */
   myText: string | null;
   result: PlayerResult | null;
   podium: RankedEntry[] | null;
@@ -43,18 +42,16 @@ export interface HostClassicState {
   pacing: Pacing;
   players: HostPlayer[];
   question: QuestionView | null;
-  /** why: revealed only once answering has closed. */
+  /** why: The projector must keep typed answers private until answering closes. */
   correct: number[] | null;
   answeredCount: number;
   answerCounts: number[] | null;
   /** why: reveal only; per option, pickers fastest first. */
   answerAvatars: AvatarChoice[][] | null;
   leaderboard: RankedEntry[];
-  /** why: podium only. */
   errors: QuestionError[] | null;
 }
 
-/** why: typed questions send `text` and ignore `option`. */
 export type ClassicMsg = { type: "setAvatar"; avatar: string; accessory: string } | { type: "answer"; qIndex: number; option: number; text?: string };
 
 export const classicShared = sharedModeEntry<ModeProtocol<ClassicMsg, NoSettings, HostClassicState, ClassicView>>()({

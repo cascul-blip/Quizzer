@@ -5,7 +5,6 @@ import { sharedModeEntry } from "../shared-mode-entry.ts";
 import type { SeasonTheme } from "../themed-modes.ts";
 import { modeTheme } from "../themed-modes.ts";
 
-/** why: options stay hidden during intro, while the duelists face off. */
 export type DuelPhase = "intro" | "open" | "reveal" | "podium";
 
 export const DUEL_ROUNDS = [10, 15, 20] as const;
@@ -24,19 +23,14 @@ export interface DuelPlayerRef {
 }
 
 export interface DuelistResult extends DuelPlayerRef {
-  /** why: null means didn't answer. */
   correct: boolean | null;
   answerDurationMs: number | null;
-  /** why: a 3-way duel's middle player and everyone in a draw get "stay". */
   outcome: "win" | "lose" | "stay";
-  /** why: this round only, see arenaPoints; 0 without a win. */
   points: number;
-  /** why: 1-based. */
   nextArena: number;
 }
 
 export interface DuelArenaResult {
-  /** why: 1-based; 1 is High Noon. */
   arena: number;
   /** why: ordered left, right, then the third in a 3-way duel. */
   duelists: DuelistResult[];
@@ -51,7 +45,6 @@ export interface DuelRound {
 
 export interface DuelArena {
   arena: number;
-  /** why: 3 in the bottom arena when the count is odd; disconnected players stay in place. */
   duelists: (DuelPlayerRef & { connected: boolean; answered: boolean })[];
 }
 
@@ -62,9 +55,7 @@ export type DuelAwards = Record<DuelAwardKey, SubAward | null>;
 
 export interface HostDuelPlayer extends DuelPlayerRef {
   connected: boolean;
-  /** why: 1-based. */
   arena: number;
-  /** why: competition rank (ties share), starting at 1. */
   rank: number;
   points: number;
   wins: number;
@@ -83,21 +74,17 @@ export interface HostDuelState {
   kind: "duel";
   phase: DuelPhase;
   quiz: { id: string; title: string; questionCount: number };
-  /** why: manual waits for host.next on the reveal; auto moves on after 5 s. */
   pacing: Pacing;
   round: number;
   rounds: number;
-  /** why: `index` is the play-order slot, `total` the round count; options empty during intro. */
+  /** why: index identifies the round in play order, so repeated quiz questions still have distinct answer slots. */
   question: QuestionView | null;
-  /** why: during reveal, as they stood when the round was played; empty at the podium. */
+  /** why: The reveal shows the arenas before their players move to their new places. */
   arenas: DuelArena[];
   answeredCount: number;
   playerCount: number;
-  /** why: reveal only. */
   correct: number[] | null;
-  /** why: null before the first reveal. */
   lastRound: DuelRound | null;
-  /** why: in standing order, rank 1 first. */
   players: HostDuelPlayer[];
   phaseRemainingMs: number;
   phaseDurationMs: number;
@@ -123,17 +110,13 @@ export interface PlayerDuelView {
   opponents: DuelPlayerRef[];
   myChoice: number | null;
   myText: string | null;
-  /** why: reveal only. */
   reveal: { choice: number | null; correct: number[]; wasCorrect: boolean; answerDurationMs: number | null } | null;
-  /** why: reveal only; the whole duel, so the phone can show the face-off. */
+  /** why: The phone needs the other duelists to show the face-off. */
   myDuel: DuelArenaResult | null;
-  /** why: podium only. */
   result: { rank: number; playerCount: number; awards: string[] } | null;
 }
 
-export type DuelMsg =
-  /** why: open phase only; one answer per player per round. */
-  PacedAnswerMsg<"duel">;
+export type DuelMsg = PacedAnswerMsg<"duel">;
 
 export const duelShared = sharedModeEntry<ModeProtocol<DuelMsg, DuelSettings, HostDuelState, PlayerDuelView>>()({
   name: "Showdown",

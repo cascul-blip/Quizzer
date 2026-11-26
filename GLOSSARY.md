@@ -121,3 +121,15 @@ _Avoid_: reveal opportunity
 **Reveal step** is one point in Showdown's projector animation for a round's reveal. The duelists face off, draw, fire, settle, then walk to their new arenas.
 
 **View batching** is building every view of one broadcast together, so work the views share (a ranking, a podium) is done once. A game mode opts in through its mode entry (Classic and Showdown do).
+
+**Arena ladder** is the order Showdown uses to pair players. Arenas are numbered from High Noon down. An odd player count makes the bottom arena a three-way duel. A win earns one point in the bottom arena and one more for each arena above it. At each boundary, the upper arena’s loser swaps with the lower arena’s winner when both exist. Exact ties leave the tied players in place. An arena draws if nobody answers correctly or if nobody wins or loses.
+
+**Confidence** is the Racer driver’s locked lever choice for a turn. It sets how many correct answers the class needs to gain or keep its speed. Each fail halves the car’s speed and a drop below the crash threshold stops the car. The class can repair a crashed car by answering at least half correctly. The car covers ten minutes’ worth of travel at the speed it has after the turn settles.
+
+**Claim** is the currency Land Grab players spend to take tiles. A grass tile costs one claim and taking a rival tile costs two. A live rival start and its neighbors are protected from placement. A tile two steps away is guarded and costs at least two claims, including when it is grass. A team captures tiles by closing a ring around them with its own land. Capturing a rival start conquers that team, moves its players to the capturing team, and ends that start’s protection.
+
+**Purse** is one Kingdom Siege player’s unspent gold. Late arrivals receive the same starting purse as other players. The projector combines players’ purses to show the class total.
+
+**Thorns** is the damage a Kingdom Siege defender deals back to a monster that hits it.
+
+**Wave budget** is the allowance Kingdom Siege spends to pick ordinary monsters for a wave. Giants arrive separately. Class size and answer accuracy affect the allowance. The board’s defense value can then boost the allowance and the monsters’ toughness.
