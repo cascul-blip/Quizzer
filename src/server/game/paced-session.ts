@@ -10,13 +10,14 @@ import { GameFinish } from "./phase-timer.ts";
 import type { BasePlayer } from "./roster.ts";
 import { Roster } from "./roster.ts";
 
-interface HubCallbacks {
+interface HubCallbacks<G> {
   onChange?: () => void;
   onActivity?: (playerId: string) => void;
-  onFinish?: () => void;
+  onFinish?: (game: G) => void;
 }
 
-interface PacedSessionOptions<P, Extra extends string, T> {
+interface PacedSessionOptions<P, Extra extends string, T, G> {
+  game: G;
   clock?: Clock;
   rng?: () => number;
   initial: PacedPhase | Extra;
@@ -30,11 +31,11 @@ interface PacedSessionOptions<P, Extra extends string, T> {
   advance: () => void;
   cleanup?: () => void;
   podium?: { build: () => T; empty: () => T };
-  hub: HubCallbacks;
+  hub: HubCallbacks<G>;
 }
 
-// why: addPlayer and removePlayer don't broadcast, so the mode finishes its own clean-up and then calls changed(), left() or answered() once.
-export class PacedSession<P extends BasePlayer & PacedAnswerer<unknown>, Extra extends string, T = never> {
+// why: addPlayer and removePlayer don't broadcast, so the mode finishes its own clean-up and then calls changed(), playerLeft() or answered() once.
+export class PacedSession<P extends BasePlayer & PacedAnswerer<unknown>, Extra extends string, T = never, G = unknown> {
   readonly paced: PacedRound<Extra | "podium">;
   readonly clock: Clock;
   readonly rng: () => number;
@@ -44,13 +45,14 @@ export class PacedSession<P extends BasePlayer & PacedAnswerer<unknown>, Extra e
   private readonly onActivity: (playerId: string) => void;
   private started = false;
 
-  constructor(opts: PacedSessionOptions<P, Extra, T>) {
+  constructor(opts: PacedSessionOptions<P, Extra, T, G>) {
     this.clock = opts.clock ?? realClock;
     this.rng = opts.rng ?? Math.random;
     const onChange = opts.hub.onChange ?? (() => {});
     this.onChange = onChange;
     this.onActivity = opts.hub.onActivity ?? (() => onChange());
     const asked = opts.asked;
+    const onFinish = opts.hub.onFinish;
     this.paced = new PacedRound<Extra | "podium">(this.clock, {
       initial: opts.initial,
       pacing: opts.pacing,
@@ -66,7 +68,7 @@ export class PacedSession<P extends BasePlayer & PacedAnswerer<unknown>, Extra e
     this.gameFinish = new GameFinish<PacedPhase | Extra | "podium", T>(this.paced.phases, "podium", {
       cleanup: opts.cleanup,
       podium: opts.podium,
-      onFinish: opts.hub.onFinish ?? (() => {}),
+      onFinish: () => onFinish?.(opts.game),
       onChange,
     });
   }
@@ -111,7 +113,7 @@ export class PacedSession<P extends BasePlayer & PacedAnswerer<unknown>, Extra e
   setConnected(playerId: string, connected: boolean): void {
     if (!this.roster.setConnected(playerId, connected)) return;
     if (connected) this.onChange();
-    else this.left();
+    else this.playerLeft();
   }
 
   // why: a mode whose own follow-up step broadcasts marks the disconnect here, so screens update once.
@@ -119,7 +121,8 @@ export class PacedSession<P extends BasePlayer & PacedAnswerer<unknown>, Extra e
     return this.roster.setConnected(playerId, false) !== null;
   }
 
-  left(): void {
+  // why: a leaver may have been the last unanswered player, so the open question closes (which broadcasts) instead of a plain broadcast.
+  playerLeft(): void {
     if (!this.paced.closeIfAllAnswered()) this.onChange();
   }
 
@@ -131,15 +134,17 @@ export class PacedSession<P extends BasePlayer & PacedAnswerer<unknown>, Extra e
     this.onChange();
   }
 
-  activity(playerId: string): void {
-    this.onActivity(playerId);
-  }
-
   start(begin: () => void): void {
+    if (this.finished) throw new GameError("This game has finished");
     if (this.started) throw new GameError("The game has already started");
     if (this.players.size === 0) throw new GameError("Wait for at least one player to join");
     this.started = true;
-    begin();
+    try {
+      begin();
+    } catch (err) {
+      this.started = false;
+      throw err;
+    }
   }
 
   setPacing(pacing: Pacing): void {

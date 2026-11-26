@@ -220,7 +220,6 @@ describe("Showdown", () => {
     expect(c.question!.options).toEqual([]);
     expect(game.playerView("nobody")).toBeNull();
     expect(answer(game, byName(game, "A"), true)).toBe(false);
-    expect(() => game.start()).toThrow("already started");
   });
 
   test("a game needs questions", () => {

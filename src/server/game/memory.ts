@@ -7,7 +7,7 @@ import type { Question } from "../../shared/quiz-schema.ts";
 import type { Clock } from "./common.ts";
 import { GameError, preparePlayOrder, shuffle } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
-import type { PacedAnswer, PacedRound } from "./paced-round.ts";
+import type { PacedAnswer } from "./paced-round.ts";
 import { PacedSession } from "./paced-session.ts";
 import type { BasePlayer } from "./roster.ts";
 import { most, rankBy } from "./standings.ts";
@@ -45,7 +45,7 @@ const MISS_MS = 2_000;
 
 export class MemoryGame {
   readonly runningMode: "memory" = "memory";
-  private readonly session: PacedSession<MemoryParticipant, "turn" | "feedback">;
+  private readonly session: PacedSession<MemoryParticipant, "turn" | "feedback", never, MemoryGame>;
   private readonly questions: Question[] = [];
   private readonly boardSize: MemoryBoardSize;
   private readonly board: (number | null)[];
@@ -60,8 +60,8 @@ export class MemoryGame {
     options: MemoryOptions = {},
   ) {
     if (lobby.quiz.questions.length === 0) throw new GameError("This quiz has no questions");
-    const onFinish = options.onFinish;
-    this.session = new PacedSession<MemoryParticipant, "turn" | "feedback">({
+    this.session = new PacedSession<MemoryParticipant, "turn" | "feedback", never, MemoryGame>({
+      game: this,
       clock: options.clock,
       rng: options.rng,
       initial: "intro",
@@ -73,29 +73,17 @@ export class MemoryGame {
         this.turn = null;
         this.feedback = null;
       },
-      hub: { onChange: options.onChange, onActivity: options.onActivity, onFinish: onFinish && (() => onFinish(this)) },
+      hub: { onChange: options.onChange, onActivity: options.onActivity, onFinish: options.onFinish },
     });
     this.boardSize = lobby.settings.boardSize;
     const pairCount = this.boardSize ** 2 / 2;
     const faces = Array.from({ length: MEMORY_FACE_COUNT }, (_, face) => face);
-    const chosenFaces = pairCount === faces.length ? faces : shuffle(faces, this.rng).slice(0, pairCount);
+    const chosenFaces = pairCount === faces.length ? faces : shuffle(faces, this.session.rng).slice(0, pairCount);
     this.board = shuffle(
       chosenFaces.flatMap((face) => [face, face]),
-      this.rng,
+      this.session.rng,
     );
     this.session.adoptPlayers(lobby.players, newPlayer);
-  }
-
-  private get paced(): PacedRound<"turn" | "feedback" | "podium"> {
-    return this.session.paced;
-  }
-
-  private get clock(): Clock {
-    return this.session.clock;
-  }
-
-  private get rng(): () => number {
-    return this.session.rng;
   }
 
   get quizId(): string {
@@ -115,16 +103,16 @@ export class MemoryGame {
   }
 
   get phase() {
-    return this.paced.phase;
+    return this.session.paced.phase;
   }
 
   get pacing(): Pacing {
-    return this.paced.pacing;
+    return this.session.paced.pacing;
   }
 
   start(pacing?: Pacing): void {
     this.session.start(() => {
-      if (pacing) this.paced.pacing = pacing;
+      if (pacing) this.session.paced.pacing = pacing;
       this.beginQuestion();
     });
   }
@@ -147,7 +135,7 @@ export class MemoryGame {
     const player = this.session.removePlayer(playerId);
     if (!player) return null;
     if (this.phase === "turn" && this.turn?.playerId === playerId) this.nextTurn();
-    else this.session.left();
+    else this.session.playerLeft();
     return player;
   }
 
@@ -156,17 +144,17 @@ export class MemoryGame {
   }
 
   next(): void {
-    this.paced.next();
+    this.session.paced.next();
   }
 
   skip(): void {
-    this.paced.skip();
+    this.session.paced.skip();
   }
 
   answer(playerId: string, index: number, value: AnswerValue): boolean {
     const player = this.players.get(playerId);
     if (!player) return false;
-    const answer = this.paced.take(player, index, value, (accepted) => accepted);
+    const answer = this.session.paced.take(player, index, value, (accepted) => accepted);
     if (!answer) return false;
     player.totalMs += answer.msSinceOpen;
     if (answer.correct) {
@@ -179,7 +167,8 @@ export class MemoryGame {
 
   confirm(playerId: string, turnId: number, step: number, position: unknown): boolean {
     const turn = this.turn;
-    if (this.phase !== "turn" || !turn || playerId !== turn.playerId || turnId !== turn.id || this.clock.now() >= this.paced.phases.endsAt) return false;
+    if (this.phase !== "turn" || !turn || playerId !== turn.playerId || turnId !== turn.id || this.session.clock.now() >= this.session.paced.phases.endsAt)
+      return false;
     const { first } = turn;
     if (step !== (first === null ? 1 : 2) || !this.eligible(position) || first === position) return false;
     if (first === null) {
@@ -194,7 +183,7 @@ export class MemoryGame {
     const matched = this.board[first] === this.board[position];
     if (matched) player.pairs++;
     this.feedback = { matched, positions: [first, position] };
-    this.paced.phases.set("feedback", matched ? MEMORY_MATCH_RESULT_MS : MISS_MS, () => this.afterFeedback());
+    this.session.paced.phases.set("feedback", matched ? MEMORY_MATCH_RESULT_MS : MISS_MS, () => this.afterFeedback());
     this.session.changed();
     return true;
   }
@@ -208,15 +197,15 @@ export class MemoryGame {
   }
 
   private beginQuestion(): void {
-    const index = this.paced.qIndex + 1;
+    const index = this.session.paced.qIndex + 1;
     if (index === this.questions.length) {
-      for (const question of preparePlayOrder(this.lobby.quiz.questions, this.lobby.shuffle, this.rng)) this.questions.push(question);
+      for (const question of preparePlayOrder(this.lobby.quiz.questions, this.lobby.shuffle, this.session.rng)) this.questions.push(question);
     }
-    this.paced.intro(index);
+    this.session.paced.intro(index);
   }
 
   private get revealTurnsNext(): boolean {
-    return this.phase === "reveal" && (this.paced.qIndex + 1) % MEMORY_QUESTIONS_PER_PHASE === 0 && [...this.players.values()].some((p) => p.chips > 0);
+    return this.phase === "reveal" && (this.session.paced.qIndex + 1) % MEMORY_QUESTIONS_PER_PHASE === 0 && [...this.players.values()].some((p) => p.chips > 0);
   }
 
   private afterQuestion(): void {
@@ -228,7 +217,7 @@ export class MemoryGame {
   }
 
   private beginRevealPhase(): void {
-    const end = this.paced.qIndex + 1;
+    const end = this.session.paced.qIndex + 1;
     const order = [...this.players.values()]
       .map((player, joinOrder): RevealCandidate => {
         const answers = player.answers.slice(end - MEMORY_QUESTIONS_PER_PHASE, end);
@@ -250,7 +239,7 @@ export class MemoryGame {
       this.nextInOrder = (this.nextInOrder + 1) % this.turnOrder.length;
       if (!player?.chips) continue;
       this.turn = { id: ++this.turnId, playerId: player.id, nickname: player.nickname, first: null };
-      this.paced.phases.set("turn", MEMORY_TURN_MS, () => {
+      this.session.paced.phases.set("turn", MEMORY_TURN_MS, () => {
         player.chips--;
         this.nextTurn();
       });
@@ -282,14 +271,14 @@ export class MemoryGame {
   }
 
   private questionView() {
-    return this.phase === "intro" || this.phase === "open" || this.phase === "reveal" ? this.paced.view() : null;
+    return this.phase === "intro" || this.phase === "open" || this.phase === "reveal" ? this.session.paced.view() : null;
   }
 
   hostView(): HostMemoryState {
     const quiz = this.lobby.quiz;
     const question = this.questionView();
     const answers = [...this.players.values()].flatMap((p) => {
-      const answer = this.paced.shownAnswer(p);
+      const answer = this.session.paced.shownAnswer(p);
       return answer ? [answer] : [];
     });
     const revealed = this.phase === "reveal";
@@ -299,7 +288,7 @@ export class MemoryGame {
       quiz: { id: quiz.id, title: quiz.title, questionCount: quiz.questions.length },
       pacing: this.pacing,
       question,
-      correct: revealed ? (this.paced.currentQuestion?.correct ?? null) : null,
+      correct: revealed ? (this.session.paced.currentQuestion?.correct ?? null) : null,
       answeredCount: answers.length,
       revealTurnsNext: this.revealTurnsNext,
       answerCounts: revealed && question ? question.options.map((_, i) => answers.filter((a) => a.option === i).length) : null,
@@ -308,7 +297,7 @@ export class MemoryGame {
       board: this.boardView(),
       turn: this.turn && { id: this.turn.id, playerId: this.turn.playerId, nickname: this.turn.nickname },
       feedback: this.feedback ? { matched: this.feedback.matched } : null,
-      phaseRemainingMs: this.paced.phases.remainingMs(),
+      phaseRemainingMs: this.session.paced.phases.remainingMs(),
     };
   }
 
@@ -323,9 +312,9 @@ export class MemoryGame {
   playerView(id: string): PlayerMemoryView | null {
     const player = this.players.get(id);
     if (!player) return null;
-    const answer = this.paced.shownAnswer(player);
+    const answer = this.session.paced.shownAnswer(player);
     const choice = answer && answer.option >= 0 ? answer.option : null;
-    const correct = this.phase === "reveal" ? this.paced.currentQuestion?.correct : null;
+    const correct = this.phase === "reveal" ? this.session.paced.currentQuestion?.correct : null;
     const turn = this.turn?.playerId === id ? this.turn : null;
     return {
       kind: "memory",
@@ -346,7 +335,7 @@ export class MemoryGame {
               : { stage: "picking", step: turn.first === null ? 1 : 2 }),
           }
         : null,
-      phaseRemainingMs: this.paced.phases.remainingMs(),
+      phaseRemainingMs: this.session.paced.phases.remainingMs(),
       result: this.phase === "podium" ? { rank: this.ranked().find((p) => p.id === id)!.rank, playerCount: this.players.size } : null,
     };
   }

@@ -24,7 +24,6 @@ import { GameError, preparePlayOrder, shuffle, topErrors } from "./common.ts";
 import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
-import type { PacedRound } from "./paced-round.ts";
 import { INTRO_MS } from "./paced-round.ts";
 import { PacedSession } from "./paced-session.ts";
 import type { Podium } from "./podium.ts";
@@ -106,15 +105,15 @@ export class DuelGame {
   private readonly source: Question[];
   /** Index into the quiz's questions for each slot. */
   private readonly slotSource: number[];
-  private readonly session: PacedSession<DuelPlayer, never, Podium<DuelPlayer, DuelPlayer, DuelAwardKey>>;
+  private readonly session: PacedSession<DuelPlayer, never, Podium<DuelPlayer, DuelPlayer, DuelAwardKey>, DuelGame>;
 
   constructor(quiz: Quiz, settings: DuelGameSettings, opts: DuelOptions = {}) {
     if (quiz.questions.length === 0) throw new GameError("This quiz has no questions");
     this.theme = modeTheme("duel", settings.theme);
     this.quizId = quiz.id;
     this.title = quiz.title;
-    const onFinish = opts.onFinish;
-    this.session = new PacedSession<DuelPlayer, never, Podium<DuelPlayer, DuelPlayer, DuelAwardKey>>({
+    this.session = new PacedSession<DuelPlayer, never, Podium<DuelPlayer, DuelPlayer, DuelAwardKey>, DuelGame>({
+      game: this,
       clock: opts.clock,
       rng: opts.rng,
       initial: "intro",
@@ -127,7 +126,7 @@ export class DuelGame {
         this.arenas = [];
       },
       podium: { build: () => this.buildPodium(), empty: () => emptyPodium(duelShared.awards) },
-      hub: { onChange: opts.onChange, onActivity: opts.onActivity, onFinish: onFinish && (() => onFinish(this)) },
+      hub: { onChange: opts.onChange, onActivity: opts.onActivity, onFinish: opts.onFinish },
     });
     const rounds = settings.rounds ?? DUEL_DEFAULT_ROUNDS;
     this.rounds = (DUEL_ROUNDS as readonly number[]).includes(rounds) ? rounds : DUEL_DEFAULT_ROUNDS;
@@ -136,24 +135,12 @@ export class DuelGame {
     this.questions = [];
     this.slotSource = [];
     while (this.questions.length < this.rounds) {
-      for (const q of preparePlayOrder(quiz.questions, settings.shuffle, this.rng)) {
+      for (const q of preparePlayOrder(quiz.questions, settings.shuffle, this.session.rng)) {
         if (this.questions.length >= this.rounds) break;
         this.questions.push(q);
         this.slotSource.push(sourceIndex.get(q.id) ?? 0);
       }
     }
-  }
-
-  private get paced(): PacedRound<"podium"> {
-    return this.session.paced;
-  }
-
-  private get clock(): Clock {
-    return this.session.clock;
-  }
-
-  private get rng(): () => number {
-    return this.session.rng;
   }
 
   private setup!: LobbyChoices;
@@ -172,29 +159,29 @@ export class DuelGame {
   }
 
   get phase(): DuelPhase {
-    return this.paced.phase;
+    return this.session.paced.phase;
   }
 
   /** Current round slot (round − 1); -1 before the start. */
   get qIndex(): number {
-    return this.paced.qIndex;
+    return this.session.paced.qIndex;
   }
 
   get pacing(): Pacing {
-    return this.paced.pacing;
+    return this.session.paced.pacing;
   }
 
   get openedAt(): number {
-    return this.paced.openedAt;
+    return this.session.paced.openedAt;
   }
 
   /** When the current phase's countdown ends; 0 when it has none. */
   get phaseEndsAt(): number {
-    return this.paced.phases.endsAt;
+    return this.session.paced.phases.endsAt;
   }
 
   get phaseDurationMs(): number {
-    return this.paced.phases.durationMs;
+    return this.session.paced.phases.durationMs;
   }
 
   get players(): Map<string, DuelPlayer> {
@@ -202,7 +189,7 @@ export class DuelGame {
   }
 
   get currentQuestion(): Question | null {
-    return this.paced.currentQuestion;
+    return this.session.paced.currentQuestion;
   }
 
   get round(): number {
@@ -256,22 +243,22 @@ export class DuelGame {
     if (!p) return null;
     this.ladder = this.ladder.filter((id) => id !== playerId);
     this.arenas = this.arenas.map((a) => a.filter((id) => id !== playerId)).filter((a) => a.length > 0);
-    this.session.left();
+    this.session.playerLeft();
     return p;
   }
 
   /** One answer per duelist per round. Returns whether it was accepted. */
   answer(playerId: string, qIndex: number, answer: AnswerValue): boolean {
     if (this.arenaIndex(playerId) < 0) return false;
-    if (!this.paced.take(this.players.get(playerId), qIndex, answer, (a) => a)) return false;
+    if (!this.session.paced.take(this.players.get(playerId), qIndex, answer, (a) => a)) return false;
     this.session.answered(playerId);
     return true;
   }
 
   start(pacing?: Pacing): void {
     this.session.start(() => {
-      if (pacing) this.paced.pacing = pacing;
-      this.ladder = shuffle([...this.players.keys()], this.rng);
+      if (pacing) this.session.paced.pacing = pacing;
+      this.ladder = shuffle([...this.players.keys()], this.session.rng);
       this.beginRound(0);
     });
   }
@@ -281,12 +268,12 @@ export class DuelGame {
   }
 
   next(): void {
-    this.paced.next();
+    this.session.paced.next();
   }
 
   /** Cut the current countdown short: straight to the options, or close the question. */
   skip(): void {
-    this.paced.skip();
+    this.session.paced.skip();
   }
 
   /** Host ends the game now. An open round is settled first; a round that hadn't opened yet is dropped. */
@@ -306,7 +293,7 @@ export class DuelGame {
         if (p && !p.startArena) p.startArena = k + 1;
       }
     });
-    this.paced.intro(index);
+    this.session.paced.intro(index);
   }
 
   private settleRound(): void {
@@ -410,7 +397,7 @@ export class DuelGame {
   }
 
   private questionView(): QuestionView | null {
-    return this.phase === "podium" ? null : this.paced.view();
+    return this.phase === "podium" ? null : this.session.paced.view();
   }
 
   /** The arena number a player is shown with: this round's while it is being played, else where the ladder puts them. */
@@ -457,7 +444,7 @@ export class DuelGame {
       round: Math.max(1, this.round),
       rounds: this.rounds,
       theme: this.theme,
-      revealElapsedMs: this.phase === "reveal" ? Math.max(0, this.clock.now() - this.paced.phases.enteredAtMs) : 0,
+      revealElapsedMs: this.phase === "reveal" ? Math.max(0, this.session.clock.now() - this.session.paced.phases.enteredAtMs) : 0,
       question: this.questionView(),
       arenas,
       answeredCount: answering ? arenas.reduce((n, a) => n + a.duelists.filter((d) => d.answered).length, 0) : 0,
@@ -465,7 +452,7 @@ export class DuelGame {
       correct: this.phase === "reveal" && q ? q.correct : null,
       lastRound: this.lastRound,
       players,
-      phaseRemainingMs: this.paced.phases.remainingMs(),
+      phaseRemainingMs: this.session.paced.phases.remainingMs(),
       phaseDurationMs: this.phaseDurationMs,
       awards: podium ? this.podium.awards : null,
       errors: podium ? this.errors() : null,
@@ -505,7 +492,7 @@ export class DuelGame {
     const k = this.arenaIndexOnReveal(p);
     const arena = k >= 0 ? k + 1 : arenaNow;
     const opponents = k >= 0 ? this.arenas[k]!.filter((id) => id !== p.id).map((id) => ref(this.players.get(id)!)) : [];
-    const ans = this.paced.shownAnswer(p);
+    const ans = this.session.paced.shownAnswer(p);
     const revealed = this.phase === "reveal" && !!q;
     let result: PlayerDuelView["result"] = null;
     if (this.phase === "podium") {
@@ -521,9 +508,9 @@ export class DuelGame {
       round: Math.max(1, this.round),
       rounds: this.rounds,
       theme: this.theme,
-      revealElapsedMs: this.phase === "reveal" ? Math.max(0, this.clock.now() - this.paced.phases.enteredAtMs) : 0,
+      revealElapsedMs: this.phase === "reveal" ? Math.max(0, this.session.clock.now() - this.session.paced.phases.enteredAtMs) : 0,
       question: this.questionView(),
-      phaseRemainingMs: this.paced.phases.remainingMs(),
+      phaseRemainingMs: this.session.paced.phases.remainingMs(),
       phaseDurationMs: this.phaseDurationMs,
       arena,
       arenaCount: this.phase === "podium" ? pairArenas(this.ladder).length : this.arenas.length,

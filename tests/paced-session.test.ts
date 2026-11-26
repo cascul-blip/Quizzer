@@ -13,6 +13,7 @@ function setup() {
   const seen: string[] = [];
   const questions = sampleQuiz().questions;
   const session: PacedSession<TestPlayer, never, string[]> = new PacedSession<TestPlayer, never, string[]>({
+    game: null,
     clock,
     rng: () => 0,
     initial: "intro",
@@ -50,6 +51,41 @@ describe("Paced session", () => {
     join("Ann");
     start();
     expect(start).toThrow("The game has already started");
+  });
+
+  test("refuses to start once finished", () => {
+    const { join, session, calls } = setup();
+    join("Ann");
+    session.end();
+    const changes = calls.change;
+    expect(() => session.start(() => session.paced.intro(0))).toThrow("This game has finished");
+    expect(session.phase).toBe("podium");
+    expect(calls.change).toBe(changes);
+  });
+
+  test("a start whose first step throws can be retried", () => {
+    const { join, session, start } = setup();
+    join("Ann");
+    expect(() =>
+      session.start(() => {
+        throw new Error("boom");
+      }),
+    ).toThrow("boom");
+    start();
+    expect(session.phase).toBe("intro");
+  });
+
+  test("a quiet disconnect marks the player without broadcasting", () => {
+    const { join, open, session, calls } = setup();
+    const ann = join("Ann");
+    join("Bob");
+    open();
+    calls.change = 0;
+    expect(session.markDisconnectedQuietly(ann.id)).toBe(true);
+    expect(ann.connected).toBe(false);
+    expect(calls.change).toBe(0);
+    expect(session.markDisconnectedQuietly(ann.id)).toBe(false);
+    expect(session.markDisconnectedQuietly("nobody")).toBe(false);
   });
 
   test("refuses to start with no players", () => {
@@ -159,7 +195,7 @@ describe("Paced session", () => {
     calls.change = 0;
     session.removePlayer(bob.id);
     expect(calls.change).toBe(0);
-    session.left();
+    session.playerLeft();
     expect(session.phase).toBe("reveal");
     expect(calls.change).toBe(1);
   });

@@ -8,7 +8,6 @@ import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import type { Clock } from "./common.ts";
 import { GameError, preparePlayOrder, topErrors } from "./common.ts";
 import type { LobbyChoices } from "./lobby-facts.ts";
-import type { PacedRound } from "./paced-round.ts";
 import { INTRO_MS } from "./paced-round.ts";
 import { PacedSession } from "./paced-session.ts";
 import type { Podium } from "./podium.ts";
@@ -64,7 +63,7 @@ export class ClassicGame {
   readonly runningMode = "classic" as const;
 
   private readonly source: Question[];
-  private readonly session: PacedSession<Player, "lobby" | "leaderboard", Podium<Player, Player, never>>;
+  private readonly session: PacedSession<Player, "lobby" | "leaderboard", Podium<Player, Player, never>, ClassicGame>;
   private batch: { ranked?: (Player & { rank: number })[]; rankById?: Map<string, number> } | null = null;
 
   constructor(quiz: Quiz, opts: GameOptions = {}) {
@@ -74,8 +73,8 @@ export class ClassicGame {
     this.source = quiz.questions;
     this.questions = preparePlayOrder(quiz.questions, { questions: false, answers: false });
     this.shuffle = opts.shuffle ?? { questions: quiz.settings.shuffleQuestions, answers: quiz.settings.shuffleAnswers };
-    const onFinish = opts.onFinish;
-    this.session = new PacedSession<Player, "lobby" | "leaderboard", Podium<Player, Player, never>>({
+    this.session = new PacedSession<Player, "lobby" | "leaderboard", Podium<Player, Player, never>, ClassicGame>({
+      game: this,
       clock: opts.clock,
       rng: opts.rng,
       initial: "lobby",
@@ -86,28 +85,20 @@ export class ClassicGame {
       settle: () => this.settleQuestion(),
       advance: () => this.afterReveal(),
       podium: { build: () => this.buildPodium(), empty: () => emptyPodium({}) },
-      hub: { onChange: opts.onChange, onActivity: opts.onActivity, onFinish: onFinish && (() => onFinish(this)) },
+      hub: { onChange: opts.onChange, onActivity: opts.onActivity, onFinish: opts.onFinish },
     });
   }
 
-  private get paced(): PacedRound<"lobby" | "leaderboard" | "podium"> {
-    return this.session.paced;
-  }
-
-  private get rng(): () => number {
-    return this.session.rng;
-  }
-
   get phase(): ClassicPhase | "lobby" {
-    return this.paced.phase;
+    return this.session.paced.phase;
   }
 
   get qIndex(): number {
-    return this.paced.qIndex;
+    return this.session.paced.qIndex;
   }
 
   get pacing(): Pacing {
-    return this.paced.pacing;
+    return this.session.paced.pacing;
   }
 
   setup!: LobbyChoices;
@@ -118,12 +109,12 @@ export class ClassicGame {
   }
 
   get openedAt(): number {
-    return this.paced.openedAt;
+    return this.session.paced.openedAt;
   }
 
   /** When the current phase's countdown ends (intro/open), for views; 0 when it has none. */
   get phaseEndsAt(): number {
-    return this.paced.phases.endsAt;
+    return this.session.paced.phases.endsAt;
   }
 
   get players(): Map<string, Player> {
@@ -131,7 +122,7 @@ export class ClassicGame {
   }
 
   get currentQuestion(): Question | null {
-    return this.paced.currentQuestion;
+    return this.session.paced.currentQuestion;
   }
 
   /** `avatar` is the player's previous pick (if any); otherwise they get a random one to change in the lobby. */
@@ -167,13 +158,16 @@ export class ClassicGame {
   kick(playerId: string): Player | null {
     const p = this.session.removePlayer(playerId);
     if (!p) return null;
-    this.session.left();
+    this.session.playerLeft();
     return p;
   }
 
   answer(playerId: string, qIndex: number, answer: AnswerValue): boolean {
     const limitSec = this.currentQuestion?.timeLimitSec ?? 0;
-    const taken = this.paced.take(this.players.get(playerId), qIndex, answer, (a) => ({ ...a, points: scoreAnswer(a.correct, a.msSinceOpen, limitSec) }));
+    const taken = this.session.paced.take(this.players.get(playerId), qIndex, answer, (a) => ({
+      ...a,
+      points: scoreAnswer(a.correct, a.msSinceOpen, limitSec),
+    }));
     if (!taken) return false;
     this.session.answered(playerId);
     return true;
@@ -182,8 +176,8 @@ export class ClassicGame {
   start(pacing?: Pacing): void {
     if (this.phase === "lobby" && this.questions.length === 0) throw new GameError("This quiz has no questions");
     this.session.start(() => {
-      if (pacing) this.paced.pacing = pacing;
-      this.questions = preparePlayOrder(this.source, this.shuffle, this.rng);
+      if (pacing) this.session.paced.pacing = pacing;
+      this.questions = preparePlayOrder(this.source, this.shuffle, this.session.rng);
       this.enterIntro(0);
     });
   }
@@ -195,7 +189,7 @@ export class ClassicGame {
   }
 
   setPacing(pacing: Pacing): void {
-    if (this.phase === "leaderboard") this.paced.phases.cancelPhase();
+    if (this.phase === "leaderboard") this.session.paced.phases.cancelPhase();
     this.session.setPacing(pacing);
     this.scheduleLeaderboardAuto();
   }
@@ -207,7 +201,7 @@ export class ClassicGame {
       case "intro":
       case "open":
       case "reveal":
-        return this.paced.next();
+        return this.session.paced.next();
       case "leaderboard":
         return this.enterIntro(this.qIndex + 1);
       case "podium":
@@ -216,7 +210,7 @@ export class ClassicGame {
   }
 
   skip(): void {
-    this.paced.skip();
+    this.session.paced.skip();
   }
 
   end(): void {
@@ -228,7 +222,7 @@ export class ClassicGame {
   }
 
   private enterIntro(index: number): void {
-    this.paced.intro(index);
+    this.session.paced.intro(index);
   }
 
   private settleQuestion(): void {
@@ -242,7 +236,7 @@ export class ClassicGame {
 
   private afterReveal(): void {
     if (this.qIndex >= this.questions.length - 1) return this.session.end();
-    this.paced.phases.enter("leaderboard");
+    this.session.paced.phases.enter("leaderboard");
     this.scheduleLeaderboardAuto();
     this.session.changed();
   }
@@ -250,7 +244,7 @@ export class ClassicGame {
   private scheduleLeaderboardAuto(): void {
     // The timer runs behind the scenes: views show no countdown for an auto-paced leaderboard.
     if (this.pacing === "auto" && this.phase === "leaderboard") {
-      this.paced.phases.set("leaderboard", AUTO_LEADERBOARD_MS, () => this.enterIntro(this.qIndex + 1), { hidden: true });
+      this.session.paced.phases.set("leaderboard", AUTO_LEADERBOARD_MS, () => this.enterIntro(this.qIndex + 1), { hidden: true });
     }
   }
 
@@ -298,11 +292,11 @@ export class ClassicGame {
   }
 
   private questionView(): QuestionView | null {
-    return this.phase === "lobby" || this.phase === "podium" ? null : this.paced.view();
+    return this.phase === "lobby" || this.phase === "podium" ? null : this.session.paced.view();
   }
 
   private get revealed(): boolean {
-    return this.paced.revealed;
+    return this.session.paced.revealed;
   }
 
   hostView(): HostClassicState {
@@ -353,7 +347,7 @@ export class ClassicGame {
     if (this.phase === "lobby") throw new GameError("The game has not started");
     if (!p) return { kind: "none", game: { title: this.title, phase: this.phase } };
     const q = this.currentQuestion;
-    const ans = this.paced.shownAnswer(p);
+    const ans = this.session.paced.shownAnswer(p);
     return {
       kind: "classic",
       phase: this.phase,
