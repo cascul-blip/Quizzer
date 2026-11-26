@@ -77,6 +77,10 @@ The preview pages in `scripts/*-preview/` and `scripts/winter-art/` import the m
 
 To remove a mode, delete it from each of these places, then run `bun run typecheck`, which lists any references left.
 
+# Projector cues
+
+For sound and voice cues scheduled with `useDelayedCues`, call the hook before the effect that schedules cues. On a phase change its cleanup must clear the previous phase's timers before the new phase queues its cues.
+
 # Testing mode timers
 
 Tests run each mode on a `FakeClock` from its test file's `setup` and move time with `clock.advance(ms)`. Some timers run only in certain states:
