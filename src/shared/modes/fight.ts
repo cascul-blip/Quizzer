@@ -48,7 +48,6 @@ export type FightAwardKey = keyof typeof FIGHT_AWARDS;
 export type FightAwards = Record<FightAwardKey, SubAward | null>;
 
 export interface FightOutcome {
-  /** why: null for a draw. */
   winner: number | null;
   reason: "destroyed" | "damage" | "correct" | "draw";
 }
@@ -69,14 +68,12 @@ export interface HostFightState {
   hill: HillHeight;
   terrain: number[];
   teams: HostFightTeam[];
-  /** why: includes shots that landed moments ago. */
+  /** why: Recently landed shots stay in the view so the projector can finish their animations. */
   shots: FightShot[];
-  /** why: newest last. */
   events: FightEvent[];
   outcome: FightOutcome | null;
   playerCount: number;
   awards: FightAwards | null;
-  /** why: podium only. */
   errors: QuestionError[] | null;
 }
 
@@ -91,11 +88,8 @@ export interface PlayerFightView {
   team: TeamInfo;
   teams: TeamInfo[];
   state: FightState;
-  /** why: ranges 0 … CORRECT_PER_DECISION - 1. */
   towardDecision: number;
-  /** why: decide state only. */
   decisionRemainingMs: number;
-  /** why: repair state only. */
   repairRemainingMs: number;
   /** why: repaired is false if teammates had already fixed the tower. */
   lastRepair: { seq: number; repaired: boolean } | null;
@@ -103,7 +97,6 @@ export interface PlayerFightView {
   feedback: StreamFeedbackView | null;
   damage: number[];
   terrain: number[];
-  /** why: set only while this player watches their shot fly. */
   shot: FightShot | null;
   result: { outcome: FightOutcome; awards: string[] } | null;
 }

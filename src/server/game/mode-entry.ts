@@ -43,7 +43,6 @@ type MsgTypeOf<M extends GameMode> = SharedOf<M>["msgTypes"][number];
 
 type MsgModeMap = { [T in MsgTypeOf<GameMode>]: { [M in GameMode]: T extends MsgTypeOf<M> ? M : never }[GameMode] };
 
-/** why: undefined for join and resume; tests/mode-entries.test.ts checks no two modes list the same type. */
 export function modeOfMsg(type: string): GameMode | undefined {
   const lists = (mode: GameMode): readonly string[] => SHARED_MODES[mode].msgTypes;
   return keysOf(SHARED_MODES).find((mode) => lists(mode).includes(type));
@@ -94,16 +93,12 @@ interface ServerModeEntry<M extends GameMode> {
   defaultSettings: ModeSettingsMap[M];
   /** why: throws GameError when the change isn't valid. */
   readSettings(raw: RawSettings, current: ModeSettingsMap[M]): ModeSettingsMap[M];
-  /** why: the game is not started yet; log is printed once it starts. */
+  /** why: the hub installs the returned game before activation so synchronous updates reach the new game. */
   start(lobby: LobbyFacts<M>, ctx: StartContext): { game: ModeGame[M]; log: string | null };
-  /** why: the pacing carries over to the next lobby. */
   pacing: PacingOf<M>;
-  /** why: null in a solo mode. */
   teams(settings: ModeSettingsMap[M]): number | null;
-  /** why: views built inside send share work once; absent, views are built one by one. */
   viewBatch?(game: ModeGame[M], send: () => void): void;
   results(game: ModeGame[M]): ResultsSheet;
-  /** why: runs after the results are saved. */
   finished?(game: ModeGame[M], ctx: FinishContext): void;
   /** why: "resend" makes the phone get its view again; throw GameError to report an error. */
   handle(game: ModeGame[M], playerId: string, msg: ModeMsg<M>): "resend" | void;

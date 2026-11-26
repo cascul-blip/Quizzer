@@ -125,3 +125,15 @@ _Avoid_: reveal opportunity
 **Pin question** is a question answered by selecting a spot on a picture. The quiz saves each spot's coordinates as fractions of the picture so spots keep their positions across screen sizes.
 
 **Confidence lever** is Racer's three-stop control for the driver's confidence in the team's next answer. The handle follows a drag continuously and selects the nearest stop as it moves.
+
+**Arena ladder** is the order Showdown uses to pair players. Arenas are numbered from High Noon down. An odd player count makes the bottom arena a three-way duel. A win earns one point in the bottom arena and one more for each arena above it. At each boundary, the upper arena’s loser swaps with the lower arena’s winner when both exist. Exact ties leave the tied players in place. An arena draws if nobody answers correctly or if nobody wins or loses.
+
+**Confidence** is the Racer driver’s locked lever choice for a turn. It sets how many correct answers the class needs to gain or keep its speed. Each fail halves the car’s speed and a drop below the crash threshold stops the car. The class can repair a crashed car by answering at least half correctly. The car covers ten minutes’ worth of travel at the speed it has after the turn settles.
+
+**Claim** is the currency Land Grab players spend to take tiles. A grass tile costs one claim and taking a rival tile costs two. A live rival start and its neighbors are protected from placement. A tile two steps away is guarded and costs at least two claims, including when it is grass. A team captures tiles by closing a ring around them with its own land. Capturing a rival start conquers that team, moves its players to the capturing team, and ends that start’s protection.
+
+**Purse** is one Kingdom Siege player’s unspent gold. Late arrivals receive the same starting purse as other players. The projector combines players’ purses to show the class total.
+
+**Thorns** is the damage a Kingdom Siege defender deals back to a monster that hits it.
+
+**Wave budget** is the allowance Kingdom Siege spends to pick ordinary monsters for a wave. Giants arrive separately. Class size and answer accuracy affect the allowance. The board’s defense value can then boost the allowance and the monsters’ toughness.

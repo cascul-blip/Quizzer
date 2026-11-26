@@ -24,6 +24,7 @@ import { GameError, preparePlayOrder, shuffle, topErrors } from "./common.ts";
 import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
+import type { PacedAnswer } from "./paced-round.ts";
 import { INTRO_MS } from "./paced-round.ts";
 import { PacedSession } from "./paced-session.ts";
 import type { Podium } from "./podium.ts";
@@ -38,27 +39,16 @@ export { AUTO_REVEAL_MS, GRACE_MS } from "./common.ts";
 
 export { INTRO_MS };
 
-export interface DuelAnswer {
-  /** why: -1 marks a typed answer. */
-  option: number;
-  text?: string;
-  correct: boolean;
-  msSinceOpen: number;
-}
+export type DuelAnswer = PacedAnswer;
 
 export interface DuelPlayer extends BasePlayer {
-  /** why: indexed by round slot (round − 1). */
   answers: (DuelAnswer | undefined)[];
-  /** why: the bottom arena is worth 1, each arena above 1 more; decides the final ranking. */
   points: number;
   wins: number;
   losses: number;
   draws: number;
-  /** why: counted when a round closes, for duelists only. */
   correct: number;
-  /** why: a round left unanswered is not counted. */
   wrong: number;
-  /** why: counts rounds won in Arena 1 only. */
   reign: number;
   startArena: number;
 }
@@ -67,7 +57,6 @@ interface DuelOptions {
   clock?: Clock;
   rng?: () => number;
   onChange?: () => void;
-  /** why: the answerer needs their own view at once; everyone else can wait a moment. */
   onActivity?: (playerId: string) => void;
   onFinish?: (game: DuelGame) => void;
 }
@@ -85,9 +74,7 @@ export class DuelGame {
   readonly title: string;
   readonly rounds: number;
   readonly theme: SeasonTheme;
-  /** why: the quiz's play order, repeated in fresh cycles, one per round slot. */
   readonly questions: Question[];
-  /** why: top of the ladder first. */
   ladder: string[] = [];
   /** why: fixed when the round starts; kicked players are taken out. */
   arenas: string[][] = [];
@@ -142,12 +129,10 @@ export class DuelGame {
 
   private setup!: LobbyChoices;
 
-  /** why: keeps the pacing as the host left it; the next lobby opens with them. */
   get choices(): LobbyChoices {
     return { ...this.setup, pacing: this.pacing };
   }
 
-  /** why: keeps the lobby's ids and tokens, rounds, shuffle choices and pacing. */
   static fromLobby(lobby: LobbyFacts<"duel">, opts: DuelOptions = {}): DuelGame {
     const game = new DuelGame(lobby.quiz, { shuffle: lobby.shuffle, rounds: lobby.settings.rounds, theme: lobby.settings.theme, pacing: lobby.pacing }, opts);
     game.setup = lobby.choices;
@@ -159,7 +144,6 @@ export class DuelGame {
     return this.session.paced.phase;
   }
 
-  /** why: round slot is round − 1; -1 before the start. */
   get qIndex(): number {
     return this.session.paced.qIndex;
   }
@@ -172,7 +156,6 @@ export class DuelGame {
     return this.session.paced.openedAt;
   }
 
-  /** why: 0 when the phase has no countdown. */
   get phaseEndsAt(): number {
     return this.session.paced.phases.endsAt;
   }
@@ -197,12 +180,10 @@ export class DuelGame {
     return { ...base, answers: [], points: 0, wins: 0, losses: 0, draws: 0, correct: 0, wrong: 0, reign: 0, startArena: 0 };
   }
 
-  /** why: -1 when the player is not duelling this round. */
   private arenaIndex(playerId: string): number {
     return this.arenas.findIndex((a) => a.includes(playerId));
   }
 
-  /** why: -1 on the podium and for a late joiner awaiting the next round (who gets the ladder's arena, no opponents). */
   private arenaIndexOnReveal(p: DuelPlayer): number {
     if (this.phase === "podium") return -1;
     return this.batch ? (this.shared("arenaById", () => this.arenaIndexes()).get(p.id) ?? -1) : this.arenaIndex(p.id);
@@ -214,7 +195,6 @@ export class DuelGame {
     return out;
   }
 
-  /** why: late joiners go to the bottom of the ladder and duel from the next round. */
   join(rawNickname: unknown, avatar?: AvatarChoice | null): DuelPlayer {
     const player = this.session.addPlayer(rawNickname, avatar, (base) => this.newPlayer(base));
     if (this.qIndex >= 0) this.ladder.push(player.id);
@@ -241,7 +221,6 @@ export class DuelGame {
     return p;
   }
 
-  /** why: one answer per duelist per round; returns whether it was accepted. */
   answer(playerId: string, qIndex: number, answer: AnswerValue): boolean {
     if (this.arenaIndex(playerId) < 0) return false;
     if (!this.session.paced.take(this.players.get(playerId), qIndex, answer, (a) => a)) return false;
@@ -269,7 +248,6 @@ export class DuelGame {
     this.session.paced.skip();
   }
 
-  /** why: an open round is settled first; a round that hadn't opened yet is dropped. */
   end(): void {
     this.session.end();
   }
@@ -337,18 +315,15 @@ export class DuelGame {
     return this.ladder.map((id) => this.players.get(id)).filter((p): p is DuelPlayer => !!p);
   }
 
-  /** why: most points, then most correct; a full tie shares a place, higher on the ladder listed first. */
   ranked(): Ranked<DuelPlayer>[] {
     const pos = new Map(this.ladder.map((id, i) => [id, i]));
     return rankBy(this.onLadder(), [most((p) => p.points), most((p) => p.correct)], [fewest((p) => pos.get(p.id) ?? Infinity)]);
   }
 
-  /** why: next round's arena during the reveal; the final one at the podium. */
   ladderArenas(): Map<string, number> {
     return arenaOf(this.ladder);
   }
 
-  /** why: 0 for someone who never duelled. */
   climb(p: DuelPlayer, arenas = this.ladderArenas()): number {
     return p.startArena ? p.startArena - (arenas.get(p.id) ?? p.startArena) : 0;
   }
@@ -374,7 +349,6 @@ export class DuelGame {
     });
   }
 
-  /** why: worked out once in Game finish. */
   get podium(): Podium<DuelPlayer, DuelPlayer, DuelAwardKey> {
     return this.session.podium;
   }
@@ -392,7 +366,6 @@ export class DuelGame {
     return this.phase === "podium" ? null : this.session.paced.view();
   }
 
-  /** why: this round's arena while it is played, else where the ladder puts them. */
   private arenaNow(playerId: string, ladderArenas: Map<string, number>): number {
     if (this.phase === "intro" || this.phase === "open") {
       const i = this.arenaIndex(playerId);

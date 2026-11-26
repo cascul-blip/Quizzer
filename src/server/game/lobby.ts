@@ -80,7 +80,6 @@ export class Lobby {
     return player;
   }
 
-  /** why: only while waiting in the lobby. */
   setAvatar(playerId: string, avatar: unknown, accessory: unknown): void {
     const p = this.players.get(playerId);
     if (!p) return;
@@ -107,7 +106,6 @@ export class Lobby {
     this.onChange();
   }
 
-  /** why: a partial change keeps the rest (and the theme) as they are. */
   setModeSettings(mode: GameMode, raw: unknown): void {
     if (!Object.hasOwn(MODES, mode)) throw new GameError("Unknown game mode");
     this.applySettings(mode, raw && typeof raw === "object" ? (raw as RawSettings) : {});
@@ -120,12 +118,11 @@ export class Lobby {
     this.onChange();
   }
 
-  /** why: null in solo modes. */
   teamCount(): number | null {
     return this.teamsIn(this.mode);
   }
 
-  /** why: round-robin until the first manual move; then keep every assignment that still fits. */
+  /** why: preserve valid assignments once the host has arranged teams by hand. */
   private reconcileTeams(): void {
     const count = this.teamCount();
     // why: solo modes hide the arrangement without changing it.
@@ -150,7 +147,6 @@ export class Lobby {
     }
   }
 
-  /** why: everyone else stays where they are shown. */
   setTeam(playerId: string, team: number): void {
     const count = this.teamCount();
     if (count === null) throw new GameError("This game mode has no teams");
@@ -171,7 +167,6 @@ export class Lobby {
     this.onChange();
   }
 
-  /** why: the hub remembers `choices` before disposing; a lobby holds no timers. */
   dispose(): void {}
 
   get choices(): LobbyChoices {
@@ -230,7 +225,6 @@ export class Lobby {
   }
 }
 
-/** why: settings carried over from the last lobby win; a theme the server no longer knows becomes the default. */
 function initialSettings(given: InitialSettings = {}): ModeSettingsMap {
   const read = <M extends GameMode>(mode: M): ModeSettingsMap[M] => {
     const defaults = MODES[mode].defaultSettings;

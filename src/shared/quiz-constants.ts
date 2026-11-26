@@ -14,7 +14,6 @@ export const MEDIA_REF_RE = /^media\/[A-Za-z0-9_-]+\.(png|jpg|gif|webp)$/;
 export const MAX_MEDIA_BYTES = 5 * 1024 * 1024;
 /** why: phones never show images bigger, and every phone downloads each one. */
 export const MAX_IMAGE_SIDE = 1280;
-/** why: images within this and MAX_IMAGE_SIDE are stored as they are. */
 export const SHRINK_ABOVE_BYTES = 300 * 1024;
 
 /** why: x and y are fractions (0–1) of the image's width and height. */
@@ -38,5 +37,4 @@ export function newId(len = 6): string {
 /** why: legacy guard for clients that loaded a quiz before content revisions existed. */
 export const BASE_VERSION_HEADER = "x-quiz-updated-at";
 
-/** why: carries the digest of the quiz file the editor loaded. */
 export const QUIZ_REVISION_HEADER = "x-quiz-revision";

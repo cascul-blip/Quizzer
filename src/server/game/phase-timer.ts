@@ -1,18 +1,20 @@
 import type { Clock } from "./common.ts";
 import { GameError } from "./common.ts";
 
+const NO_COUNTDOWN = 0;
+
 interface PhaseOptions {
-  /** why: a late answer is still accepted; views still count down to the deadline. */
+  /** why: the continuation waits for late answers after the visible countdown has ended. */
   graceMs?: number;
   hidden?: boolean;
 }
 
 export class PhaseTimer<P extends string> {
   private current: P;
-  private deadline = 0;
-  private duration: number;
-  private enteredAt = 0;
-  private setAt = 0;
+  private deadlineMs = NO_COUNTDOWN;
+  private countdownDurationMs: number;
+  private phaseEnteredAtMs = 0;
+  private countdownSetAtMs = 0;
   private pending: unknown = null;
   private readonly slots = new Map<string, { handle: unknown; at: number }>();
 
@@ -22,51 +24,49 @@ export class PhaseTimer<P extends string> {
     initialDurationMs = 0,
   ) {
     this.current = initial;
-    this.duration = initialDurationMs;
+    this.countdownDurationMs = initialDurationMs;
   }
 
   get phase(): P {
     return this.current;
   }
 
-  /** why: 0 when the phase has no countdown. */
   get endsAt(): number {
-    return this.deadline;
+    return this.deadlineMs;
   }
 
   get durationMs(): number {
-    return this.duration;
+    return this.countdownDurationMs;
   }
 
-  /** why: setting the same phase again keeps it. */
   get enteredAtMs(): number {
-    return this.enteredAt;
+    return this.phaseEnteredAtMs;
   }
 
   remainingMs(): number {
-    return this.deadline ? Math.max(0, this.deadline - this.clock.now()) : 0;
+    return this.deadlineMs ? Math.max(0, this.deadlineMs - this.clock.now()) : 0;
   }
 
   progress(): number {
-    if (!this.deadline || this.duration <= 0) return 0;
-    return Math.min(1, Math.max(0, (this.clock.now() - this.setAt) / this.duration));
+    if (!this.deadlineMs || this.countdownDurationMs <= 0) return 0;
+    return Math.min(1, Math.max(0, (this.clock.now() - this.countdownSetAtMs) / this.countdownDurationMs));
   }
 
-  /** why: cancels the previous phase's pending continuation. */
-  set(phase: P, ms: number, then?: () => void, { graceMs = 0, hidden = false }: PhaseOptions = {}): void {
+  set(phase: P, durationMs: number, then?: () => void, { graceMs = 0, hidden = false }: PhaseOptions = {}): void {
     this.cancelPhase();
     const now = this.clock.now();
-    if (phase !== this.current) this.enteredAt = now;
+    // why: rescheduling a reveal must not restart elapsed-time cues on the projector.
+    if (phase !== this.current) this.phaseEnteredAtMs = now;
     this.current = phase;
-    this.setAt = now;
-    const counted = ms > 0 && !hidden;
-    this.duration = counted ? ms : 0;
-    this.deadline = counted ? now + ms : 0;
+    this.countdownSetAtMs = now;
+    const showsCountdown = durationMs > 0 && !hidden;
+    this.countdownDurationMs = showsCountdown ? durationMs : NO_COUNTDOWN;
+    this.deadlineMs = showsCountdown ? now + durationMs : NO_COUNTDOWN;
     if (then) {
       this.pending = this.clock.setTimeout(() => {
         this.pending = null;
         then();
-      }, ms + graceMs);
+      }, durationMs + graceMs);
     }
   }
 
@@ -79,7 +79,6 @@ export class PhaseTimer<P extends string> {
     this.pending = null;
   }
 
-  /** why: replaces (and so cancels) whatever the slot held. */
   after(slot: string, ms: number, fn: () => void): void {
     this.cancel(slot);
     const handle = this.clock.setTimeout(() => {
@@ -113,11 +112,9 @@ export class PhaseTimer<P extends string> {
 }
 
 interface GameFinishSteps<T> {
-  /** why: the timers are still cancelled and the podium entered if this throws. */
   cleanup?: () => void;
   podium?: { build: () => T; empty: () => T };
   onFinish: () => void;
-  /** why: runs even when an earlier step throws. */
   onChange: () => void;
 }
 
@@ -160,7 +157,6 @@ export class GameFinish<P extends string, T = never> {
     if (podiumError) throw podiumError;
   }
 
-  /** why: returns what build threw so finish can rethrow it after the podium is entered. */
   private buildPodium(): unknown {
     const steps = this.steps.podium;
     if (!steps) return null;

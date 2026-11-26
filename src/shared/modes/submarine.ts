@@ -18,9 +18,9 @@ export interface HostSubState {
   level: number;
   depthMeters: number;
   phaseRemainingMs: number;
-  /** why: in seconds of fish travel, as of when this was sent. */
+  /** why: The projector extrapolates from this send-time gap, measured in seconds of fish travel. */
   gapSeconds: number;
-  /** why: gap-seconds closed per second. */
+  /** why: Wire speed is the number of gap seconds the fish close per real second, so the projector can extrapolate between views. */
   speed: number;
   maxGap: number;
   boosts: number;
@@ -32,7 +32,6 @@ export interface HostSubState {
   players: { id: string; nickname: string; avatar: AvatarChoice; connected: boolean; state: "question" | "boost" | "waiting" }[];
   playerCount: number;
   awards: SubAwards | null;
-  /** why: podium only. */
   errors: QuestionError[] | null;
 }
 
@@ -45,11 +44,9 @@ export interface PlayerSubView {
   phaseRemainingMs: number;
   me: { id: string; nickname: string; avatar: AvatarChoice; correct: number; boosts: number; diveHits: number };
   state: "question" | "boost" | "waiting";
-  /** why: 0 … CORRECT_PER_BOOST-1. */
   towardBoost: number;
   question: StreamQuestionView | null;
   feedback: StreamFeedbackView | null;
-  // why: symbolRemainingMs is time left to find the current symbol before the instructor moves on.
   dive:
     | {
         role: "instructor";

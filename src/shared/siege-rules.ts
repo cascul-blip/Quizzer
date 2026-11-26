@@ -1,14 +1,10 @@
-/** why: lanes are 0-based in code but shown 1-based on screen. */
 export const SIEGE_LANES = 5;
-/** why: square 1 is next to the castle wall; the last square is where monsters come on. */
 export const SIEGE_SQUARES = 8;
 export const SIEGE_BUILD_SQUARES = 7;
 /** why: the wall never heals, so this is the whole game's supply. */
 export const SIEGE_HEARTS = 10;
-/** why: the cracked wall layer shows at this many hearts or fewer. */
 export const SIEGE_CRACKED_HEARTS = 5;
 
-/** why: purses are per player; a late joiner also starts with this. */
 export const SIEGE_START_GOLD = 50;
 export const SIEGE_GOLD_PER_CORRECT = 25;
 
@@ -21,7 +17,6 @@ export const SIEGE_WARNING_MS = 2000;
 export const SIEGE_GIANT_WAIT_MS = 3000;
 export const SIEGE_ENDING_MS = 5000;
 export const SIEGE_DANGER_SQUARES = 2;
-/** why: counts monsters on a lane's last two squares; one more is allowed from SIEGE_CROWD_FROM_WAVE on. */
 const SIEGE_MAX_ENTERING = 2;
 const SIEGE_CROWD_FROM_WAVE = 5;
 export const SIEGE_GROUP_GAP_MS = 2500;
@@ -40,15 +35,11 @@ export const SIEGE_DEFENDER_TYPES: readonly SiegeDefenderType[] = ["archer", "kn
 const SIEGE_MAX_LEVEL = 3;
 
 interface SiegeDefenderStats {
-  /** why: indexed place, Lv 2, Lv 3. */
-  cost: readonly [number, number, number];
+  cost: readonly [place: number, level2: number, level3: number];
   health: readonly [number, number, number];
-  /** why: for archers this is per arrow. */
   damage: readonly [number, number, number];
   arrows: readonly [number, number, number];
-  /** why: 0 means it never attacks. */
   attackMs: readonly [number, number, number];
-  /** why: dealt back to a monster each time it hits this defender. */
   thorns: readonly [number, number, number];
 }
 
@@ -58,7 +49,6 @@ export const SIEGE_DEFENDERS: Record<SiegeDefenderType, SiegeDefenderStats> = {
   wall: { cost: [50, 50, 100], health: [15, 25, 25], damage: [0, 0, 0], arrows: [1, 1, 1], attackMs: [0, 0, 0], thorns: [0, 0, 1] },
 };
 
-/** why: the Build button lights up once a purse reaches this. */
 export const SIEGE_CHEAPEST = Math.min(...SIEGE_DEFENDER_TYPES.map((t) => SIEGE_DEFENDERS[t].cost[0]));
 
 export function siegeUpgradeCost(type: SiegeDefenderType, level: number): number | null {
@@ -74,7 +64,6 @@ interface SiegeMonsterStats {
   hitDamage: number;
   hitIntervalMs: number;
   wallFactor: number;
-  /** why: armor; the share of an arrow's damage it takes. */
   arrowFactor: number;
   hearts: number;
   /** why: the giant comes on top of the budget, so its cost is unused. */
@@ -112,10 +101,8 @@ export function siegeMaxEntering(wave: number): number {
   return wave >= SIEGE_CROWD_FROM_WAVE ? SIEGE_MAX_ENTERING + 1 : SIEGE_MAX_ENTERING;
 }
 
-/** why: the stomp hits the same square in the lanes above and below. */
 export const SIEGE_STOMP_SPLASH = 2;
 export const SIEGE_LEAP_MS = 700;
-/** why: relative weights, not probabilities. */
 export const SIEGE_MONSTER_ODDS: Record<Exclude<SiegeMonsterType, "giant">, number> = { goblin: 5, wolf: 3, troll: 2 };
 
 export function siegeBaseBudget(wave: number): number {
@@ -131,14 +118,10 @@ export function siegeWaveBudget(wave: number, players: number, scalePct: number)
   return Math.max(1, Math.round((siegeBaseBudget(wave) * siegeClassSizeFactor(players) * scalePct) / 100));
 }
 
-/** why: an ordinary class's board is worth about this much gold per budget point. */
 const SIEGE_PAR_GOLD_PER_POINT = 60;
-/** why: squared because a big board is stronger than its gold says. */
 const SIEGE_STRENGTH_EXPONENT = 2;
-/** why: the boost climbs only after an untouched wave, but can drop any amount. */
-const SIEGE_STRENGTH_STEP = 0.35;
+const SIEGE_MAX_BOOST_INCREASE = 0.35;
 const SIEGE_MAX_BOOST = 4;
-/** why: mostly health, since lanes cap monsters entering and extra monsters just trickle in. */
 const SIEGE_STRENGTH_COUNT_SHARE = 0.3;
 
 export function siegeDefenderGold(type: SiegeDefenderType, level: number, health: number, maxHealth: number): number {
@@ -147,7 +130,6 @@ export function siegeDefenderGold(type: SiegeDefenderType, level: number, health
   return maxHealth > 0 ? (paid * Math.max(0, health)) / maxHealth : 0;
 }
 
-/** why: the giant keeps its health under boost and gets faster instead. */
 const SIEGE_GIANT_MAX_PACE = 2;
 
 export function siegeGiantPace(boost: number): number {
@@ -155,10 +137,14 @@ export function siegeGiantPace(boost: number): number {
   return Math.round((1 + (SIEGE_GIANT_MAX_PACE - 1) * share) * 100) / 100;
 }
 
-/** why: when the class builds faster than the waves grow, the waves catch up; `grow` is false after a wave that cost hearts. */
-export function siegeWaveStrength(budget: number, defenseGold: number, lastBoost = 1, grow = true): { boost: number; budget: number; toughness: number } {
+export function siegeWaveStrength(
+  budget: number,
+  defenseGold: number,
+  lastBoost = 1,
+  allowBoostIncrease = true,
+): { boost: number; budget: number; toughness: number } {
   const r = Math.max(1, Math.max(0, defenseGold) / (SIEGE_PAR_GOLD_PER_POINT * Math.max(1, budget)));
-  const ceiling = Math.min(SIEGE_MAX_BOOST, Math.max(1, lastBoost) + (grow ? SIEGE_STRENGTH_STEP : 0));
+  const ceiling = Math.min(SIEGE_MAX_BOOST, Math.max(1, lastBoost) + (allowBoostIncrease ? SIEGE_MAX_BOOST_INCREASE : 0));
   const boost = Math.round(Math.min(r ** SIEGE_STRENGTH_EXPONENT, ceiling) * 100) / 100;
   return {
     boost,
@@ -172,23 +158,22 @@ export function siegeGiants(wave: number, endless: boolean): number {
   return endless && wave >= 15 ? 2 : 1;
 }
 
-/** why: the window shrinks each wave so later waves come packed. */
 export function siegeSpawnWindowMs(wave: number): number {
   return Math.max(20_000, 30_000 - 1000 * (Math.max(1, wave) - 1));
 }
 
-const SIEGE_SCALE_MIN = 70;
-const SIEGE_SCALE_MAX = 130;
-const SIEGE_SCALE_STEP = 20;
+const SIEGE_SCALE_MIN_PCT = 70;
+const SIEGE_SCALE_MAX_PCT = 130;
+const SIEGE_SCALE_STEP_PCT = 20;
 
 export function siegeTargetScale(accuracy: number): number {
   const a = Math.min(0.9, Math.max(0.4, accuracy));
-  return Math.round(SIEGE_SCALE_MIN + ((a - 0.4) / 0.5) * (SIEGE_SCALE_MAX - SIEGE_SCALE_MIN));
+  return Math.round(SIEGE_SCALE_MIN_PCT + ((a - 0.4) / 0.5) * (SIEGE_SCALE_MAX_PCT - SIEGE_SCALE_MIN_PCT));
 }
 
 /** why: a wave with no answers says nothing about accuracy, so it keeps the scale. */
-export function siegeNextScale(current: number, correct: number, answered: number): number {
-  if (answered <= 0) return current;
-  const target = siegeTargetScale(correct / answered);
-  return Math.max(current - SIEGE_SCALE_STEP, Math.min(current + SIEGE_SCALE_STEP, target));
+export function siegeNextScale(currentPct: number, correct: number, answered: number): number {
+  if (answered <= 0) return currentPct;
+  const targetPct = siegeTargetScale(correct / answered);
+  return Math.max(currentPct - SIEGE_SCALE_STEP_PCT, Math.min(currentPct + SIEGE_SCALE_STEP_PCT, targetPct));
 }

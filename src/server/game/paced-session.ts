@@ -34,7 +34,6 @@ interface PacedSessionOptions<P, Extra extends string, T, G> {
   hub: HubCallbacks<G>;
 }
 
-// why: addPlayer and removePlayer don't broadcast, so the mode finishes its own clean-up and then calls changed(), playerLeft() or answered() once.
 export class PacedSession<P extends BasePlayer & PacedAnswerer<unknown>, Extra extends string, T = never, G = unknown> {
   readonly paced: PacedRound<Extra | "podium">;
   readonly clock: Clock;
@@ -116,12 +115,10 @@ export class PacedSession<P extends BasePlayer & PacedAnswerer<unknown>, Extra e
     else this.playerLeft();
   }
 
-  // why: a mode whose own follow-up step broadcasts marks the disconnect here, so screens update once.
   markDisconnectedQuietly(playerId: string): boolean {
     return this.roster.setConnected(playerId, false) !== null;
   }
 
-  // why: a leaver may have been the last unanswered player, so the open question closes (which broadcasts) instead of a plain broadcast.
   playerLeft(): void {
     if (!this.paced.closeIfAllAnswered()) this.onChange();
   }

@@ -53,12 +53,10 @@ interface LandTeam {
   start: number;
   out: boolean;
   conqueredBy: number | null;
-  /** why: 0 while still in the game. */
   outOrder: number;
 }
 
 export interface LandPlayer extends BasePlayer, AnswerTotals {
-  /** why: changes when the team is conquered; they join the conquerors. */
   team: number;
   firstTeam: number;
   state: LandState;
@@ -67,7 +65,6 @@ export interface LandPlayer extends BasePlayer, AnswerTotals {
   emptyEndsAt: number;
   placed: number;
   stolen: number;
-  /** why: excludes the tiles placed. */
   captured: number;
   conquered: { seq: number; from: string; by: string } | null;
 }
@@ -102,7 +99,6 @@ export class LandGame {
   readonly teams: LandTeam[];
   readonly settings: LandGameSettings;
   readonly size: number;
-  /** why: EMPTY means grass. */
   readonly owners: number[];
   lastPlace: LandPlace | null = null;
   lastCapture: LandCapture | null = null;
@@ -139,7 +135,6 @@ export class LandGame {
     return this.session.choices;
   }
 
-  /** why: keeps ids, tokens and lobby teams. */
   static fromLobby(lobby: LobbyFacts<"land">, opts: LandOptions = {}): LandGame {
     const game = new LandGame(lobby.quiz, { ...lobby.settings, shuffleAnswers: lobby.shuffle.answers }, opts);
     const teams = lobby.teams;
@@ -199,7 +194,6 @@ export class LandGame {
     this.session.dispose();
   }
 
-  /** why: each player's cooldown has its own slot on the phase timer. */
   private playerSlot(p: LandPlayer): string {
     return `player:${p.id}`;
   }
@@ -278,7 +272,6 @@ export class LandGame {
     return false;
   }
 
-  /** why: returns whether it was taken. */
   place(playerId: string, tile: number): boolean {
     const p = this.players.get(playerId);
     if (!p || this.phase !== "playing" || p.state !== "claim" || this.session.clock.now() < this.session.stream.feedbackEndsAt(p)) return false;
@@ -303,7 +296,6 @@ export class LandGame {
     return true;
   }
 
-  /** why: unused claims are kept. */
   done(playerId: string): boolean {
     const p = this.players.get(playerId);
     if (!p || this.phase !== "playing" || p.state !== "claim") return false;
@@ -367,12 +359,10 @@ export class LandGame {
     return this.teams.map((t) => ({ ...t, tiles: this.teamTiles(t.index), correct: this.teamCorrect(t.index) }));
   }
 
-  /** why: knocked-out teams come last, the first one out at the bottom; equal teams share a rank. */
   rankedTeams(): (LandTeamTotals & { rank: number })[] {
     return rankBy(this.teamTotals(), LAND_ORDER, LAND_THEN);
   }
 
-  /** why: a conquered player finishes with the team they started on. */
   private buildPodium(): LandPodium {
     const entries = this.teamTotals();
     const players = [...this.players.values()].sort((a, b) => b.placed - a.placed || b.correct - a.correct);
@@ -443,7 +433,6 @@ export class LandGame {
     const state: LandState = playing ? p.state : "question";
     let result: PlayerLandView["result"] = null;
     if (this.phase === "podium") {
-      // why: a conquered player's place is that of the team they started on.
       const mine = this.podium.result(p.id);
       const team = this.podiumTeam(p.firstTeam);
       if (mine && team) result = { teamRank: mine.place, teamCount: this.teams.length, tiles: team.tiles, won: mine.place === 1, awards: mine.awards };
