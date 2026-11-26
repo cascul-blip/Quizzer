@@ -20,7 +20,6 @@ const TICK_SECONDS = 3;
 
 type CupView = Extract<HostView, { kind: "cup" }>;
 
-/** Projector screen for Cup of Death: countdown → (roll → quiz → drink → reveal)… → podium. */
 export function CupStage({ view, send }: { view: CupView; send: Send }) {
   return (
     <CupThemeProvider theme={view.theme}>
@@ -75,7 +74,7 @@ function CupStageContent({ view, send }: { view: CupView; send: Send }) {
 
   const alive = view.players.filter((p) => !p.out);
   const r = view.phase === "reveal" ? view.reveal : null;
-  // Players poisoned in this reveal stay at the table until it's over, so they can fall.
+  // why: players poisoned in this reveal stay at the table until it's over, so they can fall.
   const dying = new Set(r?.drinks.filter((d) => d.verdict === "poison").map((d) => d.id) ?? []);
   const seated = view.players.filter((p) => !p.out || dying.has(p.id));
   const mode: SaloonMode = view.phase === "countdown" || view.phase === "podium" ? "idle" : view.phase;
@@ -189,7 +188,7 @@ function TableText({ view, secs }: { view: CupView; secs: number }) {
 
 function TimerBar({ view, secs }: { view: CupView; secs: number }) {
   const christmas = useChristmasCup();
-  // Catch up once, when the phase starts (see Robot Attack's PhaseBar).
+  // why: catch up once, when the phase starts (see Robot Attack's PhaseBar).
   const key = `${view.phase}-${view.round}`;
   const start = useRef<{ key: string; elapsed: number } | null>(null);
   if (!start.current || start.current.key !== key) start.current = { key, elapsed: Math.max(0, view.phaseDurationMs - view.phaseRemainingMs) };

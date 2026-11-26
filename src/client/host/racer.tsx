@@ -20,14 +20,13 @@ import { Award } from "./tower.tsx";
 
 type RacerView = Extract<HostView, { kind: "racer" }>;
 
-/** The engine hum is at most this share of a full rev, reached at ENGINE_FULL_MPH. */
+// why: the hum peaks at this share of a full rev, reached at ENGINE_FULL_MPH.
 const ENGINE_MAX = 0.5;
 const ENGINE_FULL_MPH = 150;
-/** How loud the hum is next to the Submarine boost rev it borrows. */
+// why: relative to the Submarine boost rev it borrows.
 const ENGINE_VOLUME = 0.5;
 const SPEED_COUNT_MS = 1000;
 
-/** Projector screen for Racer: (intro or confidence → open → reveal)… → podium. */
 export function RacerStage({ view, send }: { view: RacerView; send: Send }) {
   const q = view.question;
   const secs = useCountdown(view.phaseRemainingMs, `${view.phase}:${q?.index ?? -1}`);
@@ -160,7 +159,6 @@ export function RacerStage({ view, send }: { view: RacerView; send: Send }) {
   );
 }
 
-/** A number that glides to each new value instead of jumping; starts on the value it is first given. */
 function useCountUp(target: number, ms: number): number {
   const [shown, setShown] = useState(target);
   const at = useRef(target);
@@ -184,11 +182,11 @@ function useCountUp(target: number, ms: number): number {
   return shown;
 }
 
-/** A quiet engine note while `on`, pitched by `level` (0 to 1). Silent while sounds are muted. */
+// why: silent while sounds are muted; `level` runs 0 to 1.
 function useEngineHum(on: boolean, level: number) {
   const rev = useRef<Rev | null>(null);
   const [muteSeq, setMuteSeq] = useState(0);
-  // Muting cuts the running note; unmuting starts a new one through the effect below.
+  // why: muting cuts the running note; unmuting starts a new one through the effect below.
   useEffect(
     () =>
       onMuteChange(() => {
@@ -204,7 +202,7 @@ function useEngineHum(on: boolean, level: number) {
       rev.current = null;
       return;
     }
-    // Null while muted or before the browser allows audio; later renders try again.
+    // why: null while muted or before the browser allows audio, so later renders try again.
     rev.current ??= startRev(ENGINE_VOLUME);
     rev.current?.set(level);
   }, [on, level, muteSeq]);
@@ -225,7 +223,6 @@ function Countdown({ secs, totalMs }: { secs: number; totalMs: number }) {
   );
 }
 
-/** The upper part of the screen: the question and whatever this phase adds below it. */
 function Turn({ view, send, secs }: { view: RacerView; send: Send; secs: number }) {
   const q = view.question!;
   const reveal = view.phase === "reveal";
@@ -300,7 +297,6 @@ function Turn({ view, send, secs }: { view: RacerView; send: Send; secs: number 
   );
 }
 
-/** A read-only copy of the driver's lever: three stops, top to bottom, and a handle that slides to the live one. */
 function Lever({ level }: { level: RacerView["lever"] }) {
   const stops = [...RACER_CONFIDENCE_LEVELS].reverse();
   const at = level ? stops.indexOf(level) : stops.length - 1;
@@ -437,8 +433,7 @@ function RacerSettings({ settings, send, children }: LobbySettingsProps<"racer">
 
 export function racerCue(view: RacerView): MusicCue {
   if (view.phase === "podium") return { track: themedTrack("racer", view.theme, "results") };
-  // One continuous drive: tempo and layers follow the car's speed. No key, so the
-  // music never restarts between questions; useMusic glides to each new intensity.
+  // why: no key, so the music never restarts between questions and glides to each new speed.
   const { speedMph, crashed } = view.car;
   return { track: themedTrack("racer", view.theme, "play"), intensity: crashed ? 0.03 : Math.max(0.1, Math.min(1, speedMph / 150)) };
 }
