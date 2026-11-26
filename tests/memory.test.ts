@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { Lobby } from "../src/server/game/lobby.ts";
 import { MemoryGame } from "../src/server/game/memory.ts";
+import { memoryMode } from "../src/server/game/memory-entry.ts";
 import { QuizStore } from "../src/server/quiz/store.ts";
 import type { GameHub } from "../src/server/ws.ts";
 import type { Pacing } from "../src/shared/mode-views.ts";
@@ -655,8 +656,13 @@ describe("Memory Game", () => {
       for (const position of positions) expectedBoard[position] = { state: "empty" };
     }
     expect([...revealedFaces].sort((a, b) => a - b)).toEqual(Array.from({ length: pairCount }, (_, index) => index + (boardSize === 10 ? 0 : 1)));
-    expect(projector()).toMatchObject({ phase: "podium", board: expectedBoard, players: [{ rank: 1, pairs: pairCount, chips: chipsLeft }] });
-    expect(player(noel!).result).toEqual({ rank: 1, playerCount: 1 });
+    expect(projector()).toMatchObject({
+      phase: "podium",
+      board: expectedBoard,
+      players: [{ pairs: pairCount, chips: chipsLeft }],
+      podium: [{ place: 1, player: { pairs: pairCount } }],
+    });
+    expect(player(noel!).result).toEqual({ place: 1, playerCount: 1, awards: [] });
     clock.advance(60_000);
     expect(projector().phase).toBe("podium");
   });
@@ -692,15 +698,13 @@ describe("Memory Game", () => {
     expect(facesUp()).toEqual([]);
     const matched = when === "match feedback" ? 1 : 0;
     const sharedPlace = matched ? 2 : 1;
-    expect(projector()).toMatchObject({
-      phase: "podium",
-      players: [
-        { nickname: "Noel", pairs: matched, rank: 1 },
-        { nickname: "Holly", pairs: 0, rank: sharedPlace },
-        { nickname: "Ivy", pairs: 0, rank: sharedPlace },
-      ],
-    });
-    expect(player(holly!).result).toEqual({ rank: sharedPlace, playerCount: 3 });
+    expect(projector().phase).toBe("podium");
+    expect(projector().podium!.map(({ place, player: { nickname, pairs } }) => ({ place, nickname, pairs }))).toEqual([
+      { nickname: "Noel", pairs: matched, place: 1 },
+      { nickname: "Holly", pairs: 0, place: sharedPlace },
+      { nickname: "Ivy", pairs: 0, place: sharedPlace },
+    ]);
+    expect(player(holly!).result).toEqual({ place: sharedPlace, playerCount: 3, awards: [] });
     expect(hub.lastResults?.csv.split("\r\n").slice(0, 4)).toEqual([
       "\ufeffRank,Nickname,Matched pairs,Correct answers,Total time (s)",
       `1,Noel,${matched},${when === "questions" ? "1,0.120" : "2,0.181"}`,
@@ -711,5 +715,69 @@ describe("Memory Game", () => {
     clock.advance(60_000);
     expect(projector().phase).toBe("podium");
     expect(hub.lastResults).toBe(result);
+  });
+  test("a kick during the podium leaves the places, the other phones' results and the results sheet unchanged", async () => {
+    const {
+      host,
+      phones: [noel, holly],
+    } = await launch(["Noel", "Holly", "Ivy"]);
+    for (let i = 0; i < 3; i++) playQuestion(host, [noel!]);
+    confirmPair(noel!, [0, 1]);
+    host.sendMsg({ type: "host.end" });
+    const places = () => projector().podium!.map((r) => [r.place, r.player.nickname]);
+    expect(places()).toEqual([
+      [1, "Noel"],
+      [2, "Holly"],
+      [2, "Ivy"],
+    ]);
+    const sheet = memoryMode.results(hub.game as MemoryGame);
+
+    host.sendMsg({ type: "host.kick", playerId: projector().players.find((p) => p.nickname === "Noel")!.id });
+
+    expect(projector().players.map((p) => p.nickname)).toEqual(["Holly", "Ivy"]);
+    expect(places()).toEqual([
+      [1, "Noel"],
+      [2, "Holly"],
+      [2, "Ivy"],
+    ]);
+    expect(player(holly!).result).toEqual({ place: 2, playerCount: 3, awards: [] });
+    expect(memoryMode.results(hub.game as MemoryGame)).toEqual(sheet);
+  });
+
+  test("players with the same matched pairs share a place and are listed by correct answers, in the podium and the results sheet", async () => {
+    const {
+      host,
+      phones: [, holly, ivy],
+    } = await launch(["Noel", "Holly", "Ivy"], { count: 2 });
+    playQuestion(host, [ivy!, holly!]);
+    playQuestion(host, [ivy!]);
+    host.sendMsg({ type: "host.end" });
+
+    expect(projector().podium!.map((r) => [r.place, r.player.nickname])).toEqual([
+      [1, "Ivy"],
+      [1, "Holly"],
+      [1, "Noel"],
+    ]);
+    expect(projector().players.every((p) => !("rank" in p))).toBe(true);
+    expect(memoryMode.results(hub.game as MemoryGame).rows.map((row) => row.slice(0, 2))).toEqual([
+      [1, "Ivy"],
+      [1, "Holly"],
+      [1, "Noel"],
+    ]);
+  });
+
+  test("the live scoreboard is sorted by matched pairs without a rank", async () => {
+    const {
+      host,
+      phones: [, holly],
+    } = await launch(["Noel", "Holly"]);
+    for (let i = 0; i < 3; i++) playQuestion(host, [holly!]);
+    confirmPair(holly!, [0, 1]);
+    expect(projector().players).toMatchObject([
+      { nickname: "Holly", pairs: 1 },
+      { nickname: "Noel", pairs: 0 },
+    ]);
+    expect(projector().players.every((p) => !("rank" in p))).toBe(true);
+    expect(projector().podium).toBeNull();
   });
 });

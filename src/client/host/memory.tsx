@@ -145,10 +145,10 @@ function MemoryPodium({ view, send }: { view: MemoryView; send: Send }) {
     <main class="podium">
       <h1>🏆 Final results</h1>
       <ol class="rest">
-        {view.players.map((player) => (
+        {(view.podium ?? []).map(({ place, player }) => (
           <li key={player.id}>
             <span class="rest-who">
-              {ordinal(player.rank)} {player.nickname}
+              {ordinal(place)} {player.nickname}
             </span>
             <span>
               {player.pairs} {player.pairs === 1 ? "pair" : "pairs"}

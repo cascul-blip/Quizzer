@@ -2,15 +2,17 @@ import type { AnswerValue } from "../../shared/answer-match.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import type { Pacing } from "../../shared/mode-views.ts";
 import type { HostMemoryState, MemoryBoardSize, MemoryCardView, MemoryPlayer, PlayerMemoryView } from "../../shared/modes/memory.ts";
-import { MEMORY_FACE_COUNT, MEMORY_MATCH_RESULT_MS, MEMORY_QUESTIONS_PER_PHASE, MEMORY_TURN_MS } from "../../shared/modes/memory.ts";
+import { MEMORY_FACE_COUNT, MEMORY_MATCH_RESULT_MS, MEMORY_QUESTIONS_PER_PHASE, MEMORY_TURN_MS, memoryShared } from "../../shared/modes/memory.ts";
 import type { Question } from "../../shared/quiz-schema.ts";
 import type { Clock } from "./common.ts";
 import { GameError, preparePlayOrder, shuffle } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
 import type { PacedAnswer } from "./paced-round.ts";
 import { PacedSession } from "./paced-session.ts";
+import type { Podium } from "./podium.ts";
+import { buildPodium, emptyPodium } from "./podium.ts";
 import type { BasePlayer } from "./roster.ts";
-import { most, rankBy } from "./standings.ts";
+import { most } from "./standings.ts";
 
 interface MemoryParticipant extends BasePlayer {
   answers: (PacedAnswer | undefined)[];
@@ -43,9 +45,11 @@ interface Feedback {
 
 const MISS_MS = 2_000;
 
+type MemoryPodiumT = Podium<MemoryParticipant, MemoryParticipant, never>;
+
 export class MemoryGame {
   readonly runningMode: "memory" = "memory";
-  private readonly session: PacedSession<MemoryParticipant, "turn" | "feedback", never, MemoryGame>;
+  private readonly session: PacedSession<MemoryParticipant, "turn" | "feedback", MemoryPodiumT, MemoryGame>;
   private readonly questions: Question[] = [];
   private readonly boardSize: MemoryBoardSize;
   private readonly board: (number | null)[];
@@ -60,7 +64,7 @@ export class MemoryGame {
     options: MemoryOptions = {},
   ) {
     if (lobby.quiz.questions.length === 0) throw new GameError("This quiz has no questions");
-    this.session = new PacedSession<MemoryParticipant, "turn" | "feedback", never, MemoryGame>({
+    this.session = new PacedSession<MemoryParticipant, "turn" | "feedback", MemoryPodiumT, MemoryGame>({
       game: this,
       clock: options.clock,
       rng: options.rng,
@@ -73,6 +77,7 @@ export class MemoryGame {
         this.turn = null;
         this.feedback = null;
       },
+      podium: { build: () => this.buildPodium(), empty: () => emptyPodium(memoryShared.awards) },
       hub: { onChange: options.onChange, onActivity: options.onActivity, onFinish: options.onFinish },
     });
     this.boardSize = lobby.settings.boardSize;
@@ -266,8 +271,21 @@ export class MemoryGame {
     return typeof position === "number" && Number.isInteger(position) && this.board[position] != null;
   }
 
-  ranked() {
-    return rankBy([...this.players.values()], [most((p) => p.pairs)]);
+  /** why: places come from matched pairs alone; correct answers only order players who share a place. */
+  private buildPodium(): MemoryPodiumT {
+    const players = [...this.players.values()];
+    return buildPodium({
+      entries: players,
+      order: [most((p) => p.pairs)],
+      then: [most((p) => p.correct)],
+      players,
+      entryOf: (p) => p,
+      awards: { labels: memoryShared.awards, values: {} },
+    });
+  }
+
+  get podium(): MemoryPodiumT {
+    return this.session.podium;
   }
 
   private questionView() {
@@ -292,7 +310,8 @@ export class MemoryGame {
       answeredCount: answers.length,
       revealTurnsNext: this.revealTurnsNext,
       answerCounts: revealed && question ? question.options.map((_, i) => answers.filter((a) => a.option === i).length) : null,
-      players: this.ranked().map((p) => ({ ...playerView(p), connected: p.connected, rank: p.rank })),
+      players: [...this.players.values()].sort((a, b) => b.pairs - a.pairs).map((p) => ({ ...playerView(p), connected: p.connected })),
+      podium: this.phase === "podium" ? this.podium.rows.map((r) => ({ place: r.place, player: playerView(r.player) })) : null,
       boardSize: this.boardSize,
       board: this.boardView(),
       turn: this.turn && { id: this.turn.id, playerId: this.turn.playerId, nickname: this.turn.nickname },
@@ -336,7 +355,7 @@ export class MemoryGame {
           }
         : null,
       phaseRemainingMs: this.session.paced.phases.remainingMs(),
-      result: this.phase === "podium" ? { rank: this.ranked().find((p) => p.id === id)!.rank, playerCount: this.players.size } : null,
+      result: this.phase === "podium" ? this.podium.result(id) : null,
     };
   }
 }

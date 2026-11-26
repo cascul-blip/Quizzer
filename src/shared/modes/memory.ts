@@ -37,7 +37,8 @@ export interface HostMemoryState {
   answeredCount: number;
   revealTurnsNext: boolean;
   answerCounts: number[] | null;
-  players: (MemoryPlayer & { connected: boolean; rank: number })[];
+  players: (MemoryPlayer & { connected: boolean })[];
+  podium: { place: number; player: MemoryPlayer }[] | null;
   boardSize: number;
   board: MemoryCardView[];
   turn: { id: number; playerId: string; nickname: string } | null;
@@ -65,7 +66,7 @@ export interface PlayerMemoryView {
   boardSize: number;
   turn: ({ id: number; board: MemoryCardView[] } & PlayerMemoryTurnStage) | null;
   phaseRemainingMs: number;
-  result: { rank: number; playerCount: number } | null;
+  result: { place: number; playerCount: number; awards: string[] } | null;
 }
 
 export type MemoryMsg = PacedAnswerMsg<"memory"> | { type: "memory.confirm"; turnId: number; step: 1 | 2; position: number };
@@ -74,5 +75,6 @@ export const memoryShared = sharedModeEntry<ModeProtocol<MemoryMsg, MemorySettin
   name: "Memory Game",
   flags: { paced: true, protect: false },
   lobbyBanner: false,
+  awards: {},
   msgTypes: ["memory.answer", "memory.confirm"],
 });
