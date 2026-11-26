@@ -13,7 +13,7 @@ export type ClassicView = PhoneModeView<"classic">;
 
 export interface PhoneBanner {
   avatarClass: string;
-  LineUnderYoureIn: ComponentType;
+  JoinedSubtitle: ComponentType;
 }
 
 export function Center({ children }: { children: ComponentChildren }) {

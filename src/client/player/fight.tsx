@@ -28,8 +28,7 @@ const WALL_COLS = 5;
 const WALL_CLEAR_MS = 700;
 const WALL_WASTED_MS = 1600;
 
-/** why: avatars are drawn bigger on the phone's small battlefield. */
-const PHONE_SPRITE_R = 32;
+const PHONE_AVATAR_RADIUS = 32;
 
 export function FightPlayer(props: { view: PlayerFightView; send: Send }) {
   return (
@@ -74,7 +73,7 @@ function FightPlayerContent({ view, send }: { view: PlayerFightView; send: Send 
         <Battlefield
           hill={view.hill}
           shots={view.shot ? [view.shot] : []}
-          spriteR={PHONE_SPRITE_R}
+          spriteR={PHONE_AVATAR_RADIUS}
           terrain={view.terrain}
           damage={view.damage}
           colors={colors}
@@ -162,7 +161,7 @@ function DecideScreen({ view, send }: { view: PlayerFightView; send: Send }) {
       <Battlefield
         hill={view.hill}
         shots={view.shot ? [view.shot] : []}
-        spriteR={PHONE_SPRITE_R}
+        spriteR={PHONE_AVATAR_RADIUS}
         terrain={view.terrain}
         damage={view.damage}
         colors={view.teams.map((t) => t.color)}
@@ -231,13 +230,14 @@ function AimScreen({ view, send }: { view: PlayerFightView; send: Send }) {
 
   const v = pull ? launchVector(pull.dx, pull.dy) : null;
   const len = pull ? Math.hypot(pull.dx, pull.dy) : 0;
-  const power = Math.round((Math.min(len, MAX_PULL) / MAX_PULL) * 100);
+  const pullShare = Math.min(len, MAX_PULL) / MAX_PULL;
+  const power = Math.round(pullShare * 100);
   const cx = CATAPULT_X[team]!;
   const back =
     pull && len > 0
       ? {
-          x: cx + (pull.dx / len) * (Math.min(len, MAX_PULL) / MAX_PULL) * PULL_DRAW_FIELD_UNITS,
-          y: LAUNCH_Y + (pull.dy / len) * (Math.min(len, MAX_PULL) / MAX_PULL) * PULL_DRAW_FIELD_UNITS,
+          x: cx + (pull.dx / len) * pullShare * PULL_DRAW_FIELD_UNITS,
+          y: LAUNCH_Y + (pull.dy / len) * pullShare * PULL_DRAW_FIELD_UNITS,
         }
       : null;
   const dots = [];
@@ -262,7 +262,7 @@ function AimScreen({ view, send }: { view: PlayerFightView; send: Send }) {
       <Battlefield
         hill={view.hill}
         shots={view.shot ? [view.shot] : []}
-        spriteR={PHONE_SPRITE_R}
+        spriteR={PHONE_AVATAR_RADIUS}
         terrain={view.terrain}
         damage={view.damage}
         colors={view.teams.map((t) => t.color)}
@@ -272,7 +272,7 @@ function AimScreen({ view, send }: { view: PlayerFightView; send: Send }) {
           <>
             <line x1={cx - 12} y1={sy(LAUNCH_Y) - 4} x2={back.x} y2={sy(back.y)} stroke="#3b2412" stroke-width="4" />
             <line x1={cx + 12} y1={sy(LAUNCH_Y) - 4} x2={back.x} y2={sy(back.y)} stroke="#3b2412" stroke-width="4" />
-            <AvatarSprite choice={view.me.avatar} x={back.x} y={back.y} r={PHONE_SPRITE_R} />
+            <AvatarSprite choice={view.me.avatar} x={back.x} y={back.y} r={PHONE_AVATAR_RADIUS} />
           </>
         )}
         {dots}
@@ -357,14 +357,14 @@ function WatchScreen({ view, shot }: { view: PlayerFightView; shot: FightShot })
       <Battlefield
         hill={view.hill}
         shots={view.shot ? [view.shot] : []}
-        spriteR={PHONE_SPRITE_R}
+        spriteR={PHONE_AVATAR_RADIUS}
         terrain={view.terrain}
         damage={view.damage}
         colors={view.teams.map((t) => t.color)}
       >
         <ShotLayer
           shots={[shot]}
-          spriteR={PHONE_SPRITE_R}
+          spriteR={PHONE_AVATAR_RADIUS}
           onLand={(s) => {
             setLanded(s.id);
             navigator.vibrate?.(i.kind === "tower" ? [80, 40, 160] : 40);

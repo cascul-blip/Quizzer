@@ -22,7 +22,7 @@ export function LobbyScreen({ view, onAvatarPick }: { view: PlayerLobbyView; onA
           <Avatar choice={look} />
         </div>
         <h1>You're in!</h1>
-        {banner && <banner.LineUnderYoureIn />}
+        {banner && <banner.JoinedSubtitle />}
         {view.team && (
           <div class="team-badge" style={{ background: view.team.color, color: teamInk(view.team.color) }}>
             Team {view.team.name}

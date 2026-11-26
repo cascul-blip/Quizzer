@@ -277,7 +277,6 @@ function LandSettings({ settings, send }: LobbySettingsProps<"land">) {
 let landKey = "";
 let landValue = 0;
 
-// why: recomputed only when a tile or a start changes.
 function landThreat(board: LandBoard): number {
   const key = `${board.owners.join()}|${board.starts.map((s) => (s.out ? 1 : 0)).join("")}`;
   if (key !== landKey) {

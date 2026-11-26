@@ -580,7 +580,6 @@ export function scheduleStep(ctx: Ctx, dest: AudioNode, track: Track, step: numb
   });
 }
 
-// why: used for previews and tests.
 export function renderInto(ctx: Ctx, dest: AudioNode, track: Track, seconds: number, intensity: number): void {
   let t = 0.05;
   for (let step = 0; t < seconds; step++) {

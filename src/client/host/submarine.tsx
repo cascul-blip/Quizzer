@@ -46,7 +46,6 @@ const LUNGE_MS = 450;
 const GRAB_MS = 140;
 const GRAB_AT_MS = LUNGE_MS + GRAB_MS + 60;
 
-// why: re-renders every frame until the grab is over.
 function useCatchClock(caught: boolean): number {
   const start = useRef(0);
   const [, tick] = useState(0);
@@ -78,7 +77,7 @@ function paceFor(phase: SubView["phase"], level: number, boosting: boolean): num
 
 const POP_MS = 2600;
 const MAX_POPS = 3;
-// why: three riders stay visible; the rest of the squad rotates through.
+const SLED_SEATS = 3;
 function useSledRiders(players: SubView["players"], boost: SubView["lastBoost"]): SledRider[] {
   const [offset, setOffset] = useState(0);
   useEffect(() => {
@@ -89,7 +88,7 @@ function useSledRiders(players: SubView["players"], boost: SubView["lastBoost"])
   return useMemo(() => {
     const connected = players.filter((p) => p.connected);
     const pool = connected.length ? connected : players;
-    const riders = Array.from({ length: Math.min(3, pool.length) }, (_, i) => {
+    const riders = Array.from({ length: Math.min(SLED_SEATS, pool.length) }, (_, i) => {
       const p = pool[(offset + i) % pool.length]!;
       return { key: p.id, choice: p.avatar };
     });
@@ -98,7 +97,7 @@ function useSledRiders(players: SubView["players"], boost: SubView["lastBoost"])
       if (existing >= 0) riders.splice(existing, 1);
       riders.splice(1, 0, { key: `boost-${boost.seq}`, choice: boost.avatar });
     }
-    return riders.slice(0, 3);
+    return riders.slice(0, SLED_SEATS);
   }, [players, offset, boost?.seq]);
 }
 
