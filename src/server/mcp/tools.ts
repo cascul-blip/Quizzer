@@ -204,7 +204,7 @@ export function createMcpServer(store: QuizStore, version: string): McpServer {
     },
     ({ quizId, questionId, ...src }) =>
       run(async () => {
-        store.get(quizId); // fail fast on a bad id before downloading
+        store.get(quizId); // why: fail fast on a bad id before downloading
         const ref = await store.saveMedia(await loadImageBytes(src));
         return store.updateQuestion(quizId, questionId, { image: ref });
       }),

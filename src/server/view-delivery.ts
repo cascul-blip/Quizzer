@@ -40,7 +40,6 @@ export class ViewDelivery<S extends ViewSocket> {
     private readonly viewBatch: (send: () => void) => void,
   ) {}
 
-  /** Coalesce synchronous changes into one room-wide update. */
   scheduleBroadcast(): void {
     if (this.queuedBroadcast) return;
     const flush = () => {
@@ -52,7 +51,7 @@ export class ViewDelivery<S extends ViewSocket> {
     queueMicrotask(flush);
   }
 
-  /** Acknowledge the acting player immediately and share one trailing update across a burst. */
+  // why: the acting player sees their action at once; the rest of the burst shares one trailing update.
   onActivity(playerId: string): void {
     for (const socket of this.sockets.forPlayer(playerId)) this.refresh(socket);
     this.activityTimer ??= this.clock.setTimeout(() => {
@@ -106,7 +105,7 @@ export class ViewDelivery<S extends ViewSocket> {
   }
 
   private sendAndInvalidateComparison(socket: S, message: string): void {
-    // These messages can change the page, so let the next phone update through.
+    // why: these messages can change the page, so let the next phone update through.
     this.invalidateComparison(socket);
     socket.send(message, socket.data.role === "player");
   }

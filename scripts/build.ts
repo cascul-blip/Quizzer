@@ -18,7 +18,7 @@ for (const { target, out } of targets) {
   console.log(`Building ${out} (${target})…`);
   rmSync(out, { force: true });
   const args = ["build", "src/server/main.ts", "--compile", "--minify", `--target=${target}`, `--outfile=${out}`];
-  // Exe metadata flags only work when building on Windows itself.
+  // why: Bun accepts the exe metadata flags only when building on Windows itself.
   if (target.includes("windows") && process.platform === "win32") {
     args.push("--windows-title=Quizzer", `--windows-version=${pkg.version}.0`, "--windows-description=Quizzer quiz server");
   }

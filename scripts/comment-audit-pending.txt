@@ -1,7 +1,3 @@
-scripts/build.ts
-scripts/land-preview/music.ts
-scripts/winter-art/music-preview.ts
-scripts/winter-art/serve.ts
 src/client/admin/main.tsx
 src/client/admin/save-quiz-draft.ts
 src/client/assets.d.ts
@@ -56,7 +52,6 @@ src/client/shared/voice.ts
 src/client/shared/winter-art.tsx
 src/client/shared/winter-gradient.ts
 src/client/shared/ws.ts
-src/server/bundles.ts
 src/server/game/classic.ts
 src/server/game/common.ts
 src/server/game/cup.ts
@@ -82,20 +77,6 @@ src/server/game/standings.ts
 src/server/game/stream.ts
 src/server/game/submarine.ts
 src/server/game/tower.ts
-src/server/host-commands.ts
-src/server/http.ts
-src/server/join-info.ts
-src/server/main.ts
-src/server/mcp/http.ts
-src/server/mcp/stdio.ts
-src/server/mcp/tools.ts
-src/server/network.ts
-src/server/paths.ts
-src/server/phone-attachments.ts
-src/server/quiz/store.ts
-src/server/siege-records.ts
-src/server/view-delivery.ts
-src/server/ws.ts
 src/shared/answer-match.ts
 src/shared/avatars.ts
 src/shared/duel-rules.ts

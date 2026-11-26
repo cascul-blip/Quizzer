@@ -5,7 +5,7 @@ import type { LanAddress } from "../src/server/network.ts";
 const wifi: LanAddress = { address: "192.168.1.5", iface: "wlan0" };
 const eth: LanAddress = { address: "10.0.0.7", iface: "eth0" };
 
-function make(list: () => LanAddress[], extra: { address?: string; now?: () => number; onQrReady?: () => void } = {}) {
+function make(list: () => LanAddress[], extra: { forcedAddress?: string; now?: () => number; onQrReady?: () => void } = {}) {
   const j = new JoinInformation({ discoverAddresses: list, ...extra });
   j.port = 4321;
   return j;
@@ -35,7 +35,7 @@ test("rejects addresses that are not on this computer", () => {
 });
 
 test("a forced --host address is selected, listed first and survives discovery", () => {
-  const j = make(() => [wifi], { address: "example.lan" });
+  const j = make(() => [wifi], { forcedAddress: "example.lan" });
   expect(j.address).toBe("example.lan");
   const info = j.info();
   expect(info.addresses[0]).toEqual({ address: "example.lan", iface: "--host" });

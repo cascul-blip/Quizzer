@@ -6,7 +6,7 @@ type Handler = (req: Request) => Response;
 
 const TEXT_LOADERS = new Set(["html", "js", "css"]);
 
-/** Whether the request's Accept-Encoding allows gzip (and doesn't rule it out with q=0). */
+// why: q=0 in Accept-Encoding rules gzip out even when it is listed.
 export function acceptsGzip(req: Request): boolean {
   const header = req.headers.get("accept-encoding");
   if (!header) return false;

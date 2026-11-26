@@ -2,7 +2,7 @@ import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/
 import type { QuizStore } from "../quiz/store.ts";
 import { createMcpServer } from "./tools.ts";
 
-/** Stateless Streamable HTTP: a fresh server + transport per request, JSON responses only. */
+// why: stateless Streamable HTTP, a fresh server and transport per request, JSON responses only.
 export async function handleMcpRequest(req: Request, store: QuizStore, version: string): Promise<Response> {
   const server = createMcpServer(store, version);
   const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
