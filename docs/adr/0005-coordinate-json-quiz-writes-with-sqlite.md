@@ -1,3 +1,5 @@
 # Coordinate JSON quiz writes with SQLite
 
 The HTTP server and standalone MCP can edit the same quiz directory from separate processes. Quiz files remain JSON. Both processes take a SQLite writer lock before reading the current quiz, checking its revision, and renaming the replacement into place. The lock spans the entire write operation and SQLite releases it when the connection closes or the process exits, so a crashed writer leaves no lock for an operator to clear.
+
+The editor sends the revision of the quiz it opened so an HTTP save can reject a concurrent MCP edit. The revision hashes the raw JSON so it also detects edits outside Quizzer. Older HTTP clients can still send the saved `updatedAt`; each write advances that timestamp even if the clock has not advanced. Reads of the quiz itself go to disk so separate processes see the current file. The admin library reloads on focus, so the store caches each summary to avoid stalling the live game by parsing and validating unchanged quiz files.

@@ -21,7 +21,7 @@ export interface HostCommandContext {
   handoff(lobby: Lobby, action: HandoffAction): void;
 }
 
-// why: throws GameError when the command doesn't apply, which the caller reports to the host.
+// why: GameError messages are sent verbatim to the host by the hub.
 export function applyHostCommand(msg: ClientMsg, ctx: HostCommandContext): void {
   const game = () => {
     if (!ctx.game) throw new GameError("No game is open");
