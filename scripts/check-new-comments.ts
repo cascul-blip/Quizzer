@@ -3,6 +3,8 @@ import { $ } from "bun";
 const MARKERS = /^(why|checked):/;
 const DIRECTIVES = /^(biome-ignore|@ts-expect-error|@ts-ignore|eslint-disable)/;
 const PATHS = ["src/*.ts", "src/*.tsx", "tests/*.ts", "tests/*.tsx", "scripts/*.ts"];
+// why: these are written by a generator script (named in their header), and the spec puts generated files out of scope.
+const GENERATED = new Set(["src/client/shared/duel/meta.ts", "src/client/shared/music/samples/manifest.ts"]);
 
 const wholeRepo = process.argv.includes("--all");
 
@@ -68,6 +70,7 @@ function justified(lines: string[], index: number, comment: CommentStart): boole
 
 const failures: string[] = [];
 async function checkFile(path: string, lineNumbers: number[] | "all") {
+  if (GENERATED.has(path)) return;
   const lines = (await Bun.file(path).text()).split("\n");
   const numbers = lineNumbers === "all" ? lines.map((_, i) => i + 1) : lineNumbers;
   const insideBlock = linesInsideBlockComments(lines);

@@ -140,8 +140,8 @@ function TowerStageContent({ view, send }: { view: TowerView; send: Send }) {
   );
 }
 
-// why: the attack animation runs about 3.4 s.
-const ATTACK_REPLAY_MS = 3600;
+const ATTACK_ANIMATION_MS = 3400;
+const ATTACK_REPLAY_MS = ATTACK_ANIMATION_MS + 200;
 const EGG_NOTICE_MS = 4000;
 const UNIT = 10;
 const TOWER_SIDE_MARGIN = 9;

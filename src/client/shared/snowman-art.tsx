@@ -352,7 +352,6 @@ export function planAttack(marked: number[], players: ArenaPlayer[], hit: Set<st
   return { rakes, contact };
 }
 
-// why: returns performance.now() in ms.
 function useFrame(on: boolean): number {
   const [, tick] = useState(0);
   useEffect(() => {

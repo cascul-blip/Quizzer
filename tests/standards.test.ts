@@ -123,7 +123,6 @@ describe("Coding standards: phase timer", () => {
   });
 });
 
-/** why: HubSocket owns opening in-memory sockets. */
 const DIRECT_SOCKET_OPEN = /\.\s*onOpen\s*\(/;
 /** why: a temp directory belongs in an afterEach, not a test's own finally block. */
 const FINALLY_CLEANUP = /\bfinally\s*\{[^}]*\.cleanup\(\)/;
@@ -315,7 +314,6 @@ describe("Coding standards: import graph", () => {
   });
 });
 
-/** why: a cast of Object.keys claims the key type without checking it. */
 const KEYS_CAST = /\bObject\.keys\([^)]*\)\s*as\b/;
 
 function codeFiles(dir: string): string[] {

@@ -47,7 +47,9 @@ const SIDE_BOX_PCT = 70;
 // why: the soles sit at 90% of the box, with the name tag below.
 const SIDE_BOX_BOTTOM_PCT = 7;
 const THIRD_BOX_PCT = 50;
-const THIRD_BOTTOM = 21;
+const THIRD_BOTTOM_PCT = 21;
+const THIRD_SLOT = 2;
+const CENTRE_X_PCT = 50;
 const SIDE_X_PCT = 21;
 // why: the manifest's head point (600, 177) on the 1280×720 canvas, facing right.
 const HEAD_PCT = { x: (600 / 1280) * 100, y: (177 / 720) * 100 };
@@ -58,8 +60,7 @@ const STEP_DRAW = 1;
 const STEP_FIRE = 2;
 const STEP_SETTLE = 3;
 const STEP_MOVE = 4;
-// why: matches .duel-token in host.css.
-const TOKEN_MS = 1500;
+const DUEL_TOKEN_CSS_MS = 1500;
 
 // why: picked from the player id so a hat never changes.
 const HATS: DuelHat[] = ["brown", "black", "white"];
@@ -271,8 +272,7 @@ function TimerBar({ view, secs }: { view: DuelView; secs: number }) {
 
 // why: past 3 arenas, Arena 1 takes a 2×2 block and the column count keeps panels near 16:9.
 const MAX_FIRST_ARENA_HEIGHT_VH = 46;
-// why: the space under the question on a 16:9 projector.
-const TARGET_GRID_ASPECT = 3;
+const SPACE_UNDER_QUESTION_ASPECT = 3;
 const LOSER_SPOT_X = 0.79;
 const WINNER_SPOT_X = 0.21;
 const LANDING_Y = 0.45;
@@ -296,7 +296,7 @@ function gridFor(n: number): { row: true; columns: string; maxWidth: string } | 
   let best = { cols: 4, rows: Math.ceil(cells / 4), score: Infinity };
   for (let cols = 3; cols <= 9; cols++) {
     const rows = Math.max(2, Math.ceil(cells / cols));
-    const aspect = (TARGET_GRID_ASPECT * rows) / cols;
+    const aspect = (SPACE_UNDER_QUESTION_ASPECT * rows) / cols;
     const score = Math.abs(Math.log(aspect / (16 / 9))) + 0.12 * (cols * rows - cells);
     if (score < best.score) best = { cols, rows, score };
   }
@@ -323,7 +323,7 @@ function Arenas({ view, step }: { view: DuelView; step: number }) {
   useLayoutEffect(() => {
     if (!reveal || step !== STEP_MOVE || !wrap.current) return;
     const delay = modeTheme("duel", view.theme) === "christmas" ? Math.max(0, (view.revealElapsedMs ?? 0) - STEP_AT_MS[3]!) : 0;
-    if (delay >= TOKEN_MS) return;
+    if (delay >= DUEL_TOKEN_CSS_MS) return;
     const base = wrap.current.getBoundingClientRect();
     const list: Token[] = [];
     for (const a of reveal.arenas) {
@@ -375,7 +375,7 @@ function Arenas({ view, step }: { view: DuelView; step: number }) {
                 top: `${t.y}px`,
                 "--dx": `${t.dx}px`,
                 "--dy": `${t.dy}px`,
-                animationDuration: `${TOKEN_MS}ms`,
+                animationDuration: `${DUEL_TOKEN_CSS_MS}ms`,
                 animationDelay: `-${tokens.delay}ms`,
               }}
             >
@@ -388,14 +388,16 @@ function Arenas({ view, step }: { view: DuelView; step: number }) {
   );
 }
 
-// why: slot 2, the third duelist, stands in the middle.
 function slotCentreX(slot: number): number {
-  return slot === 0 ? SIDE_X_PCT : slot === 1 ? 100 - SIDE_X_PCT : 50;
+  return slot === 0 ? SIDE_X_PCT : slot === 1 ? 100 - SIDE_X_PCT : CENTRE_X_PCT;
+}
+
+function slotBox(slot: number): { size: number; bottom: number } {
+  return slot === THIRD_SLOT ? { size: THIRD_BOX_PCT, bottom: THIRD_BOTTOM_PCT } : { size: SIDE_BOX_PCT, bottom: SIDE_BOX_BOTTOM_PCT };
 }
 
 function boxFor(slot: number, facing: Facing): { left: number; top: number; size: number } {
-  const size = slot === 2 ? THIRD_BOX_PCT : SIDE_BOX_PCT;
-  const bottom = slot === 2 ? THIRD_BOTTOM : SIDE_BOX_BOTTOM_PCT;
+  const { size, bottom } = slotBox(slot);
   // why: mirroring flips the canvas, so the head sits at 100 − x of a left-facing box.
   const headX = facing === "right" ? HEAD_PCT.x : 100 - HEAD_PCT.x;
   return { left: slotCentreX(slot) - (headX * size) / 100, top: 100 - bottom - size, size };
@@ -546,11 +548,7 @@ function ArenaPanel({
       {result?.draw && step === STEP_FIRE && (
         <>
           {people.map((_, slot) => (
-            <div
-              key={`dust${round}-${slot}`}
-              class="duel-fx duel-dust"
-              style={{ left: `${slotCentreX(slot)}%`, top: `${100 - (slot === 2 ? THIRD_BOTTOM : SIDE_BOX_BOTTOM_PCT) - 4}%` }}
-            >
+            <div key={`dust${round}-${slot}`} class="duel-fx duel-dust" style={{ left: `${slotCentreX(slot)}%`, top: `${100 - slotBox(slot).bottom - 4}%` }}>
               <DustPuff />
             </div>
           ))}

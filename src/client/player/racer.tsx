@@ -158,13 +158,14 @@ function WatchScreen({ view }: { view: PlayerRacerView }) {
   );
 }
 
+type BottomToTopStopFraction = number;
+
 /** why: without `onChange` the lever is a small read-only copy. */
 function Lever({ level, onChange }: { level: RacerConfidence; onChange?: (level: RacerConfidence) => void }) {
   const last = RACER_CONFIDENCE_LEVELS.length - 1;
   const track = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
-  /** why: 0 is the bottom stop, 1 the top stop; null when not dragging. */
-  const [dragPos, setDragPos] = useState<number | null>(null);
+  const [dragPos, setDragPos] = useState<BottomToTopStopFraction | null>(null);
 
   const follow = (e: PointerEvent) => {
     const rect = track.current?.getBoundingClientRect();

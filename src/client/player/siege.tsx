@@ -28,7 +28,7 @@ const ALERT_TEXT = { giant: "⚠️ A giant approaches!", wall: "💥 The wall w
 
 export const siegeBanner: PhoneBanner = {
   avatarClass: "siege-banner-avatar",
-  LineUnderYoureIn: () => <p class="siege-lobby-line">🛡️ Defend the kingdom! Watch the projector.</p>,
+  JoinedSubtitle: () => <p class="siege-lobby-line">🛡️ Defend the kingdom! Watch the projector.</p>,
 };
 
 export function SiegePlayer({ view, send }: { view: PlayerSiegeView; send: Send }) {

@@ -81,7 +81,6 @@ export function Battlefield(props: {
   damage: number[];
   colors: string[];
   loaded?: (AvatarChoice | null)[];
-  /** why: Team whose tower is collapsing right now. */
   collapsing?: number | null;
   /** why: Per team: someone is repairing that tower (scaffolding goes up). */
   repairing?: boolean[];

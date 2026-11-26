@@ -24,7 +24,6 @@ export function seeded(seed: number): () => number {
 
 interface Human {
   timeOffsetS: number;
-  /** why: Multiplies the note's volume. */
   gain: number;
   detuneCents: number;
 }
