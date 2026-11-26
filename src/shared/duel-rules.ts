@@ -1,17 +1,12 @@
-/** What a duel did to one duelist: "win" moves up a boundary, "lose" moves down. */
 export type DuelOutcome = "win" | "lose" | "stay";
 
 export interface DuelAnswerInfo {
-  /** Null: didn't answer (or was away). */
+  /** why: null means didn't answer (or was away). */
   correct: boolean | null;
-  /** Answer time from the question opening; null if they didn't answer. */
-  ms: number | null;
+  answerDurationMs: number | null;
 }
 
-/**
- * Pair the ladder from the top: Arena 1 gets the first two, Arena 2 the next two, …
- * With an odd count the bottom arena is a 3-way duel; a single player gets an arena of their own.
- */
+/** why: an odd count makes the bottom arena a 3-way duel; under 4 players share one arena. */
 export function pairArenas<T>(order: readonly T[]): T[][] {
   const arenas: T[][] = [];
   if (order.length === 0) return arenas;
@@ -25,21 +20,16 @@ export function pairArenas<T>(order: readonly T[]): T[][] {
 const AnswerRank = { RIGHT: 0, WRONG: 1, NO_ANSWER: 2 } as const;
 const tier = (d: DuelAnswerInfo) => (d.correct === true ? AnswerRank.RIGHT : d.correct === false ? AnswerRank.WRONG : AnswerRank.NO_ANSWER);
 
-/** Negative when `a` did better: right before wrong before no answer, then the faster one. */
+/** why: negative when `a` did better (comparator contract). */
 export function compareDuelists(a: DuelAnswerInfo, b: DuelAnswerInfo): number {
   const t = tier(a) - tier(b);
   if (tier(a) !== tier(b) || tier(a) === AnswerRank.NO_ANSWER) return t;
-  const am = a.ms ?? Number.MAX_SAFE_INTEGER;
-  const bm = b.ms ?? Number.MAX_SAFE_INTEGER;
+  const am = a.answerDurationMs ?? Number.MAX_SAFE_INTEGER;
+  const bm = b.answerDurationMs ?? Number.MAX_SAFE_INTEGER;
   return am - bm;
 }
 
-/**
- * Who won one arena. Nobody right → draw (everyone stays). Otherwise the strictly best duelist wins
- * and the strictly worst loses; anyone else (a 3-way duel's middle player, or an exact tie) stays.
- * Among the wrong, no answer is worse than a wrong answer, then the later answer is worse.
- * A duelist alone in an arena just stays (not a draw).
- */
+/** why: only a strict best wins and a strict worst loses, so exact ties stay; nobody right is a draw. */
 export function duelOutcome(duelists: readonly DuelAnswerInfo[]): { outcomes: DuelOutcome[]; draw: boolean } {
   const outcomes: DuelOutcome[] = duelists.map(() => "stay");
   if (duelists.length < 2) return { outcomes, draw: false };
@@ -51,13 +41,7 @@ export function duelOutcome(duelists: readonly DuelAnswerInfo[]): { outcomes: Du
   return { outcomes, draw: !outcomes.includes("win") && !outcomes.includes("lose") };
 }
 
-/**
- * The ladder after a round. `arenas` are the round's arenas (top first) and `outcomes` their results, index for index.
- * Within each arena the winner moves to its top and the loser to its bottom; then at each boundary the upper
- * arena's loser swaps with the lower arena's winner, only when both exist (a draw blocks the boundary).
- * Arena 1's winner stays on top and the bottom arena's loser stays at the bottom.
- * Players in `order` who weren't in any arena (late joiners) keep their order after everyone who was.
- */
+/** why: a boundary swaps only when the upper arena has a loser and the lower a winner; late joiners go last. */
 export function climbLadder<T>(order: readonly T[], arenas: readonly (readonly T[])[], outcomes: readonly (readonly DuelOutcome[])[]): T[] {
   const sorted = arenas.map((arena, k) => {
     const out = outcomes[k] ?? [];
@@ -73,22 +57,18 @@ export function climbLadder<T>(order: readonly T[], arenas: readonly (readonly T
     end += arenas[k]!.length;
     const upperLoses = (outcomes[k] ?? []).includes("lose");
     const lowerWins = (outcomes[k + 1] ?? []).includes("win");
-    // The loser is the last of the upper arena and the winner the first of the lower one: adjacent places.
     if (upperLoses && lowerWins) [ladder[end - 1], ladder[end]] = [ladder[end]!, ladder[end - 1]!];
   }
   const placed = new Set(ladder);
   return [...ladder, ...order.filter((id) => !placed.has(id))];
 }
 
-/**
- * Points for winning a duel in arena `arena` (1-based, 1 = top) when the round has `arenaCount` arenas:
- * the bottom arena is worth 1, the one above it 2, and so on up to `arenaCount` for Arena 1.
- */
+/** why: `arena` is 1-based from the top, so the bottom arena is worth 1. */
 export function arenaPoints(arena: number, arenaCount: number): number {
   return Math.max(1, arenaCount - arena + 1);
 }
 
-/** 1-based arena of each player in a ladder order. */
+/** why: arenas are 1-based. */
 export function arenaOf<T>(order: readonly T[]): Map<T, number> {
   const map = new Map<T, number>();
   pairArenas(order).forEach((arena, k) => arena.forEach((id) => map.set(id, k + 1)));

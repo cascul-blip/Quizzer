@@ -1,7 +1,4 @@
-// Pre-recorded attacker lines. Each id names an MP3 in src/client/shared/voice/.
-// Original robot clips are Sovereign takes; the snowman lines are processed user recordings.
-
-// User recording labels below identify cues rather than transcribe their speech.
+// why: each id names an MP3 in src/client/shared/voice/; snowman values label user recordings' cues rather than transcribe them.
 export const VOICE_LINES = {
   lookwarm: "Snowman: before the attack",
   frostyaim: "Snowman: attack missed",

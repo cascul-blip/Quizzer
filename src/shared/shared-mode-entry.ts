@@ -1,22 +1,21 @@
-/** What one game mode's server, projector and phone share (GLOSSARY.md: shared mode entry). Each mode file in modes/ declares its own; src/shared/mode-entries.ts collects them. */
+/** why: each mode file declares its own; src/shared/mode-entries.ts collects them. */
 export interface SharedModeEntry<T extends string = string> {
-  /** The mode's one plain name (GLOSSARY.md). A seasonal theme may decorate how the client shows it. */
+  /** why: the one plain name; a seasonal theme may only decorate how the client shows it. */
   name: string;
   flags: {
-    /** Played question by question: the host sets its pacing (in the lobby and during the game) and moves it on, and the pacing carries over to the next lobby. The lobby also offers to shuffle the question order. */
+    /** why: host sets pacing and moves on; pacing carries to the next lobby, which offers shuffle. */
     paced: boolean;
-    /** "Protect from abuse" applies: wrong answers in a row make a player wait longer before the next question. The lobby offers it. */
+    /** why: enables "Protect from abuse" (wrong streaks lengthen the wait) and its lobby toggle. */
     protect: boolean;
   };
-  /** Phones in the lobby show the mode's banner instead of the plain waiting screen (Kingdom Siege's castle). */
+  /** why: lobby phones show the mode's banner instead of the plain waiting screen. */
   lobbyBanner: boolean;
-  /** The type of every phone message the mode handles; the hub routes each one to the mode. */
+  /** why: the hub routes phone messages to the mode by these types. */
   msgTypes: readonly T[];
-  /** Each Podium award's label by key (GLOSSARY.md: Podium), read by the server and the projector alike. */
+  /** why: read by both server and projector, so labels live here. */
   awards?: Readonly<Record<string, string>>;
 }
 
-/** The label of the award most modes give for correct answers. */
 export const MOST_CORRECT_LABEL = "Most correct answers";
 
 export type NoSettings = Record<string, never>;
@@ -42,12 +41,12 @@ export interface ModeProtocol<
 
 type GameplayProtocol = ModeProtocol<{ type: string }, object, GameplayView, GameplayView, object>;
 
-// The entry carries its protocol only in the type system.
+// why: phantom key, so the entry carries its protocol only in the type system.
 declare const protocol: unique symbol;
 export type WithModeProtocol<P extends GameplayProtocol = GameplayProtocol> = { readonly [protocol]?: P };
 export type EntryProtocol<E extends WithModeProtocol> = NonNullable<E[typeof protocol]>;
 
-/** Keep the entry's literal types and require msgTypes to list every phone message in its protocol. */
+/** why: curried so the entry keeps literal types while msgTypes must cover the whole protocol. */
 export function sharedModeEntry<P extends GameplayProtocol>() {
   type MsgType = P["msg"]["type"];
   return <const E extends SharedModeEntry<MsgType>>(

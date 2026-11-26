@@ -1,16 +1,12 @@
 export type PatchPath = (string | number)[];
-/** [path, value] sets a value; [path] deletes a key. An empty path replaces the whole view. */
+/** why: [path] deletes a key; an empty path replaces the whole view. */
 export type PatchOp = [PatchPath, unknown] | [PatchPath];
 
 type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
 
 const isObject = (v: unknown): v is Record<string, Json> => typeof v === "object" && v !== null && !Array.isArray(v);
 
-/**
- * The ops that turn `prev` into `next`. Both must be plain JSON (as JSON.parse returns).
- * Objects are compared key by key. Arrays of the same length are compared item by item,
- * unless more than half the items changed, when the whole array is sent.
- */
+/** why: both must be plain JSON; an array with over half its items changed is sent whole. */
 export function diffView(prev: unknown, next: unknown): PatchOp[] {
   const ops: PatchOp[] = [];
   diff(prev as Json, next as Json, [], ops);
@@ -42,27 +38,23 @@ function diff(a: Json, b: Json, path: PatchPath, ops: PatchOp[]): void {
   ops.push([path, b]);
 }
 
-/**
- * Applies ops to a view without mutating it. Every object along a changed path is copied,
- * the rest is shared, and the result is always a new object so the page re-renders.
- */
+/** why: copies along changed paths and always returns a new root so the page re-renders. */
 export function applyPatch<T>(view: T, ops: PatchOp[]): T {
   let root: unknown = Array.isArray(view) ? [...view] : { ...(view as object) };
-  // Containers already copied for this patch, so each is copied once however many ops touch it.
-  const fresh = new Set<unknown>([root]);
+  const copiedThisPatch = new Set<unknown>([root]);
   for (const op of ops) {
     const [path] = op;
     if (path.length === 0) {
       root = op[1];
-      fresh.clear();
+      copiedThisPatch.clear();
       continue;
     }
     let node = root as Record<string | number, unknown>;
     for (const key of path.slice(0, -1)) {
       let child = node[key] as Record<string | number, unknown>;
-      if (!fresh.has(child)) {
+      if (!copiedThisPatch.has(child)) {
         child = Array.isArray(child) ? ([...child] as unknown as Record<number, unknown>) : { ...child };
-        fresh.add(child);
+        copiedThisPatch.add(child);
         node[key] = child;
       }
       node = child;

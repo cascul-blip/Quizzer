@@ -2,9 +2,9 @@ import { describe, expect, test } from "bun:test";
 import type { DuelAnswerInfo } from "../src/shared/duel-rules.ts";
 import { arenaOf, arenaPoints, climbLadder, compareDuelists, duelOutcome, pairArenas } from "../src/shared/duel-rules.ts";
 
-const right = (ms: number): DuelAnswerInfo => ({ correct: true, ms });
-const wrong = (ms: number): DuelAnswerInfo => ({ correct: false, ms });
-const none: DuelAnswerInfo = { correct: null, ms: null };
+const right = (ms: number): DuelAnswerInfo => ({ correct: true, answerDurationMs: ms });
+const wrong = (ms: number): DuelAnswerInfo => ({ correct: false, answerDurationMs: ms });
+const none: DuelAnswerInfo = { correct: null, answerDurationMs: null };
 
 describe("pairArenas", () => {
   test("pairs from the top; an odd count makes the bottom arena a 3-way duel", () => {

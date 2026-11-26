@@ -1,34 +1,31 @@
-// Land Grab's hexagonal board: geometry and the rules that only depend on it.
-// Tiles are pointy-top hexes in offset rows (odd rows sit half a tile to the right);
-// tile index = row * size + col. owners[tile] is a team index, or EMPTY.
+// why: pointy-top hexes, odd rows shifted half a tile right; tile index = row * size + col.
 
 export const EMPTY = -1;
 
-/** A start is this many tiles in from the nearest edge at least, so a ring fits around its protected tiles. */
+/** why: so a ring fits around a start's protected tiles. */
 export const START_MARGIN = 2;
 
 export interface LandStart {
   team: number;
   tile: number;
-  /** The team was surrounded: its start is ordinary land now. */
+  /** why: once surrounded, the start is ordinary land. */
   out: boolean;
 }
 
-/** Board side length for a team count: 2 → 10, 3–4 → 12, 5–6 → 14. */
 export function landBoardSize(teams: number): number {
   return teams <= 2 ? 10 : teams <= 4 ? 12 : 14;
 }
 
 const SQRT3 = Math.sqrt(3);
 
-/** Centre of a tile, in units of the hex's corner radius (tiles are √3 wide and 2 tall, rows 1.5 apart). */
+/** why: in units of the hex's corner radius (tiles √3 wide, 2 tall, rows 1.5 apart). */
 export function hexCenter(size: number, tile: number): { x: number; y: number } {
   const row = Math.floor(tile / size);
   const col = tile % size;
   return { x: SQRT3 * (col + 0.5 + (row & 1) * 0.5), y: 1.5 * row + 1 };
 }
 
-/** Width and height of the whole board in the same units as hexCenter. */
+/** why: same units as hexCenter. */
 export function boardExtent(size: number): { width: number; height: number } {
   return { width: SQRT3 * (size + 0.5), height: 1.5 * size + 0.5 };
 }
@@ -60,7 +57,7 @@ export function hexDistance(size: number, a: number, b: number): number {
   return (Math.abs(dq) + Math.abs(dr) + Math.abs(dq + dr)) / 2;
 }
 
-/** Ring radius (in tiles) and first angle per team count; the starts sit evenly around the centre tile. */
+/** why: radius in tiles, angle in degrees; starts sit evenly around the centre tile. */
 const START_RINGS: Record<number, { radius: number; angle: number }> = {
   3: { radius: 3, angle: 0 },
   4: { radius: 3.5, angle: 45 },
@@ -68,10 +65,7 @@ const START_RINGS: Record<number, { radius: number; angle: number }> = {
   6: { radius: 4, angle: 0 },
 };
 
-/**
- * Each team's starting tile. 2, 3 and 6 teams are exactly the same distance apart;
- * with 4 or 5 a hex grid can't do that, so they are the nearest tiles to an even ring.
- */
+/** why: a hex grid can't space 4 or 5 starts evenly, so those take the nearest tiles to an even ring. */
 export function startTiles(teams: number): number[] {
   const size = landBoardSize(teams);
   if (teams <= 2) {
@@ -100,23 +94,19 @@ function nearestTile(size: number, x: number, y: number): number {
   return best;
 }
 
-/** On or next to the starting point of a team other than `team` that is still in the game. */
+/** why: on or next to another live team's start. */
 export function isProtected(size: number, starts: LandStart[], team: number, tile: number): boolean {
   return starts.some((s) => !s.out && s.team !== team && (s.tile === tile || neighbors(size, s.tile).includes(tile)));
 }
 
-/** How far from a start the guarded ring is: just outside the protected tiles, where the smallest surrounding ring goes. */
+/** why: just outside the protected tiles, where the smallest surrounding ring goes. */
 const GUARD_DISTANCE = 2;
 
-/** In the ring GUARD_DISTANCE steps from the starting point of a team other than `team` that is still in the game. */
 export function isGuarded(size: number, starts: LandStart[], team: number, tile: number): boolean {
   return starts.some((s) => !s.out && s.team !== team && hexDistance(size, s.tile, tile) === GUARD_DISTANCE);
 }
 
-/**
- * Claims needed for `team` to take a tile: 1 for grass, `stealCost` for enemy land, null if it can't be taken.
- * A guarded tile costs at least `guardCost`, whoever holds it.
- */
+/** why: in claims; null if it can't be taken. A guarded tile costs at least `guardCost`, whoever holds it. */
 export function placementCost(
   owners: number[],
   size: number,
@@ -133,10 +123,7 @@ export function placementCost(
   return isGuarded(size, starts, team, tile) ? Math.max(cost, guardCost) : cost;
 }
 
-/**
- * Tiles walled in by `team`: everything that isn't the team's and can't reach the
- * board edge without crossing the team's land. The edge itself is never part of a wall.
- */
+/** why: the board edge never counts as wall, so land against it is never enclosed. */
 export function enclosedBy(owners: number[], size: number, team: number): number[] {
   const open = new Uint8Array(owners.length);
   const queue: number[] = [];
@@ -157,20 +144,13 @@ export function enclosedBy(owners: number[], size: number, team: number): number
   return enclosed;
 }
 
-/** With this many claims (or more) still needed to ring a starting point, nothing is brewing yet. */
 const THREAT_CALM_CLAIMS = 12;
-/** With this many claims (or fewer) still needed, the ring is as good as closed. */
 const THREAT_CLOSE_CLAIMS = 2;
-/** Threat when one more tile would capture an area: a base, plus a bit per tile captured, up to a cap. */
 const THREAT_CAPTURE_BASE = 0.35;
 const THREAT_CAPTURE_PER_TILE = 0.05;
 const THREAT_CAPTURE_MAX = 0.75;
 
-/**
- * The fewest claims `team` still needs to wall `target` off from the board edge, counted up to `limit`.
- * A minimum cut: the team's own tiles are walls already, tiles it can't take can't be cut,
- * and every other tile costs what it costs to claim.
- */
+/** why: a minimum cut (max flow) from `target` to the board edge, weighted by claim cost; stops at `limit`. */
 function claimsToEnclose(
   owners: number[],
   size: number,
@@ -181,7 +161,7 @@ function claimsToEnclose(
   guardCost: number,
   limit: number,
 ): number {
-  // Each tile is two nodes (in = 2t, out = 2t + 1) joined by an edge of its cost; the sink is past the board edge.
+  // why: node splitting (in = 2t, out = 2t + 1) puts the claim cost on the tile, not its links.
   const n = owners.length;
   const sink = 2 * n;
   const head = Array<number>(2 * n + 1).fill(-1);
@@ -205,7 +185,6 @@ function claimsToEnclose(
   }
   let flow = 0;
   while (flow < limit) {
-    // Shortest augmenting path from the target to the edge.
     const via = Array<number>(2 * n + 1).fill(-1);
     const queue = [2 * target];
     const seen = new Uint8Array(2 * n + 1);
@@ -231,11 +210,7 @@ function claimsToEnclose(
   return Math.min(flow, limit);
 }
 
-/**
- * How close any team is to closing a ring, 0 (nothing brewing) … 1 (about to happen). The larger of:
- * how few claims a team still needs to surround an opposing starting point, and how much land
- * a team would capture by placing just one more tile.
- */
+/** why: 0 … 1; the larger of how close a team is to ringing a start and what one more tile would capture. */
 export function captureThreat(owners: number[], size: number, starts: LandStart[], stealCost: number, guardCost: number): number {
   const alive = starts.filter((s) => !s.out);
   const trial = [...owners];
@@ -258,11 +233,7 @@ export function captureThreat(owners: number[], size: number, starts: LandStart[
   return Math.max(0, Math.min(1, threat));
 }
 
-/**
- * The neighbour across side `side` of a tile, or null past the board edge. Sides run clockwise
- * from the top-right one: 0 NE, 1 E, 2 SE, 3 SW, 4 W, 5 NW; side k joins corners k and k + 1
- * when the corners are numbered clockwise from the top.
- */
+/** why: sides 0 NE, 1 E, 2 SE, 3 SW, 4 W, 5 NW; side k joins corners k and k + 1 (clockwise from the top). */
 export function neighborAcross(size: number, tile: number, side: number): number | null {
   const row = Math.floor(tile / size);
   const col = tile % size;
@@ -278,7 +249,6 @@ export function neighborAcross(size: number, tile: number, side: number): number
   return r! >= 0 && r! < size && c! >= 0 && c! < size ? r! * size + c! : null;
 }
 
-/** A side of an owned tile where the land changes hands: next to grass, another team's tile, or the board edge. */
 interface BorderEdge {
   tile: number;
   side: number;

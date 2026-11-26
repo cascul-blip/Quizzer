@@ -17,12 +17,12 @@ export function glyphId(g: Glyph): string {
   return `christmas:${g.family}:${g.design}`;
 }
 
-/** Only catalogued pictures can be sent to or rendered by a phone. */
+/** why: only catalogued pictures may be sent to or rendered by a phone. */
 export function parseGlyph(id: string): Glyph | null {
   return CHRISTMAS_GLYPHS.find((g) => glyphId(g) === id) ?? null;
 }
 
-/** All five family members are look-alikes, with visible decoration/shape changes. */
+/** why: family members are look-alikes that differ in visible decoration or shape. */
 export function variantsOf(g: Glyph): Glyph[] {
   return CHRISTMAS_GLYPHS.filter((other) => other.family === g.family && other.design !== g.design);
 }

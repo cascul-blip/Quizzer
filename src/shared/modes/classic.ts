@@ -30,13 +30,12 @@ export interface ClassicView {
   playerCount: number;
   question: QuestionView | null;
   myChoice: number | null;
-  /** What was typed for the current question, if it is a typed one and answered. */
+  /** why: null unless the current question is typed and answered. */
   myText: string | null;
   result: PlayerResult | null;
   podium: RankedEntry[] | null;
 }
 
-/** Everything the projector needs about a live Classic game, except join info. */
 export interface HostClassicState {
   kind: "classic";
   phase: ClassicPhase;
@@ -44,18 +43,18 @@ export interface HostClassicState {
   pacing: Pacing;
   players: HostPlayer[];
   question: QuestionView | null;
-  /** Revealed only once answering has closed. */
+  /** why: revealed only once answering has closed. */
   correct: number[] | null;
   answeredCount: number;
   answerCounts: number[] | null;
-  /** Revealed only: per option, the avatars of the players who picked it, fastest first. */
+  /** why: reveal only; per option, pickers fastest first. */
   answerAvatars: AvatarChoice[][] | null;
   leaderboard: RankedEntry[];
-  /** The questions answered wrongly most often (podium only). */
+  /** why: podium only. */
   errors: QuestionError[] | null;
 }
 
-/** Classic's phone messages. Typed questions send `text` (the typed answer) and ignore `option`. */
+/** why: typed questions send `text` and ignore `option`. */
 export type ClassicMsg = { type: "setAvatar"; avatar: string; accessory: string } | { type: "answer"; qIndex: number; option: number; text?: string };
 
 export const classicShared = sharedModeEntry<ModeProtocol<ClassicMsg, NoSettings, HostClassicState, ClassicView>>()({

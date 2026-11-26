@@ -8,11 +8,9 @@ import type { SeasonTheme } from "../themed-modes.ts";
 export type FightPhase = "countdown" | "playing" | "collapse" | "podium";
 export type HillSetting = HillHeight | "random";
 export const HILL_SETTINGS: readonly HillSetting[] = ["random", "low", "medium", "high"];
-/** Correct answers needed to earn one attack-or-rebuild decision. */
 export const CORRECT_PER_DECISION = 4;
-/** Hits a tower can take; the last one brings it down. */
 export const FIGHT_MAX_DAMAGE = 5;
-/** Time to choose attack or rebuild before the move is forfeited (aiming has no time limit). */
+/** why: the move is forfeited after this; aiming has no time limit. */
 export const DECISION_MS = 10_000;
 export const REPAIR_MS = 4000;
 
@@ -32,7 +30,7 @@ export interface FightShot {
   vx: number;
   vy: number;
   durationMs: number;
-  /** How long ago it was fired when this was sent (clients add it to their own clock). */
+  /** why: time since firing when sent; clients add it to their own clock. */
   elapsedMs: number;
   impact: ShotImpact;
 }
@@ -50,7 +48,7 @@ export type FightAwardKey = keyof typeof FIGHT_AWARDS;
 export type FightAwards = Record<FightAwardKey, SubAward | null>;
 
 export interface FightOutcome {
-  /** Winning team, or null for a draw. */
+  /** why: null for a draw. */
   winner: number | null;
   reason: "destroyed" | "damage" | "correct" | "draw";
 }
@@ -71,14 +69,14 @@ export interface HostFightState {
   hill: HillHeight;
   terrain: number[];
   teams: HostFightTeam[];
-  /** Shots still flying, or landed moments ago. */
+  /** why: includes shots that landed moments ago. */
   shots: FightShot[];
-  /** Newest last. */
+  /** why: newest last. */
   events: FightEvent[];
   outcome: FightOutcome | null;
   playerCount: number;
   awards: FightAwards | null;
-  /** The questions answered wrongly most often (podium only). */
+  /** why: podium only. */
   errors: QuestionError[] | null;
 }
 
@@ -93,19 +91,19 @@ export interface PlayerFightView {
   team: TeamInfo;
   teams: TeamInfo[];
   state: FightState;
-  /** Correct answers toward the next decision (0 … CORRECT_PER_DECISION-1). */
+  /** why: ranges 0 … CORRECT_PER_DECISION - 1. */
   towardDecision: number;
-  /** Time left to choose attack or rebuild (decide state). */
+  /** why: decide state only. */
   decisionRemainingMs: number;
-  /** Time left on this player's repair (repair state). */
+  /** why: repair state only. */
   repairRemainingMs: number;
-  /** This player's most recently finished repair; repaired is false if teammates had already fixed the tower. */
+  /** why: repaired is false if teammates had already fixed the tower. */
   lastRepair: { seq: number; repaired: boolean } | null;
   question: StreamQuestionView | null;
   feedback: StreamFeedbackView | null;
   damage: number[];
   terrain: number[];
-  /** This player's shot while watching it fly. */
+  /** why: set only while this player watches their shot fly. */
   shot: FightShot | null;
   result: { outcome: FightOutcome; awards: string[] } | null;
 }
@@ -113,7 +111,7 @@ export interface PlayerFightView {
 export type FightMsg =
   | StreamAnswerMsg<"fight">
   | { type: "fight.choose"; action: "attack" | "rebuild" }
-  /** The slingshot pull in field units (y up); the shot flies the opposite way. */
+  /** why: the slingshot pull in field units (y up); the shot flies the opposite way. */
   | { type: "fight.fire"; dx: number; dy: number };
 
 export const fightShared = sharedModeEntry<ModeProtocol<FightMsg, FightSettings, HostFightState, PlayerFightView, Partial<FightSettings>>>()({

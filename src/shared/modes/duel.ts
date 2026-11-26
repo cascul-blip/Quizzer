@@ -5,12 +5,7 @@ import { sharedModeEntry } from "../shared-mode-entry.ts";
 import type { SeasonTheme } from "../themed-modes.ts";
 import { modeTheme } from "../themed-modes.ts";
 
-/**
- * intro: 3 s look at the question (options hidden) while the duelists face off.
- * open: options visible, everyone answers once.
- * reveal: who drew first in each arena and who moves where (`lastRound`).
- * podium: the game is over; show the final standings.
- */
+/** why: options stay hidden during intro, while the duelists face off. */
 export type DuelPhase = "intro" | "open" | "reveal" | "podium";
 
 export const DUEL_ROUNDS = [10, 15, 20] as const;
@@ -18,7 +13,7 @@ export const DUEL_DEFAULT_ROUNDS = 15;
 
 export interface DuelSettings {
   theme?: SeasonTheme;
-  /** Rounds to play; questions repeat in a fresh order once they run out. */
+  /** why: may exceed the question count; questions repeat in a fresh order. */
   rounds: number;
 }
 
@@ -29,34 +24,34 @@ export interface DuelPlayerRef {
 }
 
 export interface DuelistResult extends DuelPlayerRef {
-  /** Null: didn't answer. */
+  /** why: null means didn't answer. */
   correct: boolean | null;
   answerDurationMs: number | null;
-  /** "win" moves up a boundary, "lose" moves down; a 3-way duel's middle player and everyone in a draw get "stay". */
+  /** why: a 3-way duel's middle player and everyone in a draw get "stay". */
   outcome: "win" | "lose" | "stay";
-  /** Points won this round: a win in the bottom arena is worth 1, each arena above it 1 more; 0 without a win. */
+  /** why: this round only, see arenaPoints; 0 without a win. */
   points: number;
-  /** Arena (1-based) they are in for the next round. */
+  /** why: 1-based. */
   nextArena: number;
 }
 
 export interface DuelArenaResult {
-  /** 1-based; 1 is High Noon. */
+  /** why: 1-based; 1 is High Noon. */
   arena: number;
-  /** Ordered as they stood (left, right, then the third in a 3-way duel). */
+  /** why: ordered left, right, then the third in a 3-way duel. */
   duelists: DuelistResult[];
   draw: boolean;
 }
 
 export interface DuelRound {
-  /** Round number (1-based); use it to play the reveal animation once. */
+  /** why: 1-based; screens key the reveal animation on it to play it once. */
   round: number;
   arenas: DuelArenaResult[];
 }
 
 export interface DuelArena {
   arena: number;
-  /** 2 duelists, or 3 in the bottom arena when the count is odd. Disconnected players stay in place. */
+  /** why: 3 in the bottom arena when the count is odd; disconnected players stay in place. */
   duelists: (DuelPlayerRef & { connected: boolean; answered: boolean })[];
 }
 
@@ -67,9 +62,9 @@ export type DuelAwards = Record<DuelAwardKey, SubAward | null>;
 
 export interface HostDuelPlayer extends DuelPlayerRef {
   connected: boolean;
-  /** 1-based arena now. */
+  /** why: 1-based. */
   arena: number;
-  /** Competition rank, starting at 1. */
+  /** why: competition rank (ties share), starting at 1. */
   rank: number;
   points: number;
   wins: number;
@@ -77,34 +72,32 @@ export interface HostDuelPlayer extends DuelPlayerRef {
   draws: number;
   correct: number;
   wrong: number;
-  /** Rounds won while in Arena 1. */
   reign: number;
   startArena: number;
 }
 
 export interface HostDuelState {
-  /** Time since reveal started, for reconnect-safe animation. */
+  /** why: lets a reconnecting screen resume the reveal animation. */
   revealElapsedMs?: number;
   theme?: SeasonTheme;
   kind: "duel";
   phase: DuelPhase;
   quiz: { id: string; title: string; questionCount: number };
-  /** Manual waits for host.next on the reveal; auto moves on after 5 s. */
+  /** why: manual waits for host.next on the reveal; auto moves on after 5 s. */
   pacing: Pacing;
-  /** 1-based round now; total rounds. */
   round: number;
   rounds: number;
-  /** `index` is the play-order slot (unique per round); `total` is the round count. Options empty during intro. */
+  /** why: `index` is the play-order slot, `total` the round count; options empty during intro. */
   question: QuestionView | null;
-  /** The arenas for this round (during reveal: as they stood when the round was played). Empty at the podium. */
+  /** why: during reveal, as they stood when the round was played; empty at the podium. */
   arenas: DuelArena[];
   answeredCount: number;
   playerCount: number;
-  /** Reveal only. */
+  /** why: reveal only. */
   correct: number[] | null;
-  /** The latest finished round (this one on the reveal). Null before the first reveal. */
+  /** why: null before the first reveal. */
   lastRound: DuelRound | null;
-  /** Players in standing order (rank 1 first). */
+  /** why: in standing order, rank 1 first. */
   players: HostDuelPlayer[];
   phaseRemainingMs: number;
   phaseDurationMs: number;
@@ -125,22 +118,21 @@ export interface PlayerDuelView {
   question: QuestionView | null;
   phaseRemainingMs: number;
   phaseDurationMs: number;
-  /** This player's arena this round and who they face (1 opponent, or 2 in a 3-way duel). */
   arena: number;
   arenaCount: number;
   opponents: DuelPlayerRef[];
   myChoice: number | null;
   myText: string | null;
-  /** Reveal only. */
+  /** why: reveal only. */
   reveal: { choice: number | null; correct: number[]; wasCorrect: boolean; answerDurationMs: number | null } | null;
-  /** Reveal only: this player's arena result (the whole duel, so the phone can show the face-off). */
+  /** why: reveal only; the whole duel, so the phone can show the face-off. */
   myDuel: DuelArenaResult | null;
-  /** Podium only. */
+  /** why: podium only. */
   result: { rank: number; playerCount: number; awards: string[] } | null;
 }
 
 export type DuelMsg =
-  /** Open phase only. One answer per player per round. */
+  /** why: open phase only; one answer per player per round. */
   PacedAnswerMsg<"duel">;
 
 export const duelShared = sharedModeEntry<ModeProtocol<DuelMsg, DuelSettings, HostDuelState, PlayerDuelView>>()({
@@ -151,6 +143,5 @@ export const duelShared = sharedModeEntry<ModeProtocol<DuelMsg, DuelSettings, Ho
   awards: DUEL_AWARDS,
 });
 
-/** An arena's name; arena 1 has its own in each theme. */
 export const duelArenaName = (arena: number, theme?: SeasonTheme) =>
   arena === 1 ? (modeTheme("duel", theme) === "christmas" ? "North Pole Plaza" : "High Noon") : `Arena ${arena}`;
