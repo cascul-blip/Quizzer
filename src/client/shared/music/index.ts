@@ -1,8 +1,3 @@
-/**
- * Background music for the host/projector: one shared player, the host's
- * music settings (on/off + volume, remembered in this browser), custom
- * tracks from data/music/, and a useMusic() hook for screens.
- */
 import { useEffect } from "preact/hooks";
 import type { MusicTrackId } from "../../../shared/music-tracks.ts";
 import { getAudioContext, isMuted, onMuteChange } from "../sounds.ts";
@@ -25,7 +20,7 @@ function write(key: string, value: string): void {
   try {
     localStorage.setItem(key, value);
   } catch {
-    // storage unavailable: the setting just won't persist
+    // why: storage unavailable: the setting just won't persist
   }
 }
 
@@ -37,7 +32,7 @@ export const music = new MusicPlayer(
   getAudioContext,
   TRACKS,
   (id) =>
-    // Existing uploads for the shared Christmas track still override the building music.
+    // why: Existing uploads for the shared Christmas track still override the building music.
     custom[id] ?? (id === "tower-christmas-medley" ? custom["tower-christmas-play"] : undefined) ?? null,
 );
 
@@ -62,9 +57,9 @@ export function setMusicVolume(v: number): void {
   applyLevel();
 }
 
-/** Load the list of custom tracks in data/music/ (host only), and start downloading the instrument recordings. */
+// why: host only; also starts downloading the instrument recordings.
 export async function loadCustomMusic(): Promise<void> {
-  // ?music=synth plays every track with the synthesized voices, as before the recordings.
+  // why: ?music=synth plays every track with the synthesized voices, as before the recordings.
   const synth = new URLSearchParams(location.search).get("music") === "synth";
   setSamplesEnabled(!synth);
   if (!synth) prefetchSamples(Object.values(TRACKS).flatMap((t) => (usesSamples(t) ? [...instrumentsOf(t)] : [])));
@@ -72,26 +67,26 @@ export async function loadCustomMusic(): Promise<void> {
     const res = await fetch("/api/music");
     if (res.ok) custom = (await res.json()).files ?? {};
   } catch {
-    // Built-in music still works when the custom music list is unavailable.
+    // why: Built-in music still works when the custom music list is unavailable.
   }
 }
 
 export interface MusicCue {
   track: MusicTrackId | null;
-  /** 0…1 — faster tempo and extra layers as it rises. */
+  // why: 0…1: faster tempo and extra layers as it rises.
   intensity?: number;
-  /** Ramp from `intensity` up to `rampTo` over `rampMs` (e.g. a countdown getting tense). */
+  /** why: Ramp from `intensity` up to `rampTo` over `rampMs` (e.g. a countdown getting tense). */
   rampTo?: number;
   rampMs?: number;
-  /** Change this to restart the ramp (e.g. per question). */
+  /** why: Change this to restart the ramp (e.g. per question). */
   key?: string;
 }
 
-/** Play a track for the current screen; crossfades when the track changes. */
+// why: crossfades when the track changes.
 export function useMusic(cue: MusicCue): void {
   useEffect(() => {
     music.play(cue.track);
-    document.body.dataset.music = cue.track ?? ""; // handy for checking which track a screen uses
+    document.body.dataset.music = cue.track ?? ""; // why: lets tests and devtools see which track a screen uses
   }, [cue.track]);
   useEffect(() => {
     music.setIntensity(cue.intensity ?? 0, 600);

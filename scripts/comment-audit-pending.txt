@@ -36,12 +36,6 @@ src/client/shared/glyph-symbol.tsx
 src/client/shared/katex-fonts.ts
 src/client/shared/land-art.tsx
 src/client/shared/memory/card-flips.ts
-src/client/shared/music/engine.ts
-src/client/shared/music/index.ts
-src/client/shared/music/rich.ts
-src/client/shared/music/samples.ts
-src/client/shared/music/samples/manifest.ts
-src/client/shared/music/tracks.ts
 src/client/shared/phone-art.ts
 src/client/shared/pin.tsx
 src/client/shared/racer-art.tsx
@@ -54,7 +48,6 @@ src/client/shared/season-skin.tsx
 src/client/shared/siege-art.tsx
 src/client/shared/snowman-art.tsx
 src/client/shared/snowman/tiles.ts
-src/client/shared/sounds.ts
 src/client/shared/tex.tsx
 src/client/shared/tint.ts
 src/client/shared/tower-art.tsx
@@ -126,7 +119,6 @@ src/shared/modes/robot.ts
 src/shared/modes/siege.ts
 src/shared/modes/submarine.ts
 src/shared/modes/tower.ts
-src/shared/music-tracks.ts
 src/shared/protocol.ts
 src/shared/quiz-constants.ts
 src/shared/quiz-schema.ts

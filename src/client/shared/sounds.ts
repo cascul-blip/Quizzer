@@ -1,6 +1,6 @@
 import shotUrl from "./sfx/shot.mp3";
 
-/** Tiny synthesized sound effects (WebAudio); a few use a bundled recording instead (RECORDINGS). */
+/** why: Tiny synthesized sound effects (WebAudio); a few use a bundled recording instead (RECORDINGS). */
 
 type Sfx =
   | "cheerBlast"
@@ -75,23 +75,23 @@ export function setMuted(value: boolean): void {
   try {
     localStorage.setItem(MUTE_KEY, value ? "1" : "0");
   } catch {
-    // storage unavailable: setting just won't persist
+    // why: storage unavailable: setting just won't persist
   }
 }
 
-/** The shared AudioContext (null until unlockAudio has run from a user gesture). */
+/** why: The shared AudioContext (null until unlockAudio has run from a user gesture). */
 export function getAudioContext(): AudioContext | null {
   return ctx;
 }
 
 const muteListeners = new Set<() => void>();
-/** Called whenever sounds are muted or unmuted (music follows the mute button). */
+/** why: Called whenever sounds are muted or unmuted (music follows the mute button). */
 export function onMuteChange(fn: () => void): () => void {
   muteListeners.add(fn);
   return () => muteListeners.delete(fn);
 }
 
-/** Browsers only allow audio after a user gesture; call this from click/key handlers. */
+/** why: Browsers only allow audio after a user gesture; call this from click/key handlers. */
 export function unlockAudio(): void {
   try {
     ctx ??= new AudioContext();
@@ -119,7 +119,7 @@ function tone(freq: number, start: number, dur: number, type: OscillatorType = "
 
 let noiseBuf: AudioBuffer | null = null;
 
-/** A burst of white noise through a filter (swept to `freqTo` if given), with a sharp attack and an exponential decay. */
+/** why: A burst of white noise through a filter (swept to `freqTo` if given), with a sharp attack and an exponential decay. */
 function noise(start: number, dur: number, filter: BiquadFilterType, freq: number, gain: number, q = 0.7, freqTo?: number, out?: AudioNode): void {
   if (!ctx) return;
   if (!noiseBuf || noiseBuf.sampleRate !== ctx.sampleRate) {
@@ -147,7 +147,7 @@ function noise(start: number, dur: number, filter: BiquadFilterType, freq: numbe
   src.stop(t0 + dur + 0.05);
 }
 
-/** A sine whose pitch drops from `from` to `to`: the low punch under a bang. */
+/** why: A sine whose pitch drops from `from` to `to`: the low punch under a bang. */
 function thump(from: number, to: number, start: number, dur: number, gain: number, out?: AudioNode): void {
   if (!ctx) return;
   const t0 = ctx.currentTime + start;
@@ -163,7 +163,7 @@ function thump(from: number, to: number, start: number, dur: number, gain: numbe
   osc.stop(t0 + dur + 0.05);
 }
 
-/** A soft-clipping overdrive bus: whatever plays into it comes out louder and grittier without harsh clipping. */
+/** why: A soft-clipping overdrive bus: whatever plays into it comes out louder and grittier without harsh clipping. */
 function driveBus(drive: number, level: number): AudioNode | undefined {
   if (!ctx) return undefined;
   const curve = new Float32Array(1024);
@@ -180,7 +180,7 @@ function driveBus(drive: number, level: number): AudioNode | undefined {
   return shaper;
 }
 
-/** Recorded effects, decoded once the audio is unlocked; until then (or if loading fails) play() synthesizes them. */
+/** why: Recorded effects, decoded once the audio is unlocked; until then (or if loading fails) play() synthesizes them. */
 const RECORDINGS = { gunshot: { url: shotUrl, gain: 0.6 } } satisfies Partial<Record<Sfx, { url: string; gain: number }>>;
 const recorded = new Map<Sfx, AudioBuffer>();
 let recordingsRequested = false;
@@ -193,11 +193,11 @@ function loadRecordings(ac: AudioContext): void {
       .then((r) => r.arrayBuffer())
       .then((data) => ac.decodeAudioData(data))
       .then((buf) => recorded.set(sfx as Sfx, buf))
-      .catch(() => {}); // keep the synthesized version
+      .catch(() => {}); // why: keep the synthesized version
   }
 }
 
-/** Plays a decoded recording; false if it isn't ready. */
+// why: false if it isn't ready.
 function playRecording(sfx: keyof typeof RECORDINGS): boolean {
   const buf = recorded.get(sfx);
   if (!ctx || !buf) return false;
@@ -233,7 +233,7 @@ export function play(sfx: Sfx): void {
     case "thud":
       return tone(110, 0, 0.18, "sine", 0.3);
     case "land":
-      // A heavy car hitting the road: a deep thump with a short crunch on top.
+      // why: A heavy car hitting the road: a deep thump with a short crunch on top.
       tone(70, 0, 0.4, "sine", 0.45);
       tone(45, 0.03, 0.35, "triangle", 0.3);
       return tone(160, 0, 0.07, "square", 0.1);
@@ -258,7 +258,7 @@ export function play(sfx: Sfx): void {
       tone(60, 0, 0.12, "sine", 0.4);
       return tone(55, 0.18, 0.14, "sine", 0.3);
     case "laser":
-      // A falling zap, layered with a low buzz.
+      // why: A falling zap, layered with a low buzz.
       [1800, 1500, 1200, 900, 600].forEach((f, i) => tone(f, i * 0.03, 0.12, "sawtooth", 0.06));
       return tone(80, 0, 0.6, "square", 0.12);
     case "alarm":
@@ -278,24 +278,24 @@ export function play(sfx: Sfx): void {
       [392, 392, 523.25, 659.25, 783.99].forEach((f, i) => tone(f, 0.1 + i * 0.12, i === 4 ? 0.7 : 0.14, "square", 0.09));
       return;
     case "gearUp":
-      // Speed gained: quick rising square blips, the last one held a little.
+      // why: Speed gained: quick rising square blips, the last one held a little.
       [330, 440, 554.37, 659.25, 880].forEach((f, i) => tone(f, i * 0.055, i === 4 ? 0.13 : 0.07, "square", 0.07));
       return;
     case "skid":
-      // Speed lost: two detuned saws sliding down in small steps, like a tyre screech.
+      // why: Speed lost: two detuned saws sliding down in small steps, like a tyre screech.
       [1500, 1380, 1260, 1130, 1010, 900, 800, 720].forEach((f, i) => {
         tone(f, i * 0.045, 0.09, "sawtooth", 0.04);
         tone(f * 1.07, i * 0.045, 0.09, "sawtooth", 0.035);
       });
       return;
     case "crash":
-      // A harsh low crunch (clashing squares and saws), then a tone falling away.
+      // why: A harsh low crunch (clashing squares and saws), then a tone falling away.
       [47, 61, 83, 113].forEach((f, i) => tone(f, i * 0.015, 0.4 - i * 0.05, i % 2 ? "sawtooth" : "square", 0.16));
       [1900, 1370].forEach((f) => tone(f, 0, 0.05, "square", 0.05));
       [392, 330, 262, 196, 147, 98].forEach((f, i) => tone(f, 0.12 + i * 0.08, 0.16, "sawtooth", 0.08));
       return;
     case "repair":
-      // Two ratchet clicks, then a bright rising two-note chime.
+      // why: Two ratchet clicks, then a bright rising two-note chime.
       [0, 0.09].forEach((t) => {
         tone(1700, t, 0.025, "square", 0.07);
         tone(240, t, 0.04, "square", 0.08);
@@ -305,25 +305,25 @@ export function play(sfx: Sfx): void {
     case "leverClick":
       return tone(1500, 0, 0.025, "square", 0.035);
     case "diceRoll":
-      // Dice rattling across a wooden table.
+      // why: Dice rattling across a wooden table.
       [0, 0.07, 0.13, 0.22, 0.28, 0.37, 0.45, 0.56, 0.66, 0.8].forEach((t, i) => tone(500 + ((i * 337) % 600), t, 0.035, "square", 0.05));
       return;
     case "diceLand":
       tone(180, 0, 0.09, "triangle", 0.25);
       return tone(900, 0, 0.03, "square", 0.05);
     case "clink":
-      // A tin cup set down.
+      // why: A tin cup set down.
       tone(2093, 0, 0.18, "sine", 0.08);
       return tone(3136, 0.01, 0.12, "sine", 0.05);
     case "gulp":
-      // Three swallows, each a little lower.
+      // why: Three swallows, each a little lower.
       [0, 0.32, 0.64].forEach((t, i) => {
         tone(320 - i * 40, t, 0.07, "sine", 0.3);
         tone(140 - i * 15, t + 0.04, 0.12, "sine", 0.3);
       });
       return;
     case "cheerBlast":
-      // Power up during the shake, then a rising rocket whoosh and glitter.
+      // why: Power up during the shake, then a rising rocket whoosh and glitter.
       tone(330, 0, 0.15, "triangle", 0.12);
       tone(440, 0.16, 0.15, "triangle", 0.14);
       tone(660, 0.32, 0.22, "triangle", 0.16);
@@ -331,23 +331,23 @@ export function play(sfx: Sfx): void {
       [880, 1175, 1568, 2093].forEach((f, i) => tone(f, 0.65 + i * 0.12, 0.35, "sine", 0.1));
       break;
     case "poison":
-      // A low thud, then a wail falling away.
+      // why: A low thud, then a wail falling away.
       tone(70, 0, 0.5, "sine", 0.45);
       [660, 587, 523, 466, 415, 370, 330, 277, 233].forEach((f, i) => tone(f, 0.2 + i * 0.09, 0.16, "sawtooth", 0.07));
       return tone(55, 1.05, 0.8, "triangle", 0.3);
     case "survive":
-      // A relieved twang up the scale.
+      // why: A relieved twang up the scale.
       [220, 277.18, 329.63, 440].forEach((f, i) => tone(f, i * 0.07, 0.35, "sawtooth", 0.07));
       return tone(880, 0.3, 0.4, "triangle", 0.1);
     case "starterPistol":
-      // A pistol crack with a ricochet (Cup's starting shot).
+      // why: A pistol crack with a ricochet (Cup's starting shot).
       tone(120, 0, 0.12, "square", 0.3);
       tone(60, 0, 0.3, "sine", 0.35);
       [2400, 2000, 1600, 1250].forEach((f, i) => tone(f, 0.12 + i * 0.05, 0.06, "sine", 0.06));
       return;
     case "gunshot": {
       if (playRecording("gunshot")) return;
-      // A big revolver: a crack and a blast that darkens as it dies, a chest-thumping punch and a sub boom,
+      // why: A big revolver: a crack and a blast that darkens as it dies, a chest-thumping punch and a sub boom,
       // all driven hard through a soft clipper, then rolling echoes off the canyon walls.
       const bang = driveBus(4, 0.85);
       noise(0, 0.06, "highpass", 1500, 1, 0.7, undefined, bang);
@@ -359,21 +359,21 @@ export function play(sfx: Sfx): void {
       return;
     }
     case "coins":
-      // Coins tumbling: quick bright pings.
+      // why: Coins tumbling: quick bright pings.
       [2637, 3136, 2349, 3520, 2794].forEach((f, i) => tone(f, i * 0.05 + Math.random() * 0.02, 0.09, "sine", 0.06));
       return;
     case "fanfare":
       [523.25, 523.25, 523.25, 698.46, 880, 1046.5].forEach((f, i) => tone(f, i * 0.14, i === 5 ? 0.9 : 0.16, "triangle", 0.18));
       return;
     case "bowTwang":
-      // A plucked bowstring bending down.
+      // why: A plucked bowstring bending down.
       tone(330, 0, 0.12, "triangle", 0.1);
       return tone(196, 0.02, 0.18, "sawtooth", 0.04);
     case "arrowHit":
       tone(900, 0, 0.03, "square", 0.04);
       return tone(140, 0.01, 0.07, "triangle", 0.1);
     case "swordClang":
-      // Steel on steel: a bright ring with a low knock.
+      // why: Steel on steel: a bright ring with a low knock.
       tone(1760, 0, 0.3, "triangle", 0.07);
       tone(2637, 0, 0.18, "sine", 0.04);
       return tone(180, 0, 0.06, "square", 0.08);
@@ -381,7 +381,7 @@ export function play(sfx: Sfx): void {
       tone(90, 0, 0.18, "sine", 0.3);
       return tone(60, 0.02, 0.12, "triangle", 0.2);
     case "placeClack":
-      // A miniature set down on the board: a wooden clack and a little bounce.
+      // why: A miniature set down on the board: a wooden clack and a little bounce.
       tone(1200, 0, 0.03, "square", 0.06);
       tone(600, 0.01, 0.05, "triangle", 0.1);
       return tone(900, 0.09, 0.03, "square", 0.03);
@@ -389,12 +389,12 @@ export function play(sfx: Sfx): void {
       [783.99, 1046.5, 1318.5].forEach((f, i) => tone(f, i * 0.06, 0.25, "triangle", 0.1));
       return;
     case "heartLost":
-      // Stones crashing from the castle wall.
+      // why: Stones crashing from the castle wall.
       tone(70, 0, 0.5, "sine", 0.35);
       [160, 120, 95, 140, 80].forEach((f, i) => tone(f, i * 0.05, 0.12, "square", 0.08));
       return;
     case "giantHorn":
-      // A long, low war horn with a swell.
+      // why: A long, low war horn with a swell.
       tone(110, 0, 1.6, "sawtooth", 0.12);
       tone(164.8, 0.05, 1.5, "sawtooth", 0.06);
       return tone(55, 0, 1.7, "triangle", 0.15);
@@ -402,7 +402,7 @@ export function play(sfx: Sfx): void {
       for (let i = 0; i < 18; i++) tone(180 + (i % 2) * 20, i * 0.055, 0.05, "square", 0.03 + i * 0.004);
       return tone(70, 1.0, 0.35, "sine", 0.35);
     case "wolfHowl":
-      // A rising then falling howl.
+      // why: A rising then falling howl.
       [440, 520, 600, 660, 640, 580, 500].forEach((f, i) => tone(f, i * 0.11, 0.2, "sine", 0.06));
       return;
     case "trollRoar":
@@ -413,26 +413,26 @@ export function play(sfx: Sfx): void {
       tone(36, 0.03, 0.7, "triangle", 0.35);
       return tone(120, 0, 0.1, "square", 0.12);
     case "castleCrumble":
-      // Stone giving way: a long rumble with tumbling blocks.
+      // why: Stone giving way: a long rumble with tumbling blocks.
       tone(45, 0, 2.2, "sine", 0.45);
       tone(60, 0.1, 1.8, "triangle", 0.3);
       for (let i = 0; i < 14; i++) tone(70 + ((i * 37) % 120), 0.15 + i * 0.12, 0.14, "square", 0.07);
       return;
     case "victoryBells":
-      // Church bells pealing down the scale.
+      // why: Church bells pealing down the scale.
       [1046.5, 880, 784, 659.25, 784, 880, 1046.5, 784].forEach((f, i) => {
         tone(f, i * 0.28, 1.2, "sine", 0.1);
         tone(f * 2.4, i * 0.28, 0.6, "sine", 0.03);
       });
       return;
     case "jingle":
-      // A quick shake of sleigh bells.
+      // why: A quick shake of sleigh bells.
       for (let i = 0; i < 5; i++) shake(i * 0.07 + (i % 2) * 0.012, 0.11 - i * 0.012);
       return;
   }
 }
 
-/** One shake of sleigh bells: a few bursts of high, ringing band-passed noise with bright little tones. */
+/** why: One shake of sleigh bells: a few bursts of high, ringing band-passed noise with bright little tones. */
 function shake(start: number, gain: number, out?: AudioNode): void {
   if (!ctx) return;
   for (let j = 0; j < 3; j++) noise(start + j * 0.018, 0.09, "bandpass", 6500 + j * 1300, gain, 4, undefined, out);
@@ -451,12 +451,12 @@ function shake(start: number, gain: number, out?: AudioNode): void {
 }
 
 export interface Rev {
-  /** 0 = idle, 1 = fully charged. */
+  /** why: 0 = idle, 1 = fully charged. */
   set(level: number): void;
   stop(): void;
 }
 
-/** A continuous engine rev whose pitch and volume follow the boost charge. Call from a press handler. `volume` scales how loud it is. */
+/** why: A continuous engine rev whose pitch and volume follow the boost charge. Call from a press handler. `volume` scales how loud it is. */
 export function startRev(volume = 1): Rev | null {
   unlockAudio();
   if (muted || !ctx) return null;
