@@ -1,32 +1,23 @@
-/**
- * Recorded instruments for the built-in music: real piano, string sections, brass, harp, drums …
- * (samples/CREDITS.md says where each comes from; scripts/music-samples.py makes the files).
- *
- * The sequencer in engine.ts still decides when every note starts, so tempo and layers follow
- * the game exactly as before; a sampled note is just the nearest recording re-pitched with
- * playbackRate. One buffer source and one gain per note is lighter than the oscillator voices.
- *
- * Until an instrument's recordings are decoded (or if they fail to load) playSample returns
- * false and the caller plays the synthesized voice instead, so music never waits on a download.
- */
+// why: a sampled note is the nearest recording re-pitched; until it is decoded playSample returns false
+// and the synth voice plays, so music never waits on a download.
 import type { SampleSet, Zone } from "./samples/manifest.ts";
 import { SAMPLE_SETS } from "./samples/manifest.ts";
 
 type Ctx = BaseAudioContext;
 
 interface Voice {
-  /** Which recordings to use (default: the instrument's own). */
+  // why: defaults to the instrument's own recordings.
   set?: string;
-  /** Matches the level of the synthesized voice it replaces, so the tracks keep their mix. */
+  /** why: Matches the level of the synthesized voice it replaces, so the tracks keep their mix. */
   level: number;
-  /** Seconds the sound carries on past the written note (a struck string rings), then fades over `release`. */
+  /** why: Seconds the sound carries on past the written note (a struck string rings), then fades over `release`. */
   ring: number;
   release: number;
-  /** Seconds to fade in (a pad swells); 0 keeps the recording's own attack. */
+  /** why: Seconds to fade in (a pad swells); 0 keeps the recording's own attack. */
   attack?: number;
 }
 
-/** Instruments that stay synthesized (chiptune and sound effects) aren't listed. */
+/** why: Instruments that stay synthesized (chiptune and sound effects) aren't listed. */
 export const VOICES: Record<string, Voice> = {
   piano: { level: 0.75, ring: 0.9, release: 0.35 },
   strings: { level: 0.73, ring: 0, release: 0.2 },
@@ -52,7 +43,7 @@ export const VOICES: Record<string, Voice> = {
   woodblock: { level: 0.39, ring: 0.25, release: 0.05 },
 };
 
-/** An accented drum hit uses the harder stroke, a little louder too. */
+/** why: An accented drum hit uses the harder stroke, a little louder too. */
 const ACCENT_GAIN_FACTOR = 1.15;
 
 const setOf = (inst: string): SampleSet | undefined => SAMPLE_SETS[VOICES[inst]?.set ?? inst];
@@ -64,7 +55,7 @@ export function urlsFor(inst: string): string[] {
 }
 
 let enabled = true;
-/** Turn the recordings off (the `?music=synth` escape hatch, and for comparing). */
+/** why: Turn the recordings off (the `?music=synth` escape hatch, and for comparing). */
 export function setSamplesEnabled(on: boolean): void {
   enabled = on;
 }
@@ -82,12 +73,12 @@ function download(url: string, get: Fetcher): Promise<ArrayBuffer | null> {
   return p;
 }
 
-/** Start downloading recordings before there is an audio context to decode them in (it needs a click first). */
+/** why: Start downloading recordings before there is an audio context to decode them in (it needs a click first). */
 export function prefetchSamples(instruments: Iterable<string>, get: Fetcher = fromNetwork): void {
   for (const inst of instruments) for (const url of urlsFor(inst)) void download(url, get);
 }
 
-/** Download (if needed) and decode these instruments' recordings; resolves when they are ready or have failed. */
+/** why: Download (if needed) and decode these instruments' recordings; resolves when they are ready or have failed. */
 export function loadSamples(ctx: Ctx, instruments: Iterable<string>, get: Fetcher = fromNetwork): Promise<void> {
   let done = buffers.get(ctx);
   if (!done) buffers.set(ctx, (done = new Map()));
@@ -113,14 +104,14 @@ export function loadSamples(ctx: Ctx, instruments: Iterable<string>, get: Fetche
   return Promise.all(all).then(() => {});
 }
 
-/** Whether every recording this instrument needs is decoded (so its notes never mix two sounds). */
+/** why: Whether every recording this instrument needs is decoded (so its notes never mix two sounds). */
 export function samplesReady(ctx: Ctx, inst: string): boolean {
   const done = buffers.get(ctx);
   const urls = urlsFor(inst);
   return !!done && urls.length > 0 && urls.every((u) => done.get(u));
 }
 
-/** The recording nearest a MIDI note: the one needing the least re-pitching. */
+/** why: The recording nearest a MIDI note: the one needing the least re-pitching. */
 export function nearestZone(zones: Zone[], midi: number): Zone {
   let best = zones[0]!;
   for (const z of zones) if (Math.abs(z.root - midi) < Math.abs(best.root - midi)) best = z;
@@ -129,10 +120,7 @@ export function nearestZone(zones: Zone[], midi: number): Zone {
 
 const midiOf = (freq: number) => 69 + 12 * Math.log2(freq / 440);
 
-/**
- * Play one note or drum hit from its recording at time t (drums ignore `freq`).
- * Returns false (play the synthesized voice instead) if the instrument has no recordings or they aren't ready.
- */
+// why: drums ignore `freq`; false means play the synthesized voice instead (no recordings, or not ready).
 export function playSample(ctx: Ctx, dest: AudioNode, inst: string, t: number, freq: number, len: number, vol: number, detune = 0, accent = false): boolean {
   const voice = VOICES[inst];
   const set = setOf(inst);
