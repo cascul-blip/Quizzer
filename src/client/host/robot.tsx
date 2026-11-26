@@ -18,6 +18,10 @@ import { Award } from "./tower.tsx";
 
 type RobotView = Extract<HostView, { kind: "robot" }>;
 
+const SNOWMAN_CLAW_CONTACT_MS = 800;
+const ATTACK_VERDICT_DELAY_MS = 1000;
+const WARNING_VOICE_AFTER_ALARM_MS = 650;
+
 const Arena = ROBOT_SKIN === "snowman" ? SnowmanArena : RobotArena;
 
 export function RobotStage({ view, send }: { view: RobotView; send: Send }) {
@@ -34,19 +38,16 @@ export function RobotStage({ view, send }: { view: RobotView; send: Send }) {
       if (view.phase === "quiz" && view.round === 1) play("start");
       if (view.phase === "move") play("tickHigh");
       if (view.phase === "attack") {
-        if (ROBOT_SKIN === "snowman")
-          later(() => play("whoosh"), 800); // why: as the claws hit the board
+        if (ROBOT_SKIN === "snowman") later(() => play("whoosh"), SNOWMAN_CLAW_CONTACT_MS);
         else play("laser");
-        // why: one verdict per attack, once it has hit.
         const line = attackVoiceLine(view.lastAttack, ROBOT_SKIN);
-        if (line) later(() => void say(line), 1000);
+        if (line) later(() => void say(line), ATTACK_VERDICT_DELAY_MS);
       }
       if (view.phase === "podium") play("fanfare");
     }
     if (view.marked.length > 0 && p.marked.length === 0 && view.phase === "quiz") {
       play("alarm");
-      // why: the attacker speaks once the alarm has sounded.
-      later(() => void say(warningVoiceLine(ROBOT_SKIN)), 650);
+      later(() => void say(warningVoiceLine(ROBOT_SKIN)), WARNING_VOICE_AFTER_ALARM_MS);
     }
   }, [view]);
 
@@ -125,9 +126,9 @@ export function RobotStage({ view, send }: { view: RobotView; send: Send }) {
 function PhaseBar({ view, secs }: { view: RobotView; secs: number }) {
   // why: catch up once per phase; updating the delay on every snapshot would empty the bar early.
   const key = `${view.phase}-${view.round}`;
-  const start = useRef<{ key: string; elapsed: number } | null>(null);
-  if (!start.current || start.current.key !== key) start.current = { key, elapsed: Math.max(0, view.phaseDurationMs - view.phaseRemainingMs) };
-  const elapsed = start.current.elapsed;
+  const start = useRef<{ key: string; initialElapsedMs: number } | null>(null);
+  if (!start.current || start.current.key !== key) start.current = { key, initialElapsedMs: Math.max(0, view.phaseDurationMs - view.phaseRemainingMs) };
+  const initialElapsedMs = start.current.initialElapsedMs;
   const label =
     view.phase === "countdown"
       ? "Get ready…"
@@ -143,7 +144,7 @@ function PhaseBar({ view, secs }: { view: RobotView; secs: number }) {
   return (
     <div class={`robot-bar ${view.phase} ${view.marked.length > 0 && view.phase === "quiz" ? "warn" : ""}`}>
       {/* The key restarts the drain animation each phase; a negative delay catches up with time already passed. */}
-      <div key={key} class="robot-bar-fill" style={{ animationDuration: `${view.phaseDurationMs}ms`, animationDelay: `-${elapsed}ms` }} />
+      <div key={key} class="robot-bar-fill" style={{ animationDuration: `${view.phaseDurationMs}ms`, animationDelay: `-${initialElapsedMs}ms` }} />
       <div class="robot-bar-label">{label}</div>
     </div>
   );

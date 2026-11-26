@@ -21,10 +21,9 @@ import "./gift.css";
 
 type GiftView = Extract<HostView, { kind: "gift" }>;
 
-// why: Standings order selects exactly three featured heaps, including when ranks tie.
-const PODIUM_HEAPS = [chestMaximum, chestOverflowing, chestMedium];
+const FEATURED_HEAPS_BY_STANDINGS_INDEX = [chestMaximum, chestOverflowing, chestMedium];
 
-function GiftStation({ player, position, final }: { player: GiftStanding; position: number; final: boolean }) {
+function GiftStation({ player, standingsIndex, final }: { player: GiftStanding; standingsIndex: number; final: boolean }) {
   const previousScore = useRef(player.score);
   const [burst, setBurst] = useState(0);
   useEffect(() => {
@@ -32,7 +31,7 @@ function GiftStation({ player, position, final }: { player: GiftStanding; positi
     previousScore.current = player.score;
   }, [player.score, final]);
 
-  const heap = PODIUM_HEAPS[position] ?? chestFull;
+  const heap = FEATURED_HEAPS_BY_STANDINGS_INDEX[standingsIndex] ?? chestFull;
   const leading = player.rank === 1 && (player.score > 0 || final);
   return (
     <li class={`gift-station ${leading ? "gift-leading" : ""} ${!player.connected && !final ? "gift-offline" : ""}`}>
@@ -66,7 +65,7 @@ export function GiftStage({ view, send }: { view: GiftView; send: Send }) {
   for (const player of view.standings) {
     if (!seats.current.has(player.id)) seats.current.set(player.id, seats.current.size);
   }
-  const scoringPositions = new Map(view.standings.map((player, index) => [player.id, index]));
+  const standingsIndices = new Map(view.standings.map((player, index) => [player.id, index]));
   const stations = final ? view.standings : [...view.standings].sort((a, b) => seats.current.get(a.id)! - seats.current.get(b.id)!);
   const columns = Math.max(1, Math.min(6, stations.length > 6 ? Math.ceil(stations.length / 2) : stations.length));
 
@@ -112,7 +111,7 @@ export function GiftStage({ view, send }: { view: GiftView; send: Send }) {
               aria-label={final ? "Final standings" : "Live standings"}
             >
               {stations.map((player) => (
-                <GiftStation key={player.id} player={player} position={scoringPositions.get(player.id)!} final={final} />
+                <GiftStation key={player.id} player={player} standingsIndex={standingsIndices.get(player.id)!} final={final} />
               ))}
             </ul>
             {final && view.mostCorrect && <Award icon="✓" title={giftShared.awards.mostCorrect} award={view.mostCorrect} unit="correct" />}

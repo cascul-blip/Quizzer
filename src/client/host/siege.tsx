@@ -175,14 +175,17 @@ function useFrameClock(on: boolean): number {
   return now;
 }
 
-// why: keys present on the first render count as old.
-function useFirstSeen<K>(keys: K[], now: number): { at: (k: K) => number; old: (k: K) => boolean } {
+// why: the initial snapshot can contain completed events, which should not replay when the projector joins.
+function useFirstSeen<K>(keys: K[], nowMs: number): { firstSeenAtMs: (k: K) => number; hasTimestamp: (k: K) => boolean } {
   const seen = useRef<Map<K, number> | null>(null);
   const first = seen.current === null;
   seen.current ??= new Map();
-  for (const k of keys) if (!seen.current.has(k)) seen.current.set(k, first ? -Infinity : now);
+  for (const k of keys) if (!seen.current.has(k)) seen.current.set(k, first ? -Infinity : nowMs);
   if (seen.current.size > 500) for (const k of [...seen.current.keys()].slice(0, 250)) seen.current.delete(k);
-  return { at: (k) => seen.current!.get(k) ?? -Infinity, old: (k) => (seen.current!.get(k) ?? -Infinity) === -Infinity };
+  return {
+    firstSeenAtMs: (k) => seen.current!.get(k) ?? -Infinity,
+    hasTimestamp: (k) => (seen.current!.get(k) ?? -Infinity) !== -Infinity,
+  };
 }
 
 function Battlefield({ view }: { view: SiegeView }) {
@@ -240,7 +243,7 @@ function Battlefield({ view }: { view: SiegeView }) {
           <DefenderFigure
             key={d.id}
             d={d}
-            fresh={!defenders.old(d.id) && now - defenders.at(d.id) < 700}
+            fresh={defenders.hasTimestamp(d.id) && now - defenders.firstSeenAtMs(d.id) < 700}
             drawing={d.type === "archer" && now - lastAttack(`d${d.id}`, d.attackSeq) < 350}
           />
         ))}
@@ -250,12 +253,12 @@ function Battlefield({ view }: { view: SiegeView }) {
           return <MonsterFigure key={m.id} m={m} x={x} posed={now - lastAttack(`m${m.id}`, m.attackSeq) < 450} />;
         })}
         {view.fallen
-          .filter((f) => !fallen.old(f.seq) && now - fallen.at(f.seq) < FALLEN_MS)
+          .filter((f) => fallen.hasTimestamp(f.seq) && now - fallen.firstSeenAtMs(f.seq) < FALLEN_MS)
           .map((f) => (
             <FallenFigure key={`f${f.seq}`} type={f.type} lane={f.lane} x={f.x} reachedWall={f.reachedWall} />
           ))}
         {view.shots
-          .filter((s) => !shots.old(s.seq) && now - shots.at(s.seq) < SHOT_MS)
+          .filter((s) => shots.hasTimestamp(s.seq) && now - shots.firstSeenAtMs(s.seq) < SHOT_MS)
           .map((s) => (
             <ArrowShot key={`s${s.seq}`} lane={s.lane} from={s.square} to={s.toX} />
           ))}

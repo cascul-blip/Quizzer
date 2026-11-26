@@ -115,4 +115,6 @@ _Avoid_: reveal opportunity
 
 **High Noon** is Showdown's top arena, Arena 1 on Main Street, which the top two players fight in. Its winner stays there. Below it the arenas are numbered streets.
 
+**Reveal step** is one point in Showdown's projector animation for a round's reveal. The duelists face off, draw, fire, settle, then walk to their new arenas.
+
 **View batching** is building every view of one broadcast together, so work the views share (a ranking, a podium) is done once. A game mode opts in through its mode entry (Classic and Showdown do).
