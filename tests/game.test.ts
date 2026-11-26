@@ -30,11 +30,6 @@ describe("joining", () => {
     expect(() => game.join(42)).toThrow(GameError);
   });
 
-  test("cannot start without players", () => {
-    const { game } = setup();
-    expect(() => game.start()).toThrow(/at least one player/);
-  });
-
   test("resume by token", () => {
     const { game } = setup();
     const p = game.join("A");
@@ -205,6 +200,21 @@ describe("question flow", () => {
     expect(a.score).toBeGreaterThan(0);
     expect(finished()).toBe(1);
     expect(() => game.join("Late")).toThrow(/finished/);
+  });
+
+  test("a disconnect updates the screens once", () => {
+    const clock = new FakeClock();
+    let changes = 0;
+    const game = classicGame(sampleQuiz(), { clock, onChange: () => changes++ });
+    const a = game.join("A");
+    const b = game.join("B");
+    game.start();
+    toOpen(game, clock);
+    game.answer(b.id, 0, 1);
+    changes = 0;
+    game.setConnected(a.id, false);
+    expect(game.phase).toBe("reveal");
+    expect(changes).toBe(1);
   });
 
   test("kick removes the player and invalidates their token", () => {

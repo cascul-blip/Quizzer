@@ -60,6 +60,10 @@ _Avoid_: finish handler, podium step
 The parts every streamed game mode assembles, built together: Roster, QuestionStream, Phase timer, Game finish, an optional Game-length clock, the start guard and the hub callbacks. The mode still owns its join, kick and answer.
 _Avoid_: base game, mode lifecycle
 
+**Paced session**:
+The paced counterpart of the Streamed session: the parts every paced game mode assembles, built together: Roster, Paced question round (with its Phase timer), Game finish, the start guard and the hub callbacks. It ends a game by settling and revealing an open question first, and broadcasts once per disconnect, answer or pacing change. The mode still owns its join, kick, answer and next.
+_Avoid_: base game, mode lifecycle
+
 **Streamed question**:
 A question one player gets on their own phone in a self-paced game mode, such as Tallest Tower or Kingdom Siege. Each player moves through questions at their own speed, and an answer names the question by its sequence number.
 _Avoid_: self-paced question, stream question

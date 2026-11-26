@@ -1,21 +1,20 @@
 import type { AnswerValue } from "../../shared/answer-match.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
-import { cleanAvatar, randomAvatar } from "../../shared/avatars.ts";
+import { cleanAvatar } from "../../shared/avatars.ts";
 import type { Pacing, QuestionError, QuestionView } from "../../shared/mode-views.ts";
 import type { ClassicPhase, HostClassicState, RankedEntry } from "../../shared/modes/classic.ts";
 import type { PlayerView, ShuffleOptions } from "../../shared/protocol.ts";
 import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import type { Clock } from "./common.ts";
-import { GameError, preparePlayOrder, realClock, topErrors } from "./common.ts";
+import { GameError, preparePlayOrder, topErrors } from "./common.ts";
 import type { LobbyChoices } from "./lobby-facts.ts";
-import { INTRO_MS, PacedRound } from "./paced-round.ts";
-import { GameFinish } from "./phase-timer.ts";
+import { INTRO_MS } from "./paced-round.ts";
+import { PacedSession } from "./paced-session.ts";
 import type { Podium } from "./podium.ts";
 import { buildPodium, emptyPodium } from "./podium.ts";
 import type { Column, ResultsSheet } from "./results.ts";
 import { sheet } from "./results.ts";
 import type { BasePlayer } from "./roster.ts";
-import { Roster } from "./roster.ts";
 import { scoreAnswer } from "./scoring.ts";
 import { most, rankBy } from "./standings.ts";
 
@@ -62,16 +61,9 @@ export class ClassicGame {
   questions: Question[];
   shuffle: ShuffleOptions;
   readonly runningMode = "classic" as const;
-  readonly roster = new Roster<Player>();
 
-  private readonly clock: Clock;
-  private readonly rng: () => number;
   private readonly source: Question[];
-  private readonly paced: PacedRound<"lobby" | "leaderboard" | "podium">;
-  private readonly onChange: () => void;
-  private readonly onActivity: (playerId: string) => void;
-  private readonly onFinish: (game: ClassicGame) => void;
-  private readonly gameFinish: GameFinish<ClassicGame["phase"], Podium<Player, Player, never>>;
+  private readonly session: PacedSession<Player, "lobby" | "leaderboard", Podium<Player, Player, never>, ClassicGame>;
   private batch: { ranked?: (Player & { rank: number })[]; rankById?: Map<string, number> } | null = null;
 
   constructor(quiz: Quiz, opts: GameOptions = {}) {
@@ -81,39 +73,32 @@ export class ClassicGame {
     this.source = quiz.questions;
     this.questions = preparePlayOrder(quiz.questions, { questions: false, answers: false });
     this.shuffle = opts.shuffle ?? { questions: quiz.settings.shuffleQuestions, answers: quiz.settings.shuffleAnswers };
-    this.rng = opts.rng ?? Math.random;
-    this.clock = opts.clock ?? realClock;
-    this.paced = new PacedRound<"lobby" | "leaderboard" | "podium">(this.clock, {
+    this.session = new PacedSession<Player, "lobby" | "leaderboard", Podium<Player, Player, never>, ClassicGame>({
+      game: this,
+      clock: opts.clock,
+      rng: opts.rng,
       initial: "lobby",
       pacing: opts.pacing ?? "manual",
       questions: () => this.questions,
-      asked: () => this.players.values(),
       afterReveal: ["leaderboard"],
       hideAutoCountdown: true,
       settle: () => this.settleQuestion(),
       advance: () => this.afterReveal(),
-      onChange: () => this.onChange(),
-    });
-    this.onChange = opts.onChange ?? (() => {});
-    this.onActivity = opts.onActivity ?? (() => this.onChange());
-    this.onFinish = opts.onFinish ?? (() => {});
-    this.gameFinish = new GameFinish(this.paced.phases, "podium", {
       podium: { build: () => this.buildPodium(), empty: () => emptyPodium({}) },
-      onFinish: () => this.onFinish(this),
-      onChange: () => this.onChange(),
+      hub: { onChange: opts.onChange, onActivity: opts.onActivity, onFinish: opts.onFinish },
     });
   }
 
   get phase(): ClassicPhase | "lobby" {
-    return this.paced.phase;
+    return this.session.paced.phase;
   }
 
   get qIndex(): number {
-    return this.paced.qIndex;
+    return this.session.paced.qIndex;
   }
 
   get pacing(): Pacing {
-    return this.paced.pacing;
+    return this.session.paced.pacing;
   }
 
   setup!: LobbyChoices;
@@ -124,36 +109,35 @@ export class ClassicGame {
   }
 
   get openedAt(): number {
-    return this.paced.openedAt;
+    return this.session.paced.openedAt;
   }
 
   /** When the current phase's countdown ends (intro/open), for views; 0 when it has none. */
   get phaseEndsAt(): number {
-    return this.paced.phases.endsAt;
+    return this.session.paced.phases.endsAt;
   }
 
   get players(): Map<string, Player> {
-    return this.roster.players;
+    return this.session.players;
   }
 
   get currentQuestion(): Question | null {
-    return this.paced.currentQuestion;
+    return this.session.paced.currentQuestion;
   }
 
   /** `avatar` is the player's previous pick (if any); otherwise they get a random one to change in the lobby. */
   join(rawNickname: unknown, avatar?: AvatarChoice | null): Player {
-    if (this.phase === "podium") throw new GameError("This game has finished");
-    const player = this.roster.add(rawNickname, avatar ?? randomAvatar(this.rng), newPlayer);
-    this.onChange();
+    const player = this.session.addPlayer(rawNickname, avatar, newPlayer);
+    this.session.changed();
     return player;
   }
 
   adoptPlayers(players: Iterable<BasePlayer>): void {
-    this.roster.adoptFrom(players, newPlayer);
+    this.session.adoptPlayers(players, newPlayer);
   }
 
   byToken(token: unknown): Player | null {
-    return this.roster.byToken(token);
+    return this.session.byToken(token);
   }
 
   /** Change a player's character/accessory; only while waiting in the lobby. */
@@ -164,54 +148,50 @@ export class ClassicGame {
     const choice = cleanAvatar(avatar, accessory);
     if (!choice) throw new GameError("Unknown avatar");
     p.avatar = choice;
-    this.onChange();
+    this.session.changed();
   }
 
   setConnected(playerId: string, connected: boolean): void {
-    if (!this.roster.setConnected(playerId, connected)) return;
-    this.onChange();
-    if (!connected) this.paced.closeIfAllAnswered();
+    this.session.setConnected(playerId, connected);
   }
 
   kick(playerId: string): Player | null {
-    const p = this.roster.remove(playerId);
+    const p = this.session.removePlayer(playerId);
     if (!p) return null;
-    this.onChange();
-    this.paced.closeIfAllAnswered();
+    this.session.playerLeft();
     return p;
   }
 
   answer(playerId: string, qIndex: number, answer: AnswerValue): boolean {
     const limitSec = this.currentQuestion?.timeLimitSec ?? 0;
-    const taken = this.paced.take(this.players.get(playerId), qIndex, answer, (a) => ({ ...a, points: scoreAnswer(a.correct, a.msSinceOpen, limitSec) }));
+    const taken = this.session.paced.take(this.players.get(playerId), qIndex, answer, (a) => ({
+      ...a,
+      points: scoreAnswer(a.correct, a.msSinceOpen, limitSec),
+    }));
     if (!taken) return false;
-    this.onActivity(playerId);
-    this.paced.closeIfAllAnswered();
+    this.session.answered(playerId);
     return true;
   }
 
   start(pacing?: Pacing): void {
-    if (this.phase !== "lobby") throw new GameError("The game has already started");
-    if (this.questions.length === 0) throw new GameError("This quiz has no questions");
-    if (this.players.size === 0) throw new GameError("Wait for at least one player to join");
-    if (pacing) this.paced.pacing = pacing;
-    this.questions = preparePlayOrder(this.source, this.shuffle, this.rng);
-    this.enterIntro(0);
+    if (this.phase === "lobby" && this.questions.length === 0) throw new GameError("This quiz has no questions");
+    this.session.start(() => {
+      if (pacing) this.session.paced.pacing = pacing;
+      this.questions = preparePlayOrder(this.source, this.shuffle, this.session.rng);
+      this.enterIntro(0);
+    });
   }
 
   setShuffle(opts: ShuffleOptions): void {
     if (this.phase !== "lobby") throw new GameError("Shuffle can only be changed before the game starts");
     this.shuffle = { questions: !!opts.questions, answers: !!opts.answers };
-    this.onChange();
+    this.session.changed();
   }
 
   setPacing(pacing: Pacing): void {
-    this.paced.setPacing(pacing);
-    if (this.phase === "leaderboard") {
-      this.paced.phases.cancelPhase();
-      this.scheduleLeaderboardAuto();
-    }
-    this.onChange();
+    if (this.phase === "leaderboard") this.session.paced.phases.cancelPhase();
+    this.session.setPacing(pacing);
+    this.scheduleLeaderboardAuto();
   }
 
   next(): void {
@@ -221,7 +201,7 @@ export class ClassicGame {
       case "intro":
       case "open":
       case "reveal":
-        return this.paced.next();
+        return this.session.paced.next();
       case "leaderboard":
         return this.enterIntro(this.qIndex + 1);
       case "podium":
@@ -230,21 +210,19 @@ export class ClassicGame {
   }
 
   skip(): void {
-    this.paced.skip();
+    this.session.paced.skip();
   }
 
   end(): void {
-    if (this.gameFinish.finished) return;
-    if (this.phase === "open") this.paced.close();
-    this.gameFinish.finish();
+    this.session.end();
   }
 
   dispose(): void {
-    this.paced.phases.dispose();
+    this.session.dispose();
   }
 
   private enterIntro(index: number): void {
-    this.paced.intro(index);
+    this.session.paced.intro(index);
   }
 
   private settleQuestion(): void {
@@ -257,16 +235,16 @@ export class ClassicGame {
   }
 
   private afterReveal(): void {
-    if (this.qIndex >= this.questions.length - 1) return this.gameFinish.finish();
-    this.paced.phases.enter("leaderboard");
+    if (this.qIndex >= this.questions.length - 1) return this.session.end();
+    this.session.paced.phases.enter("leaderboard");
     this.scheduleLeaderboardAuto();
-    this.onChange();
+    this.session.changed();
   }
 
   private scheduleLeaderboardAuto(): void {
     // The timer runs behind the scenes: views show no countdown for an auto-paced leaderboard.
     if (this.pacing === "auto" && this.phase === "leaderboard") {
-      this.paced.phases.set("leaderboard", AUTO_LEADERBOARD_MS, () => this.enterIntro(this.qIndex + 1), { hidden: true });
+      this.session.paced.phases.set("leaderboard", AUTO_LEADERBOARD_MS, () => this.enterIntro(this.qIndex + 1), { hidden: true });
     }
   }
 
@@ -291,7 +269,7 @@ export class ClassicGame {
 
   /** The finished game's Podium (GLOSSARY.md), worked out once in Game finish. */
   get podium(): Podium<Player, Player, never> {
-    return this.gameFinish.podium;
+    return this.session.podium;
   }
 
   leaderboard(limit = LEADERBOARD_SIZE): RankedEntry[] {
@@ -314,11 +292,11 @@ export class ClassicGame {
   }
 
   private questionView(): QuestionView | null {
-    return this.phase === "lobby" || this.phase === "podium" ? null : this.paced.view();
+    return this.phase === "lobby" || this.phase === "podium" ? null : this.session.paced.view();
   }
 
   private get revealed(): boolean {
-    return this.paced.revealed;
+    return this.session.paced.revealed;
   }
 
   hostView(): HostClassicState {
@@ -369,7 +347,7 @@ export class ClassicGame {
     if (this.phase === "lobby") throw new GameError("The game has not started");
     if (!p) return { kind: "none", game: { title: this.title, phase: this.phase } };
     const q = this.currentQuestion;
-    const ans = this.paced.shownAnswer(p);
+    const ans = this.session.paced.shownAnswer(p);
     return {
       kind: "classic",
       phase: this.phase,
