@@ -17,7 +17,7 @@ describe("Kingdom Siege themes", () => {
     ]);
   });
 
-  test("Christmas is the default and both clients receive the selected look", () => {
+  test("Christmas is the default and both clients keep the selected theme on a waves-only update", () => {
     const lobby = new Lobby(sampleQuiz());
     lobby.setMode("siege");
     expect(lobby.settings.siege.theme).toBe(THEMED_MODES.siege.default);
@@ -25,7 +25,6 @@ describe("Kingdom Siege themes", () => {
     const player = lobby.join("Holly");
     for (const theme of ["classic", "christmas"] as const) {
       lobby.setModeSettings("siege", { waves: 10, theme });
-      // why: Older clients updating only waves must preserve an explicit theme choice.
       lobby.setModeSettings("siege", { waves: 5 });
       expect(lobby.settings.siege.theme).toBe(theme);
       const game = SiegeGame.fromLobby(lobby.handoffFacts("siege"), { clock: new FakeClock() });

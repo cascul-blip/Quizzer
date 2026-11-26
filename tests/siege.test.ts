@@ -149,7 +149,6 @@ describe("rules", () => {
     const GOLD_PER_BUDGET_POINT = 60;
     expect(siegeWaveStrength(10, 10 * GOLD_PER_BUDGET_POINT)).toEqual({ boost: 1, budget: 10, toughness: 1 });
     expect(siegeWaveStrength(10, 0, 3)).toEqual({ boost: 1, budget: 10, toughness: 1 });
-    // why: twice par calls for 4×, reached 0.35 at a time, mostly as health.
     expect(siegeWaveStrength(10, 2 * 10 * GOLD_PER_BUDGET_POINT)).toEqual({ boost: 1.35, budget: 11, toughness: 1.23 });
     expect(siegeWaveStrength(10, 2 * 10 * GOLD_PER_BUDGET_POINT, 2, false).boost).toBe(2);
     expect(siegeWaveStrength(10, 2 * 10 * GOLD_PER_BUDGET_POINT, 3.9)).toEqual({ boost: 4, budget: 15, toughness: 2.64 });
@@ -301,7 +300,6 @@ describe("the battle", () => {
     game.place(byName(game, "Ana").id, "wall", 0, 5);
     const wall = game.battlefield.defenderAt(0, 5)!;
     const goblin = game.battlefield.spawn("goblin", 0);
-    // why: two squares at 2 s each, then 1 damage a second.
     clock.advance(4000);
     expect(goblin.x).toBeCloseTo(6, 5);
     expect(goblin.state).toBe("attack");
@@ -424,7 +422,6 @@ describe("the battle", () => {
     expect(wolf.state).toBe("leap");
     clock.advance(1000);
     expect(wolf.x).toBeLessThan(6);
-    // why: it lands on square 5, walks to 4 and hits the second wall a second later.
     clock.advance(2000);
     expect(wolf.x).toBeCloseTo(4, 5);
     expect(wolf.state).toBe("attack");
@@ -657,7 +654,6 @@ describe("waves", () => {
     const log1 = game.waveLog[0]!;
     expect(log1.scale).toBe(100);
     expect(log1.budget).toBe(siegeWaveBudget(1, 3, 100));
-    // why: a perfect wave raises the scale by the 20-point step.
     const players = [...game.players.values()];
     for (let i = 0; i < 4; i++) for (const p of players) answer(game, clock, p, true);
     game.battlefield.monsters = [];

@@ -58,9 +58,8 @@ const ALL = Object.keys(VOICES);
 const midiOf = (f: number) => 69 + 12 * Math.log2(f / 440);
 const sampledTracks = Object.values(TRACKS).filter(usesSamples);
 
-/** why: `len` is in seconds at the track's slowest tempo, the longest a sample must hold. */
-function notesOf(inst: string): { midi: number; len: number }[] {
-  const out: { midi: number; len: number }[] = [];
+function notesOf(inst: string): { midi: number; heldSeconds: number }[] {
+  const out: { midi: number; heldSeconds: number }[] = [];
   for (const t of sampledTracks)
     for (const l of t.layers) {
       if (l.inst !== inst) continue;
@@ -71,7 +70,7 @@ function notesOf(inst: string): { midi: number; len: number }[] {
           while (s + held < stepsPerBar(t) && toks[s + held] === "-") held++;
           for (const n of tok.split("+")) {
             const f = noteFreq(n);
-            if (f) out.push({ midi: midiOf(f), len: held * stepSeconds(t, 0) * 0.95 });
+            if (f) out.push({ midi: midiOf(f), heldSeconds: held * stepSeconds(t, 0) * 0.95 });
           }
         });
       }
@@ -100,9 +99,9 @@ describe("the recordings", () => {
       const voice = VOICES[inst]!;
       const set = SAMPLE_SETS[voice.set ?? inst]!;
       if (!("zones" in set)) throw new Error(inst);
-      for (const { midi, len } of notesOf(inst)) {
+      for (const { midi, heldSeconds } of notesOf(inst)) {
         const rate = 2 ** ((midi - nearestZone(set.zones, midi).root) / 12);
-        expect((len + voice.ring + voice.release) * rate).toBeLessThan(set.seconds - RECORDING_END_FADE_S);
+        expect((heldSeconds + voice.ring + voice.release) * rate).toBeLessThan(set.seconds - RECORDING_END_FADE_S);
       }
     }
   });

@@ -148,7 +148,6 @@ describe("Robot Attack", () => {
     expect(game.phase).toBe("quiz");
     expect(game.marked.size).toBe(0);
     clock.advance(ROBOT_QUIZ_MIN_MS - ROBOT_WARN_MS);
-    // why: three rings are gone, and 27 is 3/4 of the 6×6 board left.
     expect(game.inset).toBe(3);
     expect(game.marked.size).toBe(27);
   });

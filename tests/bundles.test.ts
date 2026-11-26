@@ -14,8 +14,7 @@ function file(name: string, loader: string, contentType: string, body: string | 
   return { input: "index.html", path, loader: loader as never, isEntry: true, headers: { etag: `tag-${name}`, "content-type": contentType } };
 }
 
-/** why: mirrors what the compiled exe sees: two pages sharing one chunk. */
-function builtPages(): Record<string, HTMLBundle> {
+function pagesWithSharedChunk(): Record<string, HTMLBundle> {
   const js = file("chunk-shared.js", "js", "text/javascript;charset=utf-8", "console.log('hello');".repeat(200));
   const img = file("cat-abc123.webp", "file", "image/webp", new Uint8Array([82, 73, 70, 70, 1, 2, 3]));
   const a = file("index-a.html", "html", "text/html;charset=utf-8", "<!doctype html><script src=/chunk-shared.js></script>");
@@ -44,11 +43,11 @@ describe("pageRoutes", () => {
   });
 
   test("routes every page and asset once", () => {
-    expect(Object.keys(pageRoutes(builtPages())).sort()).toEqual(["/", "/admin", "/cat-abc123.webp", "/chunk-shared.js"]);
+    expect(Object.keys(pageRoutes(pagesWithSharedChunk())).sort()).toEqual(["/", "/admin", "/cat-abc123.webp", "/chunk-shared.js"]);
   });
 
   test("text is gzipped when accepted and plain otherwise", async () => {
-    const routes = pageRoutes(builtPages()) as Record<string, (req: Request) => Response>;
+    const routes = pageRoutes(pagesWithSharedChunk()) as Record<string, (req: Request) => Response>;
     const plain = routes["/chunk-shared.js"]!(get());
     const zipped = routes["/chunk-shared.js"]!(get("gzip, deflate"));
     expect(plain.headers.get("content-encoding")).toBeNull();
@@ -61,7 +60,7 @@ describe("pageRoutes", () => {
   });
 
   test("pages are revalidated, images are never gzipped", () => {
-    const routes = pageRoutes(builtPages()) as Record<string, (req: Request) => Response>;
+    const routes = pageRoutes(pagesWithSharedChunk()) as Record<string, (req: Request) => Response>;
     const page = routes["/"]!(get("gzip"));
     expect(page.headers.get("cache-control")).toBe("no-cache");
     expect(page.headers.get("content-type")).toBe("text/html;charset=utf-8");
@@ -71,9 +70,8 @@ describe("pageRoutes", () => {
   });
 
   test("images are served from the file when asked for, not copied into memory at startup", async () => {
-    const pages = builtPages();
+    const pages = pagesWithSharedChunk();
     const routes = pageRoutes(pages) as Record<string, (req: Request) => Response>;
-    // why: a startup copy would still serve the old bytes.
     writeFileSync(join(dir, "cat-abc123.webp"), new Uint8Array([82, 73, 70, 70, 9, 9]));
     const img = routes["/cat-abc123.webp"]!(get());
     expect([...new Uint8Array(await img.arrayBuffer())]).toEqual([82, 73, 70, 70, 9, 9]);
@@ -82,7 +80,7 @@ describe("pageRoutes", () => {
   });
 
   test("a matching If-None-Match gets 304, and the gzip and plain copies have different ETags", () => {
-    const routes = pageRoutes(builtPages()) as Record<string, (req: Request) => Response>;
+    const routes = pageRoutes(pagesWithSharedChunk()) as Record<string, (req: Request) => Response>;
     const etag = routes["/chunk-shared.js"]!(get("gzip")).headers.get("etag")!;
     expect(etag).not.toBe(routes["/chunk-shared.js"]!(get()).headers.get("etag"));
     expect(routes["/chunk-shared.js"]!(get("gzip", etag)).status).toBe(304);

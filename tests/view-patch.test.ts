@@ -99,7 +99,6 @@ describe("View delivery", () => {
     ]);
     phone.raw = [];
 
-    // why: drain forces a refresh even when the queued attempt saw no view change.
     phone.bufferedAmount = 4096;
     hub.broadcast();
     expect(phone.raw).toEqual([]);

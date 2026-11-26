@@ -123,7 +123,6 @@ describe("climbLadder", () => {
       ["win", "lose"],
       ["lose", "win"],
     ]);
-    // why: the draw above blocks boundary 1-2; at boundary 2-3, d (lost) and f (won) swap.
     expect(pairArenas(next2)).toEqual([
       ["a", "b"],
       ["c", "f"],

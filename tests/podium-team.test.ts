@@ -75,7 +75,6 @@ function running() {
 
 type QuestionShown = { seq: number; index: number; text: string; options: string[] };
 
-/** why: "One" is True, "Two" is False. */
 function question(id: string) {
   const view = running().playerView(id) as { question?: QuestionShown | null } | null;
   const q = view?.question;
@@ -150,7 +149,6 @@ describe("Podium in team modes", () => {
       },
       { teams: 3, minutes: 2, theme: "classic" },
     );
-    // why: changes after the finish must not reach the Podium.
     const holly = [...game.players.values()].find((p) => p.nickname === "Holly")!;
     holly.placed = 9;
     game.teams[holly.team]!.columns = [5, 5, 5];
@@ -232,7 +230,6 @@ describe("Podium in team modes", () => {
       { teams: 3, minutes: 5 },
     );
     const holly = [...game.players.values()].find((p) => p.nickname === "Holly")!;
-    // why: conquered, Holly plays on with Noel's team.
     expect(holly.team).toBe(0);
     holly.captured = 99;
     expect(places).toEqual({

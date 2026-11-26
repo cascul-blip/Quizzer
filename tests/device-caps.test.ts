@@ -5,8 +5,7 @@ import type { GameHub } from "../src/server/ws.ts";
 import { FakeClock, tempDir } from "./helpers.ts";
 import { fakeHub, HubSocket } from "./hub-harness.ts";
 
-/** why: the host machine's own address is exempt from the per-device caps. */
-const HOST_ADDRESS = "127.0.0.1";
+const EXEMPT_HOST_ADDRESS = "127.0.0.1";
 
 describe("Per-device caps", () => {
   let t: ReturnType<typeof tempDir>;
@@ -36,7 +35,7 @@ describe("Per-device caps", () => {
     const extra = join(hub, "192.168.1.50", "Extra");
     expect(extra.raw).toContainEqual({ type: "error", message: "Too many players from this device" });
     expect(join(hub, "192.168.1.51", "Other").raw.some((m) => m.type === "joined")).toBe(true);
-    for (let i = 0; i < MAX_JOINS_PER_ADDRESS + 1; i++) expect(join(hub, HOST_ADDRESS, `L${i}`).raw.some((m) => m.type === "joined")).toBe(true);
+    for (let i = 0; i < MAX_JOINS_PER_ADDRESS + 1; i++) expect(join(hub, EXEMPT_HOST_ADDRESS, `L${i}`).raw.some((m) => m.type === "joined")).toBe(true);
   });
 
   test("a closed socket frees its seat in the socket count", async () => {

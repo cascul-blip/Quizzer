@@ -33,8 +33,7 @@ const CHANGED: { [M in GameMode]: ModeSettingsInput[M] } = {
   memory: { boardSize: 6 },
 };
 
-/** why: how many teams the lobby shows with CHANGED settings; null in solo modes. */
-const TEAMS: { [M in GameMode]: number | null } = {
+const TEAM_COUNTS_WITH_CHANGED_SETTINGS: { [M in GameMode]: number | null } = {
   classic: null,
   tower: 3,
   submarine: null,
@@ -49,7 +48,6 @@ const TEAMS: { [M in GameMode]: number | null } = {
   memory: null,
 };
 
-/** why: modes played question by question, whose pacing the host sets and the next lobby keeps. */
 const PACED = new Set<GameMode>(["classic", "racer", "duel", "memory"]);
 
 const MODES_WITH_LOBBY_BANNER = new Set<GameMode>(["siege"]);
@@ -245,8 +243,8 @@ describe("Game modes", () => {
       test("the lobby shows the mode's teams", () => {
         const [noel] = openLobby(mode, ["Noel"]);
         send(host, { type: "host.setModeSettings", mode, settings: CHANGED[mode] } as ClientMsg);
-        expect(lobbyView().teams?.length ?? null).toBe(TEAMS[mode]);
-        expect(phoneLobbyView(noel!.playerId).team !== null).toBe(TEAMS[mode] !== null);
+        expect(lobbyView().teams?.length ?? null).toBe(TEAM_COUNTS_WITH_CHANGED_SETTINGS[mode]);
+        expect(phoneLobbyView(noel!.playerId).team !== null).toBe(TEAM_COUNTS_WITH_CHANGED_SETTINGS[mode] !== null);
       });
 
       test(`is declared ${PACED.has(mode) ? "paced" : "not paced"}, ${MODES_WITH_PROTECT_FROM_ABUSE.has(mode) ? "protected" : "not protected"}, ${MODES_WITH_LOBBY_BANNER.has(mode) ? "with" : "without"} a lobby banner`, () => {
@@ -281,11 +279,10 @@ describe("Game modes", () => {
         const csv = hub.lastResults?.csv ?? "";
         expect(csv).toStartWith(BOM);
         const lines = csv.slice(1).split("\r\n");
-        // why: Kingdom Siege adds a wave log after a blank line; the player rows come first in every mode.
-        const rows = lines.slice(1, lines.indexOf(""));
+        const resultsRowsBeforeAppendix = lines.slice(1, lines.indexOf(""));
         expect(lines[0]).toContain("Nickname");
-        expect(rows).toHaveLength(nicknames.length);
-        for (const nickname of nicknames) expect(rows.some((row) => row.includes(nickname))).toBe(true);
+        expect(resultsRowsBeforeAppendix).toHaveLength(nicknames.length);
+        for (const nickname of nicknames) expect(resultsRowsBeforeAppendix.some((row) => row.includes(nickname))).toBe(true);
         const game = hub.game;
         if (!game || game instanceof Lobby) throw new Error("expected the finished game");
         const sheet = entryOf(game).results(game);
@@ -358,8 +355,7 @@ describe("Game modes", () => {
 const STREAMED_MODES = ["tower", "gift", "submarine", "fight", "robot", "land", "cup", "siege"] as const satisfies readonly GameMode[];
 type StreamedMode = (typeof STREAMED_MODES)[number];
 
-// why: only Robot Attack, Cup of Death and Kingdom Siege show the countdown length; null where the host view has no such field.
-const COUNTDOWN_DURATION: { [M in StreamedMode]: number | null } = {
+const VISIBLE_COUNTDOWN_DURATION_MS: { [M in StreamedMode]: number | null } = {
   tower: null,
   gift: null,
   submarine: null,
@@ -429,7 +425,7 @@ describe("Streamed modes' visible output", () => {
         const { game } = streamedGame(mode);
         const before = game.hostView();
         expect(before.phase).toBe("countdown");
-        expect("phaseDurationMs" in before ? before.phaseDurationMs : null).toBe(COUNTDOWN_DURATION[mode]);
+        expect("phaseDurationMs" in before ? before.phaseDurationMs : null).toBe(VISIBLE_COUNTDOWN_DURATION_MS[mode]);
         game.start();
         const started = game.hostView();
         expect(new Map(Object.entries(started)).get(REMAINING_FIELD[mode])).toBe(3_000);

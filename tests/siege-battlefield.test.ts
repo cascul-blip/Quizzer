@@ -22,12 +22,10 @@ beforeEach(() => {
     classSize: () => 1,
     onDefeat: (owner, by) => defeats.push({ owner, by }),
   });
-  // why: wave 1 with nothing planned lets each test bring on exactly the monsters it wants.
   field.beginWave({ wave: 1, budget: 0, toughness: 1, giantPace: 1 });
 });
 
-/** why: ticks one at a time so any changed tick is reported. */
-function run(ms: number) {
+function runEachBattleTick(ms: number) {
   const seen = { changed: false, phones: false, map: false };
   for (let t = 0; t < ms; t += TICK) {
     clock.advance(TICK);
@@ -57,7 +55,7 @@ describe("Battlefield: placement", () => {
   test("an upgrade adds the extra health to what the defender has left, up to level 3", () => {
     const wall = field.place("wall", 0, 2, "Ana");
     field.spawn("goblin", 0, 3);
-    run(1100);
+    runEachBattleTick(1100);
     expect(wall.health).toBe(14);
     field.upgrade(wall);
     expect([wall.level, wall.health, wall.maxHealth]).toEqual([2, 24, 25]);
@@ -76,7 +74,7 @@ describe("Battlefield: combat", () => {
 
   test("a goblin on an empty lane reaches the wall and costs one heart", () => {
     field.spawn("goblin", 0, 2);
-    const seen = run(4000);
+    const seen = runEachBattleTick(4000);
     expect(field.hearts).toBe(9);
     expect(field.heartsLost).toBe(1);
     expect(field.sent).toBe(1);
@@ -90,7 +88,7 @@ describe("Battlefield: combat", () => {
   test("a knight defeats the goblin that walks into it, and its owner gets the credit", () => {
     const knight = field.place("knight", 2, 3, "Ana");
     field.spawn("goblin", 2, 5);
-    run(5000);
+    runEachBattleTick(5000);
     expect(field.monsters).toEqual([]);
     expect(field.fallen.map((f) => f.reachedWall)).toEqual([false]);
     expect(defeats).toEqual([{ owner: "Ana", by: "knight" }]);
@@ -101,7 +99,7 @@ describe("Battlefield: combat", () => {
   test("a goblin breaks a wall and walks on to the castle", () => {
     field.place("wall", 0, 2, "Ben");
     field.spawn("goblin", 0, 3);
-    const seen = run(22000);
+    const seen = runEachBattleTick(22000);
     expect(field.defenderAt(0, 2)).toBeUndefined();
     expect(seen.map).toBe(true);
     expect(field.hearts).toBe(9);
@@ -113,7 +111,7 @@ describe("Battlefield: combat", () => {
     const far = field.spawn("goblin", 0, 6);
     const near = field.spawn("goblin", 0, 4);
     const troll = field.spawn("troll", 1, 8);
-    run(TICK);
+    runEachBattleTick(TICK);
     expect([near.health, far.health, troll.health]).toEqual([2, 3, 11.5]);
     expect(field.shots).toHaveLength(2);
   });
@@ -123,7 +121,7 @@ describe("Battlefield: combat", () => {
     const knight = field.place("knight", 1, 4, "Ana");
     field.spawn("troll", 0, 5);
     field.spawn("troll", 1, 5);
-    run(1100);
+    runEachBattleTick(1100);
     expect(wall.health).toBe(9);
     expect(knight.health).toBe(8);
   });
@@ -133,9 +131,9 @@ describe("Battlefield: combat", () => {
     field.upgrade(wall);
     field.upgrade(wall);
     const goblin = field.spawn("goblin", 0, 4);
-    run(1100);
+    runEachBattleTick(1100);
     expect([wall.health, goblin.health]).toEqual([24, 2]);
-    run(2000);
+    runEachBattleTick(2000);
     expect(field.monsters).toEqual([]);
     expect(defeats).toEqual([{ owner: "Ana", by: "wall" }]);
   });
@@ -144,9 +142,9 @@ describe("Battlefield: combat", () => {
     const first = field.place("wall", 4, 6, "Ana");
     const second = field.place("wall", 4, 3, "Ana");
     const wolf = field.spawn("wolf", 4);
-    run(1000);
+    runEachBattleTick(1000);
     expect(wolf.state).toBe("leap");
-    run(3000);
+    runEachBattleTick(3000);
     expect(wolf.state).toBe("attack");
     expect(wolf.x).toBeCloseTo(4, 5);
     expect([first.health, second.health]).toEqual([15, 14]);
@@ -160,9 +158,9 @@ describe("Battlefield: combat", () => {
     const giant = field.spawn("giant", 2, 7);
     expect(giant.maxHealth).toBe(45);
     expect(field.alert?.kind).toBe("giant");
-    run(2900);
+    runEachBattleTick(2900);
     expect(giant.state).toBe("wait");
-    run(3300);
+    runEachBattleTick(3300);
     expect([wall.health, knight.health, above.health, apart.health]).toEqual([9, 8, 2, 4]);
   });
 
@@ -176,7 +174,7 @@ describe("Battlefield: combat", () => {
     field.beginWave({ wave: 1, budget: 6, toughness: 1, giantPace: 1 });
     expect(field.pending.length).toBeGreaterThan(0);
     field.stop();
-    run(20000);
+    runEachBattleTick(20000);
     expect(field.monsters).toEqual([]);
     expect(field.sent).toBe(0);
   });

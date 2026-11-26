@@ -238,7 +238,6 @@ describe("placing tiles", () => {
     round(game, clock, a, 3);
     expect(game.place(a.id, theirs[0]!)).toBe(true);
     expect(a).toMatchObject({ claims: 1, stolen: 0, state: "claim" });
-    // why: Taking it back costs Blue the normal steal price; taking it from Blue again is 2, not 4.
     fund(b, 2);
     expect(game.place(b.id, theirs[0]!)).toBe(true);
     expect(b.claims).toBe(0);
@@ -343,7 +342,6 @@ describe("surrounding", () => {
     expect(game.phase).toBe("podium");
     expect(finished()).toBe(1);
     expect(game.playerView(a.id)!.result).toMatchObject({ teamRank: 1, teamCount: 2, won: true });
-    // why: B's team was conquered: B's result is the place of the team B started on.
     expect(game.playerView(byName(game, "B").id)!.result).toMatchObject({ teamRank: 2, won: false });
     clock.advance(10 * 60_000);
     expect(finished()).toBe(1);

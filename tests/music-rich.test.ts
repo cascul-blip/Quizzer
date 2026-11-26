@@ -18,8 +18,6 @@ import {
 } from "../src/client/shared/music/rich.ts";
 import { TRACKS } from "../src/client/shared/music/tracks.ts";
 
-// why: tests have no AudioContext, so this stand-in records every node made and source started.
-
 class FakeParam {
   value = 0;
   setValueAtTime() {}
