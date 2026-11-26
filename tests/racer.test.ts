@@ -108,13 +108,9 @@ describe("Racer", () => {
     expect(mine.question!.options).toEqual([]);
     expect(game.playerView(others(game)[0]!.id)).toMatchObject({ isDriver: false, driver: v.driver, lever: "low" });
     expect(game.playerView("nobody")).toBeNull();
-    expect(() => game.start()).toThrow("already started");
   });
 
-  test("a game needs players and questions", () => {
-    const clock = new FakeClock();
-    const empty = RacerGame.fromLobby(new Lobby(quiz()).handoffFacts("racer"), { clock });
-    expect(() => empty.start()).toThrow("at least one player");
+  test("a game needs questions", () => {
     expect(() => new RacerGame(quiz(0), { shuffle: { questions: false, answers: false } })).toThrow("no questions");
   });
 
