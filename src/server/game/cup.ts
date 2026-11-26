@@ -39,16 +39,13 @@ export const COUNTDOWN_MS = 3000;
 
 export interface CupPlayer extends BasePlayer, AnswerTotals {
   cups: number;
-  /** why: null while still alive. */
   outRound: number | null;
-  /** why: the dice roll; correct answers needed to be safe. */
   target: number;
   progress: number;
   safe: boolean;
   pick: number | null;
   drinksSurvived: number;
   safeRounds: number;
-  /** why: read by earliestFirstCupOut. */
   poisonedFrom: number | null;
 }
 
@@ -64,7 +61,6 @@ interface Reveal {
   seq: number;
   round: number;
   drinks: Drink[];
-  /** why: drink k is in the spotlight from step 2k, its verdict shows from step 2k + 1. */
   step: number;
 }
 
@@ -78,10 +74,8 @@ interface CupOptions {
 
 interface CupGameSettings {
   theme?: SeasonTheme;
-  /** why: defaults to CUP_DEFAULT_CUPS. */
   cups?: number;
   shuffleAnswers: boolean;
-  /** why: the lobby's "Protect from abuse" option. */
   protect?: boolean;
 }
 
@@ -95,7 +89,6 @@ export class CupGame {
   readonly questions: Question[];
   readonly startCups: number;
   round = 0;
-  /** why: set only in the drink and reveal phases. */
   drinkers: string[] = [];
   reveal: Reveal | null = null;
   private reveals = 0;
@@ -148,7 +141,6 @@ export class CupGame {
     return this.session.phase;
   }
 
-  /** why: 0 when the phase has no countdown. */
   get phaseEndsAt(): number {
     return this.session.phases.endsAt;
   }
@@ -170,7 +162,6 @@ export class CupGame {
   }
 
   private newPlayer(base: BasePlayer): Omit<CupPlayer, keyof AnswerTotals> {
-    // why: a late joiner rolls straight away if the round's questions haven't finished yet.
     const rolling = this.phase === "roll" || this.phase === "quiz";
     return {
       ...base,
@@ -243,7 +234,6 @@ export class CupGame {
     if (waiting.length === 0) this.pour();
   }
 
-  /** why: random cups for anyone who didn't pick, then one cup in each set is poisoned. */
   private pour(): void {
     if (this.phase !== "drink") return;
     const drinks: Drink[] = [];
@@ -282,7 +272,6 @@ export class CupGame {
   }
 
   private afterReveal(): void {
-    // why: everything has been shown by now; make sure every verdict is in.
     const r = this.reveal;
     if (r) while (r.step < r.drinks.length * 2 - 1) this.forceStep(r);
     this.session.phases.cancel("step");
@@ -339,7 +328,6 @@ export class CupGame {
     return p;
   }
 
-  /** why: poisoned players practise in every phase of play. */
   private quizzing(p: CupPlayer): boolean {
     if (p.outRound !== null) return this.phase !== "countdown" && this.phase !== "podium";
     return this.phase === "quiz";
@@ -349,7 +337,6 @@ export class CupGame {
     return this.quizzing(p) && (p.outRound !== null || !p.safe);
   }
 
-  /** why: poisoned players answer for practice only. */
   answer(playerId: string, seq: number, option: AnswerValue): boolean {
     const answered = this.session.answer(playerId, seq, option);
     if (!answered) return false;
@@ -373,7 +360,6 @@ export class CupGame {
     return true;
   }
 
-  /** why: survivors first, then the latest poisoned (same round shares a place); correct answers break ties. */
   private buildPodium(): Podium<CupPlayer, CupPlayer, CupAwardKey> {
     const players = [...this.players.values()];
     return buildPodium({
@@ -410,17 +396,15 @@ export class CupGame {
     }));
   }
 
-  /** why: a 1-in-N chance; with a single cup every drink is certain death, so not luck. */
+  /** why: a single cup guarantees poison, so it cannot earn the Unluckiest award. */
   private poisonedByFirstCup(p: CupPlayer): boolean {
     return this.startCups > 1 && p.poisonedFrom === this.startCups && p.outRound !== null;
   }
 
-  /** why: counts both ends, so an earlier round scores higher. */
   private roundsFrom(round: number): number {
     return this.round + 1 - round;
   }
 
-  /** why: turns earliestFirstCupOut back into the round the projector shows. */
   private awards(): CupAwards {
     const a = this.podium.awards;
     const out = a.earliestFirstCupOut;

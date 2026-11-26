@@ -14,16 +14,13 @@ export interface Column<Row> {
 export interface ResultsSheet {
   header: string[];
   rows: Cell[][];
-  /** why: written after a blank line, free-form (e.g. a per-wave log). */
   appendix?: Cell[][];
 }
 
-/** why: rows must already be in rank order. */
-export function sheet<Row>(columns: readonly Column<Row>[], rows: Iterable<Row>, appendix?: Cell[][]): ResultsSheet {
-  return { header: columns.map((c) => c.header), rows: [...rows].map((r) => columns.map((c) => c.value(r))), appendix };
+export function sheet<Row>(columns: readonly Column<Row>[], rowsInRankOrder: Iterable<Row>, appendix?: Cell[][]): ResultsSheet {
+  return { header: columns.map((c) => c.header), rows: [...rowsInRankOrder].map((r) => columns.map((c) => c.value(r))), appendix };
 }
 
-/** why: empty when the player answered nothing. */
 export function accuracy(p: { correct: number; wrong: number }): Cell {
   const answered = p.correct + p.wrong;
   return answered ? Math.round((p.correct / answered) * 100) : "";
@@ -44,7 +41,6 @@ export function toCsv(rows: Cell[][]): string {
   return BOM + rows.map((r) => r.map(csvCell).join(",")).join("\r\n") + "\r\n";
 }
 
-/** why: throws when a row's length differs from the header's. */
 export function resultsCsv(s: ResultsSheet): string {
   s.rows.forEach((r, i) => {
     if (r.length !== s.header.length) throw new Error(`Results row ${i + 1} has ${r.length} cells for ${s.header.length} columns`);
@@ -64,7 +60,7 @@ export function writeResultsFile(game: { quizId: string }, csv: string, resultsD
   return file;
 }
 
-/** why: never throws, so the game still finishes; file is null on failure and csv holds the rows that could be written. */
+/** why: CSV validation or file errors must not prevent the game from finishing or the host from downloading the available rows. */
 export function saveResults(game: { quizId: string }, s: ResultsSheet, resultsDir: string, log: (msg: string) => void): { csv: string; file: string | null } {
   let csv: string;
   try {

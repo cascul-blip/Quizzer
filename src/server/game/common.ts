@@ -32,7 +32,7 @@ export function shuffle<T>(arr: T[], rng: () => number): T[] {
   return a;
 }
 
-/** why: True/False keeps its familiar order and pin spots stay put; correct indices are remapped. */
+/** why: True/False keeps its familiar order and pin spots keep their authored positions. */
 export function shuffleOptions<Q extends { type: string; options: string[]; correct: number[] }>(q: Q, rng: () => number): Q {
   if (q.type === "true_false" || q.type === "text" || q.type === "pin") return q;
   const order = shuffle(
@@ -53,7 +53,6 @@ export function cleanNickname(raw: unknown): string {
   return name;
 }
 
-/** why: worst first, ties in quiz order; questions nobody got wrong are left out. */
 export function topErrors(questions: { text: string; options: string[]; correct: number[] }[], wrongCounts: number[], limit = ERRORS_SHOWN): QuestionError[] {
   return questions
     .map((q, i) => ({ wrong: wrongCounts[i] ?? 0, text: q.text, answers: q.correct.map((c) => q.options[c]!), i }))
@@ -76,7 +75,6 @@ export const AUTO_REVEAL_MS = 5000;
 /** why: answers sent just before the deadline may arrive slightly after it. */
 export const GRACE_MS = 500;
 
-/** why: same order for everyone in the game; correct indices are remapped. */
 export function preparePlayOrder(source: Question[], opts: ShuffleOptions, rng: () => number = Math.random): Question[] {
   let questions = source.map((q) => ({ ...q, options: [...q.options], correct: [...q.correct] }));
   if (opts.questions) questions = shuffle(questions, rng);

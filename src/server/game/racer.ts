@@ -15,6 +15,7 @@ import { GameError, preparePlayOrder, shuffle, topErrors } from "./common.ts";
 import type { LobbyChoices, LobbyFacts } from "./lobby-facts.ts";
 import type { ModeEntry } from "./mode-entry.ts";
 import { handoffOptions, pickTheme, unhandled } from "./mode-entry.ts";
+import type { PacedAnswer } from "./paced-round.ts";
 import { INTRO_MS } from "./paced-round.ts";
 import { PacedSession } from "./paced-session.ts";
 import type { Podium } from "./podium.ts";
@@ -27,24 +28,16 @@ import { most } from "./standings.ts";
 export { AUTO_REVEAL_MS, GRACE_MS } from "./common.ts";
 
 export { INTRO_MS };
-/** why: then the lever is locked where it is. */
 export const CONFIDENCE_MS = 20_000;
 
 const RACER_AWARD_VALUES: Record<RacerAwardKey, (p: RacerPlayer) => number> = { mostCorrect: (p) => p.correct, mostMphGained: (p) => p.mphGained };
 
-export interface RacerAnswer {
-  /** why: -1 marks a typed answer. */
-  option: number;
-  text?: string;
-  correct: boolean;
-}
+export type RacerAnswer = Pick<PacedAnswer, "option" | "text" | "correct">;
 
 export interface RacerPlayer extends BasePlayer {
-  /** why: indexed by play order. */
   answers: (RacerAnswer | undefined)[];
   /** why: counted when a question closes, so the numbers give nothing away while it is open. */
   correct: number;
-  /** why: a question left unanswered is not counted. */
   wrong: number;
   turnsDriven: number;
   mphGained: number;
@@ -55,7 +48,6 @@ interface RacerOptions {
   clock?: Clock;
   rng?: () => number;
   onChange?: () => void;
-  /** why: the answering player needs their own view at once; everyone else can wait a moment. */
   onActivity?: (playerId: string) => void;
   onFinish?: (game: RacerGame) => void;
 }
@@ -74,13 +66,10 @@ export class RacerGame {
   readonly title: string;
   readonly questions: Question[];
   car: RacerCar = newRacerCar();
-  /** why: as they were when the turn started. */
   driver: RacerDriver | null = null;
-  /** why: null on a turn without a driver. */
   lever: RacerConfidence | null = null;
   confidence: RacerConfidence | null = null;
   lastTurn: RacerTurn | null = null;
-  /** why: they fall out of the car on the reveal; not answering counts as wrong. */
   ejected: { id: string; nickname: string; avatar: AvatarChoice }[] = [];
   turns = 0;
 
@@ -115,7 +104,6 @@ export class RacerGame {
 
   private setup!: LobbyChoices;
 
-  /** why: the next lobby opens with these, pacing as the host left it. */
   get choices(): LobbyChoices {
     return { ...this.setup, pacing: this.pacing };
   }
@@ -139,7 +127,6 @@ export class RacerGame {
     return this.session.paced.pacing;
   }
 
-  /** why: 0 when the phase has no countdown. */
   get phaseEndsAt(): number {
     return this.session.paced.phases.endsAt;
   }
@@ -190,12 +177,11 @@ export class RacerGame {
     return p;
   }
 
-  // why: a driver who leaves while choosing is taken at their word so far, so their leaving locks the lever in.
   private isChoosing(playerId: string): boolean {
     return this.phase === "confidence" && this.driver?.id === playerId;
   }
 
-  /** why: everyone drives once before anyone drives again; away players keep their place, and the bag refills once nobody in it is connected. */
+  /** why: take connected players from the bag without removing absent players who may return before the next refill. */
   private pickDriver(): RacerPlayer | null {
     const connected = (id: string) => !!this.players.get(id)?.connected;
     let i = this.bag.findIndex(connected);
@@ -223,7 +209,6 @@ export class RacerGame {
     return true;
   }
 
-  /** why: the driver answers too. */
   answer(playerId: string, qIndex: number, answer: AnswerValue): boolean {
     const taken = this.session.paced.take(this.players.get(playerId), qIndex, answer, ({ msSinceOpen: _ms, ...a }): RacerAnswer => a);
     if (!taken) return false;
@@ -255,13 +240,11 @@ export class RacerGame {
     }
   }
 
-  /** why: straight to the options, lock the lever where it is, or close the question. */
   skip(): void {
     if (this.phase === "confidence") this.lockIn();
     else this.session.paced.skip();
   }
 
-  /** why: an open question is settled first; a turn that had not opened yet is dropped. */
   end(): void {
     this.session.end();
   }
@@ -285,6 +268,7 @@ export class RacerGame {
     }
   }
 
+  // why: this also settles a departing driver's choice using the last position they sent.
   private lockIn(): void {
     if (this.phase !== "confidence") return;
     this.confidence = this.lever;
@@ -299,7 +283,7 @@ export class RacerGame {
     for (const p of players) {
       const ans = p.answers[this.qIndex];
       const participated = p.connected || !!ans;
-      // why: no answer counts as wrong, so idle players cannot ride out a question.
+      // why: a connected player who skips the question is ejected without adding a wrong answer to their record.
       const failed = participated && !ans?.correct;
       if (participated) total++;
       if (failed) this.ejected.push({ id: p.id, nickname: p.nickname, avatar: p.avatar });
@@ -333,7 +317,7 @@ export class RacerGame {
     return { distanceMiles: this.car.distanceMiles, topSpeedMph: this.car.topSpeedMph, crashes: this.car.crashes, turns: this.turns };
   }
 
-  /** why: the class shares one result, so every player shares one place; most correct first, then best driver. */
+  /** why: the class shares one result, so every player shares one place. */
   private buildPodium(): Podium<RacerPlayer, RacerPlayer, RacerAwardKey> {
     const players = [...this.players.values()];
     return buildPodium({
@@ -350,7 +334,6 @@ export class RacerGame {
     return this.session.podium;
   }
 
-  /** why: wrong answers only; a question left unanswered does not count. */
   errors(): QuestionError[] {
     const wrong = this.questions.map((_, i) => [...this.players.values()].filter((p) => p.answers[i] && !p.answers[i]!.correct).length);
     return topErrors(this.questions, wrong);
@@ -445,7 +428,6 @@ export class RacerGame {
   }
 }
 
-/** why: the class shares distance, top speed and crashes, so they repeat in every row. */
 function racerColumns(game: RacerGame): Column<RacerPlayer>[] {
   const round = (v: number) => Math.round(v * 100) / 100;
   return [
