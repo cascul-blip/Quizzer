@@ -343,7 +343,6 @@ describe("lobby shuffle options", () => {
     expect(game.questions.map((q) => q.id)).toEqual(["q1", "q2", "q3"]);
     game.join("A");
     game.start();
-    // why: rng() = 0 turns a Fisher-Yates shuffle into a rotation.
     expect(game.questions.map((q) => q.id)).toEqual(["q2", "q3", "q1"]);
   });
 
@@ -445,7 +444,6 @@ describe("lobby teams", () => {
     ]);
     game.setModeSettings("tower", { teams: 4, minutes: 5 });
     expect(layout()).toEqual([["A", "C"], ["B", "D", "E"], [], []]);
-    // why: Tower Fight has 2 teams, so switching keeps only the teams that fit.
     game.setTeam(ids[4]!, 3);
     game.setMode("fight");
     expect(layout()).toEqual([

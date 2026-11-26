@@ -86,7 +86,6 @@ describe("Podium", () => {
       clock.advance(INTRO_MS + 1000);
       phones.get("Noel")!.sendMsg({ type: "answer", qIndex: 0, option: 0 });
     });
-    // why: changes after the finish must not reach the Podium.
     game.players.get(ids.get("Ivy")!)!.score = 99_999;
     const view = hub.hostView();
     expect(view.kind === "classic" && view.leaderboard.map((e) => [e.nickname, e.rank])).toEqual([
@@ -125,14 +124,12 @@ describe("Podium", () => {
     const ids = await finish("duel", (phones, ids) => {
       game = running() as DuelGame;
       clock.advance(INTRO_MS);
-      // why: one three-way arena; Noel is right first and wins, Holly and Ivy answer wrong.
       const q = question(ids.get("Noel")!);
       phones.get("Noel")!.sendMsg({ type: "duel.answer", index: q.index, option: q.right });
       for (const n of ["Holly", "Ivy"]) phones.get(n)!.sendMsg({ type: "duel.answer", index: q.index, option: 1 - q.right });
       clock.advance(1000);
     });
     const ladder = game.ladder.map((id) => game.players.get(id)!.nickname).filter((n) => n !== "Noel");
-    // why: changes after the finish must not reach the Podium.
     const ivy = game.players.get(ids.get("Ivy")!)!;
     ivy.points = 50;
     ivy.wins = 9;

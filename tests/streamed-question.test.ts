@@ -44,12 +44,10 @@ function lobbyFor(mode: "tower" | "land" | "fight" | "submarine" | "cup" | "robo
 interface StreamedMode {
   game(clock: FakeClock): StreamedGame;
   advanceToAnswering(clock: FakeClock, game: StreamedGame): void;
-  /** why: null when the mode has no phase between answering and the end. */
-  toBetween: ((scenario: Scenario) => void) | null;
+  advanceToBetweenRounds: ((scenario: Scenario) => void) | null;
 }
 
-/** why: leaves the clock inside the last flash, so callers can check it still shows. */
-function answerUntilLeft(scenario: Scenario, answering: readonly string[]) {
+function answerUntilPhaseChangesWithFlashVisible(scenario: Scenario, answering: readonly string[]) {
   const { clock, game, id } = scenario;
   let answeredAt = -Infinity;
   // why: off the whole seconds, so no phase ends at the very instant a flash does.
@@ -78,23 +76,23 @@ const MODES: Record<string, StreamedMode> = {
   "Tallest Tower": {
     game: (clock) => TowerGame.fromLobby(lobbyFor("tower").handoffFacts("tower"), { clock }),
     advanceToAnswering: (clock) => clock.advance(3_000),
-    toBetween: null,
+    advanceToBetweenRounds: null,
   },
   "Land Grab": {
     game: (clock) => LandGame.fromLobby(lobbyFor("land").handoffFacts("land"), { clock }),
     advanceToAnswering: (clock) => clock.advance(3_000),
-    toBetween: null,
+    advanceToBetweenRounds: null,
   },
   "Hill Fight": {
     game: (clock) => FightGame.fromLobby(lobbyFor("fight").handoffFacts("fight"), { clock }),
     advanceToAnswering: (clock) => clock.advance(3_000),
     // why: the collapse is covered in tests/fight.test.ts with a tower that falls.
-    toBetween: null,
+    advanceToBetweenRounds: null,
   },
   Submarine: {
     game: (clock) => SubGame.fromLobby(lobbyFor("submarine").handoffFacts("submarine"), { clock }),
     advanceToAnswering: (clock) => clock.advance(3_000),
-    toBetween: (scenario) => answerUntilLeft(scenario, ["chase"]),
+    advanceToBetweenRounds: (scenario) => answerUntilPhaseChangesWithFlashVisible(scenario, ["chase"]),
   },
   "Cup of Death": {
     game: (clock) => CupGame.fromLobby(lobbyFor("cup").handoffFacts("cup"), { clock }),
@@ -102,23 +100,23 @@ const MODES: Record<string, StreamedMode> = {
       clock.advance(3_000);
       clock.advance(game.phaseEndsAt! - clock.now());
     },
-    toBetween: answerThenQuizEnds,
+    advanceToBetweenRounds: answerThenQuizEnds,
   },
   "Robot Attack": {
     game: (clock) => RobotGame.fromLobby(lobbyFor("robot").handoffFacts("robot"), { clock }),
     advanceToAnswering: (clock) => clock.advance(3_000),
-    toBetween: answerThenQuizEnds,
+    advanceToBetweenRounds: answerThenQuizEnds,
   },
   "Kingdom Siege": {
     game: (clock) => SiegeGame.fromLobby(lobbyFor("siege").handoffFacts("siege"), { clock }),
     advanceToAnswering: (clock) => clock.advance(3_000),
-    toBetween: (scenario) => answerUntilLeft(scenario, ["build", "wave"]),
+    advanceToBetweenRounds: (scenario) => answerUntilPhaseChangesWithFlashVisible(scenario, ["build", "wave"]),
   },
   "Gift Grab": {
     game: (clock) => GiftGame.fromLobby(lobbyFor("gift").handoffFacts("gift"), { clock }),
     advanceToAnswering: (clock) => clock.advance(3_000),
     // why: its bonus round is within playing, not a phase between; see its own test below.
-    toBetween: null,
+    advanceToBetweenRounds: null,
   },
 };
 
@@ -154,11 +152,11 @@ describe("Streamed question feedback", () => {
       expect(scenario.game.playerView(scenario.id)!.question).toBeNull();
     });
 
-    if (mode.toBetween) {
+    if (mode.advanceToBetweenRounds) {
       test(`${name} hides the question and the feedback flash between rounds, once the quiz is over`, () => {
         const scenario = started(mode);
         mode.advanceToAnswering(scenario.clock, scenario.game);
-        mode.toBetween!(scenario);
+        mode.advanceToBetweenRounds!(scenario);
         expect(scenario.game.phase).not.toBe("podium");
         expect(scenario.game.playerView(scenario.id)).toMatchObject({ question: null, feedback: null });
       });

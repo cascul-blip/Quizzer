@@ -243,7 +243,6 @@ describe("Game mode: Tallest Tower", () => {
       ["Blue", [0, 0, 0], 0],
     ]);
 
-    // why: the egg appears at 1/3 of the game, and the monster is on by default.
     clock.advance(40_000);
     const eggView = await host.hostState((v) => v.kind === "tower" && !!v.egg);
     expect(eggView.view.kind === "tower" && eggView.view.monster).toBe(true);
@@ -371,7 +370,6 @@ describe("Game mode: Tower Fight", () => {
     expect(aiming.view.kind === "fight" && aiming.view.state).toBe("aim");
     expect(aiming.view.kind === "fight" && aiming.view.decisionRemainingMs).toBe(0);
 
-    // why: a hard throw backwards is friendly fire on Red's own tower.
     red.sendMsg({ type: "fight.fire", dx: 170, dy: -20 });
     const watching = await red.playerState((v) => v.kind === "fight" && v.state === "watch" && !!v.shot);
     const shot = watching.view.kind === "fight" ? watching.view.shot! : null;
@@ -455,7 +453,6 @@ describe("Game mode: Robot Attack", () => {
     await expectInSync(ann);
     await host.hostState((v) => v.kind === "robot" && v.players.some((p) => p.nickname === "Ann" && p.x === start!.x + (dir === "right" ? 2 : -2)));
 
-    // why: Bob stood still, so the lasers hit him.
     clock.advance(ROBOT_MOVE_MS);
     const attack = await host.hostState((v) => v.kind === "robot" && v.phase === "attack");
     const bob = attack.view.kind === "robot" ? attack.view.players.find((p) => p.nickname === "Bob")! : null;
@@ -596,7 +593,6 @@ describe("Game mode: Kingdom Siege", () => {
     host.sendMsg({ type: "host.setMode", mode: "siege" });
     const siegeLobby = await host.hostState((v) => v.kind === "lobby" && v.mode === "siege" && v.settings.siege.waves === 5 && v.teams === null);
     expect(siegeLobby.view.kind === "lobby" && siegeLobby.view.settings.siege.theme).toBe("christmas");
-    // why: 7 is not a valid choice, as a stale page might send.
     hub.onMessage(host, JSON.stringify({ type: "host.setModeSettings", mode: "siege", settings: { waves: 7 } }));
     expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: expect.stringContaining("waves") });
     host.sendMsg({ type: "host.setModeSettings", mode: "siege", settings: { waves: "endless", theme: "classic" } });
@@ -645,7 +641,6 @@ describe("Game mode: Kingdom Siege", () => {
     hub.broadcast();
     await host.hostState((v) => v.kind === "siege" && v.phase === "wave" && v.wave === 1);
     const siege = hub.game as SiegeGame;
-    // why: a goblin near the wall in an undefended lane is sure to hit the wall.
     siege.battlefield.spawn("goblin", 0, 1);
     for (let i = 0; i < 120 && !(siege.phase === "build" && siege.wave === 2); i++) clock.advance(500);
     hub.broadcast();
@@ -876,7 +871,6 @@ describe("Game mode: Racer", () => {
     const second = await host.hostState((v) => v.kind === "racer" && v.phase === "confidence" && v.question?.index === 1);
     expect(second.view.kind === "racer" && second.view.driver!.nickname).not.toBe(driverName);
 
-    // why: a skipped lever locks on "Not confident"; closing with one wrong answer in shows the fail.
     host.sendMsg({ type: "host.skip" });
     await host.hostState((v) => v.kind === "racer" && v.phase === "open" && v.confidence === "low");
     await players[0]!.playerState((v) => v.kind === "racer" && v.phase === "open");
@@ -895,7 +889,6 @@ describe("Game mode: Racer", () => {
     const late = await players[1]!.playerState((v) => v.kind === "racer");
     expect(late.view.kind === "racer" && late.view).toMatchObject({ phase: "reveal", myChoice: null, reveal: { choice: null, wasCorrect: false } });
 
-    // why: the host ends the game before the next question opens, so that turn is dropped.
     host.sendMsg({ type: "host.next" });
     await host.hostState((v) => v.kind === "racer" && v.phase === "confidence" && v.question?.index === 2);
     host.sendMsg({ type: "host.end" });

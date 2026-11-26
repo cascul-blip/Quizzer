@@ -101,7 +101,6 @@ describe("placing", () => {
       expect(placementCost(owners, size, starts, 0, t, 2, 2)).toBe(2);
       expect(placementCost(owners, size, starts, 1, t, 2, 2)).toBe(1);
     }
-    // why: stealing a held ring tile costs the higher of steal and guard price, not their sum.
     const held = [...owners];
     held[ring[0]!] = 1;
     expect(placementCost(held, size, starts, 0, ring[0]!, 2, 2)).toBe(2);
@@ -231,7 +230,6 @@ describe("borders", () => {
   });
 
   test("sides run clockwise from the top right", () => {
-    // why: row 4 is even, so its upper neighbours are in row 3 at columns 3 and 4.
     expect([0, 1, 2, 3, 4, 5].map((side) => neighborAcross(10, at(10, 4, 4), side))).toEqual([
       at(10, 3, 4),
       at(10, 4, 5),

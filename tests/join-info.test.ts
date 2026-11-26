@@ -68,10 +68,9 @@ function withQrSignals(list: () => LanAddress[]) {
   };
 }
 
-test("the QR code is empty at first, then ready and announced once rendered", async () => {
+test("the pending QR code is empty without a second render, then announced once ready", async () => {
   const { j, nextQr } = withQrSignals(() => [wifi]);
   expect(j.info().qrSvg).toBe("");
-  // why: still pending, so no second render.
   expect(j.info().qrSvg).toBe("");
   await nextQr();
   expect(j.info().qrSvg).toContain("<svg");

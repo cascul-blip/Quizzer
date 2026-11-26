@@ -15,8 +15,7 @@ function tsFiles(dir: string): string[] {
   });
 }
 
-// why: scanImports skips type-only imports, which Bun erases;
-// dynamic imports load late and can't form an initialisation cycle.
+// why: This suite checks the static runtime graph. The standards suite separately checks type-only dependencies.
 const transpiler = new Bun.Transpiler({ loader: "ts" });
 
 function runtimeImports(file: string): string[] {
@@ -26,7 +25,6 @@ function runtimeImports(file: string): string[] {
     .map((i) => resolve(dirname(file), i.path));
 }
 
-/** why: a graph with any cycle yields at least one; each cycle starts and ends at the same file. */
 function findCycles(graph: Map<string, string[]>): string[][] {
   const cycles: string[][] = [];
   const seen = new Set<string>();
@@ -62,7 +60,6 @@ describe("Server import graph", () => {
   });
 });
 
-// why: protocol.ts re-exports nothing, so each mode type in src/shared/modes/<mode>.ts has one import path.
 const MODES_DIR = join(ROOT, "src/shared/modes");
 const MODE_FILES = keysOf(SHARED_MODES).map((m) => `${m}.ts`);
 

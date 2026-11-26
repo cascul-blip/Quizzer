@@ -113,7 +113,6 @@ describe("decisions", () => {
     expect(a.state).toBe("question");
     expect(game.playerView(a.id)!.towardDecision).toBe(3);
     const nextSeq = answer(game, clock, a, true);
-    // why: an undamaged tower has nothing to rebuild, so it goes straight to the catapult, which has no time limit.
     expect(a.state).toBe("aim");
     expect(game.playerView(a.id)!.question).toBeNull();
     expect(game.playerView(a.id)!.decisionRemainingMs).toBe(0);

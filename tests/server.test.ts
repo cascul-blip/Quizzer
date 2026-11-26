@@ -8,9 +8,6 @@ import type { ClientMsg } from "../src/shared/protocol.ts";
 import { FakeClock, tempDir } from "./helpers.ts";
 import { MessageLog, pastThrottle, withoutTimers } from "./hub-harness.ts";
 
-// why: only what a real socket can show lives here; hub logic runs on fake sockets
-// in tests/hub.test.ts and tests/game-modes.test.ts.
-
 class TestSocket extends MessageLog {
   private constructor(readonly ws: WebSocket) {
     super(2_000);
@@ -178,7 +175,6 @@ describe("REST API", () => {
     expect((await fetch(`${base}/music/notes.txt`)).status).toBe(404);
     expect((await fetch(`${base}/music/unknown-song.mp3`)).status).toBe(404);
     expect((await fetch(`${base}/music/..%2Fquizzes%2Fx.json`)).status).toBe(404);
-    // why: a malformed escape must be a 404, not a 500 with a URIError on the teacher's console.
     expect((await fetch(`${base}/music/%E0%A4%A`)).status).toBe(404);
     expect((await fetch(`${base}/api/quizzes/%E0%A4%A`)).status).toBe(404);
   });
@@ -263,7 +259,6 @@ describe("WebSocket transport", () => {
     await Promise.all([ann!.delivered(), bob!.delivered()]);
     expect([states(ann!), states(bob!)]).toEqual([0, 0]);
 
-    // why: Bob's screen is unchanged, so only Ann hears back.
     const q = annQ.view.kind === "tower" ? annQ.view.question! : null;
     ann!.sendMsg({ type: "tower.answer", seq: q!.seq, option: 0 });
     await ann!.playerState((v) => v.kind === "tower" && v.feedback?.seq === q!.seq);
@@ -272,7 +267,6 @@ describe("WebSocket transport", () => {
     expect(states(bob!)).toBe(0);
     await host.hostState((v) => v.kind === "tower");
 
-    // why: a rejected action always resyncs the phone.
     bob!.sendMsg({ type: "tower.drop", zone: 2 });
     await bob!.playerState((v) => v.kind === "tower" && v.state === "question");
 

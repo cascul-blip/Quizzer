@@ -136,7 +136,6 @@ describe("Racer", () => {
     expect([first, away.nickname]).not.toContain(second);
     turn(game, clock, "low", "all");
     game.next();
-    // why: Only the player who is away is left in the bag: it is refilled and someone connected drives.
     expect([first, second]).toContain(game.driver!.nickname);
     game.setConnected(away.id, true);
     const next: string[] = [];
@@ -218,7 +217,6 @@ describe("Racer", () => {
     expect(game.phase).toBe("open");
     expect(game.confidence).toBe("high");
     expect(game.driver!.id).toBe(driver.id);
-    // why: The others all answer right, but the driver is away without an answer: not counted, so everyone was right.
     for (const p of others(game)) answer(game, p, true);
     expect(game.phase).toBe("reveal");
     expect(game.lastTurn).toMatchObject({ confidence: "high", correct: 2, total: 2, gainMph: 40, speedAfter: 70 });
@@ -249,7 +247,6 @@ describe("Racer", () => {
     expect(game.confidence).toBe("mid");
     game.skip();
     expect(game.phase).toBe("reveal");
-    // why: Nobody answered: 0 of 2 at "mid" is 2 fails.
     expect(game.lastTurn).toMatchObject({ correct: 0, total: 2, fails: 2, speedAfter: 0, crashed: true });
     game.skip();
     expect(game.phase).toBe("reveal");
@@ -323,13 +320,11 @@ describe("Racer", () => {
     answer(game, p("C"), true);
     game.setConnected(p("C").id, false);
     game.setConnected(p("D").id, false);
-    // why: E is here but never answers: counts as wrong.
     clock.advance(20_000);
     expect(game.phase).toBe("open");
     expect(game.hostView().question!.remainingMs).toBe(0);
     clock.advance(GRACE_MS);
     expect(game.phase).toBe("reveal");
-    // why: 3 of 4 is at least two thirds: +20 mph.
     expect(game.lastTurn).toMatchObject({ confidence: "mid", correct: 3, total: 4, gainMph: 20, fails: 0, speedBefore: 30, speedAfter: 50 });
     expect([p("A"), p("D"), p("E")].map((x) => [x.correct, x.wrong])).toEqual([
       [1, 0],
@@ -369,7 +364,6 @@ describe("Racer", () => {
     expect(game.car).toEqual({ speedMph: 0, crashed: true, distanceMiles: 0, topSpeedMph: 30, crashes: 1 });
     expect(first).toMatchObject({ turnsDriven: 1, mphGained: 0, failsAsDriver: 3 });
 
-    // why: Crashed: a 3 s look at the question, no driver, no lever.
     game.next();
     expect(game.phase).toBe("intro");
     let v = game.hostView();
@@ -400,7 +394,6 @@ describe("Racer", () => {
     });
     expect(game.car).toMatchObject({ speedMph: 0, crashed: true, crashes: 1 });
 
-    // why: Half the class right: repaired, back at 30 mph.
     game.next();
     expect(game.phase).toBe("intro");
     game.skip();
@@ -436,7 +429,7 @@ describe("Racer", () => {
     game.next();
     turn(game, clock, "low", "none");
     game.next();
-    turn(game, clock, "mid", "none"); // why: 0 of 1: 2 fails → 11.25 → crash
+    turn(game, clock, "mid", "none");
     expect(game.car.distanceMiles).toBeCloseTo((50 + 90 + 45) / 6, 9);
     expect(game.car).toMatchObject({ speedMph: 0, crashed: true, topSpeedMph: 90, crashes: 1 });
     expect(game.turns).toBe(4);
@@ -509,7 +502,6 @@ describe("Racer", () => {
     game.next();
     expect(game.phase).toBe("reveal");
     game.next();
-    // why: 0 of 2 at "low" was a fail: 15 mph is a crash, so the next turn has no driver.
     expect(game.phase).toBe("intro");
     game.next();
     expect(game.phase).toBe("open");
@@ -544,7 +536,6 @@ describe("Racer", () => {
     game.setPacing("auto");
     clock.advance(AUTO_REVEAL_MS);
     expect(game.phase).toBe("confidence");
-    // why: Outside the reveal it only takes effect at the next reveal.
     game.setPacing("manual");
     clock.advance(CONFIDENCE_MS);
     expect(game.phase).toBe("open");
@@ -569,7 +560,6 @@ describe("Racer", () => {
     game.end();
     expect(game.phase).toBe("podium");
     expect(finished()).toBe(1);
-    // why: 1 of 2 at "mid": 1 fail, 15 mph, crash.
     expect(game.lastTurn).toMatchObject({ index: 0, correct: 1, total: 2, fails: 1, crashed: true });
     expect(game.turns).toBe(1);
     expect(byName(game, "A").correct).toBe(1);
@@ -739,7 +729,6 @@ describe("Racer", () => {
     const { game, clock } = setup(["A", "B", "=C"], { questions: 3 });
     expect(game.hostView().errors).toBeNull();
     const drivers: string[] = [];
-    // why: Two turns at "mid" with enough right answers (+20 each), then a careful one.
     drivers.push(game.driver!.nickname);
     turn(game, clock, "mid", ["B", "=C"]);
     game.next();

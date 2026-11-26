@@ -1,6 +1,5 @@
 import { afterAll, expect, test } from "bun:test";
 
-// why: a stand-in Image that records each fetch and lets the test finish decodes one at a time.
 const fetched: string[] = [];
 const pending: (() => void)[] = [];
 class FakeImage {
@@ -34,7 +33,6 @@ test("a phone loads only its own arena's backdrop, one file at a time, then the 
   expect(fetched).toHaveLength(3);
   for (let a = 1; a <= 4; a++) if (a !== 3) expect(fetched).not.toContain(snowballBackground(a, true));
 
-  // why: Moving arena fetches just that backdrop; the sheet and puff are already held.
   preloadSnowballArt(true, 2);
   await settle();
   expect(fetched).toHaveLength(4);
