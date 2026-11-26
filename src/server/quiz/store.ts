@@ -22,7 +22,6 @@ import {
 
 export class NotFoundError extends Error {}
 
-// why: write a temp file and rename, so the path only ever holds a complete file (or nothing).
 function writeAtomic(path: string, data: string | Uint8Array): void {
   const tmp = `${path}.${process.pid}.${newId(4)}.tmp`;
   try {
@@ -33,12 +32,11 @@ function writeAtomic(path: string, data: string | Uint8Array): void {
   }
   renameSync(tmp, path);
 }
-// why: an MCP agent can edit a quiz while the editor has it open.
 export class ConflictError extends Error {}
 
 export { MAX_MEDIA_BYTES };
 
-// why: refused rather than decoded, so a huge image can't exhaust memory.
+// why: cap decoded image size independently of the upload byte limit to bound memory use.
 const MAX_IMAGE_PIXELS = 64_000_000;
 const MEDIA_TYPES: Record<string, string> = {
   "image/png": "png",
@@ -48,11 +46,10 @@ const MEDIA_TYPES: Record<string, string> = {
 };
 export const MEDIA_MIME: Record<string, string> = Object.fromEntries(Object.entries(MEDIA_TYPES).map(([m, e]) => [e, m]));
 
-// why: WebP loads quickly on phones; PNG stays lossless so diagrams and labels stay sharp.
-// GIFs (maybe animated), images already small enough, and anything that doesn't decode are kept.
+// why: WebP reduces phone downloads, and lossless encoding keeps PNG text and diagrams sharp.
 export async function shrinkImage(bytes: Uint8Array, mime: string): Promise<{ bytes: Uint8Array; mime: string }> {
   const keep = { bytes, mime };
-  if (mime === "image/gif") return keep;
+  if (mime === "image/gif") return keep; // why: re-encoding an animated GIF here would lose its animation.
   let meta;
   try {
     meta = await new Bun.Image(bytes, { maxPixels: MAX_IMAGE_PIXELS }).metadata();
@@ -73,7 +70,6 @@ export async function shrinkImage(bytes: Uint8Array, mime: string): Promise<{ by
   }
 }
 
-// why: sniff magic bytes so a client-supplied type is never trusted.
 export function sniffImageType(bytes: Uint8Array): string | null {
   const b = bytes;
   if (b.length >= 8 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return "image/png";
@@ -115,17 +111,14 @@ function nextTimestamp(previous: string): string {
   return next.getTime() > now ? next.toISOString() : new Date(now).toISOString();
 }
 
-// why: the digest covers exactly the file read or written, including edits made outside Quizzer.
 function revision(contents: string): string {
   return createHash("sha256").update(contents).digest("hex");
 }
 
-// why: every read goes to disk so edits from other processes (stdio MCP) show up immediately.
 export class QuizStore {
   readonly quizzesDir: string;
   readonly mediaDir: string;
   readonly resultsDir: string;
-  // why: custom music files are named after a track id (src/shared/music-tracks.ts).
   readonly musicDir: string;
 
   constructor(readonly dataDir: string) {
@@ -161,8 +154,7 @@ export class QuizStore {
     return join(this.quizzesDir, `${id}.json`);
   }
 
-  // why: parsing every quiz on each list() stalls the live game; the admin library reloads the list on focus.
-  private readonly summaries = new Map<string, { stamp: string; summary: QuizSummary }>();
+  private readonly summaryCache = new Map<string, { stamp: string; summary: QuizSummary }>();
 
   list(): QuizSummary[] {
     const out: QuizSummary[] = [];
@@ -174,13 +166,13 @@ export class QuizStore {
       let stamp: string;
       try {
         const st = statSync(this.file(id));
-        // why: every write here renames a new file into place (new inode); an edit made elsewhere changes mtime or size.
+        // why: include the inode to catch an atomic replacement even when size and mtime match.
         stamp = `${st.ino}:${st.mtimeMs}:${st.size}`;
       } catch {
-        continue; // why: deleted since readdir
+        continue; // why: another process can remove a file between readdir and stat.
       }
       seen.add(id);
-      const hit = this.summaries.get(id);
+      const hit = this.summaryCache.get(id);
       if (hit?.stamp === stamp) {
         out.push(hit.summary);
         continue;
@@ -192,10 +184,10 @@ export class QuizStore {
       } catch (e) {
         summary = { id, title: id, description: "", questionCount: 0, updatedAt: "", error: (e as Error).message };
       }
-      this.summaries.set(id, { stamp, summary });
+      this.summaryCache.set(id, { stamp, summary });
       out.push(summary);
     }
-    for (const id of this.summaries.keys()) if (!seen.has(id)) this.summaries.delete(id);
+    for (const id of this.summaryCache.keys()) if (!seen.has(id)) this.summaryCache.delete(id);
     return out.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }
 
@@ -245,7 +237,6 @@ export class QuizStore {
     });
   }
 
-  // why: the editor guards by content revision; older clients can still guard by updatedAt.
   async replace(id: string, input: unknown, base?: string | { revision: string }): Promise<SavedQuiz> {
     return this.withWriteLock(() => {
       const contents = this.contents(id); // why: missing quizzes stay deleted, including on explicit overwrite.
@@ -321,21 +312,19 @@ export class QuizStore {
       const idx = this.questionIndex(quiz, questionId);
       const current = quiz.questions[idx]!;
       const merged: Record<string, unknown> = { ...current, ...patch, id: current.id };
-      // why: true/false has fixed options, so keep a valid answer.
       if (merged.type === "true_false" && current.type !== "true_false") {
         delete merged.options;
         if (patch.correct === undefined) merged.correct = [0];
       }
-      // why: on switching to typed answers the old options are not answers; the editor sends fresh ones.
+      // why: inherited choices could accidentally become accepted answers in a text question.
       if (merged.type === "text" && current.type !== "text" && patch.options === undefined) delete merged.options;
       if (merged.type === "text") delete merged.correct;
-      // why: spots belong to pin questions only; switching to pin starts from the spots' default labels.
       if (merged.type !== "pin") delete merged.spots;
       else if (current.type !== "pin" && patch.options === undefined) {
         delete merged.options;
         if (patch.correct === undefined) merged.correct = [0];
       } else if (Array.isArray(patch.spots) && patch.options === undefined && current.options.every((o, i) => o === pinLabel(i))) {
-        // why: new spots on a pin that still has the default labels (A, B, C…): the labels follow the new count.
+        // why: dropping the old defaults lets normalization generate one label per new spot.
         delete merged.options;
         const count = (patch.spots as unknown[]).length;
         if (patch.correct === undefined && current.correct.some((c) => c >= count)) merged.correct = [0];
@@ -383,31 +372,29 @@ export class QuizStore {
     return { ...parsed.data, revision: revision(contents) };
   }
 
-  // why: content-addressed by the uploaded bytes; returns a reference like "media/abc123.webp".
   async saveMedia(bytes: Uint8Array): Promise<string> {
     if (bytes.length > MAX_MEDIA_BYTES) throw new ValidationError(`Image is larger than ${MAX_MEDIA_BYTES / 1024 / 1024} MB`);
     const mime = sniffImageType(bytes);
     if (!mime) throw new ValidationError("Unsupported image type (use PNG, JPEG, GIF or WebP)");
-    const hash = createHash("sha256").update(bytes).digest("hex").slice(0, 20);
+    const uploadHash = createHash("sha256").update(bytes).digest("hex").slice(0, 20);
     const existing = Object.values(MEDIA_TYPES)
-      .map((ext) => `media/${hash}.${ext}`)
+      .map((ext) => `media/${uploadHash}.${ext}`)
       .find((ref) => existsSync(join(this.dataDir, ref)));
     if (existing) return existing;
     const out = await shrinkImage(bytes, mime);
-    const ref = `media/${hash}.${MEDIA_TYPES[out.mime]}`;
+    const ref = `media/${uploadHash}.${MEDIA_TYPES[out.mime]}`;
     // why: atomic, because a half-written file under the hash name would be handed back by the dedupe above forever.
     writeAtomic(join(this.dataDir, ref), out.bytes);
     return ref;
   }
 
-  // why: maps track id to file name in data/music/.
   musicFiles(): Record<string, string> {
-    const out: Record<string, string> = {};
+    const filenamesByTrackId: Record<string, string> = {};
     for (const name of readdirSync(this.musicDir).sort()) {
       const id = musicTrackForFile(name);
-      if (id && !out[id]) out[id] = name;
+      if (id && !filenamesByTrackId[id]) filenamesByTrackId[id] = name;
     }
-    return out;
+    return filenamesByTrackId;
   }
 
   musicFile(name: string): string | null {
