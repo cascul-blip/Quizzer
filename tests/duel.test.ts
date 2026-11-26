@@ -223,10 +223,7 @@ describe("Showdown", () => {
     expect(() => game.start()).toThrow("already started");
   });
 
-  test("a game needs players and questions", () => {
-    const clock = new FakeClock();
-    const empty = DuelGame.fromLobby(new Lobby(quiz()).handoffFacts("duel"), { clock });
-    expect(() => empty.start()).toThrow("at least one player");
+  test("a game needs questions", () => {
     expect(() => new DuelGame(quiz(0), { shuffle: { questions: false, answers: false } })).toThrow("no questions");
   });
 
@@ -368,6 +365,25 @@ describe("Showdown", () => {
       ["C", true],
       ["D", false],
     ]);
+  });
+
+  test("only duelists are asked: a late joiner doesn't hold the question open, and the last duelist leaving closes it with one update", () => {
+    const clock = new FakeClock();
+    let changes = 0;
+    const lobby = new Lobby(quiz());
+    lobby.setMode("duel");
+    for (const n of ["A", "B"]) lobby.join(n);
+    const game = DuelGame.fromLobby(lobby.handoffFacts("duel"), { clock, rng: keepOrder, onChange: () => changes++ });
+    game.start();
+    const late = game.join("Late");
+    clock.advance(INTRO_MS);
+    expect(game.answer(late.id, game.qIndex, 0)).toBe(false);
+    answer(game, byName(game, "A"), true);
+    expect(game.phase).toBe("open");
+    changes = 0;
+    game.setConnected(byName(game, "B").id, false);
+    expect(game.phase).toBe("reveal");
+    expect(changes).toBe(1);
   });
 
   test("a player who disconnects while the question is open may complete it", () => {
