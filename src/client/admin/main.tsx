@@ -28,7 +28,7 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
     try {
       message = (await res.json()).error ?? message;
     } catch {
-      // not JSON
+      // why: a non-JSON error body keeps the status text as the message
     }
     throw Object.assign(new Error(message), { status: res.status });
   }
@@ -106,7 +106,7 @@ function Library({ notify }: { notify: (m: string) => void }) {
   useEffect(() => {
     load();
     api<Info>("/api/info").then(setInfo, () => {});
-    // Agents may edit quizzes via MCP while this page is open.
+    // why: agents may edit quizzes via MCP while this page is open
     const onFocus = () => load();
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
@@ -344,7 +344,7 @@ function blankQuestion(type: Question["type"], taken: Set<string>): Question {
   return { id, type, text: "", timeLimitSec: DEFAULT_TIME_LIMIT, options: ["", "", "", ""], correct: [] };
 }
 
-/** Pin questions take a little longer: find the spot, drag, submit. */
+/** why: pin questions take longer: find the spot, drag, submit. */
 const PIN_TIME_LIMIT = 30;
 
 function questionIssues(q: Question): string[] {
@@ -567,12 +567,9 @@ function Editor({ id, notify }: { id: string; notify: (m: string) => void }) {
   );
 }
 
-/**
- * The server shrinks every image for phones (lossless for PNG). This only scales down and
- * re-encodes a file too big to upload at all. Falls back to the original file.
- */
+/** why: the server already shrinks images for phones; this only rescues files too big to upload. */
 async function shrinkImage(file: File): Promise<Blob> {
-  if (file.size <= MAX_MEDIA_BYTES || file.type === "image/gif") return file; // GIFs may be animated
+  if (file.size <= MAX_MEDIA_BYTES || file.type === "image/gif") return file; // why: GIFs may be animated
   try {
     const bmp = await createImageBitmap(file);
     const scale = Math.min(1, MAX_IMAGE_SIDE / Math.max(bmp.width, bmp.height));
@@ -583,7 +580,7 @@ async function shrinkImage(file: File): Promise<Blob> {
     bmp.close();
     const encode = (type: string) => new Promise<Blob | null>((res) => canvas.toBlob(res, type, 0.85));
     let out = await encode("image/webp");
-    if (out?.type !== "image/webp") out = await encode("image/jpeg"); // Safari can't encode WebP
+    if (out?.type !== "image/webp") out = await encode("image/jpeg"); // why: Safari can't encode WebP
     return out && out.size < file.size ? out : file;
   } catch {
     return file;
@@ -595,10 +592,7 @@ function QuestionEditor(props: {
   index: number;
   count: number;
   onChange: (q: Question) => void;
-  /**
-   * For a change that lands after an await (an image upload): applied to the question as it is
-   * then, by id, so edits made in the meantime are kept. Dropped if the question was deleted.
-   */
+  /** why: applied by id after an await so edits made meanwhile survive; dropped if the question is gone. */
   onLater: (update: (q: Question) => Question) => void;
   onMove: (delta: number) => void;
   onDuplicate: () => void;
@@ -782,10 +776,6 @@ function QuestionEditor(props: {
   );
 }
 
-/**
- * A pin question's spots: click the picture to add one, drag a spot to move it, click a spot to
- * make it the answer. The list below renames (e.g. "56" instead of "A") and removes spots.
- */
 function PinSpotsEditor({ q, onChange, onRemove }: { q: Question; onChange: (q: Question) => void; onRemove: (i: number) => void }) {
   const board = useRef<HTMLDivElement>(null);
   const drag = useRef<{ i: number; x0: number; y0: number; moved: boolean } | null>(null);

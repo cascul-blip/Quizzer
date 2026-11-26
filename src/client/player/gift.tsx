@@ -41,7 +41,6 @@ const ART: Record<GiftItemKind, { src: string; label: string }> = {
 export function GiftPlayer({ view, send }: { view: PlayerGiftView; send: Send }) {
   const seconds = useCountdown(view.remainingMs, view.phase);
   useEffect(() => {
-    // Load the playfield and targets while the player is answering questions.
     for (const url of [workshop, chest, ...Object.values(ART).map(({ src }) => src)]) {
       new Image().src = url;
     }
@@ -120,7 +119,7 @@ function GiftBonus({ bonus, score, send }: { bonus: Bonus; score: number; send: 
   const previousHitCount = useRef(bonus.hits.length);
   const [pops, setPops] = useState<Array<GiftHit & ReturnType<typeof itemPosition>>>([]);
   const claimed = new Set(bonus.hits.map((hit) => hit.item));
-  // Give an unacknowledged tap another chance if the phone briefly lost its connection.
+  // why: give an unacknowledged tap another chance if the phone briefly lost its connection.
   const isPending = (id: number) => elapsed - (pending.current.get(id)?.at ?? -Infinity) < TAP_ACK_MS;
   const active = bonus.items.filter(({ id, from, until }) => elapsed >= from && elapsed < until && !claimed.has(id) && !isPending(id));
 

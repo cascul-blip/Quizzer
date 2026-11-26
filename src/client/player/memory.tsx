@@ -74,7 +74,7 @@ function MemoryPhase({ view, send }: { view: PlayerMemoryView; send: Send }) {
 
 type TurnProps = { turn: NonNullable<PlayerMemoryView["turn"]>; boardSize: number; remainingMs: number; send: Send };
 
-/** Outlives the phase change inside a turn, so a card confirmed second still flips up when the result shows. */
+/** why: outlives the phase change inside a turn, so a card confirmed second still flips up when the result shows. */
 function MemoryTurn(props: TurnProps) {
   const { turn, remainingMs } = props;
   const resumeVersion = useContext(PhoneResumeVersion);

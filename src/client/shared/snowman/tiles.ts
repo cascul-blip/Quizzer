@@ -1,4 +1,3 @@
-// One pre-rendered snow/ice tile per board index, in perspective (the Evil Snowman skin; see snowman-art.tsx).
 import t000 from "./tiles/t-000.webp";
 import t001 from "./tiles/t-001.webp";
 import t002 from "./tiles/t-002.webp";

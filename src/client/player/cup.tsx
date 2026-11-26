@@ -8,7 +8,7 @@ import { Feedback, StreamQuestion } from "./stream-question.tsx";
 
 type Send = (m: ClientMsg) => void;
 
-/** The die tumbling; the target only appears once it lands so the text doesn't give it away. */
+/** why: the target appears only once the die lands so the text doesn't give it away. */
 function RollScreen({ round, target, rollMs }: { round: number; target: number; rollMs: number }) {
   const [landed, setLanded] = useState(rollMs <= 0);
   return (
@@ -225,7 +225,6 @@ function RevealScreen({ view }: { view: PlayerCupView }) {
   );
 }
 
-/** Poisoned players keep answering to practise. */
 function GhostScreen({ view, onAnswer }: { view: PlayerCupView; onAnswer: (seq: number, option: number, text?: string) => void }) {
   const christmas = useChristmasCup();
   return (

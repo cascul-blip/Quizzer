@@ -28,7 +28,7 @@ const ALERT_TEXT = { giant: "⚠️ A giant approaches!", wall: "💥 The wall w
 
 export const siegeBanner: PhoneBanner = {
   avatarClass: "siege-banner-avatar",
-  Line: () => <p class="siege-lobby-line">🛡️ Defend the kingdom! Watch the projector.</p>,
+  LineUnderYoureIn: () => <p class="siege-lobby-line">🛡️ Defend the kingdom! Watch the projector.</p>,
 };
 
 export function SiegePlayer({ view, send }: { view: PlayerSiegeView; send: Send }) {
@@ -50,7 +50,7 @@ function SiegePlayerContent({ view, send }: { view: PlayerSiegeView; send: Send 
   useEffect(() => {
     if (!playing && mapOpen) setMapOpen(false);
   }, [playing]);
-  // After a reconnect the server has closed our map: ask for it again.
+  // why: after a reconnect the server has closed our map, so ask for it again.
   const noMap = view.map === null;
   useEffect(() => {
     if (mapOpen && noMap && playing) send({ type: "siege.map", open: true });
@@ -95,12 +95,12 @@ function SiegePlayerContent({ view, send }: { view: PlayerSiegeView; send: Send 
   );
 }
 
-/** "A giant approaches!" or "The wall was hit!" across the top, with a short buzz. Doesn't cover the question. */
+/** why: sits across the top so it doesn't cover the question. */
 function AlertBanner({ alert }: { alert: PlayerSiegeView["alert"] }) {
   const [shown, setShown] = useState<NonNullable<PlayerSiegeView["alert"]> | null>(null);
   const first = useRef(true);
   useEffect(() => {
-    // An alert already up when the screen opens (a reconnect) isn't news.
+    // why: an alert already up when the screen opens (a reconnect) isn't news.
     if (first.current) {
       first.current = false;
       return;
@@ -137,7 +137,6 @@ function defaultPick(view: PlayerSiegeView): SiegeDefenderType {
   return cheapest ?? view.lastPlaced ?? "archer";
 }
 
-/** The top-down 5 × 7 map of buildable squares (plus the entry squares, where monsters show up). */
 function LaneMap({ view, send, onClose }: { view: PlayerSiegeView; send: Send; onClose: () => void }) {
   const theme = useSiegeTheme();
   const [pick, setPick] = useState<SiegeDefenderType>(() => defaultPick(view));

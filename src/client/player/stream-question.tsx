@@ -51,7 +51,6 @@ export function StreamQuestion({ question, onAnswer }: { question: StreamQuestio
   );
 }
 
-/** Shown on the ✗ while a player who keeps answering wrong waits out the extra time. */
 function PenaltyNote({ remainingMs, seq }: { remainingMs: number; seq: number }) {
   const secs = useCountdown(remainingMs, `penalty${seq}`);
   return (
@@ -62,9 +61,8 @@ function PenaltyNote({ remainingMs, seq }: { remainingMs: number; seq: number })
   );
 }
 
-/** Full-screen ✓/✗ after each answer: a second, or longer after wrong answers in a row. */
 export function Feedback({ feedback, rightText }: { feedback: StreamFeedbackView | null; rightText: string }) {
-  // Decided during render, not in an effect: the snapshot that brings this feedback also brings
+  // why: decided during render, not in an effect: the snapshot that brings this feedback also brings
   // the next question, and an effect would let that question paint for a frame before the overlay.
   const last = useRef(feedback);
   if (feedback) last.current = feedback;

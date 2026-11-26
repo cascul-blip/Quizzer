@@ -14,7 +14,7 @@ type Send = (m: ClientMsg) => void;
 type Pose = "idle" | "ready" | "draw" | "fire" | "stagger" | "tip" | "walk1" | "walk2";
 type Hat = "brown" | "black" | "white" | "sheriff" | null;
 
-/** Questions longer than this are set in smaller type so every screen fits without scrolling. */
+/** why: longer questions get smaller type so every screen fits without scrolling. */
 const LONG_QUESTION = 140;
 
 const qClass = (text: string) => (visibleLength(text) > LONG_QUESTION ? "long" : "");
@@ -74,7 +74,6 @@ function poses(view: PlayerDuelView, me: DuelistResult | undefined): { mine: Pos
   return { mine: view.phase === "open" && answered ? "ready" : "idle", theirs: () => (view.phase === "open" ? "ready" : "idle") };
 }
 
-/** The mini face-off: you on the left facing right, your opponent(s) on the right facing left. */
 function FaceOff({ view }: { view: PlayerDuelView }) {
   if (modeTheme("duel", view.theme) === "christmas") return <SnowballFaceOff view={view} />;
   const duel = view.phase === "reveal" ? view.myDuel : null;
@@ -160,7 +159,6 @@ function DuelIntro({ view }: { view: PlayerDuelView }) {
   );
 }
 
-/** Joined mid-round: no opponent yet, so just the question and the clock. */
 function DuelWatch({ view }: { view: PlayerDuelView }) {
   const q = view.question!;
   const left = useCountdown(q.remainingMs, `open:${q.index}`);
@@ -319,7 +317,6 @@ function DuelReveal({ view }: { view: PlayerDuelView }) {
   );
 }
 
-/** Vibration patterns (ms) for the once-per-round buzz. */
 const WIN_BUZZ = [40, 40, 80];
 const LOSE_BUZZ = 120;
 const DRAW_BUZZ = 30;

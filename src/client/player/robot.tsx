@@ -82,7 +82,7 @@ function MoveScreen({ view, secs, send }: { view: PlayerRobotView; secs: number;
   const onTarget = !!board && board.marked.includes(tile);
   const onCollapse = !!board && board.collapsing.includes(tile);
   const canMove = !view.me.out && view.me.points > 0;
-  // Another player or the edge of the board is in the way (the server has the final say).
+  // why: only a prediction; the server has the final say.
   const blocked = (dir: RobotDir) => {
     const x = view.me.x + STEP[dir][0];
     const y = view.me.y + STEP[dir][1];

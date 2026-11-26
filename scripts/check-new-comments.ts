@@ -4,7 +4,6 @@ const MARKERS = /^(why|checked):/;
 const DIRECTIVES = /^(biome-ignore|@ts-expect-error|@ts-ignore|eslint-disable)/;
 const PATHS = ["src/*.ts", "src/*.tsx", "tests/*.ts", "tests/*.tsx", "scripts/*.ts"];
 
-const PENDING_LIST = "scripts/comment-audit-pending.txt";
 const wholeRepo = process.argv.includes("--all");
 
 type CommentStart = { text: string; column: number };
@@ -13,9 +12,22 @@ function withoutStrings(line: string): string {
   return line.replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\`[^\`]*\`/g, '""');
 }
 
-function commentIn(line: string): CommentStart | null {
+function linesInsideBlockComments(lines: string[]): boolean[] {
+  let inside = false;
+  return lines.map((line) => {
+    const startsInside = inside;
+    for (const token of withoutStrings(line).matchAll(/\/\*|\*\/|\/\//g)) {
+      if (!inside && token[0] === "//") break;
+      if (token[0] === "/*") inside = true;
+      if (token[0] === "*/") inside = false;
+    }
+    return startsInside;
+  });
+}
+
+function commentIn(line: string, startsInsideBlock: boolean): CommentStart | null {
   const code = withoutStrings(line);
-  const continuation = /^\s*\*(?!\/)/.exec(code);
+  const continuation = startsInsideBlock ? /^\s*\*(?!\/)/.exec(code) : null;
   if (continuation) return { text: line.slice(continuation[0].length).trim(), column: -1 };
   const match = /(?:^|(?<=\s))(?:\/\/|\/\*)/.exec(code);
   if (!match) return null;
@@ -55,13 +67,14 @@ function justified(lines: string[], index: number, comment: CommentStart): boole
 }
 
 const failures: string[] = [];
-async function checkFile(path: string, lineNumbers: number[] | "all", into = failures) {
+async function checkFile(path: string, lineNumbers: number[] | "all") {
   const lines = (await Bun.file(path).text()).split("\n");
   const numbers = lineNumbers === "all" ? lines.map((_, i) => i + 1) : lineNumbers;
+  const insideBlock = linesInsideBlockComments(lines);
   for (const number of numbers) {
-    const comment = commentIn(lines[number - 1] ?? "");
+    const comment = commentIn(lines[number - 1] ?? "", insideBlock[number - 1] ?? false);
     if (comment && !justified(lines, number - 1, comment)) {
-      into.push(`${path}:${number}: ${(lines[number - 1] ?? "").trim()}`);
+      failures.push(`${path}:${number}: ${(lines[number - 1] ?? "").trim()}`);
     }
   }
 }
@@ -92,24 +105,8 @@ async function checkChangedLines() {
 }
 
 async function checkWholeRepo() {
-  const pendingFile = Bun.file(PENDING_LIST);
-  const pending = new Set(
-    ((await pendingFile.exists()) ? await pendingFile.text() : "")
-      .split("\n")
-      .map((row) => row.trim())
-      .filter(Boolean),
-  );
   const files = (await $`git -c core.quotePath=false ls-files --cached --others --exclude-standard -- ${PATHS}`.text()).split("\n").filter(Boolean);
-  for (const path of files) {
-    if (!(await Bun.file(path).exists())) continue;
-    if (!pending.has(path)) {
-      await checkFile(path, "all");
-      continue;
-    }
-    const found: string[] = [];
-    await checkFile(path, "all", found);
-    if (found.length === 0) failures.push(`${PENDING_LIST}: ${path} has no unmarked comments left; remove it from the list.`);
-  }
+  for (const path of files) if (await Bun.file(path).exists()) await checkFile(path, "all");
 }
 
 if (wholeRepo) await checkWholeRepo();

@@ -18,24 +18,19 @@ function useFightPhoneUI() {
   return christmas ? { backdrop: art.sky, attack: art.base, rebuild: art.castles[0]!, brick: art.earth } : FIGHT_PHONE_UI;
 }
 
-/** Seconds of the arc shown while aiming: enough to read the angle, not enough to see where it lands. */
+/** why: enough arc to read the angle, not enough to see where it lands. */
 const PREVIEW_S = 0.45;
-/** How far the loaded avatar is drawn back at full power, in field units. */
-const PULL_DRAW = 55;
-/** A drag across this share of the screen width pulls the catapult back all the way. */
+const PULL_DRAW_FIELD_UNITS = 55;
 const FULL_POWER_SCREEN_SHARE = 0.4;
 const MIN_FULL_POWER_PX = 90;
-/** Rows of the repair wall, and whole bricks per row (odd rows are offset by half a brick). */
 const WALL_ROWS = 12;
 const WALL_COLS = 5;
-/** After a repair finishes, the full wall stays this long while its bricks tumble away. */
 const WALL_CLEAR_MS = 700;
 const WALL_WASTED_MS = 1600;
 
-/** Avatars are drawn bigger on the phone's small battlefield. */
+/** why: avatars are drawn bigger on the phone's small battlefield. */
 const PHONE_SPRITE_R = 32;
 
-/** Phone screen for Tower Fight: own questions at own pace; every 4 correct answers, attack or rebuild. */
 export function FightPlayer(props: { view: PlayerFightView; send: Send }) {
   return (
     <FightThemeProvider theme={props.view.theme}>
@@ -48,7 +43,6 @@ function FightPlayerContent({ view, send }: { view: PlayerFightView; send: Send 
   const secs = useCountdown(view.phaseRemainingMs, view.phase);
   const colors = view.teams.map((t) => t.color);
 
-  // When a repair finishes, keep the full wall on screen briefly while it clears away.
   const [cleared, setCleared] = useState<{ seq: number; repaired: boolean } | null>(null);
   const prevState = useRef(view.state);
   useEffect(() => {
@@ -146,7 +140,7 @@ function FightPlayerContent({ view, send }: { view: PlayerFightView; send: Send 
 }
 
 function DecisionClock({ view }: { view: PlayerFightView }) {
-  // The correct count doesn't change while choosing, so it keys this decision's countdown.
+  // why: the correct count is fixed while choosing, so it keys this decision's countdown
   const secs = useCountdown(view.decisionRemainingMs, `decision-${view.me.correct}`);
   return <div class={`fight-clock ${secs <= 3 ? "urgent" : ""}`}>{secs}</div>;
 }
@@ -154,7 +148,7 @@ function DecisionClock({ view }: { view: PlayerFightView }) {
 function DecideScreen({ view, send }: { view: PlayerFightView; send: Send }) {
   const art = useFightPhoneUI();
   const [sent, setSent] = useState(false);
-  // A teammate may repair the tower first; the server then refuses the rebuild and the tower view changes.
+  // why: a teammate may repair the tower first; the server then refuses the rebuild and the tower view changes.
   const ownDamage = view.damage[view.team.index]!;
   useEffect(() => setSent(false), [ownDamage]);
   const choose = (action: "attack" | "rebuild") => {
@@ -199,7 +193,6 @@ function DecideScreen({ view, send }: { view: PlayerFightView; send: Send }) {
   );
 }
 
-/** Slingshot: press anywhere, pull back away from where you want to fly, let go to launch. */
 function AimScreen({ view, send }: { view: PlayerFightView; send: Send }) {
   const areaRef = useRef<HTMLDivElement>(null);
   const start = useRef<{ x: number; y: number } | null>(null);
@@ -243,8 +236,8 @@ function AimScreen({ view, send }: { view: PlayerFightView; send: Send }) {
   const back =
     pull && len > 0
       ? {
-          x: cx + (pull.dx / len) * (Math.min(len, MAX_PULL) / MAX_PULL) * PULL_DRAW,
-          y: LAUNCH_Y + (pull.dy / len) * (Math.min(len, MAX_PULL) / MAX_PULL) * PULL_DRAW,
+          x: cx + (pull.dx / len) * (Math.min(len, MAX_PULL) / MAX_PULL) * PULL_DRAW_FIELD_UNITS,
+          y: LAUNCH_Y + (pull.dy / len) * (Math.min(len, MAX_PULL) / MAX_PULL) * PULL_DRAW_FIELD_UNITS,
         }
       : null;
   const dots = [];
@@ -292,13 +285,8 @@ function AimScreen({ view, send }: { view: PlayerFightView; send: Send }) {
   );
 }
 
-/**
- * Rebuilding: bricks stack up row by row until the wall fills the screen,
- * a progress bar for the repair. When done, the bricks tumble away.
- */
 function RepairWall({ color, repairRemainingMs, done }: { color: string; repairRemainingMs: number; done?: { repaired: boolean } }) {
   const art = useFightPhoneUI();
-  // The end time is set when the wall appears, relative to this phone's clock.
   const endAt = useRef(performance.now() + repairRemainingMs);
   const [progress, setProgress] = useState(done ? 1 : 1 - repairRemainingMs / REPAIR_MS);
   const rowsBuzzed = useRef(0);
@@ -319,8 +307,8 @@ function RepairWall({ color, repairRemainingMs, done }: { color: string; repairR
     return () => cancelAnimationFrame(raf);
   }, [!!done]);
 
-  // Offset rows start and end with half bricks, like a real wall: one more piece per row.
-  const piecesIn = (r: number) => WALL_COLS + (r % 2);
+  const halfBrickEndsInOffsetRow = (r: number) => r % 2;
+  const piecesIn = (r: number) => WALL_COLS + halfBrickEndsInOffsetRow(r);
   const total = Array.from({ length: WALL_ROWS }, (_, r) => piecesIn(r)).reduce((a, b) => a + b, 0);
   const shown = done ? total : Math.min(total, Math.floor(progress * total + 1e-6));
   const rows = [];
