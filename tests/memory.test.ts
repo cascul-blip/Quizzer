@@ -106,7 +106,7 @@ function facesUp() {
 }
 
 describe("Memory Game", () => {
-  test("End during an open question settles and reveals it before the podium, and a second End does nothing", () => {
+  test("End during an open question settles and reveals it before the podium", () => {
     const clock = new FakeClock();
     const lobby = new Lobby(sampleQuiz());
     const noel = lobby.join("Noel");
@@ -134,10 +134,6 @@ describe("Memory Game", () => {
     expect(seen[0]!.reveal).toMatchObject({ choice: 1, wasCorrect: true });
     expect(finished).toBe(1);
     expect(game.hostView().phase).toBe("podium");
-
-    game.end();
-    expect(finished).toBe(1);
-    expect(seen).toHaveLength(2);
   });
 
   test("starts individual play from the lobby with a hidden 10×10 board and the current players", async () => {

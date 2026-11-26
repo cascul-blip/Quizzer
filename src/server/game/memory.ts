@@ -1,18 +1,15 @@
 import type { AnswerValue } from "../../shared/answer-match.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
-import { randomAvatar } from "../../shared/avatars.ts";
 import type { Pacing } from "../../shared/mode-views.ts";
 import type { HostMemoryState, MemoryBoardSize, MemoryCardView, MemoryPlayer, PlayerMemoryView } from "../../shared/modes/memory.ts";
 import { MEMORY_FACE_COUNT, MEMORY_MATCH_RESULT_MS, MEMORY_QUESTIONS_PER_PHASE, MEMORY_TURN_MS } from "../../shared/modes/memory.ts";
 import type { Question } from "../../shared/quiz-schema.ts";
 import type { Clock } from "./common.ts";
-import { GameError, preparePlayOrder, realClock, shuffle } from "./common.ts";
+import { GameError, preparePlayOrder, shuffle } from "./common.ts";
 import type { LobbyFacts } from "./lobby-facts.ts";
-import type { PacedAnswer } from "./paced-round.ts";
-import { PacedRound } from "./paced-round.ts";
-import { GameFinish } from "./phase-timer.ts";
+import type { PacedAnswer, PacedRound } from "./paced-round.ts";
+import { PacedSession } from "./paced-session.ts";
 import type { BasePlayer } from "./roster.ts";
-import { Roster } from "./roster.ts";
 import { most, rankBy } from "./standings.ts";
 
 interface MemoryParticipant extends BasePlayer {
@@ -48,17 +45,10 @@ const MISS_MS = 2_000;
 
 export class MemoryGame {
   readonly runningMode: "memory" = "memory";
-  private readonly roster = new Roster<MemoryParticipant>();
-  private readonly clock: Clock;
-  private readonly rng: () => number;
-  private readonly paced: PacedRound<"turn" | "feedback" | "podium">;
+  private readonly session: PacedSession<MemoryParticipant, "turn" | "feedback">;
   private readonly questions: Question[] = [];
   private readonly boardSize: MemoryBoardSize;
   private readonly board: (number | null)[];
-  private readonly onChange: () => void;
-  private readonly onActivity: (id: string) => void;
-  private readonly onFinish: (game: MemoryGame) => void;
-  private readonly gameFinish: GameFinish<MemoryGame["phase"]>;
   private turnOrder: string[] = [];
   private nextInOrder = 0;
   private turnId = 0;
@@ -70,11 +60,21 @@ export class MemoryGame {
     options: MemoryOptions = {},
   ) {
     if (lobby.quiz.questions.length === 0) throw new GameError("This quiz has no questions");
-    this.clock = options.clock ?? realClock;
-    this.rng = options.rng ?? Math.random;
-    this.onChange = options.onChange ?? (() => {});
-    this.onActivity = options.onActivity ?? this.onChange;
-    this.onFinish = options.onFinish ?? (() => {});
+    const onFinish = options.onFinish;
+    this.session = new PacedSession<MemoryParticipant, "turn" | "feedback">({
+      clock: options.clock,
+      rng: options.rng,
+      initial: "intro",
+      pacing: lobby.pacing,
+      questions: () => this.questions,
+      settle: () => {},
+      advance: () => this.afterQuestion(),
+      cleanup: () => {
+        this.turn = null;
+        this.feedback = null;
+      },
+      hub: { onChange: options.onChange, onActivity: options.onActivity, onFinish: onFinish && (() => onFinish(this)) },
+    });
     this.boardSize = lobby.settings.boardSize;
     const pairCount = this.boardSize ** 2 / 2;
     const faces = Array.from({ length: MEMORY_FACE_COUNT }, (_, face) => face);
@@ -83,24 +83,19 @@ export class MemoryGame {
       chosenFaces.flatMap((face) => [face, face]),
       this.rng,
     );
-    this.roster.adoptFrom(lobby.players, newPlayer);
-    this.paced = new PacedRound<"turn" | "feedback" | "podium">(this.clock, {
-      initial: "intro",
-      pacing: lobby.pacing,
-      questions: () => this.questions,
-      asked: () => this.players.values(),
-      settle: () => {},
-      advance: () => this.afterQuestion(),
-      onChange: this.onChange,
-    });
-    this.gameFinish = new GameFinish(this.paced.phases, "podium", {
-      cleanup: () => {
-        this.turn = null;
-        this.feedback = null;
-      },
-      onFinish: () => this.onFinish(this),
-      onChange: () => this.onChange(),
-    });
+    this.session.adoptPlayers(lobby.players, newPlayer);
+  }
+
+  private get paced(): PacedRound<"turn" | "feedback" | "podium"> {
+    return this.session.paced;
+  }
+
+  private get clock(): Clock {
+    return this.session.clock;
+  }
+
+  private get rng(): () => number {
+    return this.session.rng;
   }
 
   get quizId(): string {
@@ -112,7 +107,7 @@ export class MemoryGame {
   }
 
   get players(): Map<string, MemoryParticipant> {
-    return this.roster.players;
+    return this.session.players;
   }
 
   get choices() {
@@ -128,39 +123,36 @@ export class MemoryGame {
   }
 
   start(pacing?: Pacing): void {
-    if (this.paced.qIndex >= 0) throw new GameError("The game has already started");
-    if (this.players.size === 0) throw new GameError("Wait for at least one player to join");
-    if (pacing) this.paced.pacing = pacing;
-    this.beginQuestion();
+    this.session.start(() => {
+      if (pacing) this.paced.pacing = pacing;
+      this.beginQuestion();
+    });
   }
 
   join(nickname: unknown, avatar?: AvatarChoice | null): MemoryParticipant {
-    if (this.phase === "podium") throw new GameError("This game has finished");
-    const player = this.roster.add(nickname, avatar ?? randomAvatar(this.rng), newPlayer);
-    this.onChange();
+    const player = this.session.addPlayer(nickname, avatar, newPlayer);
+    this.session.changed();
     return player;
   }
 
   byToken(token: unknown): MemoryParticipant | null {
-    return this.roster.byToken(token);
+    return this.session.byToken(token);
   }
 
   setConnected(playerId: string, connected: boolean): void {
-    if (!this.roster.setConnected(playerId, connected)) return;
-    if (connected || !this.paced.closeIfAllAnswered()) this.onChange();
+    this.session.setConnected(playerId, connected);
   }
 
   kick(playerId: string): MemoryParticipant | null {
-    const player = this.roster.remove(playerId);
+    const player = this.session.removePlayer(playerId);
     if (!player) return null;
     if (this.phase === "turn" && this.turn?.playerId === playerId) this.nextTurn();
-    else if (!this.paced.closeIfAllAnswered()) this.onChange();
+    else this.session.left();
     return player;
   }
 
   setPacing(pacing: Pacing): void {
-    this.paced.setPacing(pacing);
-    this.onChange();
+    this.session.setPacing(pacing);
   }
 
   next(): void {
@@ -181,7 +173,7 @@ export class MemoryGame {
       player.correct++;
       player.chips++;
     }
-    if (!this.paced.closeIfAllAnswered()) this.onActivity(playerId);
+    this.session.answered(playerId);
     return true;
   }
 
@@ -192,7 +184,7 @@ export class MemoryGame {
     if (step !== (first === null ? 1 : 2) || !this.eligible(position) || first === position) return false;
     if (first === null) {
       turn.first = position;
-      this.onChange();
+      this.session.changed();
       return true;
     }
     const player = this.players.get(playerId);
@@ -203,18 +195,16 @@ export class MemoryGame {
     if (matched) player.pairs++;
     this.feedback = { matched, positions: [first, position] };
     this.paced.phases.set("feedback", matched ? MEMORY_MATCH_RESULT_MS : MISS_MS, () => this.afterFeedback());
-    this.onChange();
+    this.session.changed();
     return true;
   }
 
   end(): void {
-    if (this.gameFinish.finished) return;
-    if (this.phase === "open") this.paced.close();
-    this.gameFinish.finish();
+    this.session.end();
   }
 
   dispose(): void {
-    this.paced.phases.dispose();
+    this.session.dispose();
   }
 
   private beginQuestion(): void {
@@ -264,7 +254,7 @@ export class MemoryGame {
         player.chips--;
         this.nextTurn();
       });
-      this.onChange();
+      this.session.changed();
       return;
     }
     this.beginQuestion();
