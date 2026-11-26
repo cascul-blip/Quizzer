@@ -58,6 +58,11 @@ function MemoryPhase({ view, send }: { view: PlayerMemoryView; send: Send }) {
         <p class="muted">
           Rank {view.result.place} of {view.result.playerCount}
         </p>
+        {view.result.awards.map((a) => (
+          <div key={a} class="award-chip">
+            🏅 {a}
+          </div>
+        ))}
       </Center>
     );
   }

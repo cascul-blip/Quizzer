@@ -1,7 +1,7 @@
 import type { AnswerValue } from "../../shared/answer-match.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import type { Pacing } from "../../shared/mode-views.ts";
-import type { HostMemoryState, MemoryBoardSize, MemoryCardView, MemoryPlayer, PlayerMemoryView } from "../../shared/modes/memory.ts";
+import type { HostMemoryState, MemoryAwardKey, MemoryBoardSize, MemoryCardView, MemoryPlayer, PlayerMemoryView } from "../../shared/modes/memory.ts";
 import { MEMORY_FACE_COUNT, MEMORY_MATCH_RESULT_MS, MEMORY_QUESTIONS_PER_PHASE, MEMORY_TURN_MS, memoryShared } from "../../shared/modes/memory.ts";
 import type { Question } from "../../shared/quiz-schema.ts";
 import type { Clock } from "./common.ts";
@@ -20,6 +20,7 @@ interface MemoryParticipant extends BasePlayer {
   pairs: number;
   correct: number;
   totalMs: number;
+  correctMs: number;
   revealStarts: number;
 }
 
@@ -45,7 +46,13 @@ interface Feedback {
 
 const MISS_MS = 2_000;
 
-type MemoryPodiumT = Podium<MemoryParticipant, MemoryParticipant, never>;
+type MemoryPodiumT = Podium<MemoryParticipant, MemoryParticipant, MemoryAwardKey>;
+
+/** why: the Podium's highest-wins rule needs faster to score higher, so Fastest answers is the reciprocal of the average in seconds. */
+const MEMORY_AWARD_VALUES: Record<MemoryAwardKey, (p: MemoryParticipant) => number> = {
+  fastestAnswers: (p) => (p.correct ? (1000 * p.correct) / Math.max(p.correctMs, 1) : 0),
+  mostCorrect: (p) => p.correct,
+};
 
 export class MemoryGame {
   readonly runningMode: "memory" = "memory";
@@ -164,6 +171,7 @@ export class MemoryGame {
     player.totalMs += answer.msSinceOpen;
     if (answer.correct) {
       player.correct++;
+      player.correctMs += answer.msSinceOpen;
       player.chips++;
     }
     this.session.answered(playerId);
@@ -280,7 +288,7 @@ export class MemoryGame {
       then: [most((p) => p.correct)],
       players,
       entryOf: (p) => p,
-      awards: { labels: memoryShared.awards, values: {} },
+      awards: { labels: memoryShared.awards, values: MEMORY_AWARD_VALUES },
     });
   }
 
@@ -311,6 +319,7 @@ export class MemoryGame {
       revealTurnsNext: this.revealTurnsNext,
       answerCounts: revealed && question ? question.options.map((_, i) => answers.filter((a) => a.option === i).length) : null,
       players: [...this.players.values()].sort((a, b) => b.pairs - a.pairs).map((p) => ({ ...playerView(p), connected: p.connected })),
+      awards: this.phase === "podium" ? this.podium.awards : null,
       podium: this.phase === "podium" ? this.podium.rows.map((r) => ({ place: r.place, player: playerView(r.player) })) : null,
       boardSize: this.boardSize,
       board: this.boardView(),
@@ -371,7 +380,7 @@ function fastestAverageThenFewestStartsThenJoinOrder(a: RevealCandidate, b: Reve
 }
 
 function newPlayer(base: BasePlayer): MemoryParticipant {
-  return { ...base, answers: [], chips: 0, pairs: 0, correct: 0, totalMs: 0, revealStarts: 0 };
+  return { ...base, answers: [], chips: 0, pairs: 0, correct: 0, totalMs: 0, correctMs: 0, revealStarts: 0 };
 }
 
 function playerView({ id, nickname, avatar, chips, pairs }: MemoryParticipant): MemoryPlayer {

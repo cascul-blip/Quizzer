@@ -269,6 +269,7 @@ describe("Paced question through the projector mode entries", () => {
       phase: "reveal",
       players: [{ ...person, chips: 1, pairs: 0 }],
       podium: null,
+      awards: null,
       boardSize: 6,
       board: [],
       turn: null,

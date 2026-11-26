@@ -662,7 +662,7 @@ describe("Memory Game", () => {
       players: [{ pairs: pairCount, chips: chipsLeft }],
       podium: [{ place: 1, player: { pairs: pairCount } }],
     });
-    expect(player(noel!).result).toEqual({ place: 1, playerCount: 1, awards: [] });
+    expect(player(noel!).result).toEqual({ place: 1, playerCount: 1, awards: ["Fastest answers", "Most correct"] });
     clock.advance(60_000);
     expect(projector().phase).toBe("podium");
   });
@@ -779,5 +779,83 @@ describe("Memory Game", () => {
     ]);
     expect(projector().players.every((p) => !("rank" in p))).toBe(true);
     expect(projector().podium).toBeNull();
+  });
+  test("Most correct goes to everyone tied on the most correct answers, and the phones list it", async () => {
+    const {
+      host,
+      phones: [noel, holly, ivy],
+    } = await launch(["Noel", "Holly", "Ivy"], { count: 2 });
+    playQuestion(host, [holly!, ivy!]);
+    playQuestion(host, [holly!, ivy!, noel!]);
+    host.sendMsg({ type: "host.end" });
+
+    expect(projector().awards?.mostCorrect).toEqual({ value: 2, nicknames: ["Holly", "Ivy"] });
+    expect(player(holly!).result?.awards).toContain("Most correct");
+    expect(player(noel!).result?.awards).not.toContain("Most correct");
+  });
+
+  test("nobody gets Most correct or Fastest answers when nobody answered correctly", async () => {
+    const {
+      host,
+      phones: [noel],
+    } = await launch(["Noel", "Holly"]);
+    const index = openQuestion(host);
+    clock.advance(100);
+    submit(noel!, index, 1);
+    host.sendMsg({ type: "host.end" });
+
+    expect(projector().awards).toEqual({ fastestAnswers: null, mostCorrect: null });
+    expect(player(noel!).result?.awards).toEqual([]);
+  });
+
+  test("Fastest answers goes to the lowest average correct-answer time and ignores wrong answers", async () => {
+    const {
+      host,
+      phones: [noel, holly, ivy],
+    } = await launch(["Noel", "Holly", "Ivy"], { count: 2 });
+    let index = openQuestion(host);
+    clock.advance(10);
+    submit(ivy!, index, 1);
+    clock.advance(90);
+    submit(holly!, index, 1);
+    clock.advance(100);
+    submit(noel!, index);
+    host.sendMsg({ type: "host.skip" });
+    host.sendMsg({ type: "host.next" });
+    index = openQuestion(host);
+    clock.advance(400);
+    submit(holly!, index);
+    clock.advance(300);
+    submit(noel!, index);
+    host.sendMsg({ type: "host.end" });
+
+    const fastest = projector().awards?.fastestAnswers;
+    expect(fastest?.nicknames).toEqual(["Holly"]);
+    expect(1 / fastest!.value).toBeCloseTo(0.4);
+    expect(player(holly!).result?.awards).toEqual(["Fastest answers"]);
+    expect(player(ivy!).result?.awards).toEqual([]);
+  });
+
+  test("equal average correct-answer times share Fastest answers", async () => {
+    const {
+      host,
+      phones: [noel, holly],
+    } = await launch(["Noel", "Holly", "Ivy"], { count: 2 });
+    let index = openQuestion(host);
+    clock.advance(100);
+    submit(noel!, index);
+    clock.advance(200);
+    submit(holly!, index);
+    host.sendMsg({ type: "host.skip" });
+    host.sendMsg({ type: "host.next" });
+    index = openQuestion(host);
+    clock.advance(100);
+    submit(holly!, index);
+    clock.advance(200);
+    submit(noel!, index);
+    host.sendMsg({ type: "host.end" });
+
+    expect(projector().awards?.fastestAnswers?.nicknames).toEqual(["Noel", "Holly"]);
+    expect(player(noel!).result?.awards).toContain("Fastest answers");
   });
 });
