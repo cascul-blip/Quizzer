@@ -20,15 +20,11 @@ src/client/player/siege.tsx
 src/client/player/stream-question.tsx
 src/client/player/submarine.tsx
 src/client/player/tower.tsx
-src/client/shared/duel-art.tsx
 src/client/shared/duel-christmas.tsx
 src/client/shared/duel/meta.ts
-src/client/shared/racer-art.tsx
-src/client/shared/robot-art.tsx
 src/client/shared/robot-skin.ts
 src/client/shared/robot-voice.ts
 src/client/shared/robot/tiles.ts
-src/client/shared/snowman-art.tsx
 src/client/shared/snowman/tiles.ts
 tests/after-answer-wait.test.tsx
 tests/avatars.test.ts
