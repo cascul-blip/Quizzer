@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { Lobby } from "../src/server/game/lobby.ts";
+import { MemoryGame } from "../src/server/game/memory.ts";
 import { QuizStore } from "../src/server/quiz/store.ts";
 import type { GameHub } from "../src/server/ws.ts";
 import type { Pacing } from "../src/shared/mode-views.ts";
 import type { MemoryBoardSize, MemoryCardView } from "../src/shared/modes/memory.ts";
 import type { ShuffleOptions } from "../src/shared/protocol.ts";
-import { FakeClock, tempDir } from "./helpers.ts";
+import { FakeClock, sampleQuiz, tempDir } from "./helpers.ts";
 import { fakeHub, HubSocket } from "./hub-harness.ts";
 
 let data: ReturnType<typeof tempDir>;
@@ -104,6 +106,40 @@ function facesUp() {
 }
 
 describe("Memory Game", () => {
+  test("End during an open question settles and reveals it before the podium, and a second End does nothing", () => {
+    const clock = new FakeClock();
+    const lobby = new Lobby(sampleQuiz());
+    const noel = lobby.join("Noel");
+    const holly = lobby.join("Holly");
+    lobby.join("Ivy");
+    const seen: { phase: string; reveal: unknown }[] = [];
+    let finished = 0;
+    const game = new MemoryGame(lobby.handoffFacts("memory"), {
+      clock,
+      rng: () => 0.5,
+      onChange: () => seen.push({ phase: game.phase, reveal: game.playerView(holly.id)?.reveal ?? null }),
+      onFinish: () => finished++,
+    });
+    game.start("manual");
+    game.skip();
+    expect(game.phase).toBe("open");
+    clock.advance(120);
+    expect(game.answer(noel.id, 0, 0)).toBe(true);
+    expect(game.answer(holly.id, 0, 1)).toBe(true);
+    seen.length = 0;
+
+    game.end();
+
+    expect(seen.map((s) => s.phase)).toEqual(["reveal", "podium"]);
+    expect(seen[0]!.reveal).toMatchObject({ choice: 1, wasCorrect: true });
+    expect(finished).toBe(1);
+    expect(game.hostView().phase).toBe("podium");
+
+    game.end();
+    expect(finished).toBe(1);
+    expect(seen).toHaveLength(2);
+  });
+
   test("starts individual play from the lobby with a hidden 10×10 board and the current players", async () => {
     const {
       host,

@@ -208,6 +208,8 @@ export class MemoryGame {
   }
 
   end(): void {
+    if (this.gameFinish.finished) return;
+    if (this.phase === "open") this.paced.close();
     this.gameFinish.finish();
   }
 
