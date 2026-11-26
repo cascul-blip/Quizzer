@@ -21,7 +21,7 @@ import "./gift.css";
 
 type GiftView = Extract<HostView, { kind: "gift" }>;
 
-// Standings order selects exactly three featured heaps, including when ranks tie.
+// why: Standings order selects exactly three featured heaps, including when ranks tie.
 const PODIUM_HEAPS = [chestMaximum, chestOverflowing, chestMedium];
 
 function GiftStation({ player, position, final }: { player: GiftStanding; position: number; final: boolean }) {

@@ -229,7 +229,7 @@ export function NextButton({ pacing, send, label }: { pacing: Pacing; send: Send
   );
 }
 
-/** Avatars shown above each answer's bar (no names), in answer order; shrink as they crowd, overflow as "+N". */
+// why: avatars shrink as they crowd and overflow as "+N".
 const MAX_PICKER_AVATARS = 24;
 
 function PickerAvatars({ avatars, dim }: { avatars: AvatarChoice[]; dim: boolean }) {
