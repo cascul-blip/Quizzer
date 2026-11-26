@@ -2,19 +2,13 @@ import type { ComponentChildren, Ref } from "preact";
 import { useRef, useState } from "preact/hooks";
 import type { PinSpot } from "../../shared/quiz-constants.ts";
 
-// Pin questions: an image with labelled spots. Players drag a pin onto a spot (it snaps to the
-// nearest one when dropped close enough) and press Submit; the answer is the spot's option index.
-
-/** How far (px) a drop may land from a spot and still snap onto it; grows with big images. */
+/** why: grows with big images, so a drop this close to a spot still snaps onto it. */
 const SNAP_MIN_PX = 44;
 const SNAP_FRACTION = 0.12;
-/** The dragged pin floats this far above the finger so the finger doesn't hide its tip. */
+/** why: lifted above the finger so the finger doesn't hide the pin's tip. */
 const LIFT_PX = 36;
 
-/**
- * The image with its spots. The frame takes the image's own aspect ratio, so spot positions
- * (fractions of the image) line up exactly however large the image is drawn.
- */
+/** why: the frame takes the image's aspect ratio, so fractional spot positions line up at any size. */
 export function PinBoard({
   image,
   spots,
@@ -33,16 +27,16 @@ export function PinBoard({
   spots: PinSpot[];
   labels: string[];
   pinAt?: number | null;
-  /** Spot the dragged pin would snap to. */
+  /** why: the spot the dragged pin would snap to. */
   hot?: number | null;
-  /** Revealed correct spots (green). */
+  /** why: drawn green. */
   correct?: number[];
-  /** A wrong pick to mark red. */
+  /** why: drawn red. */
   wrong?: number | null;
-  /** Host reveal only. */
+  /** why: host reveal only. */
   pickCountsBySpot?: number[];
   onSpotClick?: (index: number) => void;
-  /** Click on the image itself, with the position as fractions of the image. */
+  /** why: x and y are fractions of the image. */
   onImageClick?: (x: number, y: number) => void;
   boardRef?: Ref<HTMLDivElement>;
   children?: ComponentChildren;
@@ -104,7 +98,7 @@ export function PinBoard({
   );
 }
 
-/** Projector, under a pin question's image: how to answer while open, the right spot on the reveal. */
+/** why: projector only; shows how to answer while open and the right spot on the reveal. */
 export function PinNote({ open, labels }: { open: boolean; labels: string[] }) {
   return <div class={`pin-note ${open ? "" : "right"}`}>{open ? "📍 Drag the pin onto the right label on your phone" : `✓ Spot ${labels.join(" / ")}`}</div>;
 }
@@ -118,7 +112,7 @@ export function PinIcon({ class: cls = "", style }: { class?: string; style?: Re
   );
 }
 
-/** The nearest spot to a point (client px) within snapping range of the board, or null. */
+/** why: client px; null when no spot is within snapping range. */
 function nearestSpot(board: HTMLElement, spots: PinSpot[], clientX: number, clientY: number): number | null {
   const rect = board.getBoundingClientRect();
   if (rect.width <= 0 || rect.height <= 0) return null;
@@ -135,11 +129,7 @@ function nearestSpot(board: HTMLElement, spots: PinSpot[], clientX: number, clie
   return best;
 }
 
-/**
- * The phone's pin question: drag the pin from the tray (or from the spot it sits on) onto the
- * image. Dropped near a spot it snaps there; dropped elsewhere it goes back to the tray. Tapping a
- * spot also puts the pin there. Submit sends the spot's index.
- */
+/** why: a drop near a spot snaps there; elsewhere the pin returns to the tray. */
 export function PinDragger({
   image,
   spots,

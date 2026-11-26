@@ -1,7 +1,3 @@
-/**
- * Sled Squad’s submarine artwork. The submarine, the anglerfish and the seabed are painted
- * pictures (scripts/sea-art.py). Sled Squad uses its own generated Christmas dive pictures.
- */
 import { useEffect, useRef } from "preact/hooks";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { Avatar } from "./avatar-art.tsx";
@@ -25,21 +21,20 @@ import propImg from "./sea/sub-prop.webp";
 interface Look {
   top: [number, number, number];
   bottom: [number, number, number];
-  /** Surface light, fading out as the water goes dark. */
+  /** why: surface light fades out as the water goes dark. */
   rays: number;
-  /** Brightness of everything the headlights are not touching. */
+  /** why: brightness outside the headlights. */
   ambient: number;
-  /** How much of the fully lit scenery shows through the headlight mask. */
+  /** why: how much fully lit scenery shows through the headlight mask. */
   beam: number;
-  /** Brightness of the fish's skin. */
   fish: number;
-  /** The eye overlay. The painted eye shows on its own while this is near 0. */
+  /** why: near 0 the painted eye shows on its own. */
   eye: number;
-  /** A bright copy of the teeth, so they glint once the skin has gone black. */
+  /** why: a bright teeth copy glints once the skin has gone black. */
   glint: number;
 }
 
-/** One entry per level. Level 5 and everything past it stay on the last entry. */
+/** why: level 5 and past stay on the last entry. */
 const LOOKS: Look[] = [
   { top: [126, 200, 227], bottom: [47, 126, 181], rays: 0.5, ambient: 1, beam: 0.16, fish: 1, eye: 0, glint: 0 },
   { top: [30, 111, 168], bottom: [12, 61, 102], rays: 0.2, ambient: 0.68, beam: 0.55, fish: 0.76, eye: 0.28, glint: 0.16 },
@@ -61,7 +56,7 @@ interface SeaLook {
   glint: number;
 }
 
-/** Water, headlights and fish shading for a level. `blend` fades toward the next level during a dive. */
+/** why: `blend` fades toward the next level during a dive. */
 export function seaLook(level: number, blend = 0): SeaLook {
   const i = Math.max(0, Math.min(LOOKS.length - 1, Math.floor(level) - 1));
   const j = Math.min(LOOKS.length - 1, i + 1);
@@ -81,24 +76,19 @@ export function seaLook(level: number, blend = 0): SeaLook {
   };
 }
 
-/** Phone and podium water. Keyed off the level, so a big class's dive taps can't skip ahead to black. */
+/** why: keyed off the level, so a big class's dive taps can't skip ahead to black. */
 export function oceanGradient(level: number, blend = 0): string {
   return seaLook(level, blend).background;
 }
 
-/** Hinge, lure bulb and eye, as percentages of the fish picture (scripts/sea-art.py prints these). */
+/** why: percentages of the fish picture, printed by scripts/sea-art.py. */
 const HINGE = { x: 64, y: 75.1 };
 const LURE = { x: 89, y: 20.9 };
 const EYE = { x: 69.9, y: 34.7 };
 
-/**
- * Anglerfish facing right. `openness` 0…1 swings the lower jaw from nearly shut
- * to wide open. The lure stays lit at every depth; `fish`/`eye`/`glint` are the
- * depth treatment from `seaLook`.
- */
+/** why: `openness` 0…1 swings the jaw from nearly shut to wide open; the lure stays lit at every depth. */
 export function Anglerfish({ openness, fish = 1, eye = 0, glint = 0 }: { openness: number; fish?: number; eye?: number; glint?: number }) {
-  // The painted mouth is already a little open, and that composite is seamless.
-  // Opening swings the jaw down from there. Closing past the painting leaves a dark gap.
+  // why: the painted mouth is already a little open; closing past it leaves a dark gap.
   const angle = Math.max(0, Math.min(1, openness)) * 32;
   const origin = `${HINGE.x}% ${HINGE.y}%`;
   return (
@@ -113,20 +103,20 @@ export function Anglerfish({ openness, fish = 1, eye = 0, glint = 0 }: { opennes
   );
 }
 
-/** Someone looking out of a porthole; `key` restarts the peek animation. */
+/** why: `key` restarts the peek animation. */
 export interface PortholeFace {
   key: string;
   choice: AvatarChoice;
 }
 
-/** Porthole centres, as percentages of the hull picture. */
+/** why: percentages of the hull picture. */
 const PORTS = [
   { x: 33.6, y: 69.7 },
   { x: 46.2, y: 70.2 },
   { x: 59.4, y: 70.8 },
 ];
 
-/** Research submarine facing right. `faces[i]` peeks out of porthole i. */
+/** why: `faces[i]` peeks out of porthole i. */
 export function Submarine({ faces = [] }: { faces?: (PortholeFace | null)[] }) {
   return (
     <div class="submarine">
@@ -154,7 +144,7 @@ export function Submarine({ faces = [] }: { faces?: (PortholeFace | null)[] }) {
 
 interface Sprite {
   src: string;
-  /** Position along one loop of the floor, 0–100. */
+  /** why: 0–100 along one loop of the floor. */
   x: number;
   heightVh: number;
   flip?: boolean;
@@ -163,13 +153,13 @@ interface Sprite {
 interface Band {
   floor: string;
   floorHeightVh: number;
-  /** How many copies of the floor fill one loop. Keeps the repeat on the loop boundary. */
+  /** why: keeps the repeat on the loop boundary. */
   repeats?: number;
   props: Sprite[];
   far: Sprite[];
 }
 
-/** One loop of the seabed, wide enough that a landmark isn't on screen twice. */
+/** why: wide enough that a landmark isn't on screen twice. */
 const LOOP = "240vw";
 
 const BANDS: Band[] = [
@@ -282,12 +272,7 @@ function BandView({ band, fade }: { band: Band; fade: number }) {
   );
 }
 
-/**
- * The seabed scrolling past the submarine. Two copies stay in step: a dim
- * ambient one, and a fully lit one revealed only inside the headlight mask.
- * `paceRef` is pixels-per-second as a fraction of the scene width (the host
- * writes it every render; the scroll itself does not re-render).
- */
+/** why: a dim copy plus a lit copy shown only inside the headlight mask; `paceRef` is scene widths per second, written without re-rendering. */
 export function SeaBackdrop({ level, blend, paceRef }: { level: number; blend: number; paceRef: { current: number } }) {
   const root = useRef<HTMLDivElement>(null);
   useEffect(() => {

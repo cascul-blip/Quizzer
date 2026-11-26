@@ -1,8 +1,4 @@
-/**
- * Tallest Tower artwork, shared by the projector and phones. Classic uses
- * generated facade overlays and SVG scenery; North Pole uses the separate
- * seasonal asset pack with team-tinted trim and SVG flags/snow effects.
- */
+// why: projector and phones share this art; North Pole uses a separate asset pack, not Classic's overlays.
 import { useEffect, useId, useRef, useState } from "preact/hooks";
 import { isPhoneArt } from "./phone-art.ts";
 import lobbyTile from "./tower/lobby.webp";
@@ -19,7 +15,7 @@ import phoneShopTile from "./tower/phone/shop.webp";
 import shopTile from "./tower/shop.webp";
 import { christmasBell, christmasCrane, christmasCraneMask, christmasTiles, christmasYeti, useChristmasTower } from "./tower-skin.tsx";
 
-/** Deterministic 0…1 hash so blocks keep their look across re-renders. */
+/** why: deterministic so blocks keep their look across re-renders. */
 export function hash01(...parts: number[]): number {
   let h = 2166136261;
   for (const p of parts) {
@@ -38,15 +34,12 @@ export const SKY_STAGES = [
   { name: "night", top: "#060920", bottom: "#231c55" },
 ] as const;
 
-/** Sky changes every 5 floors of the tallest tower: day → afternoon → sunset → dusk → night. */
+/** why: keyed on the tallest tower, so every screen shows the same sky. */
 export function skyStage(floors: number): number {
   return Math.max(0, Math.min(SKY_STAGES.length - 1, Math.floor(floors / 5)));
 }
 
-/**
- * First row shown in a phone's build view: follow the top of the tower, but
- * while an egg is out keep the egg (with a row beneath it) in view.
- */
+/** why: while an egg is out, keep it (with a row beneath it) in view instead of following the top. */
 export function viewBaseRow(tallest: number, visibleRows: number, eggRow: number | null): number {
   const topBase = tallest + 1 - visibleRows;
   if (eggRow === null) return Math.max(0, topBase);
@@ -55,11 +48,8 @@ export function viewBaseRow(tallest: number, visibleRows: number, eggRow: number
 
 export const METERS_PER_FLOOR = 4;
 
-/**
- * Returns isFresh(key): true for keys first seen after the initial render.
- * Blocks already standing when a screen loads or reconnects don't replay
- * their landing animation; the flag sticks so an animation isn't cut short.
- */
+// why: blocks standing when a screen loads or reconnects don't replay their landing;
+// the flag sticks so an animation isn't cut short.
 export function useFreshKeys(): (key: string) => boolean {
   const seen = useRef(new Map<string, boolean>());
   const ready = useRef(false);
@@ -76,10 +66,7 @@ export function useFreshKeys(): (key: string) => boolean {
   };
 }
 
-/**
- * Show `item` for `ms` whenever `seq` changes to a new value after the first
- * render. Events already in the state when a screen loads are not replayed.
- */
+/** why: events already in the state when a screen loads are not replayed. */
 export function useEventFlash<T>(item: T | null, seq: number | null | undefined, ms: number): T | null {
   const seen = useRef<number | null | undefined>(undefined);
   const [shown, setShown] = useState<T | null>(null);
@@ -99,7 +86,7 @@ export function useEventFlash<T>(item: T | null, seq: number | null | undefined,
   return shown;
 }
 
-/** Floor number that was just completed (for a one-off sparkle), or null. */
+/** why: drives a one-off sparkle; null when no floor was just completed. */
 export function useNewFloor(floors: number): number | null {
   const prev = useRef(floors);
   const last = useRef<number | null>(null);
@@ -116,7 +103,6 @@ interface BlockProps {
   team: number;
   col: number;
   row: number;
-  /** Part of a completed floor: draws the ledge. */
   fullFloor: boolean;
   fresh?: boolean;
 }
@@ -125,16 +111,12 @@ const OFFICE_TILES = [office1Tile, office2Tile, office3Tile, office4Tile];
 const TILES = { lobby: lobbyTile, shop: shopTile, offices: OFFICE_TILES };
 const PHONE_TILES = { lobby: phoneLobbyTile, shop: phoneShopTile, offices: [phoneOffice1Tile, phoneOffice2Tile, phoneOffice3Tile, phoneOffice4Tile] };
 
-/** Which tile a cell shows: "lobby", "shop", or an office variant 0…3. */
 export function blockTile(team: number, col: number, row: number): "lobby" | "shop" | number {
   if (row === 0) return col === 1 ? "lobby" : "shop";
   return Math.floor(hash01(team, col, row) * OFFICE_TILES.length);
 }
 
-/**
- * One cell of the 3-wide tower, drawn as a slice of a skyscraper. The tiles are
- * translucent over their walls, so the team color underneath shows through.
- */
+/** why: tiles are translucent over their walls, so the team color underneath shows through. */
 export function BuildingBlock({ x, y, size: s, color, team, col, row, fullFloor, fresh }: BlockProps) {
   const christmas = useChristmasTower();
   const tile = blockTile(team, col, row);
@@ -161,7 +143,7 @@ export function BuildingBlock({ x, y, size: s, color, team, col, row, fullFloor,
   );
 }
 
-/** A puff of dust at a landing point (x = center, y = bottom). */
+/** why: x is the centre and y the bottom of the puff. */
 export function DustPuff({ x, y, size: s }: { x: number; y: number; size: number }) {
   const christmas = useChristmasTower();
   return (
@@ -197,12 +179,12 @@ export function FloorSparkle({ x, y, width, size: s }: { x: number; y: number; w
   );
 }
 
-/** Tower crane standing on a roof at (x = mast center, y = roof top), jib spanning x0…x1. */
+/** why: x is the mast centre, y the roof top; the jib spans x0…x1. */
 export function Crane({ x, y, x0, x1, size: s, color = "#17633a" }: { x: number; y: number; x0: number; x1: number; size: number; color?: string }) {
   const christmas = useChristmasTower();
   const id = useId();
   if (christmas) {
-    // Stay below the bell in the cell two levels above this rooftop.
+    // why: stays below the bell in the cell two levels above this rooftop.
     const w = s * 1.62;
     const h = s * 1.08;
     const left = -w * 0.3;
@@ -244,7 +226,6 @@ export function Crane({ x, y, x0, x1, size: s, color = "#17633a" }: { x: number;
   );
 }
 
-/** Flagpole with a team flag, standing on (x, y). */
 export function RoofFlag({ x, y, size: s, color }: { x: number; y: number; size: number; color: string }) {
   const christmas = useChristmasTower();
   if (christmas)
@@ -285,7 +266,6 @@ export function RoofFlag({ x, y, size: s, color }: { x: number; y: number; size:
   );
 }
 
-/** A small round tree standing on (x, y). */
 export function Tree({ x, y, size: s, seed }: { x: number; y: number; size: number; seed: number }) {
   const h = s * (0.8 + hash01(seed) * 0.4);
   return (
@@ -297,7 +277,7 @@ export function Tree({ x, y, size: s, seed }: { x: number; y: number; size: numb
   );
 }
 
-/** Deterministic city skyline silhouette for a viewBox of width 1000 × height 100. */
+/** why: deterministic, and drawn for a 1000 × 100 viewBox. */
 export function SkylineSvg() {
   const buildings = [];
   let x = 0;
@@ -317,7 +297,7 @@ export function SkylineSvg() {
 
 export const COLUMN_NAMES = ["left", "center", "right"] as const;
 
-/** The monster egg waiting on a cell (x, y = the cell's top-left, s = cell size). */
+/** why: (x, y) is the cell's top-left and s the cell size. */
 export function EggCell({ x, y, size: s }: { x: number; y: number; size: number }) {
   const christmas = useChristmasTower();
   if (christmas)
@@ -350,7 +330,7 @@ export function EggCell({ x, y, size: s }: { x: number; y: number; size: number 
   );
 }
 
-/** The tyrant monster (viewBox 0 0 200 220), facing left. Parts are classed for animation. */
+/** why: viewBox 0 0 200 220, facing left; parts are classed for CSS animation. */
 export function MonsterSvg() {
   const christmas = useChristmasTower();
   if (christmas)
