@@ -10,16 +10,17 @@ import { Avatar } from "../shared/avatar-art.tsx";
 import type { DuelHat, DuelPose } from "../shared/duel-art.tsx";
 import {
   BulletStreak,
-  DUEL_MUZZLE,
   Duelist,
   DuelistClip,
   DuelStreet,
   DustPuff,
   duelHat,
+  duelMuzzle,
   FlyingHat,
   GunSmoke,
   MuzzleFlash,
   preloadDuelArt,
+  RIGHT_FACING_REVOLVER_TIP_FIRE_PCT,
   SheriffStar,
   TownWide,
   Tumbleweed,
@@ -503,6 +504,7 @@ function ArenaPanel({
         const a = acts[slot]!;
         const box = boxFor(slot, a.facing);
         const disconnected = live.get(d.id)?.connected === false;
+        const muzzle = duelMuzzle(a.facing);
         return (
           <div
             key={d.id}
@@ -515,10 +517,7 @@ function ArenaPanel({
               <Duelist avatar={d.avatar} pose={a.pose} facing={a.facing} hat={a.hat} />
             )}
             {a.fires && (
-              <div
-                class={`duel-fx duel-flash ${a.facing}`}
-                style={{ left: `${a.facing === "right" ? DUEL_MUZZLE.x : 100 - DUEL_MUZZLE.x}%`, top: `${DUEL_MUZZLE.y}%` }}
-              >
+              <div class={`duel-fx duel-flash ${a.facing}`} style={{ left: `${muzzle.x}%`, top: `${muzzle.y}%` }}>
                 <MuzzleFlash key={`mf${round}`} facing={a.facing} />
                 <GunSmoke key={`gs${round}`} facing={a.facing} />
               </div>
@@ -528,12 +527,11 @@ function ArenaPanel({
       })}
       {acts.map((a, slot) => {
         if (!a.fires || !a.target) return null;
-        const from = boxPoint(boxFor(slot, a.facing), a.facing, DUEL_MUZZLE);
+        const from = boxPoint(boxFor(slot, a.facing), a.facing, RIGHT_FACING_REVOLVER_TIP_FIRE_PCT);
         return <BulletStreak key={`bs${round}-${slot}`} from={from} to={a.target} />;
       })}
       {acts.map((a, slot) => {
         if (!a.hatFlies) return null;
-        // why: the flight starts from the worn hat's box, so the hat neither jumps nor grows.
         const box = boxFor(slot, a.facing);
         const worn = duelHat("idle");
         const [x, y] = boxPoint(box, a.facing, worn);

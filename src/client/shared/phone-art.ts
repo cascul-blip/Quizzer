@@ -1,11 +1,10 @@
 let phone = false;
 
-/** why: Called once by the player page, before it renders. */
+/** why: set before the first phone render so it never requests projector-sized assets. */
 export function setPhoneArt(): void {
   phone = true;
 }
 
 export const isPhoneArt = (): boolean => phone;
 
-/** why: The projector picture, or its phone copy on the player page. */
 export const pickArt = (projector: string, phoneCopy: string): string => (phone ? phoneCopy : projector);

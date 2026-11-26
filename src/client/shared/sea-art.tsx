@@ -21,26 +21,65 @@ import propImg from "./sea/sub-prop.webp";
 interface Look {
   top: [number, number, number];
   bottom: [number, number, number];
-  /** why: surface light fades out as the water goes dark. */
-  rays: number;
-  /** why: brightness outside the headlights. */
-  ambient: number;
-  /** why: how much fully lit scenery shows through the headlight mask. */
-  beam: number;
-  fish: number;
-  /** why: near 0 the painted eye shows on its own. */
-  eye: number;
-  /** why: a bright teeth copy glints once the skin has gone black. */
-  glint: number;
+  sunrayOpacity: number;
+  ambientBrightness: number;
+  headlightOpacity: number;
+  fishBrightness: number;
+  eyeGlowOpacity: number;
+  teethGlintOpacity: number;
 }
 
-/** why: level 5 and past stay on the last entry. */
 const LOOKS: Look[] = [
-  { top: [126, 200, 227], bottom: [47, 126, 181], rays: 0.5, ambient: 1, beam: 0.16, fish: 1, eye: 0, glint: 0 },
-  { top: [30, 111, 168], bottom: [12, 61, 102], rays: 0.2, ambient: 0.68, beam: 0.55, fish: 0.76, eye: 0.28, glint: 0.16 },
-  { top: [12, 44, 92], bottom: [6, 24, 51], rays: 0.03, ambient: 0.34, beam: 0.82, fish: 0.48, eye: 0.5, glint: 0.42 },
-  { top: [3, 8, 16], bottom: [0, 0, 0], rays: 0, ambient: 0, beam: 1, fish: 0.18, eye: 0.62, glint: 0.88 },
-  { top: [0, 0, 0], bottom: [0, 0, 0], rays: 0, ambient: 0, beam: 1, fish: 0.08, eye: 0.48, glint: 1 },
+  {
+    top: [126, 200, 227],
+    bottom: [47, 126, 181],
+    sunrayOpacity: 0.5,
+    ambientBrightness: 1,
+    headlightOpacity: 0.16,
+    fishBrightness: 1,
+    eyeGlowOpacity: 0,
+    teethGlintOpacity: 0,
+  },
+  {
+    top: [30, 111, 168],
+    bottom: [12, 61, 102],
+    sunrayOpacity: 0.2,
+    ambientBrightness: 0.68,
+    headlightOpacity: 0.55,
+    fishBrightness: 0.76,
+    eyeGlowOpacity: 0.28,
+    teethGlintOpacity: 0.16,
+  },
+  {
+    top: [12, 44, 92],
+    bottom: [6, 24, 51],
+    sunrayOpacity: 0.03,
+    ambientBrightness: 0.34,
+    headlightOpacity: 0.82,
+    fishBrightness: 0.48,
+    eyeGlowOpacity: 0.5,
+    teethGlintOpacity: 0.42,
+  },
+  {
+    top: [3, 8, 16],
+    bottom: [0, 0, 0],
+    sunrayOpacity: 0,
+    ambientBrightness: 0,
+    headlightOpacity: 1,
+    fishBrightness: 0.18,
+    eyeGlowOpacity: 0.62,
+    teethGlintOpacity: 0.88,
+  },
+  {
+    top: [0, 0, 0],
+    bottom: [0, 0, 0],
+    sunrayOpacity: 0,
+    ambientBrightness: 0,
+    headlightOpacity: 1,
+    fishBrightness: 0.08,
+    eyeGlowOpacity: 0.48,
+    teethGlintOpacity: 1,
+  },
 ];
 
 const mix = (a: number[], b: number[], t: number) => a.map((v, i) => Math.round(v + (b[i]! - v) * t));
@@ -56,23 +95,22 @@ interface SeaLook {
   glint: number;
 }
 
-/** why: `blend` fades toward the next level during a dive. */
-export function seaLook(level: number, blend = 0): SeaLook {
+export function seaLook(level: number, nextLevelBlend = 0): SeaLook {
   const i = Math.max(0, Math.min(LOOKS.length - 1, Math.floor(level) - 1));
   const j = Math.min(LOOKS.length - 1, i + 1);
-  const t = i === j ? 0 : Math.max(0, Math.min(1, blend));
+  const t = i === j ? 0 : Math.max(0, Math.min(1, nextLevelBlend));
   const a = LOOKS[i]!;
   const b = LOOKS[j]!;
   const top = mix(a.top, b.top, t);
   const bottom = mix(a.bottom, b.bottom, t);
   return {
     background: `linear-gradient(rgb(${top.join(",")}), rgb(${bottom.join(",")}))`,
-    rays: lerp(a.rays, b.rays, t),
-    ambient: lerp(a.ambient, b.ambient, t),
-    beam: lerp(a.beam, b.beam, t),
-    fish: lerp(a.fish, b.fish, t),
-    eye: lerp(a.eye, b.eye, t),
-    glint: lerp(a.glint, b.glint, t),
+    rays: lerp(a.sunrayOpacity, b.sunrayOpacity, t),
+    ambient: lerp(a.ambientBrightness, b.ambientBrightness, t),
+    beam: lerp(a.headlightOpacity, b.headlightOpacity, t),
+    fish: lerp(a.fishBrightness, b.fishBrightness, t),
+    eye: lerp(a.eyeGlowOpacity, b.eyeGlowOpacity, t),
+    glint: lerp(a.teethGlintOpacity, b.teethGlintOpacity, t),
   };
 }
 
@@ -81,42 +119,40 @@ export function oceanGradient(level: number, blend = 0): string {
   return seaLook(level, blend).background;
 }
 
-/** why: percentages of the fish picture, printed by scripts/sea-art.py. */
-const HINGE = { x: 64, y: 75.1 };
-const LURE = { x: 89, y: 20.9 };
-const EYE = { x: 69.9, y: 34.7 };
+/** why: use the landmarks from scripts/sea-art.py so the jaw and lure line up with the painted fish. */
+const JAW_HINGE_PCT = { x: 64, y: 75.1 };
+const ANGLER_LURE_PCT = { x: 89, y: 20.9 };
+const ANGLER_EYE_PCT = { x: 69.9, y: 34.7 };
 
-/** why: `openness` 0…1 swings the jaw from nearly shut to wide open; the lure stays lit at every depth. */
 export function Anglerfish({ openness, fish = 1, eye = 0, glint = 0 }: { openness: number; fish?: number; eye?: number; glint?: number }) {
   // why: the painted mouth is already a little open; closing past it leaves a dark gap.
-  const angle = Math.max(0, Math.min(1, openness)) * 32;
-  const origin = `${HINGE.x}% ${HINGE.y}%`;
+  const MAX_JAW_OPEN_DEG = 32;
+  const angle = Math.max(0, Math.min(1, openness)) * MAX_JAW_OPEN_DEG;
+  const origin = `${JAW_HINGE_PCT.x}% ${JAW_HINGE_PCT.y}%`;
   return (
     <div class="anglerfish">
       <img class="fish-body" src={bodyImg} alt="" style={{ filter: `brightness(${fish})` }} />
       <img class="fish-jaw" src={jawImg} alt="" style={{ filter: `brightness(${fish})`, transform: `rotate(${angle}deg)`, transformOrigin: origin }} />
       <img class="fish-glint" src={bodyImg} alt="" style={{ opacity: glint }} />
       <img class="fish-glint fish-jaw" src={jawImg} alt="" style={{ opacity: glint, transform: `rotate(${angle}deg)`, transformOrigin: origin }} />
-      <div class="fish-eye" style={{ left: `${EYE.x}%`, top: `${EYE.y}%`, opacity: eye }} />
-      <div class="lure-glow" style={{ left: `${LURE.x}%`, top: `${LURE.y}%` }} />
+      <div class="fish-eye" style={{ left: `${ANGLER_EYE_PCT.x}%`, top: `${ANGLER_EYE_PCT.y}%`, opacity: eye }} />
+      <div class="lure-glow" style={{ left: `${ANGLER_LURE_PCT.x}%`, top: `${ANGLER_LURE_PCT.y}%` }} />
     </div>
   );
 }
 
-/** why: `key` restarts the peek animation. */
 export interface PortholeFace {
+  /** why: change the key to replay the peek for the same face. */
   key: string;
   choice: AvatarChoice;
 }
 
-/** why: percentages of the hull picture. */
-const PORTS = [
+const PORTHOLE_CENTRES_PCT = [
   { x: 33.6, y: 69.7 },
   { x: 46.2, y: 70.2 },
   { x: 59.4, y: 70.8 },
 ];
 
-/** why: `faces[i]` peeks out of porthole i. */
 export function Submarine({ faces = [] }: { faces?: (PortholeFace | null)[] }) {
   return (
     <div class="submarine">
@@ -125,7 +161,7 @@ export function Submarine({ faces = [] }: { faces?: (PortholeFace | null)[] }) {
       <span class="lamp-glow lamp-glow-front" style={{ left: "97.5%", top: "69.8%" }} />
       <img class="sub-prop" src={propImg} alt="" />
       <img class="sub-hull" src={hullImg} alt="" />
-      {PORTS.map((p, i) => {
+      {PORTHOLE_CENTRES_PCT.map((p, i) => {
         const face = faces[i];
         return (
           <div key={i} class="port" style={{ left: `${p.x}%`, top: `${p.y}%` }}>
@@ -144,8 +180,7 @@ export function Submarine({ faces = [] }: { faces?: (PortholeFace | null)[] }) {
 
 interface Sprite {
   src: string;
-  /** why: 0–100 along one loop of the floor. */
-  x: number;
+  loopXPct: number;
   heightVh: number;
   flip?: boolean;
 }
@@ -153,30 +188,29 @@ interface Sprite {
 interface Band {
   floor: string;
   floorHeightVh: number;
-  /** why: keeps the repeat on the loop boundary. */
-  repeats?: number;
+  floorRepeatsPerLoop?: number;
   props: Sprite[];
   far: Sprite[];
 }
 
 /** why: wide enough that a landmark isn't on screen twice. */
-const LOOP = "240vw";
+const LOOP_WIDTH = "240vw";
 
 const BANDS: Band[] = [
   {
     floor: floor1,
     floorHeightVh: 17,
-    repeats: 9,
+    floorRepeatsPerLoop: 9,
     props: [
-      { src: kelpImg, x: 6, heightVh: 18 },
-      { src: kelpImg, x: 14, heightVh: 14, flip: true },
-      { src: ringImg, x: 22, heightVh: 8 },
-      { src: kelpImg, x: 32, heightVh: 20 },
-      { src: kelpImg, x: 44, heightVh: 13, flip: true },
-      { src: kelpImg, x: 56, heightVh: 17 },
-      { src: ringImg, x: 68, heightVh: 7 },
-      { src: kelpImg, x: 80, heightVh: 15, flip: true },
-      { src: kelpImg, x: 92, heightVh: 19 },
+      { src: kelpImg, loopXPct: 6, heightVh: 18 },
+      { src: kelpImg, loopXPct: 14, heightVh: 14, flip: true },
+      { src: ringImg, loopXPct: 22, heightVh: 8 },
+      { src: kelpImg, loopXPct: 32, heightVh: 20 },
+      { src: kelpImg, loopXPct: 44, heightVh: 13, flip: true },
+      { src: kelpImg, loopXPct: 56, heightVh: 17 },
+      { src: ringImg, loopXPct: 68, heightVh: 7 },
+      { src: kelpImg, loopXPct: 80, heightVh: 15, flip: true },
+      { src: kelpImg, loopXPct: 92, heightVh: 19 },
     ],
     far: [],
   },
@@ -184,47 +218,47 @@ const BANDS: Band[] = [
     floor: floor2,
     floorHeightVh: 16,
     props: [
-      { src: kelpImg, x: 8, heightVh: 13 },
-      { src: boatImg, x: 24, heightVh: 15 },
-      { src: kelpImg, x: 40, heightVh: 11, flip: true },
-      { src: kelpImg, x: 62, heightVh: 14 },
-      { src: boatImg, x: 84, heightVh: 13 },
+      { src: kelpImg, loopXPct: 8, heightVh: 13 },
+      { src: boatImg, loopXPct: 24, heightVh: 15 },
+      { src: kelpImg, loopXPct: 40, heightVh: 11, flip: true },
+      { src: kelpImg, loopXPct: 62, heightVh: 14 },
+      { src: boatImg, loopXPct: 84, heightVh: 13 },
     ],
-    far: [{ src: hulkImg, x: 52, heightVh: 12 }],
+    far: [{ src: hulkImg, loopXPct: 52, heightVh: 12 }],
   },
   {
     floor: floor3,
     floorHeightVh: 15,
     props: [
-      { src: boatImg, x: 10, heightVh: 11 },
-      { src: pirateImg, x: 36, heightVh: 32 },
-      { src: kelpImg, x: 68, heightVh: 12 },
+      { src: boatImg, loopXPct: 10, heightVh: 11 },
+      { src: pirateImg, loopXPct: 36, heightVh: 32 },
+      { src: kelpImg, loopXPct: 68, heightVh: 12 },
     ],
-    far: [{ src: hulkImg, x: 78, heightVh: 13 }],
+    far: [{ src: hulkImg, loopXPct: 78, heightVh: 13 }],
   },
   {
     floor: floor4,
     floorHeightVh: 20,
     props: [],
     far: [
-      { src: caveImg, x: 16, heightVh: 32 },
-      { src: hulkImg, x: 34, heightVh: 16 },
-      { src: caveImg, x: 62, heightVh: 36 },
-      { src: hulkImg, x: 88, heightVh: 18 },
+      { src: caveImg, loopXPct: 16, heightVh: 32 },
+      { src: hulkImg, loopXPct: 34, heightVh: 16 },
+      { src: caveImg, loopXPct: 62, heightVh: 36 },
+      { src: hulkImg, loopXPct: 88, heightVh: 18 },
     ],
   },
   {
     floor: floor5,
     floorHeightVh: 22,
     props: [
-      { src: linerImg, x: 32, heightVh: 26 },
-      { src: hulkImg, x: 58, heightVh: 14 },
-      { src: linerImg, x: 84, heightVh: 30 },
+      { src: linerImg, loopXPct: 32, heightVh: 26 },
+      { src: hulkImg, loopXPct: 58, heightVh: 14 },
+      { src: linerImg, loopXPct: 84, heightVh: 30 },
     ],
     far: [
-      { src: caveImg, x: 20, heightVh: 30 },
-      { src: hulkImg, x: 46, heightVh: 12 },
-      { src: caveImg, x: 74, heightVh: 34 },
+      { src: caveImg, loopXPct: 20, heightVh: 30 },
+      { src: hulkImg, loopXPct: 46, heightVh: 12 },
+      { src: caveImg, loopXPct: 74, heightVh: 34 },
     ],
   },
 ];
@@ -233,13 +267,13 @@ function Tiles({ band, sprites, showFloor }: { band: Band; sprites: Sprite[]; sh
   return (
     <>
       {[0, 1].map((copy) => (
-        <div key={copy} class="floor-tile" style={{ width: LOOP, height: `${band.floorHeightVh}vh` }}>
+        <div key={copy} class="floor-tile" style={{ width: LOOP_WIDTH, height: `${band.floorHeightVh}vh` }}>
           {showFloor && (
             <div
               class="floor-fill"
               style={{
                 backgroundImage: `url("${band.floor}")`,
-                backgroundSize: band.repeats ? `calc(100% / ${band.repeats}) 100%` : undefined,
+                backgroundSize: band.floorRepeatsPerLoop ? `calc(100% / ${band.floorRepeatsPerLoop}) 100%` : undefined,
               }}
             />
           )}
@@ -250,7 +284,7 @@ function Tiles({ band, sprites, showFloor }: { band: Band; sprites: Sprite[]; sh
               src={s.src}
               alt=""
               draggable={false}
-              style={{ left: `${s.x}%`, height: `${s.heightVh}vh` }}
+              style={{ left: `${s.loopXPct}%`, height: `${s.heightVh}vh` }}
             />
           ))}
         </div>
@@ -272,7 +306,7 @@ function BandView({ band, fade }: { band: Band; fade: number }) {
   );
 }
 
-/** why: a dim copy plus a lit copy shown only inside the headlight mask; `paceRef` is scene widths per second, written without re-rendering. */
+/** why: the mutable pace lets the scenery follow the chase without rendering a new scene each frame. */
 export function SeaBackdrop({ level, blend, paceRef }: { level: number; blend: number; paceRef: { current: number } }) {
   const root = useRef<HTMLDivElement>(null);
   useEffect(() => {
