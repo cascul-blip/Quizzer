@@ -23,7 +23,7 @@ async function call(name: string, args: Record<string, unknown> = {}): Promise<{
   try {
     data = JSON.parse(text);
   } catch {
-    // plain text
+    // why: a tool may answer in plain text rather than JSON.
   }
   return { ok: !r.isError, data, text };
 }

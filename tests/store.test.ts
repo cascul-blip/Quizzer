@@ -57,7 +57,7 @@ describe("QuizStore", () => {
     ).toEqual(["A", "B"]);
     expect(reads).toHaveBeenCalledTimes(0);
     await store.update(a.id, { title: "A2" });
-    reads.mockClear(); // update() reads the quiz itself
+    reads.mockClear();
     expect(
       store
         .list()
@@ -65,7 +65,6 @@ describe("QuizStore", () => {
         .sort(),
     ).toEqual(["A2", "B"]);
     expect(reads).toHaveBeenCalledTimes(1);
-    // Edited in place by something else (another process, a text editor): still picked up.
     const file = join(t.dir, "quizzes", `${b.id}.json`);
     writeFileSync(file, readFileSync(file, "utf8").replace('"title": "B"', '"title": "Bee"'));
     expect(
@@ -229,8 +228,7 @@ describe("QuizStore", () => {
     expect(four.correct).toEqual([2]);
     const two = await store.updateQuestion(q.id, id, { spots: [spot(0.1), spot(0.2)] });
     expect(two.options).toEqual(["A", "B"]);
-    expect(two.correct).toEqual([0]); // the old answer's spot is gone
-    // Labels the author chose are kept, so their count still has to match.
+    expect(two.correct).toEqual([0]);
     await store.updateQuestion(q.id, id, { options: ["Paris", "Rome"] });
     await expect(store.updateQuestion(q.id, id, { spots: [spot(0.1), spot(0.2), spot(0.3)] })).rejects.toThrow(ValidationError);
   });
@@ -238,7 +236,8 @@ describe("QuizStore", () => {
   test("a media write that fails part-way leaves nothing behind, so the same image can be uploaded again", async () => {
     const real = fs.writeFileSync;
     const spy = spyOn(fs, "writeFileSync").mockImplementation(((path: fs.PathOrFileDescriptor, data: Uint8Array) => {
-      real(path, data.slice(0, 4)); // the disk fills up part-way
+      const partOfTheWrite = data.slice(0, 4);
+      real(path, partOfTheWrite);
       throw Object.assign(new Error("ENOSPC: no space left on device"), { code: "ENOSPC" });
     }) as typeof fs.writeFileSync);
     await expect(store.saveMedia(PNG)).rejects.toThrow("ENOSPC");
@@ -269,7 +268,7 @@ describe("shrinkImage", () => {
   const source = readFileSync(join(import.meta.dir, "../src/client/shared/tower/lobby.webp"));
   const make = (w: number, h: number, as: (i: Bun.Image) => Bun.Image) => as(new Bun.Image(source).resize(w, h)).bytes();
   const size = (bytes: Uint8Array) => new Bun.Image(bytes).metadata();
-  /** WebP stores lossless images in a VP8L chunk, lossy ones in VP8. */
+  // why: WebP stores lossless images in a VP8L chunk, lossy ones in VP8.
   const webpChunk = (bytes: Uint8Array) => new TextDecoder().decode(bytes.slice(12, 16));
 
   test("a large photo is scaled to MAX_IMAGE_SIDE as lossy WebP", async () => {

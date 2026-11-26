@@ -50,7 +50,6 @@ test("in Kingdom Siege, the podium screen, the phone and the results sheet read 
   p("Noel").goldEarned = 20;
   host.sendMsg({ type: "host.end" });
   await new Promise((r) => setTimeout(r, 0));
-  // Changes after the finish do not reach the Podium.
   p("Ivy").archerKills = 9;
   p("Holly").goldEarned = 99;
   const view = hub.hostView();

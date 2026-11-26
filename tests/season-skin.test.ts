@@ -7,7 +7,6 @@ import { SiegeThemeProvider } from "../src/client/shared/siege-skin.tsx";
 import { TowerThemeProvider } from "../src/client/shared/tower-skin.tsx";
 import type { SeasonTheme } from "../src/shared/themed-modes.ts";
 
-/** The theme a Provider hands to the screens below it. */
 const provided = (Provider: (p: { theme?: SeasonTheme; children: null }) => unknown, theme?: SeasonTheme) =>
   (Provider({ theme, children: null }) as { props: { value: SeasonTheme } }).props.value;
 

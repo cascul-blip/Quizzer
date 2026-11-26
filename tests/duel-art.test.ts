@@ -16,7 +16,7 @@ import {
 
 const dir = new URL("../src/client/shared/duel/", import.meta.url);
 
-/** Width and height from a WebP file's header (lossy, lossless or extended). */
+/** why: reads the header so lossy, lossless and extended WebP all report width and height. */
 function webpSize(b: Buffer): [number, number] {
   expect(b.toString("latin1", 0, 4) + b.toString("latin1", 8, 12)).toBe("RIFFWEBP");
   const chunk = b.toString("latin1", 12, 16);

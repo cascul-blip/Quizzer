@@ -25,8 +25,7 @@ function seeded(seed: number) {
 
 const flat = () => Array.from({ length: COLS + 1 }, () => GROUND);
 
-/** Every pull on a coarse grid, fired by `team`: the impacts that result. */
-function sweep(terrain: number[], team: number) {
+function impactsOfCoarsePullGrid(terrain: number[], team: number) {
   const out = [];
   for (let angle = -80; angle <= 260; angle += 2) {
     for (let pull = MIN_PULL + 1; pull <= MAX_PULL; pull += 6) {
@@ -116,7 +115,7 @@ describe("flight", () => {
     test(`both teams can lob over a ${hill} hill onto the enemy tower`, () => {
       const t = makeTerrain(hill, seeded(11));
       for (const team of [0, 1]) {
-        const hits = sweep(t, team).filter((i) => i.kind === "tower" && i.team === 1 - team);
+        const hits = impactsOfCoarsePullGrid(t, team).filter((i) => i.kind === "tower" && i.team === 1 - team);
         expect(hits.length).toBeGreaterThan(0);
       }
     });

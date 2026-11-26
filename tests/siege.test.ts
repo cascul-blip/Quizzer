@@ -73,7 +73,6 @@ function setup({ players = 3, waves = 5 as SiegeWaves, protect = false, seed = 4
   return { clock, game, finished: () => finished };
 }
 
-/** Into wave 1 with its own monsters cleared, so a test can bring on exactly the monsters it wants. */
 function quietWave(opts: Parameters<typeof setup>[0] = {}) {
   const s = setup(opts);
   s.clock.advance(SIEGE_OPENING_MS);
@@ -82,8 +81,7 @@ function quietWave(opts: Parameters<typeof setup>[0] = {}) {
   return s;
 }
 
-/** A monster with 12 health and no armor, for timing defenders' hits. */
-const sturdy = (m: SiegeMonster) => Object.assign(m, { health: 12, maxHealth: 12 });
+const withTwelveHealth = (m: SiegeMonster) => Object.assign(m, { health: 12, maxHealth: 12 });
 
 const byName = (game: SiegeGame, name: string) => [...game.players.values()].find((p) => p.nickname === name)!;
 const fund = (game: SiegeGame, gold = 1000) => {
@@ -149,16 +147,14 @@ describe("rules", () => {
     expect(siegeDefenderGold("knight", 2, 8, 16)).toBe(87.5);
     expect(siegeDefenderGold("wall", 1, 0, 15)).toBe(0);
     const GOLD_PER_BUDGET_POINT = 60;
-    // A board at or below par changes nothing.
     expect(siegeWaveStrength(10, 10 * GOLD_PER_BUDGET_POINT)).toEqual({ boost: 1, budget: 10, toughness: 1 });
     expect(siegeWaveStrength(10, 0, 3)).toEqual({ boost: 1, budget: 10, toughness: 1 });
-    // Twice par calls for 4×, reached 0.35 at a time; mostly as health.
+    // why: twice par calls for 4×, reached 0.35 at a time, mostly as health.
     expect(siegeWaveStrength(10, 2 * 10 * GOLD_PER_BUDGET_POINT)).toEqual({ boost: 1.35, budget: 11, toughness: 1.23 });
     expect(siegeWaveStrength(10, 2 * 10 * GOLD_PER_BUDGET_POINT, 2, false).boost).toBe(2);
     expect(siegeWaveStrength(10, 2 * 10 * GOLD_PER_BUDGET_POINT, 3.9)).toEqual({ boost: 4, budget: 15, toughness: 2.64 });
     expect(siegeWaveStrength(10, 6000, 4).boost).toBe(4);
     expect(siegeWaveStrength(10, 900, 3).boost).toBe(2.25);
-    // The giant gets faster instead of tougher: 1× with no boost, 2× at the top boost.
     expect(siegeGiantPace(1)).toBe(1);
     expect(siegeGiantPace(2.5)).toBe(1.5);
     expect(siegeGiantPace(4)).toBe(2);
@@ -287,14 +283,12 @@ describe("the battle", () => {
     game.battlefield.pending = [];
     fund(game);
     game.place(byName(game, "Ana").id, "archer", 1, 1);
-    sturdy(game.battlefield.spawn("goblin", 1, 9));
+    withTwelveHealth(game.battlefield.spawn("goblin", 1, 9));
     const [c0, t0] = [changes, ticks];
     const ARCHER_SHOT_INTERVAL_MS = 1500;
-    // Projector news only.
     clock.advance(2 * ARCHER_SHOT_INTERVAL_MS);
     expect(ticks - t0).toBeGreaterThanOrEqual(2);
     expect(changes - c0).toBe(0);
-    // A goblin reaching the wall costs a heart, which every phone shows.
     const hearts = game.hearts;
     game.battlefield.spawn("goblin", 3, 0.6);
     for (let i = 0; i < 100 && game.hearts === hearts; i++) clock.advance(SIEGE_TICK_MS);
@@ -307,7 +301,7 @@ describe("the battle", () => {
     game.place(byName(game, "Ana").id, "wall", 0, 5);
     const wall = game.battlefield.defenderAt(0, 5)!;
     const goblin = game.battlefield.spawn("goblin", 0);
-    // Two squares at 2 s each, then 1 damage a second.
+    // why: two squares at 2 s each, then 1 damage a second.
     clock.advance(4000);
     expect(goblin.x).toBeCloseTo(6, 5);
     expect(goblin.state).toBe("attack");
@@ -325,8 +319,8 @@ describe("the battle", () => {
     const ana = byName(game, "Ana");
     fund(game);
     game.place(ana.id, "archer", 1, 1);
-    const far = sturdy(game.battlefield.spawn("goblin", 1, 8));
-    const near = sturdy(game.battlefield.spawn("goblin", 1, 6));
+    const far = withTwelveHealth(game.battlefield.spawn("goblin", 1, 8));
+    const near = withTwelveHealth(game.battlefield.spawn("goblin", 1, 6));
     clock.advance(SIEGE_TICK_MS);
     expect(near.health).toBe(11);
     expect(far.health).toBe(12);
@@ -354,7 +348,7 @@ describe("the battle", () => {
     game.upgrade(ana.id, 1, 1);
     const near = game.battlefield.spawn("wolf", 1, 7);
     near.health = 1;
-    const far = sturdy(game.battlefield.spawn("goblin", 1, 8));
+    const far = withTwelveHealth(game.battlefield.spawn("goblin", 1, 8));
     clock.advance(SIEGE_TICK_MS);
     expect(game.battlefield.monsters).not.toContain(near);
     expect(far.health).toBe(11);
@@ -430,7 +424,7 @@ describe("the battle", () => {
     expect(wolf.state).toBe("leap");
     clock.advance(1000);
     expect(wolf.x).toBeLessThan(6);
-    // Lands on square 5, walks to square 4 and hits the second wall a second later.
+    // why: it lands on square 5, walks to 4 and hits the second wall a second later.
     clock.advance(2000);
     expect(wolf.x).toBeCloseTo(4, 5);
     expect(wolf.state).toBe("attack");
@@ -555,7 +549,6 @@ describe("waves", () => {
     expect(giant.health).toBe(siegeMonsterHealth("giant", 1, 3));
     expect(giant.pace).toBe(siegeGiantPace(1.35));
     expect(game.battlefield.spawn("troll", 2).pace).toBe(1);
-    // A goblin gets through: the next wave's boost stays put.
     game.battlefield.pending = [];
     game.battlefield.monsters = [];
     game.battlefield.spawn("goblin", 0, 1);
@@ -563,7 +556,6 @@ describe("waves", () => {
     expect(first.heartsLost).toBe(1);
     clock.advance(SIEGE_BREAK_MS);
     expect(game.waveLog[1]!.boost).toBe(1.35);
-    // A clean wave lets it climb.
     game.battlefield.pending = [];
     game.battlefield.monsters = [];
     clock.advance(SIEGE_TICK_MS);
@@ -660,19 +652,18 @@ describe("waves", () => {
 
   test("the budget uses the class size factor at the start of the wave and the scale from the last wave's accuracy", () => {
     const { game, clock } = quietWave({ players: 3 });
-    // Keeps the wave going while the class answers.
+    // why: the troll keeps the wave going while the class answers.
     game.battlefield.spawn("troll", 0);
     const log1 = game.waveLog[0]!;
     expect(log1.scale).toBe(100);
     expect(log1.budget).toBe(siegeWaveBudget(1, 3, 100));
-    // Everyone answers right during wave 1: the scale goes up by the 20-point step.
+    // why: a perfect wave raises the scale by the 20-point step.
     const players = [...game.players.values()];
     for (let i = 0; i < 4; i++) for (const p of players) answer(game, clock, p, true);
     game.battlefield.monsters = [];
     clock.advance(SIEGE_TICK_MS);
     expect(game.phase).toBe("build");
     expect(game.wave).toBe(2);
-    // A player who disconnects isn't counted for wave 2.
     game.setConnected(players[0]!.id, false);
     clock.advance(SIEGE_BREAK_MS);
     expect(game.phase).toBe("wave");

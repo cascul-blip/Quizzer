@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { MusicPlayer } from "../src/client/shared/music/engine.ts";
 
-// An AudioContext stand-in whose gains remember their scheduled targets, so a test can ask
+// why: an AudioContext stand-in whose gains remember their scheduled targets, so a test can ask
 // where each gain settles at a later time.
 
 class RecordingParam {
@@ -16,7 +16,7 @@ class RecordingParam {
   cancelScheduledValues(at: number) {
     this.events = this.events.filter((e) => e.at < at);
   }
-  /** The value the param heads for at `time`: the latest event at or before it. */
+  /** why: ** The value the param heads for at `time`: the latest event at or before it. */
   settledAt(time: number): number {
     let v = this.value;
     let latest = -Infinity;
@@ -38,7 +38,7 @@ class RecordingCtx {
   createDynamicsCompressor() {
     return { threshold: { value: 0 }, ratio: { value: 0 }, connect: <T>(n: T) => n };
   }
-  /** Overall music gain at `time`: every live gain on the output chain multiplied together. */
+  /** why: ** Overall music gain at `time`: every live gain on the output chain multiplied together. */
   musicAt(time: number): number {
     return this.gains.filter((g) => !g.disconnected).reduce((n, g) => n * g.gain.settledAt(time), 1);
   }
@@ -51,7 +51,7 @@ function player() {
     {},
     () => null,
   );
-  // An unknown sting builds the output chain and plays nothing.
+  // why: An unknown sting builds the output chain and plays nothing.
   music.sting("nothing");
   return { ctx, music };
 }

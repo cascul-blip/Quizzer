@@ -23,7 +23,8 @@ test("a selected address is used until it disappears", () => {
   j.select("10.0.0.7");
   expect(j.address).toBe("10.0.0.7");
   list = [wifi];
-  now = 10_000; // past the discovery cache
+  const PAST_DISCOVERY_CACHE_MS = 10_000;
+  now = PAST_DISCOVERY_CACHE_MS;
   expect(j.address).toBe("192.168.1.5");
 });
 
@@ -55,7 +56,6 @@ test("discovery is cached for a few seconds", () => {
   expect(calls).toBe(2);
 });
 
-/** A JoinInformation whose QR completions can be awaited one at a time. */
 function withQrSignals(list: () => LanAddress[]) {
   let waiter = Promise.withResolvers<void>();
   const j = make(list, { onQrReady: () => waiter.resolve() });
@@ -71,7 +71,8 @@ function withQrSignals(list: () => LanAddress[]) {
 test("the QR code is empty at first, then ready and announced once rendered", async () => {
   const { j, nextQr } = withQrSignals(() => [wifi]);
   expect(j.info().qrSvg).toBe("");
-  expect(j.info().qrSvg).toBe(""); // still pending: no second render
+  // why: still pending, so no second render.
+  expect(j.info().qrSvg).toBe("");
   await nextQr();
   expect(j.info().qrSvg).toContain("<svg");
 });

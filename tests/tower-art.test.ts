@@ -20,13 +20,9 @@ test("sky stage changes every 5 floors and tops out at night", () => {
 
 test("phone build view keeps a monster egg in frame", () => {
   const within = (base: number, rows: number, row: number) => row >= base && row < base + rows;
-  // No egg: follow the top of the tower.
   expect(viewBaseRow(40, 7, null)).toBe(34);
   expect(viewBaseRow(3, 7, null)).toBe(0);
-  // Egg far below a tall teammate column: scroll down to the egg.
   expect(within(viewBaseRow(40, 7, 26), 7, 26)).toBe(true);
-  // Egg above the tower: scroll up so it and a row of headroom show.
   expect(within(viewBaseRow(10, 7, 14), 7, 14)).toBe(true);
-  // Egg already in view: same as following the top.
   expect(viewBaseRow(12, 7, 10)).toBe(6);
 });

@@ -21,16 +21,13 @@ const read = (path: string): Source => ({ path, lines: readFileSync(path, "utf8"
 
 const sources = tsFiles(SERVER).map(read);
 
-/** The client files that look a mode up in its entry (src/client/host/modes.tsx or src/client/player/modes.tsx) or its shared mode entry (src/shared/mode-entries.ts) instead of asking which mode is running. */
 const CLIENT_FILES = ["src/client/host/main.tsx", "src/client/host/lobby.tsx", "src/client/host/music-cues.ts", "src/client/player/main.tsx"].map((path) =>
   read(join(ROOT, path)),
 );
 
 const QUOTE = "[\"'`]";
 const MODE = `${QUOTE}(?:${Object.keys(SHARED_MODES).join("|")})${QUOTE}`;
-/** mode === "tower", game.runningMode !== "siege", "duel" === mode, and the same with ' or `. */
 const MODE_LITERAL = new RegExp(`\\b\\w*[mM]ode\\s*[!=]==?\\s*${QUOTE}|${QUOTE}\\w*${QUOTE}\\s*[!=]==?\\s*[\\w.]*[mM]ode\\b`);
-/** view.kind === "tower", view.mode !== "siege", view.banner === "siege", "duel" === view.kind, and case "racer":. */
 const CLIENT_MODE_LITERAL = new RegExp(
   `\\b\\w*(?:[mM]ode|[kK]ind|[bB]anner)\\s*[!=]==?\\s*${MODE}|${MODE}\\s*[!=]==?\\s*[\\w.]*(?:[mM]ode|[kK]ind|[bB]anner)\\b|\\bcase\\s+${MODE}\\s*:`,
 );
@@ -39,13 +36,11 @@ function offending(pattern: RegExp, files: Source[] = sources): string[] {
   return files.flatMap(({ path, lines }) => lines.flatMap((line, i) => (pattern.test(line) ? [`${relative(ROOT, path)}:${i + 1}: ${line.trim()}`] : [])));
 }
 
-/** The classes that run a game mode, read from the game files: ClassicGame and every other mode game. */
 const gameClasses = sources
   .filter(({ path }) => path.startsWith(join(SERVER, "game")))
   .flatMap(({ lines }) => lines.flatMap((line) => [...line.matchAll(/export class (\w*Game)\b/g)].map((m) => m[1]!)));
 
-// A mode's server behaviour belongs in its entry (src/server/game/<mode>.ts, collected in MODES);
-// code outside it looks the entry up by game.runningMode instead of asking which mode is running.
+// why: a mode's server behaviour belongs in its entry (collected in MODES); other code looks it up by game.runningMode.
 describe("Coding standards: mode entries", () => {
   test("finds the game classes", () => {
     expect(gameClasses).toContain("ClassicGame");
@@ -66,9 +61,9 @@ describe("Coding standards: mode entries", () => {
   });
 });
 
-/** A real timer or wall-clock read: server timing goes through the injected Clock (src/server/game/common.ts) so tests can control it. */
+/** why: server timing goes through the injected Clock (src/server/game/common.ts) so tests can control it. */
 const REAL_TIME = /(?<![.\w])(?:setTimeout|clearTimeout|setInterval|clearInterval)\s*\(|\bDate\s*\.\s*now\s*\(/;
-/** realClock is the one real adapter; the quiz store stamps revisions with wall time, which no game rule reads. */
+/** why: realClock is the one real adapter; the quiz store stamps revisions with wall time, which no game rule reads. */
 const REAL_TIME_ALLOWED = ["src/server/game/common.ts", "src/server/quiz/store.ts"];
 
 describe("Coding standards: server time", () => {
@@ -86,9 +81,9 @@ describe("Coding standards: server time", () => {
   });
 });
 
-/** A game mode times its phases, its game length and its other timers on its PhaseTimer (src/server/game/phase-timer.ts). */
+/** why: a game mode times its phases and other timers on its PhaseTimer (src/server/game/phase-timer.ts). */
 const CLOCK_TIMER = /\bclock\s*\.\s*(?:setTimeout|clearTimeout)\b/;
-/** A game mode's own copy of phase timing: a remainingMs method or a phase deadline field (its PhaseTimer holds these). */
+/** why: its PhaseTimer holds phase timing, so a remainingMs method or phase deadline field is a duplicate. */
 const OWN_PHASE_TIME =
   /^\s*(?:(?:private|protected|public|readonly|static|override|get)\s+)*(?:remainingMs\s*(?:\(\s*\)|=)|phase(?:EndsAt|Deadline|Timer|Timeout|Start(?:edAt)?)\s*\??\s*[:=])/;
 
@@ -128,11 +123,10 @@ describe("Coding standards: phase timer", () => {
   });
 });
 
-/** HubSocket owns opening in-memory sockets. */
+/** why: HubSocket owns opening in-memory sockets. */
 const DIRECT_SOCKET_OPEN = /\.\s*onOpen\s*\(/;
-/** A temp directory cleaned up in a test's own finally block instead of an afterEach. */
+/** why: a temp directory belongs in an afterEach, not a test's own finally block. */
 const FINALLY_CLEANUP = /\bfinally\s*\{[^}]*\.cleanup\(\)/;
-/** Find fixture declarations or assignments at the describe callback's own indentation. */
 function describeTempDirs(text: string): number[] {
   const lines = text.split("\n");
   const matches: number[] = [];
@@ -150,7 +144,7 @@ function describeTempDirs(text: string): number[] {
   return matches;
 }
 
-/** The multi-word _Avoid_ phrases in GLOSSARY.md, such as "results CSV". Single words like "board" have legitimate other uses, so the reviewer judges those. */
+/** why: single words like "board" have legitimate other uses, so only multi-word _Avoid_ phrases are checked. */
 const AVOIDED_PHRASES = [...readFileSync(join(ROOT, "GLOSSARY.md"), "utf8").matchAll(/^_Avoid_: (.*)$/gm)].flatMap((m) =>
   m[1]!
     .replace(/\(.*?\)/g, "")
@@ -164,14 +158,14 @@ function titles(text: string): string[] {
 }
 
 const testFiles = readdirSync(join(ROOT, "tests"))
-  // This file is left out: its guard checks quote the pattern.
+  // why: this file is left out because its guard checks quote the pattern.
   .filter((name) => /\.test\.tsx?$/.test(name) && name !== "standards.test.ts")
   .map((name) => ({ path: `tests/${name}`, text: readFileSync(join(ROOT, "tests", name), "utf8") }));
 
-/** Bun.sleep, or a promise resolved by a real timer after a fixed delay, used as a wait. setTimeout(r, 0) only lets pending work run. */
+/** why: setTimeout(r, 0) only lets pending work run, so only a fixed delay counts as a wait. */
 const SLEEP_WAIT = /\bBun\s*\.\s*sleep\s*\(|\bsetTimeout\s*\(\s*\w+\s*,\s*[1-9]/;
 
-/** Test helpers (hub-harness.ts, helpers.ts) as well as test files: a wait hidden in a helper is still a wait. */
+/** why: test helpers are scanned too: a wait hidden in a helper is still a wait. */
 const testSources = readdirSync(join(ROOT, "tests"))
   .filter((name) => /\.tsx?$/.test(name) && name !== "standards.test.ts")
   .map((name) => ({ path: `tests/${name}`, text: readFileSync(join(ROOT, "tests", name), "utf8") }));
@@ -240,7 +234,7 @@ describe("Coding standards: tests", () => {
 });
 
 describe("Coding standards: the mode-literal guards themselves", () => {
-  // Written by hand: a guard that stops matching passes every file, so check it against lines it must and mustn't flag.
+  // why: a guard that stops matching passes every file, so check it against lines it must and mustn't flag.
   test("the server guard flags a mode compared against a literal", () => {
     for (const line of [`if (mode === "tower")`, `game.runningMode !== 'siege'`, `"duel" === mode`]) expect(MODE_LITERAL.test(line)).toBe(true);
     for (const line of [`const mode = "tower";`, `MODES[game.runningMode]`]) expect(MODE_LITERAL.test(line)).toBe(false);
@@ -254,14 +248,12 @@ describe("Coding standards: the mode-literal guards themselves", () => {
   });
 });
 
-/** The relative imports of a source file, type-only ones included, as absolute paths. */
 function importsOf(path: string): string[] {
   const text = readFileSync(path, "utf8");
   const specs = [...text.matchAll(/(?:\bfrom\s*|\bimport\s*\(?\s*)["'](\.{1,2}\/[^"']+)["']/g)].map((m) => m[1]!);
   return specs.map((spec) => resolve(dirname(path), spec));
 }
 
-/** Every import cycle under src/, each written once as a.ts -> b.ts -> a.ts. */
 function importCycles(): string[] {
   const files = srcFiles(join(ROOT, "src"));
   const known = new Set(files);
@@ -295,10 +287,7 @@ function srcFiles(dir: string): string[] {
   });
 }
 
-/**
- * The mode entries and their shared types import one another.
- * These cycles predate the check; remove a line when a refactor breaks its cycle. Add none.
- */
+/** why: these mode-entry cycles predate the check; remove a line when a refactor breaks one. Add none. */
 const KNOWN_CYCLES = [
   "src/server/game/cup.ts -> src/server/game/mode-entry.ts -> src/server/game/cup.ts",
   "src/server/game/duel.ts -> src/server/game/mode-entry.ts -> src/server/game/duel.ts",
@@ -326,7 +315,7 @@ describe("Coding standards: import graph", () => {
   });
 });
 
-/** A cast of Object.keys to a key type, which claims the type without checking it. */
+/** why: a cast of Object.keys claims the key type without checking it. */
 const KEYS_CAST = /\bObject\.keys\([^)]*\)\s*as\b/;
 
 function codeFiles(dir: string): string[] {
@@ -337,7 +326,7 @@ function codeFiles(dir: string): string[] {
   });
 }
 
-// A table's keys come from keysOf (src/shared/keys-of.ts), which checks each key against the table.
+// why: keysOf (src/shared/keys-of.ts) checks each key against the table, unlike a cast.
 describe("Coding standards: checked casts", () => {
   test("no code casts Object.keys", () => {
     const files = ["src", "tests"].flatMap((d) => codeFiles(join(ROOT, d))).map(read);

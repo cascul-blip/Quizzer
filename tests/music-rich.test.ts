@@ -18,7 +18,7 @@ import {
 } from "../src/client/shared/music/rich.ts";
 import { TRACKS } from "../src/client/shared/music/tracks.ts";
 
-// A stand-in for an AudioContext (tests have none): it records every node made and every source started.
+// why: tests have no AudioContext, so this stand-in records every node made and source started.
 
 class FakeParam {
   value = 0;
@@ -31,7 +31,6 @@ class FakeParam {
 
 class FakeNode {
   connections = 0;
-  /** How many nodes were connected into this one. */
   inputs = 0;
   disconnected = false;
   constructor(
@@ -83,7 +82,6 @@ class FakeCtx {
 const fake = () => new FakeCtx() as FakeCtx & BaseAudioContext;
 const dest = (ctx: FakeCtx) => new FakeNode("dest", ctx) as unknown as AudioNode;
 
-/** Schedule every step of the track's loop, one step every stepSeconds, and return the grid times. */
 function playLoop(ctx: FakeCtx & BaseAudioContext, track: Track, intensity: number, echo?: AudioNode): number[] {
   const grid: number[] = [];
   let t = 1;
@@ -132,7 +130,7 @@ describe("rich sound is opt-in", () => {
         const ctx = fake();
         const grid = playLoop(ctx, track, intensity);
         for (const kind of ["panner", "shaper", "convolver", "compressor", "delay"]) expect(ctx.kinds().has(kind), `${track.id}: ${kind}`).toBe(false);
-        // Every source starts on a step, or a fixed offset after it (claps, sonar echoes, the second heartbeat).
+        // why: claps, sonar echoes and the second heartbeat start a fixed offset after a step.
         const onGrid = new Set(grid.map((g) => g.toFixed(9)));
         expect(
           ctx.starts.some((s) => onGrid.has(s.toFixed(9))),
@@ -171,8 +169,8 @@ describe("rich Kingdom Siege tracks", () => {
         const ctx = fake();
         const grid = playLoop(ctx, track, intensity);
         expect(ctx.starts.length).toBeGreaterThan(0);
-        // Strummed lute chords and the plain drums' built-in offsets (a clap's three hits) can add a little.
-        // Arcade tracks are tighter, and none of their instruments have offsets of their own.
+        // why: lute strums and the plain drums' offsets (a clap's three hits) add a little;
+        // arcade tracks are tighter and their instruments have no offsets of their own.
         const window = richStyle(track.rich) === "arcade" ? HUMAN_TIME_S * ARCADE_TIGHTNESS : HUMAN_TIME_S + 3 * STRUM_S;
         for (const s of ctx.starts) expect(nearestGap(s, grid)).toBeLessThanOrEqual(window + 1e-9);
         expect(ctx.kinds().has("panner")).toBe(true);
@@ -211,7 +209,6 @@ describe("arcade style (Racer)", () => {
       const ctx = fake();
       const echo = new FakeNode("echo", ctx);
       playLoop(ctx, track, 1, echo as unknown as AudioNode);
-      // One send per lead note: count the lead's notes over the loop.
       const leadNotes = track.layers
         .filter((l) => l.echo)
         .flatMap((l) => Array.from({ length: track.bars }, (_, b) => l.bars[b % l.bars.length]!.split(/\s+/)))
@@ -294,7 +291,8 @@ describe("the rich bus", () => {
     const energy = (d: Float32Array, from: number, to: number) => d.slice(from, to).reduce((a, x) => a + x * x, 0);
     const tenth = Math.floor(ir.length / 10);
     expect(energy(l, ir.length - tenth, ir.length)).toBeLessThan(energy(l, tenth, 2 * tenth) / 20);
-    expect(l.slice(tenth, 2 * tenth)).not.toEqual(r.slice(tenth, 2 * tenth)); // decorrelated: a wide hall
+    // why: decorrelated channels make a wide hall.
+    expect(l.slice(tenth, 2 * tenth)).not.toEqual(r.slice(tenth, 2 * tenth));
   });
 
   test("the saturation curve is gentle near zero, rising, and never beyond ±1", () => {
@@ -327,7 +325,7 @@ describe("triple-meter sequencing", () => {
     };
     const ctx = fake();
     renderInto(ctx, dest(ctx), track, 7, 0);
-    // Piano has several oscillators per note; count distinct attack times.
+    // why: piano has several oscillators per note, so count distinct attack times.
     expect([...new Set(ctx.starts)]).toEqual([0.05, 3.05, 6.05]);
     expect(stepsPerBar(TRACKS["land-play"])).toBe(16);
     expect(stepsPerBar(TRACKS["land-christmas-play"])).toBe(12);

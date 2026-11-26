@@ -47,18 +47,17 @@ describe("question flow", () => {
     toOpen(game, clock);
 
     clock.advance(2000);
-    expect(game.answer(a.id, 0, 1)).toBe(true); // correct at 2s of 20s → 950
+    expect(game.answer(a.id, 0, 1)).toBe(true);
     expect(game.answer(a.id, 0, 2)).toBe(false);
     expect(game.phase).toBe("open");
-    // Scores are hidden until the reveal.
-    expect(a.score).toBe(0);
+    const scoreBeforeReveal = a.score;
+    expect(scoreBeforeReveal).toBe(0);
     clock.advance(1000);
-    expect(game.answer(b.id, 0, 0)).toBe(true); // wrong
+    expect(game.answer(b.id, 0, 0)).toBe(true);
     expect(game.phase).toBe("reveal");
     expect(a.score).toBe(950);
     expect(b.score).toBe(0);
     expect(game.hostView().answerCounts).toEqual([1, 1, 0, 0]);
-    // Avatars per option, fastest first; hidden until the reveal (checked in "views" below).
     expect(game.hostView().answerAvatars).toEqual([[b.avatar], [a.avatar], [], []]);
     expect(game.leaderboard().map((e) => e.avatar)).toEqual([a.avatar, b.avatar]);
     expect(game.hostView().correct).toEqual([1]);
@@ -84,7 +83,6 @@ describe("question flow", () => {
     toOpen(game, clock);
     clock.advance(20_000 + GRACE_MS - 1);
     expect(game.phase).toBe("open");
-    // Within grace: accepted but scored as if at the limit.
     expect(game.answer(a.id, 0, 1)).toBe(true);
     expect(a.answers[0]!.points).toBe(500);
     clock.advance(1);
@@ -97,7 +95,7 @@ describe("question flow", () => {
     const a = game.join("A");
     game.join("B");
     game.start();
-    expect(game.answer(a.id, 0, 1)).toBe(false); // still intro
+    expect(game.answer(a.id, 0, 1)).toBe(false);
     clock.advance(INTRO_MS);
     expect(game.answer(a.id, 1, 1)).toBe(false);
     expect(game.answer(a.id, 0, 4)).toBe(false);
@@ -115,8 +113,8 @@ describe("question flow", () => {
     for (let i = 0; i < 2; i++) {
       toOpen(game, clock);
       game.skip();
-      game.next(); // → leaderboard
-      game.next(); // → intro
+      game.next();
+      game.next();
     }
     toOpen(game, clock);
     game.answer(a.id, 2, 0);
@@ -234,7 +232,7 @@ describe("views", () => {
     game.join("B");
     game.start();
     let v = game.playerView(a.id);
-    expect(v.kind === "classic" && v.question?.options).toEqual([]); // intro hides options
+    expect(v.kind === "classic" && v.question?.options).toEqual([]);
     clock.advance(INTRO_MS);
     v = game.playerView(a.id);
     expect(JSON.stringify(v)).not.toContain('"correct"');
@@ -299,8 +297,8 @@ describe("preparePlayOrder", () => {
       expect(q3!.correct.map((i) => q3!.options[i]).sort()).toEqual(["2", "7"]);
       q1Positions.add(q1!.correct[0]!);
     }
-    // The correct answer really moves around (not always the 2nd, blue tile).
-    expect(q1Positions.size).toBeGreaterThan(1);
+    const correctPositionVaries = q1Positions.size;
+    expect(correctPositionVaries).toBeGreaterThan(1);
     expect(quiz.questions[0]!.options).toEqual(["3", "4", "5", "22"]);
   });
 
@@ -345,7 +343,7 @@ describe("lobby shuffle options", () => {
     expect(game.questions.map((q) => q.id)).toEqual(["q1", "q2", "q3"]);
     game.join("A");
     game.start();
-    // rng() = 0 turns a Fisher-Yates shuffle into a rotation.
+    // why: rng() = 0 turns a Fisher-Yates shuffle into a rotation.
     expect(game.questions.map((q) => q.id)).toEqual(["q2", "q3", "q1"]);
   });
 
@@ -420,7 +418,7 @@ describe("lobby teams", () => {
       ["B", "E"],
       ["A", "C"],
     ]);
-    game.join("G"); // all equal: lowest index
+    game.join("G");
     expect(layout()).toEqual([
       ["D", "F", "G"],
       ["B", "E"],
@@ -447,7 +445,7 @@ describe("lobby teams", () => {
     ]);
     game.setModeSettings("tower", { teams: 4, minutes: 5 });
     expect(layout()).toEqual([["A", "C"], ["B", "D", "E"], [], []]);
-    // Another team mode keeps what fits (Tower Fight has 2 teams).
+    // why: Tower Fight has 2 teams, so switching keeps only the teams that fit.
     game.setTeam(ids[4]!, 3);
     game.setMode("fight");
     expect(layout()).toEqual([
@@ -500,7 +498,6 @@ describe("streaks", () => {
     const a = game.join("A");
     const b = game.join("B");
     game.start();
-    // A: right ×4, wrong, right. B: right, no answer, right…
     const aPicks = [0, 0, 0, 0, 1, 0];
     const bPicks = [0, null, 0, 0, 0, 0];
     const aStreaks: number[] = [];
@@ -515,8 +512,8 @@ describe("streaks", () => {
       expect(game.leaderboard().find((e) => e.id === a.id)!.streak).toBe(a.streak);
       const v = game.playerView(a.id);
       expect(v.kind === "classic" && v.me.streak).toBe(a.streak);
-      game.next(); // → leaderboard (or podium after the last)
-      game.next(); // → next intro
+      game.next();
+      game.next();
     }
     expect(aStreaks).toEqual([1, 2, 3, 4, 0, 1]);
     expect(bStreaks).toEqual([1, 0, 1, 2, 3, 4]);
@@ -529,7 +526,6 @@ test("answer avatars list pickers in answer order and match the counts", () => {
   const ps = ["P1", "P2", "P3", "P4"].map((n) => game.join(n));
   game.start();
   clock.advance(INTRO_MS);
-  // P3 fastest, then P1, then P4 — all on option 1; P2 on option 0.
   for (const [p, opt] of [
     [ps[2]!, 1],
     [ps[0]!, 1],

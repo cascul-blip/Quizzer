@@ -60,14 +60,14 @@ test("the rich bus stays up until every rich track using it has faded out", () =
     music.play("a");
     const shared = bus();
     expect(shared).not.toBeNull();
-    music.play("b"); // rich → rich: same bus
+    music.play("b");
     expect(bus()).toBe(shared);
-    music.play("c"); // → plain, while a and b both fade out through the bus
+    music.play("c");
     expect(fadeOuts).toHaveLength(2);
-    fadeOuts[0]!(); // a's fade is done, but b is still fading through the bus
+    fadeOuts[0]!();
     expect(bus()).toBe(shared);
     expect(shared!.input.disconnected).toBe(false);
-    fadeOuts[1]!(); // b's fade is done: nothing uses the bus any more
+    fadeOuts[1]!();
     expect(bus()).toBeNull();
     expect(shared!.input.disconnected).toBe(true);
   } finally {

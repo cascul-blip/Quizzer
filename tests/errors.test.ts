@@ -14,7 +14,6 @@ import { ERRORS_SHOWN } from "../src/shared/protocol.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
 import { classicGame, FakeClock, sampleQuiz } from "./helpers.ts";
 
-/** `count` questions; question i's correct answer is "yes i" (and "also i" for the last one). */
 function quiz(count: number): Quiz {
   return sampleQuiz({
     questions: Array.from({ length: count }, (_, i) => ({
@@ -60,7 +59,6 @@ describe("Classic", () => {
     game.start();
     return { clock, game, a: a!, b: b!, c: c! };
   }
-  /** Open the current question and have each listed player answer right (true) or wrong (false). */
   function answerAll(s: ReturnType<typeof play>, picks: [string, boolean][]) {
     s.clock.advance(INTRO_MS);
     const q = s.game.currentQuestion!;
@@ -78,7 +76,7 @@ describe("Classic", () => {
     answerAll(s, [
       [s.a.id, false],
       [s.b.id, true],
-    ]); // C lets it time out
+    ]);
     expect(s.game.hostView().errors).toBeNull();
     answerAll(s, [
       [s.a.id, false],
@@ -132,7 +130,6 @@ describe("own-pace modes", () => {
 
       const expected = [0, 0];
       for (const p of game.players.values()) {
-        // Two answers each: wrong, then right. With 2 questions that is one of each question.
         for (const right of [false, true]) {
           const cur = game.playerView(p.id)!.question!;
           const qIndex = fixture.questions.findIndex((q) => q.text === cur.text);

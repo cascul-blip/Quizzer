@@ -22,11 +22,11 @@ beforeEach(() => {
     classSize: () => 1,
     onDefeat: (owner, by) => defeats.push({ owner, by }),
   });
-  // Wave 1 with nothing planned, so each test brings on exactly the monsters it wants.
+  // why: wave 1 with nothing planned lets each test bring on exactly the monsters it wants.
   field.beginWave({ wave: 1, budget: 0, toughness: 1, giantPace: 1 });
 });
 
-/** Run the battle for ms, one tick at a time, and say whether any tick changed what phones or the map show. */
+/** why: ticks one at a time so any changed tick is reported. */
 function run(ms: number) {
   const seen = { changed: false, phones: false, map: false };
   for (let t = 0; t < ms; t += TICK) {

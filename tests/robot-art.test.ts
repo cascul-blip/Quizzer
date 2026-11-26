@@ -35,8 +35,8 @@ describe("robot arena art", () => {
   });
 
   test("each tile goes where the art was baked for, at 2 px per arena unit", () => {
-    // tiles.json is the art build's record of where it rendered each tile; a change to the board's
-    // perspective constants without re-rendering the tiles shows up here.
+    // why: tiles.json records where the art build rendered each tile, so changing the board's
+    // perspective constants without re-rendering the tiles fails here.
     const baked: Record<string, [number, number, number, number]> = JSON.parse(readFileSync(new URL("tiles.json", tilesDir), "utf8"));
     for (let i = 0; i < ROBOT_BOARD * ROBOT_BOARD; i++) {
       const b = tileBox(i % ROBOT_BOARD, Math.floor(i / ROBOT_BOARD));
