@@ -2,9 +2,9 @@ import { describe, expect, test } from "bun:test";
 import type { DuelAnswerInfo } from "../src/shared/duel-rules.ts";
 import { arenaOf, arenaPoints, climbLadder, compareDuelists, duelOutcome, pairArenas } from "../src/shared/duel-rules.ts";
 
-const right = (ms: number): DuelAnswerInfo => ({ correct: true, ms });
-const wrong = (ms: number): DuelAnswerInfo => ({ correct: false, ms });
-const none: DuelAnswerInfo = { correct: null, ms: null };
+const right = (ms: number): DuelAnswerInfo => ({ correct: true, answerDurationMs: ms });
+const wrong = (ms: number): DuelAnswerInfo => ({ correct: false, answerDurationMs: ms });
+const none: DuelAnswerInfo = { correct: null, answerDurationMs: null };
 
 describe("pairArenas", () => {
   test("pairs from the top; an odd count makes the bottom arena a 3-way duel", () => {
@@ -91,15 +91,13 @@ describe("climbLadder", () => {
   const ids = (n: number) => Array.from({ length: n }, (_, i) => String.fromCharCode(97 + i));
 
   test("winners go up a boundary, losers down; Arena 1's winner and the bottom loser stay", () => {
-    const order = ids(6); // [a b] [c d] [e f]
+    const order = ids(6);
     const arenas = pairArenas(order);
-    // a beats b, d beats c, f beats e
     const next = climbLadder(order, arenas, [
       ["win", "lose"],
       ["lose", "win"],
       ["lose", "win"],
     ]);
-    // b ↔ d at boundary 1-2, c ↔ f at boundary 2-3
     expect(pairArenas(next)).toEqual([
       ["a", "d"],
       ["b", "f"],
@@ -125,7 +123,7 @@ describe("climbLadder", () => {
       ["win", "lose"],
       ["lose", "win"],
     ]);
-    // Boundary 1-2 is blocked (draw above); boundary 2-3: d (lost) ↔ f (won).
+    // why: the draw above blocks boundary 1-2; at boundary 2-3, d (lost) and f (won) swap.
     expect(pairArenas(next2)).toEqual([
       ["a", "b"],
       ["c", "f"],
@@ -134,7 +132,7 @@ describe("climbLadder", () => {
   });
 
   test("a 3-way bottom arena: its winner goes up, its loser stays at the bottom, the middle stays", () => {
-    const order = ids(5); // [a b] [c d e]
+    const order = ids(5);
     const next = climbLadder(order, pairArenas(order), [
       ["lose", "win"],
       ["stay", "lose", "win"],

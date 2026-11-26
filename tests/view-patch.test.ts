@@ -53,7 +53,7 @@ describe("diffView / applyPatch", () => {
     expect(next.board.owners).toEqual([0, 5, 2]);
     expect(next.question).toBe(view.question);
     expect(next).not.toBe(view);
-    // No ops still gives a new object, so a forced resync re-renders the page.
+    // why: no ops still gives a new object, so a forced resync re-renders the page.
     expect(applyPatch(view, [])).not.toBe(view);
   });
 });
@@ -87,7 +87,6 @@ describe("View delivery", () => {
     hub.broadcast();
     expect(phone.raw).toEqual([]);
 
-    // A join retry from an already joined phone requests the current view.
     phone.sendMsg({ type: "join", nickname: "Ann" });
     expect(phone.raw).toEqual([{ type: "player.patch", ops: [] }]);
     phone.raw = [];
@@ -100,7 +99,7 @@ describe("View delivery", () => {
     ]);
     phone.raw = [];
 
-    // Drain also forces a refresh when the queued attempt saw no view change.
+    // why: drain forces a refresh even when the queued attempt saw no view change.
     phone.bufferedAmount = 4096;
     hub.broadcast();
     expect(phone.raw).toEqual([]);
@@ -120,7 +119,6 @@ describe("View delivery", () => {
     hub.onDrain(phone);
     expect(phone.raw).toEqual([{ type: "player.patch", ops: [[["me", "avatar", "avatar"], OFFERED_AVATARS[3]!.id]] }]);
 
-    // A socket that keeps up isn't sent anything extra on drain.
     hub.onDrain(phone);
     expect(phone.raw).toHaveLength(1);
     expect(phone.compression.every((compress) => compress)).toBe(true);

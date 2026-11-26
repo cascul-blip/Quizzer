@@ -11,7 +11,6 @@ import { SubGame } from "../src/server/game/submarine.ts";
 import { TowerGame } from "../src/server/game/tower.ts";
 import { FakeClock, sampleQuiz } from "./helpers.ts";
 
-/** What every Streamed question mode's game gives a phone and the host. */
 interface StreamedGame {
   readonly phase: string;
   readonly players: ReadonlyMap<string, unknown>;
@@ -28,7 +27,6 @@ interface Scenario {
   id: string;
 }
 
-/** The only question's options: the first is right, the second wrong. */
 const RIGHT = 0;
 const WRONG = 1;
 
@@ -44,24 +42,22 @@ function lobbyFor(mode: "tower" | "land" | "fight" | "submarine" | "cup" | "robo
 }
 
 interface StreamedMode {
-  /** The game for the first player's scenario, not started. */
   game(clock: FakeClock): StreamedGame;
-  /** Advance the clock from the start to the first moment the first question can be answered. */
   advanceToAnswering(clock: FakeClock, game: StreamedGame): void;
-  /** Leave answering for a phase that is not the end, with the feedback flash of an answer still showing; null when the mode has none. */
+  /** why: null when the mode has no phase between answering and the end. */
   toBetween: ((scenario: Scenario) => void) | null;
 }
 
-/** Keep answering wrong, the moment each flash ends, until the game leaves the phases where it is answering. Leaves the clock inside the last flash. */
+/** why: leaves the clock inside the last flash, so callers can check it still shows. */
 function answerUntilLeft(scenario: Scenario, answering: readonly string[]) {
   const { clock, game, id } = scenario;
   let answeredAt = -Infinity;
-  // Off the whole seconds that phases last, so no phase ends at the very instant a flash does.
+  // why: off the whole seconds, so no phase ends at the very instant a flash does.
   clock.advance(37);
   for (let i = 0; i < 100_000 && answering.includes(game.phase); i++) {
     const question = game.playerView(id)!.question;
     if (question && game.answer(id, question.seq, WRONG)) answeredAt = clock.now();
-    // Steps that do not end on the flash's end, so the check below sees a flash still showing.
+    // why: steps miss the flash's end, so the check below sees a flash still showing.
     for (const ms of [130, 130, 130, 130, 130, 130, 130, 89, 1]) {
       if (answering.includes(game.phase)) clock.advance(ms);
     }
@@ -82,7 +78,6 @@ const MODES: Record<string, StreamedMode> = {
   "Tallest Tower": {
     game: (clock) => TowerGame.fromLobby(lobbyFor("tower").handoffFacts("tower"), { clock }),
     advanceToAnswering: (clock) => clock.advance(3_000),
-    // Its only phases are the countdown, playing and the podium.
     toBetween: null,
   },
   "Land Grab": {
@@ -93,13 +88,12 @@ const MODES: Record<string, StreamedMode> = {
   "Hill Fight": {
     game: (clock) => FightGame.fromLobby(lobbyFor("fight").handoffFacts("fight"), { clock }),
     advanceToAnswering: (clock) => clock.advance(3_000),
-    // The collapse is the only phase after playing; tests/fight.test.ts covers it with a tower that falls.
+    // why: the collapse is covered in tests/fight.test.ts with a tower that falls.
     toBetween: null,
   },
   Submarine: {
     game: (clock) => SubGame.fromLobby(lobbyFor("submarine").handoffFacts("submarine"), { clock }),
     advanceToAnswering: (clock) => clock.advance(3_000),
-    // Caught by the fish.
     toBetween: (scenario) => answerUntilLeft(scenario, ["chase"]),
   },
   "Cup of Death": {
@@ -108,7 +102,6 @@ const MODES: Record<string, StreamedMode> = {
       clock.advance(3_000);
       clock.advance(game.phaseEndsAt! - clock.now());
     },
-    // A wrong answer, so the player is not safe and is still answering when the flash starts.
     toBetween: answerThenQuizEnds,
   },
   "Robot Attack": {
@@ -119,13 +112,12 @@ const MODES: Record<string, StreamedMode> = {
   "Kingdom Siege": {
     game: (clock) => SiegeGame.fromLobby(lobbyFor("siege").handoffFacts("siege"), { clock }),
     advanceToAnswering: (clock) => clock.advance(3_000),
-    // Its build breaks count as answering; the ending cinematic (the wall stands or falls) does not.
     toBetween: (scenario) => answerUntilLeft(scenario, ["build", "wave"]),
   },
   "Gift Grab": {
     game: (clock) => GiftGame.fromLobby(lobbyFor("gift").handoffFacts("gift"), { clock }),
     advanceToAnswering: (clock) => clock.advance(3_000),
-    // Its bonus round hides question and flash too, but within playing, not a phase between; see its own test below.
+    // why: its bonus round is within playing, not a phase between; see its own test below.
     toBetween: null,
   },
 };
@@ -137,7 +129,6 @@ function started(mode: StreamedMode): Scenario {
   return { clock, game, id: [...game.players.keys()][0]! };
 }
 
-/** Answer the player's current question, leaving the feedback flash running. */
 function answerOnce({ game, id }: Scenario, option = RIGHT) {
   const question = game.playerView(id)!.question!;
   expect(game.answer(id, question.seq, option)).toBeTruthy();
@@ -154,7 +145,7 @@ describe("Streamed question feedback", () => {
     test(`${name} shows feedback while answering and hides it once the game has finished`, () => {
       const scenario = started(mode);
       mode.advanceToAnswering(scenario.clock, scenario.game);
-      // Wrong, so no mode moves the player off answering (Cup's safe step, Gift's bonus round).
+      // why: wrong, so no mode moves the player off answering (Cup's safe step, Gift's bonus round).
       answerOnce(scenario, WRONG);
       expect(scenario.game.playerView(scenario.id)!.feedback).not.toBeNull();
       scenario.game.end();
@@ -184,7 +175,6 @@ describe("Streamed question feedback", () => {
       answerOnce({ clock, game, id: ana.id });
       if (!ana.safe) clock.advance(FEEDBACK_MS);
     }
-    // Ben is not safe, so the quiz continues; Ana can't answer, so she sees neither question nor flash.
     expect(game.phase).toBe("quiz");
     expect(game.playerView(ana.id)).toMatchObject({ question: null, feedback: null });
     expect(game.answer(ana.id, 1, RIGHT)).toBe(false);

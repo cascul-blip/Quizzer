@@ -63,7 +63,7 @@ interface GiftOptions {
 
 function launchSchedule(round: number, rng: () => number): GiftItem[] {
   const waveMs = 1_250;
-  // Each five-second batch keeps the same mix of gifts and duds.
+  // why: each five-second batch keeps the same mix of gifts and duds.
   const kinds = Array.from({ length: GIFT_ROUND_MS / 5_000 }, (_, batch) => {
     const goods = [...GIFT_GOODS, ...shuffle([...GIFT_GOODS], rng).slice(0, 3)];
     const duds = shuffle([...GIFT_DUDS], rng);
@@ -71,7 +71,7 @@ function launchSchedule(round: number, rng: () => number): GiftItem[] {
     if (power) duds.shift();
 
     const batchItems = shuffle<GiftItemKind>([...goods, ...duds], rng);
-    // A power-up launches in the first wave so there is time to use it.
+    // why: a power-up launches in the first wave so there is time to use it.
     if (power) batchItems.splice(Math.floor(rng() * 3), 0, round % 6 === 3 ? "shield" : "star");
     return batchItems;
   }).flat();
@@ -153,7 +153,7 @@ export class GiftGame {
     this.session.changed();
   }
 
-  /** The deadline: the last bonus rounds play out before the game finishes. */
+  /** why: the last bonus rounds play out before the game finishes. */
   private expire(): void {
     this.session.phases.enter("finishing");
     this.finishIfReady();
@@ -262,7 +262,7 @@ export class GiftGame {
     return true;
   }
 
-  /** Highest score first; correct answers split equal scores. */
+  /** why: correct answers split equal scores. */
   private buildPodium(): Podium<GiftPlayer, GiftPlayer, GiftAwardKey> {
     const players = [...this.players.values()];
     return buildPodium({
@@ -274,12 +274,11 @@ export class GiftGame {
     });
   }
 
-  /** The finished game's Podium (GLOSSARY.md), worked out once in Game finish. */
   get podium(): Podium<GiftPlayer, GiftPlayer, GiftAwardKey> {
     return this.session.podium;
   }
 
-  /** Live Standings during play; the Podium's places once the game has finished. */
+  /** why: live Standings during play; the Podium's places once the game has finished. */
   private standings(): GiftStanding[] {
     const ranked = this.phase === "podium" ? this.podium.places.map((p) => ({ ...p, rank: p.place })) : rankBy([...this.players.values()], GIFT_ORDER);
     return ranked.map((player) => {
@@ -304,7 +303,7 @@ export class GiftGame {
       remainingMs: this.session.phases.remainingMs(),
       standings,
       mostCorrect: final ? this.podium.awards.mostCorrect : null,
-      // Gift's host view always carries a list, empty until the podium.
+      // why: Gift's host view always carries a list, empty until the podium.
       errors: this.session.stream.errorsWhen(final) ?? [],
     };
   }

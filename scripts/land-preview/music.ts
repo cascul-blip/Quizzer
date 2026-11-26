@@ -1,4 +1,3 @@
-/** Listen to the actual adaptive tracks and render sampled WAVs for review. */
 import "../winter-art/music-preview.ts";
 import { MusicPlayer, stepSeconds } from "../../src/client/shared/music/engine.ts";
 import { TRACKS } from "../../src/client/shared/music/tracks.ts";

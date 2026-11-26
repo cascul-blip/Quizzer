@@ -7,7 +7,7 @@ interface Connection {
   close(): void;
 }
 
-/** WebSocket with automatic reconnect (backoff up to 5s, immediate retry when the tab becomes visible). */
+/** why: retries at once when the tab becomes visible, since backoff (up to 5s) would leave a woken phone stale. */
 export function connect(handlers: {
   onOpen: (send: (msg: ClientMsg) => void) => void;
   onMessage: (msg: ServerMsg) => void;
@@ -45,7 +45,7 @@ export function connect(handlers: {
         return console.error("Bad message", e);
       }
       if (msg.type === "hello") {
-        // Reconnected to a restarted server: this page may be running outdated code, so reload it.
+        // why: a restarted server means this page may be running outdated code, so reload it.
         if (serverId && serverId !== msg.serverId) {
           stopped = true;
           location.reload();

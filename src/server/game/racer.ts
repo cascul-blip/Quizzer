@@ -26,29 +26,27 @@ import { most } from "./standings.ts";
 
 export { AUTO_REVEAL_MS, GRACE_MS } from "./common.ts";
 
-/** A turn without a driver shows the question this long before the options (INTRO_MS). */
 export { INTRO_MS };
-/** The driver has this long to set the lever; then it is locked where it is. */
+/** why: then the lever is locked where it is. */
 export const CONFIDENCE_MS = 20_000;
 
 const RACER_AWARD_VALUES: Record<RacerAwardKey, (p: RacerPlayer) => number> = { mostCorrect: (p) => p.correct, mostMphGained: (p) => p.mphGained };
 
 export interface RacerAnswer {
-  /** Chosen option index; -1 for a typed answer. */
+  /** why: -1 marks a typed answer. */
   option: number;
   text?: string;
   correct: boolean;
 }
 
 export interface RacerPlayer extends BasePlayer {
-  /** By question index (play order). */
+  /** why: indexed by play order. */
   answers: (RacerAnswer | undefined)[];
-  /** Counted when a question closes, so the numbers give nothing away while it is open. */
+  /** why: counted when a question closes, so the numbers give nothing away while it is open. */
   correct: number;
-  /** Answered wrong; a question left unanswered is not counted. */
+  /** why: a question left unanswered is not counted. */
   wrong: number;
   turnsDriven: number;
-  /** Mph gained on the turns this player drove. */
   mphGained: number;
   failsAsDriver: number;
 }
@@ -57,7 +55,7 @@ interface RacerOptions {
   clock?: Clock;
   rng?: () => number;
   onChange?: () => void;
-  /** One player answered: they need their own view at once, everyone else can wait a moment. */
+  /** why: the answering player needs their own view at once; everyone else can wait a moment. */
   onActivity?: (playerId: string) => void;
   onFinish?: (game: RacerGame) => void;
 }
@@ -68,32 +66,24 @@ interface RacerGameSettings {
   pacing?: Pacing;
 }
 
-/**
- * Racer: the class shares one car. Each turn a driver bets on how well everyone will answer
- * (confidence → open → reveal); a crashed car has no driver until the class repairs it (intro → open → reveal).
- * Every question is asked once, then the podium.
- */
+/** why: a crashed car has no driver until the class repairs it, so that turn runs intro → open → reveal. */
 export class RacerGame {
   readonly runningMode = "racer" as const;
   readonly theme: SeasonTheme;
   readonly quizId: string;
   readonly title: string;
-  /** Play order, shuffled if the lobby asked for it. */
   readonly questions: Question[];
   car: RacerCar = newRacerCar();
-  /** This turn's driver, as they were when the turn started. */
+  /** why: as they were when the turn started. */
   driver: RacerDriver | null = null;
-  /** Where the lever is; null on a turn without a driver. */
+  /** why: null on a turn without a driver. */
   lever: RacerConfidence | null = null;
-  /** The locked lever, once the question is open. */
   confidence: RacerConfidence | null = null;
   lastTurn: RacerTurn | null = null;
-  /** Who got the latest closed question wrong (or didn't answer it): they fall out of the car on the reveal. */
+  /** why: they fall out of the car on the reveal; not answering counts as wrong. */
   ejected: { id: string; nickname: string; avatar: AvatarChoice }[] = [];
-  /** Turns played to the end. */
   turns = 0;
 
-  /** Player ids still to drive in this round of the bag. */
   private bag: string[] = [];
   private readonly session: PacedSession<RacerPlayer, "confidence", Podium<RacerPlayer, RacerPlayer, RacerAwardKey>, RacerGame>;
 
@@ -125,12 +115,11 @@ export class RacerGame {
 
   private setup!: LobbyChoices;
 
-  /** The lobby's choices with the pacing as the host left it; the next lobby opens with them. */
+  /** why: the next lobby opens with these, pacing as the host left it. */
   get choices(): LobbyChoices {
     return { ...this.setup, pacing: this.pacing };
   }
 
-  /** Take over a lobby's players (same ids and tokens), its shuffle choices and its pacing. */
   static fromLobby(lobby: LobbyFacts<"racer">, opts: RacerOptions = {}): RacerGame {
     const game = new RacerGame(lobby.quiz, { shuffle: lobby.shuffle, pacing: lobby.pacing, theme: lobby.settings.theme }, opts);
     game.setup = lobby.choices;
@@ -150,7 +139,7 @@ export class RacerGame {
     return this.session.paced.pacing;
   }
 
-  /** When the current phase's countdown ends; 0 when it has none. */
+  /** why: 0 when the phase has no countdown. */
   get phaseEndsAt(): number {
     return this.session.paced.phases.endsAt;
   }
@@ -173,7 +162,7 @@ export class RacerGame {
 
   join(rawNickname: unknown, avatar?: AvatarChoice | null): RacerPlayer {
     const player = this.session.addPlayer(rawNickname, avatar, (base) => this.newPlayer(base));
-    // Late joiners get their turn at the wheel in this round of the bag.
+    // why: late joiners get their turn at the wheel in this round of the bag.
     this.bag.splice(Math.floor(this.session.rng() * (this.bag.length + 1)), 0, player.id);
     this.session.changed();
     return player;
@@ -206,10 +195,7 @@ export class RacerGame {
     return this.phase === "confidence" && this.driver?.id === playerId;
   }
 
-  /**
-   * The next driver: a connected player from the shuffled bag, so everyone drives once before anyone drives again.
-   * Players who are away keep their place in the bag; once nobody in it is connected, it is refilled with everyone.
-   */
+  /** why: everyone drives once before anyone drives again; away players keep their place, and the bag refills once nobody in it is connected. */
   private pickDriver(): RacerPlayer | null {
     const connected = (id: string) => !!this.players.get(id)?.connected;
     let i = this.bag.findIndex(connected);
@@ -221,7 +207,6 @@ export class RacerGame {
     return this.players.get(this.bag.splice(i, 1)[0]!)!;
   }
 
-  /** The driver moves the lever. Returns whether it was accepted. */
   setLever(playerId: string, level: RacerConfidence): boolean {
     if (this.phase !== "confidence" || this.driver?.id !== playerId || !this.players.has(playerId)) return false;
     if (!RACER_CONFIDENCE_LEVELS.includes(level)) return false;
@@ -232,14 +217,13 @@ export class RacerGame {
     return true;
   }
 
-  /** The driver locks the lever in and opens the question. Returns whether it was accepted. */
   go(playerId: string): boolean {
     if (this.phase !== "confidence" || this.driver?.id !== playerId || !this.players.has(playerId)) return false;
     this.lockIn();
     return true;
   }
 
-  /** One answer per player per question, the driver included. Returns whether it was accepted. */
+  /** why: the driver answers too. */
   answer(playerId: string, qIndex: number, answer: AnswerValue): boolean {
     const taken = this.session.paced.take(this.players.get(playerId), qIndex, answer, ({ msSinceOpen: _ms, ...a }): RacerAnswer => a);
     if (!taken) return false;
@@ -271,13 +255,13 @@ export class RacerGame {
     }
   }
 
-  /** Cut the current countdown short: straight to the options, lock the lever where it is, or close the question. */
+  /** why: straight to the options, lock the lever where it is, or close the question. */
   skip(): void {
     if (this.phase === "confidence") this.lockIn();
     else this.session.paced.skip();
   }
 
-  /** Host ends the game now. An open question is settled first; a turn that hadn't opened yet is dropped. */
+  /** why: an open question is settled first; a turn that had not opened yet is dropped. */
   end(): void {
     this.session.end();
   }
@@ -307,7 +291,6 @@ export class RacerGame {
     this.session.paced.open();
   }
 
-  /** Apply the turn to the shared car and tally the question that just closed. */
   private settleQuestion(): void {
     const players = [...this.players.values()];
     let correct = 0;
@@ -316,7 +299,7 @@ export class RacerGame {
     for (const p of players) {
       const ans = p.answers[this.qIndex];
       const participated = p.connected || !!ans;
-      // No answer counts as wrong, so idle players can't ride out a question.
+      // why: no answer counts as wrong, so idle players cannot ride out a question.
       const failed = participated && !ans?.correct;
       if (participated) total++;
       if (failed) this.ejected.push({ id: p.id, nickname: p.nickname, avatar: p.avatar });
@@ -350,7 +333,7 @@ export class RacerGame {
     return { distanceMiles: this.car.distanceMiles, topSpeedMph: this.car.topSpeedMph, crashes: this.car.crashes, turns: this.turns };
   }
 
-  /** The class shares one result, so every player shares one place; the results sheet lists the most correct first, then the best driver. */
+  /** why: the class shares one result, so every player shares one place; most correct first, then best driver. */
   private buildPodium(): Podium<RacerPlayer, RacerPlayer, RacerAwardKey> {
     const players = [...this.players.values()];
     return buildPodium({
@@ -363,12 +346,11 @@ export class RacerGame {
     });
   }
 
-  /** The finished game's Podium (GLOSSARY.md), worked out once in Game finish. */
   get podium(): Podium<RacerPlayer, RacerPlayer, RacerAwardKey> {
     return this.session.podium;
   }
 
-  /** The most-missed questions: wrong answers only, a question left unanswered doesn't count. */
+  /** why: wrong answers only; a question left unanswered does not count. */
   errors(): QuestionError[] {
     const wrong = this.questions.map((_, i) => [...this.players.values()].filter((p) => p.answers[i] && !p.answers[i]!.correct).length);
     return topErrors(this.questions, wrong);
@@ -463,7 +445,7 @@ export class RacerGame {
   }
 }
 
-/** Racer: one row per player; the class's shared distance, top speed and crashes are in every row. */
+/** why: the class shares distance, top speed and crashes, so they repeat in every row. */
 function racerColumns(game: RacerGame): Column<RacerPlayer>[] {
   const round = (v: number) => Math.round(v * 100) / 100;
   return [

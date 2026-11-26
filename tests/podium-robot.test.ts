@@ -17,7 +17,7 @@ describe("Robot Attack podium", () => {
         ctx.clock.advance(COUNTDOWN_MS);
         answerRight("robot", "Noel", id("Noel"), 2);
         answerRight("robot", "Ivy", id("Ivy"), 2);
-        // Which players the lasers hit depends on the random board, so set the lives an attack would leave.
+        // why: laser hits depend on the random board, so set the lives an attack would leave.
         player(id("Holly")).lives--;
         player(id("Holly")).moves = 3;
       },

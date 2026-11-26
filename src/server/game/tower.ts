@@ -26,17 +26,17 @@ export { FEEDBACK_MS } from "./stream.ts";
 export const COUNTDOWN_MS = 3000;
 export const SWEEP_START_MS = 2500;
 export const SWEEP_MIN_MS = 1200;
-/** The sliding block speeds up by this much per completed floor. */
+/** why: the sliding block speeds up by this much per completed floor. */
 export const SWEEP_STEP_MS = 130;
 export const DROP_COOLDOWN_MS = 400;
-/** Egg announcements, as fractions of the game length. */
+/** why: fractions of the game length. */
 export const MONSTER_AT = [1 / 5, 2 / 5, 3 / 5, 4 / 5] as const;
 
 interface TowerTeam {
   index: number;
   name: string;
   color: string;
-  /** Blocks stacked in the left, center and right columns. */
+  /** why: left, center and right columns. */
   columns: [number, number, number];
 }
 
@@ -49,7 +49,6 @@ export interface TowerPlayer extends BasePlayer, AnswerTotals {
   blocksHeld: number;
   placed: number;
   missed: number;
-  /** Monster eggs this player hatched. */
   hatched: number;
   state: "question" | "build";
   lastDropAt: number;
@@ -58,17 +57,17 @@ export interface TowerPlayer extends BasePlayer, AnswerTotals {
 interface TowerOptions {
   clock?: Clock;
   rng?: () => number;
-  /** Something everyone may care about changed (phase, roster): push to every screen now. */
+  /** why: push to every screen now. */
   onChange?: () => void;
-  /** Only this player's state changed, plus team/host totals: push to them now, others soon. */
+  /** why: push to this player now, others soon. */
   onActivity?: (playerId: string) => void;
   onFinish?: (game: TowerGame) => void;
 }
 
 interface TowerGameSettings extends TowerSettings {
-  /** Shuffle answer positions per player (the lobby's "Shuffle answer positions"). */
+  /** why: the lobby's "Shuffle answer positions". */
   shuffleAnswers: boolean;
-  /** Longer waits for wrong answers in a row (the lobby's "Protect from abuse"). */
+  /** why: the lobby's "Protect from abuse". */
   protect?: boolean;
 }
 
@@ -78,8 +77,7 @@ const TOWER_ORDER: RankKey<TowerTeamTotals>[] = [most((t) => t.floors), most((t)
 const TOWER_THEN: RankKey<TowerTeamTotals>[] = [fewest((t) => t.index)];
 const TOWER_AWARD_VALUES: Record<TowerAwardKey, (p: TowerPlayer) => number> = { mostCorrect: (p) => p.correct, masterBuilder: (p) => p.placed };
 
-/** Tallest Tower: teams answer at their own pace; every 4 correct answers are dropped onto the team tower. */
-/** The phase timer slot of the i-th egg announcement. */
+/** why: teams answer at their own pace; every 4 correct answers drop a block on the team tower. */
 const monsterSlot = (i: number): string => `monster-${i}`;
 
 export class TowerGame {
@@ -168,7 +166,7 @@ export class TowerGame {
     this.session.changed();
   }
 
-  /** Time until the next egg announcement, or null if none is coming. */
+  /** why: null when no announcement is coming. */
   private nextMonsterRemainingMs(): number | null {
     for (let i = 0; i < MONSTER_AT.length; i++) {
       const ms = this.session.phases.slotRemainingMs(monsterSlot(i));
@@ -185,18 +183,14 @@ export class TowerGame {
     return this.teams.length >= 2;
   }
 
-  /**
-   * Give every tower its own egg, EGG_LEVELS_ABOVE levels above its highest
-   * complete floor (10 floors → level 14), in a random column where that cell
-   * is still empty.
-   */
+  /** why: the egg sits EGG_LEVELS_ABOVE levels above the highest complete floor (10 floors → level 14), in a random free column. */
   private announceMonster(): void {
     if (this.phase !== "playing") return;
     if (!this.egg) {
       const seq = ++this.monsterSeq;
       const cells = this.teams.map((t) => {
         const row = floorsOf(t) + EGG_LEVELS_ABOVE - 1;
-        // A column is free if it hasn't been stacked up to that row yet (the shortest column always is).
+        // why: a column is free if it isn't stacked up to that row yet (the shortest always is).
         const free = [0, 1, 2].filter((c) => t.columns[c]! <= row);
         return { col: free[Math.min(free.length - 1, Math.floor(this.session.rng() * free.length))]!, row };
       });
@@ -206,7 +200,7 @@ export class TowerGame {
     this.session.changed();
   }
 
-  /** The first block on the egg hatches it: the monster smashes the tallest other tower. */
+  /** why: the first block on the egg hatches it; the monster smashes the tallest other tower. */
   private hatch(p: TowerPlayer, team: TowerTeam): void {
     const target = this.rankedTeams().find((t) => t.index !== team.index);
     this.egg = null;
@@ -265,7 +259,7 @@ export class TowerGame {
     return true;
   }
 
-  /** Drop the player's next block into zone 0–4 (0 and 4 miss the tower). Returns whether it landed. */
+  /** why: zones 0 and 4 miss the tower; returns whether it landed. */
   drop(playerId: string, zone: number): boolean | null {
     const p = this.players.get(playerId);
     if (!p || this.phase !== "playing" || p.state !== "build" || p.blocksHeld <= 0) return null;
@@ -297,12 +291,12 @@ export class TowerGame {
     return this.teams.map((t) => ({ ...t, floors: floorsOf(t), placed: placedOf(t) }));
   }
 
-  /** Teams during play: by floors, then blocks placed; equal teams share a rank. */
+  /** why: by floors, then blocks placed; equal teams share a rank. */
   rankedTeams(): (TowerTeamTotals & { rank: number })[] {
     return rankBy(this.teamTotals(), TOWER_ORDER, TOWER_THEN);
   }
 
-  /** Teams ranked as in play; each player finishes with their team; players listed by blocks placed, then correct answers. */
+  /** why: players finish with their team, listed by blocks placed, then correct answers. */
   private buildPodium(): TowerPodium {
     const entries = this.teamTotals();
     const players = [...this.players.values()].sort((a, b) => b.placed - a.placed || b.correct - a.correct);
@@ -316,12 +310,11 @@ export class TowerGame {
     });
   }
 
-  /** The finished game's Podium (GLOSSARY.md), worked out once in Game finish. */
+  /** why: worked out once in Game finish (Podium, GLOSSARY.md). */
   get podium(): TowerPodium {
     return this.session.podium;
   }
 
-  /** A team's totals and place on the Podium. */
   podiumTeam(index: number): (TowerTeamTotals & { place: number }) | undefined {
     return this.podium.places.find((t) => t.index === index);
   }
@@ -365,7 +358,7 @@ export class TowerGame {
     };
   }
 
-  /** Egg news goes to everyone; an attack only to the hatching team and the team that got smashed. */
+  /** why: egg news goes to everyone; an attack only to the hatching and smashed teams. */
   private monsterEventFor(p: TowerPlayer): PlayerTowerView["monsterEvent"] {
     const ev = this.lastMonsterEvent;
     if (!ev) return null;
@@ -415,7 +408,7 @@ export class TowerGame {
   }
 }
 
-/** Tallest Tower: one row per player, grouped by team in final team order. */
+/** why: one row per player, grouped by team in final team order. */
 type TowerResultRow = { team: TowerTeamTotals & { place: number }; p: TowerPlayer };
 
 const TOWER_COLUMNS: Column<TowerResultRow>[] = [

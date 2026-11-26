@@ -42,11 +42,7 @@ export function useCardMotion({
   };
 }
 
-/**
- * The positions that turned face up since the previous board, kept while the same board renders again.
- * It compares with the last board rendered, so it records that board during render: rendering the same board twice
- * gives the same answer.
- */
+/** why: records the last board during render, so rendering the same board twice keeps the same flips. */
 function useFlippedUp(board: MemoryCardView[]): Set<number> {
   const seen = useRef<{ board: MemoryCardView[]; flipped: Set<number> } | null>(null);
   const previous = seen.current;

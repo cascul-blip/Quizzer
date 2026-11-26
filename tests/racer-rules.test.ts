@@ -112,8 +112,8 @@ describe("applyRacerTurn", () => {
       repaired: false,
       distanceAdded: 50 / 6,
     });
-    // The car passed in is left alone.
-    expect(before).toEqual(newRacerCar());
+    const inputCarUnchanged = before;
+    expect(inputCarUnchanged).toEqual(newRacerCar());
     expect(applyRacerTurn(after, { confidence: "high", correct: 3, total: 3 }).car).toMatchObject({ speedMph: 90, topSpeedMph: 90 });
   });
 
@@ -140,7 +140,6 @@ describe("applyRacerTurn", () => {
       speedAfter: 21.25,
       crashed: false,
     });
-    // Top speed remembers the best turn, not the speed before a fail.
     expect(applyRacerTurn(car({ speedMph: 50, topSpeedMph: 50 }), { confidence: "low", correct: 0, total: 4 }).car.topSpeedMph).toBe(50);
   });
 

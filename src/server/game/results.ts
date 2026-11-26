@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 export type Cell = string | number;
 
-/** Byte order mark the results CSV starts with, so Excel opens UTF-8 correctly. */
+/** why: Excel only reads the CSV as UTF-8 when it starts with a BOM. */
 export const BOM = "\ufeff";
 
 export interface Column<Row> {
@@ -14,39 +14,37 @@ export interface Column<Row> {
 export interface ResultsSheet {
   header: string[];
   rows: Cell[][];
-  /** Extra lines after a blank line, such as a per-wave log; free-form. */
+  /** why: written after a blank line, free-form (e.g. a per-wave log). */
   appendix?: Cell[][];
 }
 
-/** Builds a sheet from a mode's columns and its rows, already in rank order. */
+/** why: rows must already be in rank order. */
 export function sheet<Row>(columns: readonly Column<Row>[], rows: Iterable<Row>, appendix?: Cell[][]): ResultsSheet {
   return { header: columns.map((c) => c.header), rows: [...rows].map((r) => columns.map((c) => c.value(r))), appendix };
 }
 
-/** Percent correct, or empty when the player answered nothing. */
+/** why: empty when the player answered nothing. */
 export function accuracy(p: { correct: number; wrong: number }): Cell {
   const answered = p.correct + p.wrong;
   return answered ? Math.round((p.correct / answered) * 100) : "";
 }
 
-/** Each row as header → cell, for checking values by column. */
 export function records(s: ResultsSheet): Record<string, Cell>[] {
   return s.rows.map((r) => Object.fromEntries(s.header.map((h, i) => [h, r[i]!])));
 }
 
 function csvCell(v: Cell): string {
   const s = String(v);
-  // Prefix formula-looking text so spreadsheets don't execute it.
+  // why: prefix formula-looking text so spreadsheets don't execute it.
   const safe = /^[=+\-@\t\r]/.test(s) && typeof v === "string" ? `'${s}` : s;
   return /[",\r\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
 }
 
-/** Rows as a CSV file for spreadsheets: cells quoted where needed, UTF-8 with a BOM. */
 export function toCsv(rows: Cell[][]): string {
   return BOM + rows.map((r) => r.map(csvCell).join(",")).join("\r\n") + "\r\n";
 }
 
-/** The sheet as a CSV; throws when a row's length differs from the header's. */
+/** why: throws when a row's length differs from the header's. */
 export function resultsCsv(s: ResultsSheet): string {
   s.rows.forEach((r, i) => {
     if (r.length !== s.header.length) throw new Error(`Results row ${i + 1} has ${r.length} cells for ${s.header.length} columns`);
@@ -66,10 +64,7 @@ export function writeResultsFile(game: { quizId: string }, csv: string, resultsD
   return file;
 }
 
-/**
- * Writes the game's results to the results folder and logs where. Never throws, so the game still finishes:
- * file is null when the sheet is malformed or writing failed, and csv then holds whatever rows could be written.
- */
+/** why: never throws, so the game still finishes; file is null on failure and csv holds the rows that could be written. */
 export function saveResults(game: { quizId: string }, s: ResultsSheet, resultsDir: string, log: (msg: string) => void): { csv: string; file: string | null } {
   let csv: string;
   try {

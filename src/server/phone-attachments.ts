@@ -20,10 +20,8 @@ export class PhoneAttachments<S extends Socket> {
     return this.sockets.get(socket) ?? null;
   }
 
-  *forPlayer(playerId: string): IterableIterator<S> {
-    for (const [socket, attached] of this.sockets) {
-      if (attached === playerId) yield socket;
-    }
+  forPlayer(playerId: string): S[] {
+    return [...this.sockets].filter(([, attached]) => attached === playerId).map(([socket]) => socket);
   }
 
   socketLimitReached(ip: string): boolean {
@@ -46,7 +44,7 @@ export class PhoneAttachments<S extends Socket> {
   attach(socket: S, playerId: string): void {
     const previous = this.playerId(socket);
     this.sockets.set(socket, playerId);
-    // Reconnect first so a game checking for early round completion sees the replacement.
+    // why: reconnect first so a game checking for early round completion sees the replacement.
     this.setConnected(playerId, true);
     if (previous !== playerId) this.disconnectIfAbsent(previous);
   }
@@ -58,7 +56,7 @@ export class PhoneAttachments<S extends Socket> {
   }
 
   detachPlayer(playerId: string): S[] {
-    const sockets = [...this.forPlayer(playerId)];
+    const sockets = this.forPlayer(playerId);
     for (const socket of sockets) this.sockets.set(socket, null);
     return sockets;
   }
@@ -68,6 +66,6 @@ export class PhoneAttachments<S extends Socket> {
   }
 
   private disconnectIfAbsent(playerId: string | null): void {
-    if (playerId && this.forPlayer(playerId).next().done) this.setConnected(playerId, false);
+    if (playerId && this.forPlayer(playerId).length === 0) this.setConnected(playerId, false);
   }
 }

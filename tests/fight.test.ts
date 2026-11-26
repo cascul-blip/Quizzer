@@ -51,7 +51,6 @@ function earnDecision(game: FightGame, clock: FakeClock, p: FightPlayer) {
   return answer(game, clock, p, true);
 }
 
-/** Find a pull that sends `team`'s shot onto the given tower (on the game's current terrain). */
 function pullFor(game: FightGame, team: number, target: number | "ground") {
   for (let angle = -80; angle <= 260; angle += 1) {
     for (let pull = 20; pull <= MAX_PULL; pull += 3) {
@@ -114,7 +113,7 @@ describe("decisions", () => {
     expect(a.state).toBe("question");
     expect(game.playerView(a.id)!.towardDecision).toBe(3);
     const nextSeq = answer(game, clock, a, true);
-    // Undamaged tower: nothing to rebuild, straight to the catapult (no time limit there).
+    // why: an undamaged tower has nothing to rebuild, so it goes straight to the catapult, which has no time limit.
     expect(a.state).toBe("aim");
     expect(game.playerView(a.id)!.question).toBeNull();
     expect(game.playerView(a.id)!.decisionRemainingMs).toBe(0);
@@ -133,7 +132,6 @@ describe("decisions", () => {
     expect(a.state).toBe("repair");
     expect(game.playerView(a.id)!.repairRemainingMs).toBe(REPAIR_MS);
     expect(game.hostView().teams.map((t) => t.repairing)).toEqual([true, false]);
-    // No questions while repairing, and the decide timer no longer applies.
     expect(game.playerView(a.id)!.question).toBeNull();
     expect(game.answer(a.id, nextSeq, 0)).toBe(false);
     clock.advance(REPAIR_MS - 1);
@@ -156,7 +154,7 @@ describe("decisions", () => {
     earnDecision(game, clock, c);
     expect(game.choose(a.id, "rebuild")).toBe(true);
     clock.advance(100);
-    // Both can start: the tower is still damaged until A finishes.
+    // why: the tower stays damaged until A finishes, so C can start a rebuild too.
     expect(game.choose(c.id, "rebuild")).toBe(true);
     clock.advance(REPAIR_MS);
     expect(game.teams[0]!.damage).toBe(0);
@@ -333,7 +331,7 @@ describe("end of game", () => {
     expect(durationMs).toBeGreaterThan(500);
     game.fire(a.id, dx, dy);
     clock.advance(durationMs - 500);
-    // B's flash is still showing when the shot lands.
+    // why: the shot must land while B's flash is still showing.
     const question = game.playerView(b.id)!.question!;
     expect(game.answer(b.id, question.seq, question.options.indexOf("yes"))).toBe(true);
     expect(game.playerView(b.id)!.feedback).not.toBeNull();
@@ -380,7 +378,7 @@ describe("end of game", () => {
     game.choose(c.id, "attack");
     const pa = pullFor(game, 0, 1);
     game.fire(a.id, pa.dx, pa.dy);
-    // A slower lob from C, still flying when A's shot lands.
+    // why: a slower lob from C stays in flight when A's shot lands.
     game.fire(c.id, pa.dx * 0.99, pa.dy * 1.02);
     clock.advance(pa.durationMs);
     expect(game.phase).toBe("collapse");

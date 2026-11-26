@@ -41,34 +41,28 @@ import { Award } from "./tower.tsx";
 type DuelView = Extract<HostView, { kind: "duel" }>;
 type Facing = "left" | "right";
 
-//
-// Every arena panel is a 16:9 box, and so is a Duelist box (the bodies share one 1280×720 canvas),
-// so a Duelist's width and height are the same share of the panel and every point below is in panel %.
+// why: arena panels and Duelist boxes are both 16:9 (one 1280×720 canvas), so every point below is in panel %.
 
-/** A side duelist's box height (and width), % of the panel. */
-const BOX = 70;
-/** Gap under a side duelist's box: the soles sit at 90% of it, the name tag below. */
-const BOX_BOTTOM = 7;
-/** A 3-way duel's third duelist stands smaller, centred, further back. */
-const THIRD_BOX = 50;
-const THIRD_BOTTOM = 21;
-/** How far from the panel's edge a side duelist's body is centred. */
-const SIDE_X = 21;
-/** The mannequin head on the body canvas (facing right), % of the box: the manifest's (600, 177). */
-const HEAD = { x: (600 / 1280) * 100, y: (177 / 720) * 100 };
+const SIDE_BOX_PCT = 70;
+// why: the soles sit at 90% of the box, with the name tag below.
+const SIDE_BOX_BOTTOM_PCT = 7;
+const THIRD_BOX_PCT = 50;
+const THIRD_BOTTOM_PCT = 21;
+const THIRD_SLOT = 2;
+const CENTRE_X_PCT = 50;
+const SIDE_X_PCT = 21;
+// why: the manifest's head point (600, 177) on the 1280×720 canvas, facing right.
+const HEAD_PCT = { x: (600 / 1280) * 100, y: (177 / 720) * 100 };
 
-//
-// Steps of a round's reveal, played once per lastRound.round:
-// 0 face-off (results shown) → 1 draw → 2 fire (flash, bullet, hat) → 3 settle (holster, badges) → 4 movers walk off.
+// why: reveal steps, once per lastRound.round: 0 face-off → 1 draw → 2 fire → 3 settle → 4 movers walk off.
 const STEP_AT_MS = [450, 750, 2000, 2700];
 const STEP_DRAW = 1;
 const STEP_FIRE = 2;
 const STEP_SETTLE = 3;
 const STEP_MOVE = 4;
-/** How long a mover's token takes to fly to its new panel (matches .duel-token in host.css). */
-const TOKEN_MS = 1500;
+const DUEL_TOKEN_CSS_MS = 1500;
 
-/** The hats for the duelists below High Noon; one per player, picked from the id so it never changes. */
+// why: picked from the player id so a hat never changes.
 const HATS: DuelHat[] = ["brown", "black", "white"];
 
 export function DuelStage({ view, send }: { view: DuelView; send: Send }) {
@@ -79,7 +73,7 @@ export function DuelStage({ view, send }: { view: DuelView; send: Send }) {
   const round = view.phase === "reveal" ? view.lastRound : null;
   const step = useRevealStep(round?.round ?? null, view.revealElapsedMs ?? 0);
 
-  // Every pose and clip decoded before the first reveal, so swapping one in never blinks.
+  // why: decode every pose and clip before the first reveal, so swapping one in never blinks.
   const christmas = modeTheme("duel", view.theme) === "christmas";
   useEffect(() => (christmas ? preloadSnowballArt(false) : preloadDuelArt()), [christmas]);
 
@@ -90,7 +84,7 @@ export function DuelStage({ view, send }: { view: DuelView; send: Send }) {
     if (view.phase === "intro") play("start");
     if (view.phase === "podium") play("fanfare");
     if (view.phase === "reveal")
-      // Only this round's duelists could answer: a late joiner waits on the ladder outside every arena.
+      // why: a late joiner waits outside every arena, so only this round's duelists could answer.
       play(
         revealCue(
           p.phase === "open",
@@ -100,8 +94,7 @@ export function DuelStage({ view, send }: { view: DuelView; send: Send }) {
       );
   }, [view]);
 
-  // The draw sting starts with the draw so its stab lands on the shots, once per round (also when reduced motion skips the steps).
-  // The shots ring out when the reveal's duelists fire; the movers whoosh off.
+  // why: the draw sting starts with the draw so its stab lands on the shots, also when reduced motion skips the steps.
   const stung = useRef(-1);
   useEffect(() => {
     if (!round) return;
@@ -189,10 +182,7 @@ export function DuelStage({ view, send }: { view: DuelView; send: Send }) {
   );
 }
 
-/**
- * The reveal step for this round (see STEP_AT_MS), 0 while `round` is null.
- * Keyed on the round number, so later snapshots of the same reveal don't restart it.
- */
+// why: keyed on the round number, so later snapshots of the same reveal don't restart it.
 function useRevealStep(round: number | null, elapsed = 0): number {
   const [at, setAt] = useState<{ round: number | null; step: number }>({ round, step: 0 });
   useEffect(() => {
@@ -208,7 +198,6 @@ function useRevealStep(round: number | null, elapsed = 0): number {
   return at.round === round && round !== null ? at.step : 0;
 }
 
-/** The upper part of the screen: the question once for everyone, the shared timer, the options. */
 function Question({ view, send, secs }: { view: DuelView; send: Send; secs: number }) {
   const q = view.question!;
   const open = view.phase === "open";
@@ -263,9 +252,7 @@ function Question({ view, send, secs }: { view: DuelView; send: Send; secs: numb
 
 function TimerBar({ view, secs }: { view: DuelView; secs: number }) {
   const open = view.phase === "open";
-  // Catch up once, when the question opens. A later snapshot (someone answering) carries a
-  // smaller phaseRemainingMs. Feeding that into the running animation counts the elapsed time
-  // twice, so the bar jumps ahead of the seconds.
+  // why: catch up once per question; a later snapshot's smaller phaseRemainingMs would count elapsed time twice.
   const key = `${view.phase}:${view.question?.index ?? -1}`;
   const start = useRef<{ key: string; elapsed: number } | null>(null);
   if (!start.current || start.current.key !== key) start.current = { key, elapsed: Math.max(0, view.phaseDurationMs - view.phaseRemainingMs) };
@@ -283,19 +270,13 @@ function TimerBar({ view, secs }: { view: DuelView; secs: number }) {
   );
 }
 
-/**
- * How to lay out `n` arena panels. Up to 3 sit in one row (Arena 1 wider); more make a grid
- * where Arena 1 takes a 2×2 block, with the column count picked to keep the panels near 16:9.
- */
+// why: past 3 arenas, Arena 1 takes a 2×2 block and the column count keeps panels near 16:9.
 const MAX_FIRST_ARENA_HEIGHT_VH = 46;
-/** Width:height of the whole arena grid on a 16:9 projector below the question. */
-const TARGET_GRID_ASPECT = 3;
-/** Where a moving token lands on its new street, as fractions of the panel. */
+const SPACE_UNDER_QUESTION_ASPECT = 3;
 const LOSER_SPOT_X = 0.79;
 const WINNER_SPOT_X = 0.21;
 const LANDING_Y = 0.45;
 
-/** About a third of the streets, while everyone sizes each other up. */
 function showsTumbleweed(view: DuelView, arena: number, round: number): boolean {
   return view.phase === "intro" && (arena + round) % 3 === 0;
 }
@@ -304,7 +285,7 @@ function gridFor(n: number): { row: true; columns: string; maxWidth: string } | 
   if (n <= 3) {
     const big = n === 1 ? 1 : 1.35;
     const sum = big + (n - 1);
-    // Arena 1's panel height is width × big/sum × 9/16.
+    // why: Arena 1's panel height is width × big/sum × 9/16.
     return {
       row: true,
       columns: [`${big}fr`, ...Array.from({ length: n - 1 }, () => "1fr")].join(" "),
@@ -315,7 +296,7 @@ function gridFor(n: number): { row: true; columns: string; maxWidth: string } | 
   let best = { cols: 4, rows: Math.ceil(cells / 4), score: Infinity };
   for (let cols = 3; cols <= 9; cols++) {
     const rows = Math.max(2, Math.ceil(cells / cols));
-    const aspect = (TARGET_GRID_ASPECT * rows) / cols;
+    const aspect = (SPACE_UNDER_QUESTION_ASPECT * rows) / cols;
     const score = Math.abs(Math.log(aspect / (16 / 9))) + 0.12 * (cols * rows - cells);
     if (score < best.score) best = { cols, rows, score };
   }
@@ -332,7 +313,6 @@ interface Token {
   dy: number;
 }
 
-/** The lower part: one street panel per arena, and on the reveal the movers' tokens flying between them. */
 function Arenas({ view, step }: { view: DuelView; step: number }) {
   const reveal = view.phase === "reveal" ? view.lastRound : null;
   const layout = gridFor(view.arenas.length);
@@ -343,7 +323,7 @@ function Arenas({ view, step }: { view: DuelView; step: number }) {
   useLayoutEffect(() => {
     if (!reveal || step !== STEP_MOVE || !wrap.current) return;
     const delay = modeTheme("duel", view.theme) === "christmas" ? Math.max(0, (view.revealElapsedMs ?? 0) - STEP_AT_MS[3]!) : 0;
-    if (delay >= TOKEN_MS) return;
+    if (delay >= DUEL_TOKEN_CSS_MS) return;
     const base = wrap.current.getBoundingClientRect();
     const list: Token[] = [];
     for (const a of reveal.arenas) {
@@ -353,7 +333,7 @@ function Arenas({ view, step }: { view: DuelView; step: number }) {
         if (d.nextArena === a.arena || !from || !to) return;
         const x = from.left - base.left + (from.width * slotCentreX(slot)) / 100;
         const y = from.top - base.top + from.height * LANDING_Y;
-        // Winners take the loser's spot and vice versa.
+        // why: winners take the loser's spot and vice versa.
         const tx = to.left - base.left + to.width * (slot === 0 ? LOSER_SPOT_X : WINNER_SPOT_X);
         const ty = to.top - base.top + to.height * LANDING_Y;
         list.push({ key: d.id, avatar: d.avatar, up: d.nextArena < a.arena, x, y, dx: tx - x, dy: ty - y });
@@ -395,7 +375,7 @@ function Arenas({ view, step }: { view: DuelView; step: number }) {
                 top: `${t.y}px`,
                 "--dx": `${t.dx}px`,
                 "--dy": `${t.dy}px`,
-                animationDuration: `${TOKEN_MS}ms`,
+                animationDuration: `${DUEL_TOKEN_CSS_MS}ms`,
                 animationDelay: `-${tokens.delay}ms`,
               }}
             >
@@ -408,21 +388,21 @@ function Arenas({ view, step }: { view: DuelView; step: number }) {
   );
 }
 
-/** Where slot `slot` stands across the panel (% of its width): left, right, then the third in the middle. */
 function slotCentreX(slot: number): number {
-  return slot === 0 ? SIDE_X : slot === 1 ? 100 - SIDE_X : 50;
+  return slot === 0 ? SIDE_X_PCT : slot === 1 ? 100 - SIDE_X_PCT : CENTRE_X_PCT;
 }
 
-/** A duelist's box in panel %: left and top edges and its size (width = height, both 16:9 boxes). */
+function slotBox(slot: number): { size: number; bottom: number } {
+  return slot === THIRD_SLOT ? { size: THIRD_BOX_PCT, bottom: THIRD_BOTTOM_PCT } : { size: SIDE_BOX_PCT, bottom: SIDE_BOX_BOTTOM_PCT };
+}
+
 function boxFor(slot: number, facing: Facing): { left: number; top: number; size: number } {
-  const size = slot === 2 ? THIRD_BOX : BOX;
-  const bottom = slot === 2 ? THIRD_BOTTOM : BOX_BOTTOM;
-  // Mirroring flips the canvas, so the head (and body) sits at 100 − x of a left-facing box.
-  const headX = facing === "right" ? HEAD.x : 100 - HEAD.x;
+  const { size, bottom } = slotBox(slot);
+  // why: mirroring flips the canvas, so the head sits at 100 − x of a left-facing box.
+  const headX = facing === "right" ? HEAD_PCT.x : 100 - HEAD_PCT.x;
   return { left: slotCentreX(slot) - (headX * size) / 100, top: 100 - bottom - size, size };
 }
 
-/** A point given in % of a right-facing Duelist box, in panel %. */
 function boxPoint(box: { left: number; top: number; size: number }, facing: Facing, p: { x: number; y: number }): [number, number] {
   const x = facing === "right" ? p.x : 100 - p.x;
   return [box.left + (x * box.size) / 100, box.top + (p.y * box.size) / 100];
@@ -454,14 +434,13 @@ function ArenaPanel({
 }) {
   if (modeTheme("duel", view.theme) === "christmas") return <ChristmasArenaPanel arena={arena} result={result} view={view} step={step} panelRef={panelRef} />;
   const throne = arena.arena === 1;
-  // On the reveal the panel shows the round as it was played; otherwise the live arena.
   const people = result ? result.duelists : arena.duelists;
   const live = new Map(arena.duelists.map((d) => [d.id, d]));
   const round = result ? view.lastRound!.round : view.round;
   const winner = result && !result.draw ? result.duelists.findIndex((d) => d.outcome === "win") : -1;
   const loser = result && !result.draw ? result.duelists.findIndex((d) => d.outcome === "lose") : -1;
 
-  // Who faces where: the sides face each other; the third faces whoever it's shooting at or being shot by.
+  // why: the third duelist faces whoever it's shooting at or being shot by.
   const facingOf = (slot: number): Facing => {
     if (slot === 0) return "right";
     if (slot === 1) return "left";
@@ -469,14 +448,13 @@ function ArenaPanel({
     return other === 0 ? "left" : "right";
   };
   const hatOf = (id: string): DuelHat => (throne ? "sheriff" : HATS[hash(id) % HATS.length]!);
-  const headOf = (slot: number): [number, number] => boxPoint(boxFor(slot, facingOf(slot)), facingOf(slot), HEAD);
+  const headOf = (slot: number): [number, number] => boxPoint(boxFor(slot, facingOf(slot)), facingOf(slot), HEAD_PCT);
 
   const acts: Act[] = people.map((d, slot) => {
     const facing = facingOf(slot);
     const hat = hatOf(d.id);
     const base: Act = { pose: "idle", facing, hat, fires: false, hatFlies: false };
     if (!result) {
-      // Intro: idle. Open: hand over the holster once they have answered.
       const answered = view.phase === "open" && live.get(d.id)?.answered;
       return { ...base, pose: answered ? "ready" : "idle" };
     }
@@ -487,7 +465,7 @@ function ArenaPanel({
       return { ...base, pose: "walk1", clip: "walk", facing: up ? "left" : "right", hat: slot === loser ? undefined : hat, leaving: up ? "up" : "down" };
     }
     if (result.draw) {
-      // Both draw and fire, and both miss: the shot goes high over the other's head.
+      // why: both fire and both miss, so the shot goes high over the other's head.
       const target = slot < 2 ? headOf(1 - slot) : undefined;
       const pose: DuelPose = step >= STEP_SETTLE ? "idle" : step >= STEP_FIRE ? "fire" : step >= STEP_DRAW ? "draw" : "ready";
       return { ...base, pose, fires: step === STEP_FIRE && slot < 2, target: target && [target[0], target[1] - 14] };
@@ -502,7 +480,7 @@ function ArenaPanel({
       };
     }
     if (slot === loser) {
-      // The stagger clip (ending back on idle) and the hat's flight run on through the settle step.
+      // why: the stagger clip and the hat's flight run on through the settle step.
       if (step >= STEP_FIRE) return { ...base, pose: "stagger", clip: "stagger", hat: undefined, hatFlies: true };
       return { ...base, pose: "ready" };
     }
@@ -553,7 +531,7 @@ function ArenaPanel({
       })}
       {acts.map((a, slot) => {
         if (!a.hatFlies) return null;
-        // The flight starts from the worn hat's own box, so the hat neither jumps nor grows as it is shot off.
+        // why: the flight starts from the worn hat's box, so the hat neither jumps nor grows.
         const box = boxFor(slot, a.facing);
         const worn = duelHat("idle");
         const [x, y] = boxPoint(box, a.facing, worn);
@@ -570,11 +548,7 @@ function ArenaPanel({
       {result?.draw && step === STEP_FIRE && (
         <>
           {people.map((_, slot) => (
-            <div
-              key={`dust${round}-${slot}`}
-              class="duel-fx duel-dust"
-              style={{ left: `${slotCentreX(slot)}%`, top: `${100 - (slot === 2 ? THIRD_BOTTOM : BOX_BOTTOM) - 4}%` }}
-            >
+            <div key={`dust${round}-${slot}`} class="duel-fx duel-dust" style={{ left: `${slotCentreX(slot)}%`, top: `${100 - slotBox(slot).bottom - 4}%` }}>
               <DustPuff />
             </div>
           ))}
@@ -597,7 +571,6 @@ function ArenaPanel({
   );
 }
 
-/** Christmas art shares the same ladder, score tags and movement timing. */
 function ChristmasArenaPanel({
   arena,
   result,
@@ -647,7 +620,6 @@ function ChristmasArenaPanel({
   );
 }
 
-/** Name under a duelist; on the reveal ✓/✗ and the answer time, then where they go next. */
 function NameTag({
   slot,
   name,
@@ -822,8 +794,7 @@ export function duelCue(view: DuelView): MusicCue {
   if (modeTheme("duel", view.theme) === "christmas")
     return { track: track(view.phase === "podium" ? "results" : "play"), intensity: view.phase === "open" ? 0.6 : 0.25 };
   if (view.phase === "podium") return { track: track("results") };
-  // Rounds are quick, so the build starts in the intro (the whistle is already on the tune)
-  // and reaches full gallop halfway through the question's time.
+  // why: rounds are quick, so the build starts in the intro and reaches full gallop halfway through the question.
   if (view.phase === "intro") return { track: track("play"), intensity: 0.3, rampTo: 0.5, rampMs: view.phaseRemainingMs, key: `duel-r${view.round}-intro` };
   if (view.phase === "open") {
     const full = view.phaseDurationMs / 2;
@@ -831,7 +802,7 @@ export function duelCue(view: DuelView): MusicCue {
     const start = Math.min(1, elapsed / Math.max(1, full));
     return { track: track("play"), intensity: 0.5 + start * 0.5, rampTo: 1, rampMs: Math.max(0, full - elapsed), key: `duel-r${view.round}-open` };
   }
-  // The reveal eases back to the riding beat (no silence between quick rounds); the draw sting (DuelStage) plays over it.
+  // why: no silence between quick rounds; the draw sting plays over the riding beat.
   return { track: track("play"), intensity: 0.3, key: `duel-r${view.round}-${view.phase}` };
 }
 

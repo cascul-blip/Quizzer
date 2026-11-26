@@ -5,7 +5,7 @@ import type { GameHub } from "../src/server/ws.ts";
 import { FakeClock, tempDir } from "./helpers.ts";
 import { fakeHub, HubSocket } from "./hub-harness.ts";
 
-/** The host machine's own address, exempt from the per-device caps. */
+/** why: the host machine's own address is exempt from the per-device caps. */
 const HOST_ADDRESS = "127.0.0.1";
 
 describe("Per-device caps", () => {

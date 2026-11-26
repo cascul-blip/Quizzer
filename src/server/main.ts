@@ -26,14 +26,11 @@ function openBrowser(url: string): void {
   try {
     Bun.spawn(cmd, { stdio: ["ignore", "ignore", "ignore"] }).unref();
   } catch {
-    // No browser available; the URL is printed anyway.
+    // why: with no browser the printed URL is enough.
   }
 }
 
-/**
- * Print an error and exit. When the Windows exe was double-clicked, the console
- * window would vanish instantly, so wait for Enter first.
- */
+// why: a double-clicked Windows exe's console closes at exit, so wait for Enter first.
 async function fail(message: string, code = 1): Promise<never> {
   console.error(message);
   if (process.platform === "win32" && isCompiled() && process.stdin.isTTY) {
@@ -85,7 +82,7 @@ async function main(): Promise<void> {
       store,
       port,
       version: pkg.version,
-      address: values.host,
+      forcedAddress: values.host,
       development: values.dev && !isCompiled(),
       log: (msg) => console.log(`[${new Date().toLocaleTimeString()}] ${msg}`),
     });

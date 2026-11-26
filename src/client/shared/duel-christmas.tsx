@@ -24,11 +24,11 @@ export function snowballBackground(arena: number, phone = isPhoneArt()): string 
   const index = arena <= 1 ? 0 : 1 + (Math.max(0, Math.floor(arena) - 2) % 3);
   return (phone ? PHONE : HOST)[index]!;
 }
-/** Files already asked for; the Image objects are kept so the browser keeps them decoded. */
+// why: the Image objects are held so the browser keeps them decoded.
 const warmed = new Set<string>();
 const held: HTMLImageElement[] = [];
 
-/** Fetch and decode files one after another, so a whole class doesn't hit the Wi-Fi at once. */
+// why: one file at a time, so a whole class doesn't hit the Wi-Fi at once.
 function warmInOrder(srcs: string[], i = 0): void {
   const src = srcs[i];
   if (src === undefined) return;
@@ -43,17 +43,13 @@ function warmInOrder(srcs: string[], i = 0): void {
     .then(() => warmInOrder(srcs, i + 1));
 }
 
-/**
- * Get the snowball art ready. The projector loads every arena. A phone only ever shows its own
- * arena, so it loads that backdrop (call again when the arena changes) plus the elf sheet and puff.
- */
+// why: a phone only ever shows its own arena, so call again when the arena changes.
 export function preloadSnowballArt(phone = isPhoneArt(), arena?: number) {
   if (!phone) return warmInOrder([...HOST, sheet, puff]);
   warmInOrder([...(arena === undefined ? [] : [snowballBackground(arena, true)]), phoneSheet, phonePuff]);
 }
 
-// Head centers in % of each square animation cell, measured against its collar.
-const HEAD = [
+const HEAD_CENTER_PCT_OF_CELL = [
   [53, 13],
   [55, 19],
   [53, 13],
@@ -82,7 +78,7 @@ function useReducedMotion() {
   return reduced;
 }
 
-/** Elapsed server time is used only when the round changes, never restarted by snapshots. */
+// why: elapsed is read only when the round changes, so snapshots never restart the clock.
 function useSnowballTime(round: number, active: boolean, elapsed: number) {
   const [time, setTime] = useState(active ? elapsed : 0);
   const offset = useRef(elapsed);
@@ -98,7 +94,7 @@ function useSnowballTime(round: number, active: boolean, elapsed: number) {
       setTime(t);
       if (t < SNOW_END_MS) raf = requestAnimationFrame(tick);
     };
-    // Reduced motion still advances the static result and clears the puff.
+    // why: runs under reduced motion too, to advance the static result and clear the puff.
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, [round, active]);
@@ -106,7 +102,7 @@ function useSnowballTime(round: number, active: boolean, elapsed: number) {
 }
 
 function Elf({ avatar, frame, right, phone }: { avatar: AvatarChoice; frame: number; right: boolean; phone: boolean }) {
-  const [x, y] = HEAD[frame]!;
+  const [x, y] = HEAD_CENTER_PCT_OF_CELL[frame]!;
   return (
     <>
       <div class="snowball-shadow" />
@@ -121,7 +117,6 @@ function Elf({ avatar, frame, right, phone }: { avatar: AvatarChoice; frame: num
   );
 }
 
-/** Shared by actual host arenas and the phone strip, including odd-player duels. */
 export function SnowballScene({
   arena,
   people,

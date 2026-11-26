@@ -1,4 +1,3 @@
-// One pre-rendered granite tile per board index, in perspective (see robot-art.tsx Board).
 import t000 from "./tiles/t-000.webp";
 import t001 from "./tiles/t-001.webp";
 import t002 from "./tiles/t-002.webp";

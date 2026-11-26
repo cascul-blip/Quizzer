@@ -5,10 +5,9 @@ import { STREAK_MIN, TEAMS } from "../../shared/protocol.ts";
 import { PinIcon } from "./pin.tsx";
 import { Tex } from "./tex.tsx";
 
-/** Text colour on a team-coloured background: white, but dark on the bright yellow team. */
+/** why: white text is unreadable on the bright yellow team, so that one gets dark ink. */
 export const teamInk = (color: string | undefined): string => (color?.toLowerCase() === TEAMS[2].color ? "#2b2100" : "#fff");
 
-/** CSS variables for a team-coloured element: --team, and --team-ink for text on it. */
 export const teamVars = (color: string | undefined) => ({ "--team": color, "--team-ink": teamInk(color) });
 
 export function Shape({ index }: { index: number }) {
@@ -25,7 +24,6 @@ export function Shape({ index }: { index: number }) {
   );
 }
 
-/** 🔥 x4: shown next to a name once a player has STREAK_MIN+ correct answers in a row. */
 export function StreakBadge({ streak }: { streak: number }) {
   if (streak < STREAK_MIN) return null;
   return (
@@ -35,12 +33,11 @@ export function StreakBadge({ streak }: { streak: number }) {
   );
 }
 
-/** For true/false, use blue for True and red for False, as Kahoot does. */
+/** why: true/false uses blue for True and red for False, as Kahoot does. */
 export function optionColor(type: string, index: number): number {
   return type === "true_false" ? (index === 0 ? 1 : 0) : index;
 }
 
-/** The phone's "Answer locked in" badge: the option's colour and shape, or the pin and its spot. */
 export function LockedChoice({ type, index, label }: { type: string; index: number; label: string }) {
   if (type === "pin") {
     return (
@@ -61,20 +58,17 @@ export function LockedChoice({ type, index, label }: { type: string; index: numb
   );
 }
 
-/**
- * Seconds left in a server countdown. `remainingMs` is relative to when the
- * message arrived, so client/server clock differences don't matter.
- */
+/** why: `remainingMs` is relative to when the message arrived, so client/server clock skew doesn't matter. */
 export function useCountdown(remainingMs: number, key: string): number {
-  // Only reset when the phase/question (key) changes, not on every snapshot.
+  // why: reset only when the phase/question key changes, not on every snapshot.
   const ref = useRef<{ key: string; deadline: number } | null>(null);
   if (!ref.current || ref.current.key !== key) ref.current = { key, deadline: performance.now() + remainingMs };
   const [, force] = useState(0);
   useEffect(() => {
     if (remainingMs <= 0) return;
     let id: ReturnType<typeof setTimeout>;
-    // Re-render only when the seconds shown change (just after each whole second), and stop at 0:
-    // the caller is usually a whole stage, so every render redraws its art.
+    // why: re-render only when the shown second changes, stopping at 0: the caller is usually a
+    // whole stage, so every render redraws its art.
     const wake = () => {
       const left = ref.current!.deadline - performance.now();
       if (left > 0) id = setTimeout(tick, nextSecondIn(left));
@@ -89,13 +83,10 @@ export function useCountdown(remainingMs: number, key: string): number {
   return Math.max(0, Math.ceil((ref.current.deadline - performance.now()) / 1000));
 }
 
-/** Milliseconds until the displayed second changes, with 5ms slack unless exact timing matters. */
 export function nextSecondIn(leftMs: number, slackMs = 5): number {
-  // ceil(left / 1000) drops by one once left reaches the whole second below it.
   return leftMs - (Math.ceil(leftMs / 1000) - 1) * 1000 + slackMs;
 }
 
-/** 125 → "2:05" */
 export function formatClock(secs: number): string {
   return `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}`;
 }
@@ -125,11 +116,7 @@ export function ConnBanner({ status }: { status: string }) {
 
 const RELOAD_KEY = "quizzer.autoReloadAt";
 
-/**
- * If a screen fails to render (e.g. a page left open from an older version),
- * reload once automatically; if it happens again soon after, offer a button
- * instead of freezing on the last good screen.
- */
+/** why: a render failure (e.g. a page from an older version) reloads once; a repeat soon after shows a button instead of freezing. */
 export class ErrorBoundary extends Component<{ children: ComponentChildren }, { failed: boolean }> {
   state = { failed: false };
 
@@ -144,7 +131,7 @@ export class ErrorBoundary extends Component<{ children: ComponentChildren }, { 
         return;
       }
     } catch {
-      // storage unavailable: fall through to the manual button
+      // why: storage unavailable: fall through to the manual button
     }
     this.setState({ failed: true });
   }
@@ -174,7 +161,6 @@ export class ErrorBoundary extends Component<{ children: ComponentChildren }, { 
   }
 }
 
-/** A typed answer: a text box and a Send button (Enter also sends). Disabled once an answer is on its way. */
 export function TextAnswer({ onSubmit, disabled = false }: { onSubmit: (text: string) => void; disabled?: boolean }) {
   const [text, setText] = useState("");
   const ready = text.trim() !== "" && !disabled;

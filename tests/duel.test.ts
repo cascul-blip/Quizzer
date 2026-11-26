@@ -22,7 +22,7 @@ function quiz(count = 20): Quiz {
   });
 }
 
-/** Shuffles leave everything in place, so the ladder starts in join order. */
+/** why: shuffles leave everything in place, so the ladder starts in join order. */
 const keepOrder = () => 0.999999;
 
 function seeded(seed = 42) {
@@ -53,10 +53,8 @@ function answer(game: DuelGame, p: DuelPlayer, right: boolean): boolean {
   return game.answer(p.id, game.qIndex, option);
 }
 
-/**
- * Play the current round to its reveal. `plan` lists who answers, in order, right (true) or wrong (false),
- * 100 ms apart. Players left out don't answer; the host closes the question if it is still open.
- */
+/** why: `plan` lists who answers, in order, right (true) or wrong (false), 100 ms apart.
+ * Players left out don't answer; the host closes the question if it is still open. */
 function round(game: DuelGame, clock: FakeClock, plan: [string, boolean][]) {
   expect(game.phase).toBe("intro");
   clock.advance(INTRO_MS);
@@ -194,7 +192,7 @@ describe("Showdown", () => {
       ],
     ]);
     expect(v.players.map((p) => [p.nickname, p.rank, p.arena, p.startArena])).toEqual([
-      // Nobody has points yet, so everyone shares first place (listed in ladder order).
+      // why: nobody has points yet, so everyone shares first place (listed in ladder order).
       ["A", 1, 1, 1],
       ["B", 1, 1, 1],
       ["C", 1, 2, 2],
@@ -228,7 +226,7 @@ describe("Showdown", () => {
 
   test("6 players: one round of duels and the ladder moves", () => {
     const { game, clock } = setup(["A", "B", "C", "D", "E", "F"]);
-    // A right vs B wrong; C and D both right, D faster; E and F both wrong → draw.
+    // why: A right vs B wrong; C and D both right, D faster; E and F both wrong → draw.
     round(game, clock, [
       ["D", true],
       ["C", true],
@@ -241,7 +239,6 @@ describe("Showdown", () => {
     expect(v.correct).toEqual([0]);
     expect(v.answeredCount).toBe(6);
     expect(v.question!.options).toEqual(["yes", "no", "maybe"]);
-    // The arenas still show the round as it was played.
     expect(v.arenas.map((a) => a.duelists.map((d) => d.nickname))).toEqual([
       ["A", "B"],
       ["C", "D"],
@@ -267,7 +264,7 @@ describe("Showdown", () => {
           ["D", true, 100, "win", 1],
         ],
       ],
-      // The draw blocks the boundary above it: C stays in Arena 2.
+      // why: the draw blocks the boundary above it, so C stays in Arena 2.
       [
         3,
         true,
@@ -316,7 +313,7 @@ describe("Showdown", () => {
       ["E", "F", "G"],
     ]);
     expect(game.playerView(byName(game, "F").id)!.opponents.map((o) => o.nickname)).toEqual(["E", "G"]);
-    // Arena 2: C beats D. Arena 3: G right (wins), E wrong (middle), F no answer (loses).
+    // why: Arena 2: C beats D. Arena 3: G right (wins), E wrong (middle), F no answer (loses).
     round(game, clock, [
       ["A", true],
       ["B", true],
@@ -332,7 +329,7 @@ describe("Showdown", () => {
       ["F", null, "lose", 3],
       ["G", true, "win", 2],
     ]);
-    // B ↔ C at boundary 1-2, D ↔ G at boundary 2-3; F stays at the bottom.
+    // why: B ↔ C at boundary 1-2, D ↔ G at boundary 2-3; F stays at the bottom.
     expect(ladderNames(game)).toEqual(["A", "C", "B", "G", "D", "E", "F"]);
     game.next();
     expect(arenaNames(game)).toEqual([
@@ -353,12 +350,12 @@ describe("Showdown", () => {
     expect(game.hostView().answeredCount).toBe(2);
     expect(answer(game, byName(game, "C"), true)).toBe(true);
     expect(game.phase).toBe("reveal");
-    // A and B answered at the same moment: a draw. C beats the absent D.
+    // why: A and B answered at the same moment (a draw); C beats the absent D.
     expect(game.lastRound!.arenas.map((a) => [a.draw, a.duelists.map((d) => d.outcome)])).toEqual([
       [true, ["stay", "stay"]],
       [false, ["win", "lose"]],
     ]);
-    // Arena 1 drew, so C can't climb; D is still on the ladder.
+    // why: Arena 1 drew, so C can't climb; D is still on the ladder.
     expect(ladderNames(game)).toEqual(["A", "B", "C", "D"]);
     expect(game.hostView().arenas[1]!.duelists.map((d) => [d.nickname, d.connected])).toEqual([
       ["C", true],
@@ -403,7 +400,7 @@ describe("Showdown", () => {
     expect(game.phase).toBe("open");
     expect(game.hostView()).toMatchObject({ phaseRemainingMs: 20_000, phaseDurationMs: 20_000 });
     clock.advance(20_000);
-    // A last-moment answer still counts within the grace.
+    // why: a last-moment answer still counts within the grace.
     expect(answer(game, byName(game, "B"), true)).toBe(true);
     expect(game.lastRound).toBeNull();
     clock.advance(GRACE_MS);
@@ -437,7 +434,7 @@ describe("Showdown", () => {
     const lv = game.playerView(late.id)!;
     expect(lv).toMatchObject({ phase: "open", opponents: [], me: { rank: 1 } });
     expect(lv.arena).toBe(2);
-    // Not in an arena this round: can't answer and doesn't hold up the early close.
+    // why: not in an arena this round, so can't answer and doesn't hold up the early close.
     expect(answer(game, late, true)).toBe(false);
     for (const n of ["A", "B", "C"]) answer(game, byName(game, n), true);
     expect(game.phase).toBe("open");
@@ -446,7 +443,7 @@ describe("Showdown", () => {
     expect(game.lastRound!.arenas.flatMap((a) => a.duelists.map((d) => d.nickname))).not.toContain("Late");
     expect(game.hostView().players.find((p) => p.nickname === "Late")).toMatchObject({ rank: 4, arena: 2, startArena: 2, wins: 0 });
     game.next();
-    // A beat B in Arena 1 (stays), C beat D; Late joins the bottom arena: a 3-way duel.
+    // why: A beat B in Arena 1 (stays), C beat D; Late joins the bottom arena for a 3-way duel.
     expect(arenaNames(game)).toEqual([
       ["A", "B"],
       ["C", "D", "Late"],
@@ -463,7 +460,7 @@ describe("Showdown", () => {
       answer(game, byName(game, n), n !== "B");
     }
     expect(game.phase).toBe("open");
-    // D is the last one missing: kicking them closes the question.
+    // why: D is the last one missing, so kicking them closes the question.
     expect(game.kick(byName(game, "D").id)!.nickname).toBe("D");
     expect(game.phase).toBe("reveal");
     expect(game.lastRound!.arenas.map((a) => [a.draw, a.duelists.map((d) => [d.nickname, d.outcome])])).toEqual([
@@ -483,7 +480,7 @@ describe("Showdown", () => {
         ],
       ],
     ]);
-    // C's arena has no winner or loser: both of its boundaries are blocked. F moves to the top of Arena 3.
+    // why: C's arena has no winner or loser, so both its boundaries block; F moves to the top of Arena 3.
     expect(ladderNames(game)).toEqual(["A", "B", "C", "F", "E"]);
     game.next();
     expect(arenaNames(game)).toEqual([
@@ -491,7 +488,6 @@ describe("Showdown", () => {
       ["C", "F", "E"],
     ]);
     expect(game.kick("nobody")).toBeNull();
-    // A kicked player whose arena empties takes the arena with them.
     const solo = setup(["A", "B", "C", "D", "E"]);
     solo.game.kick(byName(solo.game, "A").id);
     solo.game.kick(byName(solo.game, "B").id);
@@ -514,7 +510,7 @@ describe("Showdown", () => {
     for (let r = 0; r < 10; r++) {
       expect(game.hostView().question).toMatchObject({ index: r, total: 10 });
       seen.push(game.currentQuestion!.id);
-      // A always wrong, B wrong only on q0.
+      // why: A always wrong, B wrong only on q0.
       round(game, clock, [
         ["A", false],
         ["B", game.currentQuestion!.id !== "q0"],
@@ -531,7 +527,7 @@ describe("Showdown", () => {
 
   test("a full game: podium, final ranking, awards, results sheet", () => {
     const { game, clock, finished } = setup(["A", "B", "C", "D", "E", "F"], { rounds: 10 });
-    // Round 1: everyone in a lower arena wins: D, F climb; A holds the Throne.
+    // why: round 1, everyone in a lower arena wins: D, F climb; A holds the Throne.
     round(game, clock, [
       ["A", true],
       ["D", true],
@@ -542,7 +538,7 @@ describe("Showdown", () => {
     ]);
     expect(ladderNames(game)).toEqual(["A", "D", "B", "F", "C", "E"]);
     game.next();
-    // Round 2: [A D] [B F] [C E] — the second of each arena wins.
+    // why: round 2, [A D] [B F] [C E], the second of each arena wins.
     round(game, clock, [
       ["D", true],
       ["F", true],
@@ -551,7 +547,7 @@ describe("Showdown", () => {
       ["B", false],
       ["C", false],
     ]);
-    // D takes the Throne; A ↔ F; B ↔ E.
+    // why: D takes the Throne; A ↔ F; B ↔ E.
     expect(ladderNames(game)).toEqual(["D", "F", "A", "E", "B", "C"]);
     game.next();
     expect(game.hostView().round).toBe(3);
@@ -564,8 +560,8 @@ describe("Showdown", () => {
 
     const v = game.hostView();
     expect(v).toMatchObject({ phase: "podium", question: null, arenas: [], correct: null });
-    // Every round has 3 arenas: a win is worth 3 on High Noon, 2 in Arena 2, 1 in Arena 3.
-    // F and A tie on 3 points; F has more correct answers, so F takes 2nd and A 3rd.
+    // why: 3 arenas make a win worth 3 on High Noon, 2 in Arena 2, 1 in Arena 3;
+    // F and A tie on 3 points but F has more correct answers, so F takes 2nd.
     expect(v.players.map((p) => [p.nickname, p.rank, p.points, p.arena, p.startArena, p.wins, p.reign])).toEqual([
       ["D", 1, 5, 1, 2, 2, 1],
       ["F", 2, 3, 1, 3, 2, 0],
@@ -627,7 +623,7 @@ describe("Showdown", () => {
 
   test("points decide the ranking, not the ladder; the round's arena count sets the value", () => {
     const { game, clock } = setup(["A", "B", "C", "D"], { rounds: 10 });
-    // Round 1: [A B] [C D]. A wins High Noon (2 pts), D wins Arena 2 (1 pt); D swaps up with B.
+    // why: round 1 [A B] [C D]: A wins High Noon (2 pts), D wins Arena 2 (1 pt); D swaps up with B.
     round(game, clock, [
       ["A", true],
       ["D", true],
@@ -645,7 +641,7 @@ describe("Showdown", () => {
       ],
     ]);
     game.next();
-    // Round 2: [A D] [B C]. D takes High Noon (2 pts), B wins Arena 2 (1 pt).
+    // why: round 2 [A D] [B C]: D takes High Noon (2 pts), B wins Arena 2 (1 pt).
     round(game, clock, [
       ["D", true],
       ["B", true],
@@ -653,7 +649,7 @@ describe("Showdown", () => {
       ["C", false],
     ]);
     game.next();
-    // Round 3: [D B] [A C]. Only A is right (1 pt); High Noon drew, so A can't climb past B.
+    // why: round 3 [D B] [A C]: only A is right (1 pt); High Noon drew, so A can't climb past B.
     round(game, clock, [
       ["A", true],
       ["D", false],
@@ -662,14 +658,14 @@ describe("Showdown", () => {
     ]);
     expect(ladderNames(game)).toEqual(["D", "B", "A", "C"]);
     game.end();
-    // A (2 + 1) and D (1 + 2) tie on 3 points and 2 correct answers, so they share first place, D listed first as higher on the ladder. A outranks B, who is above A on the ladder.
+    // why: A and D tie on 3 points and 2 correct, so share first (D higher on the ladder); A outranks B.
     expect(game.hostView().players.map((p) => [p.nickname, p.rank, p.points])).toEqual([
       ["D", 1, 3],
       ["A", 1, 3],
       ["B", 3, 1],
       ["C", 4, 0],
     ]);
-    // A late joiner makes 3 arenas: High Noon is now worth 3.
+    // why: a late joiner makes 3 arenas, so High Noon is now worth 3.
     const late = setup(["A", "B", "C", "D"]);
     late.game.join("E");
     late.game.join("F");

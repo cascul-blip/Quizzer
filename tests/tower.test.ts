@@ -17,13 +17,12 @@ import { EGG_LEVELS_ABOVE } from "../src/shared/modes/tower.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
 import { FakeClock, sampleQuiz } from "./helpers.ts";
 
-/** Rows are 0-based, so the egg EGG_LEVELS_ABOVE levels above `floors` full floors sits in this row. */
+/** why: rows are 0-based, hence the -1. */
 function eggRowFor(floors: number): number {
   return floors + EGG_LEVELS_ABOVE - 1;
 }
 
-/** 6 questions whose correct answer is always "yes" (index 0 unless shuffled). */
-function quiz(): Quiz {
+function allYesQuiz(): Quiz {
   return sampleQuiz({
     questions: Array.from({ length: 6 }, (_, i) => ({
       id: `q${i}`,
@@ -42,7 +41,7 @@ function setup(
 ) {
   const clock = new FakeClock();
   let finished = 0;
-  const lobby = new Lobby(quiz());
+  const lobby = new Lobby(allYesQuiz());
   lobby.setMode("tower");
   lobby.setModeSettings("tower", { teams: opts.teams ?? 2, minutes: opts.minutes ?? 5, monster: opts.monster ?? false });
   if (opts.shuffleAnswers) lobby.setShuffle({ questions: false, answers: true });
@@ -66,14 +65,14 @@ function answer(game: TowerGame, clock: FakeClock, p: TowerPlayer, right: boolea
   const cur = game.playerView(p.id)!.question!;
   const option = right ? cur.options.indexOf("yes") : cur.options.findIndex((option) => option !== "yes");
   expect(game.answer(p.id, cur.seq, option)).toBe(true);
-  // The flash is hidden once the player moves on to building, so wait it out by its length.
+  // why: the flash is hidden once the player moves on to building.
   clock.advance(FEEDBACK_MS);
 }
 
 describe("Lobby handoff", () => {
   test("themes survive lobby edits and are shared by host and players", () => {
     const clock = new FakeClock();
-    const lobby = new Lobby(quiz());
+    const lobby = new Lobby(allYesQuiz());
     lobby.setMode("tower");
     const player = lobby.join("Builder");
     expect(lobby.settings.tower.theme).toBe("christmas");
@@ -133,7 +132,6 @@ describe("Lobby handoff", () => {
     game.kick(byName(game, "B").id);
     expect(game.join("Late").team).toBe(1);
     expect(game.join("Later").team).toBe(0);
-    // Joining mid-game deals a question straight away.
     expect(game.playerView(byName(game, "Late").id)!.question).not.toBeNull();
     clock.advance(1);
   });
@@ -170,7 +168,6 @@ describe("questions", () => {
     const v = game.playerView(a.id)!;
     expect(v.feedback).toEqual({ seq, correct: true, remainingMs: 1000, answers: [], penaltyDurationMs: 0 });
     expect(v.question!.seq).toBe(seq + 1);
-    // Too soon: still in the feedback window.
     expect(game.answer(a.id, game.playerView(a.id)!.question!.seq, 0)).toBe(false);
     clock.advance(FEEDBACK_MS);
     expect(game.playerView(a.id)!.feedback).toBeNull();
@@ -242,7 +239,6 @@ describe("building", () => {
     expect(a).toMatchObject({ placed: 3, missed: 1, blocksHeld: 0, state: "question" });
     expect(game.hostView().teams[0]).toMatchObject({ floors: 1, placed: 3 });
 
-    // Teammate B stacks the left column: height, but no new floor.
     const b = byName(game, "B");
     toBuild(game, clock, b);
     for (const z of [1, 1, 1, 4]) {
@@ -256,7 +252,7 @@ describe("building", () => {
   test("drops are rate-limited and validated", () => {
     const { game, clock } = play(["A"]);
     const a = byName(game, "A");
-    expect(game.drop(a.id, 2)).toBeNull(); // not building
+    expect(game.drop(a.id, 2)).toBeNull();
     toBuild(game, clock, a);
     expect(game.drop(a.id, 5)).toBeNull();
     expect(game.drop(a.id, 1.5)).toBeNull();
@@ -276,9 +272,9 @@ describe("building", () => {
 describe("end of game", () => {
   test("the timer ends the game; teams rank by floors then blocks; awards", () => {
     const { game, clock, finished } = play(["A", "B", "C"], { teams: 3, minutes: 2 });
-    game.teams[0]!.columns = [2, 2, 2]; // 2 floors, 6 blocks
-    game.teams[1]!.columns = [3, 2, 4]; // 2 floors, 9 blocks
-    game.teams[2]!.columns = [5, 0, 5]; // 0 floors
+    game.teams[0]!.columns = [2, 2, 2];
+    game.teams[1]!.columns = [3, 2, 4];
+    game.teams[2]!.columns = [5, 0, 5];
     answer(game, clock, byName(game, "A"), true);
     answer(game, clock, byName(game, "B"), true);
     byName(game, "C").placed = 3;
@@ -369,13 +365,11 @@ describe("monster", () => {
     clock.advance(36_000 - 1);
     expect(game.egg).toBeNull();
     clock.advance(1);
-    // Empty towers: level 4 (row 3) on each.
     expect(game.egg!.cells).toEqual([
       { col: 0, row: 3 },
       { col: 0, row: 3 },
     ]);
     expect(game.hostView().nextMonsterRemainingMs).toBe(36_000);
-    // Unhatched eggs stay put; the later announcements don't add more.
     const first = game.egg!.seq;
     clock.advance(36_000);
     expect(game.egg!.seq).toBe(first);
@@ -404,12 +398,11 @@ describe("monster", () => {
     const { game, clock } = play(["A", "B", "C"], { teams: 3, minutes: 3, monster: true, rng: () => 0 });
     game.teams[0]!.columns = [10, 10, 10];
     game.teams[1]!.columns = [8, 9, 8];
-    game.teams[2]!.columns = [20, 5, 13]; // left and right are already stacked past the egg
+    game.teams[2]!.columns = [20, 5, 13];
     clock.advance(60_000);
     expect(egg(game, 0)).toEqual({ col: 0, row: eggRowFor(10) });
     expect(egg(game, 1)).toEqual({ col: 0, row: eggRowFor(8) });
     expect(egg(game, 2)).toEqual({ col: 1, row: eggRowFor(5) });
-    // With any random draw, the chosen cell is always empty.
     for (const r of [0, 0.34, 0.67, 0.99]) {
       const g = play(["A", "B"], { minutes: 3, monster: true, rng: () => r });
       g.game.teams[0]!.columns = [9, 3, 12];
@@ -425,14 +418,14 @@ describe("monster", () => {
     const { game, clock } = play(["Red1", "Blue1", "Yellow1"], { teams: 3, minutes: 3, monster: true, rng: () => 0.5 });
     const [red, blue, yellow] = game.teams;
     red!.columns = [1, 1, 1];
-    blue!.columns = [4, 4, 5]; // leader: 4 floors
+    blue!.columns = [4, 4, 5];
     yellow!.columns = [3, 3, 3];
     clock.advance(60_000);
     expect(egg(game, 0)).toEqual({ col: 1, row: eggRowFor(1) });
 
     const r = byName(game, "Red1");
     red!.columns = [1, 4, 1];
-    dropInto(game, clock, r, [3, 2]); // right column (no), then center fills row 4 → hatch!
+    dropInto(game, clock, r, [3, 2]);
     expect(game.egg).toBeNull();
     expect(r.hatched).toBe(1);
     expect(game.lastAttack).toMatchObject({ byTeam: 0, byNickname: "Red1", target: 1, before: [4, 4, 5], after: [2, 2, 2] });
@@ -449,7 +442,7 @@ describe("monster", () => {
     game.teams[1]!.columns = [1, 1, 1];
     game.teams[2]!.columns = [1, 1, 1];
     clock.advance(60_000);
-    // B lands on row 8 of column 0 — that's A's egg position, not B's (B's is row 4).
+    // why: row 8 of column 0 is A's egg position, not B's (row 4).
     game.teams[1]!.columns = [8, 1, 1];
     dropInto(game, clock, byName(game, "B"), [1]);
     expect(game.egg).not.toBeNull();
@@ -468,7 +461,7 @@ describe("monster", () => {
     game.end();
     expect(game.egg).toBeNull();
     expect(game.hostView().nextMonsterRemainingMs).toBeNull();
-    clock.advance(10 * 60_000); // no timers left to fire
+    clock.advance(10 * 60_000);
     expect(game.lastAttack).toBeNull();
   });
 });

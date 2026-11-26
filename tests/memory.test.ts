@@ -641,7 +641,7 @@ describe("Memory Game", () => {
       if (pair % 3 === 0) for (let i = 0; i < 3; i++) playQuestion(host, [noel!]);
       expect(projector().board).toEqual(expectedBoard);
       expect(player(noel!)).toMatchObject({ boardSize, turn: { board: expectedBoard } });
-      // The deterministic shuffle shifts the original first card to the end of the board.
+      // why: the deterministic shuffle shifts the original first card to the end of the board.
       const positions: [number, number] = pair === 0 ? [0, expectedBoard.length - 1] : [pair * 2 - 1, pair * 2];
       confirmPair(noel!, positions);
       const exposed = facesUp();
@@ -655,7 +655,7 @@ describe("Memory Game", () => {
       clock.advance(1);
       for (const position of positions) expectedBoard[position] = { state: "empty" };
     }
-    // Smaller boards draw from the full pool: for this RNG, the draw moves the original first face out of the chosen subset.
+    // why: smaller boards draw from the full pool, and this RNG's draw leaves out the original first face.
     expect([...revealedFaces].sort((a, b) => a - b)).toEqual(Array.from({ length: pairCount }, (_, index) => index + (boardSize === 10 ? 0 : 1)));
     expect(projector()).toMatchObject({ phase: "podium", board: expectedBoard, players: [{ rank: 1, pairs: pairCount, chips: chipsLeft }] });
     expect(player(noel!).result).toEqual({ rank: 1, playerCount: 1 });

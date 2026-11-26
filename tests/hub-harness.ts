@@ -8,19 +8,18 @@ import type { FakeClock } from "./helpers.ts";
 type HostState = Extract<ServerMsg, { type: "host.state" }>;
 type PlayerState = Extract<ServerMsg, { type: "player.state" }>;
 
-/** One message as type, view kind and phase ("host.state tower/podium"), so a timeout reads in a line. */
+/** why: one line per message ("host.state tower/podium") keeps a timeout readable. */
 function summary(m: ServerMsg): string {
   if (m.type !== "host.state" && m.type !== "player.state") return m.type === "error" ? `error "${m.message}"` : m.type;
   const v: { kind: string; phase?: string } = m.view;
   return `${m.type} ${v.kind}${v.phase ? `/${v.phase}` : ""}`;
 }
 
-/** Messages a phone or projector received, read the way the client reads them. Shared by real and fake sockets. */
+/** why: read the way the client reads them; shared by real and fake sockets. */
 export abstract class MessageLog {
   msgs: ServerMsg[] = [];
-  /** Raw messages as received, before patches are turned back into player.state. */
+  /** why: kept before patches are turned back into player.state. */
   raw: ServerMsg[] = [];
-  /** The player's view as the phone holds it, built from snapshots and patches. */
   view: PlayerView | null = null;
   token: string | null = null;
   private waiters: (() => void)[] = [];
@@ -30,13 +29,13 @@ export abstract class MessageLog {
     this.raw.push(msg);
     if (msg.type === "player.state") this.view = msg.view;
     if (msg.type === "joined") this.token = msg.token;
-    // Tests read whole views, as the phone ends up with them.
+    // why: tests read whole views, as the phone ends up with them.
     if (msg.type === "player.patch") this.view = applyPatch(this.view!, msg.ops);
     this.msgs.push(msg.type === "player.patch" ? { type: "player.state", view: this.view! } : msg);
     this.waiters.splice(0).forEach((w) => w());
   }
 
-  /** Wait for (and consume up to) the first queued or future message matching the predicate. */
+  /** why: consumes up to the match, so later waits see only newer messages. */
   async waitFor<T extends ServerMsg>(pred: (m: ServerMsg) => m is T, timeout?: number): Promise<T>;
   async waitFor(pred: (m: ServerMsg) => boolean, timeout?: number): Promise<ServerMsg>;
   async waitFor(pred: (m: ServerMsg) => boolean, timeout = this.waitMs): Promise<ServerMsg> {
@@ -46,7 +45,7 @@ export abstract class MessageLog {
       if (i >= 0) return this.msgs.splice(0, i + 1).pop()!;
       const left = deadline - Date.now();
       if (left <= 0) throw new Error(`timeout; last got ${this.msgs.slice(-3).map(summary).join(", ") || "nothing"}`);
-      // Wakes on the next message, or once at the deadline to report the timeout.
+      // why: wakes once at the deadline too, to report the timeout.
       await new Promise<void>((r) => {
         const timer = setTimeout(r, left);
         this.waiters.push(() => {
@@ -66,7 +65,7 @@ export abstract class MessageLog {
   abstract close(): void;
 }
 
-/** A phone or projector talking to a GameHub without a real socket. Pass admin: true for the host computer. */
+/** why: drives a GameHub without a real socket; admin: true acts as the host computer. */
 export class HubSocket extends MessageLog {
   closed = false;
   bufferedAmount = 0;
@@ -76,12 +75,11 @@ export class HubSocket extends MessageLog {
     readonly hub: GameHub,
     data: Partial<SocketData> = {},
   ) {
-    // Fake sockets answer as fast as the hub does.
+    // why: fake sockets answer as fast as the hub does.
     super(2_000);
     this.data = { admin: false, ip: "127.0.0.1", role: "player", ...data };
     hub.onOpen(this);
   }
-  /** Called by the hub. */
   send(text: string, compress = false) {
     if (this.closed) return 0;
     this.compression.push(compress);
@@ -102,14 +100,14 @@ export class HubSocket extends MessageLog {
 }
 
 export function fakeHub(store: QuizStore, clock: FakeClock, port = 4321, rng?: () => number) {
-  const hub = new Hub(store, { address: "127.0.0.1", discoverAddresses: () => [], clock, rng });
+  const hub = new Hub(store, { forcedAddress: "127.0.0.1", discoverAddresses: () => [], clock, rng });
   hub.join.port = port;
   return hub;
 }
 
-/** Moves the clock past the hub's activity throttle (100 ms) so its pending room-wide update is sent. */
+/** why: passing the hub's 100 ms activity throttle sends its pending room-wide update. */
 export const pastThrottle = (clock: FakeClock) => clock.advance(100);
 
-/** Timer fields (countdowns, cooldowns, lock-outs) are left out: a snapshot where only time passed isn't sent, so the phone's can be older. */
+/** why: a snapshot where only time passed isn't sent, so the phone's timer fields can be older. */
 export const withoutTimers = (v: unknown): unknown =>
   JSON.parse(JSON.stringify(v, (k, x) => (/(remaining|decision|repair|locked|empty)Ms$/i.test(k) ? undefined : x)));

@@ -106,7 +106,7 @@ describe("pin in a game", () => {
     expect(view.result).toBeNull();
     expect(game.hostView().correct).toBeNull();
 
-    expect(game.answer(a.id, 0, 6)).toBe(false); // no such spot
+    expect(game.answer(a.id, 0, 6)).toBe(false);
     expect(game.answer(a.id, 0, 4)).toBe(true);
     expect(game.answer(b.id, 0, 1)).toBe(true);
     expect(game.phase).toBe("reveal");

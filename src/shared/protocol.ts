@@ -3,7 +3,6 @@ import type { GameMode, ProtocolOf } from "./mode-entries.ts";
 import type { HostPlayer, Pacing, TeamInfo } from "./mode-views.ts";
 import type { PatchOp } from "./view-patch.ts";
 
-/** Consecutive correct answers needed before a 🔥 streak badge shows. */
 export const STREAK_MIN = 4;
 
 export interface ShuffleOptions {
@@ -11,7 +10,7 @@ export interface ShuffleOptions {
   answers: boolean;
 }
 
-/** Each team also has a shape, so teams can be told apart without relying on colour. */
+/** why: shapes let teams be told apart without relying on colour. */
 type TeamShape = "circle" | "square" | "triangle" | "diamond" | "star" | "heart";
 
 export const TEAMS = [
@@ -25,7 +24,7 @@ export const TEAMS = [
 export const MAX_TEAMS = TEAMS.length;
 
 export type PlayerMsg =
-  /** avatar/accessory: the player's last pick, remembered on the phone (optional). */
+  /** why: avatar/accessory are the last pick remembered on the phone. */
   { type: "join"; nickname: string; avatar?: string; accessory?: string } | { type: "resume"; token: string } | ProtocolOf<GameMode>["msg"];
 
 export type ModeSettingsMap = { [M in GameMode]: ProtocolOf<M>["settings"] };
@@ -53,7 +52,6 @@ export type HostMsg =
 
 export type ClientMsg = PlayerMsg | HostMsg;
 
-/** How many errors the final screen's "Show errors" table lists (rows are QuestionError, in mode-views.ts). */
 export const ERRORS_SHOWN = 10;
 
 export interface PlayerLobbyView {
@@ -93,26 +91,25 @@ export interface HostLobbyView {
   quiz: { id: string; title: string; questionCount: number };
   pacing: Pacing;
   shuffle: ShuffleOptions;
-  /** Availability follows the shared mode entry’s protect flag. */
+  /** why: only offered when the shared mode entry's protect flag is set. */
   protect: boolean;
   players: HostPlayer[];
 }
 
 export type HostView = { kind: "idle"; phase: "idle"; join: JoinInfo } | ((HostLobbyView | GameplayHostView) & { join: JoinInfo });
 
-/** A gameplay view cannot publish the lobby phase. */
 export type GameplayPhasesExcludeLobby = AssertTrue<"lobby" extends GameplayPhase ? false : true>;
 
 type AssertTrue<T extends true> = T;
 
 export type ServerMsg =
-  /** First message on every connection. A new serverId means the server restarted (maybe with new code). */
+  /** why: a new serverId means the server restarted, maybe with new code. */
   | { type: "hello"; serverId: string }
   | { type: "player.state"; view: PlayerView }
-  /** Changes relative to the last view delivered on this connection, sent when smaller than a snapshot. */
+  /** why: diff against the last view on this connection, sent when smaller than a snapshot. */
   | { type: "player.patch"; ops: PatchOp[] }
   | { type: "host.state"; view: HostView }
-  | { type: "joined"; token: string; playerId: string /** Question images of the quiz, to preload. */; images?: string[] }
+  | { type: "joined"; token: string; playerId: string /** why: question images, for the phone to preload. */; images?: string[] }
   | { type: "kicked" }
   | { type: "resumeFailed" }
   | { type: "error"; message: string };

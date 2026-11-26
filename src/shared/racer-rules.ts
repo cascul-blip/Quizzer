@@ -1,18 +1,14 @@
-/** How sure the driver is that the class will answer this question correctly. */
 export type RacerConfidence = "low" | "mid" | "high";
-/** Lever positions from bottom to top; the lever starts on the first one. */
+/** why: ordered bottom to top; the lever starts on the first one. */
 export const RACER_CONFIDENCE_LEVELS: readonly RacerConfidence[] = ["low", "mid", "high"];
 
 export const RACER_START_MPH = 30;
 export const RACER_REPAIR_MPH = 30;
-/** A car that ends a turn slower than this has crashed (speed drops to 0). */
 export const RACER_CRASH_BELOW_MPH = 20;
-/** Speed gained when the class does as well as the lever promised. */
 export const RACER_GAIN_MPH: Record<RacerConfidence, number> = { low: 0, mid: 20, high: 40 };
-/** Each turn is this many minutes of driving at the speed the turn ended on. */
+/** why: driven at the speed the turn ended on. */
 export const RACER_TURN_MINUTES = 10;
 
-/** What the screens show for each lever position. `needs` is a one-line summary of what earns the gain. */
 export const RACER_CONFIDENCE: Record<RacerConfidence, { label: string; gain: number; needs: string }> = {
   low: { label: "Not confident", gain: RACER_GAIN_MPH.low, needs: "No speed gain. Safe if at least 1 in 4 answers right." },
   mid: { label: "Confident", gain: RACER_GAIN_MPH.mid, needs: "+20 mph if at least 2 in 3 answer right." },
@@ -20,12 +16,12 @@ export const RACER_CONFIDENCE: Record<RacerConfidence, { label: string; gain: nu
 };
 
 export interface RacerCar {
-  /** May be fractional (each fail halves it). 0 while crashed. */
+  /** why: may be fractional (each fail halves it); 0 while crashed. */
   speedMph: number;
-  /** A crashed car has no driver; it stays put until the class repairs it. */
+  /** why: a crashed car has no driver and stays put until the class repairs it. */
   crashed: boolean;
   distanceMiles: number;
-  /** Highest speed a turn ended on. */
+  /** why: speeds a turn ended on only. */
   topSpeedMph: number;
   crashes: number;
 }
@@ -34,11 +30,7 @@ export function newRacerCar(): RacerCar {
   return { speedMph: RACER_START_MPH, crashed: false, distanceMiles: 0, topSpeedMph: RACER_START_MPH, crashes: 0 };
 }
 
-/**
- * What a driven turn earns: `gain` mph (0, 20 or 40) or `fails` (0 to 3), never both.
- * `correct` of the `total` players who count answered right; no answer counts as wrong.
- * With nobody to count (total 0) nothing happens.
- */
+/** why: `gain` or `fails` (0 to 3), never both; no answer counts as wrong, and total 0 changes nothing. */
 export function racerOutcome(confidence: RacerConfidence, correct: number, total: number): { gain: number; fails: number } {
   const c = correct;
   const n = total;
@@ -55,40 +47,34 @@ export function racerOutcome(confidence: RacerConfidence, correct: number, total
   }
 }
 
-/** A crashed car is repaired when at least half of the players who count answer right. */
 export function racerRepairs(correct: number, total: number): boolean {
   return total > 0 && 2 * correct >= total;
 }
 
 interface RacerTurnInput {
-  /** The driver's locked lever; null when the turn had no driver (car crashed, or nobody connected). */
+  /** why: null when the turn had no driver (car crashed, or nobody connected). */
   confidence: RacerConfidence | null;
   correct: number;
-  /** Players who count: connected when the question closed, plus disconnected ones who answered. */
+  /** why: connected when the question closed, plus disconnected players who answered. */
   total: number;
 }
 
 export interface RacerTurnResult {
-  /** The lever that was played; null on a turn without a driver. */
   confidence: RacerConfidence | null;
   correct: number;
   total: number;
-  /** 0, 20 or 40. */
   gainMph: number;
-  /** Fail points, 0 to 3; each one halved the speed. */
+  /** why: 0 to 3; each one halved the speed. */
   fails: number;
   speedBefore: number;
   speedAfter: number;
   crashed: boolean;
   repaired: boolean;
-  /** Miles driven this turn (speedAfter for RACER_TURN_MINUTES). */
+  /** why: miles, speedAfter driven for RACER_TURN_MINUTES. */
   distanceAdded: number;
 }
 
-/**
- * Play one turn: returns the car afterwards and a summary of what happened (the input car is left untouched).
- * A crashed car ignores the lever and can only be repaired; a car without a driver keeps its speed.
- */
+/** why: the input car is left untouched; a crashed car can only be repaired, a car without a driver keeps its speed. */
 export function applyRacerTurn(car: RacerCar, turn: RacerTurnInput): { car: RacerCar; summary: RacerTurnResult } {
   const speedBefore = car.speedMph;
   let speed = car.speedMph;

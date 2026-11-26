@@ -29,7 +29,6 @@ const FALL_MS = 450;
 const HALF_BLOCK_WIDTH = 0.1;
 const LAST_BLOCK_PAUSE_MS = 500;
 
-/** Phone screen for Tallest Tower: own questions at own pace, then build mode every 4 correct answers. */
 export function TowerPlayer(props: { view: PlayerTowerView; send: Send }) {
   return (
     <TowerThemeProvider theme={props.view.theme}>
@@ -43,7 +42,7 @@ function TowerPlayerContent({ view, send }: { view: PlayerTowerView; send: Send 
   const words = towerWords(view.theme);
   const secs = useCountdown(view.remainingMs, view.phase);
 
-  // When the last block is dropped, hold build mode (from the tap, before the server even replies)
+  // why: when the last block is dropped, hold build mode (from the tap, before the server replies)
   // so the player sees it fall and land, then pause briefly before questions come back.
   const [hold, setHold] = useState<Build | null>(null);
   const holdTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -121,7 +120,6 @@ function TowerPlayerContent({ view, send }: { view: PlayerTowerView; send: Send 
   );
 }
 
-/** Monster news: a new egg (everyone), your team hatched it, or your tower got smashed. */
 function MonsterNotice({ event, egg }: { event: PlayerTowerView["monsterEvent"]; egg: MonsterEgg | null }) {
   const christmas = useChristmasTower();
   const words = towerWords(useTowerTheme());
@@ -202,7 +200,7 @@ function BuildMode(props: {
   const cell = size.w / DROP_ZONES;
   const ground = 14;
   const sliderTop = 6;
-  // While our block falls, show the tower as it was when we tapped.
+  // why: while our block falls, show the tower as it was when we tapped.
   const columns = falling ? falling.columns : build.columns;
   const tallest = Math.max(...columns);
   const visibleRows = Math.max(2, Math.floor((size.h - ground - sliderTop - cell * 1.6) / Math.max(cell, 1)));
@@ -246,7 +244,7 @@ function BuildMode(props: {
     send({ type: "tower.drop", zone });
     navigator.vibrate?.(25);
     setFalling({ zone, columns: [...build.columns], id: performance.now() });
-    // The last block stays where it landed until the screen switches back to questions.
+    // why: the last block stays where it landed until the screen switches back to questions.
     if (blocksHeld > 1) setTimeout(() => setFalling(null), FALL_MS + 30);
     else props.onLastDrop(build);
   }

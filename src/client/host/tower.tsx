@@ -140,8 +140,8 @@ function TowerStageContent({ view, send }: { view: TowerView; send: Send }) {
   );
 }
 
-/** How long the host replays a new monster attack (its animation runs about 3.4 s). */
-const ATTACK_REPLAY_MS = 3600;
+const ATTACK_ANIMATION_MS = 3400;
+const ATTACK_REPLAY_MS = ATTACK_ANIMATION_MS + 200;
 const EGG_NOTICE_MS = 4000;
 const UNIT = 10;
 const TOWER_SIDE_MARGIN = 9;
@@ -212,7 +212,7 @@ function Sky({ stage }: { stage: number }) {
 
 function Towers({ teams, phase, egg, attack }: { teams: HostTowerTeam[]; phase: TowerView["phase"] } & MonsterProps) {
   const christmas = useChristmasTower();
-  // One shared vertical scale so heights compare fairly between teams (egg and smashed blocks included).
+  // why: one shared vertical scale so heights compare fairly between teams.
   const rows = Math.max(
     8,
     ...teams.map((t) => Math.max(...t.columns) + 2),
@@ -268,7 +268,6 @@ function TowerSvg({ team, rows, phase, egg, attack }: { team: HostTowerTeam; row
       if (fresh) puffs.push(<DustPuff key={`p${key}`} x={x + UNIT / 2} y={y + UNIT} size={UNIT} />);
     }
   }
-  // Labels grow with the tower so they stay readable as the scale shrinks.
   const labelSize = 2.6 * Math.max(1, rows / 12);
   const marks = [];
   for (let f = 5; f < rows; f += 5) {
@@ -500,7 +499,6 @@ function TowerSettings({ settings, send }: LobbySettingsProps<"tower">) {
   );
 }
 
-/** The music builds over the last five minutes of the timer. */
 const BUILD_UP_MS = 300_000;
 
 export function towerCue(view: TowerView): MusicCue {

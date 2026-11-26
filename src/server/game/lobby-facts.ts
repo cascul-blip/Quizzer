@@ -8,7 +8,7 @@ export type InitialSettings = {
   [M in GameMode]?: Partial<Omit<ModeSettingsMap[M], "theme">> & ("theme" extends keyof ModeSettingsMap[M] ? { theme?: string } : object);
 };
 
-/** What the host chose in the lobby that carries over to the next one ("Play again"). */
+/** why: carries over to the next lobby ("Play again"). */
 export interface LobbyChoices {
   mode: GameMode;
   settings: InitialSettings;
@@ -20,10 +20,9 @@ export interface LobbyFacts<M extends GameMode> {
   readonly quiz: Quiz;
   readonly settings: Readonly<ModeSettingsMap[M]>;
   readonly shuffle: Readonly<ShuffleOptions>;
-  /** Effective Protect from abuse for this game mode. */
   readonly protect: boolean;
   readonly pacing: Pacing;
-  /** The lobby's own choices at Start, for the game to hand back when it closes ("Play again"). */
+  /** why: the game hands these back when it closes ("Play again"). */
   readonly choices: LobbyChoices;
   readonly players: readonly BasePlayer[];
   readonly teams: ReadonlyMap<string, number>;

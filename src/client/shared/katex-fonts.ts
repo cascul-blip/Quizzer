@@ -1,5 +1,4 @@
-// KaTeX's fonts as separate woff2 files, so the browser fetches only the faces a question uses
-// (Bun would otherwise inline every woff, woff2 and ttf into the CSS: 1.5 MB per phone).
+// why: separate woff2 files, else Bun inlines every font into the CSS (1.5 MB per phone).
 
 import f0 from "katex/dist/fonts/KaTeX_AMS-Regular.woff2";
 import f1 from "katex/dist/fonts/KaTeX_Caligraphic-Bold.woff2";
@@ -47,7 +46,6 @@ const FACES: [string, string, string, string][] = [
 
 let added = false;
 
-/** Adds the @font-face rules the first time a page shows maths. */
 export function addKatexFonts(): void {
   if (added) return;
   added = true;

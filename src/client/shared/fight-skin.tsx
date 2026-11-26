@@ -52,7 +52,7 @@ const phoneArt = {
 };
 export const fightChristmasArt = () => (isPhoneArt() ? phoneArt : gingerbreadArt);
 
-/** Release starts immediately with the authoritative shot; late snapshots resume rather than replay. */
+// why: release starts with the authoritative shot; late snapshots resume rather than replay.
 export function catapultAngle(ageMs: number): number {
   if (ageMs < 0 || ageMs >= 700) return 24;
   if (ageMs < 130) return 24 + 106 * (1 - (1 - ageMs / 130) ** 3);

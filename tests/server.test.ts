@@ -8,8 +8,8 @@ import type { ClientMsg } from "../src/shared/protocol.ts";
 import { FakeClock, tempDir } from "./helpers.ts";
 import { MessageLog, pastThrottle, withoutTimers } from "./hub-harness.ts";
 
-// Only what a real socket can show lives here: HTTP routes, the WebSocket upgrade, patches over the wire and
-// resume after a reconnect. Hub logic runs on fake sockets in tests/hub.test.ts and tests/game-modes.test.ts.
+// why: only what a real socket can show lives here; hub logic runs on fake sockets
+// in tests/hub.test.ts and tests/game-modes.test.ts.
 
 class TestSocket extends MessageLog {
   private constructor(readonly ws: WebSocket) {
@@ -31,10 +31,10 @@ class TestSocket extends MessageLog {
   close() {
     this.ws.close();
   }
-  /** Resolves once every frame the server sent before now has arrived: the pong follows them on the same connection. */
+  /** why: the pong follows every earlier frame on the same connection. */
   delivered(): Promise<void> {
     const ws = this.ws;
-    // Bun's client socket has ping(); the DOM WebSocket type doesn't declare it.
+    // why: Bun's client socket has ping(); the DOM WebSocket type doesn't declare it.
     const ping = "ping" in ws ? ws.ping : undefined;
     if (typeof ping !== "function") throw new Error("WebSocket.ping is not available");
     return new Promise((r) => {
@@ -64,7 +64,7 @@ let base: string;
 beforeAll(() => {
   t = tempDir();
   store = new QuizStore(t.dir);
-  srv = startServer({ store, port: 0, version: "test", clock, address: "127.0.0.1" });
+  srv = startServer({ store, port: 0, version: "test", clock, forcedAddress: "127.0.0.1" });
   base = `http://localhost:${srv.port}`;
 });
 afterAll(async () => {
@@ -178,7 +178,7 @@ describe("REST API", () => {
     expect((await fetch(`${base}/music/notes.txt`)).status).toBe(404);
     expect((await fetch(`${base}/music/unknown-song.mp3`)).status).toBe(404);
     expect((await fetch(`${base}/music/..%2Fquizzes%2Fx.json`)).status).toBe(404);
-    // A malformed escape is a plain 404, not a 500 with a URIError on the teacher's console.
+    // why: a malformed escape must be a 404, not a 500 with a URIError on the teacher's console.
     expect((await fetch(`${base}/music/%E0%A4%A`)).status).toBe(404);
     expect((await fetch(`${base}/api/quizzes/%E0%A4%A`)).status).toBe(404);
   });
@@ -256,14 +256,14 @@ describe("WebSocket transport", () => {
     ann!.msgs = [];
     bob!.msgs = [];
 
-    // Only the clock moved: countdowns run on the phone, so nothing is sent.
+    // why: countdowns run on the phone, so a clock-only change sends nothing.
     clock.advance(500);
     srv.hub.broadcast();
     pastThrottle(clock);
     await Promise.all([ann!.delivered(), bob!.delivered()]);
     expect([states(ann!), states(bob!)]).toEqual([0, 0]);
 
-    // Ann answers: she hears back, Bob's screen is unchanged so he gets nothing.
+    // why: Bob's screen is unchanged, so only Ann hears back.
     const q = annQ.view.kind === "tower" ? annQ.view.question! : null;
     ann!.sendMsg({ type: "tower.answer", seq: q!.seq, option: 0 });
     await ann!.playerState((v) => v.kind === "tower" && v.feedback?.seq === q!.seq);
@@ -272,7 +272,7 @@ describe("WebSocket transport", () => {
     expect(states(bob!)).toBe(0);
     await host.hostState((v) => v.kind === "tower");
 
-    // A rejected action (dropping without blocks) always resyncs the phone.
+    // why: a rejected action always resyncs the phone.
     bob!.sendMsg({ type: "tower.drop", zone: 2 });
     await bob!.playerState((v) => v.kind === "tower" && v.state === "question");
 

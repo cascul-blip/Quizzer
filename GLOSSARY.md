@@ -113,4 +113,6 @@ _Avoid_: reveal opportunity
 
 **View delivery** is how the server sends projector snapshots and phone views. A phone can receive a patch based on its last view and catch up from the latest view when its socket drains.
 
+**High Noon** is Showdown's top arena, Arena 1 on Main Street, which the top two players fight in. Its winner stays there. Below it the arenas are numbered streets.
+
 **View batching** is building every view of one broadcast together, so work the views share (a ranking, a podium) is done once. A game mode opts in through its mode entry (Classic and Showdown do).

@@ -183,7 +183,7 @@ describe("Lobby handoff", () => {
     const { joined, host } = await setup("classic", ["Noel"]);
     const activate = ClassicGame.prototype.start;
     let installedBeforeActivation = false;
-    // Classic has no gameplay view until activation starts.
+    // why: Classic has no gameplay view until activation starts.
     const observedStart = spyOn(ClassicGame.prototype, "start").mockImplementation(function (this: ClassicGame, pacing) {
       installedBeforeActivation = hub.game === this;
       activate.call(this, pacing);

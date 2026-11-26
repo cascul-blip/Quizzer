@@ -1,31 +1,25 @@
-/**
- * Tower Fight battlefield: terrain, slingshot launches and flight paths.
- *
- * Pure and deterministic so the server (which decides every hit) and the
- * screens (which animate the same arcs and preview the aim) always agree.
- * Coordinates are field units with y pointing up; ground level is GROUND.
- */
+/** why: pure and deterministic so the server (which decides hits) and screens (which animate arcs) agree. Field units, y up. */
 
 export const FIELD_W = 1000;
 export const FIELD_H = 600;
-/** Height of the flat ground the towers stand on. */
+/** why: field units; the flat ground the towers stand on. */
 export const GROUND = 60;
-/** Terrain is sampled at x = i * COL_W for i = 0 … COLS. */
+/** why: terrain has COLS + 1 samples, at x = i * COL_W. */
 export const COLS = 200;
 export const COL_W = FIELD_W / COLS;
 
 const TOWER_W = 92;
 export const TOWER_H = 190;
-/** Tower centers: Red (team 0) on the left, Blue (team 1) on the right. */
+/** why: indexed by team; Red (0) left, Blue (1) right. */
 export const TOWER_X = [90, 910] as const;
 export const CATAPULT_X = [190, 810] as const;
 export const LAUNCH_Y = GROUND + 34;
 
 const GRAVITY = 600;
 export const MAX_SPEED = 860;
-/** Pull-back distance (field units) for full power; shorter pulls are weaker. */
+/** why: pull length in field units that gives full power; shorter pulls are weaker. */
 export const MAX_PULL = 180;
-/** Pulls shorter than this are treated as a cancelled aim. */
+/** why: a shorter pull counts as a cancelled aim. */
 export const MIN_PULL = 12;
 export const SHOT_R = 14;
 const MAX_FLIGHT_S = 8;
@@ -36,7 +30,7 @@ export type HillHeight = keyof typeof HILL_HEIGHTS;
 
 const CRATER_R = 30;
 const CRATER_DEPTH = 26;
-/** Craters can dig the hill away completely, but not below this. */
+/** why: craters can dig the hill away completely, but not below this. */
 export const MIN_GROUND = 24;
 
 export type ShotImpact =
@@ -55,7 +49,7 @@ const smoothstep = (t: number) => {
   return c * c * (3 - 2 * c);
 };
 
-/** A flat field with a bumpy hill in the middle; the towers and catapults stay on flat ground. */
+/** why: the hill fades out near the edges so towers and catapults stay on flat ground. */
 export function makeTerrain(hill: HillHeight, rng: () => number = Math.random): number[] {
   const peak = HILL_HEIGHTS[hill] * (0.9 + rng() * 0.2);
   const cx = FIELD_W / 2 + (rng() - 0.5) * 60;
@@ -71,7 +65,7 @@ export function makeTerrain(hill: HillHeight, rng: () => number = Math.random): 
   });
 }
 
-/** Ground height at x (linear between samples; flat beyond the edges). */
+/** why: linear between samples; flat beyond the edges. */
 export function groundAt(terrain: number[], x: number): number {
   const f = Math.min(COLS, Math.max(0, x / COL_W));
   const i = Math.floor(f);
@@ -80,10 +74,7 @@ export function groundAt(terrain: number[], x: number): number {
   return a + (b - a) * (f - i);
 }
 
-/**
- * Slingshot: the shot flies opposite to the pull. The pull is in field units
- * (y up); its length sets the power, capped at MAX_PULL. Null if too short.
- */
+/** why: the shot flies opposite the pull (field units, y up); null for a pull under MIN_PULL. */
 export function launchVector(dx: number, dy: number): { vx: number; vy: number } | null {
   if (!Number.isFinite(dx) || !Number.isFinite(dy)) return null;
   const len = Math.hypot(dx, dy);
@@ -92,12 +83,10 @@ export function launchVector(dx: number, dy: number): { vx: number; vy: number }
   return { vx: -dx * k, vy: -dy * k };
 }
 
-/** Where a shot from `team`'s catapult is `t` seconds after launch. */
-export function shotPos(team: number, vx: number, vy: number, t: number): { x: number; y: number } {
-  return { x: CATAPULT_X[team]! + vx * t, y: LAUNCH_Y + vy * t - (GRAVITY * t * t) / 2 };
+export function shotPos(team: number, vx: number, vy: number, tSeconds: number): { x: number; y: number } {
+  return { x: CATAPULT_X[team]! + vx * tSeconds, y: LAUNCH_Y + vy * tSeconds - (GRAVITY * tSeconds * tSeconds) / 2 };
 }
 
-/** The tower whose (slightly padded) outline contains the point, if any. */
 function towerAt(x: number, y: number): number | null {
   const pad = SHOT_R * 0.6;
   for (let team = 0; team < TOWER_X.length; team++) {
@@ -106,7 +95,7 @@ function towerAt(x: number, y: number): number | null {
   return null;
 }
 
-/** Fly a shot until it hits a tower (either one: friendly fire counts), the ground, or leaves the field. */
+/** why: either tower can be hit; friendly fire counts. */
 export function simulate(terrain: number[], team: number, vx: number, vy: number): Flight {
   for (let t = STEP_S; t <= MAX_FLIGHT_S; t += STEP_S) {
     const { x, y } = shotPos(team, vx, vy, t);
@@ -120,7 +109,7 @@ export function simulate(terrain: number[], team: number, vx: number, vy: number
   return { durationMs: MAX_FLIGHT_S * 1000, impact: { kind: "offscreen", x: round1(end.x), y: round1(end.y) } };
 }
 
-/** Knock a round crater into the ground at x (not under the towers). Returns a new terrain. */
+/** why: ground under the towers is never carved; returns a new terrain. */
 export function carve(terrain: number[], x: number, radius = CRATER_R, depth = CRATER_DEPTH): number[] {
   return terrain.map((h, i) => {
     const cx = i * COL_W;

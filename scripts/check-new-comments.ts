@@ -3,10 +3,10 @@ import { $ } from "bun";
 const MARKERS = /^(why|checked):/;
 const DIRECTIVES = /^(biome-ignore|@ts-expect-error|@ts-ignore|eslint-disable)/;
 const PATHS = ["src/*.ts", "src/*.tsx", "tests/*.ts", "tests/*.tsx", "scripts/*.ts"];
+// why: these are written by a generator script (named in their header), and the spec puts generated files out of scope.
+const GENERATED = new Set(["src/client/shared/duel/meta.ts", "src/client/shared/music/samples/manifest.ts"]);
 
-const emptyTree = (await $`git hash-object -t tree /dev/null`.text()).trim();
-const envBase = process.env.BASE_SHA;
-const base = envBase && !/^0+$/.test(envBase) ? envBase : (await $`git merge-base main HEAD`.nothrow().text()).trim() || emptyTree;
+const wholeRepo = process.argv.includes("--all");
 
 type CommentStart = { text: string; column: number };
 
@@ -14,9 +14,22 @@ function withoutStrings(line: string): string {
   return line.replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\`[^\`]*\`/g, '""');
 }
 
-function commentIn(line: string): CommentStart | null {
+function linesInsideBlockComments(lines: string[]): boolean[] {
+  let inside = false;
+  return lines.map((line) => {
+    const startsInside = inside;
+    for (const token of withoutStrings(line).matchAll(/\/\*|\*\/|\/\//g)) {
+      if (!inside && token[0] === "//") break;
+      if (token[0] === "/*") inside = true;
+      if (token[0] === "*/") inside = false;
+    }
+    return startsInside;
+  });
+}
+
+function commentIn(line: string, startsInsideBlock: boolean): CommentStart | null {
   const code = withoutStrings(line);
-  const continuation = /^\s*\*(?!\/)/.exec(code);
+  const continuation = startsInsideBlock ? /^\s*\*(?!\/)/.exec(code) : null;
   if (continuation) return { text: line.slice(continuation[0].length).trim(), column: -1 };
   const match = /(?:^|(?<=\s))(?:\/\/|\/\*)/.exec(code);
   if (!match) return null;
@@ -55,37 +68,52 @@ function justified(lines: string[], index: number, comment: CommentStart): boole
   return MARKERS.test(opening.replace(/^\*\s*/, ""));
 }
 
-const tracked = await $`git -c core.quotePath=false diff --no-ext-diff --no-color --src-prefix=a/ --dst-prefix=b/ --unified=0 ${base} -- ${PATHS}`.text();
-const untracked = (await $`git -c core.quotePath=false ls-files --others --exclude-standard -- ${PATHS}`.text()).split("\n").filter(Boolean);
-
-const added = new Map<string, number[]>();
-let file = "";
-for (const row of tracked.split("\n")) {
-  if (row.startsWith("+++ ")) file = row.slice(4).replace(/^b\//, "");
-  const hunk = /^@@ -\S+ \+(\d+)(?:,(\d+))? @@/.exec(row);
-  if (hunk && file !== "/dev/null") {
-    const start = Number(hunk[1]);
-    const count = hunk[2] === undefined ? 1 : Number(hunk[2]);
-    const lines = added.get(file) ?? [];
-    for (let n = 0; n < count; n++) lines.push(start + n);
-    added.set(file, lines);
-  }
-}
-
 const failures: string[] = [];
 async function checkFile(path: string, lineNumbers: number[] | "all") {
+  if (GENERATED.has(path)) return;
   const lines = (await Bun.file(path).text()).split("\n");
   const numbers = lineNumbers === "all" ? lines.map((_, i) => i + 1) : lineNumbers;
+  const insideBlock = linesInsideBlockComments(lines);
   for (const number of numbers) {
-    const comment = commentIn(lines[number - 1] ?? "");
+    const comment = commentIn(lines[number - 1] ?? "", insideBlock[number - 1] ?? false);
     if (comment && !justified(lines, number - 1, comment)) {
       failures.push(`${path}:${number}: ${(lines[number - 1] ?? "").trim()}`);
     }
   }
 }
 
-for (const [path, numbers] of added) await checkFile(path, numbers);
-for (const path of untracked) await checkFile(path, "all");
+async function checkChangedLines() {
+  const emptyTree = (await $`git hash-object -t tree /dev/null`.text()).trim();
+  const envBase = process.env.BASE_SHA;
+  const base = envBase && !/^0+$/.test(envBase) ? envBase : (await $`git merge-base main HEAD`.nothrow().text()).trim() || emptyTree;
+  const tracked = await $`git -c core.quotePath=false diff --no-ext-diff --no-color --src-prefix=a/ --dst-prefix=b/ --unified=0 ${base} -- ${PATHS}`.text();
+  const untracked = (await $`git -c core.quotePath=false ls-files --others --exclude-standard -- ${PATHS}`.text()).split("\n").filter(Boolean);
+
+  const added = new Map<string, number[]>();
+  let file = "";
+  for (const row of tracked.split("\n")) {
+    if (row.startsWith("+++ ")) file = row.slice(4).replace(/^b\//, "");
+    const hunk = /^@@ -\S+ \+(\d+)(?:,(\d+))? @@/.exec(row);
+    if (hunk && file !== "/dev/null") {
+      const start = Number(hunk[1]);
+      const count = hunk[2] === undefined ? 1 : Number(hunk[2]);
+      const lines = added.get(file) ?? [];
+      for (let n = 0; n < count; n++) lines.push(start + n);
+      added.set(file, lines);
+    }
+  }
+
+  for (const [path, numbers] of added) await checkFile(path, numbers);
+  for (const path of untracked) await checkFile(path, "all");
+}
+
+async function checkWholeRepo() {
+  const files = (await $`git -c core.quotePath=false ls-files --cached --others --exclude-standard -- ${PATHS}`.text()).split("\n").filter(Boolean);
+  for (const path of files) if (await Bun.file(path).exists()) await checkFile(path, "all");
+}
+
+if (wholeRepo) await checkWholeRepo();
+else await checkChangedLines();
 
 if (failures.length > 0) {
   console.error(failures.join("\n"));

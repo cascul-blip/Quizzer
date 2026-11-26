@@ -1,33 +1,16 @@
-/**
- * The "rich" sound, for tracks that opt in with `rich` (today: Kingdom Siege and Racer).
- * Every other track keeps the plain oscillators in engine.ts, so the two can be compared.
- *
- * Two styles:
- * - "acoustic" (`rich: true`): early-music instruments for Kingdom Siege; its drums stay plain.
- * - "arcade" (`rich: "arcade"`): a late-80s arcade-racer sound for Racer: FM lead and slap bass,
- *   chorused pulse stabs, drum-machine kit, tighter timing and a tempo-synced ping-pong echo.
- *
- * Adds, all generated in code:
- * - humanised timing and velocity (small, seeded, so a loop sounds the same every time);
- * - a place in the stereo field per instrument, and a little detune per voice;
- * - filter envelopes, and instruments built for the sound: Karplus-Strong plucks (a lute),
- *   FM bells and brass, strings with bow noise, a recorder with breath and chiff;
- * - a bus with gentle saturation and compression, and a convolution reverb whose impulse
- *   response is decaying stereo noise.
- */
+// why: tracks opt in with `rich`; every other track keeps the plain oscillators in engine.ts, so the two can be compared.
 
 type Ctx = BaseAudioContext;
 
 export type RichStyle = "acoustic" | "arcade";
 
-/** The style a track's `rich` flag asks for, or null for the plain sound. */
 export const richStyle = (rich: boolean | RichStyle | undefined): RichStyle | null => (rich === true ? "acoustic" : rich || null);
 
-/** Timing offsets stay within ±HUMAN_TIME_S; velocity within ±HUMAN_GAIN of the written level. */
+/** why: Timing offsets stay within ±HUMAN_TIME_S; velocity within ±HUMAN_GAIN of the written level. */
 export const HUMAN_TIME_S = 0.008;
 export const HUMAN_GAIN = 0.1;
 
-/** A small seeded random number generator (mulberry32): the same seed always gives the same sequence. */
+// why: mulberry32, seeded so a loop sounds the same every time round.
 export function seeded(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
@@ -41,36 +24,35 @@ export function seeded(seed: number): () => number {
 
 interface Human {
   timeOffsetS: number;
-  /** Multiplies the note's volume. */
   gain: number;
   detuneCents: number;
 }
 
-/** Drum machines and sequenced synths are tighter than players: arcade timing moves this fraction as much. */
+/** why: Drum machines and sequenced synths are tighter than players: arcade timing moves this fraction as much. */
 export const ARCADE_TIGHTNESS = 0.4;
 
-/** The nudge for one layer's note on one step: the same every time the loop comes round. */
+/** why: The nudge for one layer's note on one step: the same every time the loop comes round. */
 export function humanize(step: number, layer: number, style: RichStyle = "acoustic"): Human {
   const r = seeded(step * 7919 + layer * 104729 + 17);
   const time = style === "arcade" ? HUMAN_TIME_S * ARCADE_TIGHTNESS : HUMAN_TIME_S;
   return { timeOffsetS: (r() * 2 - 1) * time, gain: 1 + (r() * 2 - 1) * HUMAN_GAIN, detuneCents: (r() * 2 - 1) * 4 };
 }
 
-/** Where each instrument sits, -1 (left) … 1 (right), per style. */
+// why: pan runs -1 (left) … 1 (right).
 const PAN: Record<RichStyle, Partial<Record<string, number>>> = {
   acoustic: { pluck: -0.35, flute: 0.25, brass: 0.15, bell: 0.3, woodblock: -0.25, snare: 0.1, hat: 0.35, cymbal: -0.3, organ: -0.1 },
   arcade: { hat: 0.3, openhat: -0.3, chipnoise: 0.15, snare: 0.05 },
 };
 export const panFor = (inst: string, style: RichStyle = "acoustic"): number => PAN[style][inst] ?? 0;
 
-/** Lute chords are strummed: each note of a chord this much later than the one below. */
+/** why: Lute chords are strummed: each note of a chord this much later than the one below. */
 export const STRUM_S = 0.012;
 
 const noiseBuffers = new WeakMap<Ctx, AudioBuffer>();
 const pulseWaves = new WeakMap<Ctx, Map<number, PeriodicWave>>();
 const plucks = new WeakMap<Ctx, Map<number, AudioBuffer>>();
 
-/** Two seconds of seeded white noise, for breath, bow and the reverb. */
+/** why: Two seconds of seeded white noise, for breath, bow and the reverb. */
 function noise(ctx: Ctx): AudioBuffer {
   let b = noiseBuffers.get(ctx);
   if (!b) {
@@ -83,7 +65,7 @@ function noise(ctx: Ctx): AudioBuffer {
   return b;
 }
 
-/** A pulse wave with the given duty cycle (0.25 = the classic chip lead), made once per duty and context. */
+/** why: A pulse wave with the given duty cycle (0.25 = the classic chip lead), made once per duty and context. */
 function pulseWave(ctx: Ctx, duty: number): PeriodicWave {
   let cache = pulseWaves.get(ctx);
   if (!cache) pulseWaves.set(ctx, (cache = new Map()));
@@ -106,7 +88,7 @@ function env(p: AudioParam, t: number, peak: number, attack: number, hold: numbe
   p.exponentialRampToValueAtTime(0.0001, t + attack + hold + release);
 }
 
-/** A lowpass whose cutoff opens from `from` to `peak` over `attack`, then settles to `sustain`. */
+/** why: A lowpass whose cutoff opens from `from` to `peak` over `attack`, then settles to `sustain`. */
 function filterEnv(ctx: Ctx, t: number, from: number, peak: number, sustain: number, attack: number, decay: number, q = 0.7): BiquadFilterNode {
   const f = ctx.createBiquadFilter();
   f.type = "lowpass";
@@ -117,7 +99,7 @@ function filterEnv(ctx: Ctx, t: number, from: number, peak: number, sustain: num
   return f;
 }
 
-/** Vibrato that fades in after the note has sounded for a moment, as players do. */
+/** why: Vibrato that fades in after the note has sounded for a moment, as players do. */
 function vibrato(ctx: Ctx, targets: AudioParam[], t: number, end: number, rate: number, cents: number, delay = 0.25) {
   const lfo = ctx.createOscillator();
   const depth = ctx.createGain();
@@ -141,7 +123,7 @@ function osc(ctx: Ctx, dest: AudioNode, type: OscillatorType, freq: number, t: n
   return o;
 }
 
-/** Filtered noise under an envelope: breath on a recorder, a bow on a string, a chiff. */
+/** why: Filtered noise under an envelope: breath on a recorder, a bow on a string, a chiff. */
 function airNoise(
   ctx: Ctx,
   dest: AudioNode,
@@ -170,10 +152,8 @@ function airNoise(
 
 const PLUCK_S = 1.8;
 
-/**
- * A plucked string by Karplus-Strong: a burst of noise circulating in a delay line one period long,
- * averaged each time round so it darkens and dies away. Made once per delay length and context.
- */
+// why: Karplus-Strong: noise circulating in a one-period delay line, averaged each trip so it darkens and dies.
+// Made once per delay length and context.
 function pluckBuffer(ctx: Ctx, period: number): AudioBuffer {
   let cache = plucks.get(ctx);
   if (!cache) plucks.set(ctx, (cache = new Map()));
@@ -183,11 +163,11 @@ function pluckBuffer(ctx: Ctx, period: number): AudioBuffer {
     b = ctx.createBuffer(1, Math.floor(sr * PLUCK_S), sr);
     const d = b.getChannelData(0);
     const r = seeded(period);
-    // A softened burst (a finger, not a pick).
+    // why: A softened burst (a finger, not a pick).
     const line = new Float32Array(period);
     let prev = 0;
     for (let i = 0; i < period; i++) line[i] = prev = 0.6 * prev + 0.4 * (r() * 2 - 1);
-    // Loss per trip round the loop, so the note dies away over about 1.3 s whatever its pitch.
+    // why: Loss per trip round the loop, so the note dies away over about 1.3 s whatever its pitch.
     const loss = 10 ** ((-3 * period) / (sr * 1.3));
     for (let i = 0, k = 0; i < d.length; i++) {
       const a = line[k]!;
@@ -201,10 +181,7 @@ function pluckBuffer(ctx: Ctx, period: number): AudioBuffer {
   return b;
 }
 
-/**
- * Play one note or hit in a rich style. Returns false for instruments the style has no rich version of,
- * so the caller plays the plain one instead (in the acoustic style: the drums, organ and the rest).
- */
+// why: false means the style has no rich version of the instrument, so the caller plays the plain one.
 export function playRich(
   ctx: Ctx,
   dest: AudioNode,
@@ -221,7 +198,7 @@ export function playRich(
   const v = vol;
   switch (inst) {
     case "pluck": {
-      // The lute: Karplus-Strong, tuned exactly by playback rate (the loop's average adds half a sample).
+      // why: The lute: Karplus-Strong, tuned exactly by playback rate (the loop's average adds half a sample).
       const period = Math.max(2, Math.round(ctx.sampleRate / freq));
       const s = ctx.createBufferSource();
       s.buffer = pluckBuffer(ctx, period);
@@ -239,7 +216,7 @@ export function playRich(
       return true;
     }
     case "bell": {
-      // Church bell by FM: an inharmonic modulator whose brightness dies away faster than the tone, plus a low hum.
+      // why: Church bell by FM: an inharmonic modulator whose brightness dies away faster than the tone, plus a low hum.
       const end = t + 2.6;
       const g = ctx.createGain();
       env(g.gain, t, 0.2 * v, 0.002, 0.01, 2.4);
@@ -260,7 +237,7 @@ export function playRich(
       return true;
     }
     case "brass": {
-      // FM brass: the modulation index swells with the attack (the "blat"), with a filter that opens with it,
+      // why: FM brass: the modulation index swells with the attack (the "blat"), with a filter that opens with it,
       // a slight scoop up into the pitch, and vibrato on longer notes.
       const end = t + len + 0.25;
       const attack = Math.min(0.06, len * 0.4);
@@ -295,7 +272,7 @@ export function playRich(
       return true;
     }
     case "strings": {
-      // A section: detuned saws spread across the stereo field, a bowed swell through an opening filter,
+      // why: A section: detuned saws spread across the stereo field, a bowed swell through an opening filter,
       // a breath of bow noise and late vibrato.
       const end = t + len + 0.35;
       const attack = Math.min(0.12, len * 0.35);
@@ -319,7 +296,7 @@ export function playRich(
       return true;
     }
     case "flute": {
-      // The recorder: a soft, nearly pure tone with a chiff at the start, breath under it and late vibrato.
+      // why: The recorder: a soft, nearly pure tone with a chiff at the start, breath under it and late vibrato.
       const end = t + len + 0.2;
       const attack = Math.min(0.03, len * 0.3);
       const g = ctx.createGain();
@@ -342,7 +319,7 @@ export function playRich(
       return true;
     }
     case "pad": {
-      // A slow, wide pad: two saws far apart in the stereo field and a triangle an octave down,
+      // why: A slow, wide pad: two saws far apart in the stereo field and a triangle an octave down,
       // through a filter that opens slowly.
       const end = t + len * 1.4 + 0.5;
       const attack = Math.min(0.5, len * 0.35);
@@ -366,7 +343,7 @@ export function playRich(
       return true;
     }
     case "bass": {
-      // A round bass: a saw and a sine an octave down through a resonant filter that closes on each note.
+      // why: A round bass: a saw and a sine an octave down through a resonant filter that closes on each note.
       const end = t + len + 0.15;
       const f = filterEnv(ctx, t, 1400, 1400, 260, 0.001, Math.max(0.08, len), 2);
       const g = ctx.createGain();
@@ -383,9 +360,7 @@ export function playRich(
   return false;
 }
 
-// Arcade instruments (Racer).
-
-/** An 808-style metallic hat: six detuned squares through a high band, short or open. */
+/** why: An 808-style metallic hat: six detuned squares through a high band, short or open. */
 function metalHat(ctx: Ctx, dest: AudioNode, t: number, peak: number, decay: number) {
   const band = ctx.createBiquadFilter();
   band.type = "bandpass";
@@ -400,7 +375,7 @@ function metalHat(ctx: Ctx, dest: AudioNode, t: number, peak: number, decay: num
   for (const mult of [2, 3, 4.16, 5.43, 6.79, 8.21]) osc(ctx, band, "square", 40 * mult * 4, t, end);
 }
 
-/** A drum-machine snare: a short tuned body, a band of noise and a little high sizzle. */
+/** why: A drum-machine snare: a short tuned body, a band of noise and a little high sizzle. */
 function arcadeSnare(ctx: Ctx, dest: AudioNode, t: number, v: number) {
   const body = ctx.createOscillator();
   body.type = "triangle";
@@ -417,12 +392,12 @@ function arcadeSnare(ctx: Ctx, dest: AudioNode, t: number, v: number) {
 
 function playArcade(ctx: Ctx, dest: AudioNode, inst: string, t: number, freq: number, len: number, v: number, detune: number, accent: boolean): boolean {
   switch (inst) {
-    // Seasonal arcade arrangements share the synthesized FM bells and brass.
+    // why: Seasonal arcade arrangements share the synthesized FM bells and brass.
     case "bell":
     case "brass":
       return playRich(ctx, dest, inst, t, freq, len, v, detune, "acoustic");
     case "lead": {
-      // A late-80s FM lead: a bright 2:1 voice that mellows after the attack, a detuned saw under it,
+      // why: A late-80s FM lead: a bright 2:1 voice that mellows after the attack, a detuned saw under it,
       // a quick slide up into each note and vibrato on held ones.
       const end = t + len + 0.2;
       const g = ctx.createGain();
@@ -455,7 +430,7 @@ function playArcade(ctx: Ctx, dest: AudioNode, inst: string, t: number, freq: nu
       return true;
     }
     case "pulse": {
-      // Chorused stabs and arpeggios: two pulse widths, a little detuned and apart in the stereo field,
+      // why: Chorused stabs and arpeggios: two pulse widths, a little detuned and apart in the stereo field,
       // through a filter that snaps shut.
       const end = t + len + 0.1;
       const f = filterEnv(ctx, t, 5500, 5500, 1200, 0.001, Math.max(0.06, len * 0.8), 1.5);
@@ -480,7 +455,7 @@ function playArcade(ctx: Ctx, dest: AudioNode, inst: string, t: number, freq: nu
       return true;
     }
     case "tribass": {
-      // Slap FM bass: a hard, bright attack that falls to a round tone, with a sub-octave underneath.
+      // why: Slap FM bass: a hard, bright attack that falls to a round tone, with a sub-octave underneath.
       const end = t + len + 0.1;
       const g = ctx.createGain();
       env(g.gain, t, 0.42 * v, 0.003, Math.max(0, len - 0.04), 0.06);
@@ -501,7 +476,7 @@ function playArcade(ctx: Ctx, dest: AudioNode, inst: string, t: number, freq: nu
       return true;
     }
     case "kick": {
-      // A punchy drum-machine kick: a body sweeping down from 160 Hz, with a click on top.
+      // why: A punchy drum-machine kick: a body sweeping down from 160 Hz, with a click on top.
       const o = ctx.createOscillator();
       o.frequency.setValueAtTime(160, t);
       o.frequency.exponentialRampToValueAtTime(45, t + 0.12);
@@ -517,7 +492,7 @@ function playArcade(ctx: Ctx, dest: AudioNode, inst: string, t: number, freq: nu
       arcadeSnare(ctx, dest, t, v);
       return true;
     case "chipnoise":
-      // The racer tracks use it two ways: accented as the backbeat snare, plain as quick sixteenth hats.
+      // why: The racer tracks use it two ways: accented as the backbeat snare, plain as quick sixteenth hats.
       if (accent) arcadeSnare(ctx, dest, t, v * 0.8);
       else airNoise(ctx, dest, t, 0.12 * v, 0.001, 0.005, 0.03, "highpass", 6500, 0.7);
       return true;
@@ -531,18 +506,17 @@ function playArcade(ctx: Ctx, dest: AudioNode, inst: string, t: number, freq: nu
   return false;
 }
 
-/** A ping-pong echo that follows the tempo. */
 export interface Echo {
   input: GainNode;
-  /** Follow a tempo change: the echo stays ECHO_STEPS behind. */
+  // why: the echo stays ECHO_STEPS behind.
   setStep(stepSeconds: number, at: number): void;
   dispose(): void;
 }
 
-/** Echoes come a dotted eighth (three sixteenth steps) after the note, the classic arcade-lead echo. */
+/** why: Echoes come a dotted eighth (three sixteenth steps) after the note, the classic arcade-lead echo. */
 export const ECHO_STEPS = 3;
 
-/** Bouncing left and right, darker and quieter with each repeat. */
+/** why: Bouncing left and right, darker and quieter with each repeat. */
 export function createEcho(ctx: BaseAudioContext, dest: AudioNode, stepSeconds: number): Echo {
   const input = ctx.createGain();
   const left = ctx.createDelay(2);
@@ -576,12 +550,10 @@ export function createEcho(ctx: BaseAudioContext, dest: AudioNode, stepSeconds: 
   };
 }
 
-// The bus: saturation, compression, reverb.
-
 const REVERB_S = 3.2;
 const PREDELAY_S = 0.025;
 
-/** A stereo impulse response: a short gap, then decaying noise, different in each ear and darker as it fades. */
+/** why: A stereo impulse response: a short gap, then decaying noise, different in each ear and darker as it fades. */
 export function impulseResponse(ctx: Ctx, seconds = REVERB_S): AudioBuffer {
   const sr = ctx.sampleRate;
   const length = Math.floor(sr * seconds);
@@ -593,7 +565,7 @@ export function impulseResponse(ctx: Ctx, seconds = REVERB_S): AudioBuffer {
     let lp = 0;
     for (let i = gap; i < length; i++) {
       const x = (i - gap) / (length - gap);
-      // Each sample is smoothed more as the tail goes on: high frequencies die first, as in a hall.
+      // why: Each sample is smoothed more as the tail goes on: high frequencies die first, as in a hall.
       const smooth = 0.15 + 0.8 * x;
       lp = smooth * lp + (1 - smooth) * (r() * 2 - 1);
       d[i] = lp * Math.exp(-5 * x) * (1 + smooth);
@@ -602,7 +574,7 @@ export function impulseResponse(ctx: Ctx, seconds = REVERB_S): AudioBuffer {
   return ir;
 }
 
-/** Soft clipping (tanh), for a little warmth on peaks; quiet signals pass almost untouched. */
+/** why: Soft clipping (tanh), for a little warmth on peaks; quiet signals pass almost untouched. */
 export function saturationCurve(drive = 1.8, size = 1024): Float32Array<ArrayBuffer> {
   const curve = new Float32Array(size);
   for (let i = 0; i < size; i++) {
@@ -613,14 +585,12 @@ export function saturationCurve(drive = 1.8, size = 1024): Float32Array<ArrayBuf
 }
 
 export interface RichBus {
-  /** Rich tracks connect here (dry). */
   input: GainNode;
-  /** …and send here for reverb. */
   reverb: AudioNode;
   dispose(): void;
 }
 
-/** The rich tracks' bus: input → saturation → gentle compressor → master, with a reverb that joins before the compressor. */
+/** why: The rich tracks' bus: input → saturation → gentle compressor → master, with a reverb that joins before the compressor. */
 export function createRichBus(ctx: BaseAudioContext, master: AudioNode): RichBus {
   const input = ctx.createGain();
   const shaper = ctx.createWaveShaper();

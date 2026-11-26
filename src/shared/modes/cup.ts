@@ -6,7 +6,7 @@ import type { SeasonTheme } from "../themed-modes.ts";
 import { modeTheme } from "../themed-modes.ts";
 
 export type CupPhase = "countdown" | "roll" | "quiz" | "drink" | "reveal" | "podium";
-/** Cups in front of each player at the start (a lobby setting); one is drunk (and gone) each time they survive a drink. */
+/** why: starting cups per player (a lobby setting); each survived drink removes one. */
 export const CUP_MIN_CUPS = 1;
 export const CUP_MAX_CUPS = 6;
 export const CUP_DEFAULT_CUPS = 3;
@@ -16,28 +16,25 @@ export interface CupSettings {
   theme?: SeasonTheme;
 }
 export const CUP_DIE_SIDES = 6;
-/** The dice tumble this long before the quiz timer starts. */
+/** why: the dice tumble this long before the quiz timer starts. */
 export const CUP_ROLL_MS = 2500;
-/** The first quiz phase is this long; each round is CUP_QUIZ_STEP_MS shorter, down to CUP_QUIZ_MIN_MS. */
 const CUP_QUIZ_START_MS = 30_000;
 const CUP_QUIZ_STEP_MS = 2000;
 export const CUP_QUIZ_MIN_MS = 10_000;
-/** Time to pick a cup; anyone who hasn't picked by then gets a random one. */
+/** why: anyone who hasn't picked by then gets a random cup. */
 export const CUP_DRINK_MS = 10_000;
-/** In the reveal, each drinker raises the cup and gulps for CUP_SIP_MS, then the verdict shows for CUP_VERDICT_MS. */
 export const CUP_SIP_MS = 1800;
 export const CUP_VERDICT_MS = 1800;
-/** How long "Everyone's safe!" shows when nobody has to drink. */
 export const CUP_ALL_SAFE_MS = 2500;
 
-/** Length of round n's quiz phase (n starts at 1). */
+/** why: rounds count from 1. */
 export function cupQuizMs(round: number): number {
   return Math.max(CUP_QUIZ_MIN_MS, CUP_QUIZ_START_MS - CUP_QUIZ_STEP_MS * (round - 1));
 }
 
 const EARLIEST_FIRST_CUP_OUT = { christmas: "First flight", classic: "Unluckiest" } satisfies Record<SeasonTheme, string>;
 
-/** The Podium award labels (GLOSSARY.md) in a theme, read by the server and the projector alike. */
+/** why: shared so the server and the projector show the same Podium award labels (GLOSSARY.md). */
 export function cupAwardLabels(theme?: SeasonTheme) {
   return {
     mostCorrect: MOST_CORRECT_LABEL,
@@ -48,18 +45,17 @@ export function cupAwardLabels(theme?: SeasonTheme) {
 }
 
 export type CupAwardKey = keyof ReturnType<typeof cupAwardLabels>;
-/** Each award's winners; earliestFirstCupOut's value is the round their first cup poisoned them. */
+/** why: earliestFirstCupOut's value is the round their first cup poisoned them. */
 export type CupAwards = Record<CupAwardKey, SubAward | null>;
 
-/** One drinker in the reveal, in the order they are revealed. */
 export interface CupDrinkView {
   id: string;
-  /** The cup they drank (0-based among the cupsBefore cups in front of them). */
+  /** why: 0-based among the cupsBefore cups in front of them. */
   cup: number;
   cupsBefore: number;
-  /** The cup was picked for them (time ran out, or it was their last cup). */
+  /** why: picked for them (time ran out, or it was their last cup). */
   auto: boolean;
-  /** Null until this drinker's verdict is shown. */
+  /** why: null until this drinker's verdict is shown. */
   verdict: "poison" | "safe" | null;
 }
 
@@ -67,7 +63,7 @@ export interface CupRevealView {
   seq: number;
   round: number;
   drinks: CupDrinkView[];
-  /** Index of the drinker in the spotlight, or -1 before the first and after the last. */
+  /** why: -1 before the first drinker and after the last. */
   current: number;
 }
 
@@ -78,14 +74,12 @@ export interface HostCupPlayer {
   connected: boolean;
   cups: number;
   out: boolean;
-  /** This round's dice roll: correct answers needed (0 before the first roll). */
+  /** why: correct answers needed this round; 0 before the first roll. */
   target: number;
-  /** Correct answers so far this round. */
   progress: number;
   safe: boolean;
-  /** Drink phase: has to drink this round. */
+  /** why: drinker and picked are meaningful in the drink phase only. */
   drinker: boolean;
-  /** Drink phase: has picked a cup. */
   picked: boolean;
 }
 
@@ -95,7 +89,7 @@ export interface CupStanding {
   avatar: AvatarChoice;
   rank: number;
   cups: number;
-  /** Round the player was poisoned in, or null for a survivor. */
+  /** why: null for a survivor. */
   outRound: number | null;
   correct: number;
 }
@@ -107,11 +101,10 @@ export interface HostCupState {
   quiz: { id: string; title: string; questionCount: number };
   round: number;
   phaseRemainingMs: number;
-  /** Full length of the current phase, for the progress bar. */
   phaseDurationMs: number;
   players: HostCupPlayer[];
   startCups: number;
-  /** The drinks of the current round (reveal phase), or null. */
+  /** why: reveal phase only. */
   reveal: CupRevealView | null;
   playerCount: number;
   standings: CupStanding[] | null;
@@ -129,12 +122,12 @@ export interface PlayerCupView {
   phaseDurationMs: number;
   me: { id: string; nickname: string; avatar: AvatarChoice; cups: number; out: boolean; target: number; progress: number; safe: boolean; correct: number };
   startCups: number;
-  /** Questions to answer: living players during the quiz until safe; poisoned players any time, for practice. */
+  /** why: living players get questions in the quiz until safe; poisoned players any time, for practice. */
   question: StreamQuestionView | null;
   feedback: StreamFeedbackView | null;
-  /** Drink phase, drinkers only: their pick so far (null until they pick). */
+  /** why: drink phase, drinkers only. */
   drink: { picked: number | null } | null;
-  /** Reveal phase, drinkers only: this player's own drink. `turn` is true while they are in the spotlight. */
+  /** why: reveal phase, drinkers only; `turn` is true while they are in the spotlight. */
   myDrink: (CupDrinkView & { seq: number; turn: boolean; waiting: boolean }) | null;
   alive: number;
   result: { rank: number; playerCount: number; won: boolean; outRound: number | null; awards: string[] } | null;
@@ -142,7 +135,7 @@ export interface PlayerCupView {
 
 export type CupMsg =
   | StreamAnswerMsg<"cup">
-  /** Drink phase, drinkers only: pick one of your remaining cups (0-based, left to right). Final once sent. */
+  /** why: drink phase, drinkers only; cup is 0-based left to right, final once sent. */
   | { type: "cup.pick"; cup: number };
 
 export const cupShared = sharedModeEntry<ModeProtocol<CupMsg, CupSettings, HostCupState, PlayerCupView>>()({

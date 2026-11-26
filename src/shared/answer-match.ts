@@ -1,24 +1,18 @@
-// Checking an answer to a question. Zod-free so browser bundles can import it.
+// why: Zod-free so browser bundles can import it.
 
-/** What a player sent: an option index, or the text they typed. */
 export type AnswerValue = number | string;
 
 export const MAX_TYPED_ANSWER = 100;
 
-/**
- * Punctuation that changes a number's value, so it survives normalize(): a leading minus sign,
- * a decimal point and a fraction slash. In words ("x-ray", "covid-19", "v.2") they still drop out.
- */
+/** why: minus, decimal point and fraction slash change a number's value, so normalize() keeps them; in words ("x-ray") they drop. */
 const NUMBER_MARK = /(?<![\p{L}\p{N}])-(?=\.?\d)|(?<!\p{L})\.(?=\d)|(?<=\d)\/(?=\d)/u;
 const STRIPPED = new RegExp(`(?!${NUMBER_MARK.source})[^\\p{L}\\p{N}\\s]`, "gu");
 
 const MINUS_SIGN = "−";
-/** NFKD turns ½ and the like into digits around this. */
+/** why: NFKD turns ½ and the like into digits around this. */
 const FRACTION_SLASH = "⁄";
 
-/** 1,000 → 1000 */
 const stripThousandsSeparators = (s: string) => s.replace(/(?<=\d),(?=\d{3}(?!\d))/g, "");
-/** 1,5 → 1.5 */
 const normalizeDecimalComma = (s: string) => s.replace(/(?<=\d),(?=\d)/g, ".");
 
 function normalize(s: string): string {
@@ -26,7 +20,7 @@ function normalize(s: string): string {
   return normalizeDecimalComma(stripThousandsSeparators(folded)).replace(STRIPPED, "").replace(/\s+/g, " ").trim();
 }
 
-/** Strip a plural ending: berries → berry, boxes → box, airplanes → airplane. Leaves "bus"/"glass" alone. */
+/** why: leaves "bus"/"glass" alone. */
 function singular(word: string): string {
   if (word.length <= 3) return word;
   if (word.endsWith("ies")) return word.slice(0, -3) + "y";
@@ -39,16 +33,13 @@ function canonical(s: string): string {
   return normalize(s).split(" ").map(singular).join(" ");
 }
 
-/** True if the typed text equals an accepted answer, ignoring case, punctuation and plural endings. */
+/** why: ignores case, punctuation and plural endings. */
 export function matchesAnswer(typed: string, accepted: string[]): boolean {
   const t = canonical(typed);
   return t !== "" && accepted.some((a) => canonical(a) === t);
 }
 
-/**
- * Is this answer correct for the question? Returns null when the answer is
- * malformed for the question's type (so callers can reject it).
- */
+/** why: null when the answer is malformed for the question's type, so callers can reject it. */
 export function checkAnswer(q: { type: string; options: string[]; correct: number[] }, answer: AnswerValue): boolean | null {
   if (q.type === "text") return typeof answer === "string" ? matchesAnswer(answer.slice(0, MAX_TYPED_ANSWER), q.options) : null;
   if (typeof answer !== "number" || !Number.isInteger(answer) || answer < 0 || answer >= q.options.length) return null;

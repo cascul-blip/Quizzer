@@ -13,7 +13,6 @@ import type { ClientMsg } from "../src/shared/protocol.ts";
 import { FakeClock, tempDir } from "./helpers.ts";
 import { fakeHub, HubSocket } from "./hub-harness.ts";
 
-// A hub harness for Classic and Showdown on the Podium (GLOSSARY.md).
 const NICKNAMES = ["Noel", "Holly", "Ivy"];
 
 let data: ReturnType<typeof tempDir>;
@@ -59,7 +58,6 @@ function question(id: string) {
   return { ...q, right: q.options.indexOf(q.text === "One" ? "True" : "False") };
 }
 
-/** Start the mode with three players, let `play` act, then end the game. */
 async function finish(mode: GameMode, play: (phones: Map<string, HubSocket>, ids: Map<string, string>) => void) {
   host.sendMsg({ type: "host.open", quizId });
   host.sendMsg({ type: "host.setMode", mode });
@@ -88,7 +86,7 @@ describe("Podium", () => {
       clock.advance(INTRO_MS + 1000);
       phones.get("Noel")!.sendMsg({ type: "answer", qIndex: 0, option: 0 });
     });
-    // Changes after the finish do not reach the Podium.
+    // why: changes after the finish must not reach the Podium.
     game.players.get(ids.get("Ivy")!)!.score = 99_999;
     const view = hub.hostView();
     expect(view.kind === "classic" && view.leaderboard.map((e) => [e.nickname, e.rank])).toEqual([
@@ -127,14 +125,14 @@ describe("Podium", () => {
     const ids = await finish("duel", (phones, ids) => {
       game = running() as DuelGame;
       clock.advance(INTRO_MS);
-      // One three-way arena: Noel is right first and wins it; Holly and Ivy both answer wrong.
+      // why: one three-way arena; Noel is right first and wins, Holly and Ivy answer wrong.
       const q = question(ids.get("Noel")!);
       phones.get("Noel")!.sendMsg({ type: "duel.answer", index: q.index, option: q.right });
       for (const n of ["Holly", "Ivy"]) phones.get(n)!.sendMsg({ type: "duel.answer", index: q.index, option: 1 - q.right });
       clock.advance(1000);
     });
     const ladder = game.ladder.map((id) => game.players.get(id)!.nickname).filter((n) => n !== "Noel");
-    // Changes after the finish do not reach the Podium.
+    // why: changes after the finish must not reach the Podium.
     const ivy = game.players.get(ids.get("Ivy")!)!;
     ivy.points = 50;
     ivy.wins = 9;

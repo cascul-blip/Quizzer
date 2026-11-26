@@ -15,7 +15,6 @@ import type { ClientMsg, HostView, PlayerView } from "../src/shared/protocol.ts"
 import { FakeClock, tempDir } from "./helpers.ts";
 import { fakeHub, HubSocket } from "./hub-harness.ts";
 
-/** Where the team modes show a player's team place: on the podium screen (by nickname), on the phone, and in the results sheet. */
 interface RankReaders {
   podium: (view: HostView, nickname: string) => number | undefined;
   phone: (view: PlayerView | null) => number | undefined;
@@ -68,7 +67,6 @@ afterEach(() => {
   data.cleanup();
 });
 
-/** The running game, for reading a player's question and for setting up an outcome that play leaves to chance. */
 function running() {
   const game = hub.game;
   if (!game || game instanceof Lobby) throw new Error("expected a running game");
@@ -77,7 +75,7 @@ function running() {
 
 type QuestionShown = { seq: number; index: number; text: string; options: string[] };
 
-/** The player's open question, and the option that answers it correctly ("One" is True, "Two" is False). */
+/** why: "One" is True, "Two" is False. */
 function question(id: string) {
   const view = running().playerView(id) as { question?: QuestionShown | null } | null;
   const q = view?.question;
@@ -85,7 +83,6 @@ function question(id: string) {
   return { ...q, right: q.options.indexOf(q.text === "One" ? "True" : "False") };
 }
 
-/** Answer `count` streamed questions correctly, waiting out each answer's feedback. */
 function answerRight(mode: GameMode, phone: HubSocket, id: string, count: number) {
   for (let i = 0; i < count; i++) {
     const q = question(id);
@@ -94,10 +91,6 @@ function answerRight(mode: GameMode, phone: HubSocket, id: string, count: number
   }
 }
 
-/**
- * Start the mode with three players (and the given mode settings), let `play` act, end the game,
- * and read each player's place on the podium, phone and results sheet.
- */
 async function finish(mode: GameMode, play: (phones: Map<string, HubSocket>, ids: Map<string, string>) => void = () => {}, settings?: Record<string, unknown>) {
   host.sendMsg({ type: "host.open", quizId });
   host.sendMsg({ type: "host.setMode", mode });
@@ -157,7 +150,7 @@ describe("Podium in team modes", () => {
       },
       { teams: 3, minutes: 2, theme: "classic" },
     );
-    // Changes after the finish do not reach the Podium.
+    // why: changes after the finish must not reach the Podium.
     const holly = [...game.players.values()].find((p) => p.nickname === "Holly")!;
     holly.placed = 9;
     game.teams[holly.team]!.columns = [5, 5, 5];
@@ -203,7 +196,6 @@ describe("Podium in team modes", () => {
         noel.claims = 99;
         noel.state = "claim";
         const ring = (team: number) => game.owners.map((_, t) => t).filter((t) => hexDistance(game.size, game.teams[team]!.start, t) === 2);
-        // Yellow (Ivy) is knocked out first, then Blue (Holly).
         for (const team of [2, 1]) {
           for (const tile of ring(team)) phones.get("Noel")!.sendMsg({ type: "land.place", tile });
           expect(game.teams[team]!.out).toBe(true);
@@ -240,7 +232,8 @@ describe("Podium in team modes", () => {
       { teams: 3, minutes: 5 },
     );
     const holly = [...game.players.values()].find((p) => p.nickname === "Holly")!;
-    expect(holly.team).toBe(0); // conquered: plays on with Noel's team
+    // why: conquered, Holly plays on with Noel's team.
+    expect(holly.team).toBe(0);
     holly.captured = 99;
     expect(places).toEqual({
       Noel: { podium: 1, phone: 1, sheet: 1 },

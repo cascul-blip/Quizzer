@@ -48,12 +48,10 @@ function answer(game: LandGame, clock: FakeClock, p: LandPlayer, right: boolean)
   clock.advance(FEEDBACK_MS);
 }
 
-/** Answer one round of questions, `right` of them correctly. */
 function round(game: LandGame, clock: FakeClock, p: LandPlayer, right: number) {
   for (let i = 0; i < 3; i++) answer(game, clock, p, i < right);
 }
 
-/** Put the player on the land with plenty of claims (skipping the questions). */
 function fund(p: LandPlayer, claims = 99) {
   p.claims = claims;
   p.state = "claim";
@@ -117,7 +115,6 @@ describe("rounds of questions", () => {
     const v = game.playerView(a.id)!;
     expect(v).toMatchObject({ state: "claim", claims: 2, answered: 0, question: null });
     expect(v.board!.size).toBe(10);
-    // No questions while on the land.
     expect(game.answer(a.id, lastQuestion.seq + 1, 0)).toBe(false);
   });
 
@@ -187,7 +184,7 @@ describe("placing tiles", () => {
     expect(game.place(a.id, 0)).toBe(true);
     expect(game.owners[0]).toBe(0);
     expect(game.playerView(a.id)!).toMatchObject({ state: "claim", claims: 1, teamTiles: 2 });
-    expect(game.place(a.id, 0)).toBe(false); // already ours
+    expect(game.place(a.id, 0)).toBe(false);
     expect(game.place(a.id, 1)).toBe(true);
     expect(game.playerView(a.id)!).toMatchObject({ state: "question", claims: 0, teamTiles: 3, me: { placed: 2, stolen: 0 } });
     expect(game.hostView().lastPlace).toMatchObject({ tile: 1, team: 0, stolen: false });
@@ -241,7 +238,7 @@ describe("placing tiles", () => {
     round(game, clock, a, 3);
     expect(game.place(a.id, theirs[0]!)).toBe(true);
     expect(a).toMatchObject({ claims: 1, stolen: 0, state: "claim" });
-    // Taking it back costs Blue the normal steal price; taking it from Blue again is 2, not 4.
+    // why: Taking it back costs Blue the normal steal price; taking it from Blue again is 2, not 4.
     fund(b, 2);
     expect(game.place(b.id, theirs[0]!)).toBe(true);
     expect(b.claims).toBe(0);
@@ -253,7 +250,6 @@ describe("placing tiles", () => {
   test("a player with claims but nothing affordable goes straight back to questions", () => {
     const { game, clock } = play(["A", "B"]);
     const a = byName(game, "A");
-    // The whole board is Blue's, apart from the starts.
     game.owners.forEach((o, t) => {
       if (o === EMPTY) game.owners[t] = 1;
     });
@@ -316,14 +312,12 @@ describe("surrounding", () => {
     expect(game.phase).toBe("playing");
     expect(finished()).toBe(0);
 
-    // Blue's player is Red now, keeps their claims and can keep playing.
     const bv = game.playerView(b.id)!;
     expect(bv.team.name).toBe("Red");
     expect(bv.conquered).toMatchObject({ from: "Blue", by: "Red" });
     expect(bv).toMatchObject({ state: "claim", claims: 2 });
     expect(game.place(b.id, 5)).toBe(true);
     expect(game.owners[5]).toBe(0);
-    // Blue's old start is no longer protected.
     expect(game.costFor(2, neighbors(game.size, game.teams[1]!.start)[0]!)).toBe(2);
 
     const host = game.hostView();
@@ -333,7 +327,6 @@ describe("surrounding", () => {
       ["Yellow", false, ["C"]],
     ]);
     expect(host.board.starts[1]).toMatchObject({ team: 1, out: true });
-    // Late joiners never land on a knocked-out team.
     expect(game.join("Late").team).toBe(2);
     clock.advance(1);
   });
@@ -350,9 +343,8 @@ describe("surrounding", () => {
     expect(game.phase).toBe("podium");
     expect(finished()).toBe(1);
     expect(game.playerView(a.id)!.result).toMatchObject({ teamRank: 1, teamCount: 2, won: true });
-    // B's team was conquered: B's result is the place of the team B started on.
+    // why: B's team was conquered: B's result is the place of the team B started on.
     expect(game.playerView(byName(game, "B").id)!.result).toMatchObject({ teamRank: 2, won: false });
-    // The game clock doesn't fire a second finish.
     clock.advance(10 * 60_000);
     expect(finished()).toBe(1);
   });

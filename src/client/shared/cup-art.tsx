@@ -1,9 +1,4 @@
-/**
- * Cup of Death: a round wooden table in a western saloon, seen from above at an
- * angle, with every living player seated around it behind their cups. The room
- * and the table are pictures (scripts/cup-saloon.py); everything on them is SVG. Also the
- * dice and the bubbling cups the phones show.
- */
+// why: the room and table are pictures from scripts/cup-saloon.py; everything on them is SVG.
 import type { ComponentChildren } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import type { AvatarChoice } from "../../shared/avatars.ts";
@@ -18,22 +13,21 @@ import { useChristmasCup } from "./cup-skin.tsx";
 
 const SALOON_W = 1200;
 const SALOON_H = 800;
-/** Table centre and radii; the seats sit on a wider ring around it. */
 const CX = 600;
 const CY = 440;
 const TABLE_RX = 330;
 const TABLE_RY = 140;
 const SEAT_RX = 440;
 const SEAT_RY = 228;
-/** Where the cups stand, as a share of the way from the table centre to the seat. */
+// why: a fraction of the way from table centre to seat.
 const CUP_RING = 0.62;
-/** The backdrop runs this far past the sides of the view box, so wide screens show more saloon instead of black bars. */
+// why: wide screens show more saloon instead of black bars.
 const BLEED = 700;
-/** The room picture (scripts/cup-saloon.py): its height in the scene and where its top edge goes, which puts the floor's back edge just behind the far seats. */
+// why: these put the floor's back edge just behind the far seats.
 const ROOM_H = 960;
 const ROOM_Y = -150;
 const ROOM_W = ROOM_H * (1344 / 768);
-/** The table picture: its tabletop ellipse as fractions of the picture (printed by scripts/cup-saloon.py). */
+// why: tabletop ellipse as fractions of the picture, printed by scripts/cup-saloon.py.
 const TOP_FX = 0.4995;
 const TOP_FY = 0.2692;
 const TOP_FRX = 0.4995;
@@ -88,7 +82,6 @@ const PIPS: Record<number, [number, number][]> = {
   ],
 };
 
-/** One die face in a 100×100 box. */
 function DieFace({ value }: { value: number }) {
   return (
     <>
@@ -109,7 +102,7 @@ export function Die({ value, class: cls }: { value: number; class?: string }) {
   );
 }
 
-/** A random face that changes every 90 ms (never the same twice running) while `spinning`. */
+// why: never the same face twice running, so the spin is visible.
 function useTumblingFace(spinning: boolean): number {
   const [face, setFace] = useState(() => 1 + Math.floor(Math.random() * CUP_DIE_SIDES));
   useEffect(() => {
@@ -139,7 +132,7 @@ export function RollingDie({ value, rollMs, class: cls, onLand }: { value: numbe
   return <Die value={landed ? value : face} class={`${cls ?? ""} ${landed ? "landed" : "rolling"}`} />;
 }
 
-/** A tin cup of bubbling green liquid, `w` wide, standing with its base centred on (0, 0). */
+// why: base centred on (0, 0) so callers place it by where it stands.
 function CupShape({ w, bubbles = true }: { w: number; bubbles?: boolean }) {
   const christmas = useChristmasCup();
   if (christmas) return <CheerMug w={w} steam={bubbles} />;
@@ -170,7 +163,7 @@ function CupShape({ w, bubbles = true }: { w: number; bubbles?: boolean }) {
   );
 }
 
-/** Identical cocoa mugs: the supercharged one never gives itself away. */
+// why: mugs are identical so the supercharged one never gives itself away.
 function CheerMug({ w, steam }: { w: number; steam: boolean }) {
   return (
     <g transform={`scale(${w / 80})`}>
@@ -195,7 +188,7 @@ function CheerMug({ w, steam }: { w: number; steam: boolean }) {
   );
 }
 
-/** Gradients the cups need; put once inside any <svg> that draws cups. */
+// why: put once inside any <svg> that draws cups; the cups reference these ids.
 function CupDefs() {
   return (
     <>
@@ -218,7 +211,6 @@ function CupDefs() {
   );
 }
 
-/** One big cup as its own <svg>, for the phone's cup picker. */
 export function CupArt({ class: cls }: { class?: string }) {
   return (
     <svg class={`cup-art ${cls ?? ""}`} viewBox={useChristmasCup() ? "-60 -142 130 160" : "-60 -110 120 125"} aria-hidden="true">
@@ -230,7 +222,6 @@ export function CupArt({ class: cls }: { class?: string }) {
   );
 }
 
-/** The room behind the table, fading into the dark on screens wider than the picture. */
 function Backdrop() {
   const christmas = useChristmasCup();
   const roomH = christmas ? 840 : ROOM_H;
@@ -254,15 +245,14 @@ function Backdrop() {
   );
 }
 
-/** The table picture, stretched so its tabletop lands on the table ellipse. */
 function Table({ children }: { children?: ComponentChildren }) {
   const christmas = useChristmasCup();
-  // Christmas sprite is cropped to its alpha bounds; tabletop measured in source.
+  // why: the Christmas sprite is cropped to its alpha bounds, so its tabletop fractions differ.
   const w = TABLE_RX / (christmas ? 0.499 : TOP_FRX);
   const h = TABLE_RY / (christmas ? 0.3 : TOP_FRY);
   const x = CX - (christmas ? 0.5 : TOP_FX) * w;
   const y = CY - (christmas ? 0.3 : TOP_FY) * h;
-  // The tabletop is drawn about this far above the floor; its shadow falls straight down under the lamps.
+  // why: the shadow falls straight down under the lamps, this far below the tabletop.
   const lift = h * 0.62;
   return (
     <g class="saloon-table">
@@ -278,11 +268,9 @@ interface Seat {
   x: number;
   y: number;
   size: number;
-  /** Direction from the table centre to the seat. */
   angle: number;
 }
 
-/** Spread the players evenly around the table, starting at the far side. */
 function seats(players: SeatPlayer[]): Seat[] {
   const n = players.length;
   const ringCircumference = 2 * Math.PI * Math.sqrt((SEAT_RX ** 2 + SEAT_RY ** 2) / 2);
@@ -296,11 +284,10 @@ function seats(players: SeatPlayer[]): Seat[] {
 
 const NEAR_FRONT_SIN = 0.7;
 const isNearFront = (s: Seat) => Math.sin(s.angle) > NEAR_FRONT_SIN;
-/** Fraction of the way from the cup to the drinker's mouth. */
+// why: a fraction of the way from the cup to the drinker's mouth.
 const CUP_LIFT = 0.72;
 const farSide = (s: Seat) => Math.sin(s.angle) < -0.3;
 
-/** The cups in front of one seat: screen positions, left to right. */
 function cupSpots(s: Seat, count: number, startCups: number): { x: number; y: number; w: number }[] {
   const bx = CX + (s.x - CX) * CUP_RING;
   const by = CY + (s.y - CY) * CUP_RING + 10;
@@ -313,7 +300,7 @@ function cupSpots(s: Seat, count: number, startCups: number): { x: number; y: nu
     tx = -tx;
     ty = -ty;
   }
-  // More cups to start with: smaller ones, so the row stays in front of its seat.
+  // why: more cups means smaller ones, so the row stays in front of its seat.
   const w = Math.max(12, Math.min(36, s.size * 0.3) * Math.min(1, 3.5 / startCups));
   const gap = w * 1.2;
   return Array.from({ length: count }, (_, k) => {
@@ -353,7 +340,7 @@ function SeatAvatar({ s, cls, children }: { s: Seat; cls: string; children?: Com
 function SeatBadge({ s, mode }: { s: Seat; mode: SaloonMode }) {
   const { p, size } = s;
   const d = Math.max(26, size * 0.34);
-  // Above the head of a near-front player is where the cups are: put it beside them instead.
+  // why: above a near-front player's head is where the cups are, so it goes beside them.
   const beside = isNearFront(s);
   return (
     <g transform={beside ? `translate(${size * 0.55 + d * 1.1} ${size * 0.15 + d})` : undefined}>
@@ -422,14 +409,13 @@ export function SaloonScene({
 }: {
   players: SeatPlayer[];
   mode: SaloonMode;
-  /** Cups each player started with (sizes the cups). */
+  // why: sizes the cups.
   startCups?: number;
-  /** The reveal's drinks (empty otherwise). Players poisoned in it stay seated until it ends, so they can fall. */
+  // why: players poisoned in the reveal stay seated until it ends, so they can fall.
   drinks?: CupDrinkView[];
   current?: number;
-  /** Changes each round so the dice tumble again. */
+  // why: changes each round so the dice tumble again.
   rollKey?: string;
-  /** Drawn in the middle of the table. */
   children?: ComponentChildren;
 }) {
   const christmas = useChristmasCup();

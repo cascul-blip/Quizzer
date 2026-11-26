@@ -8,7 +8,7 @@ import { usePhoneDom } from "./phone-dom.ts";
 
 const dom = usePhoneDom();
 beforeAll(() => {
-  // Happy DOM doesn't lay out the build area. Give the scene a measurable viewport.
+  // why: Happy DOM doesn't lay out the build area, so give the scene a measurable viewport.
   Object.defineProperty(dom.window.HTMLElement.prototype, "clientWidth", { configurable: true, get: () => 300 });
 });
 

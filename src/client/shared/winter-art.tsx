@@ -1,4 +1,4 @@
-/** Articulated, profile-view Christmas chase art. Game rules keep the submarine protocol. */
+/** why: only the art is Christmas; game rules keep the submarine protocol. */
 
 import type { RefObject } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
@@ -23,7 +23,7 @@ export interface SledRider {
   choice: AvatarChoice;
 }
 
-/** Scroll distance follows the live chase pace, including boosts and stops. */
+/** why: follows the live chase pace, including boosts and stops. */
 export function WinterBackdrop({ paceRef }: { paceRef: RefObject<number> }) {
   const world = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -54,12 +54,12 @@ export function WinterBackdrop({ paceRef }: { paceRef: RefObject<number> }) {
   );
 }
 
-/** A local animation clock; reduced-motion users see a still painted pose. */
+/** why: local clock; reduced-motion users see a still painted pose. */
 function useArtClock(moving = true, rate = 1) {
   const [time, setTime] = useState(0);
   const elapsed = useRef(0);
-  // Chase distance changes every frame. Read its latest speed without restarting
-  // the effect: repeated restarts can prevent the throttled clock from advancing.
+  // why: read the latest speed without restarting the effect; restarts every frame
+  // can stop the throttled clock from advancing.
   const rateRef = useRef(rate);
   rateRef.current = rate;
   useEffect(() => {
@@ -92,7 +92,7 @@ const hooks = [
   [0.62, 0.8],
 ];
 const ornamentArt = [ornamentRed, ornamentGold, ornamentBlue];
-// Tree pivot and hooks share the same world transform; strings remain vertical.
+// why: pivot and hooks share one world transform so the strings stay vertical.
 const hookPositions = hooks.map(([x, y]) => {
   const angle = (-48 * Math.PI) / 180;
   const dx = (x! - 0.5) * 436 * 0.32,
@@ -164,12 +164,12 @@ export function DogSled({ riders = [], moving = true, boosting = false }: { ride
   );
 }
 
-// Layout printed by scripts/winter-art/prepare-goblin.py: 12 fps, row-major cells of 295 × 375.
+// why: layout printed by scripts/winter-art/prepare-goblin.py (12 fps, row-major 295 × 375 cells).
 const GOBLIN_FRAMES = 36,
   GOBLIN_COLS = 8,
   GOBLIN_ROWS = 5;
 
-/** The supplied claymation goblin, keyed from magenta into a transparent frame sheet. */
+/** why: the supplied goblin was keyed from magenta into a transparent frame sheet. */
 export function ChristmasGoblin({ closeness = 0, caught = false }: { closeness?: number; caught?: boolean }) {
   const reach = Math.max(0, Math.min(1, closeness));
   const time = useArtClock(!caught, 0.8 + reach * 0.4);

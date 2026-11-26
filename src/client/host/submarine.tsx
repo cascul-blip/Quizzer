@@ -16,7 +16,6 @@ import type { LobbyModeEntry } from "./lobby-modes.tsx";
 
 type SubView = Extract<HostView, { kind: "submarine" }>;
 
-/** Distance to the goblin, animated locally between server updates. */
 function useLiveGap(view: SubView): number {
   const base = useRef({ gap: view.gapSeconds, at: performance.now() });
   const last = useRef(view);
@@ -39,10 +38,7 @@ function useLiveGap(view: SubView): number {
   return Math.max(0, base.current.gap - (view.speed * (performance.now() - base.current.at)) / 1000);
 }
 
-/**
- * Goblin placement (left edge, % of the field). At gap 0 its hands
- * reach the back of the sled; at the max gap it's mostly off-screen.
- */
+// why: at gap 0 the goblin's hands reach the back of the sled; at the max gap it's mostly off-screen.
 const GOBLIN_TOUCH_LEFT = 32;
 const GOBLIN_FAR_LEFT = -15;
 const LUNGE_LEFT = 3;
@@ -50,7 +46,6 @@ const LUNGE_MS = 450;
 const GRAB_MS = 140;
 const GRAB_AT_MS = LUNGE_MS + GRAB_MS + 60;
 
-/** Milliseconds since the catch began, re-rendering every frame until the grab is over. */
 function useCatchClock(caught: boolean): number {
   const start = useRef(0);
   const [, tick] = useState(0);
@@ -70,7 +65,7 @@ function useCatchClock(caught: boolean): number {
 
 const easeOut = (t: number) => 1 - (1 - Math.max(0, Math.min(1, t))) ** 3;
 
-/** Scroll speed as a multiple of the cruise pace. The host writes this into a ref; the backdrop reads it. */
+// why: a multiple of the cruise pace; the host writes it into a ref the backdrop reads.
 function paceFor(phase: SubView["phase"], level: number, boosting: boolean): number {
   const cruise = 1 + 0.14 * (Math.min(level, 8) - 1);
   if (phase === "chase") return cruise * (boosting ? 2.5 : 1);
@@ -80,21 +75,20 @@ function paceFor(phase: SubView["phase"], level: number, boosting: boolean): num
   return 0;
 }
 
-/** How long a boost notice stays next to the sled, and how many can stack. */
 const POP_MS = 2600;
 const MAX_POPS = 3;
-/** Keep three visible riders on the sled; rotate the rest of the squad through. */
+const SLED_SEATS = 3;
 function useSledRiders(players: SubView["players"], boost: SubView["lastBoost"]): SledRider[] {
   const [offset, setOffset] = useState(0);
   useEffect(() => {
     const timer = setInterval(() => setOffset((n) => n + 1), 6000);
     return () => clearInterval(timer);
   }, []);
-  // The stage re-renders every frame during the chase: keep the same array until the riders change.
+  // why: the stage re-renders every frame during the chase, so keep the same array until the riders change.
   return useMemo(() => {
     const connected = players.filter((p) => p.connected);
     const pool = connected.length ? connected : players;
-    const riders = Array.from({ length: Math.min(3, pool.length) }, (_, i) => {
+    const riders = Array.from({ length: Math.min(SLED_SEATS, pool.length) }, (_, i) => {
       const p = pool[(offset + i) % pool.length]!;
       return { key: p.id, choice: p.avatar };
     });
@@ -103,7 +97,7 @@ function useSledRiders(players: SubView["players"], boost: SubView["lastBoost"])
       if (existing >= 0) riders.splice(existing, 1);
       riders.splice(1, 0, { key: `boost-${boost.seq}`, choice: boost.avatar });
     }
-    return riders.slice(0, 3);
+    return riders.slice(0, SLED_SEATS);
   }, [players, offset, boost?.seq]);
 }
 
@@ -120,7 +114,7 @@ export function SubmarineStage({ view, send }: { view: SubView; send: Send }) {
 
   const boost = useEventFlash(view.lastBoost, view.lastBoost?.seq, 700);
   const [pops, setPops] = useState<NonNullable<SubView["lastBoost"]>[]>([]);
-  // Each pop's removal timer lives here, not in the effect cleanup, which also runs when the flash ends.
+  // why: not in the effect cleanup, which also runs when the flash ends.
   const popTimers = useRef(new Set<ReturnType<typeof setTimeout>>());
   useEffect(() => () => popTimers.current.forEach(clearTimeout), []);
   useEffect(() => {
@@ -133,15 +127,13 @@ export function SubmarineStage({ view, send }: { view: SubView; send: Send }) {
     }, POP_MS);
     popTimers.current.add(t);
   }, [boost?.seq]);
-  // A new level starts with a clean slate.
   useEffect(() => {
     if (view.phase !== "chase") setPops([]);
   }, [view.phase]);
   const faces = useSledRiders(view.players, boost);
   const paceRef = useRef(0);
   paceRef.current = paceFor(view.phase, view.level, !!boost);
-  // The stage re-renders every frame during the chase (the goblin's live gap). These elements are
-  // reused until their inputs change, so Preact skips diffing the backdrop and the sled each frame.
+  // why: the stage re-renders every frame during the chase; reusing these lets Preact skip diffing them.
   const sledMoving = view.phase === "chase" || view.phase === "escaped";
   const backdrop = useMemo(() => <WinterBackdrop paceRef={paceRef} />, []);
   const sled = useMemo(() => <DogSled riders={faces} moving={sledMoving} boosting={!!boost} />, [faces, sledMoving, !!boost]);

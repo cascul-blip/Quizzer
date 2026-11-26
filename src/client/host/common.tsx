@@ -13,10 +13,7 @@ export function toggleFullscreen() {
   else void document.documentElement.requestFullscreen?.().catch(() => {});
 }
 
-/**
- * Music, voice, join QR, mute and fullscreen buttons for the projector's top bar.
- * `voice` shows the announcer toggle (modes that speak); `join` shows the button that pops up the join QR so players can get back in mid-game.
- */
+// why: `join` lets players get back in mid-game.
 export function ScreenControls({ voice = false, join }: { voice?: boolean; join?: JoinInfo } = {}) {
   const [muted, setMutedState] = useState(isMuted());
   const [musicOn, setMusicOn] = useState(musicEnabled());
@@ -128,7 +125,6 @@ export function ErrorsButton({ shown, onToggle }: { shown: boolean; onToggle: ()
   );
 }
 
-/** The questions answered wrongly most often, worst first. */
 export function ErrorsTable({ errors }: { errors: QuestionError[] }) {
   if (errors.length === 0) {
     return (

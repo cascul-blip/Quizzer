@@ -25,7 +25,7 @@ export const AUTO_LEADERBOARD_MS = 5000;
 const LEADERBOARD_SIZE = 10;
 
 interface Answer {
-  /** Chosen option index; -1 for a typed answer. */
+  /** why: -1 marks a typed answer. */
   option: number;
   text?: string;
   correct: boolean;
@@ -35,9 +35,7 @@ interface Answer {
 
 interface Player extends BasePlayer {
   score: number;
-  /** On the most recently closed question. */
   lastQuestionPoints: number;
-  /** Consecutive correct answers up to the most recently closed question. */
   streak: number;
   answers: (Answer | undefined)[];
 }
@@ -47,7 +45,7 @@ interface GameOptions {
   rng?: () => number;
   pacing?: Pacing;
   onChange?: () => void;
-  /** A player answered: the hub updates that phone at once and everyone else a moment later. Defaults to onChange. */
+  /** why: the answering phone updates at once, everyone else a moment later; defaults to onChange. */
   onActivity?: (playerId: string) => void;
   onFinish?: (game: ClassicGame) => void;
   shuffle?: ShuffleOptions;
@@ -57,7 +55,7 @@ export class ClassicGame {
   readonly quiz: Quiz;
   readonly quizId: string;
   readonly title: string;
-  /** Play order; fixed (and shuffled if chosen) when the game starts. */
+  /** why: fixed (and shuffled if chosen) when the game starts. */
   questions: Question[];
   shuffle: ShuffleOptions;
   readonly runningMode = "classic" as const;
@@ -103,7 +101,7 @@ export class ClassicGame {
 
   setup!: LobbyChoices;
 
-  /** The lobby's choices with the pacing as the host left it; the next lobby opens with them. */
+  /** why: the next lobby opens with these, pacing as the host left it. */
   get choices(): LobbyChoices {
     return { ...this.setup, pacing: this.pacing };
   }
@@ -112,7 +110,7 @@ export class ClassicGame {
     return this.session.paced.openedAt;
   }
 
-  /** When the current phase's countdown ends (intro/open), for views; 0 when it has none. */
+  /** why: 0 when the phase has no countdown. */
   get phaseEndsAt(): number {
     return this.session.paced.phases.endsAt;
   }
@@ -125,7 +123,7 @@ export class ClassicGame {
     return this.session.paced.currentQuestion;
   }
 
-  /** `avatar` is the player's previous pick (if any); otherwise they get a random one to change in the lobby. */
+  /** why: without a previous `avatar` the player gets a random one to change in the lobby. */
   join(rawNickname: unknown, avatar?: AvatarChoice | null): Player {
     const player = this.session.addPlayer(rawNickname, avatar, newPlayer);
     this.session.changed();
@@ -140,7 +138,7 @@ export class ClassicGame {
     return this.session.byToken(token);
   }
 
-  /** Change a player's character/accessory; only while waiting in the lobby. */
+  /** why: only while waiting in the lobby. */
   setAvatar(playerId: string, avatar: unknown, accessory: unknown): void {
     const p = this.players.get(playerId);
     if (!p) return;
@@ -242,7 +240,7 @@ export class ClassicGame {
   }
 
   private scheduleLeaderboardAuto(): void {
-    // The timer runs behind the scenes: views show no countdown for an auto-paced leaderboard.
+    // why: the timer runs behind the scenes, so views show no countdown for an auto-paced leaderboard.
     if (this.pacing === "auto" && this.phase === "leaderboard") {
       this.session.paced.phases.set("leaderboard", AUTO_LEADERBOARD_MS, () => this.enterIntro(this.qIndex + 1), { hidden: true });
     }
@@ -252,7 +250,7 @@ export class ClassicGame {
     return rankBy([...this.players.values()], [most((p) => p.score)]);
   }
 
-  /** Per option, who picked it on the current question (fastest first). */
+  /** why: fastest first. */
   private answerAvatars(optionCount: number): HostClassicState["answerAvatars"] {
     const picks = [...this.players.values()]
       .map((p) => ({ p, a: p.answers[this.qIndex] }))
@@ -261,13 +259,12 @@ export class ClassicGame {
     return Array.from({ length: optionCount }, (_, i) => picks.filter((x) => x.a.option === i).map((x) => x.p.avatar));
   }
 
-  /** Most points first; equal points share a place. Classic gives no awards. */
+  /** why: equal points share a place; Classic gives no awards. */
   private buildPodium(): Podium<Player, Player, never> {
     const players = [...this.players.values()];
     return buildPodium({ entries: players, order: [most((p) => p.score)], players, entryOf: (p) => p, awards: { labels: {}, values: {} } });
   }
 
-  /** The finished game's Podium (GLOSSARY.md), worked out once in Game finish. */
   get podium(): Podium<Player, Player, never> {
     return this.session.podium;
   }
@@ -285,7 +282,7 @@ export class ClassicGame {
     }));
   }
 
-  /** The most-missed questions: wrong answers only, a question left unanswered doesn't count. */
+  /** why: wrong answers only; a question left unanswered does not count. */
   errors(): QuestionError[] {
     const wrong = this.questions.map((_, i) => [...this.players.values()].filter((p) => p.answers[i] && !p.answers[i]!.correct).length);
     return topErrors(this.questions, wrong);
@@ -335,7 +332,7 @@ export class ClassicGame {
   }
 
   private rankOf(playerId: string): number {
-    // Someone missing from the Podium shows last.
+    // why: someone missing from the Podium shows last.
     if (this.phase === "podium") return this.podium.result(playerId)?.place ?? this.players.size;
     if (!this.batch) return this.ranked().find((r) => r.id === playerId)!.rank;
     this.batch.rankById ??= new Map(this.rankedNow().map((r) => [r.id, r.rank]));

@@ -10,21 +10,18 @@ export type HandoffAction = { type: "start"; pacing?: Pacing } | { type: "next" 
 
 const PACINGS = new Set<Pacing>(["manual", "auto"]);
 
-/** What a host command can reach beyond the lobby or live game itself; the hub provides it. */
 export interface HostCommandContext {
   readonly game: Lobby | LiveGame | null;
   promoteAndSendHostSnapshot(): void;
   loadQuiz(quizId: string): Quiz;
-  /** Close the current game and open a lobby for this quiz. */
   openLobby(quiz: Quiz): void;
   closeGame(): void;
   setAddress(address: string): void;
-  /** A player was removed: drop their phones. */
   kicked(player: { id: string; nickname: string }): void;
   handoff(lobby: Lobby, action: HandoffAction): void;
 }
 
-/** Applies one Host command to the lobby or the live game. Throws GameError when the command doesn't apply. */
+// why: throws GameError when the command doesn't apply, which the caller reports to the host.
 export function applyHostCommand(msg: ClientMsg, ctx: HostCommandContext): void {
   const game = () => {
     if (!ctx.game) throw new GameError("No game is open");

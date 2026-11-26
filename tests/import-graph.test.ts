@@ -15,8 +15,8 @@ function tsFiles(dir: string): string[] {
   });
 }
 
-// scanImports leaves out type-only imports (`import type`, and `import { type X }` when every name is a type),
-// which Bun erases; dynamic imports load late and can't form an initialisation cycle.
+// why: scanImports skips type-only imports, which Bun erases;
+// dynamic imports load late and can't form an initialisation cycle.
 const transpiler = new Bun.Transpiler({ loader: "ts" });
 
 function runtimeImports(file: string): string[] {
@@ -26,7 +26,7 @@ function runtimeImports(file: string): string[] {
     .map((i) => resolve(dirname(file), i.path));
 }
 
-/** Import cycles, each as its path of files starting and ending at the same file; a graph with any cycle yields at least one. */
+/** why: a graph with any cycle yields at least one; each cycle starts and ends at the same file. */
 function findCycles(graph: Map<string, string[]>): string[][] {
   const cycles: string[][] = [];
   const seen = new Set<string>();
@@ -62,12 +62,10 @@ describe("Server import graph", () => {
   });
 });
 
-// Each mode's protocol types live in src/shared/modes/<mode>.ts, imported directly. protocol.ts re-exports nothing, so every type has one import path.
-// The list comes from SHARED_MODES, whose entries the mode files themselves declare.
+// why: protocol.ts re-exports nothing, so each mode type in src/shared/modes/<mode>.ts has one import path.
 const MODES_DIR = join(ROOT, "src/shared/modes");
 const MODE_FILES = keysOf(SHARED_MODES).map((m) => `${m}.ts`);
 
-/** Every relative import path in a file, type-only ones included. */
 function allImports(file: string): string[] {
   const source = readFileSync(file, "utf8");
   return [...source.matchAll(/(?:import|export)\s[^;]*?\bfrom\s+["'](\.[^"']+)["']/g)].map((m) => resolve(dirname(file), m[1]!));

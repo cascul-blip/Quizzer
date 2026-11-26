@@ -21,12 +21,12 @@ function readAll(dataDir: string): Records {
   }
 }
 
-/** The class's best Kingdom Siege Endless run on this quiz, or null. A missing or broken file counts as no record. */
+// why: a missing or broken file counts as no record.
 export function loadSiegeRecord(dataDir: string, quizId: string): SiegeRecord | null {
   return readAll(dataDir)[quizId] ?? null;
 }
 
-/** Save a new best run for this quiz (written to a temp file first, so a crash can't leave half a file). */
+// why: written to a temp file first, so a crash can't leave half a file.
 export function saveSiegeRecord(dataDir: string, quizId: string, record: SiegeRecord): void {
   const all = readAll(dataDir);
   all[quizId] = record;

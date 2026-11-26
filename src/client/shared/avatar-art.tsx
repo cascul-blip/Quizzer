@@ -1,14 +1,5 @@
-/**
- * Player avatars, drawn so they look the same on every phone and projector.
- *
- * Every character shares one layout (viewBox 0 0 100 100) so any accessory fits any character:
- *   head centered near (50,56), top of the head at y≈26, sides at x≈20/80, chin at y≈86;
- *   eyes at (40,52) and (60,52); mouth around y≈66.
- * Hats sit on the head top, glasses on the eye line, the bow tie under the chin.
- *
- * Each character and accessory is a painted picture seated on that viewBox by
- * scripts/avatar-art.py, so a hat still lands on every head.
- */
+/** why: one shared 100x100 layout (head ~(50,56), eyes y=52, chin y=86) lets any accessory fit any character;
+ * scripts/avatar-art.py seats each painted picture on it. */
 import type { JSX } from "preact";
 import type { AccessoryId, AvatarChoice, AvatarId } from "../../shared/avatars.ts";
 import { ACCESSORIES, AVATARS } from "../../shared/avatars.ts";
@@ -122,19 +113,19 @@ import xmasscarfImg from "./avatar/xmasscarf.webp";
 import yeticubImg from "./avatar/yeticub.webp";
 import { isPhoneArt } from "./phone-art.ts";
 
-/** Layout of the phone sheets, as written by scripts/phone-art.py. */
+// why: must match the sheet layout scripts/phone-art.py writes.
 const CELL = 192;
 const GUTTER = 2;
 const SHEET_COLS = 8;
 const STEP = CELL + 2 * GUTTER;
 
-/**
- * A painted face or accessory, already seated on the shared viewBox. The projector draws its
- * own picture; the phone draws cell `index` of one sheet, so the lobby picker is one download.
- */
+// why: the phone draws cell `index` of one shared sheet so the lobby picker is one download.
 function painted(src: string, sheet: string, index: number, count: number): () => JSX.Element {
   const box = `${(index % SHEET_COLS) * STEP + GUTTER} ${Math.floor(index / SHEET_COLS) * STEP + GUTTER} ${CELL} ${CELL}`;
-  const size = { width: SHEET_COLS * STEP, height: Math.ceil(count / SHEET_COLS) * STEP };
+  const size = {
+    width: SHEET_COLS * STEP,
+    height: Math.ceil(count / SHEET_COLS) * STEP,
+  };
   return () =>
     isPhoneArt() ? (
       <svg x="0" y="0" width="100" height="100" viewBox={box}>
@@ -268,7 +259,7 @@ export const ACCESSORY_ART = {
   ...Object.fromEntries(GEAR.map((a, i) => [a.id, painted(GEAR_IMG[a.id], gearSheet, i, GEAR.length)])),
 } as Record<AccessoryId, () => JSX.Element | null>;
 
-/** A character with its accessory on top. Unknown ids (e.g. from an older page) fall back gracefully. */
+// why: unknown ids (e.g. from an older page) fall back instead of breaking.
 export function Avatar({ choice, class: cls, title }: { choice: AvatarChoice; class?: string; title?: string }) {
   const body = AVATAR_ART[choice.avatar] ?? AVATAR_ART.cat;
   const extra = ACCESSORY_ART[choice.accessory] ?? ACCESSORY_ART.none;

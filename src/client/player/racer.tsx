@@ -12,23 +12,23 @@ import { LockedChoice, optionColor, Shape, TextAnswer, useCountdown } from "../s
 
 type Send = (m: ClientMsg) => void;
 
-/** Holding the Go button fills its ring in this long; letting go early drains it at the same pace. */
+/** why: letting go early drains the ring at the same pace. */
 const GO_HOLD_MS = 1000;
-/** If the server has not opened the question this long after Go, the driver may try again. */
+/** why: if the server has not opened the question by then, the driver may try again. */
 const GO_RETRY_MS = 1500;
-/** The driver's answer tiles ignore taps this long after they appear, so the finger lifting off Go or the lever can't answer. */
+/** why: so the finger lifting off Go or the lever can't answer. */
 const AFTER_GO_MS = 600;
-/** A lever move shows at once; if the server has not confirmed it by then, the lever goes back to what the server says. */
+/** why: if the server has not confirmed a lever move by then, the lever goes back to what the server says. */
 const LEVER_ECHO_MS = 800;
-/** Questions longer than this are set in smaller type so every screen fits without scrolling. */
-const LONG_QUESTION = 140;
+/** why: longer questions are set in smaller type so every screen fits without scrolling. */
+const LONG_QUESTION_CHARS = 140;
 
-/** Where a stop sits on the track, as a fraction of its height from the top (the three label rows are equal). */
+/** why: fractions of track height from the top; the three label rows are equal. */
 const TOP_STOP = 1 / 6;
 const BOTTOM_STOP = 5 / 6;
 
 const plural = (n: number, word: string, many = `${word}s`) => `${n} ${n === 1 ? word : many}`;
-const qClass = (text: string) => (visibleLength(text) > LONG_QUESTION ? "long" : "");
+const qClass = (text: string) => (visibleLength(text) > LONG_QUESTION_CHARS ? "long" : "");
 
 export function RacerPlayer({ view, send }: { view: PlayerRacerView; send: Send }) {
   const q = view.question;
@@ -78,7 +78,7 @@ export function RacerPlayer({ view, send }: { view: PlayerRacerView; send: Send 
 function DriverScreen({ view, send }: { view: PlayerRacerView; send: Send }) {
   const q = view.question!;
   const secs = useCountdown(view.phaseRemainingMs, `confidence:${q.index}`);
-  // A move shows straight away; the server's snapshot confirms it, or wins if it says otherwise.
+  // why: a move shows straight away; the server's snapshot confirms it, or wins if it says otherwise.
   const [mine, setMine] = useState<RacerConfidence | null>(null);
   const level = mine ?? view.lever ?? "low";
   const current = useRef(level);
@@ -158,17 +158,14 @@ function WatchScreen({ view }: { view: PlayerRacerView }) {
   );
 }
 
-/**
- * The confidence lever: a vertical track with three stops, the surest at the top.
- * With `onChange` the handle can be dragged (it follows the finger and snaps to the nearest stop
- * when released) and the labels can be tapped; without it the lever is a small read-only copy.
- */
+type BottomToTopStopFraction = number;
+
+/** why: without `onChange` the lever is a small read-only copy. */
 function Lever({ level, onChange }: { level: RacerConfidence; onChange?: (level: RacerConfidence) => void }) {
   const last = RACER_CONFIDENCE_LEVELS.length - 1;
   const track = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
-  /** While dragging: where the handle is, from 0 (bottom stop) to 1 (top stop). */
-  const [dragPos, setDragPos] = useState<number | null>(null);
+  const [dragPos, setDragPos] = useState<BottomToTopStopFraction | null>(null);
 
   const follow = (e: PointerEvent) => {
     const rect = track.current?.getBoundingClientRect();
@@ -176,7 +173,7 @@ function Lever({ level, onChange }: { level: RacerConfidence; onChange?: (level:
     const y = (e.clientY - rect.top) / rect.height;
     const pos = Math.max(0, Math.min(1, (BOTTOM_STOP - y) / (BOTTOM_STOP - TOP_STOP)));
     setDragPos(pos);
-    // Crossing into another stop's half of the track already counts as a change.
+    // why: crossing into another stop's half of the track already counts as a change.
     onChange?.(RACER_CONFIDENCE_LEVELS[Math.round(pos * last)]!);
   };
   const onDown = (e: PointerEvent) => {
@@ -238,7 +235,6 @@ function Lever({ level, onChange }: { level: RacerConfidence; onChange?: (level:
   );
 }
 
-/** Hold to fill the ring (it drains when released early); a full ring locks the lever in. */
 function GoButton({ onGo }: { onGo: () => void }) {
   const [charge, setCharge] = useState(0);
   const [fired, setFired] = useState(false);
@@ -275,7 +271,7 @@ function GoButton({ onGo }: { onGo: () => void }) {
     return () => cancelAnimationFrame(raf);
   }, [fired]);
 
-  // If the server didn't take it, let the driver try again.
+  // why: if the server didn't take it, let the driver try again.
   useEffect(() => {
     if (!fired) return;
     const t = setTimeout(() => {
@@ -322,7 +318,6 @@ function RacerAnswering({ view, send }: { view: PlayerRacerView; send: Send }) {
   const q = view.question!;
   const [pending, setPending] = useState<number | null>(null);
   const secs = useCountdown(q.remainingMs, `open:${q.index}`);
-  // The driver's finger was just on Go or the lever: don't let it land on an answer.
   const [armed, setArmed] = useState(!view.isDriver);
   useEffect(() => {
     if (armed) return;

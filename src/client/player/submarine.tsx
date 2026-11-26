@@ -11,11 +11,11 @@ import { Feedback, StreamQuestion } from "./stream-question.tsx";
 
 type Send = (m: ClientMsg) => void;
 
-/** Holding fills the charge in this long; letting go drains at half speed. */
+/** why: letting go drains at half speed. */
 const CHARGE_MS = 2000;
 const DRAIN_MS = 4000;
 
-/** After a boost fires, keep the boost screen up this long so lifting the finger can't tap the next answer. */
+/** why: so lifting the finger can't tap the next answer. */
 const AFTER_BOOST_MS = 1200;
 
 export function SubmarinePlayer({ view, send }: { view: PlayerSubView; send: Send }) {
@@ -93,7 +93,6 @@ export function SubmarinePlayer({ view, send }: { view: PlayerSubView; send: Sen
   );
 }
 
-/** Hold to charge (with a revving engine), release to let it drain; a full charge fires the boost. */
 function BoostButton({ onBoost }: { onBoost: () => void }) {
   const [charge, setCharge] = useState(0);
   const [fired, setFired] = useState(false);
@@ -139,7 +138,7 @@ function BoostButton({ onBoost }: { onBoost: () => void }) {
     };
   }, [fired]);
 
-  // If the server didn't take the boost (too early), let the player try again.
+  // why: if the server didn't take the boost (too early), let the player try again.
   useEffect(() => {
     if (!fired) return;
     const t = setTimeout(() => {
@@ -183,9 +182,9 @@ function BoostButton({ onBoost }: { onBoost: () => void }) {
   );
 }
 
-/** The red bar that drains while a symbol is up; when it's empty the instructor moves on. */
+/** why: when the bar is empty the instructor moves on. */
 function SymbolTimer({ index, remainingMs, totalMs }: { index: number; remainingMs: number; totalMs: number }) {
-  // Catch up once, when the symbol starts. Updating the delay on every snapshot would
+  // why: catch up once, when the symbol starts. Updating the delay on every snapshot would
   // count the time already animated twice and empty the bar early.
   const start = useRef<{ index: number; elapsed: number } | null>(null);
   if (!start.current || start.current.index !== index) start.current = { index, elapsed: Math.max(0, totalMs - remainingMs) };
