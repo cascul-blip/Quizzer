@@ -19,7 +19,7 @@ function useFightPhoneUI() {
 }
 
 /** why: enough arc to read the angle, not enough to see where it lands. */
-const PREVIEW_S = 0.45;
+const TRAJECTORY_PREVIEW_SEC = 0.45;
 const PULL_DRAW_FIELD_UNITS = 55;
 const FULL_POWER_SCREEN_SHARE = 0.4;
 const MIN_FULL_POWER_PX = 90;
@@ -28,7 +28,7 @@ const WALL_COLS = 5;
 const WALL_CLEAR_MS = 700;
 const WALL_WASTED_MS = 1600;
 
-const PHONE_AVATAR_RADIUS = 32;
+const PHONE_AVATAR_RADIUS_FIELD_UNITS = 32;
 
 export function FightPlayer(props: { view: PlayerFightView; send: Send }) {
   return (
@@ -73,7 +73,7 @@ function FightPlayerContent({ view, send }: { view: PlayerFightView; send: Send 
         <Battlefield
           hill={view.hill}
           shots={view.shot ? [view.shot] : []}
-          spriteR={PHONE_AVATAR_RADIUS}
+          spriteR={PHONE_AVATAR_RADIUS_FIELD_UNITS}
           terrain={view.terrain}
           damage={view.damage}
           colors={colors}
@@ -139,8 +139,9 @@ function FightPlayerContent({ view, send }: { view: PlayerFightView; send: Send 
 }
 
 function DecisionClock({ view }: { view: PlayerFightView }) {
-  // why: the correct count is fixed while choosing, so it keys this decision's countdown
-  const secs = useCountdown(view.decisionRemainingMs, `decision-${view.me.correct}`);
+  // why: the correct count stays fixed during a decision and distinguishes it from the next one.
+  const decisionKey = `decision-${view.me.correct}`;
+  const secs = useCountdown(view.decisionRemainingMs, decisionKey);
   return <div class={`fight-clock ${secs <= 3 ? "urgent" : ""}`}>{secs}</div>;
 }
 
@@ -161,7 +162,7 @@ function DecideScreen({ view, send }: { view: PlayerFightView; send: Send }) {
       <Battlefield
         hill={view.hill}
         shots={view.shot ? [view.shot] : []}
-        spriteR={PHONE_AVATAR_RADIUS}
+        spriteR={PHONE_AVATAR_RADIUS_FIELD_UNITS}
         terrain={view.terrain}
         damage={view.damage}
         colors={view.teams.map((t) => t.color)}
@@ -243,9 +244,9 @@ function AimScreen({ view, send }: { view: PlayerFightView; send: Send }) {
   const dots = [];
   if (v) {
     const flightMs = simulate(view.terrain, team, v.vx, v.vy).durationMs;
-    for (let t = 0.05; t <= PREVIEW_S && t * 1000 < flightMs; t += 0.05) {
+    for (let t = 0.05; t <= TRAJECTORY_PREVIEW_SEC && t * 1000 < flightMs; t += 0.05) {
       const q = shotPos(team, v.vx, v.vy, t);
-      dots.push(<circle key={t} cx={q.x} cy={sy(q.y)} r={7} fill="#fff" stroke="#1f1633" stroke-width="2" opacity={1 - t / (PREVIEW_S * 1.3)} />);
+      dots.push(<circle key={t} cx={q.x} cy={sy(q.y)} r={7} fill="#fff" stroke="#1f1633" stroke-width="2" opacity={1 - t / (TRAJECTORY_PREVIEW_SEC * 1.3)} />);
     }
   }
 
@@ -262,7 +263,7 @@ function AimScreen({ view, send }: { view: PlayerFightView; send: Send }) {
       <Battlefield
         hill={view.hill}
         shots={view.shot ? [view.shot] : []}
-        spriteR={PHONE_AVATAR_RADIUS}
+        spriteR={PHONE_AVATAR_RADIUS_FIELD_UNITS}
         terrain={view.terrain}
         damage={view.damage}
         colors={view.teams.map((t) => t.color)}
@@ -272,7 +273,7 @@ function AimScreen({ view, send }: { view: PlayerFightView; send: Send }) {
           <>
             <line x1={cx - 12} y1={sy(LAUNCH_Y) - 4} x2={back.x} y2={sy(back.y)} stroke="#3b2412" stroke-width="4" />
             <line x1={cx + 12} y1={sy(LAUNCH_Y) - 4} x2={back.x} y2={sy(back.y)} stroke="#3b2412" stroke-width="4" />
-            <AvatarSprite choice={view.me.avatar} x={back.x} y={back.y} r={PHONE_AVATAR_RADIUS} />
+            <AvatarSprite choice={view.me.avatar} x={back.x} y={back.y} r={PHONE_AVATAR_RADIUS_FIELD_UNITS} />
           </>
         )}
         {dots}
@@ -357,14 +358,14 @@ function WatchScreen({ view, shot }: { view: PlayerFightView; shot: FightShot })
       <Battlefield
         hill={view.hill}
         shots={view.shot ? [view.shot] : []}
-        spriteR={PHONE_AVATAR_RADIUS}
+        spriteR={PHONE_AVATAR_RADIUS_FIELD_UNITS}
         terrain={view.terrain}
         damage={view.damage}
         colors={view.teams.map((t) => t.color)}
       >
         <ShotLayer
           shots={[shot]}
-          spriteR={PHONE_AVATAR_RADIUS}
+          spriteR={PHONE_AVATAR_RADIUS_FIELD_UNITS}
           onLand={(s) => {
             setLanded(s.id);
             navigator.vibrate?.(i.kind === "tower" ? [80, 40, 160] : 40);

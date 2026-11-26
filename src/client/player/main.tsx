@@ -29,7 +29,7 @@ const storage = {
       if (value === null) localStorage.removeItem(key);
       else localStorage.setItem(key, value);
     } catch {
-      // why: private mode etc.: reconnect-after-refresh won't work, everything else does.
+      // why: storage can be unavailable; a failed write must still allow the current session to play.
     }
   },
 };

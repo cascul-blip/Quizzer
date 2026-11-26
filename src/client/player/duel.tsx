@@ -15,9 +15,9 @@ type Pose = "idle" | "ready" | "draw" | "fire" | "stagger" | "tip" | "walk1" | "
 type Hat = "brown" | "black" | "white" | "sheriff" | null;
 
 /** why: longer questions get smaller type so every screen fits without scrolling. */
-const LONG_QUESTION = 140;
+const LONG_QUESTION_CHARS = 140;
 
-const qClass = (text: string) => (visibleLength(text) > LONG_QUESTION ? "long" : "");
+const qClass = (text: string) => (visibleLength(text) > LONG_QUESTION_CHARS ? "long" : "");
 const arenaName = (n: number, theme?: SeasonTheme) => duelArenaName(n, theme);
 const secs = (ms: number) => `${(ms / 1000).toFixed(1)} s`;
 
@@ -290,9 +290,9 @@ function DuelReveal({ view }: { view: PlayerDuelView }) {
                 image={q.image}
                 spots={q.spots}
                 labels={q.options}
-                correct={r.correct}
-                pinAt={r.choice}
-                wrong={r.choice !== null && !correctSet.has(r.choice) ? r.choice : null}
+                correctSpotIndexes={r.correct}
+                placedSpotIndex={r.choice}
+                wrongSpotIndex={r.choice !== null && !correctSet.has(r.choice) ? r.choice : null}
               />
             </div>
           ) : (

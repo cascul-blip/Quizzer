@@ -1,7 +1,6 @@
 import type { GameMode } from "../../shared/mode-entries.ts";
 
-/** why: a mode's own entry isn't assignable to the widened one, so the table is checked by shape;
- * use the entry only with values of the mode it was looked up with. */
+/** why: widening loses the relation between the looked-up mode and the entry's inputs; callers must supply that mode's values. */
 export function entryOf<E>(table: { readonly [M in GameMode]: { [K in keyof E]: unknown } }, mode: GameMode): E {
   return table[mode] as E;
 }

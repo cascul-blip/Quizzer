@@ -28,7 +28,7 @@ import {
 import { preloadSnowballArt, SnowballLobbyPreview, SnowballScene, snowballBackground } from "../shared/duel-christmas.tsx";
 import type { MusicCue } from "../shared/music/index.ts";
 import { music } from "../shared/music/index.ts";
-import { PinBoard, PinNote } from "../shared/pin.tsx";
+import { PinBoard, ProjectorPinNote } from "../shared/pin.tsx";
 import { play } from "../shared/sounds.ts";
 import { Tex, visibleLength } from "../shared/tex.tsx";
 import { optionColor, ordinal, Shape, useCountdown } from "../shared/ui.tsx";
@@ -219,7 +219,7 @@ function Question({ view, send, secs }: { view: DuelView; send: Send; secs: numb
           <Tex text={q.text} />
         </h1>
         {pin ? (
-          <PinBoard image={pin.image} spots={pin.spots} labels={q.options} correct={reveal ? [...correct] : undefined} />
+          <PinBoard image={pin.image} spots={pin.spots} labels={q.options} correctSpotIndexes={reveal ? [...correct] : undefined} />
         ) : (
           q.image && <img src={`/${q.image}`} alt="" />
         )}
@@ -227,7 +227,7 @@ function Question({ view, send, secs }: { view: DuelView; send: Send; secs: numb
       <TimerBar view={view} secs={secs} />
       {view.phase === "intro" && <p class="duel-intro">{modeTheme("duel", view.theme) === "christmas" ? "Snowballs ready…" : "Hands off your holsters…"}</p>}
       {open && q.type === "text" && <p class="typing-note">Type your answer on your phone</p>}
-      {(open || reveal) && pin && <PinNote open={!reveal} labels={[...correct].map((i) => q.options[i]!)} />}
+      {(open || reveal) && pin && <ProjectorPinNote open={!reveal} labels={[...correct].map((i) => q.options[i]!)} />}
       {(open || reveal) && !pin && (q.type !== "text" || reveal) && (
         <div
           class={`tiles duel-tiles n${q.options.length} ${longest > 60 ? "long" : longest > 30 ? "medium" : ""}`}

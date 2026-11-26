@@ -33,7 +33,7 @@ export function StreakBadge({ streak }: { streak: number }) {
   );
 }
 
-/** why: true/false uses blue for True and red for False, as Kahoot does. */
+/** why: keep the familiar Kahoot colours for true/false even though ordinary choices start with red. */
 export function optionColor(type: string, index: number): number {
   return type === "true_false" ? (index === 0 ? 1 : 0) : index;
 }
@@ -59,10 +59,9 @@ export function LockedChoice({ type, index, label }: { type: string; index: numb
 }
 
 /** why: `remainingMs` is relative to when the message arrived, so client/server clock skew doesn't matter. */
-export function useCountdown(remainingMs: number, key: string): number {
-  // why: reset only when the phase/question key changes, not on every snapshot.
-  const ref = useRef<{ key: string; deadline: number } | null>(null);
-  if (!ref.current || ref.current.key !== key) ref.current = { key, deadline: performance.now() + remainingMs };
+export function useCountdown(remainingMs: number, countdownKey: string): number {
+  const ref = useRef<{ key: string; deadlineMs: number } | null>(null);
+  if (!ref.current || ref.current.key !== countdownKey) ref.current = { key: countdownKey, deadlineMs: performance.now() + remainingMs };
   const [, force] = useState(0);
   useEffect(() => {
     if (remainingMs <= 0) return;
@@ -70,7 +69,7 @@ export function useCountdown(remainingMs: number, key: string): number {
     // why: re-render only when the shown second changes, stopping at 0: the caller is usually a
     // whole stage, so every render redraws its art.
     const wake = () => {
-      const left = ref.current!.deadline - performance.now();
+      const left = ref.current!.deadlineMs - performance.now();
       if (left > 0) id = setTimeout(tick, nextSecondIn(left));
     };
     const tick = () => {
@@ -79,16 +78,16 @@ export function useCountdown(remainingMs: number, key: string): number {
     };
     wake();
     return () => clearTimeout(id);
-  }, [key]);
-  return Math.max(0, Math.ceil((ref.current.deadline - performance.now()) / 1000));
+  }, [countdownKey]);
+  return Math.max(0, Math.ceil((ref.current.deadlineMs - performance.now()) / 1000));
 }
 
 export function nextSecondIn(leftMs: number, slackMs = 5): number {
   return leftMs - (Math.ceil(leftMs / 1000) - 1) * 1000 + slackMs;
 }
 
-export function formatClock(secs: number): string {
-  return `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}`;
+export function formatClock(seconds: number): string {
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
 export function ordinal(n: number): string {
@@ -115,23 +114,23 @@ export function ConnBanner({ status }: { status: string }) {
 }
 
 const RELOAD_KEY = "quizzer.autoReloadAt";
+const AUTO_RELOAD_INTERVAL_MS = 30_000;
 
-/** why: a render failure (e.g. a page from an older version) reloads once; a repeat soon after shows a button instead of freezing. */
+/** why: rate-limit automatic reloads so a persistent render error leaves the manual reload button usable. */
 export class ErrorBoundary extends Component<{ children: ComponentChildren }, { failed: boolean }> {
   state = { failed: false };
 
   componentDidCatch(error: unknown) {
     console.error(error);
-    let last = 0;
     try {
-      last = Number(sessionStorage.getItem(RELOAD_KEY) ?? 0);
-      if (Date.now() - last > 30_000) {
+      const lastReloadAtMs = Number(sessionStorage.getItem(RELOAD_KEY) ?? 0);
+      if (Date.now() - lastReloadAtMs > AUTO_RELOAD_INTERVAL_MS) {
         sessionStorage.setItem(RELOAD_KEY, String(Date.now()));
         location.reload();
         return;
       }
     } catch {
-      // why: storage unavailable: fall through to the manual button
+      // why: without storage to rate-limit automatic reloads, offer only the manual button.
     }
     this.setState({ failed: true });
   }

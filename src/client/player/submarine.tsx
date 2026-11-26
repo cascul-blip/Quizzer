@@ -11,12 +11,12 @@ import { Feedback, StreamQuestion } from "./stream-question.tsx";
 
 type Send = (m: ClientMsg) => void;
 
-/** why: letting go drains at half speed. */
 const CHARGE_MS = 2000;
-const DRAIN_MS = 4000;
+const DRAIN_MS = 2 * CHARGE_MS;
+const BOOST_RETRY_MS = 1500;
 
 /** why: so lifting the finger can't tap the next answer. */
-const AFTER_BOOST_MS = 1200;
+const NEXT_ANSWER_TAP_GUARD_MS = 1200;
 
 export function SubmarinePlayer({ view, send }: { view: PlayerSubView; send: Send }) {
   const secs = useCountdown(view.phaseRemainingMs, `${view.phase}:${view.level}`);
@@ -27,7 +27,7 @@ export function SubmarinePlayer({ view, send }: { view: PlayerSubView; send: Sen
     send({ type: "sub.boost" });
     setAfterBoost(true);
     clearTimeout(afterTimer.current);
-    afterTimer.current = setTimeout(() => setAfterBoost(false), AFTER_BOOST_MS);
+    afterTimer.current = setTimeout(() => setAfterBoost(false), NEXT_ANSWER_TAP_GUARD_MS);
   };
   let body;
   if (view.phase === "countdown") {
@@ -144,7 +144,7 @@ function BoostButton({ onBoost }: { onBoost: () => void }) {
     const t = setTimeout(() => {
       level.current = 0;
       setFired(false);
-    }, 1500);
+    }, BOOST_RETRY_MS);
     return () => clearTimeout(t);
   }, [fired]);
 
@@ -182,15 +182,14 @@ function BoostButton({ onBoost }: { onBoost: () => void }) {
   );
 }
 
-/** why: when the bar is empty the instructor moves on. */
 function SymbolTimer({ index, remainingMs, totalMs }: { index: number; remainingMs: number; totalMs: number }) {
   // why: catch up once, when the symbol starts. Updating the delay on every snapshot would
   // count the time already animated twice and empty the bar early.
-  const start = useRef<{ index: number; elapsed: number } | null>(null);
-  if (!start.current || start.current.index !== index) start.current = { index, elapsed: Math.max(0, totalMs - remainingMs) };
+  const start = useRef<{ index: number; elapsedMs: number } | null>(null);
+  if (!start.current || start.current.index !== index) start.current = { index, elapsedMs: Math.max(0, totalMs - remainingMs) };
   return (
     <div class="dive-timer" role="timer" aria-label="Time left for this symbol">
-      <div key={index} class="dive-timer-fill" style={{ animationDuration: `${totalMs}ms`, animationDelay: `-${start.current.elapsed}ms` }} />
+      <div key={index} class="dive-timer-fill" style={{ animationDuration: `${totalMs}ms`, animationDelay: `-${start.current.elapsedMs}ms` }} />
     </div>
   );
 }

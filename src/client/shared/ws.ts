@@ -2,19 +2,21 @@ import type { ClientMsg, ServerMsg } from "../../shared/protocol.ts";
 
 export type ConnStatus = "connecting" | "open" | "closed";
 
+const INITIAL_RETRY_DELAY_MS = 500;
+const MAX_RETRY_DELAY_MS = 5000;
+
 interface Connection {
   send(msg: ClientMsg): void;
   close(): void;
 }
 
-/** why: retries at once when the tab becomes visible, since backoff (up to 5s) would leave a woken phone stale. */
 export function connect(handlers: {
   onOpen: (send: (msg: ClientMsg) => void) => void;
   onMessage: (msg: ServerMsg) => void;
   onStatus: (status: ConnStatus) => void;
 }): Connection {
   let ws: WebSocket | null = null;
-  let delay = 500;
+  let retryDelayMs = INITIAL_RETRY_DELAY_MS;
   let retry: ReturnType<typeof setTimeout> | null = null;
   let stopped = false;
   let serverId: string | null = null;
@@ -33,7 +35,7 @@ export function connect(handlers: {
     const sock = new WebSocket(url);
     ws = sock;
     sock.onopen = () => {
-      delay = 500;
+      retryDelayMs = INITIAL_RETRY_DELAY_MS;
       handlers.onStatus("open");
       handlers.onOpen(send);
     };
@@ -60,17 +62,17 @@ export function connect(handlers: {
       ws = null;
       handlers.onStatus("closed");
       if (stopped) return;
-      retry = setTimeout(open, delay);
-      delay = Math.min(delay * 2, 5000);
+      retry = setTimeout(open, retryDelayMs);
+      retryDelayMs = Math.min(retryDelayMs * 2, MAX_RETRY_DELAY_MS);
     };
     sock.onerror = () => sock.close();
   }
 
-  const onVisible = () => {
+  const reconnectWhenVisibleAndDisconnected = () => {
     if (document.visibilityState === "visible" && !ws) open();
   };
-  document.addEventListener("visibilitychange", onVisible);
-  window.addEventListener("online", onVisible);
+  document.addEventListener("visibilitychange", reconnectWhenVisibleAndDisconnected);
+  window.addEventListener("online", reconnectWhenVisibleAndDisconnected);
 
   open();
 
@@ -78,8 +80,8 @@ export function connect(handlers: {
     send,
     close() {
       stopped = true;
-      document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("online", onVisible);
+      document.removeEventListener("visibilitychange", reconnectWhenVisibleAndDisconnected);
+      window.removeEventListener("online", reconnectWhenVisibleAndDisconnected);
       ws?.close();
     },
   };
