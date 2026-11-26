@@ -6,6 +6,7 @@ import { QuizStore } from "../src/server/quiz/store.ts";
 import type { GameHub } from "../src/server/ws.ts";
 import type { Pacing } from "../src/shared/mode-views.ts";
 import type { MemoryBoardSize, MemoryCardView } from "../src/shared/modes/memory.ts";
+import { MEMORY_TURN_MS } from "../src/shared/modes/memory.ts";
 import type { ShuffleOptions } from "../src/shared/protocol.ts";
 import { FakeClock, sampleQuiz, tempDir } from "./helpers.ts";
 import { fakeHub, HubSocket } from "./hub-harness.ts";
@@ -804,7 +805,7 @@ describe("Memory Game", () => {
     submit(noel!, index, 1);
     host.sendMsg({ type: "host.end" });
 
-    expect(projector().awards).toEqual({ fastestAnswers: null, mostCorrect: null });
+    expect(projector().awards).toEqual({ fastestAnswers: null, mostCorrect: null, worstFlipper: null });
     expect(player(noel!).result?.awards).toEqual([]);
   });
 
@@ -857,5 +858,64 @@ describe("Memory Game", () => {
 
     expect(projector().awards?.fastestAnswers?.nicknames).toEqual(["Noel", "Holly"]);
     expect(player(noel!).result?.awards).toContain("Fastest answers");
+  });
+
+  test("Worst Flipper counts mismatched pairs but not timed-out turns", async () => {
+    const {
+      host,
+      phones: [noel, holly],
+    } = await launch(["Noel", "Holly"]);
+    const phones = { Noel: noel!, Holly: holly! };
+    for (let i = 0; i < 3; i++) playQuestion(host, [noel!, holly!]);
+    const onTurn = () => phones[projector().turn!.nickname as "Noel" | "Holly"];
+    const flipper = onTurn();
+    confirmPair(flipper, [0, 2]);
+    expect(projector().feedback).toEqual({ matched: false });
+    clock.advance(2_000);
+    expect(onTurn()).not.toBe(flipper);
+    clock.advance(MEMORY_TURN_MS);
+    expect(onTurn()).toBe(flipper);
+    confirmPair(flipper, [0, 2]);
+    expect(projector().feedback).toEqual({ matched: false });
+    host.sendMsg({ type: "host.end" });
+
+    const name = flipper === noel ? "Noel" : "Holly";
+    const other = flipper === noel ? holly! : noel!;
+    expect(projector().awards?.worstFlipper).toEqual({ value: 2, nicknames: [name] });
+    expect(player(flipper).result?.awards).toContain("Worst Flipper");
+    expect(player(other).result?.awards).not.toContain("Worst Flipper");
+  });
+
+  test("players tied on misses share Worst Flipper", async () => {
+    const {
+      host,
+      phones: [noel, holly],
+    } = await launch(["Noel", "Holly", "Ivy"]);
+    const phones = { Noel: noel!, Holly: holly! };
+    for (let i = 0; i < 3; i++) playQuestion(host, [noel!, holly!]);
+    for (let i = 0; i < 2; i++) {
+      confirmPair(phones[projector().turn!.nickname as "Noel" | "Holly"], [0, 2]);
+      expect(projector().feedback).toEqual({ matched: false });
+      clock.advance(2_000);
+    }
+    host.sendMsg({ type: "host.end" });
+
+    expect(projector().awards?.worstFlipper?.nicknames.toSorted()).toEqual(["Holly", "Noel"]);
+    expect(player(noel!).result?.awards).toContain("Worst Flipper");
+    expect(player(holly!).result?.awards).toContain("Worst Flipper");
+  });
+
+  test("nobody gets Worst Flipper when the only missed turns timed out", async () => {
+    const {
+      host,
+      phones: [noel],
+    } = await launch(["Noel", "Holly"]);
+    for (let i = 0; i < 3; i++) playQuestion(host, [noel!]);
+    expect(projector().phase).toBe("turn");
+    clock.advance(MEMORY_TURN_MS);
+    host.sendMsg({ type: "host.end" });
+
+    expect(projector().awards?.worstFlipper).toBeNull();
+    expect(player(noel!).result?.awards).not.toContain("Worst Flipper");
   });
 });

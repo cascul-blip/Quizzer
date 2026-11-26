@@ -22,6 +22,7 @@ interface MemoryParticipant extends BasePlayer {
   totalMs: number;
   correctMs: number;
   revealStarts: number;
+  misses: number;
 }
 
 interface MemoryOptions {
@@ -52,6 +53,7 @@ type MemoryPodiumT = Podium<MemoryParticipant, MemoryParticipant, MemoryAwardKey
 const MEMORY_AWARD_VALUES: Record<MemoryAwardKey, (p: MemoryParticipant) => number> = {
   fastestAnswers: (p) => (p.correct ? (1000 * p.correct) / Math.max(p.correctMs, 1) : 0),
   mostCorrect: (p) => p.correct,
+  worstFlipper: (p) => p.misses,
 };
 
 export class MemoryGame {
@@ -195,6 +197,7 @@ export class MemoryGame {
     player.chips--;
     const matched = this.board[first] === this.board[position];
     if (matched) player.pairs++;
+    else player.misses++;
     this.feedback = { matched, positions: [first, position] };
     this.session.paced.phases.set("feedback", matched ? MEMORY_MATCH_RESULT_MS : MISS_MS, () => this.afterFeedback());
     this.session.changed();
@@ -380,7 +383,7 @@ function fastestAverageThenFewestStartsThenJoinOrder(a: RevealCandidate, b: Reve
 }
 
 function newPlayer(base: BasePlayer): MemoryParticipant {
-  return { ...base, answers: [], chips: 0, pairs: 0, correct: 0, totalMs: 0, correctMs: 0, revealStarts: 0 };
+  return { ...base, answers: [], chips: 0, pairs: 0, correct: 0, totalMs: 0, correctMs: 0, revealStarts: 0, misses: 0 };
 }
 
 function playerView({ id, nickname, avatar, chips, pairs }: MemoryParticipant): MemoryPlayer {

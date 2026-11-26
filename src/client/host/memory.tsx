@@ -154,6 +154,7 @@ function MemoryPodium({ view, send }: { view: MemoryView; send: Send }) {
           valueText={(value) => `${(1 / value).toFixed(1)} s average`}
         />
         <Award icon="✅" title={memoryShared.awards.mostCorrect} award={view.awards?.mostCorrect ?? null} unit="correct" />
+        <Award icon="🙃" title={memoryShared.awards.worstFlipper} award={view.awards?.worstFlipper ?? null} unit="misses" />
       </div>
       <ol class="rest">
         {(view.podium ?? []).map(({ place, player }) => (

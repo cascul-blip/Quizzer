@@ -16,7 +16,7 @@ export const MEMORY_QUESTIONS_PER_PHASE = 3;
 export const MEMORY_TURN_MS = 20_000;
 
 /** why: the same labels in the classic and Christmas themes. */
-export const MEMORY_AWARDS = { fastestAnswers: "Fastest answers", mostCorrect: "Most correct" } as const;
+export const MEMORY_AWARDS = { fastestAnswers: "Fastest answers", mostCorrect: "Most correct", worstFlipper: "Worst Flipper" } as const;
 export type MemoryAwardKey = keyof typeof MEMORY_AWARDS;
 
 export type MemoryPhase = "intro" | "open" | "reveal" | "turn" | "feedback" | "podium";
