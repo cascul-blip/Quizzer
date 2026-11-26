@@ -8,7 +8,7 @@ import { keysOf } from "../src/shared/keys-of.ts";
 import type { GameMode } from "../src/shared/mode-entries.ts";
 import { SHARED_MODES } from "../src/shared/mode-entries.ts";
 
-/** Whether the rendered tree holds the node, looking through elements' children (not into components). */
+/** why: looks through elements' children only, not into components. */
 function holds(tree: ComponentChildren, node: unknown): boolean {
   if (tree === node) return true;
   if (Array.isArray(tree)) return tree.some((child) => holds(child, node));
@@ -22,7 +22,6 @@ describe("Lobby mode entries", () => {
   });
 
   for (const mode of keysOf(HOST_MODES)) {
-    // The lobby hands a paced mode's panel the shared Pacing and Shuffle question order rows to place.
     test.if(SHARED_MODES[mode].flags.paced)(`${SHARED_MODES[mode].name}'s settings panel places the shared rows`, () => {
       const rows = h("span", { class: "shared-rows" });
       const Settings = lobbyEntryOf(mode).Settings as FunctionComponent<LobbySettingsProps<GameMode>>;

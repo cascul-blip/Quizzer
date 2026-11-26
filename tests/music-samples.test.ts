@@ -6,10 +6,7 @@ import { SAMPLE_SETS } from "../src/client/shared/music/samples/manifest.ts";
 import { loadSamples, nearestZone, playSample, samplesReady, setSamplesEnabled, urlsFor, VOICES } from "../src/client/shared/music/samples.ts";
 import { TRACKS } from "../src/client/shared/music/tracks.ts";
 
-/** The fade at the end of each recording, in seconds. */
-const RECORDING_FADE_S = 0.25;
-
-// A stand-in for an AudioContext (tests have none) that counts the nodes made.
+const RECORDING_END_FADE_S = 0.25;
 
 class FakeParam {
   value = 0;
@@ -61,7 +58,7 @@ const ALL = Object.keys(VOICES);
 const midiOf = (f: number) => 69 + 12 * Math.log2(f / 440);
 const sampledTracks = Object.values(TRACKS).filter(usesSamples);
 
-/** Every note an instrument plays in the sampled tracks, with how long it is held (seconds, at the track's slowest). */
+/** why: `len` is in seconds at the track's slowest tempo, the longest a sample must hold. */
 function notesOf(inst: string): { midi: number; len: number }[] {
   const out: { midi: number; len: number }[] = [];
   for (const t of sampledTracks)
@@ -105,7 +102,7 @@ describe("the recordings", () => {
       if (!("zones" in set)) throw new Error(inst);
       for (const { midi, len } of notesOf(inst)) {
         const rate = 2 ** ((midi - nearestZone(set.zones, midi).root) / 12);
-        expect((len + voice.ring + voice.release) * rate).toBeLessThan(set.seconds - RECORDING_FADE_S);
+        expect((len + voice.ring + voice.release) * rate).toBeLessThan(set.seconds - RECORDING_END_FADE_S);
       }
     }
   });

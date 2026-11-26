@@ -36,7 +36,7 @@ function seeded(seed = 42) {
   return () => (s = (s * 1664525 + 1013904223) % 2 ** 32) / 2 ** 32;
 }
 
-/** An rng that plays back fixed values, then falls back to a seeded one. */
+/** why: plays back fixed values first so a test can choose the poison cup, then falls back to a seeded rng. */
 function scripted(values: number[]) {
   const rest = seeded();
   return { values, rng: () => (values.length > 0 ? values.shift()! : rest()) };
@@ -145,13 +145,12 @@ describe("Cup of Death", () => {
     expect(game.playerView(b.id)!.drink).toEqual({ picked: null });
     expect(game.playerView(a.id)!.drink).toBeNull();
     expect(game.hostView().players.find((p) => p.id === b.id)).toMatchObject({ drinker: true, picked: false });
-    // A's not drinking, and B can only pick a cup that's there.
     expect(game.pick(a.id, 0)).toBe(false);
     expect(game.pick(b.id, CUP_DEFAULT_CUPS)).toBe(false);
-    // The poison goes in the last cup; B drinks cup 1.
+    const POISON_IN_LAST_CUP = 0.9;
+    values.push(POISON_IN_LAST_CUP);
     values.push(0.9);
     expect(game.pick(b.id, 1)).toBe(true);
-    // Everyone has picked: the reveal starts at once.
     expect(game.phase).toBe("reveal");
     expect(game.pick(b.id, 0)).toBe(false);
     let r = game.hostView().reveal!;
@@ -188,7 +187,7 @@ describe("Cup of Death", () => {
       expect(game.hostView().players.find((p) => p.id === b.id)!.out).toBe(true);
       clock.advance(CUP_VERDICT_MS);
       expect(game.phase).toBe("roll");
-      // Poisoned players answer any time, but it doesn't count toward anything.
+      // why: poisoned players may answer any time, but it doesn't count toward anything.
       expect(game.playerView(b.id)!.question).not.toBeNull();
       answer(game, clock, b, true);
       expect(b.progress).toBe(0);
@@ -242,7 +241,8 @@ describe("Cup of Death", () => {
         endQuiz(game, clock);
         expect(game.phase).toBe(round < cups ? "drink" : "reveal");
         if (round < cups) {
-          // Poison is in the last cup; B drinks the first.
+          const POISON_IN_LAST_CUP = 0.999;
+          values.push(POISON_IN_LAST_CUP);
           values.push(0.999);
           game.pick(b.id, 0);
         }
@@ -255,7 +255,7 @@ describe("Cup of Death", () => {
       expect(b.outRound).toBe(cups);
       expect(b.poisonedFrom).toBe(1);
       expect(game.phase).toBe("podium");
-      // B survived their first cup, or (with one cup) there was no luck in it: no "Unluckiest".
+      // why: B survived their first cup, or (with one cup) there was no luck in it, so no "Unluckiest".
       expect(game.hostView().awards!.earliestFirstCupOut).toBeNull();
     });
   }
@@ -277,7 +277,6 @@ describe("Cup of Death", () => {
       expect(d.cup).toBeLessThan(CUP_DEFAULT_CUPS);
     }
     expect(drinks.find((d) => d.id === byName(game, "A").id)!.cup).toBe(2);
-    // The reveal lasts one sip and one verdict per drinker.
     expect(game.phaseDurationMs).toBe(3 * (CUP_SIP_MS + CUP_VERDICT_MS));
   });
 
@@ -289,7 +288,7 @@ describe("Cup of Death", () => {
     endQuiz(game, clock);
     const [first, second] = game.drinkers;
     game.pick(first!, 0);
-    // Poison draws: first drinker safe (cup 2), second poisoned (cup 0).
+    // why: these draws leave the first drinker safe (cup 2) and poison the second (cup 0).
     values.push(0.9, 0);
     game.pick(second!, 0);
     let r = game.hostView().reveal!;
@@ -330,7 +329,7 @@ describe("Cup of Death", () => {
     const { rng, values } = scripted([]);
     const { game, clock } = setup(["A", "B", "C"], rng);
     const c = byName(game, "C");
-    // Round 1: C is poisoned; A and B survive.
+    // why: round 1 poisons C; A and B survive.
     toQuiz(game, clock);
     endQuiz(game, clock);
     for (const id of game.drinkers) {
@@ -340,7 +339,7 @@ describe("Cup of Death", () => {
     clock.advance(game.phaseEndsAt - clock.now());
     expect(c.outRound).toBe(1);
     expect(game.phase).toBe("roll");
-    // Round 2: A and B both poisoned.
+    // why: round 2 poisons both A and B.
     toQuiz(game, clock);
     endQuiz(game, clock);
     values.push(0);
@@ -419,7 +418,7 @@ describe("Cup of Death", () => {
       toQuiz(game, clock);
       makeSafe(game, clock, a);
       endQuiz(game, clock);
-      // B survives, C is poisoned by the first cup they drink.
+      // why: B survives; C is poisoned by the first cup they drink.
       for (const id of game.drinkers) {
         values.push(id === c.id ? 0 : 0.999);
         game.pick(id, 0);

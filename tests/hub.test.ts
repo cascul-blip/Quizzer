@@ -23,8 +23,6 @@ import { fakeHub, HubSocket, pastThrottle, withoutTimers } from "./hub-harness.t
 
 type PlayerStateMsg = Awaited<ReturnType<HubSocket["playerState"]>>;
 
-// The hub's game logic, end to end, on fake sockets; tests/server.test.ts keeps what only a real socket can show.
-
 let t: ReturnType<typeof tempDir>;
 let store: QuizStore;
 let hub: GameHub;
@@ -41,13 +39,11 @@ afterEach(() => {
   t.cleanup();
 });
 
-/** The results CSV the server would serve at /api/results/latest.csv. */
 async function resultsCsv() {
   await new Promise((r) => setTimeout(r, 0));
   return hub.lastResults?.csv ?? "";
 }
 
-/** The view a phone built from patches matches a fresh snapshot of the same player. */
 async function expectInSync(s: HubSocket) {
   pastThrottle(clock);
   const fresh = new HubSocket(hub);
@@ -105,7 +101,6 @@ describe("Game mode: Classic", () => {
     await hub.broadcast();
     await players[0]!.playerState((v) => v.kind === "classic" && v.phase === "open");
 
-    // Q1: Ann right, Bob wrong, Cy right.
     players[0]!.sendMsg({ type: "answer", qIndex: 0, option: 1 });
     players[1]!.sendMsg({ type: "answer", qIndex: 0, option: 0 });
     players[2]!.sendMsg({ type: "answer", qIndex: 0, option: 1 });
@@ -117,7 +112,6 @@ describe("Game mode: Classic", () => {
     const annResult = await players[0]!.playerState((v) => v.kind === "classic" && v.phase === "reveal");
     expect(annResult.view.kind === "classic" && annResult.view.result?.wasCorrect).toBe(true);
 
-    // Bob's phone reloads: resume with the token and keep the same identity.
     players[1]!.close();
     await host.hostState((v) => v.kind === "classic" && v.players.some((p) => p.nickname === "Bob" && !p.connected));
     const bob2 = new HubSocket(hub);
@@ -141,7 +135,6 @@ describe("Game mode: Classic", () => {
     host.sendMsg({ type: "host.next" });
     const podium = await host.hostState((v) => v.phase === "podium");
     expect(podium.view.kind).toBe("classic");
-    // Bob got the first question wrong: the "Show errors" table has it.
     const errors = podium.view.kind === "classic" ? podium.view.errors! : [];
     expect(errors.length).toBeGreaterThan(0);
     expect(errors.every((e) => e.wrong > 0 && !!e.text && e.answers.length > 0)).toBe(true);
@@ -150,7 +143,7 @@ describe("Game mode: Classic", () => {
 
     const text = await resultsCsv();
     expect(text).toContain("Ann");
-    expect(text).not.toContain("Cy"); // kicked players are dropped
+    expect(text).not.toContain("Cy");
 
     host.sendMsg({ type: "host.close" });
     await host.hostState((v) => v.phase === "idle");
@@ -196,7 +189,6 @@ describe("Game mode: Tallest Tower", () => {
     clock.advance(COUNTDOWN_MS);
     hub.broadcast();
 
-    // Ann answers 4 correctly at her own pace; the others do nothing.
     const ann = players[0]!;
     let answered: PlayerStateMsg | undefined;
     for (let i = 0; i < 4; i++) {
@@ -222,7 +214,7 @@ describe("Game mode: Tallest Tower", () => {
     const sent = ann.raw.length;
     clock.advance(600);
     hub.broadcast();
-    expect(ann.raw).toHaveLength(sent); // Elapsed time alone doesn't send another view.
+    expect(ann.raw).toHaveLength(sent);
     const midway = new HubSocket(hub);
     midway.sendMsg({ type: "resume", token: ann.token! });
     const midWait = await midway.playerState((v) => v.kind === "tower");
@@ -251,7 +243,7 @@ describe("Game mode: Tallest Tower", () => {
       ["Blue", [0, 0, 0], 0],
     ]);
 
-    // At 1/3 of the game the monster egg appears for everyone (monster is on by default).
+    // why: the egg appears at 1/3 of the game, and the monster is on by default.
     clock.advance(40_000);
     const eggView = await host.hostState((v) => v.kind === "tower" && !!v.egg);
     expect(eggView.view.kind === "tower" && eggView.view.monster).toBe(true);
@@ -319,7 +311,7 @@ describe("Game mode: Submarine Squad", () => {
     pastThrottle(clock);
     const boosted = await host.hostState((v) => v.kind === "submarine" && v.boosts === 1);
     expect(boosted.view.kind === "submarine" && boosted.view.lastBoost?.nickname).toBe("Sam");
-    // The boost carries Sam's avatar so the projector can show who boosted.
+    // why: the boost carries the avatar so the projector can show who boosted.
     if (boosted.view.kind === "submarine") {
       const samAvatar = boosted.view.players.find((p) => p.nickname === "Sam")!.avatar;
       expect(boosted.view.lastBoost?.avatar).toEqual(samAvatar);
@@ -375,12 +367,11 @@ describe("Game mode: Tower Fight", () => {
       clock.advance(FEEDBACK_MS);
       hub.broadcast();
     }
-    // Undamaged tower: straight to aiming.
     const aiming = answered!;
     expect(aiming.view.kind === "fight" && aiming.view.state).toBe("aim");
     expect(aiming.view.kind === "fight" && aiming.view.decisionRemainingMs).toBe(0);
 
-    // A hard throw backwards: friendly fire on Red's own tower.
+    // why: a hard throw backwards is friendly fire on Red's own tower.
     red.sendMsg({ type: "fight.fire", dx: 170, dy: -20 });
     const watching = await red.playerState((v) => v.kind === "fight" && v.state === "watch" && !!v.shot);
     const shot = watching.view.kind === "fight" ? watching.view.shot! : null;
@@ -456,7 +447,6 @@ describe("Game mode: Robot Attack", () => {
     const moving = await ann.playerState((v) => v.kind === "robot" && v.phase === "move" && !!v.board);
     const start = moving.view.kind === "robot" ? moving.view.me : null;
     expect(moving.view.kind === "robot" && moving.view.board!.marked.length).toBeGreaterThanOrEqual(108);
-    // Step away from the edge the player is nearest, twice.
     const dir = start!.x < 6 ? "right" : "left";
     ann.sendMsg({ type: "robot.move", dir });
     ann.sendMsg({ type: "robot.move", dir });
@@ -465,7 +455,7 @@ describe("Game mode: Robot Attack", () => {
     await expectInSync(ann);
     await host.hostState((v) => v.kind === "robot" && v.players.some((p) => p.nickname === "Ann" && p.x === start!.x + (dir === "right" ? 2 : -2)));
 
-    // Bob stood still, so the lasers hit him.
+    // why: Bob stood still, so the lasers hit him.
     clock.advance(ROBOT_MOVE_MS);
     const attack = await host.hostState((v) => v.kind === "robot" && v.phase === "attack");
     const bob = attack.view.kind === "robot" ? attack.view.players.find((p) => p.nickname === "Bob")! : null;
@@ -529,7 +519,6 @@ describe("Game mode: Cup of Death", () => {
     clock.advance(CUP_ROLL_MS);
     hub.broadcast();
 
-    // Ann answers until she's safe; Bob does nothing.
     const [ann, bob] = players as [HubSocket, HubSocket];
     for (;;) {
       const st = await ann.playerState((v) => v.kind === "cup" && v.phase === "quiz" && (v.me.safe || (!!v.question && !v.feedback)));
@@ -538,7 +527,7 @@ describe("Game mode: Cup of Death", () => {
       ann.sendMsg({ type: "cup.answer", seq: q.seq, option: 0 });
       const answered = await ann.playerState((v) => v.kind === "cup" && v.question?.seq !== q.seq);
       clock.advance(FEEDBACK_MS);
-      // The answer that makes Ann safe hides her question and flash, so no later view changes.
+      // why: the answer that makes Ann safe hides her question and flash, so no later view changes.
       if (answered.view.kind === "cup" && answered.view.me.safe) break;
       hub.broadcast();
     }
@@ -607,7 +596,8 @@ describe("Game mode: Kingdom Siege", () => {
     host.sendMsg({ type: "host.setMode", mode: "siege" });
     const siegeLobby = await host.hostState((v) => v.kind === "lobby" && v.mode === "siege" && v.settings.siege.waves === 5 && v.teams === null);
     expect(siegeLobby.view.kind === "lobby" && siegeLobby.view.settings.siege.theme).toBe("christmas");
-    hub.onMessage(host, JSON.stringify({ type: "host.setModeSettings", mode: "siege", settings: { waves: 7 } })); // not a valid choice, as a stale page might send
+    // why: 7 is not a valid choice, as a stale page might send.
+    hub.onMessage(host, JSON.stringify({ type: "host.setModeSettings", mode: "siege", settings: { waves: 7 } }));
     expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: expect.stringContaining("waves") });
     host.sendMsg({ type: "host.setModeSettings", mode: "siege", settings: { waves: "endless", theme: "classic" } });
     await host.hostState((v) => v.kind === "lobby" && v.settings.siege.waves === "endless");
@@ -632,14 +622,11 @@ describe("Game mode: Kingdom Siege", () => {
     ann.sendMsg({ type: "siege.answer", seq: q!.seq, option: 0 });
     await ann.playerState((v) => v.kind === "siege" && v.gold === 75);
     await host.hostState((v) => v.kind === "siege" && v.gold === 125);
-    // Bob's own purse doesn't change when Ann answers.
     expect(bob.view?.kind === "siege" && bob.view.gold).toBe(50);
 
-    // The map's contents only come while it is open.
     expect(bob.view?.kind === "siege" && bob.view.map).toBeNull();
     bob.sendMsg({ type: "siege.map", open: true });
     await bob.playerState((v) => v.kind === "siege" && !!v.map && v.map.defenders.length === 0);
-    // Bob's 50 gold can't buy a knight; Ann's 75 can.
     bob.sendMsg({ type: "siege.place", defender: "knight", lane: 2, square: 3 });
     expect(await bob.waitFor((m) => m.type === "error")).toMatchObject({ message: "Not enough gold." });
     ann.sendMsg({ type: "siege.place", defender: "knight", lane: 2, square: 3 });
@@ -658,13 +645,12 @@ describe("Game mode: Kingdom Siege", () => {
     hub.broadcast();
     await host.hostState((v) => v.kind === "siege" && v.phase === "wave" && v.wave === 1);
     const siege = hub.game as SiegeGame;
-    // Spawn a goblin near the wall in an undefended lane to guarantee a wall hit.
+    // why: a goblin near the wall in an undefended lane is sure to hit the wall.
     siege.battlefield.spawn("goblin", 0, 1);
     for (let i = 0; i < 120 && !(siege.phase === "build" && siege.wave === 2); i++) clock.advance(500);
     hub.broadcast();
     const wave2 = await host.hostState((v) => v.kind === "siege" && v.phase === "build" && v.wave === 2);
     expect(wave2.view.kind === "siege" && wave2.view.hearts).toBeLessThan(10);
-    // Phones never get monster positions.
     expect(JSON.stringify(ann.raw.filter((m) => m.type === "player.state" || m.type === "player.patch"))).not.toContain("goblin");
 
     host.sendMsg({ type: "host.end" });
@@ -772,7 +758,6 @@ describe("Game mode: Land Grab", () => {
     expect(afterWait.view.kind === "land" && afterWait.view.board?.owners[0]).toBe(-1);
     ready.close();
 
-    // A tile next to Blue's start is refused; grass is taken.
     const blueStart = started.view.kind === "land" ? started.view.board.starts[1]!.tile : 0;
     ann.sendMsg({ type: "land.place", tile: blueStart + 1 });
     await ann.playerState((v) => v.kind === "land" && v.claims === 3);
@@ -830,7 +815,6 @@ describe("Game mode: Racer", () => {
     }
     await host.hostState((v) => v.kind === "lobby" && v.players.length === 2);
 
-    // Straight into turn 1: one of them drives, the options are hidden.
     host.sendMsg({ type: "host.start", pacing: "manual" });
     const started = await host.hostState((v) => v.kind === "racer" && v.phase === "confidence");
     const first = started.view.kind === "racer" ? started.view : null;
@@ -849,7 +833,6 @@ describe("Game mode: Racer", () => {
     await driver.playerState((v) => v.kind === "racer" && v.phase === "confidence" && v.theme === "christmas" && v.isDriver);
     await other.playerState((v) => v.kind === "racer" && v.phase === "confidence" && !v.isDriver && v.driver?.nickname === driverName);
 
-    // Only the driver has the lever: the other phone's attempts are rejected and its state is sent again.
     other.msgs.length = 0;
     other.sendMsg({ type: "racer.lever", level: "high" });
     other.sendMsg({ type: "racer.go" });
@@ -864,11 +847,9 @@ describe("Game mode: Racer", () => {
     const open = await host.hostState((v) => v.kind === "racer" && v.phase === "open");
     expect(open.view.kind === "racer" && [open.view.confidence, open.view.question!.options]).toEqual(["mid", ["right", "wrong"]]);
 
-    // Classic-only host controls say which mode is in the way.
     host.sendMsg({ type: "host.setShuffle", questions: true, answers: true });
     expect(await host.waitFor((m) => m.type === "error")).toMatchObject({ message: "Not available in Racer" });
 
-    // Everyone right at "Confident": +20 mph.
     for (const p of players) {
       await p.playerState((v) => v.kind === "racer" && v.phase === "open" && v.question!.options.length === 2);
       p.sendMsg({ type: "racer.answer", index: 0, option: 0 });
@@ -888,7 +869,6 @@ describe("Game mode: Racer", () => {
       car: { speedMph: 50 },
     });
 
-    // Pacing can change mid-game: on auto the reveal moves on by itself.
     host.sendMsg({ type: "host.setPacing", pacing: "auto" });
     await host.hostState((v) => v.kind === "racer" && v.phase === "reveal" && v.pacing === "auto");
     clock.advance(AUTO_REVEAL_MS);
@@ -896,7 +876,7 @@ describe("Game mode: Racer", () => {
     const second = await host.hostState((v) => v.kind === "racer" && v.phase === "confidence" && v.question?.index === 1);
     expect(second.view.kind === "racer" && second.view.driver!.nickname).not.toBe(driverName);
 
-    // The host skips the lever (locked on "Not confident"), then closes the question with one wrong answer in.
+    // why: a skipped lever locks on "Not confident"; closing with one wrong answer in shows the fail.
     host.sendMsg({ type: "host.skip" });
     await host.hostState((v) => v.kind === "racer" && v.phase === "open" && v.confidence === "low");
     await players[0]!.playerState((v) => v.kind === "racer" && v.phase === "open");
@@ -909,14 +889,13 @@ describe("Game mode: Racer", () => {
       car: { speedMph: 25, crashed: false },
       lastTurn: { correct: 0, total: 2, fails: 1, speedBefore: 50, speedAfter: 25 },
     });
-    // Too late: the answer is rejected and the phone gets its state again.
     await players[1]!.playerState((v) => v.kind === "racer" && v.phase === "reveal");
     players[1]!.msgs.length = 0;
     players[1]!.sendMsg({ type: "racer.answer", index: 1, option: 0 });
     const late = await players[1]!.playerState((v) => v.kind === "racer");
     expect(late.view.kind === "racer" && late.view).toMatchObject({ phase: "reveal", myChoice: null, reveal: { choice: null, wasCorrect: false } });
 
-    // Next question, then the host ends the game before it opens: that turn is dropped.
+    // why: the host ends the game before the next question opens, so that turn is dropped.
     host.sendMsg({ type: "host.next" });
     await host.hostState((v) => v.kind === "racer" && v.phase === "confidence" && v.question?.index === 2);
     host.sendMsg({ type: "host.end" });
@@ -993,7 +972,6 @@ describe("Game mode: Showdown", () => {
     expect(ann.view.kind === "duel" && ann.view.theme).toBe("classic");
     expect(ann.view.kind === "duel" && ann.view.opponents.map((o) => o.nickname)).toEqual(["Bob"]);
 
-    // Ann right, Bob wrong: Ann wins Arena 1 and tops the ladder.
     host.sendMsg({ type: "host.skip" });
     await players[0]!.playerState((v) => v.kind === "duel" && v.phase === "open" && v.question!.options.length === 2);
     players[0]!.sendMsg({ type: "duel.answer", index: 0, option: 0 });
@@ -1249,7 +1227,7 @@ describe("Protect from abuse", () => {
 });
 
 describe("View batching", () => {
-  // The spies wrap the shared MODES entries, so they come off even when a test fails.
+  // why: the spies wrap the shared MODES entries, so they must come off even when a test fails.
   afterEach(() => mock.restore());
   for (const mode of ["classic", "duel"] as const) {
     test(`${mode}: a broadcast batches its views through the mode entry`, async () => {
@@ -1278,7 +1256,6 @@ describe("View batching", () => {
       pastThrottle(clock);
       const game = hub.game as ClassicGame | DuelGame;
       const ranked = spyOn(game, "ranked");
-      // Ranking calls while each broadcast builds its views.
       const perBroadcast: number[] = [];
       const entry = entryOf(game);
       const declared = entry.viewBatch!;
@@ -1293,7 +1270,7 @@ describe("View batching", () => {
       for (const p of players) await p.playerState((v) => v.kind === mode && v.phase !== "intro");
       expect(batch).toHaveBeenCalled();
       expect(perBroadcast.length).toBeGreaterThan(0);
-      // Built one by one, every phone's view ranks the players again.
+      // why: built one by one, every phone's view would rank the players again.
       for (const calls of perBroadcast) expect(calls).toBeLessThan(players.length);
     });
   }

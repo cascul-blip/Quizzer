@@ -46,7 +46,6 @@ function answerRight(game: SubGame, clock: FakeClock, p: SubPlayer) {
   clock.advance(FEEDBACK_MS);
 }
 
-/** Earn a boost, hold it, and fire it. Returns the ms the boost took. */
 function boostOnce(game: SubGame, clock: FakeClock, p: SubPlayer): number {
   for (let i = 0; i < CORRECT_PER_BOOST; i++) answerRight(game, clock, p);
   expect(p.state).toBe("boost");
@@ -67,7 +66,6 @@ describe("chase", () => {
     answerRight(game, clock, a);
     expect(a.state).toBe("boost");
     expect(game.playerView(a.id)!.question).toBeNull();
-    // Too soon: the phone needs a couple of seconds of holding.
     expect(game.boost(a.id)).toBe(false);
     clock.advance(BOOST_MIN_HOLD_MS);
     const before = game.gap();
@@ -76,7 +74,7 @@ describe("chase", () => {
     expect(game.boosts).toBe(1);
     expect(a.state).toBe("question");
     expect(game.lastBoost).toMatchObject({ nickname: "A" });
-    expect(game.boost(a.id)).toBe(false); // no boost left
+    expect(game.boost(a.id)).toBe(false);
   });
 
   test("the boost hold starts when answer feedback ends, even if dealing takes time", () => {
@@ -101,7 +99,8 @@ describe("chase", () => {
     const question = game.playerView(player.id)!.question!;
     const option = fixture.questions.find((q) => q.text === question.text)!.correct[0]!;
     const answeredAt = clock.now();
-    dealDelay = 3; // The fourth answer rolls over the two-question deck.
+    // why: the fourth answer rolls over the two-question deck, which is when dealing is slow.
+    dealDelay = 3;
     expect(game.answer(player.id, question.seq, option)).toBe(true);
     expect(clock.now()).toBe(answeredAt + 3);
     clock.advance(answeredAt + 1000 + BOOST_MIN_HOLD_MS - clock.now() - 1);
@@ -199,7 +198,6 @@ describe("dive", () => {
       expect(v.grid).toContain(target);
       expect(new Set(v.grid).size).toBe(6);
       for (const s of v.grid) expect(parseGlyph(s)).not.toBeNull();
-      // Near-misses share the Christmas family but have a different design.
       const lookAlikes = v.grid.filter((s) => s !== target && parseGlyph(s)!.family === t.family);
       expect(lookAlikes.length).toBe(LOOKALIKES);
     }
@@ -237,13 +235,13 @@ describe("dive", () => {
     const target = ins.symbols[0]!;
     const wrong = game.players.get(d1!)!.grid.find((s) => s !== target)!;
     expect(game.tap(d1!, wrong)).toBe(false);
-    expect(game.tap(d1!, target)).toBeNull(); // locked
+    expect(game.tap(d1!, target)).toBeNull();
     clock.advance(DIVE_WRONG_LOCK_MS);
     expect(game.tap(d1!, target)).toBe(true);
     expect(game.depth).toBe(depth0 + DIVE_METERS_PER_HIT);
-    expect(game.tap(d1!, target)).toBeNull(); // already found
+    expect(game.tap(d1!, target)).toBeNull();
     expect(ins.index).toBe(0);
-    expect(game.tap(d2!, target)).toBe(true); // 70% of 3 rounds up to 3
+    expect(game.tap(d2!, target)).toBe(true);
     const twoOfThreeFoundStaysOnSymbol = ins.index === 0;
     expect(twoOfThreeFoundStaysOnSymbol).toBe(true);
     expect(game.tap(ins.group[2]!, target)).toBe(true);
@@ -258,9 +256,8 @@ describe("dive", () => {
     game.setConnected(d3!, false);
     expect(game.tap(d1!, target)).toBe(true);
     expect(ins.index).toBe(0);
-    expect(game.tap(d2!, target)).toBe(true); // 2 of the 2 connected divers
+    expect(game.tap(d2!, target)).toBe(true);
     expect(ins.index).toBe(1);
-    // Dropping after the others have found it moves the group on at once.
     expect(game.tap(d1!, ins.symbols[1]!)).toBe(true);
     game.setConnected(d3!, true);
     expect(game.tap(d2!, ins.symbols[1]!)).toBe(true);
@@ -282,7 +279,6 @@ describe("dive", () => {
   test("an instructor moves on after 8 s; the dive ends after 5 symbols, then the next level", () => {
     const { game, clock } = toDive(["A", "B"]);
     expect(DIVE_SYMBOL_TIMEOUT_MS).toBe(8000);
-    // Both phones get the symbol timer; it counts down and starts over with the next symbol.
     const timers = () =>
       [...game.players.values()].map((p) => {
         const d = game.playerView(p.id)!.dive!;
@@ -308,7 +304,6 @@ describe("dive", () => {
     expect(game.phase).toBe("chase");
     expect(game.level).toBe(2);
     expect(game.speed).toBe(speedFor(2));
-    // The fish comes back from the dive as far away as a boost can push it.
     expect(game.gap()).toBe(GAP_MAX);
   });
 

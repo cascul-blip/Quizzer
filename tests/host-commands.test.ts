@@ -18,7 +18,7 @@ const QUIZ = {
 };
 
 describe("Host command", () => {
-  /** A context that records what the command reached beyond the game. */
+  /** why: records what the command reached beyond the game. */
   function context(game: Lobby | null) {
     const calls: string[] = [];
     const ctx: HostCommandContext = {

@@ -43,7 +43,7 @@ const EXPECTED: Record<ThemedMode, Partial<Record<SeasonTheme, Record<string, st
   },
 };
 
-/** A view of one phase, with only the fields the mode's cue reads on its way to that screen's track. */
+/** why: only the fields the mode's cue reads on its way to that screen's track. */
 function viewFor(mode: ThemedMode, theme: SeasonTheme, screen: string) {
   const results = screen === "results";
   const phase: Record<ThemedMode, string> = {

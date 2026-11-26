@@ -14,7 +14,7 @@ function file(name: string, loader: string, contentType: string, body: string | 
   return { input: "index.html", path, loader: loader as never, isEntry: true, headers: { etag: `tag-${name}`, "content-type": contentType } };
 }
 
-/** What the compiled exe sees: two pages sharing one chunk. */
+/** why: mirrors what the compiled exe sees: two pages sharing one chunk. */
 function builtPages(): Record<string, HTMLBundle> {
   const js = file("chunk-shared.js", "js", "text/javascript;charset=utf-8", "console.log('hello');".repeat(200));
   const img = file("cat-abc123.webp", "file", "image/webp", new Uint8Array([82, 73, 70, 70, 1, 2, 3]));
@@ -73,7 +73,7 @@ describe("pageRoutes", () => {
   test("images are served from the file when asked for, not copied into memory at startup", async () => {
     const pages = builtPages();
     const routes = pageRoutes(pages) as Record<string, (req: Request) => Response>;
-    // Changed after the routes were built: a startup copy would still serve the old bytes.
+    // why: a startup copy would still serve the old bytes.
     writeFileSync(join(dir, "cat-abc123.webp"), new Uint8Array([82, 73, 70, 70, 9, 9]));
     const img = routes["/cat-abc123.webp"]!(get());
     expect([...new Uint8Array(await img.arrayBuffer())]).toEqual([82, 73, 70, 70, 9, 9]);

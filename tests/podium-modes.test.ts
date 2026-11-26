@@ -12,7 +12,7 @@ describe("Podium", () => {
         mode,
         () => {},
         (id) => {
-          // A player added after the Podium was worked out, as a late joiner would be.
+          // why: added after the Podium was worked out, as a late joiner would be.
           const players = running().players as Map<string, { id: string; nickname: string }>;
           players.set("late", { ...players.get(id("Noel"))!, id: "late", nickname: "Late" });
         },

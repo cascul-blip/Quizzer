@@ -56,7 +56,7 @@ describe("starting points", () => {
         }
       }
       const around = starts.map((t, i) => hexDistance(size, t, starts[(i + 1) % teams]!));
-      // Protected zones (a start and its neighbours) never touch.
+      // why: 4 apart keeps protected zones (a start and its neighbours) from touching.
       expect(Math.min(...around)).toBeGreaterThanOrEqual(4);
       expect(Math.max(...around) - Math.min(...around)).toBeLessThanOrEqual([4, 5].includes(teams) ? 1 : 0);
     });
@@ -101,13 +101,12 @@ describe("placing", () => {
       expect(placementCost(owners, size, starts, 0, t, 2, 2)).toBe(2);
       expect(placementCost(owners, size, starts, 1, t, 2, 2)).toBe(1);
     }
-    // Blue holds a ring tile: stealing it is still 2, not 4. The guard price applies when it's the higher one.
+    // why: stealing a held ring tile costs the higher of steal and guard price, not their sum.
     const held = [...owners];
     held[ring[0]!] = 1;
     expect(placementCost(held, size, starts, 0, ring[0]!, 2, 2)).toBe(2);
     expect(placementCost(held, size, starts, 0, ring[0]!, 2, 3)).toBe(3);
     expect(placementCost(held, size, starts, 0, ring[0]!, 3, 2)).toBe(3);
-    // One step further out is ordinary grass.
     const beyond = owners.map((_, t) => t).filter((t) => hexDistance(size, blue, t) === 3 && hexDistance(size, red, t) > 2);
     for (const t of beyond) expect(placementCost(owners, size, starts, 0, t, 2, 2)).toBe(1);
   });
@@ -148,7 +147,6 @@ describe("surrounding", () => {
     const owners = board(size);
     for (const t of neighbors(size, 0)) owners[t] = 0;
     expect(enclosedBy(owners, size, 0)).toEqual([]);
-    // Nor along a side: a wall from edge to edge cuts nothing off.
     for (let col = 0; col < size; col++) owners[at(size, 3, col)] = 0;
     expect(enclosedBy(owners, size, 0)).toEqual([]);
   });
@@ -177,8 +175,7 @@ describe("capture threat", () => {
   const ring = fresh()
     .map((_, t) => t)
     .filter((t) => hexDistance(size, blue, t) === 2);
-  /** Red holds the first `count` tiles of the ring around blue's start. */
-  const withRing = (count: number) => {
+  const redHoldsRingTiles = (count: number) => {
     const owners = fresh();
     for (const t of ring.slice(0, count)) owners[t] = 0;
     return owners;
@@ -190,14 +187,14 @@ describe("capture threat", () => {
   });
 
   test("it rises as a ring around a starting point is built, up to 1 when one tile closes it", () => {
-    const levels = [2, 6, 8, 10, 11].map((n) => threat(withRing(n)));
+    const levels = [2, 6, 8, 10, 11].map((n) => threat(redHoldsRingTiles(n)));
     expect(levels[0]).toBe(0);
     for (let i = 1; i < levels.length; i++) expect(levels[i]!).toBeGreaterThan(levels[i - 1]!);
     expect(levels[4]).toBe(1);
   });
 
   test("it drops when a ring tile is stolen back", () => {
-    const owners = withRing(11);
+    const owners = redHoldsRingTiles(11);
     owners[ring[0]!] = 1;
     const after = threat(owners);
     expect(after).toBeLessThan(1);
@@ -218,7 +215,7 @@ describe("capture threat", () => {
     const owners = fresh();
     for (const t of neighbors(size, at(size, 8, 4)).slice(1)) owners[t] = 1;
     expect(threat(owners, out)).toBe(0);
-    expect(threat(withRing(11), out)).toBeLessThan(1);
+    expect(threat(redHoldsRingTiles(11), out)).toBeLessThan(1);
   });
 });
 
@@ -234,7 +231,7 @@ describe("borders", () => {
   });
 
   test("sides run clockwise from the top right", () => {
-    // Row 4 is even, so its upper neighbours are in row 3 at columns 3 and 4.
+    // why: row 4 is even, so its upper neighbours are in row 3 at columns 3 and 4.
     expect([0, 1, 2, 3, 4, 5].map((side) => neighborAcross(10, at(10, 4, 4), side))).toEqual([
       at(10, 3, 4),
       at(10, 4, 5),

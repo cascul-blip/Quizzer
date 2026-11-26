@@ -63,7 +63,6 @@ function toMove(game: RobotGame, clock: FakeClock) {
   expect(game.phase).toBe("move");
 }
 
-/** Put the player on a safe (or targeted) tile during the move phase, bypassing points. */
 function place(game: RobotGame, p: RobotPlayer, safe: boolean) {
   for (let i = 0; i < ROBOT_BOARD * ROBOT_BOARD; i++) {
     if (robotRing(i) >= game.inset && game.marked.has(i) !== safe) {
@@ -74,8 +73,7 @@ function place(game: RobotGame, p: RobotPlayer, safe: boolean) {
   }
 }
 
-/** Play one full round where the listed players end on targeted tiles and everyone else is safe. */
-function round(game: RobotGame, clock: FakeClock, hit: string[]) {
+function playRoundHitting(game: RobotGame, clock: FakeClock, hit: string[]) {
   if (game.phase !== "move") toMove(game, clock);
   for (const p of game.players.values()) if (p.outRound === null) place(game, p, !hit.includes(p.nickname));
   clock.advance(ROBOT_MOVE_MS);
@@ -89,7 +87,6 @@ describe("Robot Attack", () => {
     const tiles = new Set([...game.players.values()].map(tile));
     expect(tiles.size).toBe(4);
     for (const p of game.players.values()) expect(p.lives).toBe(ROBOT_LIVES);
-    // Four players on a 12×12 board end up far apart.
     const ps = [...game.players.values()];
     for (const a of ps) for (const b of ps) if (a !== b) expect(Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y))).toBeGreaterThanOrEqual(5);
   });
@@ -125,7 +122,7 @@ describe("Robot Attack", () => {
     expect([1, 2, 3, 12, 13, 30].map(robotQuizMs)).toEqual([30_000, 28_000, 26_000, 8000, 7000, 7000]);
     const { game, clock } = setup(["A", "B"]);
     expect(game.phaseDurationMs).toBe(30_000);
-    round(game, clock, []);
+    playRoundHitting(game, clock, []);
     expect(game.round).toBe(2);
     expect(game.phase).toBe("quiz");
     expect(game.phaseDurationMs).toBe(28_000);
@@ -140,7 +137,6 @@ describe("Robot Attack", () => {
     expect(game.marked.size).toBeGreaterThanOrEqual(108);
     expect(game.marked.size).toBeLessThanOrEqual(111);
     for (const p of game.players.values()) expect(game.marked.has(tile(p))).toBe(true);
-    // Phones only see the board during movement.
     expect(game.playerView(byName(game, "A").id)!.board).toBeNull();
     toMove(game, clock);
     expect(game.playerView(byName(game, "A").id)!.board!.marked.length).toBe(game.marked.size);
@@ -148,11 +144,11 @@ describe("Robot Attack", () => {
 
   test("at the shortest quiz time, the Xs still appear 5 s before the end", () => {
     const { game, clock } = setup(["A", "B"]);
-    while (robotQuizMs(game.round) > ROBOT_QUIZ_MIN_MS) round(game, clock, []);
+    while (robotQuizMs(game.round) > ROBOT_QUIZ_MIN_MS) playRoundHitting(game, clock, []);
     expect(game.phase).toBe("quiz");
     expect(game.marked.size).toBe(0);
     clock.advance(ROBOT_QUIZ_MIN_MS - ROBOT_WARN_MS);
-    // Three rings are gone by now: 3/4 of the 6×6 board that's left.
+    // why: three rings are gone, and 27 is 3/4 of the 6×6 board left.
     expect(game.inset).toBe(3);
     expect(game.marked.size).toBe(27);
   });
@@ -163,17 +159,17 @@ describe("Robot Attack", () => {
     answer(game, clock, a, true);
     answer(game, clock, a, true);
     answer(game, clock, a, true);
-    expect(game.move(a.id, "left")).toBe(false); // still quiz time
+    expect(game.move(a.id, "left")).toBe(false);
     toMove(game, clock);
     a.x = 0;
     a.y = 5;
-    expect(game.move(a.id, "left")).toBe(false); // edge of the board
+    expect(game.move(a.id, "left")).toBe(false);
     expect(a.points).toBe(3);
     expect(game.move(a.id, "right")).toBe(true);
     expect(game.move(a.id, "up")).toBe(true);
     expect(game.move(a.id, "down")).toBe(true);
     expect({ x: a.x, y: a.y, points: a.points, moves: a.moves }).toEqual({ x: 1, y: 5, points: 0, moves: 3 });
-    expect(game.move(a.id, "right")).toBe(false); // out of points
+    expect(game.move(a.id, "right")).toBe(false);
     expect(game.move(a.id, "sideways" as never)).toBe(false);
   });
 
@@ -206,7 +202,6 @@ describe("Robot Attack", () => {
     b.y = 5;
     expect(game.move(a.id, "right")).toBe(false);
     expect({ x: a.x, points: a.points, moves: a.moves }).toEqual({ x: 5, points: 2, moves: 0 });
-    // Once B steps away, the tile is free.
     b.y = 6;
     expect(game.move(a.id, "right")).toBe(true);
     expect(a.x).toBe(6);
@@ -214,7 +209,7 @@ describe("Robot Attack", () => {
 
   test("players who are out leave the board and don't block", () => {
     const { game, clock } = setup(["A", "B", "C"]);
-    for (let i = 0; i < ROBOT_LIVES; i++) round(game, clock, ["B"]);
+    for (let i = 0; i < ROBOT_LIVES; i++) playRoundHitting(game, clock, ["B"]);
     const a = byName(game, "A");
     const b = byName(game, "B");
     expect(b.outRound).not.toBeNull();
@@ -233,13 +228,13 @@ describe("Robot Attack", () => {
     const a = byName(game, "A");
     answer(game, clock, a, true);
     answer(game, clock, a, true);
-    round(game, clock, []);
+    playRoundHitting(game, clock, []);
     expect(a.points).toBe(0);
   });
 
   test("the lasers take a life only from players on targeted tiles", () => {
     const { game, clock } = setup(["A", "B", "C"]);
-    round(game, clock, ["A"]);
+    playRoundHitting(game, clock, ["A"]);
     expect(byName(game, "A").lives).toBe(ROBOT_LIVES - 1);
     expect(byName(game, "B").lives).toBe(ROBOT_LIVES);
     expect(game.lastAttack).toEqual({ seq: 1, round: 1, hit: [byName(game, "A").id], eliminated: [] });
@@ -257,7 +252,7 @@ describe("Robot Attack", () => {
 
   test("out of lives: out of the game, can still answer for fun but not move", () => {
     const { game, clock } = setup(["A", "B", "C"]);
-    for (let i = 0; i < ROBOT_LIVES; i++) round(game, clock, ["A"]);
+    for (let i = 0; i < ROBOT_LIVES; i++) playRoundHitting(game, clock, ["A"]);
     const a = byName(game, "A");
     expect(a.lives).toBe(0);
     expect(a.outRound).toBe(3);
@@ -273,7 +268,7 @@ describe("Robot Attack", () => {
 
   test("the last player standing wins", () => {
     const { game, clock, finished } = setup(["A", "B", "C"]);
-    for (let i = 0; i < ROBOT_LIVES; i++) round(game, clock, ["A", "B"]);
+    for (let i = 0; i < ROBOT_LIVES; i++) playRoundHitting(game, clock, ["A", "B"]);
     expect(game.phase).toBe("podium");
     expect(finished()).toBe(1);
     const s = game.hostView().standings!;
@@ -288,11 +283,11 @@ describe("Robot Attack", () => {
 
   test("everyone left knocked out by the same blast shares the win", () => {
     const { game, clock } = setup(["A", "B", "C"]);
-    round(game, clock, ["C"]);
-    round(game, clock, ["C"]);
-    round(game, clock, ["C"]);
+    playRoundHitting(game, clock, ["C"]);
+    playRoundHitting(game, clock, ["C"]);
+    playRoundHitting(game, clock, ["C"]);
     expect(byName(game, "C").outRound).toBe(3);
-    for (let i = 0; i < ROBOT_LIVES; i++) round(game, clock, ["A", "B"]);
+    for (let i = 0; i < ROBOT_LIVES; i++) playRoundHitting(game, clock, ["A", "B"]);
     expect(game.phase).toBe("podium");
     const ranks = Object.fromEntries(game.hostView().standings!.map((s) => [s.nickname, s.rank]));
     expect(ranks).toEqual({ A: 1, B: 1, C: 3 });
@@ -300,18 +295,18 @@ describe("Robot Attack", () => {
 
   test("a solo game runs until its player is out", () => {
     const { game, clock } = setup(["Solo"]);
-    round(game, clock, []);
-    round(game, clock, ["Solo"]);
+    playRoundHitting(game, clock, []);
+    playRoundHitting(game, clock, ["Solo"]);
     expect(game.phase).toBe("quiz");
-    round(game, clock, ["Solo"]);
-    round(game, clock, ["Solo"]);
+    playRoundHitting(game, clock, ["Solo"]);
+    playRoundHitting(game, clock, ["Solo"]);
     expect(game.phase).toBe("podium");
     expect(game.hostView().standings![0]).toMatchObject({ nickname: "Solo", rank: 1, outRound: 4 });
   });
 
   test("host ends early: survivors rank by lives left", () => {
     const { game, clock, finished } = setup(["A", "B", "C"]);
-    round(game, clock, ["A"]);
+    playRoundHitting(game, clock, ["A"]);
     game.end();
     expect(game.phase).toBe("podium");
     expect(finished()).toBe(1);
@@ -333,7 +328,6 @@ describe("Robot Attack", () => {
     expect(game.playerView(late.id)!.question).not.toBeNull();
     expect(game.marked.has(tile(late))).toBe(true);
     toMove(game, clock);
-    // Joining with no points left to earn: dropped on a safe tile.
     const later = game.join("Later");
     expect(game.marked.has(tile(later))).toBe(false);
   });
@@ -344,7 +338,7 @@ describe("Robot Attack", () => {
       toMove(game, clock);
       expect(game.collapsing.size).toBe(0);
       expect(game.hostView().collapsing).toEqual([]);
-      round(game, clock, []);
+      playRoundHitting(game, clock, []);
     }
     expect(game.round).toBe(4);
     toMove(game, clock);
@@ -362,11 +356,10 @@ describe("Robot Attack", () => {
 
   test("a player left on the destroyed ring loses a life and lands on the closest free tile", () => {
     const { game, clock } = setup(["A", "B", "C"]);
-    for (let r = 1; r <= 3; r++) round(game, clock, []);
+    for (let r = 1; r <= 3; r++) playRoundHitting(game, clock, []);
     toMove(game, clock);
     const [a, b, c] = [byName(game, "A"), byName(game, "B"), byName(game, "C")];
     place(game, c, true);
-    // A and B are both closest to (1, 5); only one of them gets it.
     Object.assign(a, { x: 0, y: 5 });
     Object.assign(b, { x: 0, y: 6 });
     game.marked.delete(tile({ x: 1, y: 5 }));
@@ -379,7 +372,7 @@ describe("Robot Attack", () => {
     expect({ x: a.x, y: a.y }).toEqual({ x: 1, y: 5 });
     expect({ x: b.x, y: b.y }).toEqual({ x: 1, y: 6 });
     expect({ x: c.x, y: c.y }).toEqual(safeAt);
-    // The ring stays in the views through the attack, for the collapse animation.
+    // why: the ring stays in the views through the attack, for the collapse animation.
     expect(game.hostView().collapsing.length).toBe(44);
     expect(game.hostView().inset).toBe(1);
     clock.advance(ROBOT_ATTACK_MS);
@@ -388,7 +381,7 @@ describe("Robot Attack", () => {
 
   test("a player knocked out on the ring is not moved", () => {
     const { game, clock } = setup(["A", "B", "C"]);
-    for (let r = 1; r <= 3; r++) round(game, clock, []);
+    for (let r = 1; r <= 3; r++) playRoundHitting(game, clock, []);
     toMove(game, clock);
     const a = byName(game, "A");
     for (const p of game.players.values()) place(game, p, true);
@@ -400,7 +393,7 @@ describe("Robot Attack", () => {
 
   test("after a ring is gone, moves stop at the new edge and late joiners start inside it", () => {
     const { game, clock } = setup(["A", "B"]);
-    for (let r = 1; r <= 4; r++) round(game, clock, []);
+    for (let r = 1; r <= 4; r++) playRoundHitting(game, clock, []);
     expect(game.inset).toBe(1);
     const a = byName(game, "A");
     answer(game, clock, a, true);
@@ -418,7 +411,7 @@ describe("Robot Attack", () => {
   test("the board stops shrinking at 2×2, with one tile in four still safe", () => {
     const { game, clock } = setup(["A"]);
     const a = byName(game, "A");
-    for (let r = 1; r <= 20; r++) round(game, clock, []);
+    for (let r = 1; r <= 20; r++) playRoundHitting(game, clock, []);
     expect(game.inset).toBe(5);
     expect(a.lives).toBe(ROBOT_LIVES);
     for (let r = 21; r <= 24; r++) {
@@ -426,7 +419,7 @@ describe("Robot Attack", () => {
       expect(game.collapsing.size).toBe(0);
       expect(game.marked.size).toBe(3);
       expect(game.marked.has(tile(a))).toBe(true);
-      round(game, clock, []);
+      playRoundHitting(game, clock, []);
     }
     expect(game.inset).toBe(5);
   });
@@ -440,7 +433,7 @@ describe("Robot Attack", () => {
   test("results sheet lists standings", () => {
     const { game, clock } = setup(["A", "B"]);
     answer(game, clock, byName(game, "A"), true);
-    for (let i = 0; i < ROBOT_LIVES; i++) round(game, clock, ["B"]);
+    for (let i = 0; i < ROBOT_LIVES; i++) playRoundHitting(game, clock, ["B"]);
     const rows = records(buildRobotResults(game));
     expect(rows).toEqual([
       { Rank: 1, Nickname: "A", Status: "Winner", "Lives left": 3, "Rounds survived": 3, Correct: 1, Wrong: 0, "Accuracy %": 100, Moves: 0, "Laser hits": 0 },

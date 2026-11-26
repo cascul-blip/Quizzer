@@ -46,11 +46,11 @@ describe("After-answer wait", () => {
     session.receive({ type: "player.patch", ops: [[["teamTiles"], 2]] });
     reconnect();
     dom.advance(elapsed - 300);
-    // The stale patch and pre-resume frames leave the cached countdown alone.
+    // why: The stale patch and pre-resume frames leave the cached countdown alone.
     expect(dom.root.textContent?.includes(waiting)).toBe(stillWaiting);
     expect(dom.root.querySelector(".land-claim")).toBe(mounted);
 
-    // The host's clock moved back; the fresh view has more time than the cached one.
+    // why: The host's clock moved back; the fresh view has more time than the cached one.
     showActivity(3, 1200);
     expect(dom.root.querySelector(".land-claim")).toBe(mounted);
     expect(dom.root.textContent).toContain(`${waiting} 2s`);
@@ -72,7 +72,7 @@ describe("After-answer wait", () => {
     showActivity(3, 0);
     expect(dom.root.textContent).not.toContain(waiting);
 
-    // A phone can miss the intervening question views; a different key still starts a new wait.
+    // why: A phone can miss the intervening question views; a different key still starts a new wait.
     showActivity(6, 200);
     expect(dom.root.textContent).toContain(`${waiting} 1s`);
     dom.advance(200);

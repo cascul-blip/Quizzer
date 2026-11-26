@@ -24,5 +24,5 @@ describe("splitMath", () => {
 
 test("visibleLength ignores TeX commands and braces", () => {
   expect(visibleLength("abc")).toBe(3);
-  expect(visibleLength("$\\sqrt{a^2 + b^2}$")).toBe(5); // a2+b2
+  expect(visibleLength("$\\sqrt{a^2 + b^2}$")).toBe(5);
 });

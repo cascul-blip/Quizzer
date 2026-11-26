@@ -18,7 +18,6 @@ const GAME_MODES = keysOf(MODES);
 
 const THEMED_MODES = ["tower", "fight", "land", "racer", "cup", "siege", "duel"] as const satisfies readonly GameMode[];
 
-/** A valid change to every setting of each game mode, away from its defaults. */
 const CHANGED: { [M in GameMode]: ModeSettingsInput[M] } = {
   classic: {},
   tower: { teams: 3, minutes: 7, monster: false, theme: "classic" },
@@ -34,7 +33,7 @@ const CHANGED: { [M in GameMode]: ModeSettingsInput[M] } = {
   memory: { boardSize: 6 },
 };
 
-/** How many teams the lobby shows with CHANGED settings; null in solo modes. */
+/** why: how many teams the lobby shows with CHANGED settings; null in solo modes. */
 const TEAMS: { [M in GameMode]: number | null } = {
   classic: null,
   tower: 3,
@@ -50,7 +49,7 @@ const TEAMS: { [M in GameMode]: number | null } = {
   memory: null,
 };
 
-/** Modes played question by question, whose pacing the host sets and the next lobby keeps. */
+/** why: modes played question by question, whose pacing the host sets and the next lobby keeps. */
 const PACED = new Set<GameMode>(["classic", "racer", "duel", "memory"]);
 
 const MODES_WITH_LOBBY_BANNER = new Set<GameMode>(["siege"]);
@@ -96,7 +95,6 @@ function lobbyView() {
   return view;
 }
 
-/** Open the quiz in a lobby set to the mode and join the players; returns each phone with the id and token it was given. */
 function openLobby(mode: GameMode, nicknames: string[]) {
   send(host, { type: "host.open", quizId });
   send(host, { type: "host.setMode", mode });
@@ -207,7 +205,6 @@ describe("Phone message dispatch", () => {
 });
 
 describe("Paced question round", () => {
-  /** The question a host or phone view carries; undefined for a view without one. */
   const questionOf = (view: object) => ("question" in view ? view.question : undefined);
 
   for (const mode of ["classic", "racer", "duel", "memory"] as const) {
@@ -284,7 +281,7 @@ describe("Game modes", () => {
         const csv = hub.lastResults?.csv ?? "";
         expect(csv).toStartWith(BOM);
         const lines = csv.slice(1).split("\r\n");
-        // Kingdom Siege adds a wave log after a blank line; the player rows come first in every mode.
+        // why: Kingdom Siege adds a wave log after a blank line; the player rows come first in every mode.
         const rows = lines.slice(1, lines.indexOf(""));
         expect(lines[0]).toContain("Nickname");
         expect(rows).toHaveLength(nicknames.length);

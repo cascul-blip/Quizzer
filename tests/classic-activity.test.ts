@@ -27,7 +27,7 @@ describe("View update scheduling", () => {
     });
     host.sendMsg({ type: "host.start", pacing: "manual" });
     clock.advance(INTRO_MS);
-    // Let the initial broadcast and asynchronous join QR refresh settle.
+    // why: the join QR refreshes asynchronously after the first broadcast.
     await host.hostState((v) => v.kind === "classic" && v.phase === "open" && !!v.join.qrSvg);
     for (const socket of [host, ...phones]) socket.raw = [];
   });

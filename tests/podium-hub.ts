@@ -13,10 +13,7 @@ import { fakeHub, HubSocket } from "./hub-harness.ts";
 export const NICKNAMES = ["Noel", "Holly", "Ivy"] as const;
 export type Nickname = (typeof NICKNAMES)[number];
 
-/**
- * A hub with a host, for playing a game mode to its podium.
- * Call at the top level of a test file; it sets up and tears down around each test.
- */
+/** why: registers beforeEach/afterEach hooks, so call it at the top level of a test file. */
 export function podiumHub() {
   let data: ReturnType<typeof tempDir>;
   const ctx = {} as { clock: FakeClock; hub: GameHub; host: HubSocket; quizId: string };
@@ -45,7 +42,7 @@ export function podiumHub() {
 
   const phones = new Map<Nickname, HubSocket>();
 
-  /** Answer `count` streamed questions correctly from a phone, waiting out each answer's feedback ("One" is True, "Two" is False). */
+  /** why: the sample quiz's right answers are "One" True and "Two" False. */
   function answerRight(prefix: string, nickname: Nickname, id: string, count: number) {
     for (let i = 0; i < count; i++) {
       const q = (running().playerView(id) as { question?: { seq: number; text: string; options: string[] } | null } | null)?.question;
@@ -62,10 +59,7 @@ export function podiumHub() {
     return game;
   }
 
-  /**
-   * Start the mode with three players, let `play` set up the outcome, end the game, then let `after`
-   * change the players (which must not reach the podium). Returns the podium screen, each phone and the results sheet.
-   */
+  /** why: `after` runs once the game has ended, to prove later changes don't reach the podium. */
   async function finish(mode: GameMode, play: (id: (n: Nickname) => string) => void, after: (id: (n: Nickname) => string) => void = () => {}) {
     ctx.host.sendMsg({ type: "host.open", quizId: ctx.quizId });
     ctx.host.sendMsg({ type: "host.setMode", mode } as ClientMsg);

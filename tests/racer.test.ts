@@ -22,7 +22,6 @@ function quiz(count = 8): Quiz {
   });
 }
 
-/** Deterministic rng so driver order is reproducible. */
 function seeded(seed = 42) {
   let s = seed;
   return () => (s = (s * 1664525 + 1013904223) % 2 ** 32) / 2 ** 32;
@@ -50,7 +49,6 @@ function answer(game: RacerGame, p: RacerPlayer, right: boolean): boolean {
   return game.answer(p.id, game.qIndex, option);
 }
 
-/** The driver sets the lever and goes (or the intro runs out when there is no driver): the question is open. */
 function toOpen(game: RacerGame, clock: FakeClock, level: RacerConfidence = "low") {
   if (game.phase === "confidence") {
     expect(game.setLever(game.driver!.id, level)).toBe(true);
@@ -62,7 +60,6 @@ function toOpen(game: RacerGame, clock: FakeClock, level: RacerConfidence = "low
   expect(game.phase).toBe("open");
 }
 
-/** Play the current turn to its reveal: every connected player answers, right if they are named (or "all"). */
 function turn(game: RacerGame, clock: FakeClock, level: RacerConfidence, right: string[] | "all" | "none") {
   toOpen(game, clock, level);
   for (const p of [...game.players.values()]) {
@@ -139,7 +136,7 @@ describe("Racer", () => {
     expect([first, away.nickname]).not.toContain(second);
     turn(game, clock, "low", "all");
     game.next();
-    // Only the player who is away is left in the bag: it is refilled and someone connected drives.
+    // why: Only the player who is away is left in the bag: it is refilled and someone connected drives.
     expect([first, second]).toContain(game.driver!.nickname);
     game.setConnected(away.id, true);
     const next: string[] = [];
@@ -161,7 +158,6 @@ describe("Racer", () => {
       drivers.push(game.driver!.nickname);
     }
     expect([...drivers].sort()).toEqual(["A", "B", "Late"]);
-    // Kicked players never come out of the bag.
     turn(game, clock, "low", "all");
     expect(game.kick(late.id)!.nickname).toBe("Late");
     for (let i = 0; i < 3; i++) {
@@ -185,7 +181,6 @@ describe("Racer", () => {
     expect(game.hostView()).toMatchObject({ lever: "high", confidence: null });
     expect(game.playerView(other.id)).toMatchObject({ lever: "high", confidence: null, isDriver: false });
     expect(game.setLever(driver.id, "mid")).toBe(true);
-    // Answers wait for the question to open.
     expect(answer(game, other, true)).toBe(false);
 
     expect(game.go(driver.id)).toBe(true);
@@ -194,7 +189,6 @@ describe("Racer", () => {
     expect(v).toMatchObject({ lever: "mid", confidence: "mid", phaseRemainingMs: 20_000, phaseDurationMs: 20_000 });
     expect(v.question).toMatchObject({ options: ["yes", "no", "maybe"], remainingMs: 20_000 });
     expect(game.playerView(driver.id)).toMatchObject({ isDriver: true, lever: "mid", confidence: "mid" });
-    // Too late to change it.
     expect(game.setLever(driver.id, "high")).toBe(false);
     expect(game.go(driver.id)).toBe(false);
     expect(game.confidence).toBe("mid");
@@ -216,7 +210,6 @@ describe("Racer", () => {
   test("a driver who disconnects while choosing is locked in at the current level", () => {
     const { game, clock } = setup(["A", "B", "C"]);
     const driver = driverOf(game);
-    // Someone else leaving changes nothing.
     game.setConnected(others(game)[0]!.id, false);
     expect(game.phase).toBe("confidence");
     game.setConnected(others(game)[0]!.id, true);
@@ -225,7 +218,7 @@ describe("Racer", () => {
     expect(game.phase).toBe("open");
     expect(game.confidence).toBe("high");
     expect(game.driver!.id).toBe(driver.id);
-    // The others all answer right, but the driver is away without an answer: not counted, so everyone was right.
+    // why: The others all answer right, but the driver is away without an answer: not counted, so everyone was right.
     for (const p of others(game)) answer(game, p, true);
     expect(game.phase).toBe("reveal");
     expect(game.lastTurn).toMatchObject({ confidence: "high", correct: 2, total: 2, gainMph: 40, speedAfter: 70 });
@@ -244,7 +237,6 @@ describe("Racer", () => {
     for (const p of [...game.players.values()]) answer(game, p, true);
     expect(game.lastTurn).toMatchObject({ driver: { id: driver.id, nickname: driver.nickname }, confidence: "mid", correct: 2, total: 2, gainMph: 20 });
     expect(game.hostView().players).toHaveLength(2);
-    // Nobody left in the game drove that turn.
     game.end();
     expect(game.hostView().awards!.mostMphGained).toBeNull();
   });
@@ -257,7 +249,7 @@ describe("Racer", () => {
     expect(game.confidence).toBe("mid");
     game.skip();
     expect(game.phase).toBe("reveal");
-    // Nobody answered: 0 of 2 at "mid" is 2 fails.
+    // why: Nobody answered: 0 of 2 at "mid" is 2 fails.
     expect(game.lastTurn).toMatchObject({ correct: 0, total: 2, fails: 2, speedAfter: 0, crashed: true });
     game.skip();
     expect(game.phase).toBe("reveal");
@@ -268,9 +260,9 @@ describe("Racer", () => {
     toOpen(game, clock, "low");
     const [a, b, c] = [byName(game, "A"), byName(game, "B"), byName(game, "C")];
     expect(answer(game, a, true)).toBe(true);
-    expect(answer(game, a, false)).toBe(false); // one answer each
-    expect(game.answer(b.id, 1, 0)).toBe(false); // wrong question
-    expect(game.answer(b.id, 0, 7)).toBe(false); // no such option
+    expect(answer(game, a, false)).toBe(false);
+    expect(game.answer(b.id, 1, 0)).toBe(false);
+    expect(game.answer(b.id, 0, 7)).toBe(false);
     expect(game.answer(b.id, 0, 0.5)).toBe(false);
     expect(game.hostView()).toMatchObject({ phase: "open", answeredCount: 1 });
     expect(answer(game, b, false)).toBe(true);
@@ -289,7 +281,7 @@ describe("Racer", () => {
     answer(game, a, true);
     answer(game, b, false);
     expect(game.hostView().ejected).toBeNull();
-    game.skip(); // C never answers
+    game.skip();
     expect(game.phase).toBe("reveal");
     expect(
       game
@@ -329,15 +321,15 @@ describe("Racer", () => {
     answer(game, p("A"), true);
     answer(game, p("B"), true);
     answer(game, p("C"), true);
-    game.setConnected(p("C").id, false); // answered, then left: counts
-    game.setConnected(p("D").id, false); // left without answering: doesn't count
-    // E is here but never answers: counts as wrong.
+    game.setConnected(p("C").id, false);
+    game.setConnected(p("D").id, false);
+    // why: E is here but never answers: counts as wrong.
     clock.advance(20_000);
     expect(game.phase).toBe("open");
     expect(game.hostView().question!.remainingMs).toBe(0);
     clock.advance(GRACE_MS);
     expect(game.phase).toBe("reveal");
-    // 3 of 4 is at least two thirds: +20 mph.
+    // why: 3 of 4 is at least two thirds: +20 mph.
     expect(game.lastTurn).toMatchObject({ confidence: "mid", correct: 3, total: 4, gainMph: 20, fails: 0, speedBefore: 30, speedAfter: 50 });
     expect([p("A"), p("D"), p("E")].map((x) => [x.correct, x.wrong])).toEqual([
       [1, 0],
@@ -377,7 +369,7 @@ describe("Racer", () => {
     expect(game.car).toEqual({ speedMph: 0, crashed: true, distanceMiles: 0, topSpeedMph: 30, crashes: 1 });
     expect(first).toMatchObject({ turnsDriven: 1, mphGained: 0, failsAsDriver: 3 });
 
-    // Crashed: a 3 s look at the question, no driver, no lever.
+    // why: Crashed: a 3 s look at the question, no driver, no lever.
     game.next();
     expect(game.phase).toBe("intro");
     let v = game.hostView();
@@ -408,7 +400,7 @@ describe("Racer", () => {
     });
     expect(game.car).toMatchObject({ speedMph: 0, crashed: true, crashes: 1 });
 
-    // Half the class right: repaired, back at 30 mph.
+    // why: Half the class right: repaired, back at 30 mph.
     game.next();
     expect(game.phase).toBe("intro");
     game.skip();
@@ -438,13 +430,13 @@ describe("Racer", () => {
   test("distance adds 10 minutes at each turn's final speed; top speed and driver stats follow", () => {
     const { game, clock } = setup(["Solo"]);
     const solo = byName(game, "Solo");
-    turn(game, clock, "mid", "all"); // 50
+    turn(game, clock, "mid", "all");
     game.next();
-    turn(game, clock, "high", "all"); // 90
+    turn(game, clock, "high", "all");
     game.next();
-    turn(game, clock, "low", "none"); // 45
+    turn(game, clock, "low", "none");
     game.next();
-    turn(game, clock, "mid", "none"); // 0 of 1: 2 fails → 11.25 → crash
+    turn(game, clock, "mid", "none"); // why: 0 of 1: 2 fails → 11.25 → crash
     expect(game.car.distanceMiles).toBeCloseTo((50 + 90 + 45) / 6, 9);
     expect(game.car).toMatchObject({ speedMph: 0, crashed: true, topSpeedMph: 90, crashes: 1 });
     expect(game.turns).toBe(4);
@@ -517,7 +509,7 @@ describe("Racer", () => {
     game.next();
     expect(game.phase).toBe("reveal");
     game.next();
-    // 0 of 2 at "low" was a fail: 15 mph is a crash, so the next turn has no driver.
+    // why: 0 of 2 at "low" was a fail: 15 mph is a crash, so the next turn has no driver.
     expect(game.phase).toBe("intro");
     game.next();
     expect(game.phase).toBe("open");
@@ -552,7 +544,7 @@ describe("Racer", () => {
     game.setPacing("auto");
     clock.advance(AUTO_REVEAL_MS);
     expect(game.phase).toBe("confidence");
-    // Outside the reveal it only takes effect at the next reveal.
+    // why: Outside the reveal it only takes effect at the next reveal.
     game.setPacing("manual");
     clock.advance(CONFIDENCE_MS);
     expect(game.phase).toBe("open");
@@ -577,7 +569,7 @@ describe("Racer", () => {
     game.end();
     expect(game.phase).toBe("podium");
     expect(finished()).toBe(1);
-    // 1 of 2 at "mid": 1 fail, 15 mph, crash.
+    // why: 1 of 2 at "mid": 1 fail, 15 mph, crash.
     expect(game.lastTurn).toMatchObject({ index: 0, correct: 1, total: 2, fails: 1, crashed: true });
     expect(game.turns).toBe(1);
     expect(byName(game, "A").correct).toBe(1);
@@ -593,7 +585,6 @@ describe("Racer", () => {
       phaseRemainingMs: 0,
     });
     expect(v.result).toEqual({ distanceMiles: 0, topSpeedMph: 30, crashes: 1, turns: 1 });
-    // No timer is left behind.
     clock.advance(600_000);
     expect(game.phase).toBe("podium");
     expect(finished()).toBe(1);
@@ -631,7 +622,6 @@ describe("Racer", () => {
     expect(() => game.join("d")).toThrow("taken");
     expect(game.playerView(d.id)!.question!.options).toEqual(["yes", "no", "maybe"]);
     for (const n of ["A", "B", "C"]) answer(game, byName(game, n), true);
-    // D is here now, so D counts.
     expect(game.phase).toBe("open");
     expect(answer(game, d, true)).toBe(true);
     expect(game.phase).toBe("reveal");
@@ -675,7 +665,6 @@ describe("Racer", () => {
     expect(v.driver).toEqual({ id: driver.id, nickname: driver.nickname, avatar: driver.avatar });
     expect(v.question).toMatchObject({ index: 0, total: 8, options: ["yes", "no", "maybe"], remainingMs: 16_000 });
     expect(v.car).toEqual(game.hostView().car);
-    // Nothing about right or wrong leaks while the question is open.
     expect(v.me).toEqual({
       id: other.id,
       nickname: other.nickname,
@@ -721,7 +710,6 @@ describe("Racer", () => {
     });
     expect(game.playerView(b.id)).toMatchObject({ myChoice: 2, reveal: { choice: 2, correct: [0], wasCorrect: false }, me: { correct: 0, wrong: 1 } });
     expect(game.playerView(c.id)).toMatchObject({ myChoice: null, reveal: { choice: null, correct: [0], wasCorrect: false }, me: { correct: 0, wrong: 0 } });
-    // The next turn starts clean but keeps the last turn's summary.
     game.next();
     expect(game.hostView()).toMatchObject({ answeredCount: 0, correct: null, answerCounts: null, confidence: null, lastTurn: { index: 0 } });
     expect(game.playerView(a.id)).toMatchObject({ myChoice: null, reveal: null });
@@ -751,9 +739,9 @@ describe("Racer", () => {
     const { game, clock } = setup(["A", "B", "=C"], { questions: 3 });
     expect(game.hostView().errors).toBeNull();
     const drivers: string[] = [];
-    // Two turns at "mid" with enough right answers (+20 each), then a careful one.
+    // why: Two turns at "mid" with enough right answers (+20 each), then a careful one.
     drivers.push(game.driver!.nickname);
-    turn(game, clock, "mid", ["B", "=C"]); // A is wrong: 2 of 3
+    turn(game, clock, "mid", ["B", "=C"]);
     game.next();
     drivers.push(game.driver!.nickname);
     turn(game, clock, "mid", "all");
@@ -804,7 +792,6 @@ describe("Racer", () => {
       "Top speed (mph)": 70,
       Crashes: 0,
     });
-    // The shared result is in every row; the most correct come first.
     expect(rows).toHaveLength(3);
     expect(rows.slice(0, 2)).toContainEqual(row("=C", 3, 0, 100));
     expect(rows.slice(0, 2)).toContainEqual(row("B", 3, 0, 100));

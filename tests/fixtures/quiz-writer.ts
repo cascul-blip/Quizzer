@@ -3,7 +3,8 @@ import { ConflictError, QuizStore } from "../../src/server/quiz/store.ts";
 const [dir, id, action, value] = process.argv.slice(2);
 const store = new QuizStore(dir!);
 console.log("ready");
-await Bun.stdin.text(); // The parent releases the writers together.
+// why: the parent closes stdin to release all writers at once, so they race.
+await Bun.stdin.text();
 try {
   switch (action) {
     case "append":

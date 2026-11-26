@@ -38,11 +38,11 @@ describe("built-in tracks", () => {
       expect(track.bpm).toBeLessThan(220);
       for (const layer of track.layers) {
         expect(layer.bars.length).toBeGreaterThan(0);
-        expect(track.bars % layer.bars.length).toBe(0); // loops line up
+        expect(track.bars % layer.bars.length).toBe(0);
         for (const bar of layer.bars) {
           const toks = tokens(bar);
           expect(toks).toHaveLength(stepsPerBar(track));
-          expect(toks[0]).not.toBe("-"); // a hold needs a note before it in the same bar
+          expect(toks[0]).not.toBe("-");
           for (const tok of toks) {
             if (tok === "." || tok === "-") continue;
             if (DRUMS.has(layer.inst) && (tok === "x" || tok === "o")) continue;
@@ -134,7 +134,6 @@ describe("seasonal Robot Attack music", () => {
       expect(seasonal[id]).not.toBe(original[id]);
       expect(TRACKS[id]).toBe(robotTracksForSkin(ROBOT_SKIN)[id]);
     }
-    // Beethoven's Allegretto, Mountain King, Fifth, and Ode to Joy.
     expect(Object.values(original).map((t) => t.bpm)).toEqual([72, 80, 108, 104]);
   });
 
@@ -152,7 +151,7 @@ describe("seasonal Robot Attack music", () => {
       const melody = track.layers.find((l) => l.inst === instrument)!;
       expect(tokens(melody.bars[0]!)[0]).toBe(opening);
       for (const intensity of [0, 0.2, 0.5, 0.8, 1]) expect(layerActive(melody, intensity)).toBe(true);
-      // Seasonal arrangements must use only the existing CC0 instrument sets.
+      // why: seasonal arrangements must use only the existing CC0 instrument sets.
       for (const layer of track.layers) expect(["bass", "tribass", "twang"]).not.toContain(layer.inst);
     }
   });
@@ -293,7 +292,7 @@ describe("Neon Noel Racer Christmas music", () => {
           [200, false, 1],
         ] as const) {
           const view = { kind: "racer", theme, phase, car: { speedMph: speed, crashed } } as HostView;
-          // No per-question key: phase changes must not restart the melody.
+          // why: no per-question key, so phase changes must not restart the melody.
           expect(musicFor(view)).toEqual({ track: `${prefix}-drive`, intensity });
         }
       }
@@ -353,7 +352,7 @@ describe("North Pole Land Grab Christmas music", () => {
     expect(cue().intensity).toBeLessThan(1);
     for (const tile of ring) owners[tile] = -1;
     expect(cue()).toEqual({ track: "land-christmas-play", intensity: 0 });
-    // No phase or threat key: the existing player glides instead of restarting.
+    // why: no phase or threat key, so the existing player glides instead of restarting.
     expect(cue().key).toBeUndefined();
   });
 

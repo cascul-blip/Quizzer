@@ -25,7 +25,7 @@ describe("Kingdom Siege themes", () => {
     const player = lobby.join("Holly");
     for (const theme of ["classic", "christmas"] as const) {
       lobby.setModeSettings("siege", { waves: 10, theme });
-      // Older clients updating only waves must preserve an explicit theme choice.
+      // why: Older clients updating only waves must preserve an explicit theme choice.
       lobby.setModeSettings("siege", { waves: 5 });
       expect(lobby.settings.siege.theme).toBe(theme);
       const game = SiegeGame.fromLobby(lobby.handoffFacts("siege"), { clock: new FakeClock() });
