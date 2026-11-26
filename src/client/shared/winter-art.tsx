@@ -1,5 +1,3 @@
-/** why: only the art is Christmas; game rules keep the submarine protocol. */
-
 import type { RefObject } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { AvatarChoice } from "../../shared/avatars.ts";
@@ -23,7 +21,6 @@ export interface SledRider {
   choice: AvatarChoice;
 }
 
-/** why: follows the live chase pace, including boosts and stops. */
 export function WinterBackdrop({ paceRef }: { paceRef: RefObject<number> }) {
   const world = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -164,12 +161,11 @@ export function DogSled({ riders = [], moving = true, boosting = false }: { ride
   );
 }
 
-// why: layout printed by scripts/winter-art/prepare-goblin.py (12 fps, row-major 295 × 375 cells).
+// why: the playback rate and cell layout must match the sheet from scripts/winter-art/prepare-goblin.py.
 const GOBLIN_FRAMES = 36,
   GOBLIN_COLS = 8,
   GOBLIN_ROWS = 5;
 
-/** why: the supplied goblin was keyed from magenta into a transparent frame sheet. */
 export function ChristmasGoblin({ closeness = 0, caught = false }: { closeness?: number; caught?: boolean }) {
   const reach = Math.max(0, Math.min(1, closeness));
   const time = useArtClock(!caught, 0.8 + reach * 0.4);

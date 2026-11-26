@@ -21,6 +21,8 @@ Issues and docs name a mode by its plain name; the code uses its key (`src/serve
 
 Add a new mode's row here, and put its design notes in `docs/modes/`.
 
+Robot Attack uses the seasonal snowman artwork while `ROBOT_SKIN` is `"snowman"`. To restore the standard artwork after the season, set it to `"robot"` in [robot-skin.ts](../../src/client/shared/robot-skin.ts).
+
 # Lobby handoff
 
 GameHub gives the mode entry the quiz, choices, player identities and team assignments, then installs the game before activation. It remembers the lobby choices after activation succeeds. If activation fails, GameHub restores the lobby and disposes of the new game.

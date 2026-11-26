@@ -1,4 +1,3 @@
-// why: projector and phones share this art; North Pole uses a separate asset pack, not Classic's overlays.
 import { useEffect, useId, useRef, useState } from "preact/hooks";
 import { isPhoneArt } from "./phone-art.ts";
 import lobbyTile from "./tower/lobby.webp";
@@ -86,7 +85,6 @@ export function useEventFlash<T>(item: T | null, seq: number | null | undefined,
   return shown;
 }
 
-/** why: drives a one-off sparkle; null when no floor was just completed. */
 export function useNewFloor(floors: number): number | null {
   const prev = useRef(floors);
   const last = useRef<number | null>(null);
@@ -143,15 +141,14 @@ export function BuildingBlock({ x, y, size: s, color, team, col, row, fullFloor,
   );
 }
 
-/** why: x is the centre and y the bottom of the puff. */
-export function DustPuff({ x, y, size: s }: { x: number; y: number; size: number }) {
+export function DustPuff({ x: centreX, y: bottomY, size: s }: { x: number; y: number; size: number }) {
   const christmas = useChristmasTower();
   return (
     <g class={`puff ${christmas ? "tower-snow-puff" : ""}`} aria-hidden="true">
-      <circle cx={x - s * 0.45} cy={y} r={s * 0.16} />
-      <circle cx={x} cy={y + s * 0.02} r={s * 0.2} />
-      <circle cx={x + s * 0.45} cy={y} r={s * 0.16} />
-      {christmas && [-0.6, -0.25, 0.2, 0.65].map((dx, i) => <circle key={i} cx={x + s * dx} cy={y - s * (0.14 + (i % 2) * 0.12)} r={s * 0.045} />)}
+      <circle cx={centreX - s * 0.45} cy={bottomY} r={s * 0.16} />
+      <circle cx={centreX} cy={bottomY + s * 0.02} r={s * 0.2} />
+      <circle cx={centreX + s * 0.45} cy={bottomY} r={s * 0.16} />
+      {christmas && [-0.6, -0.25, 0.2, 0.65].map((dx, i) => <circle key={i} cx={centreX + s * dx} cy={bottomY - s * (0.14 + (i % 2) * 0.12)} r={s * 0.045} />)}
     </g>
   );
 }
@@ -179,8 +176,21 @@ export function FloorSparkle({ x, y, width, size: s }: { x: number; y: number; w
   );
 }
 
-/** why: x is the mast centre, y the roof top; the jib spans x0…x1. */
-export function Crane({ x, y, x0, x1, size: s, color = "#17633a" }: { x: number; y: number; x0: number; x1: number; size: number; color?: string }) {
+export function Crane({
+  x: mastX,
+  y: roofY,
+  x0: jibLeft,
+  x1: jibRight,
+  size: s,
+  color = "#17633a",
+}: {
+  x: number;
+  y: number;
+  x0: number;
+  x1: number;
+  size: number;
+  color?: string;
+}) {
   const christmas = useChristmasTower();
   const id = useId();
   if (christmas) {
@@ -190,7 +200,7 @@ export function Crane({ x, y, x0, x1, size: s, color = "#17633a" }: { x: number;
     const left = -w * 0.3;
     const top = -h * 0.974;
     return (
-      <g transform={`translate(${x} ${y}) scale(${x > (x0 + x1) / 2 ? -1 : 1} 1)`} aria-hidden="true">
+      <g transform={`translate(${mastX} ${roofY}) scale(${mastX > (jibLeft + jibRight) / 2 ? -1 : 1} 1)`} aria-hidden="true">
         <defs>
           <mask id={id} style={{ maskType: "alpha" }} maskUnits="userSpaceOnUse" x={left} y={top} width={w} height={h}>
             <image href={christmasCraneMask()} x={left} y={top} width={w} height={h} />
@@ -203,25 +213,28 @@ export function Crane({ x, y, x0, x1, size: s, color = "#17633a" }: { x: number;
       </g>
     );
   }
-  const mastTop = y - s * 1.55;
+  const mastTop = roofY - s * 1.55;
   const w = s * 0.16;
   const rungs = Array.from({ length: 6 }, (_, i) => {
-    const ry = y - (s * 1.5 * (i + 1)) / 6;
-    return <line key={i} x1={x - w / 2} y1={ry} x2={x + w / 2} y2={ry + s * 0.22} />;
+    const ry = roofY - (s * 1.5 * (i + 1)) / 6;
+    return <line key={i} x1={mastX - w / 2} y1={ry} x2={mastX + w / 2} y2={ry + s * 0.22} />;
   });
   return (
     <g class="crane" aria-hidden="true">
-      <rect x={x - w / 2} y={mastTop} width={w} height={y - mastTop} class="crane-steel" />
+      <rect x={mastX - w / 2} y={mastTop} width={w} height={roofY - mastTop} class="crane-steel" />
       <g class="crane-lattice">{rungs}</g>
-      <g class="crane-jib" style={{ transformOrigin: `${x}px ${mastTop}px` }}>
-        <rect x={x0} y={mastTop - s * 0.1} width={x1 - x0} height={s * 0.1} class="crane-steel" />
-        <rect x={x0} y={mastTop - s * 0.02} width={s * 0.35} height={s * 0.22} class="crane-weight" />
-        <line x1={x} y1={mastTop - s * 0.35} x2={x1} y2={mastTop - s * 0.06} class="crane-cable" />
-        <line x1={x} y1={mastTop - s * 0.35} x2={x0} y2={mastTop - s * 0.06} class="crane-cable" />
-        <line x1={x1 - s * 0.35} y1={mastTop} x2={x1 - s * 0.35} y2={mastTop + s * 0.7} class="crane-cable" />
-        <path d={`M${x1 - s * 0.43},${mastTop + s * 0.7} h${s * 0.16} v${s * 0.08} a${s * 0.08},${s * 0.08} 0 1 1 -${s * 0.16},0 z`} class="crane-steel" />
+      <g class="crane-jib" style={{ transformOrigin: `${mastX}px ${mastTop}px` }}>
+        <rect x={jibLeft} y={mastTop - s * 0.1} width={jibRight - jibLeft} height={s * 0.1} class="crane-steel" />
+        <rect x={jibLeft} y={mastTop - s * 0.02} width={s * 0.35} height={s * 0.22} class="crane-weight" />
+        <line x1={mastX} y1={mastTop - s * 0.35} x2={jibRight} y2={mastTop - s * 0.06} class="crane-cable" />
+        <line x1={mastX} y1={mastTop - s * 0.35} x2={jibLeft} y2={mastTop - s * 0.06} class="crane-cable" />
+        <line x1={jibRight - s * 0.35} y1={mastTop} x2={jibRight - s * 0.35} y2={mastTop + s * 0.7} class="crane-cable" />
+        <path
+          d={`M${jibRight - s * 0.43},${mastTop + s * 0.7} h${s * 0.16} v${s * 0.08} a${s * 0.08},${s * 0.08} 0 1 1 -${s * 0.16},0 z`}
+          class="crane-steel"
+        />
       </g>
-      <rect x={x - s * 0.18} y={mastTop - s * 0.02} width={s * 0.28} height={s * 0.2} rx={s * 0.03} class="crane-cab" />
+      <rect x={mastX - s * 0.18} y={mastTop - s * 0.02} width={s * 0.28} height={s * 0.2} rx={s * 0.03} class="crane-cab" />
     </g>
   );
 }
@@ -277,7 +290,6 @@ export function Tree({ x, y, size: s, seed }: { x: number; y: number; size: numb
   );
 }
 
-/** why: deterministic, and drawn for a 1000 × 100 viewBox. */
 export function SkylineSvg() {
   const buildings = [];
   let x = 0;
@@ -297,30 +309,29 @@ export function SkylineSvg() {
 
 export const COLUMN_NAMES = ["left", "center", "right"] as const;
 
-/** why: (x, y) is the cell's top-left and s the cell size. */
-export function EggCell({ x, y, size: s }: { x: number; y: number; size: number }) {
+export function EggCell({ x: left, y: top, size: s }: { x: number; y: number; size: number }) {
   const christmas = useChristmasTower();
   if (christmas)
     return (
       <g class="egg-cell tower-bell-cell" aria-hidden="true">
-        <rect x={x + s * 0.04} y={y + s * 0.04} width={s * 0.92} height={s * 0.92} rx={s * 0.12} class="egg-slot" />
-        <g class="egg" style={{ transformOrigin: `${x + s / 2}px ${y + s * 0.18}px` }}>
-          <ellipse cx={x + s / 2} cy={y + s * 0.56} rx={s * 0.29} ry={s * 0.34} class="egg-glow" />
-          <image href={christmasBell()} x={x + s * 0.12} y={y + s * 0.1} width={s * 0.76} height={s * 0.8} />
+        <rect x={left + s * 0.04} y={top + s * 0.04} width={s * 0.92} height={s * 0.92} rx={s * 0.12} class="egg-slot" />
+        <g class="egg" style={{ transformOrigin: `${left + s / 2}px ${top + s * 0.18}px` }}>
+          <ellipse cx={left + s / 2} cy={top + s * 0.56} rx={s * 0.29} ry={s * 0.34} class="egg-glow" />
+          <image href={christmasBell()} x={left + s * 0.12} y={top + s * 0.1} width={s * 0.76} height={s * 0.8} />
         </g>
       </g>
     );
   return (
     <g class="egg-cell" aria-hidden="true">
-      <rect x={x + s * 0.04} y={y + s * 0.04} width={s * 0.92} height={s * 0.92} rx={s * 0.08} class="egg-slot" />
-      <g class="egg" style={{ transformOrigin: `${x + s / 2}px ${y + s * 0.92}px` }}>
-        <ellipse cx={x + s / 2} cy={y + s * 0.56} rx={s * 0.3} ry={s * 0.37} class="egg-glow" />
-        <ellipse cx={x + s / 2} cy={y + s * 0.56} rx={s * 0.26} ry={s * 0.33} fill="#fff4dc" stroke="#6b3fa0" stroke-width={s * 0.03} />
-        <circle cx={x + s * 0.42} cy={y + s * 0.46} r={s * 0.06} fill="#8e5cd6" />
-        <circle cx={x + s * 0.58} cy={y + s * 0.62} r={s * 0.07} fill="#8e5cd6" />
-        <circle cx={x + s * 0.44} cy={y + s * 0.72} r={s * 0.04} fill="#8e5cd6" />
+      <rect x={left + s * 0.04} y={top + s * 0.04} width={s * 0.92} height={s * 0.92} rx={s * 0.08} class="egg-slot" />
+      <g class="egg" style={{ transformOrigin: `${left + s / 2}px ${top + s * 0.92}px` }}>
+        <ellipse cx={left + s / 2} cy={top + s * 0.56} rx={s * 0.3} ry={s * 0.37} class="egg-glow" />
+        <ellipse cx={left + s / 2} cy={top + s * 0.56} rx={s * 0.26} ry={s * 0.33} fill="#fff4dc" stroke="#6b3fa0" stroke-width={s * 0.03} />
+        <circle cx={left + s * 0.42} cy={top + s * 0.46} r={s * 0.06} fill="#8e5cd6" />
+        <circle cx={left + s * 0.58} cy={top + s * 0.62} r={s * 0.07} fill="#8e5cd6" />
+        <circle cx={left + s * 0.44} cy={top + s * 0.72} r={s * 0.04} fill="#8e5cd6" />
         <path
-          d={`M${x + s * 0.3},${y + s * 0.52} l${s * 0.08},${-s * 0.06} l${s * 0.07},${s * 0.07} l${s * 0.08},${-s * 0.06}`}
+          d={`M${left + s * 0.3},${top + s * 0.52} l${s * 0.08},${-s * 0.06} l${s * 0.07},${s * 0.07} l${s * 0.08},${-s * 0.06}`}
           fill="none"
           stroke="#6b3fa0"
           stroke-width={s * 0.025}
@@ -330,7 +341,6 @@ export function EggCell({ x, y, size: s }: { x: number; y: number; size: number 
   );
 }
 
-/** why: viewBox 0 0 200 220, facing left; parts are classed for CSS animation. */
 export function MonsterSvg() {
   const christmas = useChristmasTower();
   if (christmas)

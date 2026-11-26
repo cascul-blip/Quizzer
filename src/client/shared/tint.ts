@@ -14,12 +14,11 @@ export function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-/** why: toBlob encodes off the main thread; `fallback` if the browser can't. */
 export function canvasUrl(canvas: HTMLCanvasElement, type: "image/png" | "image/webp", fallback: string): Promise<string> {
   return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob ? URL.createObjectURL(blob) : fallback), type));
 }
 
-/** why: resolves to the untinted `base` if anything fails. */
+/** why: fall back to the original picture so a failed tint never hides the sprite. */
 export function tinted(base: string, paint: string, color: string): Promise<string> {
   const key = `${base}|${paint}|${color}`;
   let p = pending.get(key);
@@ -49,7 +48,6 @@ export function tinted(base: string, paint: string, color: string): Promise<stri
   return p;
 }
 
-/** why: returns the untinted shading layer until the tinted picture is ready. */
 export function useTinted(base: string, paint: string, color: string): string {
   const key = `${base}|${paint}|${color}`;
   const [, setReady] = useState("");
