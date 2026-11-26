@@ -21,7 +21,6 @@ type LandView = Extract<HostView, { kind: "land" }>;
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
-/** Projector screen for Land Grab: countdown → the land → podium. */
 export function LandStage({ view, send }: { view: LandView; send: Send }) {
   return (
     <LandThemeProvider theme={view.theme}>
@@ -278,7 +277,7 @@ function LandSettings({ settings, send }: LobbySettingsProps<"land">) {
 let landKey = "";
 let landValue = 0;
 
-/** captureThreat for this board, worked out again only when a tile or a start changes. */
+// why: recomputed only when a tile or a start changes.
 function landThreat(board: LandBoard): number {
   const key = `${board.owners.join()}|${board.starts.map((s) => (s.out ? 1 : 0)).join("")}`;
   if (key !== landKey) {
@@ -292,8 +291,7 @@ export function landCue(view: LandView): MusicCue {
   const playTrack = themedTrack("land", view.theme, "play");
   if (view.phase === "podium") return { track: themedTrack("land", view.theme, "results") };
   if (view.phase === "conquered") return { track: playTrack, intensity: 1 };
-  // Calm until a team gets close to closing a ring. No key, so the music glides
-  // up as the ring grows and back down if it is broken.
+  // why: no key, so the music glides up as a ring grows and back down if it is broken.
   return { track: playTrack, intensity: view.phase === "playing" ? landThreat(view.board) : 0 };
 }
 

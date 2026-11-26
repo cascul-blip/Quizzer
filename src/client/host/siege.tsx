@@ -31,7 +31,6 @@ import { Award } from "./tower.tsx";
 type SiegeView = Extract<HostView, { kind: "siege" }>;
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
-/** How long arrows, fallen monsters and dust stay on screen after they arrive. */
 const SHOT_MS = 380;
 const FALLEN_MS = 1300;
 const DUST_MS = 900;
@@ -40,7 +39,6 @@ function waveLabel(wave: number, waves: SiegeSettings["waves"]): string {
   return waves === "endless" ? `Wave ${wave}` : `Wave ${wave} of ${waves}`;
 }
 
-/** Projector screen for Kingdom Siege: countdown → build break → waves (with breaks) → the kingdom stands or the castle falls → podium. */
 export function SiegeStage({ view, send }: { view: SiegeView; send: Send }) {
   return (
     <SiegeThemeProvider theme={view.settings.theme}>
@@ -104,7 +102,6 @@ function Treasury({ gold, hearts }: { gold: number; hearts: number }) {
 
 const DRUM_ROLL_LEAD_MS = 1500;
 
-/** The drum roll leads into the next wave: it starts once the build break is this close to its end. */
 function isDrumRollMoment(view: SiegeView, p: SiegeView): boolean {
   const inLead = (v: SiegeView) => v.phase === "build" && v.phaseRemainingMs <= DRUM_ROLL_LEAD_MS;
   return view.wave > 0 && inLead(view) && !inLead(p);
@@ -163,7 +160,6 @@ function useSiegeSounds(view: SiegeView) {
   }, [view]);
 }
 
-/** The time since the page started, updated every animation frame while `on`. */
 function useFrameClock(on: boolean): number {
   const [now, setNow] = useState(() => performance.now());
   useEffect(() => {
@@ -179,7 +175,7 @@ function useFrameClock(on: boolean): number {
   return now;
 }
 
-/** When each key was first seen on this screen (keys present on the first render count as old). */
+// why: keys present on the first render count as old.
 function useFirstSeen<K>(keys: K[], now: number): { at: (k: K) => number; old: (k: K) => boolean } {
   const seen = useRef<Map<K, number> | null>(null);
   const first = seen.current === null;
@@ -192,12 +188,10 @@ function useFirstSeen<K>(keys: K[], now: number): { at: (k: K) => number; old: (
 function Battlefield({ view }: { view: SiegeView }) {
   const live = view.phase === "build" || view.phase === "wave" || view.phase === "stands" || view.phase === "fallen";
   const now = useFrameClock(live);
-  // Monster positions are animated here from where each one was and where it is going.
   const received = useRef({ at: performance.now(), view });
   if (received.current.view !== view) received.current = { at: performance.now(), view };
   const since = now - received.current.at;
 
-  // Recent attack times, for the archers' draw pose and the monsters' attack pose.
   const attacks = useRef(new Map<string, { seq: number; at: number }>());
   const lastAttack = (key: string, seq: number) => {
     const a = attacks.current.get(key);
@@ -458,20 +452,16 @@ function SiegeSettings({ settings, send }: LobbySettingsProps<"siege">) {
   );
 }
 
-/** Monsters on the board at which a wave's music is at its busiest. */
 const MONSTERS_FOR_FULL_BUSY = 10;
 
 export function siegeCue(view: SiegeView): MusicCue {
   const outcome = view.result?.outcome;
   const battle = themedTrack("siege", view.settings.theme, "play");
-  // Bells and a fanfare when the kingdom stands; the low lament when the castle falls (or the host ends it).
   if (view.phase === "stands" || view.phase === "fallen" || view.phase === "podium") {
     return { track: themedTrack("siege", view.settings.theme, "results"), intensity: outcome === "stands" ? 0.9 : 0.12, key: `siege-end-${outcome}` };
   }
   if (view.phase === "countdown") return { track: battle, intensity: 0.05, key: "siege-count" };
-  // Build break: drums and a held chord, rising into a drum roll before the next wave.
   if (view.phase === "build") return { track: battle, intensity: 0.05, rampTo: 0.14, rampMs: view.phaseRemainingMs, key: `siege-break-${view.wave}` };
-  // A giant brings low brass and timpani.
   const lostHeartsShare = 1 - view.hearts / Math.max(1, view.maxHearts);
   const giant = view.monsters.some((m) => m.type === "giant");
   const busyShare = Math.min(1, view.monsterCount / MONSTERS_FOR_FULL_BUSY);
