@@ -1,10 +1,8 @@
-// why: Background music tracks. Each id is also the file name (minus extension) that
-// replaces the built-in track when placed in data/music/, e.g. submarine-chase.mp3.
+// why: An ID is also the filename stem for an override in data/music/, so changing an ID would orphan existing uploads.
 
 import type { ThemedTrackId } from "./themed-modes.ts";
 import { themedMusicTracks } from "./themed-modes.ts";
 
-/** why: Modes without themes, and Showdown's draw sting. */
 const UNTHEMED_TRACKS = [
   { id: "classic-lobby", mode: "Classic", screen: "Lobby" },
   { id: "classic-question", mode: "Classic", screen: "Questions" },
@@ -23,7 +21,6 @@ const UNTHEMED_TRACKS = [
 
 export type MusicTrackId = (typeof UNTHEMED_TRACKS)[number]["id"] | ThemedTrackId;
 
-/** why: Every track, for the admin music list; a themed mode's rows come from THEMED_MODES. */
 export const MUSIC_TRACKS: readonly { id: MusicTrackId; mode: string; screen: string }[] = [...UNTHEMED_TRACKS, ...themedMusicTracks()];
 
 export const MUSIC_EXTENSIONS: Record<string, string> = {
@@ -38,7 +35,6 @@ export const MUSIC_EXTENSIONS: Record<string, string> = {
 
 const TRACK_IDS = new Set<string>(MUSIC_TRACKS.map((t) => t.id));
 
-/** why: "submarine-chase.mp3" → "submarine-chase" if it's a known track with a supported extension, else null. */
 export function musicTrackForFile(fileName: string): MusicTrackId | null {
   const m = /^([a-z-]+)\.([a-z0-9]+)$/i.exec(fileName);
   if (!m || !MUSIC_EXTENSIONS[m[2]!.toLowerCase()]) return null;

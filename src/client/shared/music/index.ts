@@ -20,7 +20,7 @@ function write(key: string, value: string): void {
   try {
     localStorage.setItem(key, value);
   } catch {
-    // why: storage unavailable: the setting just won't persist
+    // why: Keep the current setting in memory if storage is unavailable.
   }
 }
 
@@ -57,9 +57,7 @@ export function setMusicVolume(v: number): void {
   applyLevel();
 }
 
-// why: host only; also starts downloading the instrument recordings.
 export async function loadCustomMusic(): Promise<void> {
-  // why: ?music=synth plays every track with the synthesized voices, as before the recordings.
   const synth = new URLSearchParams(location.search).get("music") === "synth";
   setSamplesEnabled(!synth);
   if (!synth) prefetchSamples(Object.values(TRACKS).flatMap((t) => (usesSamples(t) ? [...instrumentsOf(t)] : [])));
@@ -67,22 +65,19 @@ export async function loadCustomMusic(): Promise<void> {
     const res = await fetch("/api/music");
     if (res.ok) custom = (await res.json()).files ?? {};
   } catch {
-    // why: Built-in music still works when the custom music list is unavailable.
+    // why: Built-in tracks remain available when the server cannot list overrides.
   }
 }
 
 export interface MusicCue {
   track: MusicTrackId | null;
-  // why: 0…1: faster tempo and extra layers as it rises.
   intensity?: number;
-  /** why: Ramp from `intensity` up to `rampTo` over `rampMs` (e.g. a countdown getting tense). */
   rampTo?: number;
   rampMs?: number;
-  /** why: Change this to restart the ramp (e.g. per question). */
+  // why: A new key restarts the ramp even when consecutive questions use the same track and intensity.
   key?: string;
 }
 
-// why: crossfades when the track changes.
 export function useMusic(cue: MusicCue): void {
   useEffect(() => {
     music.play(cue.track);

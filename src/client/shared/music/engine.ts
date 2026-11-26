@@ -1,5 +1,5 @@
-// why: Step strings: note names ("C4", "Bb2", chords "C4+E4+G4"), "-" holds, "." rests;
-// drums are "x" (hit), "o" (accent) or ".".
+// why: Bars use space-separated note names (C4, Bb2), chords (C4+E4+G4), holds (-) and rests (.).
+// Drums also accept x for a hit and o for an accent.
 
 import type { Echo, RichBus, RichStyle } from "./rich.ts";
 import { createEcho, createRichBus, humanize, panFor, playRich, richStyle, STRUM_S } from "./rich.ts";
@@ -57,13 +57,12 @@ export const DRUMS = new Set<Instrument>([
 
 export interface Layer {
   inst: Instrument;
-  // why: cycles when there are fewer bars than the track.
+  // why: Short layer patterns repeat across the full track, so an accompaniment can loop under a longer melody.
   bars: string[];
   vol?: number;
-  // why: intensity runs 0…1; the layer plays while from <= intensity < to.
+  // why: The lower bound is inclusive and the upper bound exclusive, so adjacent layers can hand off at the same intensity.
   from?: number;
   to?: number;
-  // why: share (0…1) sent to the tempo-synced echo in rich tracks.
   echo?: number;
 }
 
@@ -71,18 +70,11 @@ export interface Track {
   id: string;
   bpm: number;
   bars: number;
-  // why: 16 for 4/4, 12 for 3/4 or 6/8.
   stepsPerBar?: number;
-  // why: fraction faster at full intensity (0.3 = 30% faster).
   tempoBoost?: number;
-  // why: fraction of a step that every other 16th is delayed (shuffle feel).
   swing?: number;
-  // why: share (0…1) sent to the hall reverb.
   reverb?: number;
-  // why: `true` is the acoustic style (Kingdom Siege), "arcade" the arcade-racer style (Racer);
-  // leave it off for the plain oscillators.
   rich?: boolean | RichStyle;
-  // why: on by default except for arcade tracks; false keeps every voice synthesized (chiptune).
   samples?: boolean;
   layers: Layer[];
 }
@@ -179,8 +171,7 @@ function noiseHit(ctx: Ctx, dest: AudioNode, t: number, peak: number, dur: numbe
   s.stop(t + dur + 0.05);
 }
 
-// why: `len` is the note length in seconds.
-function playInstrument(ctx: Ctx, dest: AudioNode, inst: Instrument, t: number, freq: number, len: number, vol: number, accent = false) {
+function playInstrument(ctx: Ctx, dest: AudioNode, inst: Instrument, t: number, freq: number, noteLengthS: number, vol: number, accent = false) {
   const v = vol * (accent ? 1.35 : 1);
   switch (inst) {
     case "kick": {
@@ -255,29 +246,29 @@ function playInstrument(ctx: Ctx, dest: AudioNode, inst: Instrument, t: number, 
       const f = ctx.createBiquadFilter();
       f.type = "lowpass";
       f.frequency.setValueAtTime(900, t);
-      f.frequency.exponentialRampToValueAtTime(250, t + Math.max(0.08, len));
+      f.frequency.exponentialRampToValueAtTime(250, t + Math.max(0.08, noteLengthS));
       const g = ctx.createGain();
-      env(g, t, 0.34 * v, 0.005, Math.max(0, len - 0.06), 0.08);
+      env(g, t, 0.34 * v, 0.005, Math.max(0, noteLengthS - 0.06), 0.08);
       o.connect(f).connect(g).connect(dest);
       o.start(t);
-      o.stop(t + len + 0.15);
+      o.stop(t + noteLengthS + 0.15);
       return;
     }
     case "tribass":
-      osc(ctx, dest, "triangle", freq, t, 0.5 * v, 0.003, Math.max(0, len - 0.03), 0.04);
+      osc(ctx, dest, "triangle", freq, t, 0.5 * v, 0.003, Math.max(0, noteLengthS - 0.03), 0.04);
       return;
     case "lead":
-      osc(ctx, dest, "square", freq, t, 0.11 * v, 0.006, Math.max(0, len - 0.06), 0.08);
-      osc(ctx, dest, "square", freq, t, 0.05 * v, 0.006, Math.max(0, len - 0.06), 0.08, 9);
+      osc(ctx, dest, "square", freq, t, 0.11 * v, 0.006, Math.max(0, noteLengthS - 0.06), 0.08);
+      osc(ctx, dest, "square", freq, t, 0.05 * v, 0.006, Math.max(0, noteLengthS - 0.06), 0.08, 9);
       return;
     case "pulse":
-      osc(ctx, dest, "pulse", freq, t, 0.14 * v, 0.003, Math.max(0, len - 0.03), 0.04);
+      osc(ctx, dest, "pulse", freq, t, 0.14 * v, 0.003, Math.max(0, noteLengthS - 0.03), 0.04);
       return;
     case "nylon":
     case "steel":
     case "dulcimer":
     case "pluck":
-      osc(ctx, dest, "triangle", freq, t, 0.3 * v, 0.003, 0.01, Math.min(0.5, len + 0.15));
+      osc(ctx, dest, "triangle", freq, t, 0.3 * v, 0.003, 0.01, Math.min(0.5, noteLengthS + 0.15));
       osc(ctx, dest, "sine", freq * 2, t, 0.08 * v, 0.003, 0.005, 0.12);
       return;
     case "bell":
@@ -290,7 +281,7 @@ function playInstrument(ctx: Ctx, dest: AudioNode, inst: Instrument, t: number, 
       f.type = "lowpass";
       f.frequency.value = 1300;
       g.connect(f).connect(dest);
-      env(g, t, 0.075 * v, Math.min(0.35, len * 0.3), Math.max(0, len * 0.6), Math.max(0.3, len * 0.4));
+      env(g, t, 0.075 * v, Math.min(0.35, noteLengthS * 0.3), Math.max(0, noteLengthS * 0.6), Math.max(0.3, noteLengthS * 0.4));
       for (const det of [-7, 7]) {
         const o = ctx.createOscillator();
         o.type = "sawtooth";
@@ -298,22 +289,24 @@ function playInstrument(ctx: Ctx, dest: AudioNode, inst: Instrument, t: number, 
         o.detune.value = det;
         o.connect(g);
         o.start(t);
-        o.stop(t + len * 1.4 + 0.5);
+        o.stop(t + noteLengthS * 1.4 + 0.5);
       }
       return;
     }
     case "organ": {
-      // why: Drawbar organ: stacked sine harmonics through a shared gain, with a slow rotary-speaker wobble.
+      // why: The slow rotary wobble simulates a drawbar organ’s rotating speaker.
       const g = ctx.createGain();
       g.connect(dest);
-      env(g, t, 0.07 * v, 0.02, Math.max(0, len - 0.05), 0.12);
+      env(g, t, 0.07 * v, 0.02, Math.max(0, noteLengthS - 0.05), 0.12);
       const lfo = ctx.createOscillator();
       const depth = ctx.createGain();
-      lfo.frequency.value = 5.5;
-      depth.gain.value = 6;
+      const rotaryRateHz = 5.5;
+      const rotaryDepthCents = 6;
+      lfo.frequency.value = rotaryRateHz;
+      depth.gain.value = rotaryDepthCents;
       lfo.connect(depth);
       lfo.start(t);
-      lfo.stop(t + len + 0.3);
+      lfo.stop(t + noteLengthS + 0.3);
       for (const [mult, level] of [
         [0.5, 0.7],
         [1, 1],
@@ -329,13 +322,13 @@ function playInstrument(ctx: Ctx, dest: AudioNode, inst: Instrument, t: number, 
         og.gain.value = level;
         o.connect(og).connect(g);
         o.start(t);
-        o.stop(t + len + 0.3);
+        o.stop(t + noteLengthS + 0.3);
       }
       return;
     }
     case "piano": {
-      // why: Soft piano: a quick hammer, then a long decay that is shorter for higher and for quicker notes.
-      const ring = Math.min(Math.max(0.5, Math.min(3, 1.8 * Math.sqrt(262 / freq))), 0.6 + len * 2);
+      // why: Higher notes decay faster to mimic a piano’s shorter treble strings.
+      const ring = Math.min(Math.max(0.5, Math.min(3, 1.8 * Math.sqrt(262 / freq))), 0.6 + noteLengthS * 2);
       osc(ctx, dest, "triangle", freq, t, 0.26 * v, 0.004, 0.01, ring);
       osc(ctx, dest, "sine", freq, t, 0.08 * v, 0.004, 0.01, ring, 4);
       osc(ctx, dest, "sine", freq * 2, t, 0.07 * v, 0.004, 0.01, ring * 0.5);
@@ -343,21 +336,20 @@ function playInstrument(ctx: Ctx, dest: AudioNode, inst: Instrument, t: number, 
       return;
     }
     case "strings": {
-      // why: String section: detuned saws with a bowed attack and a little vibrato.
       const g = ctx.createGain();
       const f = ctx.createBiquadFilter();
       f.type = "lowpass";
       f.frequency.value = 2200;
       g.connect(f).connect(dest);
-      const attack = Math.min(0.06, len * 0.3);
-      env(g, t, 0.07 * v, attack, Math.max(0, len - attack - 0.02), 0.14);
+      const attack = Math.min(0.06, noteLengthS * 0.3);
+      env(g, t, 0.07 * v, attack, Math.max(0, noteLengthS - attack - 0.02), 0.14);
       const lfo = ctx.createOscillator();
       const depth = ctx.createGain();
       lfo.frequency.value = 5.2;
       depth.gain.value = 5;
       lfo.connect(depth);
       lfo.start(t);
-      lfo.stop(t + len + 0.3);
+      lfo.stop(t + noteLengthS + 0.3);
       for (const det of [-8, 0, 8]) {
         const o = ctx.createOscillator();
         o.type = "sawtooth";
@@ -366,22 +358,21 @@ function playInstrument(ctx: Ctx, dest: AudioNode, inst: Instrument, t: number, 
         depth.connect(o.detune);
         o.connect(g);
         o.start(t);
-        o.stop(t + len + 0.3);
+        o.stop(t + noteLengthS + 0.3);
       }
       return;
     }
     case "flute": {
-      // why: Nearly a pure tone: a sine with faint overtones, a soft attack and vibrato.
       const g = ctx.createGain();
       g.connect(dest);
-      env(g, t, 0.16 * v, Math.min(0.04, len * 0.3), Math.max(0, len - 0.06), 0.1);
+      env(g, t, 0.16 * v, Math.min(0.04, noteLengthS * 0.3), Math.max(0, noteLengthS - 0.06), 0.1);
       const lfo = ctx.createOscillator();
       const depth = ctx.createGain();
       lfo.frequency.value = 5;
       depth.gain.value = 8;
       lfo.connect(depth);
       lfo.start(t);
-      lfo.stop(t + len + 0.2);
+      lfo.stop(t + noteLengthS + 0.2);
       for (const [mult, level] of [
         [1, 1],
         [2, 0.18],
@@ -395,12 +386,11 @@ function playInstrument(ctx: Ctx, dest: AudioNode, inst: Instrument, t: number, 
         og.gain.value = level;
         o.connect(og).connect(g);
         o.start(t);
-        o.stop(t + len + 0.2);
+        o.stop(t + noteLengthS + 0.2);
       }
       return;
     }
     case "twang": {
-      // why: Twangy electric guitar: a bright saw and square that bend down onto the note, with a closing filter.
       const g = ctx.createGain();
       const f = ctx.createBiquadFilter();
       f.type = "lowpass";
@@ -408,7 +398,7 @@ function playInstrument(ctx: Ctx, dest: AudioNode, inst: Instrument, t: number, 
       f.frequency.setValueAtTime(4200, t);
       f.frequency.exponentialRampToValueAtTime(700, t + 0.35);
       g.connect(f).connect(dest);
-      const ring = Math.min(1.1, len + 0.45);
+      const ring = Math.min(1.1, noteLengthS + 0.45);
       env(g, t, 0.12 * v, 0.002, 0.02, ring);
       for (const [type, level] of [
         ["sawtooth", 1],
@@ -427,14 +417,16 @@ function playInstrument(ctx: Ctx, dest: AudioNode, inst: Instrument, t: number, 
       return;
     }
     case "whistle": {
-      // why: A lonely whistle: a pure tone that scoops up into the note, with a wide vibrato and a breath of air.
+      // why: The pitch scoops into the note and the airflow makes the whistle sound played by a person.
       const g = ctx.createGain();
       g.connect(dest);
-      env(g, t, 0.15 * v, Math.min(0.05, len * 0.3), Math.max(0, len - 0.08), 0.12);
+      env(g, t, 0.15 * v, Math.min(0.05, noteLengthS * 0.3), Math.max(0, noteLengthS - 0.08), 0.12);
       const o = ctx.createOscillator();
       o.type = "sine";
-      o.frequency.setValueAtTime(freq * 0.93, t);
-      o.frequency.exponentialRampToValueAtTime(freq, t + 0.07);
+      const scoopStartPitchRatio = 0.93;
+      const scoopTimeS = 0.07;
+      o.frequency.setValueAtTime(freq * scoopStartPitchRatio, t);
+      o.frequency.exponentialRampToValueAtTime(freq, t + scoopTimeS);
       const lfo = ctx.createOscillator();
       const depth = ctx.createGain();
       lfo.frequency.value = 6;
@@ -443,14 +435,14 @@ function playInstrument(ctx: Ctx, dest: AudioNode, inst: Instrument, t: number, 
       o.connect(g);
       o.start(t);
       lfo.start(t);
-      o.stop(t + len + 0.2);
-      lfo.stop(t + len + 0.2);
-      noiseHit(ctx, dest, t, 0.03 * v, Math.min(0.4, len), "bandpass", freq * 2, 6);
+      o.stop(t + noteLengthS + 0.2);
+      lfo.stop(t + noteLengthS + 0.2);
+      noiseHit(ctx, dest, t, 0.03 * v, Math.min(0.4, noteLengthS), "bandpass", freq * 2, 6);
       return;
     }
     case "jawharp": {
-      // why: A jaw harp's "boing": a buzzing reed (sawtooth) through a mouth formant that sweeps up and back down.
-      const ring = Math.max(0.25, len);
+      // why: The formant sweep simulates a change in the shape of the player’s mouth.
+      const ring = Math.max(0.25, noteLengthS);
       const g = ctx.createGain();
       g.connect(dest);
       env(g, t, 0.2 * v, 0.004, ring * 0.25, ring * 0.75);
@@ -458,26 +450,24 @@ function playInstrument(ctx: Ctx, dest: AudioNode, inst: Instrument, t: number, 
       o.type = "sawtooth";
       o.frequency.setValueAtTime(freq * 1.02, t);
       o.frequency.exponentialRampToValueAtTime(freq, t + 0.03);
-      const mouth = ctx.createBiquadFilter();
-      mouth.type = "bandpass";
-      mouth.Q.value = 9;
-      mouth.frequency.setValueAtTime(freq * 2.5, t);
-      mouth.frequency.exponentialRampToValueAtTime(freq * 7, t + ring * 0.35);
-      mouth.frequency.exponentialRampToValueAtTime(freq * 3, t + ring);
-      // why: A little of the reed's low body under the formant.
+      const mouthFormant = ctx.createBiquadFilter();
+      mouthFormant.type = "bandpass";
+      mouthFormant.Q.value = 9;
+      mouthFormant.frequency.setValueAtTime(freq * 2.5, t);
+      mouthFormant.frequency.exponentialRampToValueAtTime(freq * 7, t + ring * 0.35);
+      mouthFormant.frequency.exponentialRampToValueAtTime(freq * 3, t + ring);
       const body = ctx.createBiquadFilter();
       body.type = "lowpass";
       body.frequency.value = freq * 1.5;
       const bodyGain = ctx.createGain();
       bodyGain.gain.value = 0.35;
-      o.connect(mouth).connect(g);
+      o.connect(mouthFormant).connect(g);
       o.connect(body).connect(bodyGain).connect(g);
       o.start(t);
       o.stop(t + ring + 0.15);
       return;
     }
     case "timpani": {
-      // why: A tuned drum: the pitch settles onto the note just after the stroke.
       const o = ctx.createOscillator();
       o.frequency.setValueAtTime(freq * 1.12, t);
       o.frequency.exponentialRampToValueAtTime(freq, t + 0.06);
@@ -495,9 +485,9 @@ function playInstrument(ctx: Ctx, dest: AudioNode, inst: Instrument, t: number, 
       f.type = "lowpass";
       f.frequency.setValueAtTime(350, t);
       f.frequency.exponentialRampToValueAtTime(2600, t + 0.08);
-      f.frequency.exponentialRampToValueAtTime(1300, t + Math.max(0.12, len));
+      f.frequency.exponentialRampToValueAtTime(1300, t + Math.max(0.12, noteLengthS));
       g.connect(f).connect(dest);
-      env(g, t, 0.13 * v, 0.03, Math.max(0, len - 0.08), 0.1);
+      env(g, t, 0.13 * v, 0.03, Math.max(0, noteLengthS - 0.08), 0.1);
       for (const det of [-6, 6]) {
         const o = ctx.createOscillator();
         o.type = "sawtooth";
@@ -505,7 +495,7 @@ function playInstrument(ctx: Ctx, dest: AudioNode, inst: Instrument, t: number, 
         o.detune.value = det;
         o.connect(g);
         o.start(t);
-        o.stop(t + len + 0.2);
+        o.stop(t + noteLengthS + 0.2);
       }
       return;
     }
@@ -524,7 +514,6 @@ interface Sends {
   echo?: AudioNode;
 }
 
-// why: step runs 0 … bars*stepsPerBar-1.
 export function scheduleStep(ctx: Ctx, dest: AudioNode, track: Track, step: number, t: number, intensity: number, sends: Sends = {}): void {
   const dur = stepSeconds(track, intensity);
   const steps = stepsPerBar(track);
@@ -542,7 +531,6 @@ export function scheduleStep(ctx: Ctx, dest: AudioNode, track: Track, step: numb
     let out = dest;
     let detune = 0;
     if (style) {
-      // why: A player's small unevenness, the same each time round; and the instrument's place in the stereo field.
       const h = humanize(step, li, style);
       at = Math.max(ctx.currentTime, t + h.timeOffsetS);
       vol *= h.gain;
@@ -558,12 +546,11 @@ export function scheduleStep(ctx: Ctx, dest: AudioNode, track: Track, step: numb
       out = pan;
     }
     if (DRUMS.has(layer.inst)) {
-      // why: Drums may carry a pitch (e.g. woodblock "E5") or just "x"/"o".
-      const pitch = noteFreq(tok) ?? 0;
+      const pitchHz = noteFreq(tok) ?? 0;
       const accent = tok === "o";
-      if (sampled && playSample(ctx, out, layer.inst, at, pitch, dur, vol, detune, accent)) return;
-      if (!(style && playRich(ctx, out, layer.inst, at, pitch, dur, vol, detune, style, accent)))
-        playInstrument(ctx, out, layer.inst, at, pitch, dur, vol, accent);
+      if (sampled && playSample(ctx, out, layer.inst, at, pitchHz, dur, vol, detune, accent)) return;
+      if (!(style && playRich(ctx, out, layer.inst, at, pitchHz, dur, vol, detune, style, accent)))
+        playInstrument(ctx, out, layer.inst, at, pitchHz, dur, vol, accent);
       return;
     }
     let held = 1;
@@ -571,11 +558,11 @@ export function scheduleStep(ctx: Ctx, dest: AudioNode, track: Track, step: numb
     tok.split("+").forEach((n, i) => {
       const f = noteFreq(n);
       if (!f) return;
-      const len = held * dur * 0.95;
+      const noteLengthS = held * dur * 0.95;
       const start = style && layer.inst === "pluck" ? at + i * STRUM_S : at;
-      if (sampled && playSample(ctx, out, layer.inst, start, f, len, vol, detune)) return;
-      if (!style) return playInstrument(ctx, out, layer.inst, at, f, len, vol);
-      if (!playRich(ctx, out, layer.inst, start, f, len, vol, detune, style)) playInstrument(ctx, out, layer.inst, start, f, len, vol);
+      if (sampled && playSample(ctx, out, layer.inst, start, f, noteLengthS, vol, detune)) return;
+      if (!style) return playInstrument(ctx, out, layer.inst, at, f, noteLengthS, vol);
+      if (!playRich(ctx, out, layer.inst, start, f, noteLengthS, vol, detune, style)) playInstrument(ctx, out, layer.inst, start, f, noteLengthS, vol);
     });
   });
 }
@@ -591,6 +578,8 @@ export function renderInto(ctx: Ctx, dest: AudioNode, track: Track, seconds: num
 export const instrumentsOf = (track: Track): Set<Instrument> => new Set(track.layers.map((l) => l.inst));
 
 const LOOKAHEAD_S = 0.12;
+const RESUME_LOOKAHEAD_S = 0.02;
+const DEFAULT_INTENSITY_RAMP_MS = 800;
 const TICK_MS = 25;
 const FADE_S = 1.2;
 const REVERB_S = 2.8;
@@ -609,18 +598,14 @@ interface Playing {
 const USUAL_LEVEL = 0.55;
 const DUCKED_LEVEL = 0.15;
 const DUCK_LEVEL = DUCKED_LEVEL / USUAL_LEVEL;
-/** why: Send to the shared reverb for rich tracks without their own amount: a hall (acoustic) or a tighter room (arcade). */
-const DEFAULT_REVERB_SEND = { acoustic: 0.3, arcade: 0.18 };
+const DEFAULT_RICH_REVERB_SEND = { acoustic: 0.3, arcade: 0.18 };
 
 export class MusicPlayer {
   private master: GainNode | null = null;
-  /** why: After the master: duck() dips this one, so a dip never fights setLevel() (mute, music off) over the same gain. */
   private ducker: GainNode | null = null;
   private reverb: ConvolverNode | null = null;
-  /** why: Saturation, compression and reverb for rich tracks: made when one first plays, taken down when none is playing. */
   private rich: RichBus | null = null;
-  /** why: Rich tracks feeding the bus: the one playing plus any still fading out. It goes when the last one has. */
-  private richUsers = 0;
+  private richTracksIncludingFadeOut = 0;
   private current: Playing | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
   private intensity = 0;
@@ -637,26 +622,23 @@ export class MusicPlayer {
     private readonly customUrl: (id: string) => string | null,
   ) {}
 
-  // why: 0…1, and 0 when muted or music is off.
   setLevel(level: number): void {
     const was = this.level;
     this.level = Math.max(0, Math.min(1, level));
     const ctx = this.getCtx();
     if (this.master && ctx) this.master.gain.setTargetAtTime(this.level * USUAL_LEVEL, ctx.currentTime, 0.15);
-    // why: Recordings aren't decoded while music is off or muted: fetch the playing track's once it's audible.
     const track = this.current?.track;
     if (was === 0 && this.level > 0 && ctx && track && usesSamples(track)) void loadSamples(ctx, instrumentsOf(track));
   }
 
-  // why: ramps over rampMs, quickly when 0.
   setIntensity(value: number, rampMs = 0): void {
     this.rampFrom = this.intensity;
     this.target = Math.max(0, Math.min(1, value));
     this.rampStart = performance.now();
-    this.rampMs = rampMs || 800;
+    this.rampMs = rampMs || DEFAULT_INTENSITY_RAMP_MS;
   }
 
-  // why: safe to call repeatedly with the same id; null fades to silence.
+  // why: Repeated calls with the same ID leave playback in place.
   play(id: string | null): void {
     this.wantedId = id;
     this.timer ??= setInterval(() => this.tick(), TICK_MS);
@@ -673,8 +655,6 @@ export class MusicPlayer {
     g.setTargetAtTime(1, t + ms / 1000, 0.3);
   }
 
-  // why: dips the background track under the sting; a custom file for the id plays once instead.
-  // Does nothing while audio is locked, muted or music is off.
   sting(id: string): void {
     const ctx = this.getCtx();
     if (!ctx || ctx.state !== "running" || this.level === 0) return;
@@ -709,7 +689,7 @@ export class MusicPlayer {
       gain.disconnect();
       return;
     }
-    // why: Dip the background track (not the master, which carries the sting too).
+    // why: Ducking the master would lower the sting along with the background.
     const bg = this.current?.gain.gain;
     if (bg) {
       bg.cancelScheduledValues(now);
@@ -732,7 +712,6 @@ export class MusicPlayer {
     return this.master;
   }
 
-  // why: the impulse response is a few seconds of decaying noise.
   private ensureReverb(ctx: AudioContext, master: GainNode): ConvolverNode {
     if (!this.reverb) {
       const length = Math.floor(ctx.sampleRate * REVERB_S);
@@ -766,10 +745,11 @@ export class MusicPlayer {
       }
       return;
     }
-    if (cur.nextTime < ctx.currentTime) cur.nextTime = ctx.currentTime + 0.02; // why: fell behind while the tab was hidden
+    // why: Play from the next step so overdue notes do not start together after a scheduling gap.
+    if (cur.nextTime < ctx.currentTime) cur.nextTime = ctx.currentTime + RESUME_LOOKAHEAD_S;
     cur.echo?.setStep(stepSeconds(cur.track, this.intensity), ctx.currentTime);
     while (cur.nextTime < ctx.currentTime + LOOKAHEAD_S) {
-      // why: Off or muted: keep the beat moving (so turning it back on comes in on time) but build no notes.
+      // why: Advance the beat even when muted so unmuting comes in on time.
       if (this.level > 0) scheduleStep(ctx, cur.gain, cur.track, cur.step, cur.nextTime, this.intensity, { echo: cur.echo?.input });
       const swing = cur.track.swing ?? 0;
       cur.nextTime += stepSeconds(cur.track, this.intensity) * (cur.step % 2 === 0 ? 1 + swing : 1 - swing);
@@ -790,7 +770,7 @@ export class MusicPlayer {
           old.gain.disconnect();
           old.echo?.dispose();
           audio?.pause();
-          if (old.track?.rich && --this.richUsers === 0 && this.rich) {
+          if (old.track?.rich && --this.richTracksIncludingFadeOut === 0 && this.rich) {
             this.rich.dispose();
             this.rich = null;
           }
@@ -813,20 +793,17 @@ export class MusicPlayer {
       this.current = { kind: "file", id, gain, step: 0, nextTime: now, audio };
       return;
     }
-    // why: An unknown id plays silence (but still counts as "current", so we don't retry every tick).
+    // why: Store unknown IDs as current so the scheduler does not retry every tick.
     const track = this.tracks[id];
-    // why: Its recordings decode in the background; until they're ready its notes use the synth voices.
     if (track && usesSamples(track) && this.level > 0) void loadSamples(ctx, instrumentsOf(track));
     if (track?.rich) {
-      // why: The rich bus replaces the master connection and the shared hall for this track.
       gain.disconnect();
       this.rich ??= createRichBus(ctx, master);
-      this.richUsers++;
+      this.richTracksIncludingFadeOut++;
       gain.connect(this.rich.input);
       const send = ctx.createGain();
-      send.gain.value = track.reverb ?? (richStyle(track.rich) === "arcade" ? DEFAULT_REVERB_SEND.arcade : DEFAULT_REVERB_SEND.acoustic);
+      send.gain.value = track.reverb ?? (richStyle(track.rich) === "arcade" ? DEFAULT_RICH_REVERB_SEND.arcade : DEFAULT_RICH_REVERB_SEND.acoustic);
       gain.connect(send).connect(this.rich.reverb);
-      // why: The echo hangs off the track's own gain, so it fades out with the track.
       const echo = track.layers.some((l) => l.echo) ? createEcho(ctx, gain, stepSeconds(track, this.intensity)) : undefined;
       this.current = { kind: "synth", id, gain, track, step: 0, nextTime: now + 0.05, echo };
       return;

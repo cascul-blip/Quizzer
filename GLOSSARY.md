@@ -28,6 +28,9 @@ _Avoid_: mode descriptor, mode metadata
 A game mode that can be shown in a seasonal theme (classic or Christmas). Its default theme, the name and icon it shows in each theme, and the music track each of its screens plays in each theme are declared together in one table. Several themed modes may share a track; the table is the one place that says so.
 _Avoid_: skinned mode, seasonal mode
 
+**Sting**:
+A short music track that plays once over the background music. Showdown plays a sting on a draw.
+
 **Results sheet**:
 What a finished game saves for the host as a spreadsheet: one row per player in the game mode's order, under the columns the mode declares, and optionally a free-form appendix such as Kingdom Siege's wave log. Every row has one cell per column.
 _Avoid_: results table, results CSV (the CSV is the file written from it)
