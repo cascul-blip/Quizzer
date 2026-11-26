@@ -55,4 +55,13 @@ When a comment explains what a name, constant or pattern means, rename or restru
 
 Make the code explain itself. Before writing a comment, try a better name, an extracted helper, a named constant or a type. A comment earns its place only when it records something the code can't express: why a choice was made, an outside constraint, a non-obvious consequence of changing it, or a unit or contract the types can't carry. Keep it to one or two lines next to the code it explains. Put design reasoning that spans modules in an ADR, and maintenance procedures in the relevant guide.
 
+A `why:` prefix does not make a comment a reason. These are findings even when marked:
+
+- `why: in ms` on `duration` → rename to `durationMs`.
+- `why: 0 is the bottom stop, 1 the top, null none` → a named union or constants.
+- `why: the revolver's tip in the fire pose` on `[412, 88]` → `REVOLVER_TIP_FIRE`.
+- `why: reset the timer` above `resetTimer()` → delete it.
+
+A reason worth keeping reads like `why: the host's 30 s idle kick would end the round first`. A reason that neither git history nor the code supports is deleted, not kept.
+
 The reviewer applies the deletion test to every added comment: if a rename or extraction could replace it, the comment is a finding. `scripts/check-new-comments.ts` (in `bun run check`, untracked files included) rejects a new comment in `src/`, `tests/` or `scripts/` unless it starts with `why:` (or `checked:` for a cast), so each one that lands has a stated reason for review. Tool directives (`biome-ignore`, `@ts-expect-error`) pass. Its `--all` mode, also in `bun run check`, applies the same rules to every line of every file in those paths, exempting only the generated files it lists.
