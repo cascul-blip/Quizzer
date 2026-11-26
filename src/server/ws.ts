@@ -46,16 +46,13 @@ interface LastResults {
 export class GameHub {
   game: Lobby | LiveGame | null = null;
   lastResults: LastResults | null = null;
-  // why: pages that reconnect to a different server start reload to pick up new code.
   readonly serverId = crypto.randomUUID();
 
   private readonly phoneAttachments = new PhoneAttachments<WS>((id, connected) => this.game?.setConnected(id, connected));
   readonly join: JoinInformation;
-  // why: sent to phones on join so they can preload the open quiz's images.
-  private images: string[] = [];
+  private imagesToPreload: string[] = [];
   private readonly views: ViewDelivery<WS>;
-  // why: mode, mode settings and pacing carry over to the next lobby ("Play again").
-  private lastSetup: Partial<LobbyChoices> = {};
+  private previousLobbyChoices: Partial<LobbyChoices> = {};
   private readonly log: (msg: string) => void;
 
   constructor(
@@ -158,7 +155,7 @@ export class GameHub {
         if (this.phoneAttachments.joinLimitReached(ws, this.game.players)) throw new GameError("Too many players from this device");
         const p = this.game.join(msg.nickname, cleanAvatar(msg.avatar, msg.accessory));
         this.phoneAttachments.attach(ws, p.id);
-        this.views.send(ws, { type: "joined", token: p.token, playerId: p.id, images: this.images });
+        this.views.send(ws, { type: "joined", token: p.token, playerId: p.id, images: this.imagesToPreload });
         this.log(`Player joined: ${p.nickname}`);
         return;
       }
@@ -169,7 +166,7 @@ export class GameHub {
           return this.views.refresh(ws);
         }
         this.phoneAttachments.attach(ws, p.id);
-        this.views.send(ws, { type: "joined", token: p.token, playerId: p.id, images: this.images });
+        this.views.send(ws, { type: "joined", token: p.token, playerId: p.id, images: this.imagesToPreload });
         return this.views.refresh(ws);
       }
       default:
@@ -187,8 +184,8 @@ export class GameHub {
       loadQuiz: (quizId) => this.store.get(quizId),
       openLobby: (quiz) => {
         this.closeGame();
-        this.images = [...new Set(quiz.questions.flatMap((q) => (q.image ? [q.image] : [])))];
-        this.game = new Lobby(quiz, { ...this.lastSetup, onChange: () => this.views.scheduleBroadcast() });
+        this.imagesToPreload = [...new Set(quiz.questions.flatMap((q) => (q.image ? [q.image] : [])))];
+        this.game = new Lobby(quiz, { ...this.previousLobbyChoices, onChange: () => this.views.scheduleBroadcast() });
         this.log(`Game opened: ${quiz.title}. Players join at ${this.join.url()}`);
         this.views.scheduleBroadcast();
       },
@@ -235,7 +232,6 @@ export class GameHub {
     if (action.type === "start") {
       installAndActivate(lobby.choices.mode, (game) => game.start(action.pacing));
     } else {
-      // why: the lobby's legacy Next and End commands always target Classic.
       installAndActivate("classic", (game) => game[action.type]());
     }
   }
@@ -243,7 +239,7 @@ export class GameHub {
   closeGame(): void {
     this.views.cancelPending();
     if (!this.game) return;
-    this.lastSetup = this.game.choices;
+    this.previousLobbyChoices = this.game.choices;
     this.game.dispose();
     this.game = null;
     this.phoneAttachments.detachAll();

@@ -51,7 +51,6 @@ export class ViewDelivery<S extends ViewSocket> {
     queueMicrotask(flush);
   }
 
-  // why: the acting player sees their action at once; the rest of the burst shares one trailing update.
   onActivity(playerId: string): void {
     for (const socket of this.sockets.forPlayer(playerId)) this.refresh(socket);
     this.activityTimer ??= this.clock.setTimeout(() => {
@@ -105,7 +104,7 @@ export class ViewDelivery<S extends ViewSocket> {
   }
 
   private sendAndInvalidateComparison(socket: S, message: string): void {
-    // why: these messages can change the page, so let the next phone update through.
+    // why: a control message can change the phone screen even when its next view compares equal.
     this.invalidateComparison(socket);
     socket.send(message, socket.data.role === "player");
   }

@@ -17,20 +17,20 @@ function readAll(dataDir: string): Records {
     if (!raw || typeof raw !== "object") return {};
     return Object.fromEntries(Object.entries(raw).filter(([, v]) => isRecord(v))) as Records;
   } catch {
+    // why: a damaged records file should never prevent an Endless run from starting.
     return {};
   }
 }
 
-// why: a missing or broken file counts as no record.
 export function loadSiegeRecord(dataDir: string, quizId: string): SiegeRecord | null {
   return readAll(dataDir)[quizId] ?? null;
 }
 
-// why: written to a temp file first, so a crash can't leave half a file.
 export function saveSiegeRecord(dataDir: string, quizId: string, record: SiegeRecord): void {
   const all = readAll(dataDir);
   all[quizId] = record;
   const file = siegeRecordsPath(dataDir);
   writeFileSync(`${file}.tmp`, JSON.stringify(all, null, 2));
+  // why: a crash during the write must leave previous quiz records readable.
   renameSync(`${file}.tmp`, file);
 }
