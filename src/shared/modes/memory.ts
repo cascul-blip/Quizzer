@@ -15,9 +15,13 @@ export interface MemorySettings {
 export const MEMORY_QUESTIONS_PER_PHASE = 3;
 export const MEMORY_TURN_MS = 20_000;
 
-/** why: the same labels in the classic and Christmas themes. */
 export const MEMORY_AWARDS = { fastestAnswers: "Fastest answers", mostCorrect: "Most correct", worstFlipper: "Worst Flipper" } as const;
 export type MemoryAwardKey = keyof typeof MEMORY_AWARDS;
+export type MemoryAwards = Record<MemoryAwardKey, SubAward | null>;
+
+/** why: awards go to the highest value, so Fastest answers carries the reciprocal of the average in seconds. */
+export const encodeFastestAnswers = (averageDurationMs: number) => 1_000 / Math.max(averageDurationMs, 1);
+export const decodeFastestAnswers = (value: number) => 1 / value;
 
 export type MemoryPhase = "intro" | "open" | "reveal" | "turn" | "feedback" | "podium";
 
@@ -43,8 +47,7 @@ export interface HostMemoryState {
   answerCounts: number[] | null;
   players: (MemoryPlayer & { connected: boolean })[];
   podium: { place: number; player: MemoryPlayer }[] | null;
-  /** why: Fastest answers' value is the reciprocal of the average correct-answer time in seconds. */
-  awards: Record<MemoryAwardKey, SubAward | null> | null;
+  awards: MemoryAwards | null;
   boardSize: number;
   board: MemoryCardView[];
   turn: { id: number; playerId: string; nickname: string } | null;

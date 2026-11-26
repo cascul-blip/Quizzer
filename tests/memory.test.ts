@@ -6,7 +6,7 @@ import { QuizStore } from "../src/server/quiz/store.ts";
 import type { GameHub } from "../src/server/ws.ts";
 import type { Pacing } from "../src/shared/mode-views.ts";
 import type { MemoryBoardSize, MemoryCardView } from "../src/shared/modes/memory.ts";
-import { MEMORY_TURN_MS } from "../src/shared/modes/memory.ts";
+import { decodeFastestAnswers, encodeFastestAnswers, MEMORY_TURN_MS } from "../src/shared/modes/memory.ts";
 import type { ShuffleOptions } from "../src/shared/protocol.ts";
 import { FakeClock, sampleQuiz, tempDir } from "./helpers.ts";
 import { fakeHub, HubSocket } from "./hub-harness.ts";
@@ -781,6 +781,31 @@ describe("Memory Game", () => {
     expect(projector().players.every((p) => !("rank" in p))).toBe(true);
     expect(projector().podium).toBeNull();
   });
+  test("the live scoreboard lists players with the same matched pairs by correct answers, like the podium", async () => {
+    const {
+      host,
+      phones: [, holly],
+    } = await launch(["Noel", "Holly"]);
+    playQuestion(host, [holly!]);
+    expect(projector().players.map((p) => p.nickname)).toEqual(["Holly", "Noel"]);
+  });
+
+  test("a player kicked before the podium gets no place or result", async () => {
+    const { host } = await launch(["Noel", "Holly"]);
+    const hollyId = projector().players.find((p) => p.nickname === "Holly")!.id;
+    host.sendMsg({ type: "host.kick", playerId: hollyId });
+    host.sendMsg({ type: "host.end" });
+
+    expect(projector().podium!.map((r) => r.player.nickname)).toEqual(["Noel"]);
+    expect((hub.game as MemoryGame).podium.result(hollyId)).toBeNull();
+    expect(memoryMode.results(hub.game as MemoryGame).rows.map((row) => row[1])).toEqual(["Noel"]);
+  });
+
+  test("Fastest answers encodes an average so faster scores higher, and decodes back to seconds", () => {
+    expect(encodeFastestAnswers(400)).toBeGreaterThan(encodeFastestAnswers(500));
+    expect(decodeFastestAnswers(encodeFastestAnswers(400))).toBeCloseTo(0.4);
+  });
+
   test("Most correct goes to everyone tied on the most correct answers, and the phones list it", async () => {
     const {
       host,
@@ -832,7 +857,7 @@ describe("Memory Game", () => {
 
     const fastest = projector().awards?.fastestAnswers;
     expect(fastest?.nicknames).toEqual(["Holly"]);
-    expect(1 / fastest!.value).toBeCloseTo(0.4);
+    expect(decodeFastestAnswers(fastest!.value)).toBeCloseTo(0.4);
     expect(player(holly!).result?.awards).toEqual(["Fastest answers"]);
     expect(player(ivy!).result?.awards).toEqual([]);
   });

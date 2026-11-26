@@ -2,7 +2,14 @@ import type { AnswerValue } from "../../shared/answer-match.ts";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import type { Pacing } from "../../shared/mode-views.ts";
 import type { HostMemoryState, MemoryAwardKey, MemoryBoardSize, MemoryCardView, MemoryPlayer, PlayerMemoryView } from "../../shared/modes/memory.ts";
-import { MEMORY_FACE_COUNT, MEMORY_MATCH_RESULT_MS, MEMORY_QUESTIONS_PER_PHASE, MEMORY_TURN_MS, memoryShared } from "../../shared/modes/memory.ts";
+import {
+  encodeFastestAnswers,
+  MEMORY_FACE_COUNT,
+  MEMORY_MATCH_RESULT_MS,
+  MEMORY_QUESTIONS_PER_PHASE,
+  MEMORY_TURN_MS,
+  memoryShared,
+} from "../../shared/modes/memory.ts";
 import type { Question } from "../../shared/quiz-schema.ts";
 import type { Clock } from "./common.ts";
 import { GameError, preparePlayOrder, shuffle } from "./common.ts";
@@ -12,7 +19,7 @@ import { PacedSession } from "./paced-session.ts";
 import type { Podium } from "./podium.ts";
 import { buildPodium, emptyPodium } from "./podium.ts";
 import type { BasePlayer } from "./roster.ts";
-import { most } from "./standings.ts";
+import { most, rankBy } from "./standings.ts";
 
 interface MemoryParticipant extends BasePlayer {
   answers: (PacedAnswer | undefined)[];
@@ -47,18 +54,20 @@ interface Feedback {
 
 const MISS_MS = 2_000;
 
-type MemoryPodiumT = Podium<MemoryParticipant, MemoryParticipant, MemoryAwardKey>;
+type MemoryPodium = Podium<MemoryParticipant, MemoryParticipant, MemoryAwardKey>;
 
-/** why: the Podium's highest-wins rule needs faster to score higher, so Fastest answers is the reciprocal of the average in seconds. */
+const PLACE_ORDER = [most<MemoryParticipant>((p) => p.pairs)];
+const SHARED_PLACE_ORDER = [most<MemoryParticipant>((p) => p.correct)];
+
 const MEMORY_AWARD_VALUES: Record<MemoryAwardKey, (p: MemoryParticipant) => number> = {
-  fastestAnswers: (p) => (p.correct ? (1000 * p.correct) / Math.max(p.correctMs, 1) : 0),
+  fastestAnswers: (p) => (p.correct ? encodeFastestAnswers(p.correctMs / p.correct) : 0),
   mostCorrect: (p) => p.correct,
   worstFlipper: (p) => p.misses,
 };
 
 export class MemoryGame {
   readonly runningMode: "memory" = "memory";
-  private readonly session: PacedSession<MemoryParticipant, "turn" | "feedback", MemoryPodiumT, MemoryGame>;
+  private readonly session: PacedSession<MemoryParticipant, "turn" | "feedback", MemoryPodium, MemoryGame>;
   private readonly questions: Question[] = [];
   private readonly boardSize: MemoryBoardSize;
   private readonly board: (number | null)[];
@@ -73,7 +82,7 @@ export class MemoryGame {
     options: MemoryOptions = {},
   ) {
     if (lobby.quiz.questions.length === 0) throw new GameError("This quiz has no questions");
-    this.session = new PacedSession<MemoryParticipant, "turn" | "feedback", MemoryPodiumT, MemoryGame>({
+    this.session = new PacedSession<MemoryParticipant, "turn" | "feedback", MemoryPodium, MemoryGame>({
       game: this,
       clock: options.clock,
       rng: options.rng,
@@ -283,19 +292,19 @@ export class MemoryGame {
   }
 
   /** why: places come from matched pairs alone; correct answers only order players who share a place. */
-  private buildPodium(): MemoryPodiumT {
+  private buildPodium(): MemoryPodium {
     const players = [...this.players.values()];
     return buildPodium({
       entries: players,
-      order: [most((p) => p.pairs)],
-      then: [most((p) => p.correct)],
+      order: PLACE_ORDER,
+      then: SHARED_PLACE_ORDER,
       players,
       entryOf: (p) => p,
       awards: { labels: memoryShared.awards, values: MEMORY_AWARD_VALUES },
     });
   }
 
-  get podium(): MemoryPodiumT {
+  get podium(): MemoryPodium {
     return this.session.podium;
   }
 
@@ -321,7 +330,7 @@ export class MemoryGame {
       answeredCount: answers.length,
       revealTurnsNext: this.revealTurnsNext,
       answerCounts: revealed && question ? question.options.map((_, i) => answers.filter((a) => a.option === i).length) : null,
-      players: [...this.players.values()].sort((a, b) => b.pairs - a.pairs).map((p) => ({ ...playerView(p), connected: p.connected })),
+      players: rankBy([...this.players.values()], PLACE_ORDER, SHARED_PLACE_ORDER).map((p) => ({ ...playerView(p), connected: p.connected })),
       awards: this.phase === "podium" ? this.podium.awards : null,
       podium: this.phase === "podium" ? this.podium.rows.map((r) => ({ place: r.place, player: playerView(r.player) })) : null,
       boardSize: this.boardSize,

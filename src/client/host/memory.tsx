@@ -1,4 +1,4 @@
-import { MEMORY_BOARD_SIZES, MEMORY_QUESTIONS_PER_PHASE, MEMORY_URGENT_SECONDS_LEFT, memoryShared } from "../../shared/modes/memory.ts";
+import { decodeFastestAnswers, MEMORY_BOARD_SIZES, MEMORY_QUESTIONS_PER_PHASE, MEMORY_URGENT_SECONDS_LEFT, memoryShared } from "../../shared/modes/memory.ts";
 import type { HostView } from "../../shared/protocol.ts";
 import { themedLabel, themedTrack } from "../../shared/themed-modes.ts";
 import { memoryMotionStyle, useCardMotion } from "../shared/memory/card-flips.ts";
@@ -151,7 +151,7 @@ function MemoryPodium({ view, send }: { view: MemoryView; send: Send }) {
           title={memoryShared.awards.fastestAnswers}
           award={view.awards?.fastestAnswers ?? null}
           unit="s"
-          valueText={(value) => `${(1 / value).toFixed(1)} s average`}
+          valueText={(value) => `${decodeFastestAnswers(value).toFixed(1)} s average`}
         />
         <Award icon="✅" title={memoryShared.awards.mostCorrect} award={view.awards?.mostCorrect ?? null} unit="correct" />
         <Award icon="🙃" title={memoryShared.awards.worstFlipper} award={view.awards?.worstFlipper ?? null} unit="misses" />
