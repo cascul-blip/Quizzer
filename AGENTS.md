@@ -21,11 +21,11 @@ For module extractions, run the Standards review on the working tree before comm
 
 ### Building
 
-`bun run build` replaces the `dist/` executables the user runs. To check the build, use `bun run build -- linux --outdir <scratch dir>`. To check the code, use `bun run check` (Biome format and import check, typecheck, then tests, one after the other as CI runs them). Run `bun run format` to fix formatting and import order, including after a codemod.
+`bun run build` replaces the `dist/` executables the user runs; check the build with `bun run build -- linux --outdir <scratch dir>`. Check the code with `bun run check`, the same command CI runs. Run `bun run format` after a codemod.
 
 For phone component DOM tests, see `tests/stream-question.test.tsx` for the Happy DOM and Preact setup.
 
-If sandboxed network tests report `getifaddrs` with `errno: 1` or `EPERM: operation not permitted, listen`, treat loopback as blocked in that environment for the rest of the session, including follow-up turns. Run each subsequent full `bun run check` with local networking. While approval is pending, run targeted suites that do not need loopback with `bun test <test files>`. Include the known loopback status and the relevant targeted test command in each worktree implementer handoff. Capture the full check in a temporary log and report its summary and any failures.
+`bun test` and `bun run check` run outside the sandbox (`.claude/settings.json`), because the server tests listen on loopback.
 
 ### Game modes
 
