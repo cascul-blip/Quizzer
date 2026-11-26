@@ -89,3 +89,7 @@ Tests run each mode on a `FakeClock` from its test file's `setup` and move time 
 
 - Showdown's phase countdown runs only with `pacing: "auto"`. Under manual pacing the reveal waits for the host and `phaseRemainingMs` stays put.
 - In Tower Fight, a player reaches the `decide` state only after taking damage. Have another player shoot them before calling `earnDecision` (`tests/fight.test.ts`).
+
+# Phone reconnect
+
+Keep the phone mode screen mounted on resume for the same mode. Use `PhoneResumeVersion` when a countdown needs the server's fresh timing after reconnect. See the [view delivery ADR](../adr/0003-deliver-phone-views-from-per-socket-baselines.md) for how the phone handles the first snapshot.

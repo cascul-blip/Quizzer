@@ -82,14 +82,13 @@ function MoveScreen({ view, secs, send }: { view: PlayerRobotView; secs: number;
   const onTarget = !!board && board.marked.includes(tile);
   const onCollapse = !!board && board.collapsing.includes(tile);
   const canMove = !view.me.out && view.me.points > 0;
-  // why: only a prediction; the server has the final say.
-  const blocked = (dir: RobotDir) => {
+  const predictBlocked = (dir: RobotDir) => {
     const x = view.me.x + STEP[dir][0];
     const y = view.me.y + STEP[dir][1];
     return !robotInBounds(x, y, board?.inset ?? 0) || !!board?.others.some((o) => o.x === x && o.y === y);
   };
   const move = (dir: RobotDir) => {
-    if (!canMove || blocked(dir)) return;
+    if (!canMove || predictBlocked(dir)) return;
     navigator.vibrate?.(15);
     send({ type: "robot.move", dir });
   };
@@ -138,16 +137,16 @@ function MoveScreen({ view, secs, send }: { view: PlayerRobotView; secs: number;
             )}
           </div>
           <div class="dpad">
-            <button class="btn dpad-btn up" disabled={!canMove || blocked("up")} onClick={() => move("up")} aria-label="Up">
+            <button class="btn dpad-btn up" disabled={!canMove || predictBlocked("up")} onClick={() => move("up")} aria-label="Up">
               ▲
             </button>
-            <button class="btn dpad-btn left" disabled={!canMove || blocked("left")} onClick={() => move("left")} aria-label="Left">
+            <button class="btn dpad-btn left" disabled={!canMove || predictBlocked("left")} onClick={() => move("left")} aria-label="Left">
               ◀
             </button>
-            <button class="btn dpad-btn right" disabled={!canMove || blocked("right")} onClick={() => move("right")} aria-label="Right">
+            <button class="btn dpad-btn right" disabled={!canMove || predictBlocked("right")} onClick={() => move("right")} aria-label="Right">
               ▶
             </button>
-            <button class="btn dpad-btn down" disabled={!canMove || blocked("down")} onClick={() => move("down")} aria-label="Down">
+            <button class="btn dpad-btn down" disabled={!canMove || predictBlocked("down")} onClick={() => move("down")} aria-label="Down">
               ▼
             </button>
           </div>

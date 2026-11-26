@@ -2,22 +2,21 @@ import type { ComponentChildren, Ref } from "preact";
 import { useRef, useState } from "preact/hooks";
 import type { PinSpot } from "../../shared/quiz-constants.ts";
 
-/** why: grows with big images, so a drop this close to a spot still snaps onto it. */
 const SNAP_MIN_PX = 44;
-const SNAP_FRACTION = 0.12;
+const SNAP_FRACTION_OF_SHORT_SIDE = 0.12;
 /** why: lifted above the finger so the finger doesn't hide the pin's tip. */
-const LIFT_PX = 36;
+const PIN_TIP_LIFT_PX = 36;
 
 /** why: the frame takes the image's aspect ratio, so fractional spot positions line up at any size. */
 export function PinBoard({
   image,
   spots,
   labels,
-  pinAt = null,
-  hot = null,
-  correct,
-  wrong = null,
-  pickCountsBySpot,
+  placedSpotIndex = null,
+  snapTargetIndex = null,
+  correctSpotIndexes,
+  wrongSpotIndex = null,
+  revealPickCountsBySpot,
   onSpotClick,
   onImageClick,
   boardRef,
@@ -26,18 +25,13 @@ export function PinBoard({
   image: string;
   spots: PinSpot[];
   labels: string[];
-  pinAt?: number | null;
-  /** why: the spot the dragged pin would snap to. */
-  hot?: number | null;
-  /** why: drawn green. */
-  correct?: number[];
-  /** why: drawn red. */
-  wrong?: number | null;
-  /** why: host reveal only. */
-  pickCountsBySpot?: number[];
+  placedSpotIndex?: number | null;
+  snapTargetIndex?: number | null;
+  correctSpotIndexes?: number[];
+  wrongSpotIndex?: number | null;
+  revealPickCountsBySpot?: number[];
   onSpotClick?: (index: number) => void;
-  /** why: x and y are fractions of the image. */
-  onImageClick?: (x: number, y: number) => void;
+  onImageClick?: (xFraction: number, yFraction: number) => void;
   boardRef?: Ref<HTMLDivElement>;
   children?: ComponentChildren;
 }) {
@@ -50,6 +44,7 @@ export function PinBoard({
     const clamp = (v: number) => Math.round(Math.max(0, Math.min(1, v)) * 1000) / 1000;
     onImageClick(clamp((e.clientX - rect.left) / rect.width), clamp((e.clientY - rect.top) / rect.height));
   };
+  const placedSpot = placedSpotIndex === null ? undefined : spots[placedSpotIndex];
   return (
     <div
       class={`pin-board ${ratio ? "" : "loading"}`}
@@ -70,10 +65,10 @@ export function PinBoard({
       {spots.map((s, i) => {
         const cls = [
           "pin-spot",
-          correct?.includes(i) ? "is-correct" : "",
-          wrong === i ? "is-wrong" : "",
-          hot === i ? "is-hot" : "",
-          pinAt === i ? "has-pin" : "",
+          correctSpotIndexes?.includes(i) ? "is-correct" : "",
+          wrongSpotIndex === i ? "is-wrong" : "",
+          snapTargetIndex === i ? "is-hot" : "",
+          placedSpotIndex === i ? "has-pin" : "",
           onSpotClick ? "clickable" : "",
         ].join(" ");
         return (
@@ -88,18 +83,17 @@ export function PinBoard({
             onClick={onSpotClick ? () => onSpotClick(i) : undefined}
           >
             {labels[i]}
-            {pickCountsBySpot && <span class="pin-count">{pickCountsBySpot[i] ?? 0}</span>}
+            {revealPickCountsBySpot && <span class="pin-count">{revealPickCountsBySpot[i] ?? 0}</span>}
           </button>
         );
       })}
-      {pinAt !== null && spots[pinAt] && <PinIcon class="pin-placed" style={{ left: `${spots[pinAt]!.x * 100}%`, top: `${spots[pinAt]!.y * 100}%` }} />}
+      {placedSpot && <PinIcon class="pin-placed" style={{ left: `${placedSpot.x * 100}%`, top: `${placedSpot.y * 100}%` }} />}
       {children}
     </div>
   );
 }
 
-/** why: projector only; shows how to answer while open and the right spot on the reveal. */
-export function PinNote({ open, labels }: { open: boolean; labels: string[] }) {
+export function ProjectorPinNote({ open, labels }: { open: boolean; labels: string[] }) {
   return <div class={`pin-note ${open ? "" : "right"}`}>{open ? "📍 Drag the pin onto the right label on your phone" : `✓ Spot ${labels.join(" / ")}`}</div>;
 }
 
@@ -112,24 +106,22 @@ export function PinIcon({ class: cls = "", style }: { class?: string; style?: Re
   );
 }
 
-/** why: client px; null when no spot is within snapping range. */
-function nearestSpot(board: HTMLElement, spots: PinSpot[], clientX: number, clientY: number): number | null {
+function nearestSpotWithinSnapRange(board: HTMLElement, spots: PinSpot[], clientXPx: number, clientYPx: number): number | null {
   const rect = board.getBoundingClientRect();
   if (rect.width <= 0 || rect.height <= 0) return null;
-  const range = Math.max(SNAP_MIN_PX, SNAP_FRACTION * Math.min(rect.width, rect.height));
-  let best: number | null = null;
-  let bestDist = range;
+  const snapRangePx = Math.max(SNAP_MIN_PX, SNAP_FRACTION_OF_SHORT_SIDE * Math.min(rect.width, rect.height));
+  let nearestIndex: number | null = null;
+  let bestDistancePx = snapRangePx;
   spots.forEach((s, i) => {
-    const d = Math.hypot(rect.left + s.x * rect.width - clientX, rect.top + s.y * rect.height - clientY);
-    if (d <= bestDist) {
-      best = i;
-      bestDist = d;
+    const distancePx = Math.hypot(rect.left + s.x * rect.width - clientXPx, rect.top + s.y * rect.height - clientYPx);
+    if (distancePx <= bestDistancePx) {
+      nearestIndex = i;
+      bestDistancePx = distancePx;
     }
   });
-  return best;
+  return nearestIndex;
 }
 
-/** why: a drop near a spot snaps there; elsewhere the pin returns to the tray. */
 export function PinDragger({
   image,
   spots,
@@ -145,30 +137,30 @@ export function PinDragger({
 }) {
   const board = useRef<HTMLDivElement>(null);
   const [placed, setPlaced] = useState<number | null>(null);
-  const [drag, setDrag] = useState<{ x: number; y: number; hot: number | null } | null>(null);
+  const [drag, setDrag] = useState<{ xPx: number; yPx: number; snapTargetIndex: number | null } | null>(null);
   const dragging = useRef(false);
 
-  const tip = (e: PointerEvent) => ({ x: e.clientX, y: e.clientY - LIFT_PX });
-  const hotAt = (x: number, y: number) => (board.current ? nearestSpot(board.current, spots, x, y) : null);
+  const pinTipPx = (e: PointerEvent) => ({ xPx: e.clientX, yPx: e.clientY - PIN_TIP_LIFT_PX });
+  const snapTargetAtPx = (xPx: number, yPx: number) => (board.current ? nearestSpotWithinSnapRange(board.current, spots, xPx, yPx) : null);
 
   const onDown = (e: PointerEvent) => {
     if (disabled || !(e.target as Element).closest?.(".pin-grab")) return;
     e.preventDefault();
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     dragging.current = true;
-    const t = tip(e);
-    setDrag({ ...t, hot: hotAt(t.x, t.y) });
+    const tipPx = pinTipPx(e);
+    setDrag({ ...tipPx, snapTargetIndex: snapTargetAtPx(tipPx.xPx, tipPx.yPx) });
   };
   const onMove = (e: PointerEvent) => {
     if (!dragging.current) return;
-    const t = tip(e);
-    setDrag({ ...t, hot: hotAt(t.x, t.y) });
+    const tipPx = pinTipPx(e);
+    setDrag({ ...tipPx, snapTargetIndex: snapTargetAtPx(tipPx.xPx, tipPx.yPx) });
   };
   const onUp = (e: PointerEvent) => {
     if (!dragging.current) return;
     dragging.current = false;
-    const t = tip(e);
-    const hit = hotAt(t.x, t.y);
+    const tipPx = pinTipPx(e);
+    const hit = snapTargetAtPx(tipPx.xPx, tipPx.yPx);
     setPlaced(hit);
     if (hit !== null) navigator.vibrate?.(25);
     setDrag(null);
@@ -178,7 +170,8 @@ export function PinDragger({
     setDrag(null);
   };
 
-  const pinAt = drag ? null : placed;
+  const placedSpotIndex = drag ? null : placed;
+  const placedSpot = placedSpotIndex === null ? undefined : spots[placedSpotIndex];
   return (
     <div class="pin-dragger" onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onCancel} onLostPointerCapture={onCancel}>
       <div class="pin-stage">
@@ -187,13 +180,11 @@ export function PinDragger({
           spots={spots}
           labels={labels}
           boardRef={board}
-          pinAt={pinAt}
-          hot={drag?.hot ?? null}
+          placedSpotIndex={placedSpotIndex}
+          snapTargetIndex={drag?.snapTargetIndex ?? null}
           onSpotClick={disabled ? undefined : (i) => setPlaced(i)}
         >
-          {pinAt !== null && spots[pinAt] && (
-            <div class="pin-grab pin-grab-placed" style={{ left: `${spots[pinAt]!.x * 100}%`, top: `${spots[pinAt]!.y * 100}%` }} />
-          )}
+          {placedSpot && <div class="pin-grab pin-grab-placed" style={{ left: `${placedSpot.x * 100}%`, top: `${placedSpot.y * 100}%` }} />}
         </PinBoard>
       </div>
       <div class="pin-tray">
@@ -211,7 +202,7 @@ export function PinDragger({
         </button>
       </div>
       {placed === null && !drag && <p class="pin-hint">Drag the pin onto the right label</p>}
-      {drag && <PinIcon class="pin-floating" style={{ left: `${drag.x}px`, top: `${drag.y}px` }} />}
+      {drag && <PinIcon class="pin-floating" style={{ left: `${drag.xPx}px`, top: `${drag.yPx}px` }} />}
     </div>
   );
 }

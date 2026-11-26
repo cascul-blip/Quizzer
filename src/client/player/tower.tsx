@@ -186,7 +186,7 @@ function BuildMode(props: {
   const fallRef = useRef<HTMLDivElement>(null);
   const blockCentreFraction = useRef(0.5);
   const [size, setSize] = useState({ w: 0, h: 0 });
-  const [falling, setFalling] = useState<{ zone: number; columns: number[]; id: number } | null>(null);
+  const [falling, setFalling] = useState<{ zone: number; columnsAtDrop: number[]; id: number } | null>(null);
 
   useLayoutEffect(() => {
     const el = areaRef.current!;
@@ -200,8 +200,7 @@ function BuildMode(props: {
   const cell = size.w / DROP_ZONES;
   const ground = 14;
   const sliderTop = 6;
-  // why: while our block falls, show the tower as it was when we tapped.
-  const columns = falling ? falling.columns : build.columns;
+  const columns = falling ? falling.columnsAtDrop : build.columns;
   const tallest = Math.max(...columns);
   const visibleRows = Math.max(2, Math.floor((size.h - ground - sliderTop - cell * 1.6) / Math.max(cell, 1)));
   const baseRow = viewBaseRow(tallest, visibleRows, egg ? egg.row : null);
@@ -226,7 +225,7 @@ function BuildMode(props: {
     if (!falling || !el) return;
     const c = falling.zone - 1;
     const landed = c >= 0 && c < 3;
-    const landTop = landed ? size.h - ground - (falling.columns[c]! - baseRow + 1) * cell : size.h + cell;
+    const landTop = landed ? size.h - ground - (falling.columnsAtDrop[c]! - baseRow + 1) * cell : size.h + cell;
     const anim = el.animate(
       [
         { transform: `translateY(0) rotate(0deg)` },
@@ -243,8 +242,7 @@ function BuildMode(props: {
     const zone = Math.min(DROP_ZONES - 1, Math.max(0, Math.floor(blockCentreFraction.current * DROP_ZONES)));
     send({ type: "tower.drop", zone });
     navigator.vibrate?.(25);
-    setFalling({ zone, columns: [...build.columns], id: performance.now() });
-    // why: the last block stays where it landed until the screen switches back to questions.
+    setFalling({ zone, columnsAtDrop: [...build.columns], id: performance.now() });
     if (blocksHeld > 1) setTimeout(() => setFalling(null), FALL_MS + 30);
     else props.onLastDrop(build);
   }

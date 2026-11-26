@@ -20,14 +20,13 @@ interface PhoneSessionEffects {
 
 export class PhoneSession {
   private screen = initialPhoneScreen;
-  private serverView: PlayerView | null = null;
+  private patchBaseline: PlayerView | null = null;
   private resuming = false;
 
   constructor(private readonly effects: PhoneSessionEffects) {}
 
   open(token: string | null): void {
-    // why: patches on this socket start from its own first snapshot.
-    this.serverView = null;
+    this.patchBaseline = null;
     this.resuming = Boolean(token);
     if (token) {
       if (this.screen.view?.kind === "none") this.show({ view: null });
@@ -53,7 +52,7 @@ export class PhoneSession {
       case "player.state":
         return this.updateView(message.view);
       case "player.patch":
-        if (this.serverView) this.updateView(applyPatch(this.serverView, message.ops));
+        if (this.patchBaseline) this.updateView(applyPatch(this.patchBaseline, message.ops));
         return;
       case "joined":
         this.effects.saveToken(message.token);
@@ -62,7 +61,7 @@ export class PhoneSession {
       case "resumeFailed":
         this.resuming = false;
         this.effects.saveToken(null);
-        this.show({ view: this.serverView, joining: false });
+        this.show({ view: this.patchBaseline, joining: false });
         return;
       case "kicked":
         this.resuming = false;
@@ -75,9 +74,7 @@ export class PhoneSession {
   }
 
   private updateView(view: PlayerView): void {
-    this.serverView = view;
-    // why: the first snapshot can arrive before the server handles resume; keep it as the patch
-    // baseline while the phone keeps showing the previous game (or its loading screen).
+    this.patchBaseline = view;
     const resumed = this.resuming && view.kind !== "none";
     if (resumed) this.resuming = false;
     this.show({

@@ -7,7 +7,7 @@ import type { SeasonTheme } from "../../shared/themed-modes.ts";
 import { modeTheme, themedLabel, themedTrack } from "../../shared/themed-modes.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
 import type { MusicCue } from "../shared/music/index.ts";
-import { PinBoard, PinNote } from "../shared/pin.tsx";
+import { PinBoard, ProjectorPinNote } from "../shared/pin.tsx";
 import { RacerScene } from "../shared/racer-art.tsx";
 import type { Rev } from "../shared/sounds.ts";
 import { onMuteChange, play, startRev } from "../shared/sounds.ts";
@@ -238,8 +238,8 @@ function Turn({ view, send, secs }: { view: RacerView; send: Send; secs: number 
             image={pin.image}
             spots={pin.spots}
             labels={q.options}
-            correct={reveal ? [...correct] : undefined}
-            pickCountsBySpot={reveal ? counts : undefined}
+            correctSpotIndexes={reveal ? [...correct] : undefined}
+            revealPickCountsBySpot={reveal ? counts : undefined}
           />
         ) : (
           q.image && <img src={`/${q.image}`} alt="" />
@@ -260,7 +260,7 @@ function Turn({ view, send, secs }: { view: RacerView; send: Send; secs: number 
         </div>
       )}
       {view.phase === "open" && q.type === "text" && <p class="typing-note">Type your answer on your phone</p>}
-      {(view.phase === "open" || reveal) && pin && <PinNote open={!reveal} labels={[...correct].map((i) => q.options[i]!)} />}
+      {(view.phase === "open" || reveal) && pin && <ProjectorPinNote open={!reveal} labels={[...correct].map((i) => q.options[i]!)} />}
       {(view.phase === "open" || reveal) && !pin && (
         <div class={`tiles racer-tiles n${q.options.length} ${longest > 60 ? "long" : longest > 30 ? "medium" : ""}`}>
           {q.options.map((text, i) => {

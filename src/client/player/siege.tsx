@@ -95,7 +95,6 @@ function SiegePlayerContent({ view, send }: { view: PlayerSiegeView; send: Send 
   );
 }
 
-/** why: sits across the top so it doesn't cover the question. */
 function AlertBanner({ alert }: { alert: PlayerSiegeView["alert"] }) {
   const [shown, setShown] = useState<NonNullable<PlayerSiegeView["alert"]> | null>(null);
   const first = useRef(true);

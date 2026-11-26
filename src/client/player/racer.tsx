@@ -12,20 +12,17 @@ import { LockedChoice, optionColor, Shape, TextAnswer, useCountdown } from "../s
 
 type Send = (m: ClientMsg) => void;
 
-/** why: letting go early drains the ring at the same pace. */
 const GO_HOLD_MS = 1000;
 /** why: if the server has not opened the question by then, the driver may try again. */
 const GO_RETRY_MS = 1500;
 /** why: so the finger lifting off Go or the lever can't answer. */
-const AFTER_GO_MS = 600;
-/** why: if the server has not confirmed a lever move by then, the lever goes back to what the server says. */
-const LEVER_ECHO_MS = 800;
+const ANSWER_TAP_GUARD_MS = 600;
+const LEVER_CONFIRM_TIMEOUT_MS = 800;
 /** why: longer questions are set in smaller type so every screen fits without scrolling. */
 const LONG_QUESTION_CHARS = 140;
 
-/** why: fractions of track height from the top; the three label rows are equal. */
-const TOP_STOP = 1 / 6;
-const BOTTOM_STOP = 5 / 6;
+const TOP_STOP_TRACK_FRACTION = 1 / 6;
+const BOTTOM_STOP_TRACK_FRACTION = 5 / 6;
 
 const plural = (n: number, word: string, many = `${word}s`) => `${n} ${n === 1 ? word : many}`;
 const qClass = (text: string) => (visibleLength(text) > LONG_QUESTION_CHARS ? "long" : "");
@@ -78,24 +75,23 @@ export function RacerPlayer({ view, send }: { view: PlayerRacerView; send: Send 
 function DriverScreen({ view, send }: { view: PlayerRacerView; send: Send }) {
   const q = view.question!;
   const secs = useCountdown(view.phaseRemainingMs, `confidence:${q.index}`);
-  // why: a move shows straight away; the server's snapshot confirms it, or wins if it says otherwise.
-  const [mine, setMine] = useState<RacerConfidence | null>(null);
-  const level = mine ?? view.lever ?? "low";
+  const [pendingLevel, setPendingLevel] = useState<RacerConfidence | null>(null);
+  const level = pendingLevel ?? view.lever ?? "low";
   const current = useRef(level);
   current.current = level;
   useEffect(() => {
-    if (mine && mine === view.lever) setMine(null);
-  }, [mine, view.lever]);
+    if (pendingLevel && pendingLevel === view.lever) setPendingLevel(null);
+  }, [pendingLevel, view.lever]);
   useEffect(() => {
-    if (!mine) return;
-    const t = setTimeout(() => setMine(null), LEVER_ECHO_MS);
+    if (!pendingLevel) return;
+    const t = setTimeout(() => setPendingLevel(null), LEVER_CONFIRM_TIMEOUT_MS);
     return () => clearTimeout(t);
-  }, [mine]);
+  }, [pendingLevel]);
 
   const change = (next: RacerConfidence) => {
     if (next === current.current) return;
     current.current = next;
-    setMine(next);
+    setPendingLevel(next);
     send({ type: "racer.lever", level: next });
     navigator.vibrate?.(10);
     play("leverClick");
@@ -158,23 +154,28 @@ function WatchScreen({ view }: { view: PlayerRacerView }) {
   );
 }
 
-type BottomToTopStopFraction = number;
+type LeverPosition = { kind: "atStop" } | { kind: "dragging"; bottomToTopFraction: number };
 
-/** why: without `onChange` the lever is a small read-only copy. */
+const BOTTOM_STOP_FRACTION = 0;
+const TOP_STOP_FRACTION = 1;
+
 function Lever({ level, onChange }: { level: RacerConfidence; onChange?: (level: RacerConfidence) => void }) {
   const last = RACER_CONFIDENCE_LEVELS.length - 1;
   const track = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
-  const [dragPos, setDragPos] = useState<BottomToTopStopFraction | null>(null);
+  const [position, setPosition] = useState<LeverPosition>({ kind: "atStop" });
 
   const follow = (e: PointerEvent) => {
     const rect = track.current?.getBoundingClientRect();
     if (!rect || rect.height <= 0) return;
-    const y = (e.clientY - rect.top) / rect.height;
-    const pos = Math.max(0, Math.min(1, (BOTTOM_STOP - y) / (BOTTOM_STOP - TOP_STOP)));
-    setDragPos(pos);
-    // why: crossing into another stop's half of the track already counts as a change.
-    onChange?.(RACER_CONFIDENCE_LEVELS[Math.round(pos * last)]!);
+    const pointerTrackFraction = (e.clientY - rect.top) / rect.height;
+    const bottomToTopFraction = Math.max(
+      BOTTOM_STOP_FRACTION,
+      Math.min(TOP_STOP_FRACTION, (BOTTOM_STOP_TRACK_FRACTION - pointerTrackFraction) / (BOTTOM_STOP_TRACK_FRACTION - TOP_STOP_TRACK_FRACTION)),
+    );
+    setPosition({ kind: "dragging", bottomToTopFraction });
+    const nearestStop = RACER_CONFIDENCE_LEVELS[Math.round(bottomToTopFraction * last)]!;
+    onChange?.(nearestStop);
   };
   const onDown = (e: PointerEvent) => {
     e.preventDefault();
@@ -187,15 +188,15 @@ function Lever({ level, onChange }: { level: RacerConfidence; onChange?: (level:
   };
   const onEnd = () => {
     dragging.current = false;
-    setDragPos(null);
+    setPosition({ kind: "atStop" });
   };
 
-  const pos = dragPos ?? RACER_CONFIDENCE_LEVELS.indexOf(level) / last;
-  const top = (BOTTOM_STOP - pos * (BOTTOM_STOP - TOP_STOP)) * 100;
+  const bottomToTopFraction = position.kind === "dragging" ? position.bottomToTopFraction : RACER_CONFIDENCE_LEVELS.indexOf(level) / last;
+  const handleTopPct = (BOTTOM_STOP_TRACK_FRACTION - bottomToTopFraction * (BOTTOM_STOP_TRACK_FRACTION - TOP_STOP_TRACK_FRACTION)) * 100;
   const handlers = onChange ? { onPointerDown: onDown, onPointerMove: onMove, onPointerUp: onEnd, onPointerCancel: onEnd, onLostPointerCapture: onEnd } : {};
   const topDown = [...RACER_CONFIDENCE_LEVELS].reverse();
   return (
-    <div class={`racer-lever ${onChange ? "" : "small"} ${dragPos !== null ? "dragging" : ""}`}>
+    <div class={`racer-lever ${onChange ? "" : "small"} ${position.kind === "dragging" ? "dragging" : ""}`}>
       <div
         class="racer-track"
         ref={track}
@@ -213,7 +214,7 @@ function Lever({ level, onChange }: { level: RacerConfidence; onChange?: (level:
         {topDown.map((lv, i) => (
           <i key={lv} class="racer-notch" style={{ top: `${((2 * i + 1) / (2 * topDown.length)) * 100}%` }} />
         ))}
-        <div class="racer-handle" style={{ top: `${top}%` }} />
+        <div class="racer-handle" style={{ top: `${handleTopPct}%` }} />
       </div>
       <div class="racer-stops">
         {topDown.map((lv) => {
@@ -271,7 +272,6 @@ function GoButton({ onGo }: { onGo: () => void }) {
     return () => cancelAnimationFrame(raf);
   }, [fired]);
 
-  // why: if the server didn't take it, let the driver try again.
   useEffect(() => {
     if (!fired) return;
     const t = setTimeout(() => {
@@ -321,7 +321,7 @@ function RacerAnswering({ view, send }: { view: PlayerRacerView; send: Send }) {
   const [armed, setArmed] = useState(!view.isDriver);
   useEffect(() => {
     if (armed) return;
-    const t = setTimeout(() => setArmed(true), AFTER_GO_MS);
+    const t = setTimeout(() => setArmed(true), ANSWER_TAP_GUARD_MS);
     return () => clearTimeout(t);
   }, []);
   const [pendingText, setPendingText] = useState<string | null>(null);
