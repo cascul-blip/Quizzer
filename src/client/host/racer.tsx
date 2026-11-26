@@ -20,11 +20,9 @@ import { Award } from "./tower.tsx";
 
 type RacerView = Extract<HostView, { kind: "racer" }>;
 
-// why: the hum peaks at this share of a full rev, reached at ENGINE_FULL_MPH.
-const ENGINE_MAX = 0.5;
-const ENGINE_FULL_MPH = 150;
-// why: relative to the Submarine boost rev it borrows.
-const ENGINE_VOLUME = 0.5;
+const ENGINE_MAX_REV_SHARE = 0.5;
+const SPEED_FOR_MAX_ENGINE_HUM_MPH = 150;
+const ENGINE_REV_VOLUME_SCALE = 0.5;
 const SPEED_COUNT_MS = 1000;
 
 export function RacerStage({ view, send }: { view: RacerView; send: Send }) {
@@ -57,7 +55,7 @@ export function RacerStage({ view, send }: { view: RacerView; send: Send }) {
     if (secs > 0 && secs <= 5) play(secs <= 3 ? "tickHigh" : "tick");
   }, [secs, view.phase]);
 
-  useEngineHum(view.phase !== "podium" && !view.car.crashed && shownSpeed > 0, Math.min(1, shownSpeed / ENGINE_FULL_MPH) * ENGINE_MAX);
+  useEngineHum(view.phase !== "podium" && !view.car.crashed && shownSpeed > 0, Math.min(1, shownSpeed / SPEED_FOR_MAX_ENGINE_HUM_MPH) * ENGINE_MAX_REV_SHARE);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -182,11 +180,9 @@ function useCountUp(target: number, ms: number): number {
   return shown;
 }
 
-// why: silent while sounds are muted; `level` runs 0 to 1.
-function useEngineHum(on: boolean, level: number) {
+function useEngineHum(on: boolean, revShare: number) {
   const rev = useRef<Rev | null>(null);
   const [muteSeq, setMuteSeq] = useState(0);
-  // why: muting cuts the running note; unmuting starts a new one through the effect below.
   useEffect(
     () =>
       onMuteChange(() => {
@@ -202,10 +198,10 @@ function useEngineHum(on: boolean, level: number) {
       rev.current = null;
       return;
     }
-    // why: null while muted or before the browser allows audio, so later renders try again.
-    rev.current ??= startRev(ENGINE_VOLUME);
-    rev.current?.set(level);
-  }, [on, level, muteSeq]);
+    // why: audio may be unavailable until the browser receives a user gesture, so leave failed starts retryable.
+    rev.current ??= startRev(ENGINE_REV_VOLUME_SCALE);
+    rev.current?.set(revShare);
+  }, [on, revShare, muteSeq]);
   useEffect(
     () => () => {
       rev.current?.stop();
@@ -433,7 +429,6 @@ function RacerSettings({ settings, send, children }: LobbySettingsProps<"racer">
 
 export function racerCue(view: RacerView): MusicCue {
   if (view.phase === "podium") return { track: themedTrack("racer", view.theme, "results") };
-  // why: no key, so the music never restarts between questions and glides to each new speed.
   const { speedMph, crashed } = view.car;
   return { track: themedTrack("racer", view.theme, "play"), intensity: crashed ? 0.03 : Math.max(0.1, Math.min(1, speedMph / 150)) };
 }
