@@ -1,0 +1,753 @@
+{
+  "id": "kids-bible-trivia-42dt",
+  "title": "Kids' Bible Trivia",
+  "description": "50 Bible trivia questions for children 10 and under, from a traditional Protestant perspective.",
+  "createdAt": "2026-11-26T14:32:40.082Z",
+  "updatedAt": "2026-11-26T14:34:43.418Z",
+  "settings": {
+    "shuffleQuestions": true,
+    "shuffleAnswers": true
+  },
+  "questions": [
+    {
+      "id": "qr5d9u",
+      "type": "multiple_choice",
+      "text": "Who made the whole world?",
+      "timeLimitSec": 25,
+      "options": [
+        "God",
+        "Moses",
+        "Noah",
+        "Abraham"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qyd508",
+      "type": "multiple_choice",
+      "text": "How many days did God take to create the world?",
+      "timeLimitSec": 25,
+      "options": [
+        "Six",
+        "Three",
+        "Ten",
+        "One"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qj4rwi",
+      "type": "multiple_choice",
+      "text": "What did God do on the seventh day?",
+      "timeLimitSec": 25,
+      "options": [
+        "He rested",
+        "He made fish",
+        "He made Adam",
+        "He made the sun"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q8nyha",
+      "type": "multiple_choice",
+      "text": "Who was the first man God made?",
+      "timeLimitSec": 25,
+      "options": [
+        "Adam",
+        "Noah",
+        "Abel",
+        "David"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q56zcb",
+      "type": "multiple_choice",
+      "text": "Who was the first woman?",
+      "timeLimitSec": 25,
+      "options": [
+        "Eve",
+        "Sarah",
+        "Mary",
+        "Ruth"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q4yz31",
+      "type": "multiple_choice",
+      "text": "What was the name of the garden where Adam and Eve lived?",
+      "timeLimitSec": 25,
+      "options": [
+        "Eden",
+        "Gethsemane",
+        "Babylon",
+        "Bethlehem"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qio4z5",
+      "type": "multiple_choice",
+      "text": "What animal tricked Eve in the garden?",
+      "timeLimitSec": 25,
+      "options": [
+        "A serpent",
+        "A lion",
+        "A frog",
+        "A bear"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q1zu85",
+      "type": "multiple_choice",
+      "text": "Who built a big ark?",
+      "timeLimitSec": 25,
+      "options": [
+        "Noah",
+        "Moses",
+        "Jonah",
+        "Peter"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qp17uc",
+      "type": "multiple_choice",
+      "text": "How did the animals go into the ark?",
+      "timeLimitSec": 25,
+      "options": [
+        "Two by two",
+        "One at a time",
+        "Ten by ten",
+        "They flew in"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qbb9fs",
+      "type": "multiple_choice",
+      "text": "What sign did God put in the sky as a promise after the flood?",
+      "timeLimitSec": 25,
+      "options": [
+        "A rainbow",
+        "A star",
+        "The moon",
+        "A cloud"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qnno5p",
+      "type": "true_false",
+      "text": "God promised never to flood the whole earth again.",
+      "timeLimitSec": 20,
+      "options": [
+        "True",
+        "False"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q5d0e1",
+      "type": "multiple_choice",
+      "text": "God promised Abraham his family would be as many as the…",
+      "timeLimitSec": 25,
+      "options": [
+        "Stars",
+        "Trees",
+        "Fish",
+        "Mountains"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qdi4wj",
+      "type": "multiple_choice",
+      "text": "Who was Abraham's son that God promised?",
+      "timeLimitSec": 25,
+      "options": [
+        "Isaac",
+        "Esau",
+        "Cain",
+        "Jacob"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qn6d3j",
+      "type": "multiple_choice",
+      "text": "Joseph's father gave him a special…",
+      "timeLimitSec": 25,
+      "options": [
+        "Coat of many colors",
+        "Golden crown",
+        "Sword",
+        "Donkey"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qhygyg",
+      "type": "multiple_choice",
+      "text": "Baby Moses was put in a basket in which river?",
+      "timeLimitSec": 25,
+      "options": [
+        "The Nile",
+        "The Jordan",
+        "The Amazon",
+        "The Euphrates"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q2pb6o",
+      "type": "multiple_choice",
+      "text": "God spoke to Moses from a…",
+      "timeLimitSec": 25,
+      "options": [
+        "Burning bush",
+        "Big rock",
+        "Tall tower",
+        "Boat"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q9nmyc",
+      "type": "multiple_choice",
+      "text": "What sea did God part so Israel could walk across?",
+      "timeLimitSec": 25,
+      "options": [
+        "The Red Sea",
+        "The Dead Sea",
+        "The Black Sea",
+        "The Blue Sea"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qlxe1e",
+      "type": "multiple_choice",
+      "text": "What food did God send from heaven in the desert?",
+      "timeLimitSec": 25,
+      "options": [
+        "Manna",
+        "Pizza",
+        "Apples",
+        "Bread rolls"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qffftw",
+      "type": "multiple_choice",
+      "text": "How many commandments did God give Moses?",
+      "timeLimitSec": 25,
+      "options": [
+        "Ten",
+        "Seven",
+        "Twelve",
+        "Three"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qiiu32",
+      "type": "multiple_choice",
+      "text": "Who led Israel after Moses?",
+      "timeLimitSec": 25,
+      "options": [
+        "Joshua",
+        "Aaron",
+        "Samson",
+        "Saul"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qx9jx2",
+      "type": "multiple_choice",
+      "text": "Which city's walls fell down after the people marched and shouted?",
+      "timeLimitSec": 25,
+      "options": [
+        "Jericho",
+        "Jerusalem",
+        "Nineveh",
+        "Rome"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qeaze1",
+      "type": "multiple_choice",
+      "text": "Samson was very…",
+      "timeLimitSec": 25,
+      "options": [
+        "Strong",
+        "Tall",
+        "Tiny",
+        "Fast"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q34hia",
+      "type": "multiple_choice",
+      "text": "What young shepherd boy fought Goliath?",
+      "timeLimitSec": 25,
+      "options": [
+        "David",
+        "Saul",
+        "Samuel",
+        "Solomon"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qcne5r",
+      "type": "multiple_choice",
+      "text": "What did David use to defeat Goliath?",
+      "timeLimitSec": 25,
+      "options": [
+        "A sling and a stone",
+        "A sword",
+        "A bow and arrow",
+        "A spear"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qkd1vi",
+      "type": "multiple_choice",
+      "text": "Who was the wisest king who asked God for wisdom?",
+      "timeLimitSec": 25,
+      "options": [
+        "Solomon",
+        "David",
+        "Saul",
+        "Ahab"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q6jbhg",
+      "type": "multiple_choice",
+      "text": "Daniel was thrown into a den of…",
+      "timeLimitSec": 25,
+      "options": [
+        "Lions",
+        "Bears",
+        "Snakes",
+        "Wolves"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qq86b6",
+      "type": "true_false",
+      "text": "God shut the lions' mouths to protect Daniel.",
+      "timeLimitSec": 20,
+      "options": [
+        "True",
+        "False"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qhdmzb",
+      "type": "multiple_choice",
+      "text": "Who was swallowed by a big fish?",
+      "timeLimitSec": 25,
+      "options": [
+        "Jonah",
+        "Peter",
+        "Elijah",
+        "Noah"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qy8rj9",
+      "type": "multiple_choice",
+      "text": "Brave Queen Esther helped save her people, the…",
+      "timeLimitSec": 25,
+      "options": [
+        "Jews",
+        "Romans",
+        "Egyptians",
+        "Greeks"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qtnx07",
+      "type": "multiple_choice",
+      "text": "In what town was Jesus born?",
+      "timeLimitSec": 25,
+      "options": [
+        "Bethlehem",
+        "Nazareth",
+        "Jerusalem",
+        "Jericho"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qs1xnv",
+      "type": "multiple_choice",
+      "text": "Who was Jesus' mother?",
+      "timeLimitSec": 25,
+      "options": [
+        "Mary",
+        "Martha",
+        "Elizabeth",
+        "Ruth"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qx411w",
+      "type": "multiple_choice",
+      "text": "Where was baby Jesus laid after He was born?",
+      "timeLimitSec": 25,
+      "options": [
+        "In a manger",
+        "In a crib",
+        "In a boat",
+        "In a palace"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qnzpr6",
+      "type": "multiple_choice",
+      "text": "Who followed a star to find baby Jesus?",
+      "timeLimitSec": 25,
+      "options": [
+        "Wise men",
+        "Fishermen",
+        "Soldiers",
+        "Kings of Egypt"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qv3u8v",
+      "type": "multiple_choice",
+      "text": "Who baptized Jesus?",
+      "timeLimitSec": 25,
+      "options": [
+        "John the Baptist",
+        "Peter",
+        "Paul",
+        "Moses"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qdcqu2",
+      "type": "multiple_choice",
+      "text": "How many disciples did Jesus choose?",
+      "timeLimitSec": 25,
+      "options": [
+        "Twelve",
+        "Seven",
+        "Ten",
+        "Forty"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qdriad",
+      "type": "multiple_choice",
+      "text": "What was Peter's job before following Jesus?",
+      "timeLimitSec": 25,
+      "options": [
+        "Fisherman",
+        "Carpenter",
+        "Farmer",
+        "Shepherd"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qf67mx",
+      "type": "multiple_choice",
+      "text": "At a wedding, Jesus turned water into…",
+      "timeLimitSec": 25,
+      "options": [
+        "Wine",
+        "Milk",
+        "Juice",
+        "Honey"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qbf4x7",
+      "type": "multiple_choice",
+      "text": "Jesus fed 5,000 people with five loaves and two…",
+      "timeLimitSec": 25,
+      "options": [
+        "Fish",
+        "Apples",
+        "Eggs",
+        "Cakes"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q0cqrg",
+      "type": "true_false",
+      "text": "Jesus walked on water.",
+      "timeLimitSec": 20,
+      "options": [
+        "True",
+        "False"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qglb2j",
+      "type": "multiple_choice",
+      "text": "Which short man climbed a tree to see Jesus?",
+      "timeLimitSec": 25,
+      "options": [
+        "Zacchaeus",
+        "Thomas",
+        "Andrew",
+        "Matthew"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q092bm",
+      "type": "multiple_choice",
+      "text": "In Jesus' story, who helped the hurt man by the road?",
+      "timeLimitSec": 25,
+      "options": [
+        "The Good Samaritan",
+        "A priest",
+        "A king",
+        "A soldier"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qf077r",
+      "type": "multiple_choice",
+      "text": "What prayer did Jesus teach His disciples?",
+      "timeLimitSec": 25,
+      "options": [
+        "The Lord's Prayer",
+        "The Psalm Prayer",
+        "The Morning Prayer",
+        "The King's Prayer"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qdte9s",
+      "type": "multiple_choice",
+      "text": "Which disciple betrayed Jesus?",
+      "timeLimitSec": 25,
+      "options": [
+        "Judas",
+        "Peter",
+        "John",
+        "James"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qwco43",
+      "type": "multiple_choice",
+      "text": "Jesus died on a cross to take away our…",
+      "timeLimitSec": 25,
+      "options": [
+        "Sins",
+        "Money",
+        "Friends",
+        "Toys"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qx2e4x",
+      "type": "multiple_choice",
+      "text": "On which day did Jesus rise from the dead?",
+      "timeLimitSec": 25,
+      "options": [
+        "The third day",
+        "The first day",
+        "The seventh day",
+        "The tenth day"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qukjuh",
+      "type": "true_false",
+      "text": "Jesus is God's Son.",
+      "timeLimitSec": 20,
+      "options": [
+        "True",
+        "False"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qbropl",
+      "type": "true_false",
+      "text": "We can earn our way to heaven by being good enough.",
+      "timeLimitSec": 20,
+      "options": [
+        "True",
+        "False"
+      ],
+      "correct": [
+        1
+      ]
+    },
+    {
+      "id": "q5l1fw",
+      "type": "multiple_choice",
+      "text": "How are we saved?",
+      "timeLimitSec": 25,
+      "options": [
+        "By grace through faith in Jesus",
+        "By being good",
+        "By going to church",
+        "By giving money"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q2cxxu",
+      "type": "multiple_choice",
+      "text": "Complete the verse: \"For God so loved the…\" (John 3:16)",
+      "timeLimitSec": 25,
+      "options": [
+        "World",
+        "Animals",
+        "Church",
+        "Kings"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qx5iue",
+      "type": "multiple_choice",
+      "text": "What is the first book of the Bible?",
+      "timeLimitSec": 25,
+      "options": [
+        "Genesis",
+        "Exodus",
+        "Matthew",
+        "Revelation"
+      ],
+      "correct": [
+        0
+      ]
+    }
+  ]
+}
