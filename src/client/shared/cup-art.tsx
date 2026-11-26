@@ -1,4 +1,3 @@
-// why: the room and table are pictures from scripts/cup-saloon.py; everything on them is SVG.
 import type { ComponentChildren } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import type { AvatarChoice } from "../../shared/avatars.ts";
@@ -19,19 +18,18 @@ const TABLE_RX = 330;
 const TABLE_RY = 140;
 const SEAT_RX = 440;
 const SEAT_RY = 228;
-// why: a fraction of the way from table centre to seat.
-const CUP_RING = 0.62;
+const CUP_TO_SEAT_RADIUS_FRACTION = 0.62;
 // why: wide screens show more saloon instead of black bars.
 const BLEED = 700;
 // why: these put the floor's back edge just behind the far seats.
 const ROOM_H = 960;
 const ROOM_Y = -150;
 const ROOM_W = ROOM_H * (1344 / 768);
-// why: tabletop ellipse as fractions of the picture, printed by scripts/cup-saloon.py.
-const TOP_FX = 0.4995;
-const TOP_FY = 0.2692;
-const TOP_FRX = 0.4995;
-const TOP_FRY = 0.2692;
+// why: use the ellipse from scripts/cup-saloon.py so the seats line up with the painted tabletop.
+const TABLETOP_CENTER_X_FRACTION = 0.4995;
+const TABLETOP_CENTER_Y_FRACTION = 0.2692;
+const TABLETOP_RADIUS_X_FRACTION = 0.4995;
+const TABLETOP_RADIUS_Y_FRACTION = 0.2692;
 
 interface SeatPlayer {
   id: string;
@@ -248,12 +246,12 @@ function Backdrop() {
 function Table({ children }: { children?: ComponentChildren }) {
   const christmas = useChristmasCup();
   // why: the Christmas sprite is cropped to its alpha bounds, so its tabletop fractions differ.
-  const w = TABLE_RX / (christmas ? 0.499 : TOP_FRX);
-  const h = TABLE_RY / (christmas ? 0.3 : TOP_FRY);
-  const x = CX - (christmas ? 0.5 : TOP_FX) * w;
-  const y = CY - (christmas ? 0.3 : TOP_FY) * h;
-  // why: the shadow falls straight down under the lamps, this far below the tabletop.
-  const lift = h * 0.62;
+  const w = TABLE_RX / (christmas ? 0.499 : TABLETOP_RADIUS_X_FRACTION);
+  const h = TABLE_RY / (christmas ? 0.3 : TABLETOP_RADIUS_Y_FRACTION);
+  const x = CX - (christmas ? 0.5 : TABLETOP_CENTER_X_FRACTION) * w;
+  const y = CY - (christmas ? 0.3 : TABLETOP_CENTER_Y_FRACTION) * h;
+  const TABLE_SHADOW_DROP_FRACTION = 0.62;
+  const lift = h * TABLE_SHADOW_DROP_FRACTION;
   return (
     <g class="saloon-table">
       <ellipse cx={CX} cy={CY + lift} rx={TABLE_RX * 0.95} ry={TABLE_RY * 0.9} fill="url(#saloon-table-shadow)" />
@@ -284,13 +282,12 @@ function seats(players: SeatPlayer[]): Seat[] {
 
 const NEAR_FRONT_SIN = 0.7;
 const isNearFront = (s: Seat) => Math.sin(s.angle) > NEAR_FRONT_SIN;
-// why: a fraction of the way from the cup to the drinker's mouth.
-const CUP_LIFT = 0.72;
+const CUP_TO_MOUTH_LIFT_FRACTION = 0.72;
 const farSide = (s: Seat) => Math.sin(s.angle) < -0.3;
 
 function cupSpots(s: Seat, count: number, startCups: number): { x: number; y: number; w: number }[] {
-  const bx = CX + (s.x - CX) * CUP_RING;
-  const by = CY + (s.y - CY) * CUP_RING + 10;
+  const bx = CX + (s.x - CX) * CUP_TO_SEAT_RADIUS_FRACTION;
+  const by = CY + (s.y - CY) * CUP_TO_SEAT_RADIUS_FRACTION + 10;
   let tx = -Math.sin(s.angle) * SEAT_RX;
   let ty = Math.cos(s.angle) * SEAT_RY;
   const len = Math.hypot(tx, ty) || 1;
@@ -409,7 +406,6 @@ export function SaloonScene({
 }: {
   players: SeatPlayer[];
   mode: SaloonMode;
-  // why: sizes the cups.
   startCups?: number;
   // why: players poisoned in the reveal stay seated until it ends, so they can fall.
   drinks?: CupDrinkView[];
@@ -457,8 +453,8 @@ export function SaloonScene({
     return spots.map((c, k) => {
       const drunk = r && r.d.cup === k;
       const lifted = drunk && (r.i === current || r.d.verdict !== null);
-      const tx = lifted ? (s.x - c.x) * CUP_LIFT : 0;
-      const ty = lifted ? (s.y - c.y) * CUP_LIFT + s.size * 0.12 : 0;
+      const tx = lifted ? (s.x - c.x) * CUP_TO_MOUTH_LIFT_FRACTION : 0;
+      const ty = lifted ? (s.y - c.y) * CUP_TO_MOUTH_LIFT_FRACTION + s.size * 0.12 : 0;
       const cls = [
         "table-cup",
         drunk ? "chosen" : "",

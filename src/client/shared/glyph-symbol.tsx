@@ -54,6 +54,6 @@ const pictures: Record<string, string> = {
 export function GlyphSymbol({ id }: { id: string }) {
   const glyph = parseGlyph(id);
   if (!glyph) return null;
-  // why: describing the picture is the instructor's job; keep the accessible name neutral.
+  // why: naming the shape would give away the symbol players are meant to identify.
   return <img class="sea-symbol" src={pictures[glyphId(glyph)]} alt="Christmas symbol" draggable={false} />;
 }
