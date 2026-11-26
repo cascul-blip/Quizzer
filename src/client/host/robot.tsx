@@ -20,7 +20,6 @@ type RobotView = Extract<HostView, { kind: "robot" }>;
 
 const Arena = ROBOT_SKIN === "snowman" ? SnowmanArena : RobotArena;
 
-/** Projector screen for Robot Attack: countdown → (quiz → move → attack)… → podium. */
 export function RobotStage({ view, send }: { view: RobotView; send: Send }) {
   const secs = useCountdown(view.phaseRemainingMs, `${view.phase}-${view.round}`);
   const prev = useRef<RobotView | null>(null);
@@ -36,9 +35,9 @@ export function RobotStage({ view, send }: { view: RobotView; send: Send }) {
       if (view.phase === "move") play("tickHigh");
       if (view.phase === "attack") {
         if (ROBOT_SKIN === "snowman")
-          later(() => play("whoosh"), 800); // as the claws hit the board
+          later(() => play("whoosh"), 800); // why: as the claws hit the board
         else play("laser");
-        // One verdict per attack, once it has hit: someone out, then anyone hit, else everyone dodged.
+        // why: one verdict per attack, once it has hit.
         const line = attackVoiceLine(view.lastAttack, ROBOT_SKIN);
         if (line) later(() => void say(line), 1000);
       }
@@ -46,7 +45,7 @@ export function RobotStage({ view, send }: { view: RobotView; send: Send }) {
     }
     if (view.marked.length > 0 && p.marked.length === 0 && view.phase === "quiz") {
       play("alarm");
-      // The attacker speaks once the alarm has sounded.
+      // why: the attacker speaks once the alarm has sounded.
       later(() => void say(warningVoiceLine(ROBOT_SKIN)), 650);
     }
   }, [view]);
@@ -123,10 +122,8 @@ export function RobotStage({ view, send }: { view: RobotView; send: Send }) {
   );
 }
 
-/** The red bar across the top drains over each phase, with what to do right now. */
 function PhaseBar({ view, secs }: { view: RobotView; secs: number }) {
-  // Catch up once, when the phase starts. Updating the delay on every snapshot would
-  // count the time already animated twice and empty the bar early.
+  // why: catch up once per phase; updating the delay on every snapshot would empty the bar early.
   const key = `${view.phase}-${view.round}`;
   const start = useRef<{ key: string; elapsed: number } | null>(null);
   if (!start.current || start.current.key !== key) start.current = { key, elapsed: Math.max(0, view.phaseDurationMs - view.phaseRemainingMs) };
