@@ -20,12 +20,11 @@ type ScreenProps<M extends GameMode> = { view: PhoneModeView<M>; send: Send };
 
 type BannerFlag<M extends GameMode> = SharedOf<M>["lobbyBanner"];
 
-/** A PlayerModeEntry's banner: a PhoneBanner for a mode with a lobby banner, null for any other, and either when M is not one mode. */
+/** why: when M is a union of modes its lobby-banner flag is unknown, so the banner is PhoneBanner | null. */
 type BannerOf<M extends GameMode> = [BannerFlag<M>] extends [true] ? PhoneBanner : [BannerFlag<M>] extends [false] ? null : PhoneBanner | null;
 
 export interface PlayerModeEntry<M extends GameMode> {
   Screen: ComponentType<ScreenProps<M>>;
-  /** What the mode adds to the lobby screen: required when its shared mode entry sets lobbyBanner, null otherwise. */
   banner: BannerOf<M>;
 }
 
@@ -44,7 +43,7 @@ export const PLAYER_MODES: { [M in GameMode]: PlayerModeEntry<M> } = {
   memory: { Screen: MemoryPlayer, banner: null },
 };
 
-/** Show the joined phone's game without remounting its screen on resume. */
+/** why: resume must not remount the joined phone's screen. */
 export function PhoneModeScreen({ view, send, resumeVersion }: { view: PhoneView; send: Send; resumeVersion: number }) {
   const { Screen } = entryOf<PlayerModeEntry<GameMode>>(PLAYER_MODES, view.kind);
   return (

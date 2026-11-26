@@ -6,7 +6,7 @@ export function toDraft({ title, description, settings, questions }: Quiz): Draf
   return { title, description, settings, questions };
 }
 
-/** Each attempt captures what it sends. A successful response only replaces that exact draft. */
+/** why: a response only replaces the exact draft it sent, so edits made during the save survive. */
 export async function saveQuizDraft(
   current: () => Draft,
   revision: string,

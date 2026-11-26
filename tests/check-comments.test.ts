@@ -49,25 +49,15 @@ describe("whole-repo comment check", () => {
     expect(result.exitCode).toBe(0);
   });
 
-  test("skips files on the pending list", async () => {
+  test("passes a generator method, which is not a comment continuation", async () => {
     const result = await wholeRepoCheck({
-      "src/a.ts": "// Walking.\nexport const a = 1;\n",
-      "scripts/comment-audit-pending.txt": "src/a.ts\n",
+      "src/a.ts": ["export class Players {", "  *forPlayer() {", "    yield 1;", "  }", "}", ""].join("\n"),
     });
     expect(result.exitCode).toBe(0);
   });
-
-  test("reports a pending file that has no unmarked comments left", async () => {
-    const result = await wholeRepoCheck({
-      "src/a.ts": "export const a = 1;\n",
-      "scripts/comment-audit-pending.txt": "src/a.ts\n",
-    });
-    expect(result.exitCode).toBe(1);
-    expect(result.output).toContain("src/a.ts has no unmarked comments left");
-  });
 });
 
-test("the pending list holds exactly the files with unmarked comments", async () => {
+test("the repo has no unmarked comments", async () => {
   const root = join(import.meta.dir, "..");
   const result = await $`bun ${SCRIPT} --all`.cwd(root).nothrow().quiet();
   expect(result.stderr.toString()).toBe("");

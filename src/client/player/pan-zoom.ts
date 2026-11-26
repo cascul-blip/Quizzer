@@ -24,7 +24,6 @@ export function usePanZoom({ focus, onTap }: PanZoomOptions = {}) {
     position.y = Math.min(0, Math.max(el.clientHeight * (1 - position.scale), position.y));
     inner.current.style.transform = position.scale === 1 ? "" : `translate(${position.x}px, ${position.y}px) scale(${position.scale})`;
   };
-  /** Zoom by `factor`, keeping the point (cx, cy) of the box under the fingers. */
   const zoomAt = (cx: number, cy: number, factor: number) => {
     const position = transform.current;
     const scale = Math.min(MAX_ZOOM, Math.max(1, position.scale * factor));
@@ -51,7 +50,6 @@ export function usePanZoom({ focus, onTap }: PanZoomOptions = {}) {
       zoomAt(p.x, p.y, e.deltaY < 0 ? 1.2 : 1 / 1.2);
     };
     el.addEventListener("wheel", onWheel, { passive: false });
-    // Centre the focus tiles, measured on the unzoomed board.
     const centres = inner.current
       ? (focus?.(inner.current) ?? []).map((target) => {
           const r = target.getBoundingClientRect();
@@ -121,7 +119,7 @@ export function usePanZoom({ focus, onTap }: PanZoomOptions = {}) {
       onPointerCancel: onUp,
       onPointerLeave: onUp,
     },
-    // Keyboard and assistive technology clicks have no pointer gesture.
+    // why: keyboard and assistive technology clicks have no pointer gesture.
     isTap: (event: MouseEvent) => event.detail === 0 || !gesture.current.moved,
   };
 }

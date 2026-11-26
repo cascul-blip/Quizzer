@@ -3,17 +3,15 @@ import { useContext, useEffect, useRef, useState } from "preact/hooks";
 import type { AfterAnswerWaitView } from "../../shared/mode-views.ts";
 import { nextSecondIn } from "../shared/ui.tsx";
 
-/** Changes when the mounted phone receives its first attached view after resuming. */
 export const PhoneResumeVersion = createContext(0);
 
-/** Count down an activity's server-reported wait and check its deadline at the tap itself. */
 export function useAfterAnswerWait(view: AfterAnswerWaitView | null) {
   const resumeVersion = useContext(PhoneResumeVersion);
   const wait = useRef<{ activityKey: number; resumeVersion: number; deadline: number } | null>(null);
   const now = performance.now();
   const activityKey = view?.activityKey;
   const reportedDeadline = now + (view?.remainingMs ?? 0);
-  // Ordinary updates can carry an old duration; only a fresh resume can extend the same wait.
+  // why: ordinary updates can carry an old duration; only a fresh resume can extend the same wait.
   const previous = wait.current;
   const deadline =
     previous && previous.activityKey === activityKey && previous.resumeVersion === resumeVersion

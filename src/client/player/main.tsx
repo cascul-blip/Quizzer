@@ -29,17 +29,14 @@ const storage = {
       if (value === null) localStorage.removeItem(key);
       else localStorage.setItem(key, value);
     } catch {
-      // Private mode etc.: reconnect-after-refresh won't work, everything else does.
+      // why: private mode etc.: reconnect-after-refresh won't work, everything else does.
     }
   },
 };
 
 let preloadRun = 0;
 
-/**
- * Fetch images one after another, in quiz order, so a room of phones joining together doesn't
- * start every download at once. A newer call (e.g. after a reconnect) stops the older one.
- */
+/** why: sequential so a room of phones joining together doesn't start every download at once. */
 function preloadImages(refs: string[]): void {
   const run = ++preloadRun;
   const next = (i: number) => {
@@ -51,7 +48,6 @@ function preloadImages(refs: string[]): void {
   next(0);
 }
 
-/** The look this phone picked last time, so returning players keep it. */
 function savedAvatar(): AvatarChoice | null {
   try {
     const raw = JSON.parse(storage.get(AVATAR_KEY) ?? "null");

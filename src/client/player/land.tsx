@@ -14,7 +14,6 @@ import { Feedback, StreamQuestion } from "./stream-question.tsx";
 
 type Send = (m: ClientMsg) => void;
 
-/** After the last tile goes down, keep the land on screen this long before the questions come back. */
 const LAST_TILE_PAUSE_MS = 900;
 
 export function LandPlayer({ view, send }: { view: PlayerLandView; send: Send }) {
@@ -29,8 +28,8 @@ function LandPlayerContent({ view, send }: { view: PlayerLandView; send: Send })
   const christmas = useNorthPole();
   const secs = useCountdown(view.remainingMs, view.phase);
 
-  // The server sends the player back to questions the moment their last claim is spent;
-  // hold the board (with the new tile on it) for a beat so they see it land.
+  // why: the server returns the player to questions as soon as their last claim is spent;
+  // hold the board a beat so they see the new tile land.
   const [hold, setHold] = useState<LandBoard | null>(null);
   const holdTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(holdTimer.current), []);
@@ -115,7 +114,7 @@ function LandPlayerContent({ view, send }: { view: PlayerLandView; send: Send })
 }
 
 function EmptyNotice({ ms }: { ms: number }) {
-  // Fixed when the message appears: later snapshots mustn't restart the bar.
+  // why: fixed when the message appears: later snapshots mustn't restart the bar.
   const [duration] = useState(ms);
   return (
     <main class="center land-empty">
@@ -129,7 +128,6 @@ function EmptyNotice({ ms }: { ms: number }) {
   );
 }
 
-/** Your team's starting point was surrounded: you play for the conquerors now. */
 function ConqueredNotice({ event }: { event: PlayerLandView["conquered"] }) {
   const shown = useEventFlash(event, event?.seq, 3500);
   useEffect(() => {
@@ -161,7 +159,6 @@ function ClaimMode(props: {
   const [selected, setSelected] = useState<number | null>(null);
   const cost = selected === null ? null : placementCost(board.owners, board.size, board.starts, team, selected, LAND_STEAL_COST, LAND_GUARD_COST);
   const steal = selected !== null && board.owners[selected] !== EMPTY;
-  // The tile went to someone else, or to us, since it was picked.
   useEffect(() => {
     if (selected !== null && board.owners[selected] === team) setSelected(null);
   }, [board]);

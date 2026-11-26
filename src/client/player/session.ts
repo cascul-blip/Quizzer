@@ -26,7 +26,7 @@ export class PhoneSession {
   constructor(private readonly effects: PhoneSessionEffects) {}
 
   open(token: string | null): void {
-    // Patches on this socket start from its own first snapshot.
+    // why: patches on this socket start from its own first snapshot.
     this.serverView = null;
     this.resuming = Boolean(token);
     if (token) {
@@ -76,8 +76,8 @@ export class PhoneSession {
 
   private updateView(view: PlayerView): void {
     this.serverView = view;
-    // The first snapshot can arrive before the server handles resume. Keep it as the patch
-    // baseline while the phone continues showing the previous game (or its loading screen).
+    // why: the first snapshot can arrive before the server handles resume; keep it as the patch
+    // baseline while the phone keeps showing the previous game (or its loading screen).
     const resumed = this.resuming && view.kind !== "none";
     if (resumed) this.resuming = false;
     this.show({
