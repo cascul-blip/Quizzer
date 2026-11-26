@@ -2,6 +2,44 @@
 
 Judgement calls the reviewer applies to a diff. `bun run typecheck` and `bun test` run in CI, so this file leaves out anything they catch.
 
+## Rule table
+
+Each rule and what enforces it. A recurring finding on a "Review only" row means the rule needs a check, a type or an architecture change instead.
+
+| Rule | Enforcer |
+| --- | --- |
+| Formatting and import order | `biome ci` (pre-commit, `bun run check`, CI) |
+| Shared fixtures: cleanup in a hook, not `finally`; no `Bun.sleep` waits | `tests/standards.test.ts` (`bun run check`, CI) |
+| Shared fixtures: which hook pair fits | Review only |
+| Hub tests on fake sockets | `tests/standards.test.ts` (`bun run check`, CI) |
+| Independent expectations | Review only |
+| Gameplay deadlines | Review only |
+| Nothing-sent checks over a real socket | Review only |
+| Public surface | Review only |
+| Domain names: multi-word _Avoid_ phrases | `tests/standards.test.ts` (`bun run check`, CI) |
+| Domain names: single-word phrases, block placement | Review only |
+| Single owner: no new getter forwarding another owner's field (ratchet) | `tests/standards.test.ts` (`bun run check`, CI) |
+| Single owner: no hand-synced copies | Review only |
+| Direct coverage | Review only |
+| Unchanged output | Review only |
+| Lifecycle transitions | Review only |
+| Lifecycle helper names | Review only |
+| End-of-game steps | Review only |
+| Type names | Review only |
+| Checked casts: new casts need `// checked:` | `scripts/check-new-casts.sh` (pre-commit, `bun run check`, CI) |
+| Checked casts: no `Object.keys(…) as` | `tests/standards.test.ts` (`bun run check`, CI) |
+| Checked casts: helper constrains its type parameter | Review only |
+| Behavior changes keep game-mode docs and ADRs current | Review only |
+| One table per fact: exhaustive `switch`/`Record` | `tsc --noEmit` (`bun run check`, CI) |
+| One table per fact: no new `instanceof` chains or mode-string lists | Review only |
+| Mode entries: no mode literals, view-kind checks or game-class `instanceof` | `tests/standards.test.ts` (`bun run check`, CI) |
+| Server time through the injected Clock; phase time from the phase timer | `tests/standards.test.ts` (`bun run check`, CI) |
+| View time fields | `tests/standards.test.ts` (`bun run check`, CI) |
+| Imports acyclic | `tests/standards.test.ts` import graph (`bun run check`, CI) |
+| Comments: new comments start with `why:` or `checked:` | `scripts/check-new-comments.ts` (pre-commit, `bun run check`, CI; `--all` in `bun run check`, CI) |
+| Comments: no section dividers | `tests/standards.test.ts` (`bun run check`, CI) |
+| Comments: a `why:` states a reason the code can't express | Review only |
+
 ## Tests
 
 - **Shared fixtures**: a temp directory or store is made in a hook and cleaned up in its pair: `beforeEach`/`afterEach` when tests change it (`tests/store.test.ts`, `tests/hub.test.ts`), `beforeAll`/`afterAll` for an expensive fixture the tests only add to (`tests/mcp.test.ts`, the real server in `tests/server.test.ts`). `tests/standards.test.ts` flags cleanup in a test's own `finally`, and `Bun.sleep` as a wait (await the event instead).
@@ -14,7 +52,7 @@ Judgement calls the reviewer applies to a diff. `bun run typecheck` and `bun tes
 
 ## Extractions
 
-- **Single owner**: after an extraction, each piece of state has one owner; the other side reads it through a getter or callback. A copy kept in step by hand (a sync method, a guard comparing the two) is a finding. Check every state the extracted module reads at a phase boundary (a build break, before the first round) against the original.
+- **Single owner**: after an extraction, each piece of state has one owner; the other side reads it through a getter or callback. A copy kept in step by hand (a sync method, a guard comparing the two) is a finding. `tests/standards.test.ts` counts getters that only return another owner's field (`return this.session.paced.phase`) per server file and fails when a file gains one. Check every state the extracted module reads at a phase boundary (a build break, before the first round) against the original.
 - **Direct coverage**: each rule the extracted module owns has a test against its own interface. Existing tests redirected through a new field don't count.
 - **Unchanged output**: an extraction that promises no visible change lists each output the moved code produced (broadcasts, phone messages, timer and countdown values, refusal messages) and confirms each is unchanged, including how many times and in what order it happens. Passing existing tests is not evidence: they may not observe that output.
 - **Lifecycle transitions**: a module with a lifecycle (session, round, phase) guards every transition from every state, including start after end and end before start, and each guard has a test. List the pairs and check each one; a ticket's test list is not the full set.
