@@ -74,7 +74,7 @@ function CupStageContent({ view, send }: { view: CupView; send: Send }) {
 
   const alive = view.players.filter((p) => !p.out);
   const r = view.phase === "reveal" ? view.reveal : null;
-  // why: players poisoned in this reveal stay at the table until it's over, so they can fall.
+  // why: newly eliminated players need to remain seated for their fall animation.
   const dying = new Set(r?.drinks.filter((d) => d.verdict === "poison").map((d) => d.id) ?? []);
   const seated = view.players.filter((p) => !p.out || dying.has(p.id));
   const mode: SaloonMode = view.phase === "countdown" || view.phase === "podium" ? "idle" : view.phase;
@@ -188,10 +188,10 @@ function TableText({ view, secs }: { view: CupView; secs: number }) {
 
 function TimerBar({ view, secs }: { view: CupView; secs: number }) {
   const christmas = useChristmasCup();
-  // why: catch up once, when the phase starts (see Robot Attack's PhaseBar).
+  // why: the CSS bar already advances between snapshots, so a fresh offset would count that time twice.
   const key = `${view.phase}-${view.round}`;
-  const start = useRef<{ key: string; elapsed: number } | null>(null);
-  if (!start.current || start.current.key !== key) start.current = { key, elapsed: Math.max(0, view.phaseDurationMs - view.phaseRemainingMs) };
+  const start = useRef<{ key: string; initialElapsedMs: number } | null>(null);
+  if (!start.current || start.current.key !== key) start.current = { key, initialElapsedMs: Math.max(0, view.phaseDurationMs - view.phaseRemainingMs) };
   const timed = view.phase === "quiz" || view.phase === "drink";
   const label =
     view.phase === "countdown"
@@ -206,7 +206,11 @@ function TimerBar({ view, secs }: { view: CupView; secs: number }) {
   return (
     <div class={`robot-bar cup-bar ${view.phase} ${timed && secs <= 5 ? "warn" : ""}`}>
       {timed && (
-        <div key={key} class="robot-bar-fill" style={{ animationDuration: `${view.phaseDurationMs}ms`, animationDelay: `-${start.current.elapsed}ms` }} />
+        <div
+          key={key}
+          class="robot-bar-fill"
+          style={{ animationDuration: `${view.phaseDurationMs}ms`, animationDelay: `-${start.current.initialElapsedMs}ms` }}
+        />
       )}
       <div class="robot-bar-label">{label}</div>
     </div>

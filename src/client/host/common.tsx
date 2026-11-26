@@ -13,7 +13,6 @@ export function toggleFullscreen() {
   else void document.documentElement.requestFullscreen?.().catch(() => {});
 }
 
-// why: `join` lets players get back in mid-game.
 export function ScreenControls({ voice = false, join }: { voice?: boolean; join?: JoinInfo } = {}) {
   const [muted, setMutedState] = useState(isMuted());
   const [musicOn, setMusicOn] = useState(musicEnabled());

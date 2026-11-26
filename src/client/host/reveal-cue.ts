@@ -3,7 +3,6 @@ export function everyoneAnswered(answeredCount: number, players: { connected: bo
   return answeredCount >= players.filter((p) => p.connected).length;
 }
 
-// why: the time-up buzzer plays only when the clock ran out on someone.
 export function revealCue(wasOpen: boolean, answeredCount: number, players: { connected: boolean }[]): "timeUp" | "reveal" {
   return wasOpen && !everyoneAnswered(answeredCount, players) ? "timeUp" : "reveal";
 }
