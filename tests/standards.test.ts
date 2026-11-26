@@ -328,50 +328,41 @@ describe("Coding standards: checked casts", () => {
 
 const SECTION_DIVIDER = /^\s*(?:\/\/|\/\*)\s*[-=]{3,}/;
 
-/** why: review removed forwarding getters twice (3bdd870, be336b2); the hub still reads phase, players and podium through them, so this ratchets the count down. */
-const KNOWN_FORWARDING_GETTERS: Record<string, number> = {
-  "src/server/game/classic.ts": 9,
-  "src/server/game/cup.ts": 6,
-  "src/server/game/duel.ts": 9,
-  "src/server/game/fight.ts": 4,
-  "src/server/game/gift.ts": 4,
-  "src/server/game/land.ts": 4,
-  "src/server/game/lobby.ts": 1,
-  "src/server/game/memory.ts": 6,
-  "src/server/game/paced-round.ts": 1,
-  "src/server/game/paced-session.ts": 5,
-  "src/server/game/phase-timer.ts": 1,
-  "src/server/game/racer.ts": 8,
-  "src/server/game/robot.ts": 6,
-  "src/server/game/siege.ts": 6,
-  "src/server/game/streamed-session.ts": 4,
-  "src/server/game/submarine.ts": 4,
-  "src/server/game/tower.ts": 4,
-};
-const FORWARDING_GETTER = /\bget\s+\w+\(\)[^{]*\{\s*return\s+this(?:\.\w+){2,};?\s*\}/g;
+/** why: review removed getters that handed out a game's internals (paced, rng, stream, phases; 3bdd870, be336b2); these names are the game state the hub and views read. */
+const PUBLIC_FORWARDED_NAMES = new Set([
+  "choices",
+  "currentQuestion",
+  "ended",
+  "finished",
+  "hearts",
+  "openedAt",
+  "pacing",
+  "phase",
+  "phaseDurationMs",
+  "phaseEndsAt",
+  "players",
+  "podium",
+  "qIndex",
+  "quizId",
+  "revealed",
+  "title",
+]);
+const FORWARDING_GETTER = /\bget\s+(\w+)\(\)[^{]*\{\s*return\s+this(?:\.\w+){2,};?\s*\}/g;
 
-function forwardingGetters(text: string): number {
-  return [...text.matchAll(FORWARDING_GETTER)].length;
+function internalForwards(text: string): string[] {
+  return [...text.matchAll(FORWARDING_GETTER)].map((m) => m[1]!).filter((name) => !PUBLIC_FORWARDED_NAMES.has(name));
 }
 
 describe("Coding standards: single owner", () => {
-  test("the forwarding getter guard flags a getter that returns another owner's field", () => {
-    expect(forwardingGetters("get phase(): Ph {\n    return this.session.paced.phase;\n  }")).toBe(1);
-    expect(forwardingGetters("get phase(): Ph {\n    return this.phases.phase === 'x';\n  }")).toBe(0);
-    expect(forwardingGetters("get phase(): Ph {\n    return this.phase;\n  }")).toBe(0);
+  test("the forwarding getter guard flags a getter that hands out another owner's internals", () => {
+    expect(internalForwards("get paced(): PacedRound {\n    return this.session.paced;\n  }")).toEqual(["paced"]);
+    expect(internalForwards("get phase(): Ph {\n    return this.session.phase;\n  }")).toEqual([]);
+    expect(internalForwards("get stream() {\n    return this.stream;\n  }")).toEqual([]);
   });
 
-  test("no server file adds a getter that forwards another owner's field; read the owner (session.paced, session.stream) instead", () => {
-    const found = Object.fromEntries(
-      sources.map(({ path, lines }) => [relative(ROOT, path), forwardingGetters(lines.join("\n"))] as const).filter(([, n]) => n > 0),
-    );
-    const grown = Object.entries(found).filter(([path, n]) => n > (KNOWN_FORWARDING_GETTERS[path] ?? 0));
-    expect(grown).toEqual([]);
-  });
-
-  test("every known forwarding getter count is still reached, so a removed getter lowers the count", () => {
-    const shrunk = Object.entries(KNOWN_FORWARDING_GETTERS).filter(([path, n]) => forwardingGetters(readFileSync(join(ROOT, path), "utf8")) < n);
-    expect(shrunk).toEqual([]);
+  test("no server getter forwards another owner's internals; read the owner (session.paced, session.stream) instead", () => {
+    const found = sources.flatMap(({ path, lines }) => internalForwards(lines.join("\n")).map((name) => `${relative(ROOT, path)}: get ${name}()`));
+    expect(found).toEqual([]);
   });
 });
 

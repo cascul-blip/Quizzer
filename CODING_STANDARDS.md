@@ -18,7 +18,7 @@ Each rule and what enforces it. A recurring finding on a "Review only" row means
 | Public surface | Review only |
 | Domain names: multi-word _Avoid_ phrases | `tests/standards.test.ts` (`bun run check`, CI) |
 | Domain names: single-word phrases, block placement | Review only |
-| Single owner: no new getter forwarding another owner's field (ratchet) | `tests/standards.test.ts` (`bun run check`, CI) |
+| Single owner: no getter handing out another owner's internals | `tests/standards.test.ts` (`bun run check`, CI) |
 | Single owner: no hand-synced copies | Review only |
 | Direct coverage | Review only |
 | Unchanged output | Review only |
@@ -52,7 +52,7 @@ Each rule and what enforces it. A recurring finding on a "Review only" row means
 
 ## Extractions
 
-- **Single owner**: after an extraction, each piece of state has one owner; the other side reads it through a getter or callback. A copy kept in step by hand (a sync method, a guard comparing the two) is a finding. `tests/standards.test.ts` counts getters that only return another owner's field (`return this.session.paced.phase`) per server file and fails when a file gains one. Check every state the extracted module reads at a phase boundary (a build break, before the first round) against the original.
+- **Single owner**: after an extraction, each piece of state has one owner; the other side reads it through a getter or callback. A copy kept in step by hand (a sync method, a guard comparing the two) is a finding. `tests/standards.test.ts` rejects a server getter that only returns another owner's field (`get paced() { return this.session.paced; }`) unless its name is game state the hub and views read (`phase`, `players`, `podium`, …, listed in `PUBLIC_FORWARDED_NAMES`). Check every state the extracted module reads at a phase boundary (a build break, before the first round) against the original.
 - **Direct coverage**: each rule the extracted module owns has a test against its own interface. Existing tests redirected through a new field don't count.
 - **Unchanged output**: an extraction that promises no visible change lists each output the moved code produced (broadcasts, phone messages, timer and countdown values, refusal messages) and confirms each is unchanged, including how many times and in what order it happens. Passing existing tests is not evidence: they may not observe that output.
 - **Lifecycle transitions**: a module with a lifecycle (session, round, phase) guards every transition from every state, including start after end and end before start, and each guard has a test. List the pairs and check each one; a ticket's test list is not the full set.
