@@ -1,5 +1,4 @@
-/** why: one shared 100x100 layout (head ~(50,56), eyes y=52, chin y=86) lets any accessory fit any character;
- * scripts/avatar-art.py seats each painted picture on it. */
+/** why: scripts/avatar-art.py aligns every character to the same landmarks so accessories fit all of them. */
 import type { JSX } from "preact";
 import type { AccessoryId, AvatarChoice, AvatarId } from "../../shared/avatars.ts";
 import { ACCESSORIES, AVATARS } from "../../shared/avatars.ts";
@@ -259,7 +258,6 @@ export const ACCESSORY_ART = {
   ...Object.fromEntries(GEAR.map((a, i) => [a.id, painted(GEAR_IMG[a.id], gearSheet, i, GEAR.length)])),
 } as Record<AccessoryId, () => JSX.Element | null>;
 
-// why: unknown ids (e.g. from an older page) fall back instead of breaking.
 export function Avatar({ choice, class: cls, title }: { choice: AvatarChoice; class?: string; title?: string }) {
   const body = AVATAR_ART[choice.avatar] ?? AVATAR_ART.cat;
   const extra = ACCESSORY_ART[choice.accessory] ?? ACCESSORY_ART.none;

@@ -1,5 +1,4 @@
-// why: the Evil Snowman skin of Robot Attack. The arm rig and timelines mirror scripts/snowman-art/rig.py
-// and timeline.py, which rendered the reference video; scripts/snowman-art/manifest.md has the full spec.
+// why: the rig and timing mirror scripts/snowman-art/rig.py and timeline.py so the live sweep matches the reference animation.
 import { useEffect, useRef, useState } from "preact/hooks";
 import { ROBOT_BOARD, robotRing } from "../../shared/modes/robot.ts";
 import type { ArenaPlayer } from "./robot-art.tsx";
@@ -25,17 +24,16 @@ import { TILE_ART } from "./snowman/tiles.ts";
 
 type Pt = { x: number; y: number };
 
-// why: arm thickness at the upper arm; the forearm is 0.8 of it.
-const H = 40;
-// why: upper arm and forearm lengths; the twigs are rigid, so they never stretch.
-const L1 = 180;
-const L2 = 160;
+const UPPER_ARM_THICKNESS = 40;
+const UPPER_ARM_LENGTH = 180;
+const FOREARM_LENGTH = 160;
 const MIRROR_X = ARENA_W / 2;
-// why: the right shoulder pivot; the left one is mirrored about MIRROR_X.
-export const RS: Pt = { x: 670.3855619360131, y: 321.5422477440525 };
-// why: CLAW_SPREAD_DEG is at spread 1; CLAW_LS are each claw's length relative to the middle one.
-const CLAW_SPREAD_DEG = 22;
-const CLAW_LS = [1.0, 1.08, 0.95];
+const RIGHT_SHOULDER_PIVOT: Pt = { x: 670.3855619360131, y: 321.5422477440525 };
+
+export const RS = RIGHT_SHOULDER_PIVOT;
+
+const CLAW_SPREAD_AT_UNIT_SCALE_DEG = 22;
+const CLAW_LENGTH_SCALES = [1.0, 1.08, 0.95];
 
 interface Hand {
   knuckleCurlDeg: number;
@@ -50,7 +48,6 @@ export const POSE: Record<"open" | "half" | "closed" | "grasp", Hand> = {
   grasp: { knuckleCurlDeg: 40, tipCurlDeg: 55, spread: 0.75, thumbClose: 0.7 },
 };
 
-// why: joint angles in degrees, in right-arm space.
 interface Arm {
   shoulder: number;
   elbow: number;
@@ -85,13 +82,12 @@ const easeIn = (t: number) => {
   return x * x;
 };
 
-// why: two-bone IK with the elbow raised.
-function ik(S: Pt, T: Pt): { shoulder: number; elbow: number } {
-  const d = Math.min(Math.max(dist(S, T), Math.abs(L1 - L2) + 1), L1 + L2 - 1e-3);
+function solveRaisedElbow(S: Pt, T: Pt): { shoulder: number; elbow: number } {
+  const d = Math.min(Math.max(dist(S, T), Math.abs(UPPER_ARM_LENGTH - FOREARM_LENGTH) + 1), UPPER_ARM_LENGTH + FOREARM_LENGTH - 1e-3);
   const base = deg(Math.atan2(T.y - S.y, T.x - S.x));
-  const a = deg(Math.acos((L1 * L1 + d * d - L2 * L2) / (2 * L1 * d)));
+  const a = deg(Math.acos((UPPER_ARM_LENGTH * UPPER_ARM_LENGTH + d * d - FOREARM_LENGTH * FOREARM_LENGTH) / (2 * UPPER_ARM_LENGTH * d)));
   const s = base - a;
-  const E = at(S, s, L1);
+  const E = at(S, s, UPPER_ARM_LENGTH);
   return { shoulder: s, elbow: wrapDegrees(deg(Math.atan2(T.y - E.y, T.x - E.x)) - s) };
 }
 
@@ -108,7 +104,6 @@ const PIECE_ART: Record<PieceName, string> = {
 };
 const HEIGHT_PER_WIDTH = { thumb: 34 / 112, dist: 51 / 128, shoulder: 150 / 192 };
 
-// why: drawn as `translate(x,y) rotate(deg) scale(1, flip ? -1 : 1)`, then the image at (ox, oy, w, h).
 interface Op {
   name: PieceName;
   x: number;
@@ -129,44 +124,44 @@ function seg(name: PieceName, A: Pt, B: Pt, thick: number): Op {
   return { name, x: A.x, y: A.y, deg: d, flip: (name === "upper" || name === "fore") && Math.cos(rad(d)) < 0, ox: 0, oy: -h / 2, w: len, h };
 }
 
-// why: mirrors rig.layout; tip is the middle claw's tip, the contact point.
 export function layout(S: Pt, arm: Arm): { ops: Op[]; tip: Pt } {
   const { knuckleCurlDeg: kc, tipCurlDeg: tc, spread: sp, thumbClose: th } = arm.hand;
-  const E = at(S, arm.shoulder, L1);
+  const E = at(S, arm.shoulder, UPPER_ARM_LENGTH);
   const fa = arm.shoulder + arm.elbow;
-  const W = at(E, fa, L2);
+  const W = at(E, fa, FOREARM_LENGTH);
   const h = fa + arm.wrist;
   const n = { x: -Math.sin(rad(h)), y: Math.cos(rad(h)) };
-  const ops: Op[] = [seg("upper", S, E, H), seg("fore", E, W, H * 0.8)];
-  const knot = H * 1.3;
+  const ops: Op[] = [seg("upper", S, E, UPPER_ARM_THICKNESS), seg("fore", E, W, UPPER_ARM_THICKNESS * 0.8)];
+  const knot = UPPER_ARM_THICKNESS * 1.3;
   ops.push({ name: "elbow", x: E.x, y: E.y, deg: 0, flip: false, ox: -knot / 2, oy: -knot / 2, w: knot, h: knot });
   // why: the thumb's base starts inside the palm, so it never looks detached.
-  const t0 = at(W, h, H * 0.2);
-  const T0 = { x: t0.x + n.x * H * 0.12, y: t0.y + n.y * H * 0.12 };
+  const t0 = at(W, h, UPPER_ARM_THICKNESS * 0.2);
+  const T0 = { x: t0.x + n.x * UPPER_ARM_THICKNESS * 0.12, y: t0.y + n.y * UPPER_ARM_THICKNESS * 0.12 };
   const ta = h + 62 - th * 55;
-  ops.push(seg("thumb", at(T0, ta, -H * 0.3), at(T0, ta, H * 0.85), H * 0.42));
-  ops.push(seg("palm", at(W, h, -H * 0.25), at(W, h, H * 1.45), H * 0.95));
-  const F = at(W, h, H * 1.2);
-  let tip = F;
+  ops.push(seg("thumb", at(T0, ta, -UPPER_ARM_THICKNESS * 0.3), at(T0, ta, UPPER_ARM_THICKNESS * 0.85), UPPER_ARM_THICKNESS * 0.42));
+  ops.push(seg("palm", at(W, h, -UPPER_ARM_THICKNESS * 0.25), at(W, h, UPPER_ARM_THICKNESS * 1.45), UPPER_ARM_THICKNESS * 0.95));
+  const F = at(W, h, UPPER_ARM_THICKNESS * 1.2);
+  const MIDDLE_CLAW = 1;
+  let middleClawTip = F;
   for (let i = 0; i < 3; i++) {
-    const o = (i - 1) * H * 0.3 * Math.min(sp, 1.1);
+    const o = (i - 1) * UPPER_ARM_THICKNESS * 0.3 * Math.min(sp, 1.1);
     const B0 = { x: F.x + n.x * o, y: F.y + n.y * o };
-    const ls = CLAW_LS[i]!;
-    const a1 = h + (i - 1) * CLAW_SPREAD_DEG * sp + kc;
-    const M1 = at(B0, a1, H * 0.85 * ls);
+    const ls = CLAW_LENGTH_SCALES[i]!;
+    const a1 = h + (i - 1) * CLAW_SPREAD_AT_UNIT_SCALE_DEG * sp + kc;
+    const M1 = at(B0, a1, UPPER_ARM_THICKNESS * 0.85 * ls);
     const a2 = a1 + tc;
-    const end = at(M1, a2, H * 1.15 * ls);
-    ops.push(seg("prox", at(B0, a1, -H * 0.1), at(M1, a1, H * 0.08), H * 0.32 * ls));
-    ops.push(seg("dist", M1, end, H * 0.32 * ls));
-    if (i === 1) tip = end;
+    const end = at(M1, a2, UPPER_ARM_THICKNESS * 1.15 * ls);
+    ops.push(seg("prox", at(B0, a1, -UPPER_ARM_THICKNESS * 0.1), at(M1, a1, UPPER_ARM_THICKNESS * 0.08), UPPER_ARM_THICKNESS * 0.32 * ls));
+    ops.push(seg("dist", M1, end, UPPER_ARM_THICKNESS * 0.32 * ls));
+    if (i === MIDDLE_CLAW) middleClawTip = end;
   }
-  return { ops, tip };
+  return { ops, tip: middleClawTip };
 }
 
 function shoulderOp(arm: Arm): Op {
-  const w = H * 1.55;
+  const w = UPPER_ARM_THICKNESS * 1.55;
   const h = w * HEIGHT_PER_WIDTH.shoulder;
-  return { name: "shoulder", x: RS.x, y: RS.y, deg: arm.shoulder, flip: false, ox: -0.42 * w, oy: -h / 2, w, h };
+  return { name: "shoulder", x: RIGHT_SHOULDER_PIVOT.x, y: RIGHT_SHOULDER_PIVOT.y, deg: arm.shoulder, flip: false, ox: -0.42 * w, oy: -h / 2, w, h };
 }
 
 const mirrorOp = (o: Op): Op => ({ ...o, x: 2 * MIRROR_X - o.x, deg: 180 - o.deg, flip: !o.flip });
@@ -194,7 +189,7 @@ function Ops({ ops }: { ops: Op[] }) {
 }
 
 const armOps = (side: Side, arm: Arm) => {
-  const ops = layout(RS, arm).ops;
+  const ops = layout(RIGHT_SHOULDER_PIVOT, arm).ops;
   return side === "R" ? ops : ops.map(mirrorOp);
 };
 const clumpOp = (side: Side, arm: Arm) => (side === "R" ? shoulderOp(arm) : mirrorOp(shoulderOp(arm)));
@@ -231,14 +226,11 @@ function idle(t: number): Pose {
   return { arms: { L, R }, headDy: -2 * Math.sin(w), breathe: 0.006 * (1 + Math.sin(w)), eyeGlow: 0.75 + 0.25 * Math.sin(2 * w) };
 }
 
-// why: the arm is drawn over the board between windup and back.
-const SWEEP_KEYS_S = { windup: 0.45, reach: 0.8, sweepEnd: 1.7, close: 1.95, back: 2.75 };
-// why: pointing down, slightly back toward the snowman.
-const RAKE_HAND_DEG = 108;
+const SWEEP_TIMELINE_S = { windup: 0.45, reach: 0.8, sweepEnd: 1.7, close: 1.95, back: 2.75 };
+const RAKE_START_HAND_DEG = 108;
 const TILE_SWEEP_S = 0.8;
 const CRACK_LEAD_S = 0.35;
 
-// why: right-arm space; the left hand uses mirrored columns (11 − u).
 interface Rake {
   u0: number;
   u1: number;
@@ -248,54 +240,57 @@ interface Rake {
 export const boardPt = (u: number, v: number): Pt => project(u, v);
 
 function tipOffset(h: number, hand: Hand): Pt {
-  const W = { x: L1 + L2, y: 0 };
+  const W = { x: UPPER_ARM_LENGTH + FOREARM_LENGTH, y: 0 };
   const tip = layout({ x: 0, y: 0 }, { shoulder: 0, elbow: 0, wrist: h, hand }).tip;
   return { x: tip.x - W.x, y: tip.y - W.y };
 }
 
 export function armForTip(P: Pt, h: number, hand: Hand): Arm {
   const o = tipOffset(h, hand);
-  const { shoulder, elbow } = ik(RS, { x: P.x - o.x, y: P.y - o.y });
+  const { shoulder, elbow } = solveRaisedElbow(RIGHT_SHOULDER_PIVOT, { x: P.x - o.x, y: P.y - o.y });
   return { shoulder, elbow, wrist: wrapDegrees(h - (shoulder + elbow)), hand };
 }
 
-const WIND: Arm = { shoulder: -30, elbow: -70, wrist: -25, hand: POSE.open };
+const WINDUP_POSE: Arm = { shoulder: -30, elbow: -70, wrist: -25, hand: POSE.open };
 
-// why: t is in seconds from the start of the attack.
-function rakeArm(t: number, r: Rake, rest: Arm): { arm: Arm; eye: number } {
-  if (t < SWEEP_KEYS_S.windup) {
-    const f = ease(t / SWEEP_KEYS_S.windup);
-    return { arm: mixArm(rest, WIND, f), eye: lerp(0.75, 1.6, f) };
+function rakeArm(attackElapsedS: number, r: Rake, rest: Arm): { arm: Arm; eye: number } {
+  if (attackElapsedS < SWEEP_TIMELINE_S.windup) {
+    const f = ease(attackElapsedS / SWEEP_TIMELINE_S.windup);
+    return { arm: mixArm(rest, WINDUP_POSE, f), eye: lerp(0.75, 1.6, f) };
   }
-  if (t < SWEEP_KEYS_S.reach) {
-    const start = armForTip(boardPt(r.u0, r.v), RAKE_HAND_DEG, POSE.open);
-    return { arm: mixArm(WIND, start, easeIn((t - SWEEP_KEYS_S.windup) / (SWEEP_KEYS_S.reach - SWEEP_KEYS_S.windup))), eye: 1.6 };
+  if (attackElapsedS < SWEEP_TIMELINE_S.reach) {
+    const start = armForTip(boardPt(r.u0, r.v), RAKE_START_HAND_DEG, POSE.open);
+    return {
+      arm: mixArm(WINDUP_POSE, start, easeIn((attackElapsedS - SWEEP_TIMELINE_S.windup) / (SWEEP_TIMELINE_S.reach - SWEEP_TIMELINE_S.windup))),
+      eye: 1.6,
+    };
   }
-  if (t < SWEEP_KEYS_S.sweepEnd) {
-    const f = (t - SWEEP_KEYS_S.reach) / (SWEEP_KEYS_S.sweepEnd - SWEEP_KEYS_S.reach);
+  if (attackElapsedS < SWEEP_TIMELINE_S.sweepEnd) {
+    const f = (attackElapsedS - SWEEP_TIMELINE_S.reach) / (SWEEP_TIMELINE_S.sweepEnd - SWEEP_TIMELINE_S.reach);
     const u = lerp(r.u0, r.u1, ease(f));
-    return { arm: armForTip(boardPt(u, r.v + 0.15 * Math.sin(Math.PI * f)), RAKE_HAND_DEG - 18 * ease(f), mixHand(POSE.open, POSE.grasp, ease(f))), eye: 1.6 };
+    return {
+      arm: armForTip(boardPt(u, r.v + 0.15 * Math.sin(Math.PI * f)), RAKE_START_HAND_DEG - 18 * ease(f), mixHand(POSE.open, POSE.grasp, ease(f))),
+      eye: 1.6,
+    };
   }
   const end = boardPt(r.u1, r.v);
-  if (t < SWEEP_KEYS_S.close) {
-    const f = ease((t - SWEEP_KEYS_S.sweepEnd) / (SWEEP_KEYS_S.close - SWEEP_KEYS_S.sweepEnd));
-    return { arm: armForTip({ x: end.x, y: end.y - 40 * f }, RAKE_HAND_DEG - 18 + 10 * f, mixHand(POSE.grasp, POSE.closed, f)), eye: lerp(1.6, 1.2, f) };
+  if (attackElapsedS < SWEEP_TIMELINE_S.close) {
+    const f = ease((attackElapsedS - SWEEP_TIMELINE_S.sweepEnd) / (SWEEP_TIMELINE_S.close - SWEEP_TIMELINE_S.sweepEnd));
+    return { arm: armForTip({ x: end.x, y: end.y - 40 * f }, RAKE_START_HAND_DEG - 18 + 10 * f, mixHand(POSE.grasp, POSE.closed, f)), eye: lerp(1.6, 1.2, f) };
   }
-  if (t < SWEEP_KEYS_S.back) {
-    const f = ease((t - SWEEP_KEYS_S.close) / (SWEEP_KEYS_S.back - SWEEP_KEYS_S.close));
-    const last = armForTip({ x: end.x, y: end.y - 40 }, RAKE_HAND_DEG - 8, POSE.closed);
+  if (attackElapsedS < SWEEP_TIMELINE_S.back) {
+    const f = ease((attackElapsedS - SWEEP_TIMELINE_S.close) / (SWEEP_TIMELINE_S.back - SWEEP_TIMELINE_S.close));
+    const last = armForTip({ x: end.x, y: end.y - 40 }, RAKE_START_HAND_DEG - 8, POSE.closed);
     return { arm: mixArm(last, rest, f), eye: lerp(1.2, 0.75, f) };
   }
   return { arm: rest, eye: 0.75 };
 }
 
-// why: null while the claws are off the board.
-function rakeTip(t: number, r: Rake): Pt | null {
-  if (t < SWEEP_KEYS_S.reach || t > SWEEP_KEYS_S.sweepEnd + 0.02) return null;
-  return layout(RS, rakeArm(Math.min(t, SWEEP_KEYS_S.sweepEnd - 1e-3), r, idle(0).arms.R).arm).tip;
+function rakeTipOverBoard(attackElapsedS: number, r: Rake): Pt | null {
+  if (attackElapsedS < SWEEP_TIMELINE_S.reach || attackElapsedS > SWEEP_TIMELINE_S.sweepEnd + 0.02) return null;
+  return layout(RIGHT_SHOULDER_PIVOT, rakeArm(Math.min(attackElapsedS, SWEEP_TIMELINE_S.sweepEnd - 1e-3), r, idle(0).arms.R).arm).tip;
 }
 
-// why: inverts the rake's ease by bisection.
 export function contactTime(r: Rake, u: number): number {
   const target = Math.min(Math.max((r.u0 - (u + 0.5)) / (r.u0 - r.u1), 0), 1);
   let lo = 0;
@@ -305,7 +300,7 @@ export function contactTime(r: Rake, u: number): number {
     if (ease(m) < target) lo = m;
     else hi = m;
   }
-  return SWEEP_KEYS_S.reach + lo * (SWEEP_KEYS_S.sweepEnd - SWEEP_KEYS_S.reach);
+  return SWEEP_TIMELINE_S.reach + lo * (SWEEP_TIMELINE_S.sweepEnd - SWEEP_TIMELINE_S.reach);
 }
 
 function tileMotion(ageS: number): { dx: number; dy: number; rot: number; alpha: number } {
@@ -319,13 +314,11 @@ function tileMotion(ageS: number): { dx: number; dy: number; rot: number; alpha:
 }
 
 const half = ROBOT_BOARD / 2;
-// why: each hand rakes its own half; rightCol mirrors a left-half column into right-arm space.
 const sideOf = (u: number): Side => (u < half ? "L" : "R");
-const rightCol = (u: number) => (u < half ? ROBOT_BOARD - 1 - u : u);
+const columnInRightArmSpace = (u: number) => (u < half ? ROBOT_BOARD - 1 - u : u);
 
 interface Plan {
   rakes: Partial<Record<Side, Rake>>;
-  // why: seconds after the attack starts that the claws reach each marked tile.
   contact: Map<number, number>;
 }
 
@@ -335,7 +328,7 @@ export function planAttack(marked: number[], players: ArenaPlayer[], hit: Set<st
   for (const side of SIDES) {
     const tiles = marked.filter((i) => sideOf(i % ROBOT_BOARD) === side);
     if (tiles.length === 0) continue;
-    const cols = tiles.map((i) => rightCol(i % ROBOT_BOARD));
+    const cols = tiles.map((i) => columnInRightArmSpace(i % ROBOT_BOARD));
     const rows = tiles.map((i) => Math.floor(i / ROBOT_BOARD));
     const u0 = Math.min(Math.max(...cols) + 0.9, ROBOT_BOARD - 0.1);
     const u1 = Math.min(Math.min(...cols) - 0.3, u0 - 1.2);
@@ -347,7 +340,7 @@ export function planAttack(marked: number[], players: ArenaPlayer[], hit: Set<st
     const v = Math.min(Math.max(band.reduce((a, b) => a + b, 0) / band.length + 0.5, lo), hi);
     const r = { u0, u1, v };
     rakes[side] = r;
-    for (const i of tiles) contact.set(i, contactTime(r, rightCol(i % ROBOT_BOARD)));
+    for (const i of tiles) contact.set(i, contactTime(r, columnInRightArmSpace(i % ROBOT_BOARD)));
   }
   return { rakes, contact };
 }
@@ -388,10 +381,9 @@ function useClock(attackSeq: number | null): Clock {
   return c;
 }
 
-// why: now is in ms; t is the attack time in s, null when not attacking.
-function frame(clock: Clock, plan: Plan | null, now: number, still: boolean): { pose: Pose; t: number | null; over: Set<Side> } {
-  const t = plan ? (still ? SWEEP_KEYS_S.back + 0.1 : (now - clock.attackStart) / 1000) : null;
-  const pose = idle(still ? 0 : ((clock.frozenAt ?? now - clock.offset) / 1000) % IDLE_PERIOD_S);
+function frame(clock: Clock, plan: Plan | null, nowMs: number, still: boolean): { pose: Pose; t: number | null; over: Set<Side> } {
+  const t = plan ? (still ? SWEEP_TIMELINE_S.back + 0.1 : (nowMs - clock.attackStart) / 1000) : null;
+  const pose = idle(still ? 0 : ((clock.frozenAt ?? nowMs - clock.offset) / 1000) % IDLE_PERIOD_S);
   const over = new Set<Side>();
   if (plan && t !== null) {
     let eye: number | null = null;
@@ -401,7 +393,7 @@ function frame(clock: Clock, plan: Plan | null, now: number, still: boolean): { 
       const res = rakeArm(t, r, pose.arms[side]);
       pose.arms = { ...pose.arms, [side]: res.arm };
       eye = Math.max(eye ?? 0, res.eye);
-      if (t > SWEEP_KEYS_S.windup && t < SWEEP_KEYS_S.back) over.add(side);
+      if (t > SWEEP_TIMELINE_S.windup && t < SWEEP_TIMELINE_S.back) over.add(side);
     }
     if (eye !== null) pose.eyeGlow = eye;
   }
@@ -561,7 +553,6 @@ function SnowBoard({ marked, inset, collapsing, attacking }: { marked: Set<numbe
   );
 }
 
-// why: in tile space (0..1, centred on 0.5), as line segments.
 const SNOWFLAKE: [number, number, number, number][] = (() => {
   const R = 0.4;
   const segs: [number, number, number, number][] = [];
@@ -607,12 +598,12 @@ function FrostTarget({ u, v }: { u: number; v: number }) {
 function SweptTiles({ clock, plan, marked, collapsing }: { clock: Clock; plan: Plan; marked: number[]; collapsing: Set<number> }) {
   const still = prefersStill();
   const now = useFrame(!still);
-  const t = still ? SWEEP_KEYS_S.back + 0.1 : (now - clock.attackStart) / 1000;
+  const t = still ? SWEEP_TIMELINE_S.back + 0.1 : (now - clock.attackStart) / 1000;
   const out = [];
   for (const i of marked) {
     const u = i % ROBOT_BOARD;
     const v = Math.floor(i / ROBOT_BOARD);
-    const c = plan.contact.get(i) ?? SWEEP_KEYS_S.reach;
+    const c = plan.contact.get(i) ?? SWEEP_TIMELINE_S.reach;
     const box = tileBox(u, v);
     if (collapsing.has(i)) {
       const age = t - c;
@@ -659,7 +650,6 @@ const SPRAY_LIFE_S = 0.55;
 const TRAIL_S = 0.22;
 const TRAIL_STEPS = 8;
 
-// why: drawn in front of the pieces.
 function SweepFx({ clock, plan, players, hit }: { clock: Clock; plan: Plan; players: ArenaPlayer[]; hit: Set<string> }) {
   const still = prefersStill();
   const now = useFrame(!still);
@@ -676,7 +666,7 @@ function SweepFx({ clock, plan, players, hit }: { clock: Clock; plan: Plan; play
     }
     const pts: Pt[] = [];
     for (let j = TRAIL_STEPS; j >= 0; j--) {
-      const p = rakeTip(t - (j * TRAIL_S) / TRAIL_STEPS, r);
+      const p = rakeTipOverBoard(t - (j * TRAIL_S) / TRAIL_STEPS, r);
       if (p) pts.push(m({ x: p.x, y: p.y + 4 }));
     }
     for (let j = 1; j < pts.length; j++) {
@@ -696,11 +686,11 @@ function SweepFx({ clock, plan, players, hit }: { clock: Clock; plan: Plan; play
       );
     }
     for (let n = 0; ; n++) {
-      const born = SWEEP_KEYS_S.reach + 0.03 + n * SPRAY_INTERVAL_S;
-      if (born >= SWEEP_KEYS_S.sweepEnd || born > t) break;
+      const born = SWEEP_TIMELINE_S.reach + 0.03 + n * SPRAY_INTERVAL_S;
+      if (born >= SWEEP_TIMELINE_S.sweepEnd || born > t) break;
       const age = t - born;
       if (age >= SPRAY_LIFE_S) continue;
-      const p = rakeTip(born, r);
+      const p = rakeTipOverBoard(born, r);
       if (!p) continue;
       const r0 = repeatableRandom(n, 0);
       const r1 = repeatableRandom(n, 1);
@@ -722,7 +712,7 @@ function SweepFx({ clock, plan, players, hit }: { clock: Clock; plan: Plan; play
   }
   for (const p of players) {
     if (!hit.has(p.id)) continue;
-    const age = t - (plan.contact.get(p.y * ROBOT_BOARD + p.x) ?? SWEEP_KEYS_S.reach);
+    const age = t - (plan.contact.get(p.y * ROBOT_BOARD + p.x) ?? SWEEP_TIMELINE_S.reach);
     if (age < 0 || age > 0.6) continue;
     const c = project(p.x + 0.5, p.y + 0.62);
     const size = TILE * 0.95 * c.s;

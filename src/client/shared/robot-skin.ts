@@ -1,6 +1,5 @@
 export type RobotSkin = "robot" | "snowman";
 
-// why: "snowman" is the seasonal look; change back to "robot" when the season is over.
 export const ROBOT_SKIN = "snowman" as RobotSkin;
 
 export const SKIN_TEXT =
