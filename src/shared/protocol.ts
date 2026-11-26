@@ -91,7 +91,6 @@ export interface HostLobbyView {
   quiz: { id: string; title: string; questionCount: number };
   pacing: Pacing;
   shuffle: ShuffleOptions;
-  /** why: only offered when the shared mode entry's protect flag is set. */
   protect: boolean;
   players: HostPlayer[];
 }
@@ -103,10 +102,9 @@ export type GameplayPhasesExcludeLobby = AssertTrue<"lobby" extends GameplayPhas
 type AssertTrue<T extends true> = T;
 
 export type ServerMsg =
-  /** why: a new serverId means the server restarted, maybe with new code. */
+  /** why: Browser clients reload when the server identity changes so a restarted server can serve updated code. */
   | { type: "hello"; serverId: string }
   | { type: "player.state"; view: PlayerView }
-  /** why: diff against the last view on this connection, sent when smaller than a snapshot. */
   | { type: "player.patch"; ops: PatchOp[] }
   | { type: "host.state"; view: HostView }
   | { type: "joined"; token: string; playerId: string /** why: question images, for the phone to preload. */; images?: string[] }

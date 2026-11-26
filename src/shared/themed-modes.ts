@@ -6,11 +6,9 @@ interface Look<Screen extends string> {
   name: string;
   icon: string;
   tracks: Record<Screen, string>;
-  /** why: credited after the screen in the admin music list, such as the tune the tracks arrange. */
   tune?: string;
 }
 
-/** why: `default` is the theme new lobbies use; screen values are admin music list labels. */
 function themedMode<const Screen extends string, const L extends Partial<Record<SeasonTheme, Look<Screen>>>>(mode: {
   default: keyof L & SeasonTheme;
   screens: Record<Screen, string>;
@@ -19,7 +17,6 @@ function themedMode<const Screen extends string, const L extends Partial<Record<
   return mode;
 }
 
-/** why: a track id shared by modes or screens is declared only here; MUSIC_TRACKS builds its rows from this table. */
 export const THEMED_MODES = {
   tower: themedMode({
     default: "christmas",
@@ -146,7 +143,6 @@ function lookOf<M extends ThemedMode>(mode: M, theme?: SeasonTheme): Look<Screen
 
 export const themedName = (mode: ThemedMode, theme?: SeasonTheme): string => lookOf(mode, theme).name;
 export const themedIcon = (mode: ThemedMode, theme?: SeasonTheme): string => lookOf(mode, theme).icon;
-/** why: the Game mode menu's format. */
 export const themedLabel = (mode: ThemedMode, theme?: SeasonTheme): string => `${themedIcon(mode, theme)} ${themedName(mode, theme)}`;
 
 export function themedTrack<M extends ThemedMode>(mode: M, theme: SeasonTheme | undefined, screen: ScreenOf<M>): ThemedTrackId {
@@ -154,7 +150,6 @@ export function themedTrack<M extends ThemedMode>(mode: M, theme: SeasonTheme | 
   return lookOf(mode, theme).tracks[screen] as ThemedTrackId;
 }
 
-/** why: a track several modes or screens share gets one row naming them all. */
 export function themedMusicTracks(): { id: ThemedTrackId; mode: string; screen: string }[] {
   const rows = new Map<string, { modes: string[]; screens: string[] }>();
   const add = (list: string[], item: string) => list.includes(item) || list.push(item);

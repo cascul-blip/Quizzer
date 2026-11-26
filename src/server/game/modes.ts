@@ -30,6 +30,5 @@ export const MODES: { [M in GameMode]: ModeEntry<M> } = {
 
 /** why: callers pass back the same game they looked the entry up with. */
 export function entryOf(game: LiveGame): ModeEntry<GameMode> {
-  // why: the one place the per-mode types meet.
   return MODES[game.runningMode] as ModeEntry<GameMode>;
 }

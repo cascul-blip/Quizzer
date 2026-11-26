@@ -10,9 +10,7 @@ export const LAND_MINUTES = [3, 5, 7, 10] as const;
 export const LAND_MIN_TEAMS = 2;
 /** why: counts wrong answers too, so every player reaches the land. */
 export const LAND_QUESTIONS_PER_ROUND = 3;
-/** why: in claims; grass costs 1. */
 export const LAND_STEAL_COST = 2;
-/** why: in claims, for a tile 2 steps from another team's start; does not add to LAND_STEAL_COST. */
 export const LAND_GUARD_COST = 2;
 export const LAND_EMPTY_MS = 4000;
 
@@ -22,7 +20,6 @@ export interface LandSettings {
   minutes: number;
 }
 
-/** why: empty = the "no tiles to place" message. */
 export type LandState = "question" | "claim" | "empty";
 
 /** why: owners[tile] is a team index or -1 for grass. */
@@ -73,7 +70,6 @@ export interface HostLandState {
   lastCapture: LandCapture | null;
   playerCount: number;
   awards: LandAwards | null;
-  /** why: podium only. */
   errors: QuestionError[] | null;
 }
 
@@ -84,20 +80,17 @@ export interface PlayerLandView {
   title: string;
   remainingMs: number;
   me: { id: string; nickname: string; avatar: AvatarChoice; correct: number; placed: number; stolen: number };
-  /** why: changes when their team is conquered. */
+  /** why: Conquered players claim tiles for their new team, while results still use their original team. */
   team: TeamInfo;
   teamTiles: number;
   state: LandState;
   claims: number;
-  /** why: 0 … LAND_QUESTIONS_PER_ROUND-1, reset each round of questions. */
   answered: number;
   emptyRemainingMs: number;
   question: StreamQuestionView | null;
   feedback: StreamFeedbackView | null;
-  /** why: only while this player is placing tiles. */
   board: LandBoard | null;
   claimWait: AfterAnswerWaitView | null;
-  /** why: set once their first team was surrounded and they joined the conquerors. */
   conquered: { seq: number; from: string; by: string } | null;
   result: { teamRank: number; teamCount: number; tiles: number; won: boolean; awards: string[] } | null;
 }

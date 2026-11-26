@@ -59,14 +59,12 @@ interface RobotOptions {
 
 interface RobotGameSettings {
   shuffleAnswers: boolean;
-  /** why: the lobby's "Protect from abuse" setting: longer waits for wrong answers in a row. */
   protect?: boolean;
 }
 
 const tileOf = (x: number, y: number) => y * ROBOT_BOARD + x;
 const tileXY = (i: number) => ({ x: i % ROBOT_BOARD, y: Math.floor(i / ROBOT_BOARD) });
 
-/** why: Chebyshev distance; ties go to the earliest tile in `order`, and once every tile is taken the least crowded wins. */
 export function spreadTile(taken: { x: number; y: number }[], order: number[], allowed: (i: number) => boolean = () => true): number {
   let best = -1;
   let bestScore = -Infinity;
@@ -98,7 +96,6 @@ export class RobotGame {
   attacks = 0;
   marked = new Set<number>();
   inset = 0;
-  /** why: set with the targets and kept through the attack. */
   collapsing = new Set<number>();
   lastAttack: RobotAttack | null = null;
 
@@ -191,7 +188,7 @@ export class RobotGame {
     this.session.changed();
   }
 
-  /** why: occupied tiles count toward the 3/4 first, so a quarter of the board stays safe however small it shrinks. */
+  /** why: occupied tiles count toward the hazard budget to leave safe ground after each shrink. */
   private markTargets(): void {
     this.session.phases.cancel("warn");
     if (this.phase !== "quiz") return;
@@ -237,7 +234,6 @@ export class RobotGame {
     this.session.changed();
   }
 
-  /** why: closest free tile in steps; the least crowded one once the board is full. */
   private relocate(p: RobotPlayer): void {
     const others = this.alive().filter((o) => o !== p);
     let best = -1;
@@ -318,7 +314,6 @@ export class RobotGame {
     return true;
   }
 
-  /** why: survivors first, then the latest knocked out; lives break ties, correct answers order within a shared place. */
   private buildPodium(): Podium<RobotPlayer, RobotPlayer, RobotAwardKey> {
     const players = [...this.players.values()];
     return buildPodium({

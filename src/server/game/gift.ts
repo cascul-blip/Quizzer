@@ -63,8 +63,8 @@ interface GiftOptions {
 
 function launchSchedule(round: number, rng: () => number): GiftItem[] {
   const waveMs = 1_250;
-  // why: each five-second batch keeps the same mix of gifts and duds.
-  const kinds = Array.from({ length: GIFT_ROUND_MS / 5_000 }, (_, batch) => {
+  const giftMixBatchMs = 5_000;
+  const kinds = Array.from({ length: GIFT_ROUND_MS / giftMixBatchMs }, (_, batch) => {
     const goods = [...GIFT_GOODS, ...shuffle([...GIFT_GOODS], rng).slice(0, 3)];
     const duds = shuffle([...GIFT_DUDS], rng);
     const power = batch === 0 && round % 3 === 0;
@@ -262,7 +262,6 @@ export class GiftGame {
     return true;
   }
 
-  /** why: correct answers split equal scores. */
   private buildPodium(): Podium<GiftPlayer, GiftPlayer, GiftAwardKey> {
     const players = [...this.players.values()];
     return buildPodium({
@@ -278,7 +277,6 @@ export class GiftGame {
     return this.session.podium;
   }
 
-  /** why: live Standings during play; the Podium's places once the game has finished. */
   private standings(): GiftStanding[] {
     const ranked = this.phase === "podium" ? this.podium.places.map((p) => ({ ...p, rank: p.place })) : rankBy([...this.players.values()], GIFT_ORDER);
     return ranked.map((player) => {
@@ -303,7 +301,6 @@ export class GiftGame {
       remainingMs: this.session.phases.remainingMs(),
       standings,
       mostCorrect: final ? this.podium.awards.mostCorrect : null,
-      // why: Gift's host view always carries a list, empty until the podium.
       errors: this.session.stream.errorsWhen(final) ?? [],
     };
   }

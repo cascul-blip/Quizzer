@@ -6,7 +6,6 @@ export const RACER_START_MPH = 30;
 export const RACER_REPAIR_MPH = 30;
 export const RACER_CRASH_BELOW_MPH = 20;
 export const RACER_GAIN_MPH: Record<RacerConfidence, number> = { low: 0, mid: 20, high: 40 };
-/** why: driven at the speed the turn ended on. */
 export const RACER_TURN_MINUTES = 10;
 
 export const RACER_CONFIDENCE: Record<RacerConfidence, { label: string; gain: number; needs: string }> = {
@@ -16,12 +15,9 @@ export const RACER_CONFIDENCE: Record<RacerConfidence, { label: string; gain: nu
 };
 
 export interface RacerCar {
-  /** why: may be fractional (each fail halves it); 0 while crashed. */
   speedMph: number;
-  /** why: a crashed car has no driver and stays put until the class repairs it. */
   crashed: boolean;
   distanceMiles: number;
-  /** why: speeds a turn ended on only. */
   topSpeedMph: number;
   crashes: number;
 }
@@ -30,7 +26,6 @@ export function newRacerCar(): RacerCar {
   return { speedMph: RACER_START_MPH, crashed: false, distanceMiles: 0, topSpeedMph: RACER_START_MPH, crashes: 0 };
 }
 
-/** why: `gain` or `fails` (0 to 3), never both; no answer counts as wrong, and total 0 changes nothing. */
 export function racerOutcome(confidence: RacerConfidence, correct: number, total: number): { gain: number; fails: number } {
   const c = correct;
   const n = total;
@@ -64,17 +59,14 @@ export interface RacerTurnResult {
   correct: number;
   total: number;
   gainMph: number;
-  /** why: 0 to 3; each one halved the speed. */
   fails: number;
   speedBefore: number;
   speedAfter: number;
   crashed: boolean;
   repaired: boolean;
-  /** why: miles, speedAfter driven for RACER_TURN_MINUTES. */
   distanceAdded: number;
 }
 
-/** why: the input car is left untouched; a crashed car can only be repaired, a car without a driver keeps its speed. */
 export function applyRacerTurn(car: RacerCar, turn: RacerTurnInput): { car: RacerCar; summary: RacerTurnResult } {
   const speedBefore = car.speedMph;
   let speed = car.speedMph;

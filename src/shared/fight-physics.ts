@@ -1,8 +1,5 @@
-/** why: pure and deterministic so the server (which decides hits) and screens (which animate arcs) agree. Field units, y up. */
-
 export const FIELD_W = 1000;
 export const FIELD_H = 600;
-/** why: field units; the flat ground the towers stand on. */
 export const GROUND = 60;
 /** why: terrain has COLS + 1 samples, at x = i * COL_W. */
 export const COLS = 200;
@@ -17,9 +14,7 @@ export const LAUNCH_Y = GROUND + 34;
 
 const GRAVITY = 600;
 export const MAX_SPEED = 860;
-/** why: pull length in field units that gives full power; shorter pulls are weaker. */
 export const MAX_PULL = 180;
-/** why: a shorter pull counts as a cancelled aim. */
 export const MIN_PULL = 12;
 export const SHOT_R = 14;
 const MAX_FLIGHT_S = 8;
@@ -30,7 +25,6 @@ export type HillHeight = keyof typeof HILL_HEIGHTS;
 
 const CRATER_R = 30;
 const CRATER_DEPTH = 26;
-/** why: craters can dig the hill away completely, but not below this. */
 export const MIN_GROUND = 24;
 
 export type ShotImpact =
@@ -65,7 +59,6 @@ export function makeTerrain(hill: HillHeight, rng: () => number = Math.random): 
   });
 }
 
-/** why: linear between samples; flat beyond the edges. */
 export function groundAt(terrain: number[], x: number): number {
   const f = Math.min(COLS, Math.max(0, x / COL_W));
   const i = Math.floor(f);
@@ -95,7 +88,6 @@ function towerAt(x: number, y: number): number | null {
   return null;
 }
 
-/** why: either tower can be hit; friendly fire counts. */
 export function simulate(terrain: number[], team: number, vx: number, vy: number): Flight {
   for (let t = STEP_S; t <= MAX_FLIGHT_S; t += STEP_S) {
     const { x, y } = shotPos(team, vx, vy, t);
@@ -109,7 +101,6 @@ export function simulate(terrain: number[], team: number, vx: number, vy: number
   return { durationMs: MAX_FLIGHT_S * 1000, impact: { kind: "offscreen", x: round1(end.x), y: round1(end.y) } };
 }
 
-/** why: ground under the towers is never carved; returns a new terrain. */
 export function carve(terrain: number[], x: number, radius = CRATER_R, depth = CRATER_DEPTH): number[] {
   return terrain.map((h, i) => {
     const cx = i * COL_W;

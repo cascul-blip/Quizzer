@@ -1,12 +1,11 @@
 export type PatchPath = (string | number)[];
-/** why: [path] deletes a key; an empty path replaces the whole view. */
-export type PatchOp = [PatchPath, unknown] | [PatchPath];
+export type PatchOp = [path: PatchPath, replacement: unknown] | [pathToDelete: PatchPath];
 
 type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
 
 const isObject = (v: unknown): v is Record<string, Json> => typeof v === "object" && v !== null && !Array.isArray(v);
 
-/** why: both must be plain JSON; an array with over half its items changed is sent whole. */
+/** why: View patches operate on plain JSON. */
 export function diffView(prev: unknown, next: unknown): PatchOp[] {
   const ops: PatchOp[] = [];
   diff(prev as Json, next as Json, [], ops);
@@ -38,7 +37,6 @@ function diff(a: Json, b: Json, path: PatchPath, ops: PatchOp[]): void {
   ops.push([path, b]);
 }
 
-/** why: copies along changed paths and always returns a new root so the page re-renders. */
 export function applyPatch<T>(view: T, ops: PatchOp[]): T {
   let root: unknown = Array.isArray(view) ? [...view] : { ...(view as object) };
   const copiedThisPatch = new Set<unknown>([root]);

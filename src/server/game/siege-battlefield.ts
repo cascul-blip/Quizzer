@@ -28,9 +28,8 @@ import {
 } from "../../shared/siege-rules.ts";
 import type { Clock } from "./common.ts";
 
-/** why: a monster reaching this position has hit the castle wall (the wall face, in squares). */
+const UNASSIGNED_LANE = -1;
 const WALL_X = 0.5;
-/** why: a monster is coming onto its lane while it is on squares 7–8. */
 const ENTERING_X = SIEGE_SQUARES - 1.5;
 const EPS = 1e-6;
 
@@ -53,16 +52,12 @@ export interface SiegeMonster {
   id: number;
   type: SiegeMonsterType;
   lane: number;
-  /** why: square k's centre is k; the wall face is 0.5. */
   x: number;
   state: "wait" | "walk" | "attack" | "leap";
   health: number;
   maxHealth: number;
-  /** why: set only while attacking. */
   cooldownMs: number;
-  /** why: the giant waits on the entry square until then. */
   waitUntil: number;
-  /** why: the giant's goes up with the wave's boost. */
   pace: number;
   /** why: wolves leap only the first stone wall in their way. */
   leapt: boolean;
@@ -76,26 +71,19 @@ export interface SiegeMonster {
 export interface SiegeSpawn {
   at: number;
   type: SiegeMonsterType;
-  /** why: goblins that come in together share a group and a lane. */
   group: number;
-  /** why: chosen when its warning arrow shows; -1 until then. */
   lane: number;
 }
 
-/** why: tells which views need a new push. */
 export interface SiegeTickResult {
   changed: boolean;
-  /** why: hearts, danger lanes or an alert. */
   phones: boolean;
-  /** why: monster dots or the defenders. */
   map: boolean;
 }
 
 export interface SiegeWaveConditions {
   wave: number;
-  /** why: the usual budget, raised by any boost. */
   budget: number;
-  /** why: not applied to giants. */
   toughness: number;
   giantPace: number;
 }
@@ -104,14 +92,12 @@ interface BattlefieldOptions<O> {
   clock: Clock;
   rng: () => number;
   endless: boolean;
-  /** why: the wave being fought, or the next one during a build break. */
   wave: () => number;
   /** why: monster health scales with the players connected now. */
   classSize: () => number;
   onDefeat: (owner: O, by: SiegeDefenderType) => void;
 }
 
-/** why: owns combat, occupancy and the board view only; the game decides when the battle ticks and who pays. */
 export class SiegeBattlefield<O> {
   hearts = SIEGE_HEARTS;
   toughness = 1;
@@ -174,12 +160,11 @@ export class SiegeBattlefield<O> {
     this.pending = [];
   }
 
-  /** why: valued by health left. */
   boardGold(): number {
     return this.defenders.reduce((sum, d) => sum + siegeDefenderGold(d.type, d.level, d.health, d.maxHealth), 0);
   }
 
-  /** why: goblins come in groups of 2–3; giants come at the end, on top of the budget. */
+  /** why: the giants arrive last and cost none of the budget used for the rest of the wave. */
   planWave(wave: number, budget: number): SiegeSpawn[] {
     const allowed = (["goblin", "wolf", "troll"] as const).filter((t) => SIEGE_MONSTERS[t].fromWave <= wave);
     const groups: SiegeMonsterType[][] = [];
@@ -212,13 +197,13 @@ export class SiegeBattlefield<O> {
     groups.forEach((members, i) => {
       const at = now + SIEGE_WARNING_MS + Math.round((spread * (i + this.rng() * 0.6)) / Math.max(1, groups.length));
       const group = ++this.ids;
-      members.forEach((type, k) => out.push({ at: at + k * SIEGE_GROUP_GAP_MS, type, group, lane: -1 }));
+      members.forEach((type, k) => out.push({ at: at + k * SIEGE_GROUP_GAP_MS, type, group, lane: UNASSIGNED_LANE }));
     });
-    for (let g = 0; g < siegeGiants(wave, this.endless); g++) out.push({ at: now + window + g * 100, type: "giant", group: ++this.ids, lane: -1 });
+    for (let g = 0; g < siegeGiants(wave, this.endless); g++) out.push({ at: now + window + g * 100, type: "giant", group: ++this.ids, lane: UNASSIGNED_LANE });
     return out.sort((a, b) => a.at - b.at);
   }
 
-  /** why: order matters: spawns, monsters, then defenders. */
+  /** why: monsters get their move before defenders attack, including monsters that enter on this tick. */
   tick(now: number): SiegeTickResult {
     const before = { hearts: this.hearts, alert: this.alert?.seq, defenders: this.defenders.length };
     let changed = this.spawnStep(now);
@@ -281,7 +266,6 @@ export class SiegeBattlefield<O> {
     return best[Math.min(best.length - 1, Math.floor(this.rng() * best.length))]!;
   }
 
-  /** why: also used by tests. */
   spawn(type: SiegeMonsterType, lane: number, x: number = SIEGE_SQUARES): SiegeMonster {
     const stats = SIEGE_MONSTERS[type];
     const health = Math.max(1, Math.round(siegeMonsterHealth(type, this.wave(), this.classSize()) * (type === "giant" ? 1 : this.toughness)));
@@ -377,7 +361,6 @@ export class SiegeBattlefield<O> {
         m.leapt = true;
         const landing = target.square - 1;
         if (landing >= 1 && this.defenderAt(m.lane, landing)) {
-          // why: nowhere to land, so it attacks the wall instead.
           this.startAttack(m);
         } else {
           m.state = "leap";
@@ -397,7 +380,6 @@ export class SiegeBattlefield<O> {
     m.cooldownMs = SIEGE_MONSTERS[m.type].hitIntervalMs / m.pace;
   }
 
-  /** why: the giant's stomp also hits the squares just above and below. */
   private strike(m: SiegeMonster, target: SiegeDefender<O>): void {
     const stats = SIEGE_MONSTERS[m.type];
     m.attackSeq++;
@@ -414,7 +396,6 @@ export class SiegeBattlefield<O> {
     if (!this.defenders.includes(d)) return;
     d.health -= amount;
     d.hitSeq++;
-    // why: spikes hurt whatever hits the wall.
     const thorns = SIEGE_DEFENDERS[d.type].thorns[d.level - 1]!;
     if (thorns > 0 && this.monsters.includes(by)) this.damageMonster(by, thorns, d);
     if (d.health <= 0) this.defenders = this.defenders.filter((x) => x !== d);
@@ -458,7 +439,6 @@ export class SiegeBattlefield<O> {
           const t = this.archerTarget(d);
           if (!t) break;
           this.shots.push({ seq: ++this.seq, lane: d.lane, square: d.square, toX: t.x });
-          // why: armored monsters (trolls) take only part of each arrow.
           this.damageMonster(t, stats.damage[d.level - 1]! * SIEGE_MONSTERS[t.type].arrowFactor, d);
         }
         if (this.shots.length > SIEGE_SHOTS_SHOWN) this.shots.splice(0, this.shots.length - SIEGE_SHOTS_SHOWN);
@@ -476,14 +456,12 @@ export class SiegeBattlefield<O> {
     return changed;
   }
 
-  /** why: the entry square counts. */
   private archerTarget(d: SiegeDefender<O>): SiegeMonster | undefined {
     let best: SiegeMonster | undefined;
     for (const m of this.monsters) if (m.lane === d.lane && this.monsterX(m) > d.square + EPS && (!best || this.monsterX(m) < this.monsterX(best))) best = m;
     return best;
   }
 
-  /** why: a leaping wolf is partway through the air. */
   private monsterX(m: SiegeMonster): number {
     if (m.state !== "leap") return m.x;
     const left = Math.max(0, m.leapEndsAt - this.clock.now());
@@ -513,7 +491,7 @@ export class SiegeBattlefield<O> {
     return d;
   }
 
-  /** why: the extra health is added to what it has left. */
+  /** why: upgrading preserves damage already taken. */
   upgrade(d: SiegeDefender<O>): void {
     if (siegeUpgradeCost(d.type, d.level) === null) return;
     const stats = SIEGE_DEFENDERS[d.type];
@@ -523,7 +501,6 @@ export class SiegeBattlefield<O> {
     d.maxHealth = maxHealth;
   }
 
-  /** why: monsters only glide toward their target while the battle runs. */
   hostBoard(
     playing: boolean,
     ending: boolean,

@@ -56,7 +56,6 @@ export { FEEDBACK_MS } from "./stream.ts";
 export const SIEGE_NO_GOLD = "Not enough gold.";
 
 export interface SiegePlayer extends BasePlayer, AnswerTotals {
-  /** why: only this player earns and spends it. */
   gold: number;
   goldEarned: number;
   goldSpent: number;
@@ -64,7 +63,6 @@ export interface SiegePlayer extends BasePlayer, AnswerTotals {
   upgrades: number;
   archerUpgrades: number;
   wallUpgrades: number;
-  /** why: counts kills by defenders this player placed. */
   defeated: number;
   archerKills: number;
   lastPlaced: SiegeDefenderType | null;
@@ -73,15 +71,10 @@ export interface SiegePlayer extends BasePlayer, AnswerTotals {
 
 interface SiegeWaveLog {
   wave: number;
-  /** why: percent. */
   scale: number;
-  /** why: gold worth at wave start (defenders by health left, plus unspent gold). */
   defense: number;
-  /** why: 1 = no boost from a strong board. */
   boost: number;
-  /** why: the usual budget, raised by the boost. */
   budget: number;
-  /** why: monster health multiplier; 1 = none. */
   toughness: number;
   sent: number;
   /** why: counts run from this wave's start to the next one's (or game end). */
@@ -96,18 +89,15 @@ interface SiegeOptions {
   record?: SiegeRecord | null;
   onChange?: () => void;
   onActivity?: (playerId: string) => void;
-  /** why: tick changed only projector state (shots, monsters, defender hits); defaults to onChange. */
   onTick?: () => void;
   onFinish?: (game: SiegeGame) => void;
 }
 
 interface SiegeGameSettings extends SiegeSettings {
   shuffleAnswers: boolean;
-  /** why: the lobby's "Protect from abuse": longer waits after wrong answers in a row. */
   protect?: boolean;
 }
 
-/** why: battle runs in fixed SIEGE_TICK_MS steps on the game clock. */
 const SIEGE_AWARD_VALUES: Record<SiegeAwardKey, (p: SiegePlayer) => number> = {
   topArcher: (p) => p.archerKills,
   masterMason: (p) => p.placed.wall + p.wallUpgrades,
@@ -123,9 +113,7 @@ export class SiegeGame {
   /** why: kept so their stats stay in the results. */
   readonly kicked: SiegePlayer[] = [];
 
-  /** why: during a build break this is the next wave. */
   wave = 0;
-  /** why: percent. */
   scale = 100;
   outcome: SiegeResult["outcome"] | null = null;
   readonly waveLog: SiegeWaveLog[] = [];
@@ -253,7 +241,6 @@ export class SiegeGame {
     this.session.changed();
   }
 
-  /** why: also rescales difficulty from the stored answers and resets the counters. */
   private closePreviousWave(): (typeof this.waveLog)[number] | undefined {
     this.recordBattle();
     const prev = this.waveLog[this.waveLog.length - 1];
@@ -284,7 +271,6 @@ export class SiegeGame {
     this.session.changed();
   }
 
-  /** why: defenders count by health left, plus unspent gold. */
   defenseGold(): number {
     return this.battlefield.boardGold() + [...this.players.values()].reduce((sum, p) => sum + p.gold, 0);
   }
@@ -322,7 +308,6 @@ export class SiegeGame {
     this.session.changed();
   }
 
-  /** why: returns null on success, or why it couldn't be placed. */
   place(playerId: string, type: unknown, lane: unknown, square: unknown): string | null {
     const p = this.players.get(playerId);
     if (!p) return "You're not in this game.";
@@ -342,7 +327,6 @@ export class SiegeGame {
     return null;
   }
 
-  /** why: the extra health is added to what it has left. */
   upgrade(playerId: string, lane: unknown, square: unknown): string | null {
     const p = this.players.get(playerId);
     if (!p) return "You're not in this game.";
@@ -391,7 +375,6 @@ export class SiegeGame {
     this.session.changed();
   }
 
-  /** why: skips the cinematic. */
   end(): void {
     if (this.session.finished) return;
     if (!this.outcome) {
@@ -484,7 +467,6 @@ export class SiegeGame {
     return Math.max(0, this.wave - 1);
   }
 
-  /** why: percent. */
   avgScale(): number {
     if (this.waveLog.length === 0) return 100;
     return Math.round(this.waveLog.reduce((n, w) => n + w.scale, 0) / this.waveLog.length);
@@ -591,7 +573,6 @@ export class SiegeGame {
   }
 }
 
-/** why: one row per player (kicked included) with the class result, then a wave log row per wave. */
 function siegeColumns(game: SiegeGame): Column<SiegePlayer>[] {
   const r = game.result();
   const result = r.outcome === "stands" ? "Stood" : r.outcome === "fallen" ? "Fell" : "Ended";

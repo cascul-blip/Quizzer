@@ -27,16 +27,12 @@ const SUB_AWARD_VALUES: Record<SubAwardKey, (p: SubPlayer) => number> = {
 };
 export const ESCAPED_MS = 3500;
 export const CAUGHT_MS = 4000;
-/** why: measured in seconds of fish travel. */
 export const GAP_START = 30;
 export const GAP_MAX = 45;
-/** why: the fish closes 1 gap-second per second on level 1, +25% per level. */
-const SPEED_STEP = 0.25;
-/** why: a full squad's boosts are worth this many gap-seconds per player-boost-cycle; divided by players. */
+const FISH_SPEED_INCREASE_PER_LEVEL = 0.25;
 export const BOOST_POWER = 35;
-/** why: boosts to clear a level = BOOSTS_BASE + players. */
 export const BOOSTS_BASE = 3;
-/** why: the phone needs ~2 s of holding. */
+/** why: the server accepts a boost a little before the end of the phone's two-second hold. */
 export const BOOST_MIN_HOLD_MS = 1500;
 export const DIVE_SYMBOLS = 5;
 const DIVE_ADVANCE_FRACTION = 0.7;
@@ -50,7 +46,7 @@ export const LOOKALIKES = 3;
 const PLAYERS_PER_INSTRUCTOR = 6;
 const MAX_INSTRUCTORS = 4;
 
-export const speedFor = (level: number) => 1 + SPEED_STEP * (level - 1);
+export const speedFor = (level: number) => 1 + FISH_SPEED_INCREASE_PER_LEVEL * (level - 1);
 
 export interface SubPlayer extends BasePlayer, AnswerTotals {
   state: "question" | "boost" | "waiting";
@@ -95,9 +91,9 @@ export class SubGame {
   lastBoost: { seq: number; nickname: string; avatar: AvatarChoice } | null = null;
   instructors: Instructor[] = [];
 
-  private gapValue = GAP_START;
-  private gapAt = 0;
-  private boostPower = BOOST_POWER;
+  private storedGapSeconds = GAP_START;
+  private gapUpdatedAtMs = 0;
+  private boostGapSeconds = BOOST_POWER;
   private boostSeq = 0;
   private readonly session: StreamedSession<SubPlayer, SubPhase, Podium<SubPlayer, SubPlayer, SubAwardKey>>;
 
@@ -168,7 +164,6 @@ export class SubGame {
     this.session.dispose();
   }
 
-  /** why: an instructor's symbol timeout has its own slot on the phase timer. */
   private symbolSlot(ins: Instructor): string {
     return `symbol:${ins.playerId}`;
   }
@@ -182,20 +177,19 @@ export class SubGame {
   }
 
   gap(now = this.session.clock.now()): number {
-    if (this.phase !== "chase") return this.gapValue;
-    return Math.max(0, this.gapValue - (this.speed * (now - this.gapAt)) / 1000);
+    if (this.phase !== "chase") return this.storedGapSeconds;
+    return Math.max(0, this.storedGapSeconds - (this.speed * (now - this.gapUpdatedAtMs)) / 1000);
   }
 
-  /** why: after a dive the fish starts as far back as a boost can push it. */
-  private startChase(gap = GAP_START): void {
+  private startChase(gapSeconds = GAP_START): void {
     const players = this.connectedCount();
     this.session.phases.enter("chase");
     this.instructors = [];
     this.boosts = 0;
     this.required = BOOSTS_BASE + players;
-    this.boostPower = BOOST_POWER / players;
-    this.gapValue = gap;
-    this.gapAt = this.session.clock.now();
+    this.boostGapSeconds = BOOST_POWER / players;
+    this.storedGapSeconds = gapSeconds;
+    this.gapUpdatedAtMs = this.session.clock.now();
     for (const p of this.players.values()) {
       if (p.state === "waiting") p.state = "question";
       this.session.stream.open(p);
@@ -213,7 +207,7 @@ export class SubGame {
 
   private caught(): void {
     this.session.phases.dispose();
-    this.gapValue = 0;
+    this.storedGapSeconds = 0;
     this.session.phases.set("caught", CAUGHT_MS, () => this.end());
     this.session.changed();
   }
@@ -235,8 +229,8 @@ export class SubGame {
     const p = this.players.get(playerId);
     const now = this.session.clock.now();
     if (!p || this.phase !== "chase" || p.state !== "boost" || now - p.boostReadyAt < BOOST_MIN_HOLD_MS) return false;
-    this.gapValue = Math.min(GAP_MAX, this.gap(now) + this.boostPower);
-    this.gapAt = now;
+    this.storedGapSeconds = Math.min(GAP_MAX, this.gap(now) + this.boostGapSeconds);
+    this.gapUpdatedAtMs = now;
     this.boosts++;
     p.boosts++;
     p.state = "question";
@@ -252,7 +246,7 @@ export class SubGame {
 
   private escaped(): void {
     this.session.phases.cancel("catch");
-    this.gapValue = this.gap();
+    this.storedGapSeconds = this.gap();
     this.levelsCleared++;
     this.session.phases.set("escaped", ESCAPED_MS, () => this.startDive());
     this.session.changed();
@@ -266,7 +260,6 @@ export class SubGame {
     if (divers.length === 0) return this.nextLevel();
     const count = divers.length === 1 ? 1 : Math.min(MAX_INSTRUCTORS, Math.max(1, Math.ceil(divers.length / PLAYERS_PER_INSTRUCTOR)), divers.length - 1);
     const leads = divers.slice(0, count);
-    // why: every symbol in this dive is different, across all instructors.
     const symbols = shuffle(CHRISTMAS_GLYPHS.map(glyphId), this.session.rng);
     const freshSymbols = () => symbols.splice(0, DIVE_SYMBOLS);
     const rest = divers.slice(count);
@@ -304,7 +297,6 @@ export class SubGame {
     });
   }
 
-  /** why: only divers with connected phones can find the symbol. */
   private liveDivers(ins: Instructor): number {
     return ins.group.filter((id) => this.players.get(id)?.connected).length;
   }
@@ -318,7 +310,6 @@ export class SubGame {
     const t = parseGlyph(target)!;
     const near = shuffle(variantsOf(t).map(glyphId), this.session.rng).slice(0, LOOKALIKES);
     const grid = [target, ...near];
-    // why: other families fill the remaining slots, keeping exactly three close matches.
     const fillers = shuffle(CHRISTMAS_GLYPHS.filter((g) => g.family !== t.family).map(glyphId), this.session.rng);
     grid.push(...fillers.slice(0, GRID_SIZE - grid.length));
     return shuffle(grid, this.session.rng);
@@ -363,7 +354,6 @@ export class SubGame {
   }
 
   join(rawNickname: unknown, avatar?: AvatarChoice | null): SubPlayer {
-    // why: joining mid-dive waits for the next level (like Kahoot).
     const diving = this.phase === "dive";
     const p = this.session.addPlayer(rawNickname, avatar, (base) => ({ ...this.newPlayer(base), state: diving ? "waiting" : "question" }));
     this.session.changed();
@@ -388,7 +378,6 @@ export class SubGame {
     for (const ins of this.instructors) {
       ins.group = ins.group.filter((id) => id !== playerId);
       ins.found.delete(playerId);
-      // why: an instructor who leaves (or loses their whole group) is done.
       if (ins.playerId === playerId || ins.group.length === 0) ins.index = DIVE_SYMBOLS;
     }
     if (this.phase === "dive" && this.instructors.every((i) => i.index >= DIVE_SYMBOLS)) this.nextLevel();
@@ -396,7 +385,6 @@ export class SubGame {
     return p;
   }
 
-  /** why: the squad shares one depth, so the results list top boosters first, then the most correct. */
   private buildPodium(): Podium<SubPlayer, SubPlayer, SubAwardKey> {
     const players = [...this.players.values()];
     return buildPodium({
@@ -503,7 +491,6 @@ export class SubGame {
   }
 }
 
-/** why: the squad's final depth is in every row. */
 function subColumns(game: SubGame): Column<SubPlayer>[] {
   return [
     { header: "Nickname", value: (p) => p.nickname },
