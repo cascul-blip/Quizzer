@@ -3,7 +3,6 @@ import { Window } from "happy-dom";
 import { render } from "preact";
 import { act } from "preact/test-utils";
 
-/** why: the monotonic clock advances separately from timer callbacks. */
 export function usePhoneDom() {
   const window = new Window();
   const vibrate = mock((_ms: number) => true);

@@ -3,7 +3,7 @@ import type { AvatarChoice } from "../../shared/avatars.ts";
 import type { Pacing, QuestionView } from "../../shared/mode-views.ts";
 import type { JoinInfo } from "../../shared/protocol.ts";
 import { Avatar } from "../shared/avatar-art.tsx";
-import { PinBoard, PinNote } from "../shared/pin.tsx";
+import { PinBoard, ProjectorPinNote } from "../shared/pin.tsx";
 import { play } from "../shared/sounds.ts";
 import { Tex } from "../shared/tex.tsx";
 import { optionColor, Shape, useCountdown } from "../shared/ui.tsx";
@@ -153,8 +153,8 @@ export function PacedQuestionScreen({
               image={pin.image}
               spots={pin.spots}
               labels={q.options}
-              correct={open ? undefined : [...correct]}
-              pickCountsBySpot={open ? undefined : counts}
+              correctSpotIndexes={open ? undefined : [...correct]}
+              revealPickCountsBySpot={open ? undefined : counts}
             />
           ) : !open && q.type !== "text" ? (
             <div class="bars" role="img" aria-label="Answer distribution">
@@ -190,7 +190,7 @@ export function PacedQuestionScreen({
       </div>
       {q.type === "text" && open && <p class="typing-note">Type your answer on your phone</p>}
       {pin ? (
-        <PinNote open={open} labels={[...correct].map((i) => q.options[i]!)} />
+        <ProjectorPinNote open={open} labels={[...correct].map((i) => q.options[i]!)} />
       ) : (
         <div class={`tiles n${q.options.length}`}>
           {q.options.map((text, i) => {
@@ -229,7 +229,6 @@ export function NextButton({ pacing, send, label }: { pacing: Pacing; send: Send
   );
 }
 
-// why: avatars shrink as they crowd and overflow as "+N".
 const MAX_PICKER_AVATARS = 24;
 
 function PickerAvatars({ avatars, dim }: { avatars: AvatarChoice[]; dim: boolean }) {

@@ -8,11 +8,10 @@ import { keysOf } from "../src/shared/keys-of.ts";
 import type { GameMode } from "../src/shared/mode-entries.ts";
 import { SHARED_MODES } from "../src/shared/mode-entries.ts";
 
-/** why: looks through elements' children only, not into components. */
-function holds(tree: ComponentChildren, node: unknown): boolean {
+function containsInChildren(tree: ComponentChildren, node: unknown): boolean {
   if (tree === node) return true;
-  if (Array.isArray(tree)) return tree.some((child) => holds(child, node));
-  if (tree && typeof tree === "object" && "props" in tree) return holds((tree.props as { children?: ComponentChildren }).children, node);
+  if (Array.isArray(tree)) return tree.some((child) => containsInChildren(child, node));
+  if (tree && typeof tree === "object" && "props" in tree) return containsInChildren((tree.props as { children?: ComponentChildren }).children, node);
   return false;
 }
 
@@ -25,7 +24,7 @@ describe("Lobby mode entries", () => {
     test.if(SHARED_MODES[mode].flags.paced)(`${SHARED_MODES[mode].name}'s settings panel places the shared rows`, () => {
       const rows = h("span", { class: "shared-rows" });
       const Settings = lobbyEntryOf(mode).Settings as FunctionComponent<LobbySettingsProps<GameMode>>;
-      expect(holds(Settings({ settings: MODES[mode].defaultSettings, send: () => {}, children: rows }), rows)).toBe(true);
+      expect(containsInChildren(Settings({ settings: MODES[mode].defaultSettings, send: () => {}, children: rows }), rows)).toBe(true);
     });
   }
 });

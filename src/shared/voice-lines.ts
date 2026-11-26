@@ -1,4 +1,4 @@
-// why: each id names an MP3 in src/client/shared/voice/; snowman values label user recordings' cues rather than transcribe them.
+// why: Snowman labels describe when user recordings play because their spoken words can vary.
 export const VOICE_LINES = {
   lookwarm: "Snowman: before the attack",
   frostyaim: "Snowman: attack missed",

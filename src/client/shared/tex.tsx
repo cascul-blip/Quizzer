@@ -18,14 +18,12 @@ function renderMath(tex: string): string {
   return html;
 }
 
-/** why: Question or option text with `$…$` maths typeset by KaTeX. Plain text renders as it always did. */
 export function Tex({ text }: { text: string }) {
   const parts = splitMath(text);
   if (parts.length === 1 && typeof parts[0] === "string") return <>{parts[0]}</>;
   return <>{parts.map((p) => (typeof p === "string" ? p : <span class="tex" dangerouslySetInnerHTML={{ __html: renderMath(p.math) }} />))}</>;
 }
 
-/** why: Several answers or labels, each typeset like <Tex>, joined by `sep`. */
 export function TexList({ items, sep }: { items: string[]; sep: string }) {
   return (
     <>

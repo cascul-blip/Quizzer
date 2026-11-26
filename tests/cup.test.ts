@@ -36,8 +36,7 @@ function seeded(seed = 42) {
   return () => (s = (s * 1664525 + 1013904223) % 2 ** 32) / 2 ** 32;
 }
 
-/** why: plays back fixed values first so a test can choose the poison cup, then falls back to a seeded rng. */
-function scripted(values: number[]) {
+function scriptedThenSeededRng(values: number[]) {
   const rest = seeded();
   return { values, rng: () => (values.length > 0 ? values.shift()! : rest()) };
 }
@@ -133,7 +132,7 @@ describe("Cup of Death", () => {
   });
 
   test("players who fall short pick a cup; a safe drink costs them that cup", () => {
-    const { rng, values } = scripted([]);
+    const { rng, values } = scriptedThenSeededRng([]);
     const { game, clock } = setup(["A", "B"], rng);
     const a = byName(game, "A");
     const b = byName(game, "B");
@@ -169,7 +168,7 @@ describe("Cup of Death", () => {
 
   for (const theme of ["classic", "christmas"] as const)
     test(`${theme}: an eliminating cup knocks the player out; they keep answering for practice`, () => {
-      const { rng, values } = scripted([]);
+      const { rng, values } = scriptedThenSeededRng([]);
       const { game, clock } = setup(["A", "B", "C"], rng, CUP_DEFAULT_CUPS, theme);
       const a = byName(game, "A");
       const c = byName(game, "C");
@@ -187,7 +186,6 @@ describe("Cup of Death", () => {
       expect(game.hostView().players.find((p) => p.id === b.id)!.out).toBe(true);
       clock.advance(CUP_VERDICT_MS);
       expect(game.phase).toBe("roll");
-      // why: poisoned players may answer any time, but it doesn't count toward anything.
       expect(game.playerView(b.id)!.question).not.toBeNull();
       answer(game, clock, b, true);
       expect(b.progress).toBe(0);
@@ -228,7 +226,7 @@ describe("Cup of Death", () => {
 
   for (let cups = CUP_MIN_CUPS; cups <= CUP_MAX_CUPS; cups++) {
     test(`with ${cups} cups, they run out one by one, and the last cup is certain death`, () => {
-      const { rng, values } = scripted([]);
+      const { rng, values } = scriptedThenSeededRng([]);
       const { game, clock } = setup(["A", "B"], rng, cups);
       const a = byName(game, "A");
       const b = byName(game, "B");
@@ -255,7 +253,6 @@ describe("Cup of Death", () => {
       expect(b.outRound).toBe(cups);
       expect(b.poisonedFrom).toBe(1);
       expect(game.phase).toBe("podium");
-      // why: B survived their first cup, or (with one cup) there was no luck in it, so no "Unluckiest".
       expect(game.hostView().awards!.earliestFirstCupOut).toBeNull();
     });
   }
@@ -280,15 +277,14 @@ describe("Cup of Death", () => {
     expect(game.phaseDurationMs).toBe(3 * (CUP_SIP_MS + CUP_VERDICT_MS));
   });
 
-  test("the reveal goes one drinker at a time", () => {
-    const { rng, values } = scripted([]);
+  test("the reveal shows the first drinker survive before eliminating the second", () => {
+    const { rng, values } = scriptedThenSeededRng([]);
     const { game, clock } = setup(["A", "B", "C"], rng);
     toQuiz(game, clock);
     makeSafe(game, clock, byName(game, "A"));
     endQuiz(game, clock);
     const [first, second] = game.drinkers;
     game.pick(first!, 0);
-    // why: these draws leave the first drinker safe (cup 2) and poison the second (cup 0).
     values.push(0.9, 0);
     game.pick(second!, 0);
     let r = game.hostView().reveal!;
@@ -307,7 +303,7 @@ describe("Cup of Death", () => {
   });
 
   test("last one standing wins", () => {
-    const { rng, values } = scripted([]);
+    const { rng, values } = scriptedThenSeededRng([]);
     const { game, clock, finished } = setup(["A", "B"], rng);
     toQuiz(game, clock);
     makeSafe(game, clock, byName(game, "A"));
@@ -326,10 +322,9 @@ describe("Cup of Death", () => {
   });
 
   test("if everyone left is poisoned in the same round, they share the win", () => {
-    const { rng, values } = scripted([]);
+    const { rng, values } = scriptedThenSeededRng([]);
     const { game, clock } = setup(["A", "B", "C"], rng);
     const c = byName(game, "C");
-    // why: round 1 poisons C; A and B survive.
     toQuiz(game, clock);
     endQuiz(game, clock);
     for (const id of game.drinkers) {
@@ -339,7 +334,6 @@ describe("Cup of Death", () => {
     clock.advance(game.phaseEndsAt - clock.now());
     expect(c.outRound).toBe(1);
     expect(game.phase).toBe("roll");
-    // why: round 2 poisons both A and B.
     toQuiz(game, clock);
     endQuiz(game, clock);
     values.push(0);
@@ -365,7 +359,7 @@ describe("Cup of Death", () => {
   });
 
   test("a solo game runs until its player is poisoned", () => {
-    const { rng, values } = scripted([]);
+    const { rng, values } = scriptedThenSeededRng([]);
     const { game, clock } = setup(["Solo"], rng);
     const p = byName(game, "Solo");
     toQuiz(game, clock);
@@ -393,7 +387,7 @@ describe("Cup of Death", () => {
   });
 
   test("ending mid-reveal still counts the drinks already poured", () => {
-    const { rng, values } = scripted([]);
+    const { rng, values } = scriptedThenSeededRng([]);
     const { game, clock } = setup(["A", "B", "C"], rng);
     toQuiz(game, clock);
     makeSafe(game, clock, byName(game, "A"));
@@ -412,13 +406,12 @@ describe("Cup of Death", () => {
     ["christmas", "First flight"],
   ] as const)
     test(`awards (${theme})`, () => {
-      const { rng, values } = scripted([]);
+      const { rng, values } = scriptedThenSeededRng([]);
       const { game, clock } = setup(["A", "B", "C"], rng, CUP_DEFAULT_CUPS, theme);
       const [a, c] = ["A", "C"].map((n) => byName(game, n)) as [CupPlayer, CupPlayer];
       toQuiz(game, clock);
       makeSafe(game, clock, a);
       endQuiz(game, clock);
-      // why: B survives; C is poisoned by the first cup they drink.
       for (const id of game.drinkers) {
         values.push(id === c.id ? 0 : 0.999);
         game.pick(id, 0);

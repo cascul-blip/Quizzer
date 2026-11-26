@@ -1,4 +1,4 @@
-// why: separate woff2 files, else Bun inlines every font into the CSS (1.5 MB per phone).
+// why: Bun would inline the fonts into CSS, making phones download them even when no question uses maths.
 
 import f0 from "katex/dist/fonts/KaTeX_AMS-Regular.woff2";
 import f1 from "katex/dist/fonts/KaTeX_Caligraphic-Bold.woff2";

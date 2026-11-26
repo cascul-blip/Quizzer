@@ -8,11 +8,10 @@ import { Bar } from "./common.tsx";
 import { PLAYER_MODES } from "./modes.tsx";
 
 export function LobbyScreen({ view, onAvatarPick }: { view: PlayerLobbyView; onAvatarPick: (choice: AvatarChoice) => void }) {
-  // why: show a pick straight away; the next snapshot from the server confirms it.
-  const [picked, setPicked] = useState<AvatarChoice | null>(null);
+  const [pendingAvatar, setPendingAvatar] = useState<AvatarChoice | null>(null);
   const server = view.me.avatar;
-  useEffect(() => setPicked(null), [server.avatar, server.accessory]);
-  const look = picked ?? server;
+  useEffect(() => setPendingAvatar(null), [server.avatar, server.accessory]);
+  const look = pendingAvatar ?? server;
   const banner = PLAYER_MODES[view.mode].banner;
   return (
     <div class="game">
@@ -32,7 +31,7 @@ export function LobbyScreen({ view, onAvatarPick }: { view: PlayerLobbyView; onA
         <AvatarPicker
           value={look}
           onPick={(choice) => {
-            setPicked(choice);
+            setPendingAvatar(choice);
             onAvatarPick(choice);
           }}
         />

@@ -1,18 +1,11 @@
-/** why: each mode file declares its own; src/shared/mode-entries.ts collects them. */
 export interface SharedModeEntry<T extends string = string> {
-  /** why: the one plain name; a seasonal theme may only decorate how the client shows it. */
   name: string;
   flags: {
-    /** why: host sets pacing and moves on; pacing carries to the next lobby, which offers shuffle. */
     paced: boolean;
-    /** why: enables "Protect from abuse" (wrong streaks lengthen the wait) and its lobby toggle. */
     protect: boolean;
   };
-  /** why: lobby phones show the mode's banner instead of the plain waiting screen. */
   lobbyBanner: boolean;
-  /** why: the hub routes phone messages to the mode by these types. */
   msgTypes: readonly T[];
-  /** why: read by both server and projector, so labels live here. */
   awards?: Readonly<Record<string, string>>;
 }
 

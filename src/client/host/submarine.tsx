@@ -38,10 +38,9 @@ function useLiveGap(view: SubView): number {
   return Math.max(0, base.current.gap - (view.speed * (performance.now() - base.current.at)) / 1000);
 }
 
-// why: at gap 0 the goblin's hands reach the back of the sled; at the max gap it's mostly off-screen.
-const GOBLIN_TOUCH_LEFT = 32;
-const GOBLIN_FAR_LEFT = -15;
-const LUNGE_LEFT = 3;
+const GOBLIN_CONTACT_LEFT_PCT = 32;
+const GOBLIN_MAX_GAP_LEFT_PCT = -15;
+const GOBLIN_LUNGE_OFFSET_PCT = 3;
 const LUNGE_MS = 450;
 const GRAB_MS = 140;
 const GRAB_AT_MS = LUNGE_MS + GRAB_MS + 60;
@@ -65,8 +64,7 @@ function useCatchClock(caught: boolean): number {
 
 const easeOut = (t: number) => 1 - (1 - Math.max(0, Math.min(1, t))) ** 3;
 
-// why: a multiple of the cruise pace; the host writes it into a ref the backdrop reads.
-function paceFor(phase: SubView["phase"], level: number, boosting: boolean): number {
+function backdropPaceMultiplier(phase: SubView["phase"], level: number, boosting: boolean): number {
   const cruise = 1 + 0.14 * (Math.min(level, 8) - 1);
   if (phase === "chase") return cruise * (boosting ? 2.5 : 1);
   if (phase === "escaped") return cruise * 2.8;
@@ -84,7 +82,6 @@ function useSledRiders(players: SubView["players"], boost: SubView["lastBoost"])
     const timer = setInterval(() => setOffset((n) => n + 1), 6000);
     return () => clearInterval(timer);
   }, []);
-  // why: the stage re-renders every frame during the chase, so keep the same array until the riders change.
   return useMemo(() => {
     const connected = players.filter((p) => p.connected);
     const pool = connected.length ? connected : players;
@@ -107,14 +104,14 @@ export function SubmarineStage({ view, send }: { view: SubView; send: Send }) {
   const closeness = caught ? 1 : Math.max(0, Math.min(1, 1 - gap / view.maxGap));
   const catchMs = useCatchClock(caught);
   const goblinLeft = caught
-    ? GOBLIN_TOUCH_LEFT + LUNGE_LEFT * easeOut(catchMs / LUNGE_MS)
-    : GOBLIN_TOUCH_LEFT - (gap / view.maxGap) * (GOBLIN_TOUCH_LEFT - GOBLIN_FAR_LEFT);
+    ? GOBLIN_CONTACT_LEFT_PCT + GOBLIN_LUNGE_OFFSET_PCT * easeOut(catchMs / LUNGE_MS)
+    : GOBLIN_CONTACT_LEFT_PCT - (gap / view.maxGap) * (GOBLIN_CONTACT_LEFT_PCT - GOBLIN_MAX_GAP_LEFT_PCT);
   const grabbed = caught && catchMs >= GRAB_AT_MS;
   const secs = useCountdown(view.phaseRemainingMs, `${view.phase}:${view.level}`);
 
   const boost = useEventFlash(view.lastBoost, view.lastBoost?.seq, 700);
   const [pops, setPops] = useState<NonNullable<SubView["lastBoost"]>[]>([]);
-  // why: not in the effect cleanup, which also runs when the flash ends.
+  // why: the boost flash ends before the notice expires, so its cleanup would cancel notice removal.
   const popTimers = useRef(new Set<ReturnType<typeof setTimeout>>());
   useEffect(() => () => popTimers.current.forEach(clearTimeout), []);
   useEffect(() => {
@@ -132,8 +129,8 @@ export function SubmarineStage({ view, send }: { view: SubView; send: Send }) {
   }, [view.phase]);
   const faces = useSledRiders(view.players, boost);
   const paceRef = useRef(0);
-  paceRef.current = paceFor(view.phase, view.level, !!boost);
-  // why: the stage re-renders every frame during the chase; reusing these lets Preact skip diffing them.
+  paceRef.current = backdropPaceMultiplier(view.phase, view.level, !!boost);
+  // why: chase frames update the goblin position, so keep those updates from diffing the sled and backdrop.
   const sledMoving = view.phase === "chase" || view.phase === "escaped";
   const backdrop = useMemo(() => <WinterBackdrop paceRef={paceRef} />, []);
   const sled = useMemo(() => <DogSled riders={faces} moving={sledMoving} boosting={!!boost} />, [faces, sledMoving, !!boost]);

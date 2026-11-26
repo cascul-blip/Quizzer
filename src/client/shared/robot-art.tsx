@@ -1,4 +1,3 @@
-// why: board coordinates are u across (0 = left) and v toward the viewer (0 = far row, next to the robot).
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { ROBOT_BOARD, robotRing } from "../../shared/modes/robot.ts";
@@ -22,19 +21,19 @@ const CX = ARENA_W / 2;
 // changing any of them misplaces every tile. tests/robot-art.test.ts checks this.
 const NEAR_EDGE_SCREEN_Y = 800;
 const FAR_EDGE_SCREEN_Y = 360;
-// why: how much farther away the far row is than the near row.
-const DEPTH = 0.55;
-// why: tile width at the near edge.
-export const TILE = 84;
-const H0 = (NEAR_EDGE_SCREEN_Y - FAR_EDGE_SCREEN_Y) / (1 - 1 / (1 + DEPTH));
+const FAR_ROW_EXTRA_DEPTH = 0.55;
+const NEAR_EDGE_TILE_WIDTH = 84;
+
+export const TILE = NEAR_EDGE_TILE_WIDTH;
+
+const H0 = (NEAR_EDGE_SCREEN_Y - FAR_EDGE_SCREEN_Y) / (1 - 1 / (1 + FAR_ROW_EXTRA_DEPTH));
 const HORIZON = NEAR_EDGE_SCREEN_Y - H0;
 export const EDGE = 18;
 const AVATARS_SHOWN_PER_TILE = 3;
 
-// why: s is the perspective scale at that point.
-export function project(u: number, v: number): { x: number; y: number; s: number } {
-  const z = 1 + (DEPTH * (ROBOT_BOARD - v)) / ROBOT_BOARD;
-  return { x: CX + ((u - ROBOT_BOARD / 2) * TILE) / z, y: HORIZON + H0 / z, s: 1 / z };
+export function project(columnFromLeft: number, rowFromRobot: number): { x: number; y: number; s: number } {
+  const z = 1 + (FAR_ROW_EXTRA_DEPTH * (ROBOT_BOARD - rowFromRobot)) / ROBOT_BOARD;
+  return { x: CX + ((columnFromLeft - ROBOT_BOARD / 2) * NEAR_EDGE_TILE_WIDTH) / z, y: HORIZON + H0 / z, s: 1 / z };
 }
 
 export const quad = (u: number, v: number) => {
@@ -116,7 +115,6 @@ const ARM_SEGMENTS = REST_ARMS.map((pts) =>
   pts.slice(1).map((p, i) => ({ len: Math.hypot(p.x - pts[i]!.x, p.y - pts[i]!.y), ang: Math.atan2(p.y - pts[i]!.y, p.x - pts[i]!.x) })),
 );
 const SWAY_PERIOD_MS = 7000;
-// why: it builds up joint by joint toward the tip.
 const SWAY_BEND_PER_JOINT_RAD = 0.03;
 // why: the lag between joints makes the arm ripple instead of swinging stiffly.
 const SWAY_JOINT_LAG_RAD = 0.35;
@@ -168,7 +166,6 @@ export interface ArenaPlayer {
 export function RobotArena(props: {
   players: ArenaPlayer[];
   marked: number[];
-  // why: the number of rings already destroyed.
   inset?: number;
   collapsing?: number[];
   // why: seq keys the animation so every attack restarts it.
@@ -271,12 +268,11 @@ export function Pieces({
   players,
   hit,
   me,
-  zapDelay,
+  zapDelay: zapDelayS,
 }: {
   players: ArenaPlayer[];
   hit: Set<string>;
   me: string | null;
-  // why: seconds until each hit player's flicker starts, when not the default.
   zapDelay?: Map<string, number>;
 }) {
   const byTile = new Map<number, ArenaPlayer[]>();
@@ -294,7 +290,7 @@ export function Pieces({
     const v = Math.floor(i / ROBOT_BOARD);
     const shown = list.slice(0, AVATARS_SHOWN_PER_TILE);
     const c = project(u + 0.5, v + 0.62);
-    const size = TILE * 0.95 * c.s;
+    const size = NEAR_EDGE_TILE_WIDTH * 0.95 * c.s;
     shown
       .map((p, k) => ({ p, k }))
       .reverse()
@@ -310,7 +306,7 @@ export function Pieces({
             class={`piece ${hit.has(p.id) ? "zapped" : ""} ${p.id === me ? "mine" : ""}`}
             style={{
               transform: `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`,
-              ...(zapDelay?.has(p.id) ? { "--zap-delay": `${zapDelay.get(p.id)!.toFixed(2)}s` } : {}),
+              ...(zapDelayS?.has(p.id) ? { "--zap-delay": `${zapDelayS.get(p.id)!.toFixed(2)}s` } : {}),
             }}
           >
             <ellipse cx={size / 2} cy={size * 0.98} rx={size * 0.34} ry={size * 0.09} fill="rgba(0,0,0,0.45)" />
@@ -352,7 +348,14 @@ function Lasers({ marked, tips }: { marked: number[]; tips: Pt[] }) {
           <g key={i} style={{ animationDelay: delay }} class="beam">
             <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} class="beam-glow" style={{ animationDelay: delay }} />
             <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} class="beam-core" style={{ animationDelay: delay }} />
-            <ellipse cx={to.x} cy={to.y} rx={TILE * 0.35 * to.s} ry={TILE * 0.14 * to.s} class="scorch" style={{ animationDelay: delay }} />
+            <ellipse
+              cx={to.x}
+              cy={to.y}
+              rx={NEAR_EDGE_TILE_WIDTH * 0.35 * to.s}
+              ry={NEAR_EDGE_TILE_WIDTH * 0.14 * to.s}
+              class="scorch"
+              style={{ animationDelay: delay }}
+            />
           </g>
         );
       })}
@@ -363,12 +366,11 @@ function Lasers({ marked, tips }: { marked: number[]; tips: Pt[] }) {
 const ARM_ROOT_THICKNESS = [34, 28, 34];
 const TAPER = 0.933;
 const armH = (k: number, j: number) => ARM_ROOT_THICKNESS[k]! * TAPER ** j;
-// why: these are multiples of the arm thickness at that joint.
-const SEGMENT_PULLBACK = 0.15;
-const CONNECTOR_OVERLAP = 0.45;
-const CONNECTOR_THICKNESS = 1.05;
-const SOCKET_LENGTH = 1.4;
-const SOCKET_WIDTH = 1.2;
+const SEGMENT_PULLBACK_PER_THICKNESS = 0.15;
+const CONNECTOR_OVERLAP_PER_THICKNESS = 0.45;
+const CONNECTOR_WIDTH_PER_THICKNESS = 1.05;
+const SOCKET_LENGTH_PER_THICKNESS = 1.4;
+const SOCKET_WIDTH_PER_THICKNESS = 1.2;
 const SOCKET_SHARE_BEHIND_PORT = 0.35;
 const f1 = (n: number) => n.toFixed(1);
 const deg = (y: number, x: number) => (Math.atan2(y, x) * 180) / Math.PI;
@@ -386,8 +388,8 @@ function MechArm({ pts, k }: { pts: Pt[]; k: number }) {
     const len = Math.hypot(b.x - a.x, b.y - a.y);
     const dx = (b.x - a.x) / len;
     const dy = (b.y - a.y) / len;
-    const g0 = i > 0 ? SEGMENT_PULLBACK * armH(k, i) : 0;
-    const g1 = i < n - 1 ? SEGMENT_PULLBACK * armH(k, i + 1) : 0;
+    const g0 = i > 0 ? SEGMENT_PULLBACK_PER_THICKNESS * armH(k, i) : 0;
+    const g1 = i < n - 1 ? SEGMENT_PULLBACK_PER_THICKNESS * armH(k, i + 1) : 0;
     const s = { x: a.x + dx * g0, y: a.y + dy * g0 };
     S.push(s);
     E.push({ x: b.x - dx * g1, y: b.y - dy * g1 });
@@ -424,8 +426,8 @@ function MechArm({ pts, k }: { pts: Pt[]; k: number }) {
       vx = (p1.x - p0.x) / l0 + (p2.x - p1.x) / l1;
       vy = (p1.y - p0.y) / l0 + (p2.y - p1.y) / l1;
     }
-    const len = d + 2 * CONNECTOR_OVERLAP * h;
-    const w = CONNECTOR_THICKNESS * h;
+    const len = d + 2 * CONNECTOR_OVERLAP_PER_THICKNESS * h;
+    const w = CONNECTOR_WIDTH_PER_THICKNESS * h;
     cons.push(
       <image
         key={`c${j}`}
@@ -452,8 +454,8 @@ function MechArm({ pts, k }: { pts: Pt[]; k: number }) {
 function ArmSocket({ k }: { k: number }) {
   const p0 = REST_ARMS[k]![0]!;
   const p1 = REST_ARMS[k]![1]!;
-  const len = SOCKET_LENGTH * ARM_ROOT_THICKNESS[k]!;
-  const w = SOCKET_WIDTH * ARM_ROOT_THICKNESS[k]!;
+  const len = SOCKET_LENGTH_PER_THICKNESS * ARM_ROOT_THICKNESS[k]!;
+  const w = SOCKET_WIDTH_PER_THICKNESS * ARM_ROOT_THICKNESS[k]!;
   const a = (ARM_SEGMENTS[k]![0]!.ang * 180) / Math.PI;
   return (
     <image
@@ -560,7 +562,6 @@ export function MiniBoard({
   const shift = { x: (MINI_RADIUS - me.x) * cell, y: (MINI_RADIUS - me.y) * cell };
   return (
     <svg class={`mini-board ${ROBOT_SKIN}`} viewBox={`0 0 ${span} ${span}`} role="img" aria-label={`You are on column ${me.x + 1}, row ${me.y + 1}`}>
-      {/* why: the svg box can be wider or taller than the map. */}
       <clipPath id="mini-window">
         <rect x={0} y={0} width={span} height={span} rx={2} />
       </clipPath>

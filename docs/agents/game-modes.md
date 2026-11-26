@@ -21,6 +21,8 @@ Issues and docs name a mode by its plain name; the code uses its key (`src/serve
 
 Add a new mode's row here, and put its design notes in `docs/modes/`.
 
+Robot Attack uses the seasonal snowman artwork while `ROBOT_SKIN` is `"snowman"`. To restore the standard artwork after the season, set it to `"robot"` in [robot-skin.ts](../../src/client/shared/robot-skin.ts).
+
 # Lobby handoff
 
 GameHub gives the mode entry the quiz, choices, player identities and team assignments, then installs the game before activation. It remembers the lobby choices after activation succeeds. If activation fails, GameHub restores the lobby and disposes of the new game.
@@ -39,7 +41,7 @@ The [mode entry ADR](../adr/0002-route-game-behavior-through-mode-entries.md) re
 
 A mode's server knowledge lives in its entry: a `ModeEntry` (`src/server/game/mode-entry.ts`) exported from the mode's own file in `src/server/game/`, collected in `MODES` (`src/server/game/modes.ts`). `MODES` is typed over `GameMode`, so a mode without an entry is a compile error. The hub, lobby and handoff look the entry up by `game.runningMode` and never branch on the mode; `tests/standards.test.ts` enforces that.
 
-Lobby imports the registry. Put code that needs both Lobby and the registry in a separate module, as in [phone message dispatch](../../src/server/game/phone-message-dispatch.ts). The cycle check in `tests/standards.test.ts` includes type-only imports.
+Lobby imports the registry. Put code that needs both Lobby and the registry in a separate module, as in [phone message dispatch](../../src/server/game/phone-message-dispatch.ts). The cycle check in `tests/standards.test.ts` includes type-only imports. When a refactor breaks a listed cycle, remove its entry from `KNOWN_CYCLES`. Keep that list limited to the cycles grandfathered by the check.
 
 Every mode ends through its Game finish (`GameFinish` in `src/server/game/phase-timer.ts`), built on its phase timer (the paced modes use `paced.phases`). Call `gameFinish.finish()` from `end()` and from wherever play runs out; pass only the mode's own clean-up, and check `gameFinish.finished` for "already over". The paced modes (Classic, Racer, Duel, Memory Game) own theirs through their Paced session (`src/server/game/paced-session.ts`): call `session.end()` and check `session.finished` instead. Finishing cancels every timer, the phase's and every slot, so no mode keeps a timer running on the podium (Classic, Showdown, Racer, Memory Game and Kingdom Siege used to). The clean-up runs before the podium is entered: Kingdom Siege computes its result there and Cup of Death pours the rest of the reveal. Memory Game no longer catches finish errors itself.
 
@@ -70,12 +72,16 @@ The following checklist covers adding a mode. "Compiler" marks the places where 
 - [ ] Music tracks: a new track id goes in `THEMED_MODES` for a themed mode's screen, else in `OTHER_TRACKS` (`src/shared/music-tracks.ts`), and its track in `TRACKS` (`src/client/shared/music/tracks.ts`, compiler once the id exists).
 - [ ] Themes: a themed mode's entry in `THEMED_MODES` (`src/shared/themed-modes.ts`): its default theme, its screens, and for each theme its name, icon and the track each screen plays. The cue and lobby track read tracks with `themedTrack` and choose only intensity; `MUSIC_TRACKS` builds the mode's rows from the table, and `tests/themed-modes.test.ts` independently checks every theme × screen → track. Update its expected tracks when deliberately changing a mapping. Theme words beyond the name (Kingdom Siege's defenders, say) go in the mode file.
 - [ ] Art: keep shared rules in `src/shared/<mode>-rules.ts` when needed, and bundle assets in `src/client/shared/<mode>/`. Modes with selectable themes use `src/client/shared/<mode>-art.tsx` and `<mode>-skin.tsx` (`createSkin("<mode>")`). A mode with one fixed theme can expose its art through a shared registry, as Gift Grab and Memory Game do.
-- [ ] Tests: in `tests/game-modes.test.ts`, the `CHANGED`, `TEAMS` and `PHONE_MSG` tables (compiler). Put the mode's own rules in `tests/<mode>.test.ts`.
+- [ ] Tests: in `tests/game-modes.test.ts`, the `CHANGED`, `TEAM_COUNTS_WITH_CHANGED_SETTINGS` and `PHONE_MSG` tables (compiler). Put the mode's own rules in `tests/<mode>.test.ts`.
 - [ ] `README.md`: the mode's section, and the list of modes under "Protect from abuse".
 
 The preview pages in `scripts/*-preview/` and `scripts/winter-art/` import the mode view types, so a renamed view field must be renamed there too. `bun run typecheck` covers them.
 
 To remove a mode, delete it from each of these places, then run `bun run typecheck`, which lists any references left.
+
+# Projector cues
+
+For sound and voice cues scheduled with `useDelayedCues`, call the hook before the effect that schedules cues. On a phase change its cleanup must clear the previous phase's timers before the new phase queues its cues.
 
 # Testing mode timers
 
@@ -83,3 +89,7 @@ Tests run each mode on a `FakeClock` from its test file's `setup` and move time 
 
 - Showdown's phase countdown runs only with `pacing: "auto"`. Under manual pacing the reveal waits for the host and `phaseRemainingMs` stays put.
 - In Tower Fight, a player reaches the `decide` state only after taking damage. Have another player shoot them before calling `earnDecision` (`tests/fight.test.ts`).
+
+# Phone reconnect
+
+Keep the phone mode screen mounted on resume for the same mode. Use `PhoneResumeVersion` when a countdown needs the server's fresh timing after reconnect. See the [view delivery ADR](../adr/0003-deliver-phone-views-from-per-socket-baselines.md) for how the phone handles the first snapshot.

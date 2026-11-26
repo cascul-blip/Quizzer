@@ -1,12 +1,10 @@
 export type DuelOutcome = "win" | "lose" | "stay";
 
 export interface DuelAnswerInfo {
-  /** why: null means didn't answer (or was away). */
   correct: boolean | null;
   answerDurationMs: number | null;
 }
 
-/** why: an odd count makes the bottom arena a 3-way duel; under 4 players share one arena. */
 export function pairArenas<T>(order: readonly T[]): T[][] {
   const arenas: T[][] = [];
   if (order.length === 0) return arenas;
@@ -20,7 +18,6 @@ export function pairArenas<T>(order: readonly T[]): T[][] {
 const AnswerRank = { RIGHT: 0, WRONG: 1, NO_ANSWER: 2 } as const;
 const tier = (d: DuelAnswerInfo) => (d.correct === true ? AnswerRank.RIGHT : d.correct === false ? AnswerRank.WRONG : AnswerRank.NO_ANSWER);
 
-/** why: negative when `a` did better (comparator contract). */
 export function compareDuelists(a: DuelAnswerInfo, b: DuelAnswerInfo): number {
   const t = tier(a) - tier(b);
   if (tier(a) !== tier(b) || tier(a) === AnswerRank.NO_ANSWER) return t;
@@ -29,7 +26,6 @@ export function compareDuelists(a: DuelAnswerInfo, b: DuelAnswerInfo): number {
   return am - bm;
 }
 
-/** why: only a strict best wins and a strict worst loses, so exact ties stay; nobody right is a draw. */
 export function duelOutcome(duelists: readonly DuelAnswerInfo[]): { outcomes: DuelOutcome[]; draw: boolean } {
   const outcomes: DuelOutcome[] = duelists.map(() => "stay");
   if (duelists.length < 2) return { outcomes, draw: false };
@@ -41,7 +37,6 @@ export function duelOutcome(duelists: readonly DuelAnswerInfo[]): { outcomes: Du
   return { outcomes, draw: !outcomes.includes("win") && !outcomes.includes("lose") };
 }
 
-/** why: a boundary swaps only when the upper arena has a loser and the lower a winner; late joiners go last. */
 export function climbLadder<T>(order: readonly T[], arenas: readonly (readonly T[])[], outcomes: readonly (readonly DuelOutcome[])[]): T[] {
   const sorted = arenas.map((arena, k) => {
     const out = outcomes[k] ?? [];
@@ -63,12 +58,10 @@ export function climbLadder<T>(order: readonly T[], arenas: readonly (readonly T
   return [...ladder, ...order.filter((id) => !placed.has(id))];
 }
 
-/** why: `arena` is 1-based from the top, so the bottom arena is worth 1. */
-export function arenaPoints(arena: number, arenaCount: number): number {
-  return Math.max(1, arenaCount - arena + 1);
+export function arenaPoints(arenaNumber: number, arenaCount: number): number {
+  return Math.max(1, arenaCount - arenaNumber + 1);
 }
 
-/** why: arenas are 1-based. */
 export function arenaOf<T>(order: readonly T[]): Map<T, number> {
   const map = new Map<T, number>();
   pairArenas(order).forEach((arena, k) => arena.forEach((id) => map.set(id, k + 1)));

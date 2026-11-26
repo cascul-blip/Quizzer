@@ -10,15 +10,13 @@ import {
   HUMAN_TIME_S,
   humanize,
   impulseResponse,
-  playRich,
   richStyle,
   STRUM_S,
   saturationCurve,
   seeded,
+  tryPlayRich,
 } from "../src/client/shared/music/rich.ts";
 import { TRACKS } from "../src/client/shared/music/tracks.ts";
-
-// why: tests have no AudioContext, so this stand-in records every node made and source started.
 
 class FakeParam {
   value = 0;
@@ -196,12 +194,12 @@ describe("arcade style (Racer)", () => {
 
   test("has a rich version of every instrument the Racer tracks use, drums included", () => {
     const insts = new Set(racer.flatMap((t) => t.layers.map((l) => l.inst)));
-    for (const inst of insts) expect(playRich(fake(), dest(new FakeCtx()), inst, 1, 220, 0.2, 1, 0, "arcade"), inst).toBe(true);
+    for (const inst of insts) expect(tryPlayRich(fake(), dest(new FakeCtx()), inst, 1, 220, 0.2, 1, 0, "arcade"), inst).toBe(true);
   });
 
   test("the acoustic style still leaves drums to the plain sound, so Kingdom Siege's drums are unchanged", () => {
     for (const inst of ["snare", "hat", "kick", "woodblock", "timpani", "cymbal"])
-      expect(playRich(fake(), dest(new FakeCtx()), inst, 1, 220, 0.2, 1, 0, "acoustic"), inst).toBe(false);
+      expect(tryPlayRich(fake(), dest(new FakeCtx()), inst, 1, 220, 0.2, 1, 0, "acoustic"), inst).toBe(false);
   });
 
   test("leads go to the echo when there is one; nothing else does", () => {

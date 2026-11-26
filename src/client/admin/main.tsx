@@ -340,12 +340,12 @@ function blankQuestion(type: Question["type"], taken: Set<string>): Question {
   while (taken.has(id));
   if (type === "true_false") return { id, type, text: "", timeLimitSec: DEFAULT_TIME_LIMIT, options: [...TF_OPTIONS], correct: [0] };
   if (type === "text") return { id, type, text: "", timeLimitSec: DEFAULT_TIME_LIMIT, options: [""], correct: [0] };
-  if (type === "pin") return { id, type, text: "", timeLimitSec: PIN_TIME_LIMIT, options: [], spots: [], correct: [] };
+  if (type === "pin") return { id, type, text: "", timeLimitSec: PIN_TIME_LIMIT_SEC, options: [], spots: [], correct: [] };
   return { id, type, text: "", timeLimitSec: DEFAULT_TIME_LIMIT, options: ["", "", "", ""], correct: [] };
 }
 
 /** why: pin questions take longer: find the spot, drag, submit. */
-const PIN_TIME_LIMIT = 30;
+const PIN_TIME_LIMIT_SEC = 30;
 
 function questionIssues(q: Question): string[] {
   const issues: string[] = [];
@@ -529,7 +529,7 @@ function Editor({ id, notify }: { id: string; notify: (m: string) => void }) {
             index={i}
             count={draft.questions.length}
             onChange={(nq) => setQ(i, nq)}
-            onLater={(fn) => {
+            onUpdateCurrentQuestion={(fn) => {
               const d = latest.current;
               if (d) setDraft({ ...d, questions: d.questions.map((x) => (x.id === q.id ? fn(x) : x)) });
             }}
@@ -568,7 +568,7 @@ function Editor({ id, notify }: { id: string; notify: (m: string) => void }) {
 }
 
 /** why: the server already shrinks images for phones; this only rescues files too big to upload. */
-async function shrinkImage(file: File): Promise<Blob> {
+async function shrinkImageForUpload(file: File): Promise<Blob> {
   if (file.size <= MAX_MEDIA_BYTES || file.type === "image/gif") return file; // why: GIFs may be animated
   try {
     const bmp = await createImageBitmap(file);
@@ -580,7 +580,7 @@ async function shrinkImage(file: File): Promise<Blob> {
     bmp.close();
     const encode = (type: string) => new Promise<Blob | null>((res) => canvas.toBlob(res, type, 0.85));
     let out = await encode("image/webp");
-    if (out?.type !== "image/webp") out = await encode("image/jpeg"); // why: Safari can't encode WebP
+    if (out?.type !== "image/webp") out = await encode("image/jpeg"); // why: browsers without WebP encoding may return a different MIME type.
     return out && out.size < file.size ? out : file;
   } catch {
     return file;
@@ -593,13 +593,13 @@ function QuestionEditor(props: {
   count: number;
   onChange: (q: Question) => void;
   /** why: applied by id after an await so edits made meanwhile survive; dropped if the question is gone. */
-  onLater: (update: (q: Question) => Question) => void;
+  onUpdateCurrentQuestion: (update: (q: Question) => Question) => void;
   onMove: (delta: number) => void;
   onDuplicate: () => void;
   onDelete: () => void;
   notify: (m: string) => void;
 }) {
-  const { q, index, count, onChange, onLater, notify } = props;
+  const { q, index, count, onChange, onUpdateCurrentQuestion, notify } = props;
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const issues = questionIssues(q);
@@ -610,7 +610,7 @@ function QuestionEditor(props: {
     const { spots: _, ...rest } = q;
     if (type === "true_false") onChange({ ...rest, type, options: [...TF_OPTIONS], correct: [0] });
     else if (type === "text") onChange({ ...rest, type, options: [""], correct: [0] });
-    else if (type === "pin") onChange({ ...rest, type, options: [], spots: [], correct: [], timeLimitSec: Math.max(q.timeLimitSec, PIN_TIME_LIMIT) });
+    else if (type === "pin") onChange({ ...rest, type, options: [], spots: [], correct: [], timeLimitSec: Math.max(q.timeLimitSec, PIN_TIME_LIMIT_SEC) });
     else onChange({ ...rest, type, options: ["", "", "", ""], correct: [] });
   }
 
@@ -631,9 +631,9 @@ function QuestionEditor(props: {
   async function upload(file: File) {
     setUploading(true);
     try {
-      const body = await shrinkImage(file);
+      const body = await shrinkImageForUpload(file);
       const { ref } = await api<{ ref: string }>("/api/media", { method: "POST", headers: { "content-type": body.type }, body });
-      onLater((current) => ({ ...current, image: ref }));
+      onUpdateCurrentQuestion((current) => ({ ...current, image: ref }));
     } catch (e) {
       notify(`Image upload failed: ${(e as Error).message}`);
     } finally {
@@ -783,11 +783,11 @@ function PinSpotsEditor({ q, onChange, onRemove }: { q: Question; onChange: (q: 
   const full = spots.length >= MAX_PIN_SPOTS;
 
   const setAnswer = (i: number) => onChange({ ...q, correct: [i] });
-  function addSpot(x: number, y: number) {
+  function addSpot(xFraction: number, yFraction: number) {
     if (full) return;
     let n = 0;
     while (q.options.includes(pinLabel(n))) n++;
-    onChange({ ...q, spots: [...spots, { x, y }], options: [...q.options, pinLabel(n)] });
+    onChange({ ...q, spots: [...spots, { x: xFraction, y: yFraction }], options: [...q.options, pinLabel(n)] });
   }
 
   const onDown = (e: PointerEvent) => {
@@ -817,7 +817,7 @@ function PinSpotsEditor({ q, onChange, onRemove }: { q: Question; onChange: (q: 
   return (
     <div class="pin-editor">
       <div class="pin-editor-board" onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={() => (drag.current = null)}>
-        <PinBoard image={q.image} spots={spots} labels={q.options} correct={q.correct} boardRef={board} onImageClick={addSpot} />
+        <PinBoard image={q.image} spots={spots} labels={q.options} correctSpotIndexes={q.correct} boardRef={board} onImageClick={addSpot} />
       </div>
       <p class="note">
         {full ? `That's the most spots (${MAX_PIN_SPOTS}). ` : "Click the picture to add a spot. "}

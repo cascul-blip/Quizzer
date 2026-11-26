@@ -12,7 +12,6 @@ export function fewest<T>(value: (t: T) => number): RankKey<T> {
   return (a, b) => cmp(value(a), value(b));
 }
 
-/** why: competition ranks (1, 2, 2, 4); `then` only orders within a shared place, and the stable sort keeps input order for full ties. */
 export function rankBy<T extends object>(items: readonly T[], order: RankKey<T>[], then: RankKey<T>[] = []): Ranked<T>[] {
   const by = (keys: RankKey<T>[]) => (a: T, b: T) => {
     for (const key of keys) {

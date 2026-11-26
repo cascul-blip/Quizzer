@@ -41,9 +41,7 @@ interface QuestionState {
 }
 
 export interface StreamRules<P> {
-  /** why: outside it the phone shows no question and no feedback. */
   canAnswer: (player: P) => boolean;
-  /** why: the lobby's "Protect from abuse" setting. */
   penalizeGuessing?: boolean;
 }
 
@@ -82,7 +80,6 @@ export class QuestionStream<P extends AnswerTotals = AnswerTotals> {
     if (!state.current) this.deal(state);
   }
 
-  /** why: both show only while the player can answer; errors are on the host's view (`errorsWhen`). */
   fragment(player: P): StreamFragment {
     return this.rules.canAnswer(player) ? { question: this.questionView(player), feedback: this.feedbackView(player) } : { question: null, feedback: null };
   }
@@ -126,7 +123,6 @@ export class QuestionStream<P extends AnswerTotals = AnswerTotals> {
     state.current = { seq: (state.current?.seq ?? 0) + 1, qIndex, options: [...shown.options], correct: [...shown.correct] };
   }
 
-  /** why: null means rejected: player can't answer now, stale seq, still in the feedback flash, or invalid option. */
   answer(player: P, seq: number, answer: AnswerValue): boolean | null {
     if (!this.rules.canAnswer(player)) return null;
     const state = this.state(player);

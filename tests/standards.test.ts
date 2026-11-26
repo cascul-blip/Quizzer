@@ -40,7 +40,6 @@ const gameClasses = sources
   .filter(({ path }) => path.startsWith(join(SERVER, "game")))
   .flatMap(({ lines }) => lines.flatMap((line) => [...line.matchAll(/export class (\w*Game)\b/g)].map((m) => m[1]!)));
 
-// why: a mode's server behaviour belongs in its entry (collected in MODES); other code looks it up by game.runningMode.
 describe("Coding standards: mode entries", () => {
   test("finds the game classes", () => {
     expect(gameClasses).toContain("ClassicGame");
@@ -81,9 +80,7 @@ describe("Coding standards: server time", () => {
   });
 });
 
-/** why: a game mode times its phases and other timers on its PhaseTimer (src/server/game/phase-timer.ts). */
 const CLOCK_TIMER = /\bclock\s*\.\s*(?:setTimeout|clearTimeout)\b/;
-/** why: its PhaseTimer holds phase timing, so a remainingMs method or phase deadline field is a duplicate. */
 const OWN_PHASE_TIME =
   /^\s*(?:(?:private|protected|public|readonly|static|override|get)\s+)*(?:remainingMs\s*(?:\(\s*\)|=)|phase(?:EndsAt|Deadline|Timer|Timeout|Start(?:edAt)?)\s*\??\s*[:=])/;
 
@@ -124,7 +121,6 @@ describe("Coding standards: phase timer", () => {
 });
 
 const DIRECT_SOCKET_OPEN = /\.\s*onOpen\s*\(/;
-/** why: a temp directory belongs in an afterEach, not a test's own finally block. */
 const FINALLY_CLEANUP = /\bfinally\s*\{[^}]*\.cleanup\(\)/;
 function describeTempDirs(text: string): number[] {
   const lines = text.split("\n");
@@ -286,7 +282,6 @@ function srcFiles(dir: string): string[] {
   });
 }
 
-/** why: these mode-entry cycles predate the check; remove a line when a refactor breaks one. Add none. */
 const KNOWN_CYCLES = [
   "src/server/game/cup.ts -> src/server/game/mode-entry.ts -> src/server/game/cup.ts",
   "src/server/game/duel.ts -> src/server/game/mode-entry.ts -> src/server/game/duel.ts",
@@ -324,7 +319,6 @@ function codeFiles(dir: string): string[] {
   });
 }
 
-// why: keysOf (src/shared/keys-of.ts) checks each key against the table, unlike a cast.
 describe("Coding standards: checked casts", () => {
   test("no code casts Object.keys", () => {
     const files = ["src", "tests"].flatMap((d) => codeFiles(join(ROOT, d))).map(read);

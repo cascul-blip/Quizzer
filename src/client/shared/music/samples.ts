@@ -1,23 +1,17 @@
-// why: a sampled note is the nearest recording re-pitched; until it is decoded playSample returns false
-// and the synth voice plays, so music never waits on a download.
 import type { SampleSet, Zone } from "./samples/manifest.ts";
 import { SAMPLE_SETS } from "./samples/manifest.ts";
 
 type Ctx = BaseAudioContext;
 
 interface Voice {
-  // why: defaults to the instrument's own recordings.
   set?: string;
-  /** why: Matches the level of the synthesized voice it replaces, so the tracks keep their mix. */
+  // why: Match the synth voice levels so arrangements keep their mix when samples take over.
   level: number;
-  /** why: Seconds the sound carries on past the written note (a struck string rings), then fades over `release`. */
   ring: number;
   release: number;
-  /** why: Seconds to fade in (a pad swells); 0 keeps the recording's own attack. */
   attack?: number;
 }
 
-/** why: Instruments that stay synthesized (chiptune and sound effects) aren't listed. */
 export const VOICES: Record<string, Voice> = {
   piano: { level: 0.75, ring: 0.9, release: 0.35 },
   strings: { level: 0.73, ring: 0, release: 0.2 },
@@ -43,7 +37,6 @@ export const VOICES: Record<string, Voice> = {
   woodblock: { level: 0.39, ring: 0.25, release: 0.05 },
 };
 
-/** why: An accented drum hit uses the harder stroke, a little louder too. */
 const ACCENT_GAIN_FACTOR = 1.15;
 
 const setOf = (inst: string): SampleSet | undefined => SAMPLE_SETS[VOICES[inst]?.set ?? inst];
@@ -55,7 +48,6 @@ export function urlsFor(inst: string): string[] {
 }
 
 let enabled = true;
-/** why: Turn the recordings off (the `?music=synth` escape hatch, and for comparing). */
 export function setSamplesEnabled(on: boolean): void {
   enabled = on;
 }
@@ -73,12 +65,12 @@ function download(url: string, get: Fetcher): Promise<ArrayBuffer | null> {
   return p;
 }
 
-/** why: Start downloading recordings before there is an audio context to decode them in (it needs a click first). */
+// why: Prefetch before the browser lets a user gesture unlock the context for decoding.
 export function prefetchSamples(instruments: Iterable<string>, get: Fetcher = fromNetwork): void {
   for (const inst of instruments) for (const url of urlsFor(inst)) void download(url, get);
 }
 
-/** why: Download (if needed) and decode these instruments' recordings; resolves when they are ready or have failed. */
+// why: The promise resolves even on decode failure so a missing recording cannot block playback.
 export function loadSamples(ctx: Ctx, instruments: Iterable<string>, get: Fetcher = fromNetwork): Promise<void> {
   let done = buffers.get(ctx);
   if (!done) buffers.set(ctx, (done = new Map()));
@@ -104,14 +96,13 @@ export function loadSamples(ctx: Ctx, instruments: Iterable<string>, get: Fetche
   return Promise.all(all).then(() => {});
 }
 
-/** why: Whether every recording this instrument needs is decoded (so its notes never mix two sounds). */
+// why: Wait for the whole instrument’s recordings to avoid alternating recorded and synthesized timbres.
 export function samplesReady(ctx: Ctx, inst: string): boolean {
   const done = buffers.get(ctx);
   const urls = urlsFor(inst);
   return !!done && urls.length > 0 && urls.every((u) => done.get(u));
 }
 
-/** why: The recording nearest a MIDI note: the one needing the least re-pitching. */
 export function nearestZone(zones: Zone[], midi: number): Zone {
   let best = zones[0]!;
   for (const z of zones) if (Math.abs(z.root - midi) < Math.abs(best.root - midi)) best = z;
@@ -120,8 +111,7 @@ export function nearestZone(zones: Zone[], midi: number): Zone {
 
 const midiOf = (freq: number) => 69 + 12 * Math.log2(freq / 440);
 
-// why: drums ignore `freq`; false means play the synthesized voice instead (no recordings, or not ready).
-export function playSample(ctx: Ctx, dest: AudioNode, inst: string, t: number, freq: number, len: number, vol: number, detune = 0, accent = false): boolean {
+export function tryPlaySample(ctx: Ctx, dest: AudioNode, inst: string, t: number, freq: number, len: number, vol: number, detune = 0, accent = false): boolean {
   const voice = VOICES[inst];
   const set = setOf(inst);
   if (!enabled || !voice || !set || !samplesReady(ctx, inst)) return false;
@@ -138,17 +128,18 @@ export function playSample(ctx: Ctx, dest: AudioNode, inst: string, t: number, f
   }
   src.detune.value = detune;
   const g = ctx.createGain();
-  const end = t + len + voice.ring;
-  if (voice.attack) {
+  const { ring: ringS, attack: attackS, release: releaseS } = voice;
+  const ringEndS = t + len + ringS;
+  if (attackS) {
     g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(level, t + Math.min(voice.attack, len * 0.5));
+    g.gain.linearRampToValueAtTime(level, t + Math.min(attackS, len * 0.5));
   } else {
     g.gain.setValueAtTime(level, t);
   }
-  g.gain.setValueAtTime(level, end);
-  g.gain.setTargetAtTime(0, end, voice.release / 4);
+  g.gain.setValueAtTime(level, ringEndS);
+  g.gain.setTargetAtTime(0, ringEndS, releaseS / 4);
   src.connect(g).connect(dest);
   src.start(t);
-  src.stop(end + voice.release);
+  src.stop(ringEndS + releaseS);
   return true;
 }

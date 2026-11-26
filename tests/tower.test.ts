@@ -13,14 +13,8 @@ import {
   sweepMsFor,
   TowerGame,
 } from "../src/server/game/tower.ts";
-import { EGG_LEVELS_ABOVE } from "../src/shared/modes/tower.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
 import { FakeClock, sampleQuiz } from "./helpers.ts";
-
-/** why: rows are 0-based, hence the -1. */
-function eggRowFor(floors: number): number {
-  return floors + EGG_LEVELS_ABOVE - 1;
-}
 
 function allYesQuiz(): Quiz {
   return sampleQuiz({
@@ -65,7 +59,6 @@ function answer(game: TowerGame, clock: FakeClock, p: TowerPlayer, right: boolea
   const cur = game.playerView(p.id)!.question!;
   const option = right ? cur.options.indexOf("yes") : cur.options.findIndex((option) => option !== "yes");
   expect(game.answer(p.id, cur.seq, option)).toBe(true);
-  // why: the flash is hidden once the player moves on to building.
   clock.advance(FEEDBACK_MS);
 }
 
@@ -400,9 +393,9 @@ describe("monster", () => {
     game.teams[1]!.columns = [8, 9, 8];
     game.teams[2]!.columns = [20, 5, 13];
     clock.advance(60_000);
-    expect(egg(game, 0)).toEqual({ col: 0, row: eggRowFor(10) });
-    expect(egg(game, 1)).toEqual({ col: 0, row: eggRowFor(8) });
-    expect(egg(game, 2)).toEqual({ col: 1, row: eggRowFor(5) });
+    expect(egg(game, 0)).toEqual({ col: 0, row: 13 });
+    expect(egg(game, 1)).toEqual({ col: 0, row: 11 });
+    expect(egg(game, 2)).toEqual({ col: 1, row: 8 });
     for (const r of [0, 0.34, 0.67, 0.99]) {
       const g = play(["A", "B"], { minutes: 3, monster: true, rng: () => r });
       g.game.teams[0]!.columns = [9, 3, 12];
@@ -421,7 +414,7 @@ describe("monster", () => {
     blue!.columns = [4, 4, 5];
     yellow!.columns = [3, 3, 3];
     clock.advance(60_000);
-    expect(egg(game, 0)).toEqual({ col: 1, row: eggRowFor(1) });
+    expect(egg(game, 0)).toEqual({ col: 1, row: 4 });
 
     const r = byName(game, "Red1");
     red!.columns = [1, 4, 1];
@@ -442,7 +435,6 @@ describe("monster", () => {
     game.teams[1]!.columns = [1, 1, 1];
     game.teams[2]!.columns = [1, 1, 1];
     clock.advance(60_000);
-    // why: row 8 of column 0 is A's egg position, not B's (row 4).
     game.teams[1]!.columns = [8, 1, 1];
     dropInto(game, clock, byName(game, "B"), [1]);
     expect(game.egg).not.toBeNull();

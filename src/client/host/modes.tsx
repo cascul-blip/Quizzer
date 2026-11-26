@@ -27,7 +27,6 @@ export interface HostModeEntry<M extends GameMode> extends LobbyModeEntry<M> {
   cue(view: HostModeView<M>): MusicCue;
 }
 
-// why: this order is the Game mode menu order.
 export const HOST_MODES: { [M in GameMode]: HostModeEntry<M> } = {
   classic: {
     label: () => "Classic",

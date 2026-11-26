@@ -28,7 +28,7 @@ export function snowballBackground(arena: number, phone = isPhoneArt()): string 
 const warmed = new Set<string>();
 const held: HTMLImageElement[] = [];
 
-// why: one file at a time, so a whole class doesn't hit the Wi-Fi at once.
+// why: load serially to limit concurrent art requests per phone on the classroom Wi-Fi.
 function warmInOrder(srcs: string[], i = 0): void {
   const src = srcs[i];
   if (src === undefined) return;

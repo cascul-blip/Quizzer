@@ -28,6 +28,9 @@ _Avoid_: mode descriptor, mode metadata
 A game mode that can be shown in a seasonal theme (classic or Christmas). Its default theme, the name and icon it shows in each theme, and the music track each of its screens plays in each theme are declared together in one table. Several themed modes may share a track; the table is the one place that says so.
 _Avoid_: skinned mode, seasonal mode
 
+**Sting**:
+A short music track that plays once over the background music. Showdown plays a sting during its classic reveal.
+
 **Results sheet**:
 What a finished game saves for the host as a spreadsheet: one row per player in the game mode's order, under the columns the mode declares, and optionally a free-form appendix such as Kingdom Siege's wave log. Every row has one cell per column.
 _Avoid_: results table, results CSV (the CSV is the file written from it)
@@ -115,4 +118,22 @@ _Avoid_: reveal opportunity
 
 **High Noon** is Showdown's top arena, Arena 1 on Main Street, which the top two players fight in. Its winner stays there. Below it the arenas are numbered streets.
 
+**Reveal step** is one point in Showdown's projector animation for a round's reveal. The duelists face off, draw, fire, settle, then walk to their new arenas.
+
 **View batching** is building every view of one broadcast together, so work the views share (a ranking, a podium) is done once. A game mode opts in through its mode entry (Classic and Showdown do).
+
+**Pin question** is a question answered by selecting a spot on a picture. The quiz saves each spot's coordinates as fractions of the picture so spots keep their positions across screen sizes.
+
+**Confidence lever** is Racer's three-stop control for the driver's confidence in the team's next answer. The handle follows a drag continuously and selects the nearest stop as it moves.
+
+**Arena ladder** is the order Showdown uses to pair players. Arenas are numbered from High Noon down. An odd player count makes the bottom arena a three-way duel. A win earns one point in the bottom arena and one more for each arena above it. At each boundary, the upper arena’s loser swaps with the lower arena’s winner when both exist. Exact ties leave the tied players in place. An arena draws if nobody answers correctly or if nobody wins or loses.
+
+**Confidence** is the Racer driver’s locked lever choice for a turn. It sets how many correct answers the class needs to gain or keep its speed. Each fail halves the car’s speed and a drop below the crash threshold stops the car. The class can repair a crashed car by answering at least half correctly. The car covers ten minutes’ worth of travel at the speed it has after the turn settles.
+
+**Claim** is the currency Land Grab players spend to take tiles. A grass tile costs one claim and taking a rival tile costs two. A live rival start and its neighbors are protected from placement. A tile two steps away is guarded and costs at least two claims, including when it is grass. A team captures tiles by closing a ring around them with its own land. Capturing a rival start conquers that team, moves its players to the capturing team, and ends that start’s protection.
+
+**Purse** is one Kingdom Siege player’s unspent gold. Late arrivals receive the same starting purse as other players. The projector combines players’ purses to show the class total.
+
+**Thorns** is the damage a Kingdom Siege defender deals back to a monster that hits it.
+
+**Wave budget** is the allowance Kingdom Siege spends to pick ordinary monsters for a wave. Giants arrive separately. Class size and answer accuracy affect the allowance. The battlefield’s defense value can then boost the allowance and the monsters’ toughness.

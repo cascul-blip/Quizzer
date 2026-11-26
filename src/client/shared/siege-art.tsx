@@ -130,18 +130,14 @@ const TOYBOX_ART: Record<string, string> = {
   [wolfRunImg]: christmasWolfRunImg,
 };
 
-/** why: resolved at render time so lobby changes and both clients share one art path. */
 function ArtImage({ src, ...props }: JSX.IntrinsicElements["img"]) {
   const christmas = useChristmasSiege();
   return <img {...props} src={christmas && typeof src === "string" ? (TOYBOX_ART[src] ?? src) : src} />;
 }
 
-// why: these numbers come from ./siege/manifest.md; change them together with it.
-
-/** why: board.webp size in px; everything is placed in these pixels and drawn in % of them. */
-const BOARD = { w: 1344, h: 768 };
-const CASTLE = { w: 360, h: 768 };
-/** why: board px; square 1 is next to the wall and square 8 is the entry. */
+const BOARD_SIZE_PX = { w: 1344, h: 768 };
+const CASTLE_SIZE_PX = { w: 360, h: 768 };
+/** why: lane art coordinates must match the landmarks measured in ./siege/manifest.md. */
 const LANES: readonly { y0: number; y1: number; x: readonly (readonly [number, number])[] }[] = [
   {
     y0: 67,
@@ -214,78 +210,72 @@ const LANES: readonly { y0: number; y1: number; x: readonly (readonly [number, n
     ],
   },
 ];
-/** why: figures scale by lane height / FIGURE_LANE_PX; the anchor sits this share of lane height below the square centre. */
 const FIGURE_LANE_PX = 130;
-const ANCHOR_DROP = 0.12;
+const ANCHOR_DROP_LANE_FRACTION = 0.12;
 
 interface Canvas {
   w: number;
   h: number;
-  /** why: base centre, in the figure's own px. */
-  ax: number;
-  ay: number;
+  anchorXPx: number;
+  anchorYPx: number;
 }
 
 const FIGURES: Record<"archer" | "knight" | "wall" | SiegeMonsterType, Canvas> = {
-  archer: { w: 180, h: 220, ax: 82, ay: 188 },
-  knight: { w: 200, h: 240, ax: 99, ay: 205 },
-  wall: { w: 200, h: 180, ax: 91, ay: 135 },
-  goblin: { w: 150, h: 180, ax: 91, ay: 155 },
-  wolf: { w: 220, h: 160, ax: 113, ay: 123 },
-  troll: { w: 280, h: 300, ax: 162, ay: 252 },
-  giant: { w: 420, h: 520, ax: 226, ay: 440 },
+  archer: { w: 180, h: 220, anchorXPx: 82, anchorYPx: 188 },
+  knight: { w: 200, h: 240, anchorXPx: 99, anchorYPx: 205 },
+  wall: { w: 200, h: 180, anchorXPx: 91, anchorYPx: 135 },
+  goblin: { w: 150, h: 180, anchorXPx: 91, anchorYPx: 155 },
+  wolf: { w: 220, h: 160, anchorXPx: 113, anchorYPx: 123 },
+  troll: { w: 280, h: 300, anchorXPx: 162, anchorYPx: 252 },
+  giant: { w: 420, h: 520, anchorXPx: 226, anchorYPx: 440 },
 };
 
-/** why: listed back to front (draw order); pivots in the figure's px. */
-const KNIGHT_PIVOT = { body: [99, 136], head: [107, 83], sword: [84, 83], shield: [125, 84] } as const;
-const GIANT_PIVOT = { torso: [228, 290], head: [226, 119], right: [148, 143], left: [299, 98] } as const;
+const KNIGHT_PIVOTS_PX = { body: [99, 136], head: [107, 83], sword: [84, 83], shield: [125, 84] } as const;
+const GIANT_PIVOTS_PX = { torso: [228, 290], head: [226, 119], right: [148, 143], left: [299, 98] } as const;
 
-/** why: each point is where the detail's foot (or bottom-middle) goes on its figure's canvas. */
 const PENNANT = { w: 64, h: 96 };
-const ARCHER_PENNANT = { foot: [12, 95], ready: [151, 92], draw: [115, 4] } as const;
+const ARCHER_PENNANT_PLACEMENT_PX = { foot: [12, 95], ready: [151, 92], draw: [115, 4] } as const;
 const KNIGHT_PENNANT = { foot: [10, 95], at: [114, 118] } as const;
 const WALL_COURSE = { w: 130, h: 53, foot: [65, 39], at: [96, 52] } as const;
 const WALL_SPIKES = { w: 110, h: 79, foot: [55, 62], at: [96, 32] } as const;
 
 const pct = (v: number, of: number) => `${(v / of) * 100}%`;
 
-/** why: position is in squares: k = square k's centre, 0.5 = the wall face. */
-function laneX(lane: number, x: number): number {
+function laneX(lane: number, squarePosition: number): number {
   const squares = LANES[lane]!.x;
   const centre = (k: number) => (squares[k - 1]![0] + squares[k - 1]![1]) / 2;
-  if (x <= 1) return squares[0]![0] + (centre(1) - squares[0]![0]) * Math.max(0, (x - 0.5) * 2);
-  if (x >= 8) return centre(8) + (squares[7]![1] - centre(8)) * Math.min(1, (x - 8) * 2);
-  const k = Math.floor(x);
-  return centre(k) + (centre(k + 1) - centre(k)) * (x - k);
+  const WALL_FACE_SQUARE_POSITION = 0.5;
+  if (squarePosition <= 1) return squares[0]![0] + (centre(1) - squares[0]![0]) * Math.max(0, (squarePosition - WALL_FACE_SQUARE_POSITION) * 2);
+  if (squarePosition >= 8) return centre(8) + (squares[7]![1] - centre(8)) * Math.min(1, (squarePosition - 8) * 2);
+  const k = Math.floor(squarePosition);
+  return centre(k) + (centre(k + 1) - centre(k)) * (squarePosition - k);
 }
 
 function boardPoint(lane: number, x: number): { px: number; py: number; scale: number } {
   const l = LANES[Math.max(0, Math.min(LANES.length - 1, lane))]!;
   const h = l.y1 - l.y0;
-  return { px: laneX(lane, x), py: (l.y0 + l.y1) / 2 + ANCHOR_DROP * h, scale: h / FIGURE_LANE_PX };
+  return { px: laneX(lane, x), py: (l.y0 + l.y1) / 2 + ANCHOR_DROP_LANE_FRACTION * h, scale: h / FIGURE_LANE_PX };
 }
 
-/** why: lower figures draw on top, so figures nearer the viewer overlap the ones behind. */
 function placeStyle(c: Canvas, p: { px: number; py: number; scale: number }): JSX.CSSProperties {
   const w = c.w * p.scale;
   const h = c.h * p.scale;
   return {
-    left: pct(p.px - c.ax * p.scale, BOARD.w),
-    top: pct(p.py - c.ay * p.scale, BOARD.h),
-    width: pct(w, BOARD.w),
-    height: pct(h, BOARD.h),
+    left: pct(p.px - c.anchorXPx * p.scale, BOARD_SIZE_PX.w),
+    top: pct(p.py - c.anchorYPx * p.scale, BOARD_SIZE_PX.h),
+    width: pct(w, BOARD_SIZE_PX.w),
+    height: pct(h, BOARD_SIZE_PX.h),
     zIndex: Math.round(p.py),
-    "--ox": `${(c.ax / c.w) * 100}%`,
-    "--oy": `${(c.ay / c.h) * 100}%`,
+    "--ox": `${(c.anchorXPx / c.w) * 100}%`,
+    "--oy": `${(c.anchorYPx / c.h) * 100}%`,
   };
 }
 
-/** why: placed in the canvas's own px; full canvas size unless given. */
 function Layer({
   src,
   c,
-  box,
-  origin,
+  box: boxPx,
+  origin: pivotPx,
   class: cls = "",
   style,
 }: {
@@ -296,7 +286,7 @@ function Layer({
   class?: string;
   style?: JSX.CSSProperties;
 }) {
-  const [x, y, w, h] = box ?? [0, 0, c.w, c.h];
+  const [x, y, w, h] = boxPx ?? [0, 0, c.w, c.h];
   return (
     <ArtImage
       class={`siege-layer ${cls}`}
@@ -308,7 +298,7 @@ function Layer({
         top: pct(y, c.h),
         width: pct(w, c.w),
         height: pct(h, c.h),
-        ...(origin ? { transformOrigin: `${pct(origin[0] - x, w)} ${pct(origin[1] - y, h)}` } : {}),
+        ...(pivotPx ? { transformOrigin: `${pct(pivotPx[0] - x, w)} ${pct(pivotPx[1] - y, h)}` } : {}),
         ...style,
       }}
     />
@@ -336,9 +326,9 @@ export function SiegeBoard({
   const christmas = useChristmasSiege();
   const layer = castle === "fallen" ? castleFallenImg : hearts <= SIEGE_CRACKED_HEARTS ? castleCrackedImg : castleImg;
   return (
-    <div class={`siege-board ${christmas ? "siege-christmas" : ""} ${cls}`} style={{ aspectRatio: `${BOARD.w} / ${BOARD.h}` }}>
+    <div class={`siege-board ${christmas ? "siege-christmas" : ""} ${cls}`} style={{ aspectRatio: `${BOARD_SIZE_PX.w} / ${BOARD_SIZE_PX.h}` }}>
       <ArtImage class="siege-board-img" src={boardImg} alt="" draggable={false} />
-      <div class={`siege-castle ${castle}`} style={{ width: pct(CASTLE.w, BOARD.w) }}>
+      <div class={`siege-castle ${castle}`} style={{ width: pct(CASTLE_SIZE_PX.w, BOARD_SIZE_PX.w) }}>
         {castle === "crumble" ? (
           <>
             <ArtImage class="castle-fallen-under" src={castleFallenImg} alt="" draggable={false} />
@@ -362,19 +352,27 @@ export function SiegeBoard({
 
 function laneRect(lane: number): JSX.CSSProperties {
   const l = LANES[lane]!;
-  return { left: pct(l.x[0]![0], BOARD.w), top: pct(l.y0, BOARD.h), width: pct(l.x[7]![1] - l.x[0]![0], BOARD.w), height: pct(l.y1 - l.y0, BOARD.h) };
+  return {
+    left: pct(l.x[0]![0], BOARD_SIZE_PX.w),
+    top: pct(l.y0, BOARD_SIZE_PX.h),
+    width: pct(l.x[7]![1] - l.x[0]![0], BOARD_SIZE_PX.w),
+    height: pct(l.y1 - l.y0, BOARD_SIZE_PX.h),
+  };
 }
 
-/** why: shared by danger (a monster near the wall) and the giant's horn. */
 export function LaneFlash({ lane, kind }: { lane: number; kind: "danger" | "giant" }) {
   return <div class={`siege-lane-flash ${kind}`} style={laneRect(lane)} aria-hidden="true" />;
 }
 
 export function WarningArrow({ lane }: { lane: number }) {
   const l = LANES[lane]!;
-  const right = Math.min(BOARD.w - 6, l.x[7]![1]);
+  const right = Math.min(BOARD_SIZE_PX.w - 6, l.x[7]![1]);
   return (
-    <div class="siege-warning" style={{ left: pct(right - 46, BOARD.w), top: pct((l.y0 + l.y1) / 2 - 22, BOARD.h), zIndex: 2000 }} aria-hidden="true">
+    <div
+      class="siege-warning"
+      style={{ left: pct(right - 46, BOARD_SIZE_PX.w), top: pct((l.y0 + l.y1) / 2 - 22, BOARD_SIZE_PX.h), zIndex: 2000 }}
+      aria-hidden="true"
+    >
       ◀
     </div>
   );
@@ -415,7 +413,7 @@ function Archer({ level, drawing }: { level: number; drawing: boolean }) {
         <Layer
           src={lv2PennantArcherImg}
           c={c}
-          box={footBox(PENNANT, ARCHER_PENNANT.foot, drawing ? ARCHER_PENNANT.draw : ARCHER_PENNANT.ready)}
+          box={footBox(PENNANT, ARCHER_PENNANT_PLACEMENT_PX.foot, drawing ? ARCHER_PENNANT_PLACEMENT_PX.draw : ARCHER_PENNANT_PLACEMENT_PX.ready)}
           class="pennant"
         />
       )}
@@ -426,7 +424,7 @@ function Archer({ level, drawing }: { level: number; drawing: boolean }) {
 /** why: pieces draw in order, so the Lv 2 banner sits between legs and body (behind his back). */
 function Knight({ level, attackSeq }: { level: number; attackSeq: number }) {
   const c = FIGURES.knight;
-  const P = useChristmasSiege() ? toyboxManifest.knight.pivots : KNIGHT_PIVOT;
+  const P = useChristmasSiege() ? toyboxManifest.knight.pivots : KNIGHT_PIVOTS_PX;
   return (
     <>
       <Layer src={knightLegsImg} c={c} />
@@ -479,7 +477,7 @@ export function MonsterFigure({ m, x, posed }: { m: HostSiegeMonster; x: number;
 function monsterCanvas(type: SiegeMonsterType, christmas: boolean): Canvas {
   if (!christmas) return FIGURES[type];
   const { size, anchor } = toyboxManifest[type];
-  return { w: size[0]!, h: size[1]!, ax: anchor[0]!, ay: anchor[1]! };
+  return { w: size[0]!, h: size[1]!, anchorXPx: anchor[0]!, anchorYPx: anchor[1]! };
 }
 
 function monsterPose(type: Exclude<SiegeMonsterType, "giant">, action: boolean): string {
@@ -490,7 +488,7 @@ function monsterPose(type: Exclude<SiegeMonsterType, "giant">, action: boolean):
 
 function Giant({ attackSeq }: { attackSeq: number }) {
   const c = FIGURES.giant;
-  const P = useChristmasSiege() ? toyboxManifest.giant.pivots : GIANT_PIVOT;
+  const P = useChristmasSiege() ? toyboxManifest.giant.pivots : GIANT_PIVOTS_PX;
   return (
     <>
       <Layer src={giantLegsImg} c={c} />
@@ -516,7 +514,6 @@ export function FallenFigure({ type, lane, x, reachedWall }: { type: SiegeMonste
   );
 }
 
-/** why: anchored bottom-middle on the ground. */
 export function DustPuff({ at }: { at?: { lane: number; x: number } }) {
   if (!at) return <ArtImage class="siege-dust" src={dustImg} alt="" />;
   const p = boardPoint(at.lane, at.x);
@@ -527,7 +524,13 @@ export function DustPuff({ at }: { at?: { lane: number; x: number } }) {
       class="siege-dust loose"
       src={dustImg}
       alt=""
-      style={{ left: pct(p.px - w / 2, BOARD.w), top: pct(p.py - h, BOARD.h), width: pct(w, BOARD.w), height: pct(h, BOARD.h), zIndex: Math.round(p.py) + 1 }}
+      style={{
+        left: pct(p.px - w / 2, BOARD_SIZE_PX.w),
+        top: pct(p.py - h, BOARD_SIZE_PX.h),
+        width: pct(w, BOARD_SIZE_PX.w),
+        height: pct(h, BOARD_SIZE_PX.h),
+        zIndex: Math.round(p.py) + 1,
+      }}
     />
   );
 }
@@ -544,10 +547,10 @@ export function ArrowShot({ lane, from, to }: { lane: number; from: number; to: 
       src={arrowImg}
       alt=""
       style={{
-        left: pct(a.px, BOARD.w),
-        top: pct(a.py - lift, BOARD.h),
-        width: pct(w, BOARD.w),
-        height: pct(h, BOARD.h),
+        left: pct(a.px, BOARD_SIZE_PX.w),
+        top: pct(a.py - lift, BOARD_SIZE_PX.h),
+        width: pct(w, BOARD_SIZE_PX.w),
+        height: pct(h, BOARD_SIZE_PX.h),
         zIndex: 1500,
         "--dx": `${((b.px - a.px - w) / w) * 100}%`,
       }}

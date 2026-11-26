@@ -83,12 +83,6 @@ import { pickArt } from "./phone-art.ts";
 import { canvasUrl, loadImage } from "./tint.ts";
 import { teamInk } from "./ui.tsx";
 
-/** why: Land Grab's board and its art, shared by the projector and the phones. The art is the
- * storybook parchment map in ./land/; ./land/manifest.md says where each piece goes, how big it is
- * and how it is tinted. Phones get the half-size copies in ./land/phone/. The card, banner
- * and plinths are projector only.
- */
-
 const ART = {
   background: [backgroundImg, phoneBackgroundImg],
   "felt-tile": [feltTileImg, phoneFeltTileImg],
@@ -158,15 +152,14 @@ const hexPoints = (r: number, x = 0, y = 0) =>
 const TILE = hexPoints(TILE_R);
 
 const OWNER_BORDER_CORNERS = hexCorners(TILE_R);
-/** why: The parchment edge: every cell a little bigger, an ink outline under a darker paper band, so its outline follows the board. */
 const EDGE_INK_R = 1.17 * HEX_CORNER_RADIUS_SVG;
 const EDGE_R = 1.12 * HEX_CORNER_RADIUS_SVG;
 const INK = "#3a2412";
 const EDGE_PAPER_TILE_SIZE = 40;
 const EDGE_AND_SHADOW_MARGIN = 5 * TENTH_OF_HEX_RADIUS;
-/** why: The keep is 1.24 tiles wide; its anchor (the middle of its base) goes on the tile centre. */
-const KEEP_W = 1.24 * TILE_W;
-const KEEP_H = (KEEP_W * 801) / 552;
+const KEEP_WIDTH_IN_TILES = 1.24;
+const KEEP_WIDTH = KEEP_WIDTH_IN_TILES * TILE_W;
+const KEEP_HEIGHT = (KEEP_WIDTH * 801) / 552;
 const KEEP_ANCHOR = { x: 0.496, y: 0.85 };
 const BADGE_DISC_TILE_HEIGHT = 0.27;
 const BADGE_DISC_PICTURE_FILL = 0.8;
@@ -181,11 +174,9 @@ const POP = PLACE_POP_TILES * TILE_W;
 
 const GRASS: LandArtId[] = ["grass-1", "grass-2", "grass-3", "grass-4"];
 const CLAIMED: LandArtId[] = ["claimed-1", "claimed-2", "claimed-3"];
-/** why: The keep with its flag in each team's colour, in TEAMS order. */
+/** why: keep this in TEAMS order because these images are indexed by team number. */
 const KEEPS: LandArtId[] = ["keep-red", "keep-blue", "keep-yellow", "keep-cyan", "keep-purple", "keep-pink"];
-/** why: One continuous map per board size, covering boardExtent exactly. Other sizes fall back to grass-N and claimed-N per tile. */
 const MAPS: Partial<Record<number, LandArtId>> = { 10: "map-10", 12: "map-12", 14: "map-14" };
-/** why: Claimed tiles show the map lightened toward paper, then multiplied by the team colour; yellow, blue and purple get more lighten. */
 const CLAIM_PAPER = "#fffaf0";
 const CLAIM_LIGHTEN: Record<string, number> = { "#d81e3a": 0.35, "#1f5ee0": 0.4, "#f5c400": 0.45, "#12b5cb": 0.35, "#7d3cc8": 0.4, "#f0559e": 0.35 };
 
@@ -199,10 +190,8 @@ const teamColor = (team: number) => TEAMS[team % TEAMS.length]!.color;
 
 const rgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
 const toHex = (c: number[]) => `#${c.map((v) => Math.round(v).toString(16).padStart(2, "0")).join("")}`;
-/** why: A colour scaled toward black: 0.5 is half as bright. */
 const shade = (hex: string, f: number) => toHex(rgb(hex).map((v) => v * f));
 
-/** why: A picture drawn over the tile's whole box (`scale` times the tile), centred on (x, y). */
 function TileImage({
   id,
   x,
@@ -236,20 +225,14 @@ function TileImage({
 
 interface HexBoardProps {
   board: LandBoard;
-  /** why: The team looking at the board: tiles it can't take are hatched, tiles that cost extra are marked. */
   viewer?: number;
   selected?: number | null;
-  /** why: Just placed: pops in. */
   placed?: LandPlace | null;
-  /** why: Just surrounded: these tiles flip over to their new colour. */
   capture?: LandCapture | null;
   label?: string;
 }
 
-/** why: The whole board, back to front: parchment edge, the map, tiles (claimed ones tinted), borders,
- * keeps, then the viewer's tile states and the effects. Each tile carries data-tile, so a tap can be
- * traced back to it; everything drawn after the tiles lets taps through.
- */
+/** why: overlays drawn above the tiles let taps through so the board can resolve a tap via data-tile. */
 export function HexBoard({ board, viewer, selected, placed, capture, label }: HexBoardProps) {
   const christmas = useNorthPole();
   const { size, owners, starts } = board;
@@ -351,10 +334,10 @@ export function HexBoard({ board, viewer, selected, placed, capture, label }: He
           class="hex-base"
           opacity={christmas ? (s.out ? 0.25 : 0.45) : undefined}
           href={landArt(s.out ? "keep-out" : KEEPS[s.team % KEEPS.length]!)}
-          x={(t.x - KEEP_W * KEEP_ANCHOR.x).toFixed(2)}
-          y={(t.y - KEEP_H * KEEP_ANCHOR.y).toFixed(2)}
-          width={KEEP_W.toFixed(2)}
-          height={KEEP_H.toFixed(2)}
+          x={(t.x - KEEP_WIDTH * KEEP_ANCHOR.x).toFixed(2)}
+          y={(t.y - KEEP_HEIGHT * KEEP_ANCHOR.y).toFixed(2)}
+          width={KEEP_WIDTH.toFixed(2)}
+          height={KEEP_HEIGHT.toFixed(2)}
         />
       );
     });
@@ -366,7 +349,6 @@ export function HexBoard({ board, viewer, selected, placed, capture, label }: He
           if (owner === viewer) return [];
           const t = top(tile);
           if (isProtected(size, starts, viewer, tile)) return [<TileImage key={tile} id="state-blocked" x={t.x} y={t.y} />];
-          // why: Takeable, but for more than one claim: another team's land, or the ring around its start.
           const cost = placementCost(owners, size, starts, viewer, tile, LAND_STEAL_COST, LAND_GUARD_COST);
           if (cost === null || cost <= 1) return [];
           return [
@@ -492,7 +474,6 @@ export function LandShape({ team, class: cls = "" }: { team: number; class?: str
 
 const tinted = new Map<string, Promise<string>>();
 
-/** why: `base` with `color` multiplied in where the greyscale `mask` is white, as an object URL. Made once per picture and colour. */
 function tint(base: string, mask: string, color: string): Promise<string> {
   const key = `${base} ${color}`;
   let url = tinted.get(key);
@@ -524,7 +505,6 @@ function tint(base: string, mask: string, color: string): Promise<string> {
   return url;
 }
 
-/** why: The tinted picture once it's ready; the untinted one until then. */
 function useTinted(base: LandArtId, mask: LandArtId, color: string): string {
   const [url, setUrl] = useState(landArt(base));
   useEffect(() => {
@@ -537,14 +517,13 @@ function useTinted(base: LandArtId, mask: LandArtId, color: string): string {
   return url;
 }
 
-/** why: The team card plaque with its ribbon in the team colour, for a 9-slice border-image. */
+/** why: callers use these images as 9-slice borders so the plaque can stretch while its corners keep their shape. */
 export const useTeamCard = (color: string) => `url(${useTinted("team-card", "team-card-tint", color)})`;
 
-/** why: Event banner colours: a ring closed, a team knocked out; the conquest uses the winner's colour. */
 export const BANNER_CAPTURE = "#3d8a34";
 export const BANNER_KNOCKOUT = "#8e1330";
 
-/** why: The ribbon banner in `color`, for a 3-slice border-image. */
+/** why: the banner stretches in the middle while its end caps retain their proportions. */
 export const useBanner = (color: string) => `url(${useTinted("banner", "banner-tint", color)})`;
 
 const PLINTHS = {
@@ -553,7 +532,6 @@ const PLINTHS = {
   third: ["podium-3rd", "podium-3rd-tint"],
 } as const satisfies Record<string, readonly [LandArtId, LandArtId]>;
 
-/** why: A podium plinth with its drape in the team colour, and the team's shape and rank on the drape. */
 export function Plinth({ place, team, color, rank }: { place: keyof typeof PLINTHS; team: number; color: string; rank: string }) {
   const [base, mask] = PLINTHS[place];
   return (

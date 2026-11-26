@@ -8,17 +8,14 @@ import type { FakeClock } from "./helpers.ts";
 type HostState = Extract<ServerMsg, { type: "host.state" }>;
 type PlayerState = Extract<ServerMsg, { type: "player.state" }>;
 
-/** why: one line per message ("host.state tower/podium") keeps a timeout readable. */
-function summary(m: ServerMsg): string {
+function messageSummary(m: ServerMsg): string {
   if (m.type !== "host.state" && m.type !== "player.state") return m.type === "error" ? `error "${m.message}"` : m.type;
   const v: { kind: string; phase?: string } = m.view;
   return `${m.type} ${v.kind}${v.phase ? `/${v.phase}` : ""}`;
 }
 
-/** why: read the way the client reads them; shared by real and fake sockets. */
 export abstract class MessageLog {
   msgs: ServerMsg[] = [];
-  /** why: kept before patches are turned back into player.state. */
   raw: ServerMsg[] = [];
   view: PlayerView | null = null;
   token: string | null = null;
@@ -29,7 +26,6 @@ export abstract class MessageLog {
     this.raw.push(msg);
     if (msg.type === "player.state") this.view = msg.view;
     if (msg.type === "joined") this.token = msg.token;
-    // why: tests read whole views, as the phone ends up with them.
     if (msg.type === "player.patch") this.view = applyPatch(this.view!, msg.ops);
     this.msgs.push(msg.type === "player.patch" ? { type: "player.state", view: this.view! } : msg);
     this.waiters.splice(0).forEach((w) => w());
@@ -44,7 +40,7 @@ export abstract class MessageLog {
       const i = this.msgs.findIndex(pred);
       if (i >= 0) return this.msgs.splice(0, i + 1).pop()!;
       const left = deadline - Date.now();
-      if (left <= 0) throw new Error(`timeout; last got ${this.msgs.slice(-3).map(summary).join(", ") || "nothing"}`);
+      if (left <= 0) throw new Error(`timeout; last got ${this.msgs.slice(-3).map(messageSummary).join(", ") || "nothing"}`);
       // why: wakes once at the deadline too, to report the timeout.
       await new Promise<void>((r) => {
         const timer = setTimeout(r, left);
@@ -65,7 +61,6 @@ export abstract class MessageLog {
   abstract close(): void;
 }
 
-/** why: drives a GameHub without a real socket; admin: true acts as the host computer. */
 export class HubSocket extends MessageLog {
   closed = false;
   bufferedAmount = 0;
@@ -75,7 +70,6 @@ export class HubSocket extends MessageLog {
     readonly hub: GameHub,
     data: Partial<SocketData> = {},
   ) {
-    // why: fake sockets answer as fast as the hub does.
     super(2_000);
     this.data = { admin: false, ip: "127.0.0.1", role: "player", ...data };
     hub.onOpen(this);
@@ -105,7 +99,6 @@ export function fakeHub(store: QuizStore, clock: FakeClock, port = 4321, rng?: (
   return hub;
 }
 
-/** why: passing the hub's 100 ms activity throttle sends its pending room-wide update. */
 export const pastThrottle = (clock: FakeClock) => clock.advance(100);
 
 /** why: a snapshot where only time passed isn't sent, so the phone's timer fields can be older. */

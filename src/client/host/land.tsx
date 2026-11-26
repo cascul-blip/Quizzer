@@ -290,7 +290,6 @@ export function landCue(view: LandView): MusicCue {
   const playTrack = themedTrack("land", view.theme, "play");
   if (view.phase === "podium") return { track: themedTrack("land", view.theme, "results") };
   if (view.phase === "conquered") return { track: playTrack, intensity: 1 };
-  // why: no key, so the music glides up as a ring grows and back down if it is broken.
   return { track: playTrack, intensity: view.phase === "playing" ? landThreat(view.board) : 0 };
 }
 

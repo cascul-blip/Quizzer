@@ -5,7 +5,6 @@ import type { Clock } from "../src/server/game/classic.ts";
 import { ClassicGame } from "../src/server/game/classic.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
 
-/** why: deterministic clock: timers only fire when advance() is called. */
 export class FakeClock implements Clock {
   t = 1_000_000;
   private seq = 0;

@@ -1,16 +1,13 @@
-// why: tracks opt in with `rich`; every other track keeps the plain oscillators in engine.ts, so the two can be compared.
-
 type Ctx = BaseAudioContext;
 
 export type RichStyle = "acoustic" | "arcade";
 
 export const richStyle = (rich: boolean | RichStyle | undefined): RichStyle | null => (rich === true ? "acoustic" : rich || null);
 
-/** why: Timing offsets stay within ±HUMAN_TIME_S; velocity within ±HUMAN_GAIN of the written level. */
 export const HUMAN_TIME_S = 0.008;
 export const HUMAN_GAIN = 0.1;
 
-// why: mulberry32, seeded so a loop sounds the same every time round.
+// why: Seed the Mulberry32 generator so humanization repeats when the loop comes around.
 export function seeded(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
@@ -28,35 +25,33 @@ interface Human {
   detuneCents: number;
 }
 
-/** why: Drum machines and sequenced synths are tighter than players: arcade timing moves this fraction as much. */
+// why: Arcade timing varies less to sound sequenced rather than played by hand.
 export const ARCADE_TIGHTNESS = 0.4;
 
-/** why: The nudge for one layer's note on one step: the same every time the loop comes round. */
 export function humanize(step: number, layer: number, style: RichStyle = "acoustic"): Human {
   const r = seeded(step * 7919 + layer * 104729 + 17);
-  const time = style === "arcade" ? HUMAN_TIME_S * ARCADE_TIGHTNESS : HUMAN_TIME_S;
-  return { timeOffsetS: (r() * 2 - 1) * time, gain: 1 + (r() * 2 - 1) * HUMAN_GAIN, detuneCents: (r() * 2 - 1) * 4 };
+  const timeOffsetLimitS = style === "arcade" ? HUMAN_TIME_S * ARCADE_TIGHTNESS : HUMAN_TIME_S;
+  const detuneLimitCents = 4;
+  return { timeOffsetS: (r() * 2 - 1) * timeOffsetLimitS, gain: 1 + (r() * 2 - 1) * HUMAN_GAIN, detuneCents: (r() * 2 - 1) * detuneLimitCents };
 }
 
-// why: pan runs -1 (left) … 1 (right).
 const PAN: Record<RichStyle, Partial<Record<string, number>>> = {
   acoustic: { pluck: -0.35, flute: 0.25, brass: 0.15, bell: 0.3, woodblock: -0.25, snare: 0.1, hat: 0.35, cymbal: -0.3, organ: -0.1 },
   arcade: { hat: 0.3, openhat: -0.3, chipnoise: 0.15, snare: 0.05 },
 };
 export const panFor = (inst: string, style: RichStyle = "acoustic"): number => PAN[style][inst] ?? 0;
 
-/** why: Lute chords are strummed: each note of a chord this much later than the one below. */
 export const STRUM_S = 0.012;
 
+const WHITE_NOISE_LENGTH_S = 2;
 const noiseBuffers = new WeakMap<Ctx, AudioBuffer>();
 const pulseWaves = new WeakMap<Ctx, Map<number, PeriodicWave>>();
 const plucks = new WeakMap<Ctx, Map<number, AudioBuffer>>();
 
-/** why: Two seconds of seeded white noise, for breath, bow and the reverb. */
-function noise(ctx: Ctx): AudioBuffer {
+function seededWhiteNoise(ctx: Ctx): AudioBuffer {
   let b = noiseBuffers.get(ctx);
   if (!b) {
-    b = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+    b = ctx.createBuffer(1, ctx.sampleRate * WHITE_NOISE_LENGTH_S, ctx.sampleRate);
     const d = b.getChannelData(0);
     const r = seeded(1);
     for (let i = 0; i < d.length; i++) d[i] = r() * 2 - 1;
@@ -65,18 +60,17 @@ function noise(ctx: Ctx): AudioBuffer {
   return b;
 }
 
-/** why: A pulse wave with the given duty cycle (0.25 = the classic chip lead), made once per duty and context. */
-function pulseWave(ctx: Ctx, duty: number): PeriodicWave {
+function pulseWave(ctx: Ctx, dutyCycle: number): PeriodicWave {
   let cache = pulseWaves.get(ctx);
   if (!cache) pulseWaves.set(ctx, (cache = new Map()));
-  let w = cache.get(duty);
+  let w = cache.get(dutyCycle);
   if (!w) {
     const n = 48;
     const real = new Float32Array(n);
     const imag = new Float32Array(n);
-    for (let k = 1; k < n; k++) imag[k] = (2 / (k * Math.PI)) * Math.sin(k * Math.PI * duty);
+    for (let k = 1; k < n; k++) imag[k] = (2 / (k * Math.PI)) * Math.sin(k * Math.PI * dutyCycle);
     w = ctx.createPeriodicWave(real, imag);
-    cache.set(duty, w);
+    cache.set(dutyCycle, w);
   }
   return w;
 }
@@ -88,19 +82,18 @@ function env(p: AudioParam, t: number, peak: number, attack: number, hold: numbe
   p.exponentialRampToValueAtTime(0.0001, t + attack + hold + release);
 }
 
-/** why: A lowpass whose cutoff opens from `from` to `peak` over `attack`, then settles to `sustain`. */
-function filterEnv(ctx: Ctx, t: number, from: number, peak: number, sustain: number, attack: number, decay: number, q = 0.7): BiquadFilterNode {
+function lowpassEnvelope(ctx: Ctx, t: number, from: number, peak: number, sustain: number, attackS: number, decayS: number, q = 0.7): BiquadFilterNode {
   const f = ctx.createBiquadFilter();
   f.type = "lowpass";
   f.Q.value = q;
   f.frequency.setValueAtTime(from, t);
-  f.frequency.exponentialRampToValueAtTime(peak, t + attack);
-  f.frequency.exponentialRampToValueAtTime(sustain, t + attack + decay);
+  f.frequency.exponentialRampToValueAtTime(peak, t + attackS);
+  f.frequency.exponentialRampToValueAtTime(sustain, t + attackS + decayS);
   return f;
 }
 
-/** why: Vibrato that fades in after the note has sounded for a moment, as players do. */
-function vibrato(ctx: Ctx, targets: AudioParam[], t: number, end: number, rate: number, cents: number, delay = 0.25) {
+// why: Fade in vibrato so it enters after the attack, as it does on a played note.
+function fadeInVibrato(ctx: Ctx, targets: AudioParam[], t: number, end: number, rate: number, cents: number, delay = 0.25) {
   const lfo = ctx.createOscillator();
   const depth = ctx.createGain();
   lfo.frequency.value = rate;
@@ -123,7 +116,6 @@ function osc(ctx: Ctx, dest: AudioNode, type: OscillatorType, freq: number, t: n
   return o;
 }
 
-/** why: Filtered noise under an envelope: breath on a recorder, a bow on a string, a chiff. */
 function airNoise(
   ctx: Ctx,
   dest: AudioNode,
@@ -137,7 +129,7 @@ function airNoise(
   q: number,
 ) {
   const s = ctx.createBufferSource();
-  s.buffer = noise(ctx);
+  s.buffer = seededWhiteNoise(ctx);
   s.loop = true;
   const f = ctx.createBiquadFilter();
   f.type = type;
@@ -151,9 +143,10 @@ function airNoise(
 }
 
 const PLUCK_S = 1.8;
+const PLUCK_DECAY_S = 1.3;
+const PLUCK_FILTER_DELAY_SAMPLES = 0.5;
 
-// why: Karplus-Strong: noise circulating in a one-period delay line, averaged each trip so it darkens and dies.
-// Made once per delay length and context.
+// why: Averaging adjacent samples each pass of the Karplus–Strong loop damps high frequencies as the string rings.
 function pluckBuffer(ctx: Ctx, period: number): AudioBuffer {
   let cache = plucks.get(ctx);
   if (!cache) plucks.set(ctx, (cache = new Map()));
@@ -163,12 +156,12 @@ function pluckBuffer(ctx: Ctx, period: number): AudioBuffer {
     b = ctx.createBuffer(1, Math.floor(sr * PLUCK_S), sr);
     const d = b.getChannelData(0);
     const r = seeded(period);
-    // why: A softened burst (a finger, not a pick).
+    // why: Smooth the initial burst to imitate a finger-plucked string.
     const line = new Float32Array(period);
     let prev = 0;
     for (let i = 0; i < period; i++) line[i] = prev = 0.6 * prev + 0.4 * (r() * 2 - 1);
-    // why: Loss per trip round the loop, so the note dies away over about 1.3 s whatever its pitch.
-    const loss = 10 ** ((-3 * period) / (sr * 1.3));
+    // why: Scale the loss by the period so high and low notes take the same time to fade.
+    const loss = 10 ** ((-3 * period) / (sr * PLUCK_DECAY_S));
     for (let i = 0, k = 0; i < d.length; i++) {
       const a = line[k]!;
       const next = k + 1 === period ? 0 : k + 1;
@@ -181,32 +174,31 @@ function pluckBuffer(ctx: Ctx, period: number): AudioBuffer {
   return b;
 }
 
-// why: false means the style has no rich version of the instrument, so the caller plays the plain one.
-export function playRich(
+export function tryPlayRich(
   ctx: Ctx,
   dest: AudioNode,
   inst: string,
   t: number,
   freq: number,
-  len: number,
+  noteLengthS: number,
   vol: number,
   detune: number,
   style: RichStyle = "acoustic",
   accent = false,
 ): boolean {
-  if (style === "arcade") return playArcade(ctx, dest, inst, t, freq, len, vol * (accent ? 1.35 : 1), detune, accent);
+  if (style === "arcade") return playArcade(ctx, dest, inst, t, freq, noteLengthS, vol * (accent ? 1.35 : 1), detune, accent);
   const v = vol;
   switch (inst) {
     case "pluck": {
-      // why: The lute: Karplus-Strong, tuned exactly by playback rate (the loop's average adds half a sample).
+      // why: The adjacent-sample average delays the loop by half a sample, so pitch correction includes that delay.
       const period = Math.max(2, Math.round(ctx.sampleRate / freq));
       const s = ctx.createBufferSource();
       s.buffer = pluckBuffer(ctx, period);
-      s.playbackRate.value = (freq * (period + 0.5)) / ctx.sampleRate;
+      s.playbackRate.value = (freq * (period + PLUCK_FILTER_DELAY_SAMPLES)) / ctx.sampleRate;
       s.detune.value = detune;
-      const f = filterEnv(ctx, t, 5200, 5200, 1400, 0.001, 0.5);
+      const f = lowpassEnvelope(ctx, t, 5200, 5200, 1400, 0.001, 0.5);
       const g = ctx.createGain();
-      const ring = Math.min(PLUCK_S - 0.1, len + 0.9);
+      const ring = Math.min(PLUCK_S - 0.1, noteLengthS + 0.9);
       g.gain.setValueAtTime(0.55 * v, t);
       g.gain.setValueAtTime(0.55 * v, t + ring - 0.08);
       g.gain.linearRampToValueAtTime(0, t + ring);
@@ -216,7 +208,6 @@ export function playRich(
       return true;
     }
     case "bell": {
-      // why: Church bell by FM: an inharmonic modulator whose brightness dies away faster than the tone, plus a low hum.
       const end = t + 2.6;
       const g = ctx.createGain();
       env(g.gain, t, 0.2 * v, 0.002, 0.01, 2.4);
@@ -237,13 +228,11 @@ export function playRich(
       return true;
     }
     case "brass": {
-      // why: FM brass: the modulation index swells with the attack (the "blat"), with a filter that opens with it,
-      // a slight scoop up into the pitch, and vibrato on longer notes.
-      const end = t + len + 0.25;
-      const attack = Math.min(0.06, len * 0.4);
-      const f = filterEnv(ctx, t, 400, 3200, 1500, attack, Math.max(0.1, len * 0.6));
+      const end = t + noteLengthS + 0.25;
+      const attack = Math.min(0.06, noteLengthS * 0.4);
+      const f = lowpassEnvelope(ctx, t, 400, 3200, 1500, attack, Math.max(0.1, noteLengthS * 0.6));
       const g = ctx.createGain();
-      env(g.gain, t, 0.14 * v, attack, Math.max(0, len - attack - 0.05), 0.12);
+      env(g.gain, t, 0.14 * v, attack, Math.max(0, noteLengthS - attack - 0.05), 0.12);
       f.connect(g).connect(dest);
       const carriers: AudioParam[] = [];
       for (const det of [-5, 5]) {
@@ -268,17 +257,15 @@ export function playRich(
         mod.stop(end);
         carriers.push(c.detune);
       }
-      if (len > 0.35) vibrato(ctx, carriers, t, end, 5, 7, 0.3);
+      if (noteLengthS > 0.35) fadeInVibrato(ctx, carriers, t, end, 5, 7, 0.3);
       return true;
     }
     case "strings": {
-      // why: A section: detuned saws spread across the stereo field, a bowed swell through an opening filter,
-      // a breath of bow noise and late vibrato.
-      const end = t + len + 0.35;
-      const attack = Math.min(0.12, len * 0.35);
-      const f = filterEnv(ctx, t, 500, 2800, 2000, attack, 0.3);
+      const end = t + noteLengthS + 0.35;
+      const attack = Math.min(0.12, noteLengthS * 0.35);
+      const f = lowpassEnvelope(ctx, t, 500, 2800, 2000, attack, 0.3);
       const g = ctx.createGain();
-      env(g.gain, t, 0.075 * v, attack, Math.max(0, len - attack - 0.02), 0.18);
+      env(g.gain, t, 0.075 * v, attack, Math.max(0, noteLengthS - attack - 0.02), 0.18);
       f.connect(g).connect(dest);
       const detunes: AudioParam[] = [];
       for (const [det, pan] of [
@@ -291,16 +278,15 @@ export function playRich(
         p.connect(f);
         detunes.push(osc(ctx, p, "sawtooth", freq, t, end, det + detune).detune);
       }
-      vibrato(ctx, detunes, t, end, 5.3, 6);
-      airNoise(ctx, dest, t, 0.012 * v, attack, Math.max(0, len - attack), 0.15, "bandpass", freq * 4, 1.2);
+      fadeInVibrato(ctx, detunes, t, end, 5.3, 6);
+      airNoise(ctx, dest, t, 0.012 * v, attack, Math.max(0, noteLengthS - attack), 0.15, "bandpass", freq * 4, 1.2);
       return true;
     }
     case "flute": {
-      // why: The recorder: a soft, nearly pure tone with a chiff at the start, breath under it and late vibrato.
-      const end = t + len + 0.2;
-      const attack = Math.min(0.03, len * 0.3);
+      const end = t + noteLengthS + 0.2;
+      const attack = Math.min(0.03, noteLengthS * 0.3);
       const g = ctx.createGain();
-      env(g.gain, t, 0.15 * v, attack, Math.max(0, len - 0.05), 0.09);
+      env(g.gain, t, 0.15 * v, attack, Math.max(0, noteLengthS - 0.05), 0.09);
       g.connect(dest);
       const detunes: AudioParam[] = [];
       for (const [mult, level] of [
@@ -313,19 +299,17 @@ export function playRich(
         og.connect(g);
         detunes.push(osc(ctx, og, "sine", freq * mult, t, end, detune).detune);
       }
-      vibrato(ctx, detunes, t, end, 5.2, 9, 0.2);
+      fadeInVibrato(ctx, detunes, t, end, 5.2, 9, 0.2);
       airNoise(ctx, dest, t, 0.05 * v, 0.003, 0.012, 0.03, "highpass", 2500, 0.7);
-      airNoise(ctx, dest, t, 0.018 * v, attack, Math.max(0, len - attack), 0.08, "bandpass", freq * 2, 2);
+      airNoise(ctx, dest, t, 0.018 * v, attack, Math.max(0, noteLengthS - attack), 0.08, "bandpass", freq * 2, 2);
       return true;
     }
     case "pad": {
-      // why: A slow, wide pad: two saws far apart in the stereo field and a triangle an octave down,
-      // through a filter that opens slowly.
-      const end = t + len * 1.4 + 0.5;
-      const attack = Math.min(0.5, len * 0.35);
-      const f = filterEnv(ctx, t, 400, 1700, 1100, attack, len * 0.5);
+      const end = t + noteLengthS * 1.4 + 0.5;
+      const attack = Math.min(0.5, noteLengthS * 0.35);
+      const f = lowpassEnvelope(ctx, t, 400, 1700, 1100, attack, noteLengthS * 0.5);
       const g = ctx.createGain();
-      env(g.gain, t, 0.075 * v, attack, Math.max(0, len * 0.55), Math.max(0.3, len * 0.4));
+      env(g.gain, t, 0.075 * v, attack, Math.max(0, noteLengthS * 0.55), Math.max(0.3, noteLengthS * 0.4));
       f.connect(g).connect(dest);
       for (const [det, pan] of [
         [-10, -0.6],
@@ -343,11 +327,10 @@ export function playRich(
       return true;
     }
     case "bass": {
-      // why: A round bass: a saw and a sine an octave down through a resonant filter that closes on each note.
-      const end = t + len + 0.15;
-      const f = filterEnv(ctx, t, 1400, 1400, 260, 0.001, Math.max(0.08, len), 2);
+      const end = t + noteLengthS + 0.15;
+      const f = lowpassEnvelope(ctx, t, 1400, 1400, 260, 0.001, Math.max(0.08, noteLengthS), 2);
       const g = ctx.createGain();
-      env(g.gain, t, 0.3 * v, 0.006, Math.max(0, len - 0.06), 0.08);
+      env(g.gain, t, 0.3 * v, 0.006, Math.max(0, noteLengthS - 0.06), 0.08);
       f.connect(g).connect(dest);
       osc(ctx, f, "sawtooth", freq, t, end, detune);
       const sub = ctx.createGain();
@@ -360,7 +343,6 @@ export function playRich(
   return false;
 }
 
-/** why: An 808-style metallic hat: six detuned squares through a high band, short or open. */
 function metalHat(ctx: Ctx, dest: AudioNode, t: number, peak: number, decay: number) {
   const band = ctx.createBiquadFilter();
   band.type = "bandpass";
@@ -375,7 +357,6 @@ function metalHat(ctx: Ctx, dest: AudioNode, t: number, peak: number, decay: num
   for (const mult of [2, 3, 4.16, 5.43, 6.79, 8.21]) osc(ctx, band, "square", 40 * mult * 4, t, end);
 }
 
-/** why: A drum-machine snare: a short tuned body, a band of noise and a little high sizzle. */
 function arcadeSnare(ctx: Ctx, dest: AudioNode, t: number, v: number) {
   const body = ctx.createOscillator();
   body.type = "triangle";
@@ -390,20 +371,28 @@ function arcadeSnare(ctx: Ctx, dest: AudioNode, t: number, v: number) {
   airNoise(ctx, dest, t, 0.14 * v, 0.001, 0.01, 0.1, "highpass", 6000, 0.7);
 }
 
-function playArcade(ctx: Ctx, dest: AudioNode, inst: string, t: number, freq: number, len: number, v: number, detune: number, accent: boolean): boolean {
+function playArcade(
+  ctx: Ctx,
+  dest: AudioNode,
+  inst: string,
+  t: number,
+  freq: number,
+  noteLengthS: number,
+  v: number,
+  detune: number,
+  accent: boolean,
+): boolean {
   switch (inst) {
-    // why: Seasonal arcade arrangements share the synthesized FM bells and brass.
+    // why: The seasonal arcade arrangements reuse the acoustic FM bells and brass.
     case "bell":
     case "brass":
-      return playRich(ctx, dest, inst, t, freq, len, v, detune, "acoustic");
+      return tryPlayRich(ctx, dest, inst, t, freq, noteLengthS, v, detune, "acoustic");
     case "lead": {
-      // why: A late-80s FM lead: a bright 2:1 voice that mellows after the attack, a detuned saw under it,
-      // a quick slide up into each note and vibrato on held ones.
-      const end = t + len + 0.2;
+      const end = t + noteLengthS + 0.2;
       const g = ctx.createGain();
-      env(g.gain, t, 0.12 * v, 0.005, Math.max(0, len - 0.05), 0.1);
+      env(g.gain, t, 0.12 * v, 0.005, Math.max(0, noteLengthS - 0.05), 0.1);
       g.connect(dest);
-      const f = filterEnv(ctx, t, 6000, 6000, 2600, 0.001, 0.25);
+      const f = lowpassEnvelope(ctx, t, 6000, 6000, 2600, 0.001, 0.25);
       f.connect(g);
       const c = ctx.createOscillator();
       c.frequency.setValueAtTime(freq * 0.985, t);
@@ -426,18 +415,16 @@ function playArcade(ctx: Ctx, dest: AudioNode, inst: string, t: number, freq: nu
       sg.gain.value = 0.18;
       sg.connect(f);
       const saw = osc(ctx, sg, "sawtooth", freq, t, end, detune + 7);
-      if (len > 0.25) vibrato(ctx, [c.detune, saw.detune], t, end, 5.8, 10, 0.18);
+      if (noteLengthS > 0.25) fadeInVibrato(ctx, [c.detune, saw.detune], t, end, 5.8, 10, 0.18);
       return true;
     }
     case "pulse": {
-      // why: Chorused stabs and arpeggios: two pulse widths, a little detuned and apart in the stereo field,
-      // through a filter that snaps shut.
-      const end = t + len + 0.1;
-      const f = filterEnv(ctx, t, 5500, 5500, 1200, 0.001, Math.max(0.06, len * 0.8), 1.5);
+      const end = t + noteLengthS + 0.1;
+      const f = lowpassEnvelope(ctx, t, 5500, 5500, 1200, 0.001, Math.max(0.06, noteLengthS * 0.8), 1.5);
       const g = ctx.createGain();
-      env(g.gain, t, 0.1 * v, 0.002, Math.max(0, len - 0.03), 0.05);
+      env(g.gain, t, 0.1 * v, 0.002, Math.max(0, noteLengthS - 0.03), 0.05);
       f.connect(g).connect(dest);
-      for (const [duty, det, pan] of [
+      for (const [dutyCycle, det, pan] of [
         [0.25, -6, -0.35],
         [0.125, 6, 0.35],
       ] as const) {
@@ -445,7 +432,7 @@ function playArcade(ctx: Ctx, dest: AudioNode, inst: string, t: number, freq: nu
         p.pan.value = pan;
         p.connect(f);
         const o = ctx.createOscillator();
-        o.setPeriodicWave(pulseWave(ctx, duty));
+        o.setPeriodicWave(pulseWave(ctx, dutyCycle));
         o.frequency.value = freq;
         o.detune.value = det + detune;
         o.connect(p);
@@ -455,10 +442,9 @@ function playArcade(ctx: Ctx, dest: AudioNode, inst: string, t: number, freq: nu
       return true;
     }
     case "tribass": {
-      // why: Slap FM bass: a hard, bright attack that falls to a round tone, with a sub-octave underneath.
-      const end = t + len + 0.1;
+      const end = t + noteLengthS + 0.1;
       const g = ctx.createGain();
-      env(g.gain, t, 0.42 * v, 0.003, Math.max(0, len - 0.04), 0.06);
+      env(g.gain, t, 0.42 * v, 0.003, Math.max(0, noteLengthS - 0.04), 0.06);
       g.connect(dest);
       const c = osc(ctx, g, "sine", freq, t, end, detune);
       const mod = ctx.createOscillator();
@@ -476,7 +462,6 @@ function playArcade(ctx: Ctx, dest: AudioNode, inst: string, t: number, freq: nu
       return true;
     }
     case "kick": {
-      // why: A punchy drum-machine kick: a body sweeping down from 160 Hz, with a click on top.
       const o = ctx.createOscillator();
       o.frequency.setValueAtTime(160, t);
       o.frequency.exponentialRampToValueAtTime(45, t + 0.12);
@@ -492,7 +477,7 @@ function playArcade(ctx: Ctx, dest: AudioNode, inst: string, t: number, freq: nu
       arcadeSnare(ctx, dest, t, v);
       return true;
     case "chipnoise":
-      // why: The racer tracks use it two ways: accented as the backbeat snare, plain as quick sixteenth hats.
+      // why: Racer patterns share a lane for snare accents and unaccented closed hi-hats.
       if (accent) arcadeSnare(ctx, dest, t, v * 0.8);
       else airNoise(ctx, dest, t, 0.12 * v, 0.001, 0.005, 0.03, "highpass", 6500, 0.7);
       return true;
@@ -508,30 +493,32 @@ function playArcade(ctx: Ctx, dest: AudioNode, inst: string, t: number, freq: nu
 
 export interface Echo {
   input: GainNode;
-  // why: the echo stays ECHO_STEPS behind.
   setStep(stepSeconds: number, at: number): void;
   dispose(): void;
 }
 
-/** why: Echoes come a dotted eighth (three sixteenth steps) after the note, the classic arcade-lead echo. */
+// why: A dotted-eighth delay gives arcade leads syncopated repeats between the beats.
 export const ECHO_STEPS = 3;
 
-/** why: Bouncing left and right, darker and quieter with each repeat. */
+const MAX_ECHO_DELAY_S = 2;
+const ECHO_LOWPASS_HZ = 3000;
+const ECHO_FEEDBACK_GAIN = 0.35;
+
 export function createEcho(ctx: BaseAudioContext, dest: AudioNode, stepSeconds: number): Echo {
   const input = ctx.createGain();
-  const left = ctx.createDelay(2);
-  const right = ctx.createDelay(2);
-  const tone = ctx.createBiquadFilter();
-  tone.type = "lowpass";
-  tone.frequency.value = 3000;
+  const left = ctx.createDelay(MAX_ECHO_DELAY_S);
+  const right = ctx.createDelay(MAX_ECHO_DELAY_S);
+  const echoLowpass = ctx.createBiquadFilter();
+  echoLowpass.type = "lowpass";
+  echoLowpass.frequency.value = ECHO_LOWPASS_HZ;
   const feedback = ctx.createGain();
-  feedback.gain.value = 0.35;
+  feedback.gain.value = ECHO_FEEDBACK_GAIN;
   const panL = ctx.createStereoPanner();
   const panR = ctx.createStereoPanner();
   panL.pan.value = -0.7;
   panR.pan.value = 0.7;
   for (const d of [left, right]) d.delayTime.value = ECHO_STEPS * stepSeconds;
-  input.connect(tone).connect(left);
+  input.connect(echoLowpass).connect(left);
   left.connect(panL).connect(dest);
   left.connect(right);
   right.connect(panR).connect(dest);
@@ -545,7 +532,7 @@ export function createEcho(ctx: BaseAudioContext, dest: AudioNode, stepSeconds: 
       for (const d of [left, right]) d.delayTime.setTargetAtTime(ECHO_STEPS * step, at, 0.1);
     },
     dispose() {
-      for (const n of [input, left, right, tone, feedback, panL, panR]) n.disconnect();
+      for (const n of [input, left, right, echoLowpass, feedback, panL, panR]) n.disconnect();
     },
   };
 }
@@ -553,7 +540,6 @@ export function createEcho(ctx: BaseAudioContext, dest: AudioNode, stepSeconds: 
 const REVERB_S = 3.2;
 const PREDELAY_S = 0.025;
 
-/** why: A stereo impulse response: a short gap, then decaying noise, different in each ear and darker as it fades. */
 export function impulseResponse(ctx: Ctx, seconds = REVERB_S): AudioBuffer {
   const sr = ctx.sampleRate;
   const length = Math.floor(sr * seconds);
@@ -565,7 +551,7 @@ export function impulseResponse(ctx: Ctx, seconds = REVERB_S): AudioBuffer {
     let lp = 0;
     for (let i = gap; i < length; i++) {
       const x = (i - gap) / (length - gap);
-      // why: Each sample is smoothed more as the tail goes on: high frequencies die first, as in a hall.
+      // why: High frequencies die first in a hall, so smoothing increases through the tail.
       const smooth = 0.15 + 0.8 * x;
       lp = smooth * lp + (1 - smooth) * (r() * 2 - 1);
       d[i] = lp * Math.exp(-5 * x) * (1 + smooth);
@@ -574,7 +560,6 @@ export function impulseResponse(ctx: Ctx, seconds = REVERB_S): AudioBuffer {
   return ir;
 }
 
-/** why: Soft clipping (tanh), for a little warmth on peaks; quiet signals pass almost untouched. */
 export function saturationCurve(drive = 1.8, size = 1024): Float32Array<ArrayBuffer> {
   const curve = new Float32Array(size);
   for (let i = 0; i < size; i++) {
@@ -590,7 +575,6 @@ export interface RichBus {
   dispose(): void;
 }
 
-/** why: The rich tracks' bus: input → saturation → gentle compressor → master, with a reverb that joins before the compressor. */
 export function createRichBus(ctx: BaseAudioContext, master: AudioNode): RichBus {
   const input = ctx.createGain();
   const shaper = ctx.createWaveShaper();

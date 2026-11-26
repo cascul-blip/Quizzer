@@ -6,7 +6,6 @@ import type { SiegeDefenderType, SiegeMonsterType, SiegeWaves } from "../siege-r
 import type { SeasonTheme } from "../themed-modes.ts";
 import { modeTheme } from "../themed-modes.ts";
 
-/** why: "build" covers the opening break and the breaks between waves; stands / fallen are ending cinematics. */
 export type SiegePhase = "countdown" | "build" | "wave" | "stands" | "fallen" | "podium";
 
 export interface SiegeSettings {
@@ -14,30 +13,24 @@ export interface SiegeSettings {
   waves: SiegeWaves;
 }
 
-/** why: topArcher counts kills by the player's archers; masterMason counts walls placed plus wall upgrades. */
 export type SiegeAwardKey = "topArcher" | "masterMason" | "mostCorrect";
 export type SiegeAwards = Record<SiegeAwardKey, SubAward | null>;
 
-/** why: saved on the host computer, per quiz. */
 export interface SiegeRecord {
   waves: number;
-  /** why: percent; persisted, so not renamed. */
+  /** why: The value is a percentage. Existing Endless records use the scale key. */
   avgScale: number;
-  /** why: ISO date string. */
   date: string;
 }
 
 export interface SiegeResult {
-  /** why: "ended" means the host pressed End game. */
   outcome: "stands" | "fallen" | "ended";
   wave: number;
   waves: SiegeWaves;
   wavesSurvived: number;
   hearts: number;
   headline: string;
-  /** why: null outside Endless. */
   avgScale: number | null;
-  /** why: Endless only; the best run before this one. */
   record: SiegeRecord | null;
   newRecord: boolean;
 }
@@ -45,7 +38,6 @@ export interface SiegeResult {
 export interface HostSiegeDefender {
   id: number;
   type: SiegeDefenderType;
-  /** why: 0-based, top first. */
   lane: number;
   square: number;
   level: number;
@@ -60,9 +52,8 @@ export interface HostSiegeMonster {
   id: number;
   type: SiegeMonsterType;
   lane: number;
-  /** why: in squares at view time; square k's centre is k, the wall face is 0.5. */
+  /** why: The projector places a monster at the wall face at 0.5, between the castle and the center of square 1. */
   x: number;
-  /** why: moveRemainingMs 0 means standing still. */
   toX: number;
   moveRemainingMs: number;
   state: "wait" | "walk" | "attack" | "leap";
@@ -75,12 +66,10 @@ export interface HostSiegeMonster {
 export interface SiegeShot {
   seq: number;
   lane: number;
-  /** why: the archer's square. */
   square: number;
   toX: number;
 }
 
-/** why: also covers monsters that reached the wall. */
 export interface SiegeFallen {
   seq: number;
   id: number;
@@ -101,9 +90,7 @@ export interface HostSiegeState {
   phase: SiegePhase;
   quiz: { id: string; title: string; questionCount: number };
   settings: SiegeSettings;
-  /** why: the next wave during a build break; 0 before the countdown ends. */
   wave: number;
-  /** why: the sum of every player's unspent purse. */
   gold: number;
   hearts: number;
   maxHearts: number;
@@ -111,17 +98,15 @@ export interface HostSiegeState {
   phaseDurationMs: number;
   defenders: HostSiegeDefender[];
   monsters: HostSiegeMonster[];
-  /** why: newest last. */
   shots: SiegeShot[];
   fallen: SiegeFallen[];
   events: SiegeEvent[];
   warnings: { lane: number; ms: number }[];
   danger: number[];
   giant: { lane: number; ms: number } | null;
-  /** why: counters that bump on every horn and every heart lost. */
+  /** why: Consecutive horn and heart-loss events must each replay their cues. */
   giantSeq: number;
   wallHitSeq: number;
-  /** why: the music reads it. */
   monsterCount: number;
   players: { id: string; nickname: string; avatar: AvatarChoice; connected: boolean }[];
   playerCount: number;
@@ -133,7 +118,6 @@ export interface HostSiegeState {
 
 export interface SiegeMapView {
   defenders: { lane: number; square: number; type: SiegeDefenderType; level: number }[];
-  /** why: refreshed once a second; square 8 is the entry square. */
   monsters: { lane: number; square: number }[];
 }
 
@@ -147,17 +131,15 @@ export interface PlayerSiegeView {
   wave: number;
   waves: SiegeWaves;
   hearts: number;
-  /** why: this player's own purse, not the class total. */
   gold: number;
   danger: number[];
   me: { id: string; nickname: string; avatar: AvatarChoice; correct: number; goldEarned: number };
   question: StreamQuestionView | null;
   feedback: StreamFeedbackView | null;
-  /** why: pre-selected on the map. */
   lastPlaced: SiegeDefenderType | null;
   /** why: shown once per seq. */
   alert: { seq: number; kind: "giant" | "wall" } | null;
-  /** why: only sent while this phone's map is open. */
+  /** why: Closed maps omit their contents so inactive phones do not receive battlefield updates. */
   map: SiegeMapView | null;
   result: {
     outcome: SiegeResult["outcome"];
@@ -176,7 +158,6 @@ export type SiegeMsg =
   /** why: lane is 0-based top first; square 1 is next to the castle wall. */
   | { type: "siege.place"; defender: SiegeDefenderType; lane: number; square: number }
   | { type: "siege.upgrade"; lane: number; square: number }
-  /** why: the server only sends map contents while it is open. */
   | { type: "siege.map"; open: boolean };
 
 export const siegeShared = sharedModeEntry<ModeProtocol<SiegeMsg, SiegeSettings, HostSiegeState, PlayerSiegeView>>()({

@@ -1,5 +1,3 @@
-// why: every number here comes from ./duel/meta.ts, written by scripts/showdown-art.py; ./duel/manifest.md
-// explains them. Exported positions are % of the full 1280x720 canvas box, so poses and clips line up.
 import type { ComponentChildren, CSSProperties } from "preact";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import type { AvatarChoice } from "../../shared/avatars.ts";
@@ -60,17 +58,17 @@ export function preloadDuelArt(): void {
 const CLIP_FIRST_POSE: Record<DuelClip, DuelPose> = { "draw-fire": "idle", stagger: "idle", "holster-spin": "fire", walk: "walk1" };
 
 const SOURCE_CANVAS_PX = { w: 1280, h: 720 } as const;
-const [BX, BY] = DUEL_BOX.canvas;
-const trimmedPctToCanvasX = (v: number) => ((BX + (v / 100) * DUEL_BOX.w) / SOURCE_CANVAS_PX.w) * 100;
-const trimmedPctToCanvasY = (v: number) => ((BY + (v / 100) * DUEL_BOX.h) / SOURCE_CANVAS_PX.h) * 100;
+const [TRIMMED_LEFT_PX, TRIMMED_TOP_PX] = DUEL_BOX.canvas;
+const trimmedPctToCanvasX = (v: number) => ((TRIMMED_LEFT_PX + (v / 100) * DUEL_BOX.w) / SOURCE_CANVAS_PX.w) * 100;
+const trimmedPctToCanvasY = (v: number) => ((TRIMMED_TOP_PX + (v / 100) * DUEL_BOX.h) / SOURCE_CANVAS_PX.h) * 100;
 const trimmedPctToCanvasW = (v: number) => (v * DUEL_BOX.w) / SOURCE_CANVAS_PX.w;
 const trimmedPctToCanvasH = (v: number) => (v * DUEL_BOX.h) / SOURCE_CANVAS_PX.h;
 const round2 = (v: number) => Math.round(v * 100) / 100;
 
 export const DUEL_ASPECT = SOURCE_CANVAS_PX.w / SOURCE_CANVAS_PX.h;
 
-// why: % of the Duelist box height from the top.
-export const DUEL_FEET_Y = round2(trimmedPctToCanvasY(100));
+const TRIMMED_FEET_Y_PCT = 100;
+export const DUEL_FEET_Y = round2(trimmedPctToCanvasY(TRIMMED_FEET_Y_PCT));
 
 const TRIMMED_ART_BOX_PCT: Style = {
   left: `${trimmedPctToCanvasX(0)}%`,
@@ -79,26 +77,35 @@ const TRIMMED_ART_BOX_PCT: Style = {
   height: `${trimmedPctToCanvasH(100)}%`,
 };
 
-// why: "fire" pose facing right, % of the Duelist box; duelMuzzle mirrors it for "left".
-export const DUEL_MUZZLE: { x: number; y: number } = { x: round2(trimmedPctToCanvasX(DUEL_MUZZLE_RAW.x)), y: round2(trimmedPctToCanvasY(DUEL_MUZZLE_RAW.y)) };
+const { x: trimmedRevolverTipFireXPct, y: trimmedRevolverTipFireYPct } = DUEL_MUZZLE_RAW;
+const RIGHT_FACING_POSE_HEAD_TRIMMED_PCT = DUEL_POSE_HEAD;
 
-// why: facing right, % of the Duelist box; r is the head ball's radius as % of the box height.
+export const RIGHT_FACING_REVOLVER_TIP_FIRE_PCT = {
+  x: round2(trimmedPctToCanvasX(trimmedRevolverTipFireXPct)),
+  y: round2(trimmedPctToCanvasY(trimmedRevolverTipFireYPct)),
+};
+
+export const DUEL_MUZZLE = RIGHT_FACING_REVOLVER_TIP_FIRE_PCT;
+
 export const DUEL_HEAD = Object.fromEntries(
-  Object.entries(DUEL_POSE_HEAD).map(([pose, h]) => [
-    pose,
-    { x: round2(trimmedPctToCanvasX(h.x)), y: round2(trimmedPctToCanvasY(h.y)), r: round2(trimmedPctToCanvasH(h.r)) },
-  ]),
+  Object.entries(RIGHT_FACING_POSE_HEAD_TRIMMED_PCT).map(([pose, { x: centerXPct, y: centerYPct, r: radiusPctOfTrimmedHeight }]) => {
+    const radiusPctOfCanvasHeight = round2(trimmedPctToCanvasH(radiusPctOfTrimmedHeight));
+    return [pose, { x: round2(trimmedPctToCanvasX(centerXPct)), y: round2(trimmedPctToCanvasY(centerYPct)), r: radiusPctOfCanvasHeight }];
+  }),
 ) as Record<DuelPose, { x: number; y: number; r: number }>;
 
 const mirrorX = (x: number, facing: DuelFacing) => (facing === "left" ? 100 - x : x);
 
-export const duelMuzzle = (facing: DuelFacing): { x: number; y: number } => ({ x: mirrorX(DUEL_MUZZLE.x, facing), y: DUEL_MUZZLE.y });
+export const duelMuzzle = (facing: DuelFacing): { x: number; y: number } => ({
+  x: mirrorX(RIGHT_FACING_REVOLVER_TIP_FIRE_PCT.x, facing),
+  y: RIGHT_FACING_REVOLVER_TIP_FIRE_PCT.y,
+});
 
 export const duelHead = (pose: DuelPose, facing: DuelFacing): { x: number; y: number } => ({ x: mirrorX(DUEL_HEAD[pose].x, facing), y: DUEL_HEAD[pose].y });
 
 // why: give a FlyingHat's parent exactly this box so the hat takes off at the size and spot it was worn.
 export function duelHat(pose: DuelPose): { x: number; y: number; w: number; h: number } {
-  const head = DUEL_POSE_HEAD[pose] ?? DUEL_POSE_HEAD.idle;
+  const head = RIGHT_FACING_POSE_HEAD_TRIMMED_PCT[pose] ?? RIGHT_FACING_POSE_HEAD_TRIMMED_PCT.idle;
   const g = DUEL_HATS.brown;
   return {
     x: trimmedPctToCanvasX(head.x + g.dx + g.w / 2),
@@ -205,7 +212,7 @@ function Figure({ facing, class: cls = "", style, children, inner }: FigureProps
   );
 }
 
-// why: as tall as its container, so the container needs a height; "left" mirrors the body but not the face.
+// why: the containing element must set a height, which CSS uses to size the figure.
 export function Duelist({
   avatar,
   pose,
@@ -217,7 +224,7 @@ export function Duelist({
   children,
 }: FigureProps & { avatar: AvatarChoice; pose: DuelPose; hat?: DuelHat | null; phone?: boolean }) {
   const ph = phone ?? isPhoneArt();
-  const head = DUEL_POSE_HEAD[pose] ?? DUEL_POSE_HEAD.idle;
+  const head = RIGHT_FACING_POSE_HEAD_TRIMMED_PCT[pose] ?? RIGHT_FACING_POSE_HEAD_TRIMMED_PCT.idle;
   return (
     <Figure
       facing={facing}
@@ -267,7 +274,7 @@ function sheetCell(sheetW: number, sheetH: number, x: number, y: number, cellW: 
   return { width: pct((sheetW / cellW) * 100), height: pct((sheetH / cellH) * 100), left: pct((-x / cellW) * 100), top: pct((-y / cellH) * 100) };
 }
 
-// why: same box as Duelist so it swaps in for a pose; without `loop` it holds its last frame and calls onEnd.
+// why: share Figure geometry with Duelist so swapping in a clip keeps the pose aligned.
 export function DuelistClip({
   avatar,
   clip,
@@ -316,10 +323,8 @@ export function DuelistClip({
   );
 }
 
-// why: an effect plays once on mount (new key to replay); without x/y it fills its positioned parent.
-
+// why: an effect plays once on mount; use a new key to replay it.
 interface EffectProps {
-  // why: the effect's anchor (flash core, barrel end, ground point), % of the parent.
   x?: number;
   y?: number;
   widthPct?: number;
@@ -328,11 +333,20 @@ interface EffectProps {
   style?: Style;
 }
 
-function Effect({ id, kind, x, y, widthPct, facing = "right", class: cls = "", style }: EffectProps & { id: string; kind: string; widthPct: number }) {
+function Effect({
+  id,
+  kind,
+  x: anchorXPct,
+  y: anchorYPct,
+  widthPct,
+  facing = "right",
+  class: cls = "",
+  style,
+}: EffectProps & { id: string; kind: string; widthPct: number }) {
   const a = DUEL_EFFECTS[id as keyof typeof DUEL_EFFECTS];
   const ax = mirrorX(a.x, facing);
   const img = <img class={facing === "left" ? "sd-mirrored" : ""} src={duelArt(id)} alt="" draggable={false} />;
-  if (x === undefined && y === undefined) {
+  if (anchorXPct === undefined && anchorYPct === undefined) {
     return (
       <div class={`sd-fx sd-fill ${cls}`} style={style}>
         <div class={`sd-fx-anim sd-${kind}`} style={{ transformOrigin: `${ax}% ${a.y}%` }}>
@@ -342,7 +356,10 @@ function Effect({ id, kind, x, y, widthPct, facing = "right", class: cls = "", s
     );
   }
   return (
-    <div class={`sd-fx ${cls}`} style={{ left: pct(x ?? 50), top: pct(y ?? 50), width: pct(widthPct), transform: `translate(${-ax}%, ${-a.y}%)`, ...style }}>
+    <div
+      class={`sd-fx ${cls}`}
+      style={{ left: pct(anchorXPct ?? 50), top: pct(anchorYPct ?? 50), width: pct(widthPct), transform: `translate(${-ax}%, ${-a.y}%)`, ...style }}
+    >
       <div class={`sd-fx-anim sd-${kind}`} style={{ transformOrigin: `${ax}% ${a.y}%` }}>
         {img}
       </div>
@@ -358,7 +375,6 @@ export function GunSmoke({ widthPct, ...rest }: EffectProps) {
   return <Effect id="gun-smoke" kind="smoke" widthPct={widthPct ?? trimmedPctToCanvasW(DUEL_EFFECT_WIDTH["gun-smoke"])} {...rest} />;
 }
 
-// why: with x/y the anchor is its bottom centre.
 export function DustPuff({ widthPct, ...rest }: EffectProps) {
   return <Effect id="dust-puff" kind="dust" widthPct={widthPct ?? trimmedPctToCanvasW(DUEL_EFFECT_WIDTH["dust-puff"])} {...rest} />;
 }
@@ -398,8 +414,7 @@ export function BulletStreak({ from: fromPct, to: toPct, class: cls = "", style 
   );
 }
 
-// why: all four hats share the brown hat's size.
-const WORN_HAT_PX = { w: (DUEL_HATS.brown.w / 100) * DUEL_BOX.w, h: (DUEL_HATS.brown.h / 100) * DUEL_BOX.h };
+const BROWN_WORN_HAT_PX = { w: (DUEL_HATS.brown.w / 100) * DUEL_BOX.w, h: (DUEL_HATS.brown.h / 100) * DUEL_BOX.h };
 
 const HAT_FADE_FRAMES = 4;
 const STILL_HAT_SPIN_DEG = 520;
@@ -425,14 +440,18 @@ export function FlyingHat({
   const frame = useFrames(m.frames, m.fps, true, false, onEnd);
   const [rx, ry] = m.track[frame] ?? m.track[m.track.length - 1]!;
   const [x0, y0] = m.track[0]!;
-  const dxHatPct = ((((rx - x0) / 100) * DUEL_BOX.w) / WORN_HAT_PX.w) * 100 * (facing === "left" ? -1 : 1);
-  const dyHatPct = ((((ry - y0) / 100) * DUEL_BOX.h) / WORN_HAT_PX.h) * 100;
+  const dxHatPct = ((((rx - x0) / 100) * DUEL_BOX.w) / BROWN_WORN_HAT_PX.w) * 100 * (facing === "left" ? -1 : 1);
+  const dyHatPct = ((((ry - y0) / 100) * DUEL_BOX.h) / BROWN_WORN_HAT_PX.h) * 100;
   const t = frame / (m.frames - 1);
   const fade = Math.min(1, (m.frames - 1 - frame) / HAT_FADE_FRAMES);
-  const unit: Style = { aspectRatio: `${WORN_HAT_PX.w} / ${WORN_HAT_PX.h}`, transform: `translate(${dxHatPct}%, ${dyHatPct - 50}%)`, opacity: fade };
+  const unit: Style = {
+    aspectRatio: `${BROWN_WORN_HAT_PX.w} / ${BROWN_WORN_HAT_PX.h}`,
+    transform: `translate(${dxHatPct}%, ${dyHatPct - 50}%)`,
+    opacity: fade,
+  };
   if (hat === "brown" && !ph) {
-    const cw = (((m.size[0] / 100) * DUEL_BOX.w) / WORN_HAT_PX.w) * 100;
-    const ch = (((m.size[1] / 100) * DUEL_BOX.h) / WORN_HAT_PX.h) * 100;
+    const cw = (((m.size[0] / 100) * DUEL_BOX.w) / BROWN_WORN_HAT_PX.w) * 100;
+    const ch = (((m.size[1] / 100) * DUEL_BOX.h) / BROWN_WORN_HAT_PX.h) * 100;
     return (
       <div class={`sd-flying-hat ${cls}`}>
         <div class="sd-hat-unit" style={unit}>
@@ -466,21 +485,20 @@ export function Tumbleweed({
   durationMs = 5000,
   from = "left",
   heightPct = 14,
-  groundPct = 4,
+  groundPct: bottomPct = 4,
   phone,
   class: cls = "",
 }: {
   durationMs?: number;
   from?: DuelFacing;
   heightPct?: number;
-  // why: % of the parent's height from the bottom.
   groundPct?: number;
   phone?: boolean;
   class?: string;
 }) {
   const m = DUEL_OBJECTS.tumbleweed;
   const ph = phone ?? isPhoneArt();
-  const style: Style = { height: pct(heightPct), bottom: pct(groundPct), aspectRatio: `${m.cellW} / ${m.cellH}`, animationDuration: `${durationMs}ms` };
+  const style: Style = { height: pct(heightPct), bottom: pct(bottomPct), aspectRatio: `${m.cellW} / ${m.cellH}`, animationDuration: `${durationMs}ms` };
   return (
     <div class={`sd-tumble sd-from-${from} ${cls}`} style={style}>
       <div class="sd-tumble-hop">

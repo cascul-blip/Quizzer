@@ -36,7 +36,6 @@ export class JoinInformation {
     return this.addresses()[0]?.address ?? "localhost";
   }
 
-  // why: an address that isn't one of this computer's is refused, keeping the previous choice.
   select(address: string): boolean {
     if (!this.isUsable(address)) return false;
     this.selected = address;
@@ -51,11 +50,11 @@ export class JoinInformation {
     return `http://${this.address}:${this.port}/`;
   }
 
-  // why: qrSvg is "" until rendering completes; onQrReady fires then.
   info(): JoinInfo {
     const url = this.url();
     let qrSvg = this.qrByUrl.get(url);
     if (qrSvg === undefined) {
+      // why: reserve the URL before rendering so repeated view reads share one render.
       this.qrByUrl.set(url, "");
       QRCode.toString(url, { type: "svg", margin: 1, errorCorrectionLevel: "M" })
         .then((svg) => {

@@ -22,8 +22,7 @@ const REFERENCE_SCENE_PX = 1000;
 const ROAD_PX_PER_S_PER_MPH = 9;
 const SKYLINE_RATE = 0.04;
 const PALM_RATE = 0.55;
-// why: the time constant for the shown speed to close the gap to the real one.
-const EASE_S = 1.5;
+const SHOWN_SPEED_TIME_CONSTANT_S = 1.5;
 const PALM_LEFTS_PCT = [7, 35, 78];
 const BOB_MPH = 2;
 const BOB_FAST_MPH = 60;
@@ -76,9 +75,7 @@ function newStar(xShare: number): Star {
 
 interface RacerSceneProps {
   theme?: SeasonTheme;
-  // why: mph; the scene eases toward it, so it may jump.
   speed: number;
-  // why: overrides speed: the scene coasts to a stop.
   crashed: boolean;
   onLand?: () => void;
   // why: each new `key` plays it once.
@@ -93,9 +90,9 @@ interface Ejection {
   riders: { avatar: AvatarChoice; name: string; delay: number; spin: number; lift: number }[];
 }
 
-export function RacerScene({ speed, crashed, onLand, ejected, theme, class: cls }: RacerSceneProps) {
+export function RacerScene({ speed: speedMph, crashed, onLand, ejected, theme, class: cls }: RacerSceneProps) {
   const christmas = modeTheme("racer", theme) === "christmas";
-  const target = crashed ? 0 : Math.max(0, speed);
+  const target = crashed ? 0 : Math.max(0, speedMph);
   const root = useRef<HTMLDivElement>(null);
   const skyline = useRef<HTMLDivElement>(null);
   const palms = useRef<HTMLDivElement>(null);
@@ -121,7 +118,6 @@ export function RacerScene({ speed, crashed, onLand, ejected, theme, class: cls 
     let dashX = 0;
     let raf = 0;
     let last = 0;
-    // why: the space state lives in data attributes, which re-renders leave alone.
     let space = m.shown > SPACE_MPH;
     let landing = 0;
     let starsShown = false;
@@ -236,7 +232,7 @@ export function RacerScene({ speed, crashed, onLand, ejected, theme, class: cls 
       raf = 0;
       const dt = last ? Math.min(MAX_FRAME_STEP_S, (now - last) / 1000) : 0;
       last = now;
-      m.shown += (m.target - m.shown) * (1 - Math.exp(-dt / EASE_S));
+      m.shown += (m.target - m.shown) * (1 - Math.exp(-dt / SHOWN_SPEED_TIME_CONSTANT_S));
       if (Math.abs(m.target - m.shown) < 0.05) m.shown = m.target;
       const road = m.shown * ROAD_PX_PER_S_PER_MPH * (width / REFERENCE_SCENE_PX) * dt;
       skylineX = (skylineX + road * SKYLINE_RATE) % skylineW;

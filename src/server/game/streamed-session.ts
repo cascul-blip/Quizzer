@@ -28,7 +28,6 @@ interface StreamedSessionOptions<P, Ph extends string, T> {
   clock?: Clock;
   rng?: () => number;
   countdownMs: number;
-  // why: without minutes the session has no Game-length clock, and startGameLength refuses.
   minutes?: number;
   inPlay: (phase: Ph | SessionPhase) => boolean;
   canAnswer: (player: P) => boolean;
@@ -37,14 +36,12 @@ interface StreamedSessionOptions<P, Ph extends string, T> {
   hub: HubCallbacks;
 }
 
-// why: addPlayer and removePlayer don't broadcast, so the mode finishes its own clean-up and then calls changed() once.
 export class StreamedSession<P extends BasePlayer & AnswerTotals, Ph extends string, T = unknown> {
   readonly roster = new Roster<P>();
   readonly stream: QuestionStream<P>;
   readonly phases: PhaseTimer<Ph | SessionPhase>;
   readonly clock: Clock;
   readonly rng: () => number;
-  // why: undefined for a game not started from a lobby, as before the Streamed session.
   choices!: LobbyChoices;
   private readonly gameFinish: GameFinish<Ph | SessionPhase, T>;
   private readonly gameLength: GameLengthClock<Ph | SessionPhase> | null;
@@ -115,7 +112,6 @@ export class StreamedSession<P extends BasePlayer & AnswerTotals, Ph extends str
     if (this.roster.setConnected(playerId, connected)) this.onChange();
   }
 
-  // why: null when refused; the mode applies its reward, then calls activity() or changed().
   answer(playerId: string, seq: number, value: AnswerValue): { player: P; correct: boolean } | null {
     const player = this.players.get(playerId);
     if (!player || this.phase === "podium") return null;

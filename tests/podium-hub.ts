@@ -42,7 +42,6 @@ export function podiumHub() {
 
   const phones = new Map<Nickname, HubSocket>();
 
-  /** why: the sample quiz's right answers are "One" True and "Two" False. */
   function answerRight(prefix: string, nickname: Nickname, id: string, count: number) {
     for (let i = 0; i < count; i++) {
       const q = (running().playerView(id) as { question?: { seq: number; text: string; options: string[] } | null } | null)?.question;
@@ -59,7 +58,6 @@ export function podiumHub() {
     return game;
   }
 
-  /** why: `after` runs once the game has ended, to prove later changes don't reach the podium. */
   async function finish(mode: GameMode, play: (id: (n: Nickname) => string) => void, after: (id: (n: Nickname) => string) => void = () => {}) {
     ctx.host.sendMsg({ type: "host.open", quizId: ctx.quizId });
     ctx.host.sendMsg({ type: "host.setMode", mode } as ClientMsg);

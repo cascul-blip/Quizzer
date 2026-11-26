@@ -138,9 +138,9 @@ export function PacedQuestionFeedback({
             image={q.image}
             spots={q.spots}
             labels={q.options}
-            correct={r.correct}
-            pinAt={r.choice}
-            wrong={r.choice !== null && !correctSet.has(r.choice) ? r.choice : null}
+            correctSpotIndexes={r.correct}
+            placedSpotIndex={r.choice}
+            wrongSpotIndex={r.choice !== null && !correctSet.has(r.choice) ? r.choice : null}
           />
         </div>
       ) : (

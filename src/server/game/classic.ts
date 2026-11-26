@@ -8,6 +8,7 @@ import type { Question, Quiz } from "../../shared/quiz-schema.ts";
 import type { Clock } from "./common.ts";
 import { GameError, preparePlayOrder, topErrors } from "./common.ts";
 import type { LobbyChoices } from "./lobby-facts.ts";
+import type { PacedAnswer } from "./paced-round.ts";
 import { INTRO_MS } from "./paced-round.ts";
 import { PacedSession } from "./paced-session.ts";
 import type { Podium } from "./podium.ts";
@@ -24,13 +25,8 @@ export { INTRO_MS };
 export const AUTO_LEADERBOARD_MS = 5000;
 const LEADERBOARD_SIZE = 10;
 
-interface Answer {
-  /** why: -1 marks a typed answer. */
-  option: number;
-  text?: string;
-  correct: boolean;
+interface Answer extends PacedAnswer {
   points: number;
-  msSinceOpen: number;
 }
 
 interface Player extends BasePlayer {
@@ -45,7 +41,6 @@ interface GameOptions {
   rng?: () => number;
   pacing?: Pacing;
   onChange?: () => void;
-  /** why: the answering phone updates at once, everyone else a moment later; defaults to onChange. */
   onActivity?: (playerId: string) => void;
   onFinish?: (game: ClassicGame) => void;
   shuffle?: ShuffleOptions;
@@ -55,7 +50,6 @@ export class ClassicGame {
   readonly quiz: Quiz;
   readonly quizId: string;
   readonly title: string;
-  /** why: fixed (and shuffled if chosen) when the game starts. */
   questions: Question[];
   shuffle: ShuffleOptions;
   readonly runningMode = "classic" as const;
@@ -101,7 +95,6 @@ export class ClassicGame {
 
   setup!: LobbyChoices;
 
-  /** why: the next lobby opens with these, pacing as the host left it. */
   get choices(): LobbyChoices {
     return { ...this.setup, pacing: this.pacing };
   }
@@ -110,7 +103,6 @@ export class ClassicGame {
     return this.session.paced.openedAt;
   }
 
-  /** why: 0 when the phase has no countdown. */
   get phaseEndsAt(): number {
     return this.session.paced.phases.endsAt;
   }
@@ -123,7 +115,6 @@ export class ClassicGame {
     return this.session.paced.currentQuestion;
   }
 
-  /** why: without a previous `avatar` the player gets a random one to change in the lobby. */
   join(rawNickname: unknown, avatar?: AvatarChoice | null): Player {
     const player = this.session.addPlayer(rawNickname, avatar, newPlayer);
     this.session.changed();
@@ -138,7 +129,6 @@ export class ClassicGame {
     return this.session.byToken(token);
   }
 
-  /** why: only while waiting in the lobby. */
   setAvatar(playerId: string, avatar: unknown, accessory: unknown): void {
     const p = this.players.get(playerId);
     if (!p) return;
@@ -240,8 +230,8 @@ export class ClassicGame {
   }
 
   private scheduleLeaderboardAuto(): void {
-    // why: the timer runs behind the scenes, so views show no countdown for an auto-paced leaderboard.
     if (this.pacing === "auto" && this.phase === "leaderboard") {
+      // why: auto pacing advances the leaderboard without putting a countdown on that screen.
       this.session.paced.phases.set("leaderboard", AUTO_LEADERBOARD_MS, () => this.enterIntro(this.qIndex + 1), { hidden: true });
     }
   }
@@ -250,7 +240,6 @@ export class ClassicGame {
     return rankBy([...this.players.values()], [most((p) => p.score)]);
   }
 
-  /** why: fastest first. */
   private answerAvatars(optionCount: number): HostClassicState["answerAvatars"] {
     const picks = [...this.players.values()]
       .map((p) => ({ p, a: p.answers[this.qIndex] }))
@@ -259,7 +248,6 @@ export class ClassicGame {
     return Array.from({ length: optionCount }, (_, i) => picks.filter((x) => x.a.option === i).map((x) => x.p.avatar));
   }
 
-  /** why: equal points share a place; Classic gives no awards. */
   private buildPodium(): Podium<Player, Player, never> {
     const players = [...this.players.values()];
     return buildPodium({ entries: players, order: [most((p) => p.score)], players, entryOf: (p) => p, awards: { labels: {}, values: {} } });
@@ -282,7 +270,6 @@ export class ClassicGame {
     }));
   }
 
-  /** why: wrong answers only; a question left unanswered does not count. */
   errors(): QuestionError[] {
     const wrong = this.questions.map((_, i) => [...this.players.values()].filter((p) => p.answers[i] && !p.answers[i]!.correct).length);
     return topErrors(this.questions, wrong);
@@ -332,7 +319,6 @@ export class ClassicGame {
   }
 
   private rankOf(playerId: string): number {
-    // why: someone missing from the Podium shows last.
     if (this.phase === "podium") return this.podium.result(playerId)?.place ?? this.players.size;
     if (!this.batch) return this.ranked().find((r) => r.id === playerId)!.rank;
     this.batch.rankById ??= new Map(this.rankedNow().map((r) => [r.id, r.rank]));

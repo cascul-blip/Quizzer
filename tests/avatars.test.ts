@@ -7,7 +7,6 @@ import { TowerGame } from "../src/server/game/tower.ts";
 import type { AccessoryId, AvatarId } from "../src/shared/avatars.ts";
 import { ACCESSORIES, AVATAR_SET, AVATARS, cleanAvatar, OFFERED_ACCESSORIES, OFFERED_AVATARS, randomAvatar } from "../src/shared/avatars.ts";
 
-// why: ids come from whichever set is offered, so these tests pass with either AVATAR_SET.
 const [A1, A2, A3] = OFFERED_AVATARS.map((a) => a.id) as [AvatarId, AvatarId, AvatarId];
 const [, X1, X2, X3] = OFFERED_ACCESSORIES.map((a) => a.id) as [AccessoryId, AccessoryId, AccessoryId, AccessoryId];
 
