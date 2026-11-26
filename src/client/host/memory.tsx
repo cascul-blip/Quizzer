@@ -1,4 +1,4 @@
-import { MEMORY_BOARD_SIZES, MEMORY_QUESTIONS_PER_PHASE, MEMORY_URGENT_SECONDS_LEFT } from "../../shared/modes/memory.ts";
+import { decodeFastestAnswers, MEMORY_BOARD_SIZES, MEMORY_QUESTIONS_PER_PHASE, MEMORY_URGENT_SECONDS_LEFT, memoryShared } from "../../shared/modes/memory.ts";
 import type { HostView } from "../../shared/protocol.ts";
 import { themedLabel, themedTrack } from "../../shared/themed-modes.ts";
 import { memoryMotionStyle, useCardMotion } from "../shared/memory/card-flips.ts";
@@ -8,6 +8,7 @@ import { ordinal, useCountdown } from "../shared/ui.tsx";
 import type { Send } from "./common.tsx";
 import type { LobbyModeEntry } from "./lobby-modes.tsx";
 import { PacedQuestionIntro, PacedQuestionScreen, PacedStageHeader, usePacedShortcuts } from "./paced-question.tsx";
+import { Award } from "./tower.tsx";
 import "./memory.css";
 
 type MemoryView = Extract<HostView, { kind: "memory" }>;
@@ -144,11 +145,22 @@ function MemoryPodium({ view, send }: { view: MemoryView; send: Send }) {
   return (
     <main class="podium">
       <h1>🏆 Final results</h1>
+      <div class="awards">
+        <Award
+          icon="⚡"
+          title={memoryShared.awards.fastestAnswers}
+          award={view.awards?.fastestAnswers ?? null}
+          unit="s"
+          valueText={(value) => `${decodeFastestAnswers(value).toFixed(1)} s average`}
+        />
+        <Award icon="✅" title={memoryShared.awards.mostCorrect} award={view.awards?.mostCorrect ?? null} unit="correct" />
+        <Award icon="🙃" title={memoryShared.awards.worstFlipper} award={view.awards?.worstFlipper ?? null} unit="misses" />
+      </div>
       <ol class="rest">
-        {view.players.map((player) => (
+        {(view.podium ?? []).map(({ place, player }) => (
           <li key={player.id}>
             <span class="rest-who">
-              {ordinal(player.rank)} {player.nickname}
+              {ordinal(place)} {player.nickname}
             </span>
             <span>
               {player.pairs} {player.pairs === 1 ? "pair" : "pairs"}

@@ -25,6 +25,8 @@ const turnView: MemoryView = {
   revealTurnsNext: false,
   answerCounts: null,
   players: [],
+  podium: null,
+  awards: null,
   boardSize: 6,
   board: board(),
   turn: { id: 4, playerId: "noel", nickname: "Noel" },

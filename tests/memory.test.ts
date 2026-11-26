@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { Lobby } from "../src/server/game/lobby.ts";
 import { MemoryGame } from "../src/server/game/memory.ts";
+import { memoryMode } from "../src/server/game/memory-entry.ts";
 import { QuizStore } from "../src/server/quiz/store.ts";
 import type { GameHub } from "../src/server/ws.ts";
 import type { Pacing } from "../src/shared/mode-views.ts";
 import type { MemoryBoardSize, MemoryCardView } from "../src/shared/modes/memory.ts";
+import { decodeFastestAnswers, encodeFastestAnswers, MEMORY_TURN_MS } from "../src/shared/modes/memory.ts";
 import type { ShuffleOptions } from "../src/shared/protocol.ts";
 import { FakeClock, sampleQuiz, tempDir } from "./helpers.ts";
 import { fakeHub, HubSocket } from "./hub-harness.ts";
@@ -655,8 +657,13 @@ describe("Memory Game", () => {
       for (const position of positions) expectedBoard[position] = { state: "empty" };
     }
     expect([...revealedFaces].sort((a, b) => a - b)).toEqual(Array.from({ length: pairCount }, (_, index) => index + (boardSize === 10 ? 0 : 1)));
-    expect(projector()).toMatchObject({ phase: "podium", board: expectedBoard, players: [{ rank: 1, pairs: pairCount, chips: chipsLeft }] });
-    expect(player(noel!).result).toEqual({ rank: 1, playerCount: 1 });
+    expect(projector()).toMatchObject({
+      phase: "podium",
+      board: expectedBoard,
+      players: [{ pairs: pairCount, chips: chipsLeft }],
+      podium: [{ place: 1, player: { pairs: pairCount } }],
+    });
+    expect(player(noel!).result).toEqual({ place: 1, playerCount: 1, awards: ["Fastest answers", "Most correct"] });
     clock.advance(60_000);
     expect(projector().phase).toBe("podium");
   });
@@ -692,15 +699,13 @@ describe("Memory Game", () => {
     expect(facesUp()).toEqual([]);
     const matched = when === "match feedback" ? 1 : 0;
     const sharedPlace = matched ? 2 : 1;
-    expect(projector()).toMatchObject({
-      phase: "podium",
-      players: [
-        { nickname: "Noel", pairs: matched, rank: 1 },
-        { nickname: "Holly", pairs: 0, rank: sharedPlace },
-        { nickname: "Ivy", pairs: 0, rank: sharedPlace },
-      ],
-    });
-    expect(player(holly!).result).toEqual({ rank: sharedPlace, playerCount: 3 });
+    expect(projector().phase).toBe("podium");
+    expect(projector().podium!.map(({ place, player: { nickname, pairs } }) => ({ place, nickname, pairs }))).toEqual([
+      { nickname: "Noel", pairs: matched, place: 1 },
+      { nickname: "Holly", pairs: 0, place: sharedPlace },
+      { nickname: "Ivy", pairs: 0, place: sharedPlace },
+    ]);
+    expect(player(holly!).result).toEqual({ place: sharedPlace, playerCount: 3, awards: [] });
     expect(hub.lastResults?.csv.split("\r\n").slice(0, 4)).toEqual([
       "\ufeffRank,Nickname,Matched pairs,Correct answers,Total time (s)",
       `1,Noel,${matched},${when === "questions" ? "1,0.120" : "2,0.181"}`,
@@ -711,5 +716,231 @@ describe("Memory Game", () => {
     clock.advance(60_000);
     expect(projector().phase).toBe("podium");
     expect(hub.lastResults).toBe(result);
+  });
+  test("a kick during the podium leaves the places, the other phones' results and the results sheet unchanged", async () => {
+    const {
+      host,
+      phones: [noel, holly],
+    } = await launch(["Noel", "Holly", "Ivy"]);
+    for (let i = 0; i < 3; i++) playQuestion(host, [noel!]);
+    confirmPair(noel!, [0, 1]);
+    host.sendMsg({ type: "host.end" });
+    const places = () => projector().podium!.map((r) => [r.place, r.player.nickname]);
+    expect(places()).toEqual([
+      [1, "Noel"],
+      [2, "Holly"],
+      [2, "Ivy"],
+    ]);
+    const sheet = memoryMode.results(hub.game as MemoryGame);
+
+    host.sendMsg({ type: "host.kick", playerId: projector().players.find((p) => p.nickname === "Noel")!.id });
+
+    expect(projector().players.map((p) => p.nickname)).toEqual(["Holly", "Ivy"]);
+    expect(places()).toEqual([
+      [1, "Noel"],
+      [2, "Holly"],
+      [2, "Ivy"],
+    ]);
+    expect(player(holly!).result).toEqual({ place: 2, playerCount: 3, awards: [] });
+    expect(memoryMode.results(hub.game as MemoryGame)).toEqual(sheet);
+  });
+
+  test("players with the same matched pairs share a place and are listed by correct answers, in the podium and the results sheet", async () => {
+    const {
+      host,
+      phones: [, holly, ivy],
+    } = await launch(["Noel", "Holly", "Ivy"], { count: 2 });
+    playQuestion(host, [ivy!, holly!]);
+    playQuestion(host, [ivy!]);
+    host.sendMsg({ type: "host.end" });
+
+    expect(projector().podium!.map((r) => [r.place, r.player.nickname])).toEqual([
+      [1, "Ivy"],
+      [1, "Holly"],
+      [1, "Noel"],
+    ]);
+    expect(projector().players.every((p) => !("rank" in p))).toBe(true);
+    expect(memoryMode.results(hub.game as MemoryGame).rows.map((row) => row.slice(0, 2))).toEqual([
+      [1, "Ivy"],
+      [1, "Holly"],
+      [1, "Noel"],
+    ]);
+  });
+
+  test("the live scoreboard is sorted by matched pairs without a rank", async () => {
+    const {
+      host,
+      phones: [, holly],
+    } = await launch(["Noel", "Holly"]);
+    for (let i = 0; i < 3; i++) playQuestion(host, [holly!]);
+    confirmPair(holly!, [0, 1]);
+    expect(projector().players).toMatchObject([
+      { nickname: "Holly", pairs: 1 },
+      { nickname: "Noel", pairs: 0 },
+    ]);
+    expect(projector().players.every((p) => !("rank" in p))).toBe(true);
+    expect(projector().podium).toBeNull();
+  });
+  test("the live scoreboard lists players with the same matched pairs by correct answers, like the podium", async () => {
+    const {
+      host,
+      phones: [, holly],
+    } = await launch(["Noel", "Holly"]);
+    playQuestion(host, [holly!]);
+    expect(projector().players.map((p) => p.nickname)).toEqual(["Holly", "Noel"]);
+  });
+
+  test("a player kicked before the podium gets no place or result", async () => {
+    const { host } = await launch(["Noel", "Holly"]);
+    const hollyId = projector().players.find((p) => p.nickname === "Holly")!.id;
+    host.sendMsg({ type: "host.kick", playerId: hollyId });
+    host.sendMsg({ type: "host.end" });
+
+    expect(projector().podium!.map((r) => r.player.nickname)).toEqual(["Noel"]);
+    expect((hub.game as MemoryGame).podium.result(hollyId)).toBeNull();
+    expect(memoryMode.results(hub.game as MemoryGame).rows.map((row) => row[1])).toEqual(["Noel"]);
+  });
+
+  test("Fastest answers encodes an average so faster scores higher, and decodes back to seconds", () => {
+    expect(encodeFastestAnswers(400)).toBeGreaterThan(encodeFastestAnswers(500));
+    expect(decodeFastestAnswers(encodeFastestAnswers(400))).toBeCloseTo(0.4);
+  });
+
+  test("Most correct goes to everyone tied on the most correct answers, and the phones list it", async () => {
+    const {
+      host,
+      phones: [noel, holly, ivy],
+    } = await launch(["Noel", "Holly", "Ivy"], { count: 2 });
+    playQuestion(host, [holly!, ivy!]);
+    playQuestion(host, [holly!, ivy!, noel!]);
+    host.sendMsg({ type: "host.end" });
+
+    expect(projector().awards?.mostCorrect).toEqual({ value: 2, nicknames: ["Holly", "Ivy"] });
+    expect(player(holly!).result?.awards).toContain("Most correct");
+    expect(player(noel!).result?.awards).not.toContain("Most correct");
+  });
+
+  test("nobody gets Most correct or Fastest answers when nobody answered correctly", async () => {
+    const {
+      host,
+      phones: [noel],
+    } = await launch(["Noel", "Holly"]);
+    const index = openQuestion(host);
+    clock.advance(100);
+    submit(noel!, index, 1);
+    host.sendMsg({ type: "host.end" });
+
+    expect(projector().awards).toEqual({ fastestAnswers: null, mostCorrect: null, worstFlipper: null });
+    expect(player(noel!).result?.awards).toEqual([]);
+  });
+
+  test("Fastest answers goes to the lowest average correct-answer time and ignores wrong answers", async () => {
+    const {
+      host,
+      phones: [noel, holly, ivy],
+    } = await launch(["Noel", "Holly", "Ivy"], { count: 2 });
+    let index = openQuestion(host);
+    clock.advance(10);
+    submit(ivy!, index, 1);
+    clock.advance(90);
+    submit(holly!, index, 1);
+    clock.advance(100);
+    submit(noel!, index);
+    host.sendMsg({ type: "host.skip" });
+    host.sendMsg({ type: "host.next" });
+    index = openQuestion(host);
+    clock.advance(400);
+    submit(holly!, index);
+    clock.advance(300);
+    submit(noel!, index);
+    host.sendMsg({ type: "host.end" });
+
+    const fastest = projector().awards?.fastestAnswers;
+    expect(fastest?.nicknames).toEqual(["Holly"]);
+    expect(decodeFastestAnswers(fastest!.value)).toBeCloseTo(0.4);
+    expect(player(holly!).result?.awards).toEqual(["Fastest answers"]);
+    expect(player(ivy!).result?.awards).toEqual([]);
+  });
+
+  test("equal average correct-answer times share Fastest answers", async () => {
+    const {
+      host,
+      phones: [noel, holly],
+    } = await launch(["Noel", "Holly", "Ivy"], { count: 2 });
+    let index = openQuestion(host);
+    clock.advance(100);
+    submit(noel!, index);
+    clock.advance(200);
+    submit(holly!, index);
+    host.sendMsg({ type: "host.skip" });
+    host.sendMsg({ type: "host.next" });
+    index = openQuestion(host);
+    clock.advance(100);
+    submit(holly!, index);
+    clock.advance(200);
+    submit(noel!, index);
+    host.sendMsg({ type: "host.end" });
+
+    expect(projector().awards?.fastestAnswers?.nicknames).toEqual(["Noel", "Holly"]);
+    expect(player(noel!).result?.awards).toContain("Fastest answers");
+  });
+
+  test("Worst Flipper counts mismatched pairs but not timed-out turns", async () => {
+    const {
+      host,
+      phones: [noel, holly],
+    } = await launch(["Noel", "Holly"]);
+    const phones = { Noel: noel!, Holly: holly! };
+    for (let i = 0; i < 3; i++) playQuestion(host, [noel!, holly!]);
+    const onTurn = () => phones[projector().turn!.nickname as "Noel" | "Holly"];
+    const flipper = onTurn();
+    confirmPair(flipper, [0, 2]);
+    expect(projector().feedback).toEqual({ matched: false });
+    clock.advance(2_000);
+    expect(onTurn()).not.toBe(flipper);
+    clock.advance(MEMORY_TURN_MS);
+    expect(onTurn()).toBe(flipper);
+    confirmPair(flipper, [0, 2]);
+    expect(projector().feedback).toEqual({ matched: false });
+    host.sendMsg({ type: "host.end" });
+
+    const name = flipper === noel ? "Noel" : "Holly";
+    const other = flipper === noel ? holly! : noel!;
+    expect(projector().awards?.worstFlipper).toEqual({ value: 2, nicknames: [name] });
+    expect(player(flipper).result?.awards).toContain("Worst Flipper");
+    expect(player(other).result?.awards).not.toContain("Worst Flipper");
+  });
+
+  test("players tied on misses share Worst Flipper", async () => {
+    const {
+      host,
+      phones: [noel, holly],
+    } = await launch(["Noel", "Holly", "Ivy"]);
+    const phones = { Noel: noel!, Holly: holly! };
+    for (let i = 0; i < 3; i++) playQuestion(host, [noel!, holly!]);
+    for (let i = 0; i < 2; i++) {
+      confirmPair(phones[projector().turn!.nickname as "Noel" | "Holly"], [0, 2]);
+      expect(projector().feedback).toEqual({ matched: false });
+      clock.advance(2_000);
+    }
+    host.sendMsg({ type: "host.end" });
+
+    expect(projector().awards?.worstFlipper?.nicknames.toSorted()).toEqual(["Holly", "Noel"]);
+    expect(player(noel!).result?.awards).toContain("Worst Flipper");
+    expect(player(holly!).result?.awards).toContain("Worst Flipper");
+  });
+
+  test("nobody gets Worst Flipper when the only missed turns timed out", async () => {
+    const {
+      host,
+      phones: [noel],
+    } = await launch(["Noel", "Holly"]);
+    for (let i = 0; i < 3; i++) playQuestion(host, [noel!]);
+    expect(projector().phase).toBe("turn");
+    clock.advance(MEMORY_TURN_MS);
+    host.sendMsg({ type: "host.end" });
+
+    expect(projector().awards?.worstFlipper).toBeNull();
+    expect(player(noel!).result?.awards).not.toContain("Worst Flipper");
   });
 });

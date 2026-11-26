@@ -51,13 +51,18 @@ function MemoryPhase({ view, send }: { view: PlayerMemoryView; send: Send }) {
     return (
       <Center>
         <p class="muted">Final result</p>
-        <div class={`final-rank ${view.result.rank <= 3 ? "top" : ""}`}>{ordinal(view.result.rank)}</div>
+        <div class={`final-rank ${view.result.place <= 3 ? "top" : ""}`}>{ordinal(view.result.place)}</div>
         <p class="big-score">
           {view.me.pairs} {view.me.pairs === 1 ? "matched pair" : "matched pairs"}
         </p>
         <p class="muted">
-          Rank {view.result.rank} of {view.result.playerCount}
+          Rank {view.result.place} of {view.result.playerCount}
         </p>
+        {view.result.awards.map((a) => (
+          <div key={a} class="award-chip">
+            🏅 {a}
+          </div>
+        ))}
       </Center>
     );
   }

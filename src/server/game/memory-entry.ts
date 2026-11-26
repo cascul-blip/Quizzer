@@ -20,13 +20,13 @@ export const memoryMode: ModeEntry<"memory"> = {
   results: (game) =>
     sheet(
       [
-        { header: "Rank", value: (p) => p.rank },
-        { header: "Nickname", value: (p) => p.nickname },
-        { header: "Matched pairs", value: (p) => p.pairs },
-        { header: "Correct answers", value: (p) => p.correct },
-        { header: "Total time (s)", value: (p) => (p.totalMs / 1_000).toFixed(3) },
+        { header: "Rank", value: (r) => r.place },
+        { header: "Nickname", value: (r) => r.player.nickname },
+        { header: "Matched pairs", value: (r) => r.player.pairs },
+        { header: "Correct answers", value: (r) => r.player.correct },
+        { header: "Total time (s)", value: (r) => (r.player.totalMs / 1_000).toFixed(3) },
       ],
-      game.ranked(),
+      game.podium.rows,
     ),
   handle(game, playerId, msg) {
     switch (msg.type) {
