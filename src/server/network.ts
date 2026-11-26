@@ -8,8 +8,7 @@ export interface LanAddress {
 const VIRTUAL_IFACE =
   /docker|veth|^br-|virbr|vbox|virtualbox|vmnet|vmware|vethernet|hyper-v|wsl|tailscale|^zt|zerotier|^wg|wireguard|^tun|^tap|^utun|loopback/i;
 
-/** Self-assigned when no DHCP server answered. */
-function isLinkLocal(ip: string): boolean {
+function isSelfAssignedWithoutDhcp(ip: string): boolean {
   return ip.startsWith("169.254.");
 }
 
@@ -18,14 +17,13 @@ function score(a: LanAddress): number {
   if (a.address.startsWith("192.168.")) s += 30;
   else if (a.address.startsWith("10.")) s += 20;
   else if (/^172\.(1[6-9]|2\d|3[01])\./.test(a.address)) s += 10;
-  else if (isLinkLocal(a.address)) s -= 50;
+  else if (isSelfAssignedWithoutDhcp(a.address)) s -= 50;
   if (VIRTUAL_IFACE.test(a.iface)) s -= 40;
   if (/^(wl|wi-?fi|wlan|en|eth|ethernet)/i.test(a.iface)) s += 5;
   return s;
 }
 
-/** Non-internal IPv4 addresses, most likely LAN address first. */
-export function lanAddresses(): LanAddress[] {
+export function lanAddressesMostLikelyFirst(): LanAddress[] {
   const out: LanAddress[] = [];
   for (const [iface, infos] of Object.entries(networkInterfaces())) {
     for (const info of infos ?? []) {
@@ -50,11 +48,7 @@ function hostnameOf(hostHeaderOrUrl: string): string {
   }
 }
 
-/**
- * Admin access = the request comes from this machine AND was addressed to a
- * loopback hostname (blocks DNS rebinding) AND, if sent by a browser page,
- * that page is itself served from loopback (blocks CSRF from other sites).
- */
+// why: the loopback Host header blocks DNS rebinding and the loopback Origin blocks CSRF from other sites.
 export function isAdminRequest(remoteIp: string | undefined | null, headers: Headers): boolean {
   if (!isLoopbackAddress(remoteIp)) return false;
   const host = headers.get("host");

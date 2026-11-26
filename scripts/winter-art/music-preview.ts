@@ -1,4 +1,3 @@
-/** Browser-only offline renderer for checking the actual sampled soundtrack. */
 import { instrumentsOf, renderInto } from "../../src/client/shared/music/engine.ts";
 import { loadSamples } from "../../src/client/shared/music/samples.ts";
 import { TRACKS } from "../../src/client/shared/music/tracks.ts";
@@ -44,7 +43,7 @@ window.renderChristmasMusic = async (id, seconds, intensity) => {
   v.setUint16(34, 16, true);
   text(36, "data");
   v.setUint32(40, wav.byteLength - 44, true);
-  // Preserve the mix; apply headroom only if the offline render would clip.
+  // why: scale down only when the render would clip, so a quiet mix keeps its levels.
   const scale = Math.min(1, 0.9 / Math.max(0.001, peak));
   for (let i = 0; i < left.length; i++)
     for (let c = 0; c < 2; c++) v.setInt16(44 + i * 4 + c * 2, Math.max(-32768, Math.min(32767, Math.round((c ? right[i]! : left[i]!) * scale * 32767))), true);

@@ -102,7 +102,7 @@ export class HubSocket extends MessageLog {
 }
 
 export function fakeHub(store: QuizStore, clock: FakeClock, port = 4321, rng?: () => number) {
-  const hub = new Hub(store, { address: "127.0.0.1", discoverAddresses: () => [], clock, rng });
+  const hub = new Hub(store, { forcedAddress: "127.0.0.1", discoverAddresses: () => [], clock, rng });
   hub.join.port = port;
   return hub;
 }

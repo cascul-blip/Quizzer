@@ -21,9 +21,7 @@ import { NotFoundError } from "./quiz/store.ts";
 import { ViewDelivery } from "./view-delivery.ts";
 
 export interface SocketData {
-  /** Request came from this machine to a loopback hostname; may use host controls. */
   admin: boolean;
-  /** Remote address, for the per-device caps. */
   ip: string;
   role: "player" | "host";
 }
@@ -31,8 +29,7 @@ export interface SocketData {
 type WS = Pick<ServerWebSocket<SocketData>, "data" | "send" | "getBufferedAmount">;
 
 interface HubOptions {
-  /** Forced join address (--host). */
-  address?: string;
+  forcedAddress?: string;
   discoverAddresses?: () => LanAddress[];
   clock?: Clock;
   rng?: () => number;
@@ -43,23 +40,21 @@ interface LastResults {
   quizId: string;
   title: string;
   csv: string;
-  /** Where the CSV was saved, or null if writing failed. */
   file: string | null;
 }
 
-/** Owns the single live game and every connected socket; pushes each phone its view (or a patch of it) on every change. */
 export class GameHub {
   game: Lobby | LiveGame | null = null;
   lastResults: LastResults | null = null;
-  /** Changes on every server start; pages that reconnect to a different one reload to pick up new code. */
+  // why: pages that reconnect to a different server start reload to pick up new code.
   readonly serverId = crypto.randomUUID();
 
   private readonly phoneAttachments = new PhoneAttachments<WS>((id, connected) => this.game?.setConnected(id, connected));
   readonly join: JoinInformation;
-  /** Image refs of the open quiz, sent to phones on join so they can preload them. */
+  // why: sent to phones on join so they can preload the open quiz's images.
   private images: string[] = [];
   private readonly views: ViewDelivery<WS>;
-  /** Mode, mode settings and pacing carry over to the next lobby ("Play again"). */
+  // why: mode, mode settings and pacing carry over to the next lobby ("Play again").
   private lastSetup: Partial<LobbyChoices> = {};
   private readonly log: (msg: string) => void;
 
@@ -81,7 +76,7 @@ export class GameHub {
       },
     );
     this.join = new JoinInformation({
-      address: opts.address,
+      forcedAddress: opts.forcedAddress,
       discoverAddresses: opts.discoverAddresses,
       now: opts.clock ? () => opts.clock!.now() : undefined,
       log: opts.log,
@@ -240,7 +235,7 @@ export class GameHub {
     if (action.type === "start") {
       installAndActivate(lobby.choices.mode, (game) => game.start(action.pacing));
     } else {
-      // The lobby's legacy Next and End commands always target Classic.
+      // why: the lobby's legacy Next and End commands always target Classic.
       installAndActivate("classic", (game) => game[action.type]());
     }
   }

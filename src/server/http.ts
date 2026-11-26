@@ -20,8 +20,7 @@ interface ServerOptions {
   store: QuizStore;
   port: number;
   version: string;
-  /** Forced join address (--host). */
-  address?: string;
+  forcedAddress?: string;
   development?: boolean;
   clock?: Clock;
   log?: (msg: string) => void;
@@ -37,7 +36,6 @@ export interface RunningServer {
 const json = (data: unknown, status = 200) => Response.json(data, { status });
 const errorJson = (message: string, status: number) => json({ error: message }, status);
 
-/** decodeURIComponent, or null for a malformed escape such as "%E0%A4%A". */
 function decodePath(s: string): string | null {
   try {
     return decodeURIComponent(s);
@@ -57,7 +55,7 @@ async function readJson(req: Request): Promise<unknown> {
 export function startServer(opts: ServerOptions): RunningServer {
   const { store, version } = opts;
   const log = opts.log ?? (() => {});
-  const hub = new GameHub(store, { address: opts.address, clock: opts.clock, log });
+  const hub = new GameHub(store, { forcedAddress: opts.forcedAddress, clock: opts.clock, log });
 
   async function api(req: Request, url: URL): Promise<Response> {
     const path = url.pathname;
@@ -182,7 +180,7 @@ export function startServer(opts: ServerOptions): RunningServer {
       maxPayloadLength: 16 * 1024,
       idleTimeout: 60,
       sendPings: true,
-      // Halves the Wi-Fi traffic to phones. The shared compressor measured smaller than per-socket windows.
+      // why: halves the Wi-Fi traffic to phones; the shared compressor measured smaller than per-socket windows.
       perMessageDeflate: true,
       open: (ws) => hub.onOpen(ws),
       message: (ws, msg) => hub.onMessage(ws, msg),

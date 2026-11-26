@@ -64,7 +64,7 @@ let base: string;
 beforeAll(() => {
   t = tempDir();
   store = new QuizStore(t.dir);
-  srv = startServer({ store, port: 0, version: "test", clock, address: "127.0.0.1" });
+  srv = startServer({ store, port: 0, version: "test", clock, forcedAddress: "127.0.0.1" });
   base = `http://localhost:${srv.port}`;
 });
 afterAll(async () => {

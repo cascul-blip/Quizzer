@@ -22,7 +22,7 @@ import {
 
 export class NotFoundError extends Error {}
 
-/** Write via a temp file and rename, so the path only ever holds a complete file (or nothing). */
+// why: write a temp file and rename, so the path only ever holds a complete file (or nothing).
 function writeAtomic(path: string, data: string | Uint8Array): void {
   const tmp = `${path}.${process.pid}.${newId(4)}.tmp`;
   try {
@@ -33,12 +33,12 @@ function writeAtomic(path: string, data: string | Uint8Array): void {
   }
   renameSync(tmp, path);
 }
-/** The quiz changed since the caller loaded it (an MCP agent edited it while the editor was open). */
+// why: an MCP agent can edit a quiz while the editor has it open.
 export class ConflictError extends Error {}
 
 export { MAX_MEDIA_BYTES };
 
-/** Images with more pixels than this are refused rather than decoded. */
+// why: refused rather than decoded, so a huge image can't exhaust memory.
 const MAX_IMAGE_PIXELS = 64_000_000;
 const MEDIA_TYPES: Record<string, string> = {
   "image/png": "png",
@@ -48,11 +48,8 @@ const MEDIA_TYPES: Record<string, string> = {
 };
 export const MEDIA_MIME: Record<string, string> = Object.fromEntries(Object.entries(MEDIA_TYPES).map(([m, e]) => [e, m]));
 
-/**
- * Scale an image down to MAX_IMAGE_SIDE and re-encode it as WebP, so phones load it quickly:
- * lossless for PNG (diagrams and labels stay sharp), quality 85 otherwise. GIFs (maybe animated),
- * images already small enough, and anything that doesn't decode are kept as they are.
- */
+// why: WebP loads quickly on phones; PNG stays lossless so diagrams and labels stay sharp.
+// GIFs (maybe animated), images already small enough, and anything that doesn't decode are kept.
 export async function shrinkImage(bytes: Uint8Array, mime: string): Promise<{ bytes: Uint8Array; mime: string }> {
   const keep = { bytes, mime };
   if (mime === "image/gif") return keep;
@@ -76,7 +73,7 @@ export async function shrinkImage(bytes: Uint8Array, mime: string): Promise<{ by
   }
 }
 
-/** Sniff the image type from magic bytes so we never trust a client-supplied type. */
+// why: sniff magic bytes so a client-supplied type is never trusted.
 export function sniffImageType(bytes: Uint8Array): string | null {
   const b = bytes;
   if (b.length >= 8 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return "image/png";
@@ -111,24 +108,24 @@ function quizDate(source: unknown, field: "createdAt" | "updatedAt"): string | u
   return typeof value === "string" && Number.isFinite(Date.parse(value)) ? value : undefined;
 }
 
-/** Keep legacy timestamp guards working across rapid saves and backwards clock adjustments. */
+// why: keeps legacy timestamp guards working across rapid saves and backwards clock adjustments.
 function nextTimestamp(previous: string): string {
   const now = Date.now();
   const next = new Date(Date.parse(previous) + 1);
   return next.getTime() > now ? next.toISOString() : new Date(now).toISOString();
 }
 
-/** The digest describes exactly the file read or written, including edits made outside Quizzer. */
+// why: the digest covers exactly the file read or written, including edits made outside Quizzer.
 function revision(contents: string): string {
   return createHash("sha256").update(contents).digest("hex");
 }
 
-/** One JSON file per quiz. Every read goes to disk so edits from other processes (stdio MCP) show up immediately. */
+// why: every read goes to disk so edits from other processes (stdio MCP) show up immediately.
 export class QuizStore {
   readonly quizzesDir: string;
   readonly mediaDir: string;
   readonly resultsDir: string;
-  /** Custom background music: files named after a track id (see src/shared/music-tracks.ts). */
+  // why: custom music files are named after a track id (src/shared/music-tracks.ts).
   readonly musicDir: string;
 
   constructor(readonly dataDir: string) {
@@ -164,10 +161,7 @@ export class QuizStore {
     return join(this.quizzesDir, `${id}.json`);
   }
 
-  /**
-   * list()'s summaries by quiz id, with the file stamp they were read at. Parsing and validating
-   * every quiz on each call stalls the live game (the admin library reloads the list on focus).
-   */
+  // why: parsing every quiz on each list() stalls the live game; the admin library reloads the list on focus.
   private readonly summaries = new Map<string, { stamp: string; summary: QuizSummary }>();
 
   list(): QuizSummary[] {
@@ -180,10 +174,10 @@ export class QuizStore {
       let stamp: string;
       try {
         const st = statSync(this.file(id));
-        // Every write here renames a new file into place (new inode); an edit made elsewhere changes mtime or size.
+        // why: every write here renames a new file into place (new inode); an edit made elsewhere changes mtime or size.
         stamp = `${st.ino}:${st.mtimeMs}:${st.size}`;
       } catch {
-        continue; // deleted since readdir
+        continue; // why: deleted since readdir
       }
       seen.add(id);
       const hit = this.summaries.get(id);
@@ -251,13 +245,10 @@ export class QuizStore {
     });
   }
 
-  /**
-   * Replace a quiz's content (title, description, settings, questions) keeping id and createdAt.
-   * The editor guards by content revision. Older clients can still guard by updatedAt.
-   */
+  // why: the editor guards by content revision; older clients can still guard by updatedAt.
   async replace(id: string, input: unknown, base?: string | { revision: string }): Promise<SavedQuiz> {
     return this.withWriteLock(() => {
-      const contents = this.contents(id); // Missing quizzes stay deleted, including on explicit overwrite.
+      const contents = this.contents(id); // why: missing quizzes stay deleted, including on explicit overwrite.
       if (typeof base === "object" && base.revision !== revision(contents)) {
         throw new ConflictError("This quiz changed since you opened it");
       }
@@ -265,7 +256,7 @@ export class QuizStore {
       try {
         raw = JSON.parse(contents);
       } catch {
-        // The open editor can restore a malformed file from its last successful load.
+        // why: the open editor can restore a malformed file from its last successful load.
       }
       const updatedAt = quizDate(raw, "updatedAt");
       if (typeof base === "string" && base !== updatedAt) {
@@ -307,8 +298,6 @@ export class QuizStore {
     });
   }
 
-  // Question-level helpers (used by MCP).
-
   private editQuestions<T>(quizId: string, edit: (quiz: Quiz) => T) {
     return this.withWriteLock(() => {
       const quiz = this.get(quizId);
@@ -332,21 +321,21 @@ export class QuizStore {
       const idx = this.questionIndex(quiz, questionId);
       const current = quiz.questions[idx]!;
       const merged: Record<string, unknown> = { ...current, ...patch, id: current.id };
-      // Switching to true/false: fixed options, keep a valid answer.
+      // why: true/false has fixed options, so keep a valid answer.
       if (merged.type === "true_false" && current.type !== "true_false") {
         delete merged.options;
         if (patch.correct === undefined) merged.correct = [0];
       }
-      // Switching to typed answers: the old options are not answers; the editor sends fresh ones.
+      // why: on switching to typed answers the old options are not answers; the editor sends fresh ones.
       if (merged.type === "text" && current.type !== "text" && patch.options === undefined) delete merged.options;
       if (merged.type === "text") delete merged.correct;
-      // Spots belong to pin questions only; switching to pin starts from the spots' default labels.
+      // why: spots belong to pin questions only; switching to pin starts from the spots' default labels.
       if (merged.type !== "pin") delete merged.spots;
       else if (current.type !== "pin" && patch.options === undefined) {
         delete merged.options;
         if (patch.correct === undefined) merged.correct = [0];
       } else if (Array.isArray(patch.spots) && patch.options === undefined && current.options.every((o, i) => o === pinLabel(i))) {
-        // New spots on a pin that still has the default labels (A, B, C…): the labels follow the new count.
+        // why: new spots on a pin that still has the default labels (A, B, C…): the labels follow the new count.
         delete merged.options;
         const count = (patch.spots as unknown[]).length;
         if (patch.correct === undefined && current.correct.some((c) => c >= count)) merged.correct = [0];
@@ -394,10 +383,7 @@ export class QuizStore {
     return { ...parsed.data, revision: revision(contents) };
   }
 
-  /**
-   * Store an image, shrunk for phones (see shrinkImage), content-addressed by the uploaded bytes;
-   * returns a reference like "media/abc123.webp".
-   */
+  // why: content-addressed by the uploaded bytes; returns a reference like "media/abc123.webp".
   async saveMedia(bytes: Uint8Array): Promise<string> {
     if (bytes.length > MAX_MEDIA_BYTES) throw new ValidationError(`Image is larger than ${MAX_MEDIA_BYTES / 1024 / 1024} MB`);
     const mime = sniffImageType(bytes);
@@ -409,12 +395,12 @@ export class QuizStore {
     if (existing) return existing;
     const out = await shrinkImage(bytes, mime);
     const ref = `media/${hash}.${MEDIA_TYPES[out.mime]}`;
-    // Atomic: a half-written file under the hash name would be handed back by the dedupe above forever.
+    // why: atomic, because a half-written file under the hash name would be handed back by the dedupe above forever.
     writeAtomic(join(this.dataDir, ref), out.bytes);
     return ref;
   }
 
-  /** Custom music files present in data/music/: track id → file name. */
+  // why: maps track id to file name in data/music/.
   musicFiles(): Record<string, string> {
     const out: Record<string, string> = {};
     for (const name of readdirSync(this.musicDir).sort()) {
@@ -424,14 +410,12 @@ export class QuizStore {
     return out;
   }
 
-  /** Absolute path of a custom music file, or null if the name isn't an allowed track file. */
   musicFile(name: string): string | null {
     if (!musicTrackForFile(name)) return null;
     const path = join(this.musicDir, name);
     return existsSync(path) ? path : null;
   }
 
-  /** Absolute path for a media reference, or null if the reference is invalid. */
   mediaFile(ref: string): string | null {
     if (!MEDIA_REF_RE.test(ref)) return null;
     return join(this.dataDir, ref);

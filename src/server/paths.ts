@@ -4,12 +4,10 @@ export function isCompiled(): boolean {
   return Bun.main.startsWith("/$bunfs/") || /^[A-Za-z]:[\\/]~BUN[\\/]/.test(Bun.main);
 }
 
-/** Data lives next to the executable when compiled, otherwise in ./data. */
 export function defaultDataDir(): string {
   return isCompiled() ? join(dirname(process.execPath), "data") : resolve("data");
 }
 
-/** The classes' best Kingdom Siege Endless runs, keyed by quiz id. */
 export function siegeRecordsPath(dataDir: string): string {
   return join(dataDir, "siege-records.json");
 }

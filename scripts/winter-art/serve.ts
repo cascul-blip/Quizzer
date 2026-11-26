@@ -1,4 +1,3 @@
-/** Standalone art preview; no quiz data or live game required. */
 import { resolve } from "node:path";
 
 const outdir = "/tmp/quizzer-winter-preview";
