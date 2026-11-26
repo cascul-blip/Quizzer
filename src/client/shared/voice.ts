@@ -1,4 +1,3 @@
-// why: projector only; plays through the shared AudioContext so it follows mute and ducks the music.
 import type { VoiceLineId } from "../../shared/voice-lines.ts";
 import { music } from "./music/index.ts";
 import { getAudioContext, isMuted } from "./sounds.ts";
@@ -25,6 +24,7 @@ const CLIPS: Record<VoiceLineId, string> = {
 
 const ON_KEY = "quizzer.voice";
 const VOLUME = 1.1;
+const VOICE_LINE_GAP_S = 0.15;
 
 let enabled = (() => {
   try {
@@ -41,23 +41,22 @@ export function setVoiceEnabled(on: boolean): void {
   try {
     localStorage.setItem(ON_KEY, on ? "1" : "0");
   } catch {
-    // why: storage unavailable: the setting just won't persist
+    // why: Keep the current voice setting in memory if storage is unavailable.
   }
 }
 
-// why: downloaded up front so a line plays the moment it's needed; decoded on first use.
-const data = new Map<VoiceLineId, Promise<ArrayBuffer | null>>();
+// why: Preload bytes so first playback only has to decode, even if audio is still locked.
+const downloadedClips = new Map<VoiceLineId, Promise<ArrayBuffer | null>>();
 const decoded = new Map<VoiceLineId, AudioBuffer>();
-/** why: on the AudioContext clock, when the playing or queued line finishes. */
-let busyUntil = 0;
+let queuedVoiceEndS = 0;
 
 function load(id: VoiceLineId): Promise<ArrayBuffer | null> {
-  let p = data.get(id);
+  let p = downloadedClips.get(id);
   if (!p) {
     p = fetch(CLIPS[id])
       .then((r) => (r.ok ? r.arrayBuffer() : null))
       .catch(() => null);
-    data.set(id, p);
+    downloadedClips.set(id, p);
   }
   return p;
 }
@@ -66,7 +65,6 @@ export function preloadVoice(ids: VoiceLineId[]): void {
   for (const id of ids) void load(id);
 }
 
-/** why: lines never overlap; a new one waits for the current one. */
 export async function say(id: VoiceLineId): Promise<void> {
   const ctx = getAudioContext();
   if (!enabled || isMuted() || !ctx || ctx.state !== "running") return;
@@ -87,8 +85,8 @@ export async function say(id: VoiceLineId): Promise<void> {
   src.buffer = buf;
   gain.gain.value = VOLUME;
   src.connect(gain).connect(ctx.destination);
-  const at = Math.max(ctx.currentTime, busyUntil);
-  busyUntil = at + buf.duration + 0.15;
+  const at = Math.max(ctx.currentTime, queuedVoiceEndS);
+  queuedVoiceEndS = at + buf.duration + VOICE_LINE_GAP_S;
   src.start(at);
-  music.duck((busyUntil - ctx.currentTime) * 1000);
+  music.duck((queuedVoiceEndS - ctx.currentTime) * 1000);
 }

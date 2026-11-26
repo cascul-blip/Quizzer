@@ -1,23 +1,17 @@
-// why: any built-in track can be replaced by an audio file in data/music/<id>.<ext>.
 import type { MusicTrackId } from "../../../shared/music-tracks.ts";
 import type { RobotSkin } from "../robot-skin.ts";
 import { ROBOT_SKIN } from "../robot-skin.ts";
 import type { Track } from "./engine.ts";
 
-/** why: Notes with lengths in 16th steps; total the track's bar length (normally 16, or 12 for triple meter). */
-const seq = (...parts: [string, number][]) =>
+const seq = (...parts: [token: string, sixteenthSteps: number][]) =>
   parts.flatMap(([tok, len]) => (tok === "." ? Array(len).fill(".") : [tok, ...Array(len - 1).fill("-")])).join(" ");
 const lyric = (_words: string, bar: string) => bar;
 const hold = (tok: string) => seq([tok, 16]);
-/** why: Drum pattern from a compact 16-character string like "x...x...x...x...". */
-const drum = (s: string) => s.split("").join(" ");
-/** why: A single hit/ping on step 0 (e.g. a sonar note), silent otherwise. */
-const once = (tok: string) => seq([tok, 1], [".", 15]);
+const drum = (compactPattern: string) => compactPattern.split("").join(" ");
+const hitOnFirstStep = (tok: string) => seq([tok, 1], [".", 15]);
 const arp = (notes: string[], every = 1) => Array.from({ length: 16 }, (_, i) => (i % every === 0 ? notes[(i / every) % notes.length] : ".")).join(" ");
-/** why: Eighth-note bass bouncing between a low and a high note. */
-const bounce = (low: string, high: string) => arp([low, high], 2);
-/** why: Repeat a note on the steps marked "x". */
-const pump = (note: string, pattern: string) =>
+const alternatingEighths = (low: string, high: string) => arp([low, high], 2);
+const noteOnHits = (note: string, pattern: string) =>
   pattern
     .split("")
     .map((c) => (c === "x" ? note : "."))
@@ -34,7 +28,7 @@ const classicLobby: Track = {
     { inst: "kick", bars: [drum("x...x...x...x...")], vol: 0.9 },
     { inst: "clap", bars: [drum("....x.......x...")], vol: 0.8 },
     { inst: "hat", bars: [drum("..x...x...x...x.")], vol: 0.8 },
-    { inst: "bass", bars: [bounce("C2", "C3"), bounce("A1", "A2"), bounce("F1", "F2"), bounce("G1", "G2")] },
+    { inst: "bass", bars: [alternatingEighths("C2", "C3"), alternatingEighths("A1", "A2"), alternatingEighths("F1", "F2"), alternatingEighths("G1", "G2")] },
     { inst: "pad", bars: [hold(chord("C4 E4 G4")), hold(chord("A3 C4 E4")), hold(chord("F3 A3 C4")), hold(chord("G3 B3 D4"))], vol: 0.8 },
     {
       inst: "lead",
@@ -62,7 +56,12 @@ const classicQuestion: Track = {
     { inst: "tick", bars: [drum("x.x.x.x.x.x.x.x.")], vol: 0.9 },
     {
       inst: "bass",
-      bars: [pump("A1", "x.x.x.x.x.x.x.x."), pump("F1", "x.x.x.x.x.x.x.x."), pump("D2", "x.x.x.x.x.x.x.x."), pump("E1", "x.x.x.x.x.x.x.x.")],
+      bars: [
+        noteOnHits("A1", "x.x.x.x.x.x.x.x."),
+        noteOnHits("F1", "x.x.x.x.x.x.x.x."),
+        noteOnHits("D2", "x.x.x.x.x.x.x.x."),
+        noteOnHits("E1", "x.x.x.x.x.x.x.x."),
+      ],
       vol: 0.8,
     },
     { inst: "pad", bars: [hold(chord("A3 C4 E4")), hold(chord("F3 A3 C4")), hold(chord("D3 F3 A3")), hold(chord("E3 G#3 B3"))], vol: 0.7 },
@@ -110,10 +109,10 @@ const classicLeaderboard: Track = {
     {
       inst: "pluck",
       bars: [
-        pump(chord("F4 A4 C5"), "..x...x...x...x."),
-        pump(chord("D4 F4 A4"), "..x...x...x...x."),
-        pump(chord("D4 F4 Bb4"), "..x...x...x...x."),
-        pump(chord("E4 G4 C5"), "..x...x...x...x."),
+        noteOnHits(chord("F4 A4 C5"), "..x...x...x...x."),
+        noteOnHits(chord("D4 F4 A4"), "..x...x...x...x."),
+        noteOnHits(chord("D4 F4 Bb4"), "..x...x...x...x."),
+        noteOnHits(chord("E4 G4 C5"), "..x...x...x...x."),
       ],
       vol: 0.55,
     },
@@ -138,7 +137,7 @@ const classicResults: Track = {
     { inst: "kick", bars: [drum("x...x...x...x...")], vol: 0.8 },
     { inst: "snare", bars: [drum("....x...x.x.x..."), drum("....x.......x..."), drum("....x...x.x.x..."), drum("x.x.x.x.xxxxxxxx")], vol: 0.6 },
     { inst: "pad", bars: [hold(chord("C4 E4 G4")), hold(chord("F3 A3 C4")), hold(chord("G3 B3 D4")), hold(chord("C4 E4 G4"))] },
-    { inst: "bass", bars: [bounce("C2", "G2"), bounce("F1", "C2"), bounce("G1", "D2"), bounce("C2", "G2")] },
+    { inst: "bass", bars: [alternatingEighths("C2", "G2"), alternatingEighths("F1", "C2"), alternatingEighths("G1", "D2"), alternatingEighths("C2", "G2")] },
     {
       inst: "brass",
       bars: [
@@ -162,7 +161,7 @@ const towerLobby: Track = {
   bpm: 120,
   bars: 4,
   layers: [
-    { inst: "tribass", bars: [bounce("G2", "G3"), bounce("E2", "E3"), bounce("C2", "C3"), bounce("D2", "D3")] },
+    { inst: "tribass", bars: [alternatingEighths("G2", "G3"), alternatingEighths("E2", "E3"), alternatingEighths("C2", "C3"), alternatingEighths("D2", "D3")] },
     {
       inst: "pulse",
       bars: [arp(["G4", "B4", "D5", "B4"]), arp(["E4", "G4", "B4", "G4"]), arp(["C4", "E4", "G4", "E4"]), arp(["D4", "F#4", "A4", "F#4"])],
@@ -190,7 +189,15 @@ const towerPlay: Track = {
   bars: 4,
   tempoBoost: 0.2,
   layers: [
-    { inst: "tribass", bars: [pump("E2", "x.x.x.x.x.x.x.x."), pump("C2", "x.x.x.x.x.x.x.x."), pump("G2", "x.x.x.x.x.x.x.x."), pump("D2", "x.x.x.x.x.x.x.x.")] },
+    {
+      inst: "tribass",
+      bars: [
+        noteOnHits("E2", "x.x.x.x.x.x.x.x."),
+        noteOnHits("C2", "x.x.x.x.x.x.x.x."),
+        noteOnHits("G2", "x.x.x.x.x.x.x.x."),
+        noteOnHits("D2", "x.x.x.x.x.x.x.x."),
+      ],
+    },
     { inst: "kick", bars: [drum("x...x...x...x...")], vol: 0.75 },
     { inst: "chipnoise", bars: [drum("....o.......o...")], vol: 0.8 },
     {
@@ -225,7 +232,7 @@ const towerResults: Track = {
   bpm: 132,
   bars: 4,
   layers: [
-    { inst: "tribass", bars: [bounce("C2", "C3"), bounce("F2", "F3"), bounce("G2", "G3"), bounce("C2", "C3")] },
+    { inst: "tribass", bars: [alternatingEighths("C2", "C3"), alternatingEighths("F2", "F3"), alternatingEighths("G2", "G3"), alternatingEighths("C2", "C3")] },
     { inst: "kick", bars: [drum("x...x...x...x...")], vol: 0.7 },
     { inst: "chipnoise", bars: [drum("..x...x...x...x.")], vol: 0.5 },
     {
@@ -245,8 +252,7 @@ const towerResults: Track = {
   ],
 };
 
-// why: Jingle Bells (Pierpont, 1857) is public domain; provenance in samples/CREDITS.md.
-// Keep the tune present even at zero intensity.
+// why: Pierpont’s 1857 melody is public domain. See samples/CREDITS.md.
 const JINGLE_BELLS = [
   seq(["E5", 4], ["E5", 4], ["E5", 8]),
   seq(["E5", 4], ["E5", 4], ["E5", 8]),
@@ -269,7 +275,7 @@ const JINGLE_CHORDS = ["C", "C", "C", "C", "F", "C", "G7", "G7", "C", "C", "C", 
 const JINGLE_VOICINGS: Record<string, string> = { C: "C4+E4+G4", F: "C4+F4+A4", G7: "B3+D4+F4+G4" };
 const JINGLE_ROOTS: Record<string, [string, string]> = { C: ["C2", "G2"], F: ["F2", "C3"], G7: ["G2", "D3"] };
 const JINGLE_PADS = JINGLE_CHORDS.map((c) => hold(JINGLE_VOICINGS[c]!));
-const JINGLE_COMP = JINGLE_CHORDS.map((c) => pump(JINGLE_VOICINGS[c]!, "....x.......x..."));
+const JINGLE_COMP = JINGLE_CHORDS.map((c) => noteOnHits(JINGLE_VOICINGS[c]!, "....x.......x..."));
 const JINGLE_BASS = JINGLE_CHORDS.map((c) => {
   const [root, fifth] = JINGLE_ROOTS[c]!;
   return seq([root, 3], [".", 1], [fifth, 3], [".", 1], [root, 3], [".", 1], [fifth, 3], [".", 1]);
@@ -311,7 +317,7 @@ const submarineChase: Track = {
     { inst: "snare", bars: [drum("....x.......x...")], vol: 0.24, from: 0.35 },
     { inst: "flute", bars: JINGLE_BELLS, vol: 0.3, from: 0.65 },
     { inst: "hat", bars: [drum("..x...x...x...x.")], vol: 0.22, from: 0.8 },
-    { inst: "cymbal", bars: [once("x"), ...Array(15).fill(rest)], vol: 0.22, from: 0.8 },
+    { inst: "cymbal", bars: [hitOnFirstStep("x"), ...Array(15).fill(rest)], vol: 0.22, from: 0.8 },
   ],
 };
 
@@ -342,7 +348,7 @@ const submarineResults: Track = {
     { inst: "pluck", bars: JINGLE_COMP, vol: 0.28 },
     { inst: "hat", bars: [SLED_BELLS], vol: 0.25 },
     { inst: "snare", bars: [drum("....x.......x...")], vol: 0.2 },
-    { inst: "cymbal", bars: [once("x"), ...Array(15).fill(rest)], vol: 0.2 },
+    { inst: "cymbal", bars: [hitOnFirstStep("x"), ...Array(15).fill(rest)], vol: 0.2 },
   ],
 };
 
@@ -367,8 +373,7 @@ const fightLobby: Track = {
   ],
 };
 
-// why: Ein feste Burg (Luther, 1529) is public domain (Mutopia-2008/01/13-1237); pickup moved to step 0.
-// Sources and licenses: samples/CREDITS.md.
+// why: The public-domain Ein feste Burg score (Mutopia 2008/01/13-1237) starts with a pickup moved to step 0 here.
 const fortressMelody = [
   seq(["C5", 4], ["C5", 4], ["C5", 4], ["G4", 2], ["A4", 2]),
   seq(["B4", 4], ["C5", 2], ["B4", 2], ["A4", 4], ["G4", 4]),
@@ -417,7 +422,7 @@ const fightPlay: Track = {
   tempoBoost: 0.15,
   rich: true,
   layers: [
-    // why: Keep the tune present even at the start of the battle.
+    // why: Keeping the melody in the lowest intensity layer makes it audible from the start of battle.
     { inst: "brass", bars: fortressMelody, vol: 0.85 },
     { inst: "organ", bars: fortressHarmony.map(([a, b]) => seq([chord(a!), 8], [chord(b!), 8])), vol: 0.35 },
     { inst: "piano", bars: fortressHarmony.map(([a, b]) => seq([a!.split(" ")[0]!, 8], [b!.split(" ")[0]!, 8])), vol: 0.65 },
@@ -436,7 +441,7 @@ const fightResults: Track = {
   layers: [
     { inst: "taiko", bars: [drum("o...x...o...x.x."), drum("o...x...o...x.x."), drum("o...x...o...x.x."), drum("o.x.o.x.oxxxxxxx")], vol: 0.7 },
     { inst: "pad", bars: [hold(chord("D3 F#3 A3")), hold(chord("G3 B3 D4")), hold(chord("A3 C#4 E4")), hold(chord("D3 F#3 A3"))] },
-    { inst: "tribass", bars: [bounce("D2", "A2"), bounce("G1", "D2"), bounce("A1", "E2"), bounce("D2", "A2")] },
+    { inst: "tribass", bars: [alternatingEighths("D2", "A2"), alternatingEighths("G1", "D2"), alternatingEighths("A1", "E2"), alternatingEighths("D2", "A2")] },
     {
       inst: "brass",
       bars: [
@@ -449,13 +454,11 @@ const fightResults: Track = {
   ],
 };
 
-// why: public-domain themes arranged for a synth orchestra.
-
 const shiftOctaves = (bars: string[], by: number) => bars.map((b) => b.replace(/\d/g, (d) => String(Number(d) + by)));
 const quarters = (a: string, b: string, c: string, d: string) => seq([a, 4], [b, 4], [c, 4], [d, 4]);
 const halves = (a: string, b: string) => [a, a, a, a, b, b, b, b];
 
-// why: Lobby: Beethoven, Symphony No. 7, Allegretto. The solemn long-short-short-long-long march in A minor.
+// why: The march comes from the Allegretto of Beethoven’s Seventh Symphony.
 const march = (first: string, second = first) => seq([first, 4], [first, 2], [first, 2], [second, 4], [second, 4]);
 
 const robotLobby: Track = {
@@ -478,7 +481,20 @@ const robotLobby: Track = {
       vol: 0.8,
     },
     { inst: "tribass", bars: [march("A1"), march("E2"), march("E2", "A1"), march("C2"), march("G2"), march("G2", "C2"), march("B1"), march("E2")], vol: 0.7 },
-    { inst: "timpani", bars: [once("A2"), once("E3"), once("E3"), once("C3"), once("G2"), once("G2"), once("B2"), once("E3")], vol: 0.35 },
+    {
+      inst: "timpani",
+      bars: [
+        hitOnFirstStep("A2"),
+        hitOnFirstStep("E3"),
+        hitOnFirstStep("E3"),
+        hitOnFirstStep("C3"),
+        hitOnFirstStep("G2"),
+        hitOnFirstStep("G2"),
+        hitOnFirstStep("B2"),
+        hitOnFirstStep("E3"),
+      ],
+      vol: 0.35,
+    },
     {
       inst: "flute",
       bars: [
@@ -496,8 +512,7 @@ const robotLobby: Track = {
   ],
 };
 
-// why: Quiz: Grieg, In the Hall of the Mountain King. Like the original, it starts as tiptoeing
-// pizzicato and ends as the full orchestra at about twice the speed.
+// why: Grieg’s In the Hall of the Mountain King gives the round its acceleration from a quiet opening.
 const MOUNTAIN_KING = [
   seq(["B2", 2], ["C#3", 2], ["D3", 2], ["E3", 2], ["F#3", 2], ["D3", 2], ["F#3", 4]),
   seq(["F3", 2], ["C#3", 2], ["F3", 4], ["E3", 2], ["C3", 2], ["E3", 4]),
@@ -513,21 +528,25 @@ const robotQuiz: Track = {
   id: "robot-quiz",
   bpm: 80,
   bars: 8,
-  // why: From a creeping 80 BPM at the start of the round to a frantic 160 as time runs out.
   tempoBoost: 1,
   layers: [
     { inst: "pluck", bars: MOUNTAIN_KING, vol: 0.9 },
     { inst: "tribass", bars: halves(arp(["B1", "F#2"], 4), arp(["F#1", "C#2"], 4)), vol: 0.8 },
     { inst: "strings", bars: shiftOctaves(MOUNTAIN_KING, 1), vol: 0.8, from: 0.3 },
-    { inst: "timpani", bars: halves(pump("B2", "x.......x......."), pump("F#2", "x.......x.......")), vol: 0.5, from: 0.45, to: 0.8 },
-    { inst: "brass", bars: halves(pump(chord("B3 D4 F#4"), "..x...x...x...x."), pump(chord("A#3 C#4 F#4"), "..x...x...x...x.")), vol: 0.5, from: 0.55 },
+    { inst: "timpani", bars: halves(noteOnHits("B2", "x.......x......."), noteOnHits("F#2", "x.......x.......")), vol: 0.5, from: 0.45, to: 0.8 },
+    {
+      inst: "brass",
+      bars: halves(noteOnHits(chord("B3 D4 F#4"), "..x...x...x...x."), noteOnHits(chord("A#3 C#4 F#4"), "..x...x...x...x.")),
+      vol: 0.5,
+      from: 0.55,
+    },
     { inst: "flute", bars: shiftOctaves(MOUNTAIN_KING, 2), vol: 0.6, from: 0.7 },
-    { inst: "timpani", bars: halves(pump("B2", "x...x...x...x..."), pump("F#2", "x...x...x...x...")), vol: 0.55, from: 0.8 },
+    { inst: "timpani", bars: halves(noteOnHits("B2", "x...x...x...x..."), noteOnHits("F#2", "x...x...x...x...")), vol: 0.55, from: 0.8 },
     { inst: "cymbal", bars: [drum("x.......x.......")], vol: 0.6, from: 0.85 },
   ],
 };
 
-// why: Movement and attack: Beethoven, Symphony No. 5. Fate knocks at the door just before the lasers fire.
+// why: Beethoven’s Fifth Symphony suggests fate knocking just before the lasers fire.
 const FATE = [
   seq([".", 1], ["G4", 1], ["G4", 1], ["G4", 1], ["Eb4", 8], [".", 1], ["F4", 1], ["F4", 1], ["F4", 1]),
   seq(["D4", 8], [".", 1], ["G4", 1], ["G4", 1], ["G4", 1], ["Eb4", 1], ["Ab4", 1], ["Ab4", 1], ["Ab4", 1]),
@@ -555,13 +574,13 @@ const robotMove: Track = {
     },
     {
       inst: "timpani",
-      bars: [seq([".", 4], ["G2", 1], [".", 11]), once("G2"), seq([".", 4], ["C3", 1], [".", 11]), seq([".", 8], ["G2", 1], [".", 7])],
+      bars: [seq([".", 4], ["G2", 1], [".", 11]), hitOnFirstStep("G2"), seq([".", 4], ["C3", 1], [".", 11]), seq([".", 8], ["G2", 1], [".", 7])],
       vol: 0.7,
     },
   ],
 };
 
-// why: Final results: Beethoven, Symphony No. 9, Ode to Joy, for the survivors.
+// why: The survivors’ theme quotes Ode to Joy from Beethoven’s Ninth Symphony.
 const ODE_OPENING = [quarters("F#4", "F#4", "G4", "A4"), quarters("A4", "G4", "F#4", "E4"), quarters("D4", "D4", "E4", "F#4")];
 const ODE = [...ODE_OPENING, seq(["F#4", 6], ["E4", 2], ["E4", 8]), ...ODE_OPENING, seq(["E4", 6], ["D4", 2], ["D4", 8])];
 const ODE_D = chord("D3 F#3 A3");
@@ -604,22 +623,27 @@ const robotResults: Track = {
     },
     {
       inst: "timpani",
-      bars: [once("D3"), once("D3"), once("D3"), once("A2"), once("D3"), once("D3"), once("D3"), seq(["A2", 1], [".", 7], ["D3", 1], [".", 7])],
+      bars: [
+        hitOnFirstStep("D3"),
+        hitOnFirstStep("D3"),
+        hitOnFirstStep("D3"),
+        hitOnFirstStep("A2"),
+        hitOnFirstStep("D3"),
+        hitOnFirstStep("D3"),
+        hitOnFirstStep("D3"),
+        seq(["A2", 1], [".", 7], ["D3", 1], [".", 7]),
+      ],
       vol: 0.5,
     },
     { inst: "cymbal", bars: [drum("x..............."), rest, rest, rest], vol: 0.5 },
   ],
 };
 
-// why: the same four chords (Am F C G) speed up and gather strings, brass and drums as a team nears closing a ring.
-
-/** why: One note every eighth, up through the chord and back down. */
 const rolled = (notes: string) => arp(notes.split(" "), 2);
-const eighths = (tok: string) => pump(tok, "x.x.x.x.x.x.x.x.");
+const eighths = (tok: string) => noteOnHits(tok, "x.x.x.x.x.x.x.x.");
 
-// why: Silent Night (Gruber, 1818), public domain (mutopiaproject.org id=81): 6/8 values doubled into
-// 24 bars of 12-step 3/4, keeping its three-beat phrasing.
-const lullaby = (...parts: [string, number][]) => seq(...parts);
+// why: The public-domain Silent Night score (Mutopia 81) doubles its 6/8 note values here to fit twelve 16th-note steps.
+const lullaby = (...parts: [token: string, sixteenthSteps: number][]) => seq(...parts);
 const SILENT_NIGHT = [
   lullaby(["G4", 6], ["A4", 2], ["G4", 4]),
   lullaby(["E4", 12]),
@@ -646,7 +670,7 @@ const SILENT_NIGHT = [
   lullaby(["C4", 12]),
   lullaby(["C4", 8], [".", 4]),
 ];
-// why: New accompaniment, aligned to all 24 melody bars, rather than an unrelated short loop.
+// why: Align the accompaniment to all 24 melody bars so its harmony follows the full carol.
 const SILENT_HARMONY = [
   "C3 E3 G3",
   "C3 E3 G3",
@@ -702,7 +726,7 @@ const christmasLandPlay: Track = {
   tempoBoost: 1,
   reverb: 0.28,
   layers: [
-    // why: The complete melody stays on piano from calm to capture, without restarting.
+    // why: The piano carries the melody across intensity changes so it keeps its place as layers enter.
     ...christmasLandLobby.layers,
     { inst: "pluck", bars: silentHarp, vol: 0.28, from: 0.25 },
     { inst: "strings", bars: SILENT_NIGHT, vol: 0.3, from: 0.45 },
@@ -716,7 +740,6 @@ const christmasLandPlay: Track = {
       from: 0.65,
     },
     { inst: "flute", bars: SILENT_NIGHT, vol: 0.32, from: 0.8 },
-    // why: Closing ring: moving low strings and a warm horn double give the tune momentum.
     { inst: "strings", bars: silentHarp, vol: 0.4, from: 0.65 },
     { inst: "brass", bars: SILENT_NIGHT, vol: 0.32, from: 0.8 },
     { inst: "snare", bars: [drum("....x.....x.")], vol: 0.22, from: 0.8 },
@@ -767,7 +790,6 @@ const landLobby: Track = {
         seq(["G3+D4", 4], ["B4", 4], ["G4", 8]),
       ],
     },
-    // why: A few high notes, far apart.
     {
       inst: "piano",
       bars: [rest, seq([".", 10], ["G5", 2], ["E5", 4]), rest, seq([".", 8], ["B5", 4], ["G5", 4]), rest, rest, seq([".", 12], ["E5", 4]), rest],
@@ -803,13 +825,11 @@ const LAND_THEME = [
 
 const landPlay: Track = {
   id: "land-play",
-  // why: 66 BPM while the land is quiet, about 109 when a ring is about to close.
   bpm: 66,
   bars: 8,
   tempoBoost: 0.65,
   reverb: 0.35,
   layers: [
-    // why: Quiet land: a chord, a long gap, a few notes.
     {
       inst: "piano",
       bars: [
@@ -825,7 +845,6 @@ const landPlay: Track = {
       to: 0.25,
     },
     { inst: "pad", bars: [hold(chord("A3 C4 E4")), hold(chord("F3 A3 C4")), hold(chord("G3 C4 E4")), hold(chord("G3 B3 D4"))], vol: 0.5 },
-    // why: Something is stirring: the piano starts to flow and picks up the theme.
     {
       inst: "piano",
       bars: [rolled("A3 E4 A4 C5 E5 C5 A4 E4"), rolled("F3 C4 F4 A4 C5 A4 F4 C4"), rolled("C3 G3 C4 E4 G4 E4 C4 G3"), rolled("G3 D4 G4 B4 D5 B4 G4 D4")],
@@ -835,7 +854,6 @@ const landPlay: Track = {
     },
     { inst: "piano", bars: LAND_THEME, from: 0.25, to: 0.45 },
     { inst: "tribass", bars: [hold("A2"), hold("F2"), hold("C2"), hold("G2")], vol: 0.6, from: 0.25, to: 0.65 },
-    // why: A ring is taking shape: strings take the theme over a heartbeat.
     { inst: "strings", bars: LAND_THEME, vol: 0.9, from: 0.45 },
     {
       inst: "strings",
@@ -845,17 +863,20 @@ const landPlay: Track = {
       to: 0.65,
     },
     { inst: "heart", bars: [drum("x.......x.......")], vol: 0.6, from: 0.45, to: 0.65 },
-    // why: Nearly closed: driving low strings, brass and timpani.
     { inst: "strings", bars: [eighths(chord("A2 E3")), eighths(chord("F2 C3")), eighths(chord("C3 G3")), eighths(chord("G2 D3"))], vol: 0.75, from: 0.65 },
     { inst: "tribass", bars: [eighths("A1"), eighths("F1"), eighths("C2"), eighths("G1")], vol: 0.7, from: 0.65 },
     { inst: "brass", bars: shiftOctaves(LAND_THEME, -1), vol: 0.8, from: 0.65 },
     {
       inst: "timpani",
-      bars: [pump("A2", "x...x...x...x..."), pump("F2", "x...x...x...x..."), pump("C3", "x...x...x...x..."), pump("G2", "x...x...x...x...")],
+      bars: [
+        noteOnHits("A2", "x...x...x...x..."),
+        noteOnHits("F2", "x...x...x...x..."),
+        noteOnHits("C3", "x...x...x...x..."),
+        noteOnHits("G2", "x...x...x...x..."),
+      ],
       vol: 0.5,
       from: 0.65,
     },
-    // why: One tile from closing: everything at once.
     {
       inst: "piano",
       bars: [arp(["A4", "C5", "E5", "A5"]), arp(["F4", "A4", "C5", "F5"]), arp(["G4", "C5", "E5", "G5"]), arp(["G4", "B4", "D5", "G5"])],
@@ -919,10 +940,10 @@ const landResults: Track = {
   ],
 };
 
-// why: IV-V-iii-vi in A major, the mould of late-80s arcade racers.
+// why: The IV–V–iii–vi progression evokes late-1980s arcade racers.
 
 const octaves = (low: string, high: string) => arp([low, low, high, low, low, high, low, high], 2);
-const stabs = (notes: string) => pump(chord(notes), "..x..x..x...x.x.");
+const stabs = (notes: string) => noteOnHits(chord(notes), "..x..x..x...x.x.");
 
 const RACER_LOBBY_ROOTS = ["A1", "F#1", "D2", "E2"];
 
@@ -963,7 +984,6 @@ const racerLobby: Track = {
   ],
 };
 
-// why: 16 bars: an 8-bar theme (D E C#m F#m / D E A E) and an 8-bar bridge (Bm E A F#m / Bm C#m D E).
 const RACER_ROOTS = ["D2", "E2", "C#2", "F#2", "D2", "E2", "A1", "E2", "B1", "E2", "A1", "F#2", "B1", "C#2", "D2", "E2"];
 const RACER_CHORDS = [
   "F#4 A4 C#5",
@@ -985,21 +1005,21 @@ const RACER_CHORDS = [
 ];
 const octaveUp = (note: string, by = 1) => note.replace(/\d/, (d) => String(Number(d) + by));
 
+const RACER_CRUISING_INTENSITY = 0.15;
+
 const racerDrive: Track = {
   id: "racer-drive",
   rich: "arcade",
-  // why: 112 BPM while crawling, about 162 at full speed.
   bpm: 112,
   bars: 16,
   tempoBoost: 0.45,
   layers: [
-    // why: Crawling or crashed: just a limping kick and bass.
-    { inst: "kick", bars: [drum("x.......x.......")], vol: 0.8, to: 0.15 },
-    { inst: "tribass", bars: RACER_ROOTS.map((r) => pump(r, "x...x.x.x...x.x.")), vol: 0.85, to: 0.15 },
-    { inst: "kick", bars: [drum("x...x...x...x...")], vol: 0.8, from: 0.15 },
-    { inst: "tribass", bars: RACER_ROOTS.map((r) => octaves(r, octaveUp(r))), from: 0.15 },
-    { inst: "chipnoise", bars: [drum("....o.......o...")], vol: 0.8, from: 0.15 },
-    { inst: "pulse", bars: RACER_CHORDS.map(stabs), vol: 0.4, from: 0.15 },
+    { inst: "kick", bars: [drum("x.......x.......")], vol: 0.8, to: RACER_CRUISING_INTENSITY },
+    { inst: "tribass", bars: RACER_ROOTS.map((r) => noteOnHits(r, "x...x.x.x...x.x.")), vol: 0.85, to: RACER_CRUISING_INTENSITY },
+    { inst: "kick", bars: [drum("x...x...x...x...")], vol: 0.8, from: RACER_CRUISING_INTENSITY },
+    { inst: "tribass", bars: RACER_ROOTS.map((r) => octaves(r, octaveUp(r))), from: RACER_CRUISING_INTENSITY },
+    { inst: "chipnoise", bars: [drum("....o.......o...")], vol: 0.8, from: RACER_CRUISING_INTENSITY },
+    { inst: "pulse", bars: RACER_CHORDS.map(stabs), vol: 0.4, from: RACER_CRUISING_INTENSITY },
     { inst: "hat", bars: [drum("..x...x...x...x.")], vol: 0.6, from: 0.3, to: 0.75 },
     {
       inst: "lead",
@@ -1025,9 +1045,7 @@ const racerDrive: Track = {
       from: 0.3,
       echo: 0.25,
     },
-    // why: Cruising: snare with a fill every four bars.
     { inst: "snare", bars: [drum("....x.......x..."), drum("....x.......x..."), drum("....x.......x..."), drum("....x.....x.x.xx")], vol: 0.55, from: 0.5 },
-    // why: Fast: sixteenth-note arpeggios.
     {
       inst: "pulse",
       bars: RACER_CHORDS.map((c) => {
@@ -1037,7 +1055,6 @@ const racerDrive: Track = {
       vol: 0.3,
       from: 0.6,
     },
-    // why: Flat out: busy hats and a sparkling top line.
     { inst: "chipnoise", bars: [drum("xxxxxxxxxxxxxxxx")], vol: 0.28, from: 0.75 },
     { inst: "openhat", bars: [drum("..x...x...x...x.")], vol: 0.5, from: 0.75 },
     {
@@ -1094,7 +1111,6 @@ const cupLobby: Track = {
   bars: 4,
   swing: 0.15,
   layers: [
-    // why: A honky-tonk saloon piano, oom-pah in the left hand.
     {
       inst: "piano",
       bars: [
@@ -1145,18 +1161,17 @@ const cupQuiz: Track = {
   id: "cup-quiz",
   bpm: 96,
   bars: 8,
-  // why: From a dusty trot at the start of the round to a full gallop as time runs out.
   tempoBoost: 0.7,
   reverb: 0.25,
   layers: [
     { inst: "whistle", bars: CUP_THEME },
     { inst: "twang", bars: CUP_BASS, vol: 0.8 },
-    { inst: "twang", bars: CUP_CHORDS.map((c) => pump(c, "..x...x...x...x.")), vol: 0.45, from: 0.2 },
+    { inst: "twang", bars: CUP_CHORDS.map((c) => noteOnHits(c, "..x...x...x...x.")), vol: 0.45, from: 0.2 },
     { inst: "woodblock", bars: [GALLOP], vol: 0.5, from: 0.25 },
     { inst: "strings", bars: CUP_CHORDS.map(hold), vol: 0.7, from: 0.4 },
-    { inst: "timpani", bars: CUP_ROOTS.map((r) => pump(r, "x.......x.......")), vol: 0.5, from: 0.5 },
-    { inst: "brass", bars: CUP_CHORDS.map((c) => pump(c, "x.......x.x.....")), vol: 0.45, from: 0.65 },
-    { inst: "bell", bars: [once("E4"), rest], vol: 0.7, from: 0.75 },
+    { inst: "timpani", bars: CUP_ROOTS.map((r) => noteOnHits(r, "x.......x.......")), vol: 0.5, from: 0.5 },
+    { inst: "brass", bars: CUP_CHORDS.map((c) => noteOnHits(c, "x.......x.x.....")), vol: 0.45, from: 0.65 },
+    { inst: "bell", bars: [hitOnFirstStep("E4"), rest], vol: 0.7, from: 0.75 },
     { inst: "snare", bars: [drum("....x.......x..."), drum("....x.......x..."), drum("....x.......x..."), drum("....x...x.x.xxxx")], vol: 0.6, from: 0.85 },
   ],
 };
@@ -1169,13 +1184,18 @@ const cupDrink: Track = {
   reverb: 0.35,
   layers: [
     { inst: "heart", bars: [drum("x.......x.......")], vol: 0.9 },
-    { inst: "strings", bars: [AM, F_, chord("D3 F3 A3"), E_].map((c) => pump(c, "xxxxxxxxxxxxxxxx")), vol: 0.35 },
+    { inst: "strings", bars: [AM, F_, chord("D3 F3 A3"), E_].map((c) => noteOnHits(c, "xxxxxxxxxxxxxxxx")), vol: 0.35 },
     { inst: "twang", bars: [seq(["A2", 8], [".", 8]), seq(["F2", 8], [".", 8]), seq(["D2", 8], [".", 8]), seq(["E2", 8], [".", 8])], vol: 0.8 },
     { inst: "whistle", bars: [seq([".", 8], ["E5", 8]), seq(["F5", 8], ["E5", 8]), seq(["D5", 12], [".", 4]), seq(["G#4", 8], ["B4", 8])], vol: 0.7 },
-    { inst: "bell", bars: [once("A3")], vol: 0.6 },
+    { inst: "bell", bars: [hitOnFirstStep("A3")], vol: 0.6 },
     {
       inst: "timpani",
-      bars: [pump("A2", "x...x...x...x..."), pump("F2", "x...x...x...x..."), pump("D2", "x...x...x...x..."), pump("E2", "x.x.x.x.xxxxxxxx")],
+      bars: [
+        noteOnHits("A2", "x...x...x...x..."),
+        noteOnHits("F2", "x...x...x...x..."),
+        noteOnHits("D2", "x...x...x...x..."),
+        noteOnHits("E2", "x.x.x.x.xxxxxxxx"),
+      ],
       vol: 0.45,
       from: 0.6,
     },
@@ -1202,11 +1222,16 @@ const cupResults: Track = {
     { inst: "twang", bars: [boomChick("A2", "E2"), boomChick("D2", "A2"), boomChick("E2", "B2"), boomChick("A2", "E2")], vol: 0.8 },
     {
       inst: "timpani",
-      bars: [pump("A2", "x.......x.x....."), pump("D2", "x.......x.x....."), pump("E2", "x.......x.x....."), pump("A2", "x...x...x.x.x...")],
+      bars: [
+        noteOnHits("A2", "x.......x.x....."),
+        noteOnHits("D2", "x.......x.x....."),
+        noteOnHits("E2", "x.......x.x....."),
+        noteOnHits("A2", "x...x...x.x.x..."),
+      ],
       vol: 0.5,
     },
     { inst: "woodblock", bars: [GALLOP], vol: 0.45 },
-    { inst: "cymbal", bars: [rest, rest, rest, once("x")], vol: 0.6 },
+    { inst: "cymbal", bars: [rest, rest, rest, hitOnFirstStep("x")], vol: 0.6 },
   ],
 };
 
@@ -1230,10 +1255,15 @@ const siegeLobby: Track = {
     },
     {
       inst: "bass",
-      bars: [pump("G2", "x.......x......."), pump("C2", "x.......x......."), pump("E2", "x.......x......."), pump("D2", "x.......x.......")],
+      bars: [
+        noteOnHits("G2", "x.......x......."),
+        noteOnHits("C2", "x.......x......."),
+        noteOnHits("E2", "x.......x......."),
+        noteOnHits("D2", "x.......x......."),
+      ],
       vol: 0.5,
     },
-    // why: the woodblock stands in for a soft tabor.
+    // why: The woodblock substitutes for a soft tabor.
     { inst: "woodblock", bars: [drum("x.....x.x.......")], vol: 0.25 },
     {
       inst: "flute",
@@ -1261,21 +1291,20 @@ const SIEGE_MARCH = [
 ];
 const SIEGE_ROOTS = ["Bb1", "Eb2", "F2", "G1", "Bb1", "Eb2", "C2", "F2"];
 
+const SIEGE_BUILD_BREAK_END_INTENSITY = 0.15;
+
 const siegeBattle: Track = {
   id: "siege-battle",
   rich: true,
   bpm: 112,
   bars: 8,
-  // why: Below 0.15 is a build break: drums and a held chord. More layers as monsters fill the
-  // board and hearts are lost; low brass and timpani for a giant (0.85 and up).
   tempoBoost: 0.3,
   reverb: 0.22,
   layers: [
-    // why: The marching snare and tabor, always there.
     { inst: "snare", bars: [drum("x..xx.x.x..xx.x."), drum("x..xx.x.x..xx.x."), drum("x..xx.x.x..xx.x."), drum("x..xx.x.x.xxxxxx")], vol: 0.45 },
     { inst: "woodblock", bars: [drum("x...x...x...x...")], vol: 0.3 },
-    { inst: "pad", bars: SIEGE_MARCH.map(hold), vol: 0.35, to: 0.15 },
-    { inst: "bass", bars: SIEGE_ROOTS.map((r) => pump(r, "x...x...x...x...")), vol: 0.7, from: 0.15 },
+    { inst: "pad", bars: SIEGE_MARCH.map(hold), vol: 0.35, to: SIEGE_BUILD_BREAK_END_INTENSITY },
+    { inst: "bass", bars: SIEGE_ROOTS.map((r) => noteOnHits(r, "x...x...x...x...")), vol: 0.7, from: SIEGE_BUILD_BREAK_END_INTENSITY },
     {
       inst: "flute",
       bars: [
@@ -1289,16 +1318,16 @@ const siegeBattle: Track = {
         seq(["F5", 12], [".", 4]),
       ],
       vol: 0.5,
-      from: 0.15,
+      from: SIEGE_BUILD_BREAK_END_INTENSITY,
     },
-    { inst: "strings", bars: SIEGE_MARCH.map((c) => pump(c, "x.x.x.x.x.x.x.x.")), vol: 0.3, from: 0.35 },
-    { inst: "brass", bars: SIEGE_MARCH.map((c) => pump(c, "x.......x.x.....")), vol: 0.45, from: 0.5 },
+    { inst: "strings", bars: SIEGE_MARCH.map((c) => noteOnHits(c, "x.x.x.x.x.x.x.x.")), vol: 0.3, from: 0.35 },
+    { inst: "brass", bars: SIEGE_MARCH.map((c) => noteOnHits(c, "x.......x.x.....")), vol: 0.45, from: 0.5 },
     { inst: "hat", bars: [drum("..x...x...x...x.")], vol: 0.35, from: 0.6 },
-    { inst: "cymbal", bars: [once("x"), rest, rest, rest], vol: 0.45, from: 0.7 },
+    { inst: "cymbal", bars: [hitOnFirstStep("x"), rest, rest, rest], vol: 0.45, from: 0.7 },
     {
       inst: "tribass",
       bars: SIEGE_ROOTS.map((r) =>
-        pump(
+        noteOnHits(
           r.replace(/\d/, (n) => String(Number(n) - 1)),
           "x.......x.......",
         ),
@@ -1306,7 +1335,7 @@ const siegeBattle: Track = {
       vol: 0.6,
       from: 0.85,
     },
-    { inst: "timpani", bars: SIEGE_ROOTS.map((r) => pump(r.replace("1", "2"), "x.....x.x.......")), vol: 0.6, from: 0.85 },
+    { inst: "timpani", bars: SIEGE_ROOTS.map((r) => noteOnHits(r.replace("1", "2"), "x.....x.x.......")), vol: 0.6, from: 0.85 },
   ],
 };
 
@@ -1317,7 +1346,6 @@ const siegeResults: Track = {
   bars: 4,
   reverb: 0.42,
   layers: [
-    // why: A slow, low brass lament for a fallen castle (low intensity).
     {
       inst: "brass",
       bars: [seq(["G3", 8], ["F3", 4], ["Eb3", 4]), seq(["D3", 12], [".", 4]), seq(["C3", 8], ["D3", 4], ["Eb3", 4]), seq(["D3", 12], [".", 4])],
@@ -1325,8 +1353,7 @@ const siegeResults: Track = {
       to: 0.45,
     },
     { inst: "strings", bars: [hold(chord("G2 Bb2 D3")), hold(chord("D2 F#2 A2")), hold(chord("C2 Eb2 G2")), hold(chord("D2 F#2 A2"))], vol: 0.45, to: 0.45 },
-    { inst: "timpani", bars: [once("G1"), rest, once("C2"), once("D2")], vol: 0.4, to: 0.45 },
-    // why: A bright fanfare with church bells when the kingdom stands (high intensity).
+    { inst: "timpani", bars: [hitOnFirstStep("G1"), rest, hitOnFirstStep("C2"), hitOnFirstStep("D2")], vol: 0.4, to: 0.45 },
     {
       inst: "brass",
       bars: [
@@ -1341,12 +1368,11 @@ const siegeResults: Track = {
     { inst: "bell", bars: [seq(["G4", 8], ["D4", 8]), seq(["C5", 8], ["G4", 8]), seq(["D5", 8], ["A4", 8]), seq(["G4", 8], ["G3", 8])], vol: 0.45, from: 0.55 },
     { inst: "organ", bars: [hold(SIEGE_G), hold(SIEGE_C), hold(SIEGE_D), hold(SIEGE_G)], vol: 0.35, from: 0.55 },
     { inst: "snare", bars: [drum("....x.......x..."), drum("....x.......x..."), drum("....x.......x..."), drum("x.x.x.x.xxxxxxxx")], vol: 0.45, from: 0.55 },
-    { inst: "cymbal", bars: [once("x"), rest, rest, once("x")], vol: 0.45, from: 0.55 },
+    { inst: "cymbal", bars: [hitOnFirstStep("x"), rest, rest, hitOnFirstStep("x")], vol: 0.45, from: 0.55 },
   ],
 };
 
-// why: Patapan soprano from a score released to the public domain by Douglas D. Anderson (samples/CREDITS.md).
-// The two-beat pickup starts the loop; the final two beats complete twelve 4/4 bars.
+// why: The melody uses Douglas D. Anderson’s public-domain Patapan soprano score. See samples/CREDITS.md.
 const PATAPAN = [
   seq(["A4", 4], ["A4", 4], ["E5", 4], ["E5", 4]),
   seq(["D5", 4], ["E5", 4], ["C5", 4], ["B4", 2], ["C5", 2]),
@@ -1361,7 +1387,7 @@ const PATAPAN = [
   seq(["D5", 4], ["C5", 2], ["B4", 2], ["E5", 8]),
   seq(["B4", 8], ["A4", 8]),
 ];
-// why: Newly written accompaniment, not a copy of the score's SATB harmonization.
+// why: The accompaniment is original to Quizzer. See samples/CREDITS.md for the melody source.
 const PATAPAN_CHORDS: Record<string, string[]> = {
   Am: ["A3", "C4", "E4"],
   E: ["E3", "G#3", "B3"],
@@ -1414,7 +1440,7 @@ const christmasSiegeBattle: Track = {
   bars: PATAPAN.length,
   reverb: 0.2,
   layers: [
-    // why: Keep the recognizable carol audible during countdowns and build breaks too.
+    // why: Countdowns and build breaks use low intensity, so the melody has to enter before the rest of the arrangement.
     { inst: "flute", bars: PATAPAN, vol: 0.55 },
     { inst: "bell", bars: shiftOctaves(PATAPAN, 1), vol: 0.16 },
     { inst: "pluck", bars: patapanPluck, vol: 0.35 },
@@ -1447,15 +1473,13 @@ const christmasSiegeResults: Track = {
   ],
 };
 
-// why: an original title-theme shape, not a transcription of any film cue.
+// why: The theme is an original composition in the style of a Western film score.
 
-/** why: Chords per bar: Dm F C Dm | Gm Dm A Dm. */
 const SHOW_CHORDS = ["D3 F3 A3", "F3 A3 C4", "C3 E3 G3", "D3 F3 A3", "G3 Bb3 D4", "D3 F3 A3", "C#3 E3 A3", "D3 F3 A3"].map(chord);
 const SHOW_GUITAR_ROOTS_PER_BAR = ["D2", "F2", "C3", "D2", "G2", "D2", "A2", "D2"];
-const tremolo = (chordTok: string) => pump(chordTok, "xxxxxxxxxxxxxxxx");
-/** why: The guitar's low root, held across beats 1 and 3. */
+const tremolo = (chordTok: string) => noteOnHits(chordTok, "xxxxxxxxxxxxxxxx");
 const guitarPulse = (root: string) => seq([root, 4], [".", 4], [root, 4], [".", 4]);
-// why: long notes, and a rest first so each loop opens on guitar alone; the flute answers in the rests.
+// why: The whistle enters late so each loop opens on guitar alone.
 const SHOW_THEME = [
   seq([".", 6], ["A5", 10]),
   seq(["G5", 6], ["F5", 6], [".", 4]),
@@ -1466,7 +1490,7 @@ const SHOW_THEME = [
   seq(["E5", 4], [".", 2], ["C#5", 4], ["A5", 6]),
   seq(["D5", 12], [".", 4]),
 ];
-/** why: Short flute turns, only in the whistle's rests. Bar 1 stays empty so the guitar has the street. */
+// why: The first flute bar is silent so the guitar opens the loop alone.
 const SHOW_FLUTE = [
   rest,
   seq([".", 12], ["A5", 2], ["G5", 2]),
@@ -1477,15 +1501,11 @@ const SHOW_FLUTE = [
   seq([".", 4], ["G5", 2], [".", 10]),
   seq([".", 12], ["A5", 4]),
 ];
-/** why: The same first phrase, with the 3rd and 7th raised, over D G A D. */
 const SHOW_SUNSET = [seq([".", 6], ["A5", 10]), seq(["G5", 6], ["F#5", 6], [".", 4]), seq(["C#6", 8], [".", 8]), seq(["D5", 10], [".", 6])];
 const SUN_CHORDS = ["D3 F#3 A3", "G3 B3 D4", "A3 C#4 E4", "D3 F#3 A3"].map(chord);
 const SUN_ROOTS = ["D2", "G2", "A2", "D2"];
-/** why: The jaw harp boings the D drone on the same beats as the low guitar. */
-const SHOW_BOING = pump("D3", "x.......x.......");
-/** why: Anvil: a hard, high, short ring. */
-const anvil = (pattern: string) => pump("D6", pattern);
-/** why: Whip cracks and the chanted "hup!" land at the end of every other bar. */
+const SHOW_BOING = noteOnHits("D3", "x.......x.......");
+const anvil = (pattern: string) => noteOnHits("D6", pattern);
 const SHOW_WHIP = [rest, drum("............o..."), rest, drum("o.........o....."), rest, drum("............o..."), rest, drum("o.........o.o...")];
 const SHOW_HUP = [rest, drum("............x.x."), rest, drum("............x.x."), rest, drum("............x.x."), rest, drum("............x.xx")];
 
@@ -1495,7 +1515,6 @@ const showdownLobby: Track = {
   bars: 4,
   reverb: 0.62,
   layers: [
-    // why: An empty street: tremolo guitar, the low root, and the whistle's first phrase. No hooves, no whip.
     { inst: "twang", bars: SHOW_CHORDS.slice(0, 4).map(tremolo), vol: 0.4 },
     { inst: "twang", bars: SHOW_GUITAR_ROOTS_PER_BAR.slice(0, 4).map(guitarPulse), vol: 0.52 },
     { inst: "whistle", bars: SHOW_THEME.slice(0, 4), vol: 0.55 },
@@ -1508,37 +1527,29 @@ const showdown: Track = {
   id: "showdown",
   bpm: 92,
   bars: 8,
-  // why: From a slow ride into town (intro, ~0.3) to a full gallop with the trumpet on the tune as time runs out (1).
   tempoBoost: 0.35,
   reverb: 0.48,
   layers: [
-    // why: Always there: the tremolo bed, the low root, hooves at a walk, an anvil ping, the jaw harp.
     { inst: "twang", bars: SHOW_CHORDS.map(tremolo), vol: 0.26 },
     { inst: "twang", bars: SHOW_GUITAR_ROOTS_PER_BAR.map(guitarPulse), vol: 0.58 },
     { inst: "woodblock", bars: [drum("x.......x.......")], vol: 0.3, to: 0.45 },
     { inst: "bell", bars: [anvil("x..............."), rest, rest, rest], vol: 0.32, to: 0.7 },
     { inst: "jawharp", bars: [SHOW_BOING], vol: 0.45 },
-    // why: The whistle is already on the tune in the intro. The flute answers in the gaps once the question opens.
     { inst: "whistle", bars: SHOW_THEME, vol: 0.72, from: 0.15 },
     { inst: "flute", bars: SHOW_FLUTE, vol: 0.32, from: 0.35 },
-    // why: Into a gallop, with the timpani on the roots.
     { inst: "woodblock", bars: [GALLOP], vol: 0.45, from: 0.45 },
-    { inst: "timpani", bars: SHOW_GUITAR_ROOTS_PER_BAR.map((r) => pump(r, "x.......x.......")), vol: 0.45, from: 0.45 },
-    // why: Whip cracks and the chanted "hup!" (low brass stab and a drum).
+    { inst: "timpani", bars: SHOW_GUITAR_ROOTS_PER_BAR.map((r) => noteOnHits(r, "x.......x.......")), vol: 0.45, from: 0.45 },
     { inst: "clap", bars: SHOW_WHIP, vol: 0.55, from: 0.55 },
     { inst: "taiko", bars: SHOW_HUP, vol: 0.5, from: 0.55 },
     { inst: "brass", bars: SHOW_HUP.map((b) => b.replace(/x/g, chord("D3 A3"))), vol: 0.4, from: 0.55 },
-    // why: The anvil on every offbeat and the strings sawing underneath.
     { inst: "bell", bars: [anvil("....x.......x...")], vol: 0.28, from: 0.7 },
-    { inst: "strings", bars: SHOW_CHORDS.map((c) => pump(c, "xxxxxxxxxxxxxxxx")), vol: 0.22, from: 0.7 },
-    // why: Last seconds: the trumpet takes the tune an octave down, the snare drives.
+    { inst: "strings", bars: SHOW_CHORDS.map((c) => noteOnHits(c, "xxxxxxxxxxxxxxxx")), vol: 0.22, from: 0.7 },
     { inst: "brass", bars: shiftOctaves(SHOW_THEME, -1), vol: 0.58, from: 0.8 },
     { inst: "snare", bars: [drum("....x.......x..."), drum("....x.......x..."), drum("....x.......x..."), drum("....x...x.x.xxxx")], vol: 0.42, from: 0.9 },
-    { inst: "cymbal", bars: [rest, rest, rest, rest, rest, rest, rest, once("x")], vol: 0.5, from: 0.9 },
+    { inst: "cymbal", bars: [rest, rest, rest, rest, rest, rest, rest, hitOnFirstStep("x")], vol: 0.5, from: 0.9 },
   ],
 };
 
-/** why: The draw: a whip crack, a rising trumpet call, and the whistle hanging on its last note. Played once by MusicPlayer.sting. */
 const showdownDraw: Track = {
   id: "showdown-draw",
   bpm: 132,
@@ -1561,7 +1572,6 @@ const showdownResults: Track = {
   bars: 4,
   reverb: 0.4,
   layers: [
-    // why: Riding off into the sunset, in D major: trumpet on the tune, the whistle above it, a full gallop.
     { inst: "brass", bars: shiftOctaves(SHOW_SUNSET, -1), vol: 0.8 },
     { inst: "whistle", bars: SHOW_SUNSET, vol: 0.42 },
     { inst: "strings", bars: SUN_CHORDS.map(hold), vol: 0.5 },
@@ -1569,14 +1579,13 @@ const showdownResults: Track = {
     { inst: "twang", bars: SUN_ROOTS.map(guitarPulse), vol: 0.6 },
     { inst: "woodblock", bars: [GALLOP], vol: 0.4 },
     { inst: "jawharp", bars: [SHOW_BOING], vol: 0.4 },
-    { inst: "timpani", bars: SUN_ROOTS.map((r) => pump(r, "x.......x.x.....")), vol: 0.48 },
+    { inst: "timpani", bars: SUN_ROOTS.map((r) => noteOnHits(r, "x.......x.x.....")), vol: 0.48 },
     { inst: "clap", bars: [rest, drum("............o..."), rest, drum("o...............")], vol: 0.45 },
-    { inst: "bell", bars: [anvil("x..............."), rest, anvil("x..............."), once("D6")], vol: 0.28 },
-    { inst: "cymbal", bars: [rest, rest, rest, once("x")], vol: 0.5 },
+    { inst: "bell", bars: [anvil("x..............."), rest, anvil("x..............."), hitOnFirstStep("D6")], vol: 0.28 },
+    { inst: "cymbal", bars: [rest, rest, rest, hitOnFirstStep("x")], vol: 0.5 },
   ],
 };
 
-/** why: Close-voiced triads (around middle C) for the carols' chords. */
 const XMAS_CHORDS: Record<string, string> = {
   G: "G3 B3 D4",
   D: "F#3 A3 D4",
@@ -1606,10 +1615,8 @@ const XMAS_ROOTS: Record<string, string> = {
   "C#m7": "C#3",
 };
 
-/** why: One bar from four beats of chords: each beat's 4 steps follow `beat` ("x" = play, "-" = hold, "." = rest). */
 const beats = (q: string[], beat: string, pick: (chordName: string, step: number) => string) =>
   q.flatMap((c, b) => beat.split("").map((ch, i) => (ch === "x" ? pick(c, b * 4 + i) : ch))).join(" ");
-/** why: The chords held as a pad, re-struck only when they change. */
 const padBar = (q: string[]) => {
   const parts: [string, number][] = [];
   for (const c of q) {
@@ -1637,7 +1644,7 @@ const brokenChords = (q: string[]) =>
 const SLEIGH_BELLS_8THS = drum("o.x.x.x.o.x.x.x.");
 const BELLS_16THS = drum("o.xxx.xxo.xxx.xx");
 
-// why: O Come, All Ye Faithful in G, 4/4. Bar 20 ends with the pickup "O" back into bar 1.
+// why: Bar 20 ends with the vocal pickup into bar 1 so the phrase flows across the loop.
 const ADESTE = [
   lyric("come, all ye", seq(["G4", 8], ["D4", 4], ["G4", 4])),
   lyric("faith-ful,", seq(["A4", 8], ["D4", 8])),
@@ -1683,8 +1690,7 @@ const ADESTE_HARMONY = [
   ["G", "G", "G", "G"],
 ];
 
-// why: Joy to the World in D (the hymn's 2/4 bars paired into 4/4). The tune is 9½ bars; bar 10
-// holds the last note while the bells shake into the repeat.
+// why: Combine pairs of 2/4 source bars into 4/4. Hold the last note in bar 10 so the bells can lead into the repeat.
 const ANTIOCH = [
   lyric("Joy to the world! the", seq(["D5", 4], ["C#5", 3], ["B4", 1], ["A4", 6], ["G4", 2])),
   lyric("Lord is come; Let", seq(["F#4", 4], ["E4", 4], ["D4", 6], ["A4", 2])),
@@ -1710,8 +1716,6 @@ const ANTIOCH_HARMONY = [
   ["D", "D", "D", "D"],
 ];
 
-// why: O Come, O Come, Emmanuel ("Veni Emmanuel", a 15th-century French processional tune) in E minor,
-// 4/4. Six lines of three bars; the refrain ("Rejoice! Rejoice!") ends like the second line.
 const EMMANUEL = [
   lyric("O come, O come,", seq(["E4", 4], ["G4", 4], ["B4", 4], ["B4", 4])),
   lyric("Em-man-u-", seq(["B4", 4], ["A4", 4], ["C5", 4], ["B4", 4])),
@@ -1752,11 +1756,12 @@ const EMMANUEL_HARMONY = [
   ["C", "Am", "B7", "Em"],
   ["D", "Em", "Em", "Em"],
 ];
-/** why: A backbeat with a fill at the end of each line (every third bar). */
-const EMMANUEL_SNARE = Array.from({ length: 18 }, (_, i) => drum(i % 3 === 2 ? "....x...x.x.xxxx" : "....x.......x..."));
+const EMMANUEL_BARS_PER_PHRASE = 3;
+const SNARE_FILL = "....x...x.x.xxxx";
+const SNARE_BACKBEAT = "....x.......x...";
+const EMMANUEL_SNARE = Array.from({ length: 18 }, (_, i) => drum(i % EMMANUEL_BARS_PER_PHRASE === EMMANUEL_BARS_PER_PHRASE - 1 ? SNARE_FILL : SNARE_BACKBEAT));
 
-// why: read off the pianotv.net sheet (one chord per bar). Bar 19 is the first ending, whose last beat
-// is the pickup back into bar 1; bars 13-18 are the refrain.
+// why: The melody follows the pianotv.net score. Bar 19 is the first ending and its last beat leads back into bar 1.
 const GOD_REST = [
   lyric("rest ye mer-ry", seq(["E4", 4], ["B4", 4], ["B4", 4], ["A4", 4])),
   lyric("gen-tle-men, let", seq(["G4", 4], ["F#4", 4], ["E4", 4], ["D4", 4])),
@@ -1779,11 +1784,9 @@ const GOD_REST = [
   lyric("joy. God", seq(["E4", 12], ["E4", 4])),
 ];
 const GOD_REST_HARMONY = ["Em", "Em", "C", "B7", "Em", "Em", "C", "B7", "Am", "Bm", "Em", "D", "G", "B7", "Em", "D", "G", "B7", "Em"].map((c) => [c, c, c, c]);
-/** why: A backbeat with a fill at the end of each phrase. */
-const GOD_REST_SNARE = GOD_REST.map((_, i) => drum([3, 7, 11, 15, 18].includes(i) ? "....x...x.x.xxxx" : "....x.......x..."));
+const GOD_REST_PHRASE_END_INDICES = [3, 7, 11, 15, 18];
+const GOD_REST_SNARE = GOD_REST.map((_, i) => drum(GOD_REST_PHRASE_END_INDICES.includes(i) ? SNARE_FILL : SNARE_BACKBEAT));
 
-// why: Hark! The Herald Angels Sing in G, 4/4. The last couplet ("Hark! the herald angels sing,
-// Glory to the newborn King!") repeats the music of the one before it.
 const HARK_REFRAIN = [
   lyric("With th'an-gel-ic / Hark! the her-ald", seq(["E5", 6], ["E5", 2], ["E5", 4], ["D5", 4])),
   lyric("host pro-claim / an-gels sing", seq(["C5", 4], ["B4", 4], ["C5", 8])),
@@ -1836,7 +1839,6 @@ const christmasTowerResults: Track = {
   tempoBoost: 0.08,
   reverb: 0.35,
   layers: [
-    // why: A festive brass band on the tune, glockenspiel above, strings and sleigh bells.
     { inst: "brass", bars: HARK, vol: 0.7 },
     { inst: "bell", bars: shiftOctaves(HARK, 1), vol: 0.3 },
     { inst: "strings", bars: HARK_HARMONY.map(padBar), vol: 0.4 },
@@ -1845,16 +1847,14 @@ const christmasTowerResults: Track = {
     { inst: "hat", bars: [SLEIGH_BELLS_8THS], vol: 0.4 },
     { inst: "kick", bars: [drum("x.......x.......")], vol: 0.55 },
     { inst: "timpani", bars: HARK_HARMONY.map((q) => seq([XMAS_ROOTS[q[0]!]!, 8], [".", 8])), vol: 0.4 },
-    { inst: "cymbal", bars: [once("x"), ...Array(11).fill(rest), once("x"), ...Array(7).fill(rest)], vol: 0.4 },
-    // why: The celebration at high intensity: a flute descant, faster bells and a snare.
+    { inst: "cymbal", bars: [hitOnFirstStep("x"), ...Array(11).fill(rest), hitOnFirstStep("x"), ...Array(7).fill(rest)], vol: 0.4 },
     { inst: "flute", bars: shiftOctaves(HARK, 1), vol: 0.28, from: 0.8 },
     { inst: "hat", bars: [BELLS_16THS], vol: 0.35, from: 0.8 },
     { inst: "snare", bars: [drum("....x.......x...")], vol: 0.4, from: 0.8 },
   ],
 };
 
-// why: keep the tune present at zero intensity: late rounds can last only seven seconds.
-// Melody and instrument provenance: samples/CREDITS.md.
+// why: Late rounds can last only seven seconds, so the melody has to be audible at zero intensity.
 const snowmanLobby: Track = {
   id: "robot-lobby",
   bpm: 92,
@@ -1883,7 +1883,7 @@ const snowmanQuiz: Track = {
     { inst: "hat", bars: [SLEIGH_BELLS_8THS], vol: 0.25 },
     { inst: "strings", bars: GOD_REST, vol: 0.35, from: 0.3 },
     { inst: "piano", bars: GOD_REST_HARMONY.map(offbeatChords), vol: 0.25, from: 0.4 },
-    { inst: "timpani", bars: GOD_REST_HARMONY.map((q) => once(XMAS_ROOTS[q[0]!]!)), vol: 0.4, from: 0.5 },
+    { inst: "timpani", bars: GOD_REST_HARMONY.map((q) => hitOnFirstStep(XMAS_ROOTS[q[0]!]!)), vol: 0.4, from: 0.5 },
     { inst: "bell", bars: shiftOctaves(GOD_REST, 1), vol: 0.25, from: 0.55 },
     { inst: "brass", bars: GOD_REST, vol: 0.45, from: 0.7 },
     { inst: "snare", bars: GOD_REST_SNARE, vol: 0.35, from: 0.8 },
@@ -1923,16 +1923,13 @@ const snowmanResults: Track = {
     { inst: "hat", bars: [SLEIGH_BELLS_8THS], vol: 0.3 },
     { inst: "kick", bars: [drum("x.......x.......")], vol: 0.4 },
     { inst: "snare", bars: [drum("....x.......x...")], vol: 0.3 },
-    { inst: "cymbal", bars: [once("x"), ...Array(ANTIOCH.length - 1).fill(rest)], vol: 0.3 },
+    { inst: "cymbal", bars: [hitOnFirstStep("x"), ...Array(ANTIOCH.length - 1).fill(rest)], vol: 0.3 },
   ],
 };
 
-// why: North Pole Tower: recognizable carols with CC0 instruments.
-// Reuse the traditional melodies and our arrangements; provenance: samples/CREDITS.md.
 const christmasTowerLobby: Track = { ...snowmanLobby, id: "tower-christmas-lobby" };
 
-// why: Adolphe Adam's O Holy Night in D, from the verse through the final refrain.
-// The vocal line is transposed from the public-domain Léon Grus score (see CREDITS.md).
+// why: The vocal line is transposed from the public-domain Léon Grus score. See samples/CREDITS.md.
 const HOLY_NIGHT = [
   seq([".", 7], ["F#4", 8], ["A4", 1]),
   seq(["A4", 7], ["A4", 1], ["B4", 3], ["B4", 1], ["G4", 3], ["B4", 1]),
@@ -1943,7 +1940,7 @@ const HOLY_NIGHT = [
   seq(["A4", 7], ["A4", 1], ["B4", 3], ["B4", 1], ["G4", 3], ["B4", 1]),
   seq(["D5", 8], ["A4", 2], [".", 1], ["A4", 1], ["G#4", 3], ["F#4", 1]),
   seq(["C#5", 4], ["A4", 3], ["B4", 1], ["C#5", 4], ["D5", 3], ["C#5", 1]),
-  lyric("why: The melody rises into the refrain.", seq(["F#4", 8], [".", 7], ["A4", 1])),
+  seq(["F#4", 8], [".", 7], ["A4", 1]),
   seq(["A4", 4], ["B4", 4], ["E4", 4], ["A4", 4]),
   seq(["B4", 3], ["A4", 1], ["D5", 3], ["F#4", 1], ["B4", 4], ["A4", 2], [".", 1], ["A4", 1]),
   seq(["A4", 4], ["B4", 4], ["E4", 4], ["A4", 4]),
@@ -2015,7 +2012,7 @@ function christmasTowerLayers(includeHolyNight: boolean): Track["layers"] {
     { inst: "kick", bars: followWith([drum("x.......x.......")]), vol: 0.4, from: 0.5 },
     { inst: "snare", bars: followWith([drum("....x.......x...")]), vol: 0.3, from: 0.75 },
     { inst: "hat", bars: followWith([BELLS_16THS]), vol: 0.2, from: 0.85 },
-    { inst: "timpani", bars: followWith(ANTIOCH_HARMONY.map((q) => once(XMAS_ROOTS[q[0]!]!))), vol: 0.3, from: 0.85 },
+    { inst: "timpani", bars: followWith(ANTIOCH_HARMONY.map((q) => hitOnFirstStep(XMAS_ROOTS[q[0]!]!))), vol: 0.3, from: 0.85 },
   ];
 }
 
@@ -2034,7 +2031,7 @@ const christmasTowerMedley: Track = {
   layers: christmasTowerLayers(true),
 };
 
-// why: Gloria in G, with both cascading refrains; public-domain sources in samples/CREDITS.md.
+// why: See samples/CREDITS.md for the public-domain source of the Gloria melody.
 const GLORIA_VERSE = [
   seq(["B4", 4], ["B4", 4], ["B4", 4], ["D5", 4]),
   seq(["D5", 6], ["C5", 2], ["B4", 8]),
@@ -2066,7 +2063,6 @@ const GLORIA_REFRAIN_HARMONY = [
 ];
 const GLORIA_HARMONY = [...GLORIA_VERSE_HARMONY, ...GLORIA_VERSE_HARMONY, ...GLORIA_REFRAIN_HARMONY, ...GLORIA_REFRAIN_HARMONY, ["G", "G", "G", "G"]];
 
-/** why: Arcade sixteenth-note sparkle, following each beat's harmony. */
 const carolArcadeArp = (q: string[]) =>
   beats(q, "xxxx", (c, step) => {
     const notes = XMAS_CHORDS[c]!.split(" ");
@@ -2104,7 +2100,6 @@ const christmasRacerDrive: Track = {
   tempoBoost: 0.45,
   bars: GOD_REST.length,
   layers: [
-    // why: Keep the carol recognizable at every speed, with a sparse rhythm while crashed.
     { inst: "lead", bars: GOD_REST, vol: 0.7, echo: 0.25 },
     { inst: "kick", bars: [drum("x.......x.......")], vol: 0.65, to: 0.15 },
     { inst: "tribass", bars: GOD_REST_HARMONY.map(rootBeats), vol: 0.6, to: 0.15 },
@@ -2139,7 +2134,7 @@ const christmasRacerResults: Track = {
   ],
 };
 
-// why: Hopkins's original 3/8 melody: the Gaspard verse and the chorus soprano, without the interlude.
+// why: The melody uses Hopkins’s original 3/8 arrangement without the interlude. See samples/CREDITS.md.
 const WE_THREE_KINGS_OPENING = [seq(["B4", 4], ["A4", 2]), seq(["G4", 4], ["E4", 2]), seq(["F#4", 2], ["G4", 2], ["F#4", 2]), seq(["E4", 4], [".", 2])];
 const WE_THREE_KINGS_VERSE = [
   ...WE_THREE_KINGS_OPENING,
@@ -2178,7 +2173,6 @@ const WE_THREE_KINGS_REFRAIN_HARMONY: WeThreeKingsChord[] = ["D7", "G", "G", "C"
 const WE_THREE_KINGS_HARMONY = [...WE_THREE_KINGS_VERSE_HARMONY, ...WE_THREE_KINGS_REFRAIN_HARMONY];
 const weThreeKingsRefrain = (bar: number) => bar >= WE_THREE_KINGS_VERSE.length;
 const WE_THREE_KINGS_REST = seq([".", 6]);
-/** why: Open-position guitar shapes: the thumb takes the bass note, the fingers roll the top three strings. */
 const WE_THREE_KINGS_GUITAR: Record<WeThreeKingsChord, [bass: string, string, string, string]> = {
   Em: ["E2", "G3", "B3", "E4"],
   B7: ["B2", "F#3", "A3", "D#4"],
@@ -2187,7 +2181,6 @@ const WE_THREE_KINGS_GUITAR: Record<WeThreeKingsChord, [bass: string, string, st
   D7: ["D3", "A3", "C4", "F#4"],
   C: ["C3", "G3", "C4", "E4"],
 };
-/** why: The hammered dulcimer's off-beat chord tones around the refrain's flute. */
 const WE_THREE_KINGS_DULCIMER: Record<WeThreeKingsChord, [string, string, string]> = {
   Em: ["B3", "E4", "G4"],
   B7: ["A3", "D#4", "F#4"],
@@ -2233,7 +2226,7 @@ const christmasMemoryPlay: Track = {
 
 type RobotMusicId = Extract<MusicTrackId, `robot-${string}`>;
 
-/** why: Keep custom file IDs stable while the seasonal skin changes the built-in arrangements. */
+// why: Custom uploads use these IDs as filenames, so seasonal arrangements must preserve them.
 export function robotTracksForSkin(skin: RobotSkin): Record<RobotMusicId, Track> {
   return skin === "snowman"
     ? { "robot-lobby": snowmanLobby, "robot-quiz": snowmanQuiz, "robot-move": snowmanMove, "robot-results": snowmanResults }
