@@ -17,7 +17,6 @@ export interface TowerSettings {
   theme?: SeasonTheme;
   teams: number;
   minutes: number;
-  /** why: eggs come 4 times per game, evenly spaced; needs 2+ teams. */
   monster: boolean;
 }
 
@@ -26,15 +25,12 @@ export const MONSTER_DAMAGE = 2;
 /** why: counted from the tower's highest complete floor. */
 export const EGG_LEVELS_ABOVE = 4;
 
-/** why: the first block landing on the egg hatches the monster. */
 export interface MonsterEgg {
   seq: number;
   col: number;
-  /** why: 0-based, so the egg sits at level row + 1. */
   row: number;
 }
 
-/** why: cells[i] belongs to team i. */
 export interface MonsterEggs {
   seq: number;
   cells: { col: number; row: number }[];
@@ -67,12 +63,10 @@ export interface PlayerTowerView {
   state: "question" | "build";
   blocksHeld: number;
   question: StreamQuestionView | null;
-  /** why: set only while the last answer's 1 s flash shows. */
   feedback: StreamFeedbackView | null;
   egg: MonsterEgg | null;
   /** why: shown once per seq. */
   monsterEvent: { seq: number; kind: "egg" | "hatched" | "smashed"; byTeam: string | null; target: string | null } | null;
-  /** why: set only while this player is building. */
   build: {
     columns: number[];
     floors: number;
@@ -109,10 +103,8 @@ export interface HostTowerState {
   monster: boolean;
   egg: MonsterEggs | null;
   lastAttack: MonsterAttack | null;
-  /** why: null when no egg is coming. */
   nextMonsterRemainingMs: number | null;
   awards: TowerAwards | null;
-  /** why: podium only. */
   errors: QuestionError[] | null;
 }
 

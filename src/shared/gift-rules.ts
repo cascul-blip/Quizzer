@@ -17,7 +17,6 @@ export interface GiftItem {
   kind: GiftItemKind;
   /** why: 0-2, left to right. */
   lane: number;
-  /** why: ms from the start of the bonus. */
   from: number;
   until: number;
 }

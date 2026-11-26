@@ -123,7 +123,6 @@ export const Quiz = z.object({
   questions: z.array(Question),
 });
 export type Quiz = z.infer<typeof Quiz>;
-/** why: revision is the digest of the quiz's JSON file. */
 export type SavedQuiz = Quiz & { revision: string };
 
 export const QuizDraft = z.object({
@@ -140,7 +139,6 @@ export interface QuizSummary {
   description: string;
   questionCount: number;
   updatedAt: string;
-  /** why: set when the file on disk could not be parsed or validated. */
   error?: string;
 }
 

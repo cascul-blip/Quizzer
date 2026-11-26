@@ -18,9 +18,7 @@ export interface StreamFeedbackView {
   penaltyDurationMs: number;
 }
 
-/** why: remainingMs counts from when this view was sent, not from the activity's start. */
 export interface AfterAnswerWaitView {
-  /** why: holds the seq of the Streamed question that opened the activity. */
   activityKey: number;
   remainingMs: number;
 }
@@ -32,7 +30,6 @@ export interface QuestionError {
   answers: string[];
 }
 
-/** why: ties share an award, so it lists everyone who reached the winning value. */
 export interface SubAward {
   value: number;
   nicknames: string[];
@@ -61,10 +58,10 @@ export interface QuestionView {
   remainingMs: number;
 }
 
-/** why: `seq` is the StreamQuestionView's seq; typed questions send `text` and ignore `option`. */
+/** why: seq identifies the active streamed question so a delayed answer cannot apply to the next one. */
 export type StreamAnswerMsg<Prefix extends string> = { type: `${Prefix}.answer`; seq: number; option: number; text?: string };
 
-/** why: `index` is QuestionView.index; typed questions send `text` and ignore `option`. */
+/** why: index identifies the paced round so a delayed answer cannot apply to the next one. */
 export type PacedAnswerMsg<Prefix extends string> = { type: `${Prefix}.answer`; index: number; option: number; text?: string };
 
 export interface HostPlayer {

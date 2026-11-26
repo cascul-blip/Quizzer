@@ -13,14 +13,13 @@ export function snowballFrame(t: number): number {
   return 6;
 }
 
-/** why: a draw misses everyone; in a three-way round only the loser is struck. */
 export function snowballShots(people: readonly { outcome: "win" | "lose" | "stay" }[], draw: boolean): { from: number; to: number; miss: boolean }[] {
   if (draw) return people.map((_, i) => ({ from: i, to: (i + 1) % people.length, miss: true })).filter((s) => s.from !== s.to);
   const from = people.findIndex((p) => p.outcome === "win");
   const to = people.findIndex((p) => p.outcome === "lose");
   if (from >= 0 && to >= 0) return [{ from, to, miss: false }];
-  // why: a tied bottom has no loser to hit; tied leaders may both hit the sole loser.
   if (from >= 0 && people.length > 1) return [{ from, to: (from + 1) % people.length, miss: true }];
+  // why: Both tied leaders can hit the lone loser even though neither moves up the ladder.
   if (to >= 0) return people.flatMap((_, i) => (i === to ? [] : [{ from: i, to, miss: false }]));
   return [];
 }
