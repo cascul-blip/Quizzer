@@ -1,4 +1,4 @@
-// Zod-free constants so browser bundles can use them without pulling in the schema library.
+// why: Zod-free so browser bundles don't pull in the schema library.
 
 export const MIN_OPTIONS = 2;
 export const MAX_OPTIONS = 4;
@@ -12,12 +12,12 @@ export const QUESTION_ID_RE = /^[A-Za-z0-9_-]{1,40}$/;
 export const MEDIA_REF_RE = /^media\/[A-Za-z0-9_-]+\.(png|jpg|gif|webp)$/;
 
 export const MAX_MEDIA_BYTES = 5 * 1024 * 1024;
-/** Longest side of a stored question image; phones never show them bigger, and every phone downloads each one. */
+/** why: phones never show images bigger, and every phone downloads each one. */
 export const MAX_IMAGE_SIDE = 1280;
-/** Images at or under this size (and MAX_IMAGE_SIDE) are stored as they are. */
+/** why: images within this and MAX_IMAGE_SIDE are stored as they are. */
 export const SHRINK_ABOVE_BYTES = 300 * 1024;
 
-/** A pin spot's position as fractions (0–1) of the image's width and height. */
+/** why: x and y are fractions (0–1) of the image's width and height. */
 export interface PinSpot {
   x: number;
   y: number;
@@ -35,8 +35,8 @@ export function newId(len = 6): string {
   return out;
 }
 
-/** Legacy timestamp guard for clients that loaded a quiz before content revisions were available. */
+/** why: legacy guard for clients that loaded a quiz before content revisions existed. */
 export const BASE_VERSION_HEADER = "x-quiz-updated-at";
 
-/** Digest of the quiz file the editor loaded. */
+/** why: carries the digest of the quiz file the editor loaded. */
 export const QUIZ_REVISION_HEADER = "x-quiz-revision";

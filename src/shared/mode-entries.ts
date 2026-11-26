@@ -35,7 +35,6 @@ export type ProtocolOf<M extends GameMode> = EntryProtocol<SharedOf<M>>;
 
 type AssertTrue<T extends true> = T;
 
-/** Each mode supplies a host and phone view discriminated by its registry key. */
 export type GameplayViewKindsMatchModes = AssertTrue<
   {
     [M in GameMode]: [ProtocolOf<M>["hostView"]["kind"] | ProtocolOf<M>["playerView"]["kind"]] extends [M]

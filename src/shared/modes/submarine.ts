@@ -16,13 +16,11 @@ export interface HostSubState {
   phase: SubPhase;
   quiz: { id: string; title: string; questionCount: number };
   level: number;
-  /** The final score. */
   depthMeters: number;
-  /** Time left in the countdown / cut-scene / dive. */
   phaseRemainingMs: number;
-  /** Distance to the fish in seconds of fish travel, as of when this was sent. */
+  /** why: in seconds of fish travel, as of when this was sent. */
   gapSeconds: number;
-  /** How fast the gap closes (gap-seconds per second). */
+  /** why: gap-seconds closed per second. */
   speed: number;
   maxGap: number;
   boosts: number;
@@ -34,7 +32,7 @@ export interface HostSubState {
   players: { id: string; nickname: string; avatar: AvatarChoice; connected: boolean; state: "question" | "boost" | "waiting" }[];
   playerCount: number;
   awards: SubAwards | null;
-  /** The questions answered wrongly most often (podium only). */
+  /** why: podium only. */
   errors: QuestionError[] | null;
 }
 
@@ -47,11 +45,12 @@ export interface PlayerSubView {
   phaseRemainingMs: number;
   me: { id: string; nickname: string; avatar: AvatarChoice; correct: number; boosts: number; diveHits: number };
   state: "question" | "boost" | "waiting";
-  /** Correct answers toward the next boost (0 … CORRECT_PER_BOOST-1). */
+  /** why: 0 … CORRECT_PER_BOOST-1. */
   towardBoost: number;
   question: StreamQuestionView | null;
   feedback: StreamFeedbackView | null;
-  dive: // symbolRemainingMs of symbolDurationMs: time left to find the current symbol before the instructor moves on.
+  // why: symbolRemainingMs is time left to find the current symbol before the instructor moves on.
+  dive:
     | {
         role: "instructor";
         symbol: string;

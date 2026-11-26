@@ -6,47 +6,38 @@ import type { SiegeDefenderType, SiegeMonsterType, SiegeWaves } from "../siege-r
 import type { SeasonTheme } from "../themed-modes.ts";
 import { modeTheme } from "../themed-modes.ts";
 
-/**
- * Kingdom Siege. countdown: 3, 2, 1. build: the opening build break and the breaks between
- * waves. wave: monsters are marching. stands / fallen: the ending cinematic, then podium.
- */
+/** why: "build" covers the opening break and the breaks between waves; stands / fallen are ending cinematics. */
 export type SiegePhase = "countdown" | "build" | "wave" | "stands" | "fallen" | "podium";
 
 export interface SiegeSettings {
   theme?: SeasonTheme;
-  /** 5, 10 or "endless". */
   waves: SiegeWaves;
 }
 
-/**
- * Each award's label: topArcher is most monsters defeated by archers the player placed,
- * masterMason most stone walls placed plus wall upgrades.
- */
+/** why: topArcher counts kills by the player's archers; masterMason counts walls placed plus wall upgrades. */
 export type SiegeAwardKey = "topArcher" | "masterMason" | "mostCorrect";
 export type SiegeAwards = Record<SiegeAwardKey, SubAward | null>;
 
-/** The class's best Endless run on this quiz, saved on the host computer. */
+/** why: saved on the host computer, per quiz. */
 export interface SiegeRecord {
   waves: number;
-  /** Average difficulty scale over the run, in %. */
+  /** why: percent; persisted, so not renamed. */
   avgScale: number;
-  /** ISO date of the run. */
+  /** why: ISO date string. */
   date: string;
 }
 
 export interface SiegeResult {
-  /** ended: the host pressed End game. */
+  /** why: "ended" means the host pressed End game. */
   outcome: "stands" | "fallen" | "ended";
-  /** The wave the game ended on. */
   wave: number;
   waves: SiegeWaves;
   wavesSurvived: number;
   hearts: number;
-  /** "The kingdom stands with 7 of 10 hearts!", "The castle fell on wave 4 of 5.", "Survived 12 waves", … */
   headline: string;
-  /** Endless only. */
+  /** why: null outside Endless. */
   avgScale: number | null;
-  /** Endless only: the best run before this one, and whether this one beat it. */
+  /** why: Endless only; the best run before this one. */
   record: SiegeRecord | null;
   newRecord: boolean;
 }
@@ -54,14 +45,13 @@ export interface SiegeResult {
 export interface HostSiegeDefender {
   id: number;
   type: SiegeDefenderType;
-  /** 0-based, top first. */
+  /** why: 0-based, top first. */
   lane: number;
-  /** 1–7. */
   square: number;
   level: number;
   health: number;
   maxHealth: number;
-  /** Bumps on every hit taken (white flash) and every attack made (lunge or shot). */
+  /** why: counters that bump so the projector replays the flash or lunge. */
   hitSeq: number;
   attackSeq: number;
 }
@@ -70,9 +60,9 @@ export interface HostSiegeMonster {
   id: number;
   type: SiegeMonsterType;
   lane: number;
-  /** Position in squares when the view was made: square k's centre is k, the wall face is 0.5. */
+  /** why: in squares at view time; square k's centre is k, the wall face is 0.5. */
   x: number;
-  /** Where it is walking to and how long it takes to get there (0 = standing still). */
+  /** why: moveRemainingMs 0 means standing still. */
   toX: number;
   moveRemainingMs: number;
   state: "wait" | "walk" | "attack" | "leap";
@@ -85,12 +75,12 @@ export interface HostSiegeMonster {
 export interface SiegeShot {
   seq: number;
   lane: number;
-  /** The archer's square. */
+  /** why: the archer's square. */
   square: number;
   toX: number;
 }
 
-/** A monster defeated (tips over and fades) or one that reached the wall. */
+/** why: also covers monsters that reached the wall. */
 export interface SiegeFallen {
   seq: number;
   id: number;
@@ -103,7 +93,6 @@ export interface SiegeFallen {
 export interface SiegeEvent {
   seq: number;
   nickname: string;
-  /** "placed an archer", "upgraded a knight to Lv 2". */
   text: string;
 }
 
@@ -112,31 +101,27 @@ export interface HostSiegeState {
   phase: SiegePhase;
   quiz: { id: string; title: string; questionCount: number };
   settings: SiegeSettings;
-  /** The wave being fought, or the next one during a build break (0 before the countdown ends). */
+  /** why: the next wave during a build break; 0 before the countdown ends. */
   wave: number;
-  /** All the players' unspent gold added up. */
+  /** why: the sum of every player's unspent purse. */
   gold: number;
   hearts: number;
   maxHearts: number;
-  /** Countdown, build break or ending time left. */
   phaseRemainingMs: number;
   phaseDurationMs: number;
   defenders: HostSiegeDefender[];
   monsters: HostSiegeMonster[];
-  /** Newest last. */
+  /** why: newest last. */
   shots: SiegeShot[];
   fallen: SiegeFallen[];
   events: SiegeEvent[];
-  /** Lanes where a monster comes on soon, with the time left. */
   warnings: { lane: number; ms: number }[];
-  /** Lanes with a monster within SIEGE_DANGER_SQUARES of the wall. */
   danger: number[];
-  /** A giant waiting on its entry square (horn and lane flash). */
   giant: { lane: number; ms: number } | null;
-  /** Bumps on every horn, and on every heart lost. */
+  /** why: counters that bump on every horn and every heart lost. */
   giantSeq: number;
   wallHitSeq: number;
-  /** Monsters on the board, for the music. */
+  /** why: the music reads it. */
   monsterCount: number;
   players: { id: string; nickname: string; avatar: AvatarChoice; connected: boolean }[];
   playerCount: number;
@@ -148,7 +133,7 @@ export interface HostSiegeState {
 
 export interface SiegeMapView {
   defenders: { lane: number; square: number; type: SiegeDefenderType; level: number }[];
-  /** Monster dots, refreshed once a second. Square 8 is the entry square. */
+  /** why: refreshed once a second; square 8 is the entry square. */
   monsters: { lane: number; square: number }[];
 }
 
@@ -162,17 +147,17 @@ export interface PlayerSiegeView {
   wave: number;
   waves: SiegeWaves;
   hearts: number;
-  /** This player's own purse. */
+  /** why: this player's own purse, not the class total. */
   gold: number;
   danger: number[];
   me: { id: string; nickname: string; avatar: AvatarChoice; correct: number; goldEarned: number };
   question: StreamQuestionView | null;
   feedback: StreamFeedbackView | null;
-  /** The defender this player placed last, pre-selected on the map. */
+  /** why: pre-selected on the map. */
   lastPlaced: SiegeDefenderType | null;
-  /** The latest banner: a giant approaches, or the wall was hit. Shown once per seq. */
+  /** why: shown once per seq. */
   alert: { seq: number; kind: "giant" | "wall" } | null;
-  /** Only while this phone's map is open. */
+  /** why: only sent while this phone's map is open. */
   map: SiegeMapView | null;
   result: {
     outcome: SiegeResult["outcome"];
@@ -188,10 +173,10 @@ export interface PlayerSiegeView {
 
 export type SiegeMsg =
   | StreamAnswerMsg<"siege">
-  /** Place a defender. lane 0–4 (top first), square 1–7 (1 = next to the castle wall). */
+  /** why: lane is 0-based top first; square 1 is next to the castle wall. */
   | { type: "siege.place"; defender: SiegeDefenderType; lane: number; square: number }
   | { type: "siege.upgrade"; lane: number; square: number }
-  /** The lane map opened or closed, so the server only sends its contents while it is open. */
+  /** why: the server only sends map contents while it is open. */
   | { type: "siege.map"; open: boolean };
 
 export const siegeShared = sharedModeEntry<ModeProtocol<SiegeMsg, SiegeSettings, HostSiegeState, PlayerSiegeView>>()({
@@ -213,13 +198,11 @@ export function siegeDefenderLabel(type: SiegeDefenderType, theme?: SeasonTheme)
   return DEFENDER_LABELS[modeTheme("siege", theme)][type];
 }
 
-/** The defender in a sentence, with its article: "an archer", "a present barricade". */
 export function siegeDefenderPhrase(type: SiegeDefenderType, theme?: SeasonTheme) {
   const label = siegeDefenderLabel(type, theme).toLowerCase();
   return `${/^[aeiou]/.test(label) ? "an" : "a"} ${label}`;
 }
 
-/** What the class defends ("the kingdom stands", "the castle fell") and the award names, for the lobby, the endings and the podium. */
 const SIEGE_WORDS = {
   christmas: { home: "toybox", fallen: "toybox", topArcher: "Top Elf Captain", archers: "elf archers", masterMason: "Master Wrapper", wall: "barricade" },
   classic: { home: "kingdom", fallen: "castle", topArcher: "Top Archer Captain", archers: "archers", masterMason: "Master Mason", wall: "wall" },
@@ -229,7 +212,6 @@ export function siegeWords(theme?: SeasonTheme) {
   return SIEGE_WORDS[modeTheme("siege", theme)];
 }
 
-/** The Podium award labels (GLOSSARY.md) in a theme, read by the server and the projector alike. */
 export function siegeAwardLabels(theme?: SeasonTheme): Record<SiegeAwardKey, string> {
   const words = siegeWords(theme);
   return { topArcher: words.topArcher, masterMason: words.masterMason, mostCorrect: MOST_CORRECT_LABEL };

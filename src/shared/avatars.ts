@@ -1,7 +1,4 @@
-// Player avatars: a character plus one accessory drawn on top (see src/client/shared/avatar-art.tsx).
-// AVATARS and ACCESSORIES are the full catalogue, every set at once, so any id can still be drawn.
-// Which ones players are offered is chosen by AVATAR_SET.
-
+// why: the full catalogue of every set, so any id can still be drawn; AVATAR_SET picks what is offered.
 export const AVATARS = [
   { id: "cat", name: "Cat" },
   { id: "dog", name: "Dog" },
@@ -40,7 +37,7 @@ export const AVATARS = [
   { id: "hedgehog", name: "Hedgehog" },
   { id: "bee", name: "Bee" },
   { id: "capybara", name: "Capybara" },
-  // Christmas set (see AVATAR_SET below). Keep these at the end: the phone sheets follow this order.
+  // why: keep the Christmas set at the end; the phone sheets follow this order.
   { id: "snowman", name: "Snowman" },
   { id: "reindeer", name: "Reindeer" },
   { id: "polarbear", name: "Polar Bear" },
@@ -126,7 +123,7 @@ export interface AvatarChoice {
 
 export type AvatarSet = "classic" | "christmas";
 
-/** The set the lobby offers. Change to "classic" to bring the original characters and accessories back. */
+/** why: the set the lobby offers; "classic" brings the original characters back. */
 export const AVATAR_SET = "christmas" as AvatarSet;
 
 const CHRISTMAS_AVATARS = new Set<string>([
@@ -176,7 +173,7 @@ const CHRISTMAS_ACCESSORIES = new Set<string>([
 
 const inSet = (christmas: Set<string>) => (item: { id: string }) => item.id === "none" || christmas.has(item.id) === (AVATAR_SET === "christmas");
 
-/** The characters and accessories players can pick from (and get at random). "none" is always offered. */
+/** why: "none" is always offered. */
 export const OFFERED_AVATARS = AVATARS.filter(inSet(CHRISTMAS_AVATARS));
 export const OFFERED_ACCESSORIES = ACCESSORIES.filter(inSet(CHRISTMAS_ACCESSORIES));
 
@@ -186,12 +183,12 @@ const accessoryIds = new Set<string>(OFFERED_ACCESSORIES.map((a) => a.id));
 const isAvatarId = (id: unknown): id is AvatarId => typeof id === "string" && avatarIds.has(id);
 const isAccessoryId = (id: unknown): id is AccessoryId => typeof id === "string" && accessoryIds.has(id);
 
-/** A valid choice, or null if either id is unknown or not in the offered set (a phone remembering an old look gets a fresh one). */
+/** why: null for ids outside the offered set, so a phone remembering an old look gets a fresh one. */
 export function cleanAvatar(avatar: unknown, accessory: unknown): AvatarChoice | null {
   return isAvatarId(avatar) && isAccessoryId(accessory) ? { avatar, accessory } : null;
 }
 
-/** A random character with no accessory, so players see there's more to pick. */
+/** why: no accessory, so players see there's more to pick. */
 export function randomAvatar(rng: () => number = Math.random): AvatarChoice {
   return { avatar: OFFERED_AVATARS[Math.floor(rng() * OFFERED_AVATARS.length) % OFFERED_AVATARS.length]!.id, accessory: "none" };
 }

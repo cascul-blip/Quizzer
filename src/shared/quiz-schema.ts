@@ -19,10 +19,7 @@ export type QuestionType = z.infer<typeof QuestionType>;
 
 const PinSpotSchema = z.object({ x: z.number().min(0).max(1), y: z.number().min(0).max(1) });
 
-/**
- * Loose question shape used for input (REST, MCP, editor). Missing fields get
- * defaults in `normalizeQuestion`, which also enforces the cross-field rules.
- */
+/** why: loose input shape; `normalizeQuestion` adds defaults and enforces cross-field rules. */
 export const QuestionDraft = z.object({
   id: z.string().regex(QUESTION_ID_RE).optional().describe("Stable question id. Omit to have one generated."),
   type: QuestionType.describe(
@@ -126,10 +123,9 @@ export const Quiz = z.object({
   questions: z.array(Question),
 });
 export type Quiz = z.infer<typeof Quiz>;
-/** A quiz snapshot and the digest of its JSON file. */
+/** why: revision is the digest of the quiz's JSON file. */
 export type SavedQuiz = Quiz & { revision: string };
 
-/** Input for creating/replacing a quiz; everything but the title is optional. */
 export const QuizDraft = z.object({
   title: z.string().trim().min(1).max(120),
   description: z.string().max(1000).optional(),
@@ -144,7 +140,7 @@ export interface QuizSummary {
   description: string;
   questionCount: number;
   updatedAt: string;
-  /** Set when the file on disk could not be parsed or validated. */
+  /** why: set when the file on disk could not be parsed or validated. */
   error?: string;
 }
 
@@ -166,7 +162,7 @@ export function slugify(title: string): string {
   return slug || "quiz";
 }
 
-/** Apply defaults to a question draft and validate it. Throws ValidationError. */
+/** why: throws ValidationError. */
 export function normalizeQuestion(draft: unknown, takenIds: Set<string> = new Set()): Question {
   const parsedDraft = QuestionDraft.safeParse(draft);
   if (!parsedDraft.success) throw new ValidationError(formatZodError(parsedDraft.error));

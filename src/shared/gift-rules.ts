@@ -15,9 +15,9 @@ export type GiftItemKind = (typeof GIFT_GOODS)[number] | (typeof GIFT_DUDS)[numb
 export interface GiftItem {
   id: number;
   kind: GiftItemKind;
-  /** Position in the three lanes, left to right. */
+  /** why: 0-2, left to right. */
   lane: number;
-  /** Window in milliseconds from the start of the bonus. */
+  /** why: ms from the start of the bonus. */
   from: number;
   until: number;
 }

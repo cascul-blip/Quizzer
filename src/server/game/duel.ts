@@ -293,7 +293,7 @@ export class DuelGame {
     const slot = this.qIndex;
     const results = this.arenas.map((arena) => {
       const answers = arena.map((id) => this.players.get(id)!.answers[slot]);
-      return duelOutcome(answers.map((a) => ({ correct: a ? a.correct : null, ms: a ? a.msSinceOpen : null })));
+      return duelOutcome(answers.map((a) => ({ correct: a ? a.correct : null, answerDurationMs: a ? a.msSinceOpen : null })));
     });
     this.ladder = climbLadder(
       this.ladder,
