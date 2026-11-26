@@ -1,8 +1,4 @@
-/**
- * Robot Attack arena: a 12×12 checkerboard seen at an angle, with the robot
- * looming behind its far edge. Board coordinates: u across (0 = left),
- * v toward the viewer (0 = far row, next to the robot).
- */
+// why: board coordinates are u across (0 = left) and v toward the viewer (0 = far row, next to the robot).
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { AvatarChoice } from "../../shared/avatars.ts";
 import { ROBOT_BOARD, robotRing } from "../../shared/modes/robot.ts";
@@ -22,21 +18,20 @@ import { ROBOT_SKIN, SKIN_TEXT } from "./robot-skin.ts";
 export const ARENA_W = 1200;
 export const ARENA_H = 860;
 const CX = ARENA_W / 2;
-// The granite tiles in robot/tiles/ are pre-rendered for these values (and ROBOT_BOARD):
+// why: the granite tiles in robot/tiles/ are pre-rendered for these values (and ROBOT_BOARD):
 // changing any of them misplaces every tile. tests/robot-art.test.ts checks this.
 const NEAR_EDGE_SCREEN_Y = 800;
 const FAR_EDGE_SCREEN_Y = 360;
-/** How much farther away the far row is than the near row (perspective strength). */
+// why: how much farther away the far row is than the near row.
 const DEPTH = 0.55;
-/** Tile width at the near edge. */
+// why: tile width at the near edge.
 export const TILE = 84;
 const H0 = (NEAR_EDGE_SCREEN_Y - FAR_EDGE_SCREEN_Y) / (1 - 1 / (1 + DEPTH));
 const HORIZON = NEAR_EDGE_SCREEN_Y - H0;
 export const EDGE = 18;
-/** Avatars drawn on one tile before the rest collapse into a "+N" chip. */
-const STACK_SHOWN = 3;
+const AVATARS_SHOWN_PER_TILE = 3;
 
-/** Board point → screen point, with the perspective scale there. */
+// why: s is the perspective scale at that point.
 export function project(u: number, v: number): { x: number; y: number; s: number } {
   const z = 1 + (DEPTH * (ROBOT_BOARD - v)) / ROBOT_BOARD;
   return { x: CX + ((u - ROBOT_BOARD / 2) * TILE) / z, y: HORIZON + H0 / z, s: 1 / z };
@@ -47,7 +42,7 @@ export const quad = (u: number, v: number) => {
   return pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
 };
 
-/** Where tile (u, v)'s pre-rendered image goes: the whole-unit bounding box of its quad. */
+// why: whole units, to match the pre-rendered tile images.
 export function tileBox(u: number, v: number): { x: number; y: number; width: number; height: number } {
   const pts = [project(u, v), project(u + 1, v), project(u + 1, v + 1), project(u, v + 1)];
   const x = Math.floor(Math.min(...pts.map((p) => p.x)));
@@ -55,31 +50,28 @@ export function tileBox(u: number, v: number): { x: number; y: number; width: nu
   return { x, y, width: Math.ceil(Math.max(...pts.map((p) => p.x))) - x, height: Math.ceil(Math.max(...pts.map((p) => p.y))) - y };
 }
 
-/** The targeting reticle's box on tile (u, v): inset a little, squashed to the tile's perspective. */
+const RETICLE_INSET = 0.08;
+
 export const reticleBox = (u: number, v: number) => {
-  const a = project(u + 0.08, v + 0.08);
-  const b = project(u + 0.92, v + 0.92);
-  const p0 = project(u + 0.08, v + 0.92);
-  const p1 = project(u + 0.92, v + 0.08);
+  const near = 1 - RETICLE_INSET;
+  const a = project(u + RETICLE_INSET, v + RETICLE_INSET);
+  const b = project(u + near, v + near);
+  const p0 = project(u + RETICLE_INSET, v + near);
+  const p1 = project(u + near, v + RETICLE_INSET);
   const x = Math.min(a.x, p0.x);
   return { x, y: a.y, width: Math.max(p1.x, b.x) - x, height: b.y - a.y };
 };
 
 type Pt = { x: number; y: number };
 
-/** The three laser emitters at the tips of the robot's back arms (at rest): left, center (over its head), right. */
-const EMITTERS: Pt[] = [
+const REST_EMITTER_TIPS: Pt[] = [
   { x: 230, y: 190 },
   { x: CX, y: 28 },
   { x: 970, y: 190 },
 ];
 
-/**
- * Rest pose of each back arm: shoulder port → nine joints → emitter tip. Each link is TAPER times
- * the one before. The outer two start at the outer shoulder ports; the middle one at the inner right
- * port, arcing over the hood.
- */
-const ARMS: Pt[][] = [
+// why: the middle arm starts at the inner right shoulder port so it arcs over the hood.
+const REST_ARMS: Pt[][] = [
   [
     { x: 458, y: 182 },
     { x: 441, y: 136.5 },
@@ -91,7 +83,7 @@ const ARMS: Pt[][] = [
     { x: 249.5, y: 110 },
     { x: 235.8, y: 136.5 },
     { x: 231.1, y: 164 },
-    EMITTERS[0]!,
+    REST_EMITTER_TIPS[0]!,
   ],
   [
     { x: 686, y: 151 },
@@ -104,7 +96,7 @@ const ARMS: Pt[][] = [
     { x: 645.2, y: 14.3 },
     { x: 627.9, y: 12.8 },
     { x: 613, y: 19.8 },
-    EMITTERS[1]!,
+    REST_EMITTER_TIPS[1]!,
   ],
   [
     { x: 738, y: 182 },
@@ -117,28 +109,26 @@ const ARMS: Pt[][] = [
     { x: 949.5, y: 109.8 },
     { x: 964, y: 136.1 },
     { x: 969, y: 163.7 },
-    EMITTERS[2]!,
+    REST_EMITTER_TIPS[2]!,
   ],
 ];
-const ARM_SEGMENTS = ARMS.map((pts) =>
+const ARM_SEGMENTS = REST_ARMS.map((pts) =>
   pts.slice(1).map((p, i) => ({ len: Math.hypot(p.x - pts[i]!.x, p.y - pts[i]!.y), ang: Math.atan2(p.y - pts[i]!.y, p.x - pts[i]!.x) })),
 );
-/** One slow sway, back and forth. */
 const SWAY_PERIOD_MS = 7000;
-/** Bend added at each joint at the sway's peak (radians); it builds up toward the tip. */
-const SWAY_AMP = 0.03;
-/** Phase lag from one joint to the next, so the arm ripples instead of swinging stiffly. */
-const SWAY_LAG = 0.35;
+// why: it builds up joint by joint toward the tip.
+const SWAY_BEND_PER_JOINT_RAD = 0.03;
+// why: the lag between joints makes the arm ripple instead of swinging stiffly.
+const SWAY_JOINT_LAG_RAD = 0.35;
 const ARM_PHASE = [0, 2.1, 4.2];
 
-/** An arm's joint points at sway time t (ms), or its rest pose for null. The last point is the emitter. */
-function armPose(k: number, t: number | null): Pt[] {
-  const rest = ARMS[k]!;
-  if (t === null) return rest;
+function armPose(k: number, swayMs: number | null): Pt[] {
+  const rest = REST_ARMS[k]!;
+  if (swayMs === null) return rest;
   const out = [rest[0]!];
   let bend = 0;
   ARM_SEGMENTS[k]!.forEach((seg, j) => {
-    bend += SWAY_AMP * Math.sin((2 * Math.PI * t) / SWAY_PERIOD_MS + ARM_PHASE[k]! + j * SWAY_LAG);
+    bend += SWAY_BEND_PER_JOINT_RAD * Math.sin((2 * Math.PI * swayMs) / SWAY_PERIOD_MS + ARM_PHASE[k]! + j * SWAY_JOINT_LAG_RAD);
     const prev = out[j]!;
     out.push({ x: prev.x + seg.len * Math.cos(seg.ang + bend), y: prev.y + seg.len * Math.sin(seg.ang + bend) });
   });
@@ -147,26 +137,21 @@ function armPose(k: number, t: number | null): Pt[] {
 
 export const prefersStill = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-/**
- * Sway clock for the back arms. It stops while an attack is on (so the beams leave
- * from where the emitters actually are) and resumes where it left off afterwards.
- */
+// why: it stops during an attack so the beams leave from where the emitters actually are.
 interface SwayClock {
-  /** Real time not counted as sway time (the attacks so far). */
-  offset: number;
-  /** Sway time the arms are frozen at, during an attack. */
+  pausedMs: number;
   frozenAt: number | null;
   frozenReal: number;
   seq: number | null;
 }
 
 function useSwayClock(attackSeq: number | null): SwayClock {
-  const ref = useRef<SwayClock>({ offset: 0, frozenAt: null, frozenReal: 0, seq: null });
+  const ref = useRef<SwayClock>({ pausedMs: 0, frozenAt: null, frozenReal: 0, seq: null });
   const c = ref.current;
   if (attackSeq !== c.seq) {
     const now = performance.now();
-    if (c.frozenAt !== null) c.offset += now - c.frozenReal;
-    c.frozenAt = attackSeq === null ? null : now - c.offset;
+    if (c.frozenAt !== null) c.pausedMs += now - c.frozenReal;
+    c.frozenAt = attackSeq === null ? null : now - c.pausedMs;
     c.frozenReal = now;
     c.seq = attackSeq;
   }
@@ -183,13 +168,11 @@ export interface ArenaPlayer {
 export function RobotArena(props: {
   players: ArenaPlayer[];
   marked: number[];
-  /** Rings of tiles already destroyed. */
+  // why: the number of rings already destroyed.
   inset?: number;
-  /** The ring being destroyed this round. */
   collapsing?: number[];
-  /** Laser attack in progress; the key restarts the animation for every attack. */
+  // why: seq keys the animation so every attack restarts it.
   attack?: { seq: number; hit: string[] } | null;
-  /** Highlighted player (e.g. the one this phone belongs to). */
   me?: string | null;
   class?: string;
 }) {
@@ -244,7 +227,6 @@ function Board({ marked, inset, collapsing }: { marked: Set<number>; inset: numb
       const gone = robotRing(i) < inset;
       const box = tileBox(u, v);
       if (collapsing.has(i)) {
-        // Cracked and pulsing red until the lasers fire, then the tile drops away.
         clips.push(
           <clipPath key={i} id={`ra-q${i}`}>
             <polygon points={quad(u, v)} />
@@ -284,7 +266,7 @@ function Board({ marked, inset, collapsing }: { marked: Set<number>; inset: numb
   );
 }
 
-/** Avatars on their tiles, far rows first so nearer ones overlap them. */
+// why: far rows first, so nearer avatars overlap them.
 export function Pieces({
   players,
   hit,
@@ -293,15 +275,16 @@ export function Pieces({
 }: {
   players: ArenaPlayer[];
   hit: Set<string>;
-  me: string | null /** When each hit player's flicker starts (s), if not the default. */;
+  me: string | null;
+  // why: seconds until each hit player's flicker starts, when not the default.
   zapDelay?: Map<string, number>;
 }) {
   const byTile = new Map<number, ArenaPlayer[]>();
   for (const p of players) {
     const i = p.y * ROBOT_BOARD + p.x;
     const list = byTile.get(i) ?? [];
-    // Keep this phone's own avatar on top of a stack.
-    if (p.id === me) list.unshift(p);
+    const isMine = p.id === me;
+    if (isMine) list.unshift(p);
     else list.push(p);
     byTile.set(i, list);
   }
@@ -309,7 +292,7 @@ export function Pieces({
   for (const [i, list] of [...byTile].sort((a, b) => a[0] - b[0])) {
     const u = i % ROBOT_BOARD;
     const v = Math.floor(i / ROBOT_BOARD);
-    const shown = list.slice(0, STACK_SHOWN);
+    const shown = list.slice(0, AVATARS_SHOWN_PER_TILE);
     const c = project(u + 0.5, v + 0.62);
     const size = TILE * 0.95 * c.s;
     shown
@@ -339,12 +322,12 @@ export function Pieces({
           </g>,
         );
       });
-    if (list.length > STACK_SHOWN) {
+    if (list.length > AVATARS_SHOWN_PER_TILE) {
       out.push(
         <g key={`more-${i}`} class="stack-more" transform={`translate(${c.x + size * 0.55} ${c.y - size * 1.05})`}>
           <rect x={-2} y={-18 * c.s * 1.4} width={46 * c.s * 1.4} height={24 * c.s * 1.4} rx={10} />
           <text x={21 * c.s * 1.4 - 2} y={-1} font-size={18 * c.s * 1.4} text-anchor="middle">
-            +{list.length - STACK_SHOWN}
+            +{list.length - AVATARS_SHOWN_PER_TILE}
           </text>
         </g>,
       );
@@ -353,14 +336,15 @@ export function Pieces({
   return <g class="pieces">{out}</g>;
 }
 
-/** A beam from the nearest back arm's emitter (at `tips`) to every targeted tile. */
+const nearestArm = (u: number) => (u < 4 ? 0 : u < 8 ? 1 : 2);
+
 function Lasers({ marked, tips }: { marked: number[]; tips: Pt[] }) {
   return (
     <g class="lasers">
       {marked.map((i, n) => {
         const u = i % ROBOT_BOARD;
         const v = Math.floor(i / ROBOT_BOARD);
-        const arm = u < 4 ? 0 : u < 8 ? 1 : 2;
+        const arm = nearestArm(u);
         const from = tips[arm]!;
         const to = project(u + 0.5, v + 0.5);
         const delay = `${(n % 12) * 40 + arm * 60}ms`;
@@ -376,27 +360,20 @@ function Lasers({ marked, tips }: { marked: number[]; tips: Pt[] }) {
   );
 }
 
-/** Arm thickness at the root of each arm; each chain point is TAPER times the last. */
-const ARM_H0 = [34, 28, 34];
+const ARM_ROOT_THICKNESS = [34, 28, 34];
 const TAPER = 0.933;
-const armH = (k: number, j: number) => ARM_H0[k]! * TAPER ** j;
-/** Segment ends pull back this much (× thickness) from each joint; the connector reaches this far under each segment. */
-const GAP = 0.15;
-const OVER = 0.45;
-/** Connector thickness, × the arm thickness at its joint. */
-const CONN_W = 1.05;
-/** Shoulder socket length and width (× the root thickness), and how much of it sits behind the shoulder port. */
-const SOCK_L = 1.4;
-const SOCK_W = 1.2;
-const SOCK_BACK = 0.35;
+const armH = (k: number, j: number) => ARM_ROOT_THICKNESS[k]! * TAPER ** j;
+// why: these are multiples of the arm thickness at that joint.
+const SEGMENT_PULLBACK = 0.15;
+const CONNECTOR_OVERLAP = 0.45;
+const CONNECTOR_THICKNESS = 1.05;
+const SOCKET_LENGTH = 1.4;
+const SOCKET_WIDTH = 1.2;
+const SOCKET_SHARE_BEHIND_PORT = 0.35;
 const f1 = (n: number) => n.toFixed(1);
 const deg = (y: number, x: number) => (Math.atan2(y, x) * 180) / Math.PI;
 
-/**
- * A back arm: rigid tapering segments, pulled back from each joint, with a stretchy cable sheath
- * under every joint to cover the gap at any bend (the emitter is drawn separately, in front of the body).
- * Mirrors layout() in the art build's arms.py.
- */
+// why: mirrors layout() in the art build's arms.py; a connector under every joint covers the gap at any bend.
 function MechArm({ pts, k }: { pts: Pt[]; k: number }) {
   const n = pts.length - 1;
   const segs = [];
@@ -409,13 +386,13 @@ function MechArm({ pts, k }: { pts: Pt[]; k: number }) {
     const len = Math.hypot(b.x - a.x, b.y - a.y);
     const dx = (b.x - a.x) / len;
     const dy = (b.y - a.y) / len;
-    const g0 = i > 0 ? GAP * armH(k, i) : 0;
-    const g1 = i < n - 1 ? GAP * armH(k, i + 1) : 0;
+    const g0 = i > 0 ? SEGMENT_PULLBACK * armH(k, i) : 0;
+    const g1 = i < n - 1 ? SEGMENT_PULLBACK * armH(k, i + 1) : 0;
     const s = { x: a.x + dx * g0, y: a.y + dy * g0 };
     S.push(s);
     E.push({ x: b.x - dx * g1, y: b.y - dy * g1 });
     const h = armH(k, i);
-    // Flipped on arms running right to left, so the painted rim light stays on top.
+    // why: flipped on arms running right to left, so the painted rim light stays on top.
     segs.push(
       <image
         key={`s${i}`}
@@ -436,8 +413,9 @@ function MechArm({ pts, k }: { pts: Pt[]; k: number }) {
     let vx = b.x - a.x;
     let vy = b.y - a.y;
     const d = Math.hypot(vx, vy);
-    if (d < 1e-3) {
-      // Folded flat: lie along the bisector of the two segments.
+    const foldedFlat = d < 1e-3;
+    if (foldedFlat) {
+      // why: with no gap to span, the connector lies along the bisector of the two segments.
       const p0 = pts[j - 1]!;
       const p1 = pts[j]!;
       const p2 = pts[j + 1]!;
@@ -446,8 +424,8 @@ function MechArm({ pts, k }: { pts: Pt[]; k: number }) {
       vx = (p1.x - p0.x) / l0 + (p2.x - p1.x) / l1;
       vy = (p1.y - p0.y) / l0 + (p2.y - p1.y) / l1;
     }
-    const len = d + 2 * OVER * h;
-    const w = CONN_W * h;
+    const len = d + 2 * CONNECTOR_OVERLAP * h;
+    const w = CONNECTOR_THICKNESS * h;
     cons.push(
       <image
         key={`c${j}`}
@@ -461,7 +439,7 @@ function MechArm({ pts, k }: { pts: Pt[]; k: number }) {
       />,
     );
   }
-  // Connectors underneath; segments root to tip, so each one's brass band overlaps the last one's end.
+  // why: segments root to tip, so each one's brass band overlaps the last one's end.
   return (
     <g class="mech-arm">
       {cons}
@@ -470,17 +448,17 @@ function MechArm({ pts, k }: { pts: Pt[]; k: number }) {
   );
 }
 
-/** The brass coupling where arm k leaves the shoulder. It follows the rest pose, so it stays still while the arm sways. */
+// why: it follows the rest pose, so it stays still while the arm sways.
 function ArmSocket({ k }: { k: number }) {
-  const p0 = ARMS[k]![0]!;
-  const p1 = ARMS[k]![1]!;
-  const len = SOCK_L * ARM_H0[k]!;
-  const w = SOCK_W * ARM_H0[k]!;
+  const p0 = REST_ARMS[k]![0]!;
+  const p1 = REST_ARMS[k]![1]!;
+  const len = SOCKET_LENGTH * ARM_ROOT_THICKNESS[k]!;
+  const w = SOCKET_WIDTH * ARM_ROOT_THICKNESS[k]!;
   const a = (ARM_SEGMENTS[k]![0]!.ang * 180) / Math.PI;
   return (
     <image
       href={socketImg}
-      x={f1(-SOCK_BACK * len)}
+      x={f1(-SOCKET_SHARE_BEHIND_PORT * len)}
       y={f1(-w / 2)}
       width={f1(len)}
       height={f1(w)}
@@ -501,15 +479,15 @@ function Emitter({ at, attacking }: { at: Pt; attacking: boolean }) {
   );
 }
 
-/** The painted forge behind everything; wider than the arena so it fills a wide projector's letterbox. */
+// why: wider than the arena so it fills a wide projector's letterbox.
 export const BACKDROP = { x: -300, y: -100, w: 1800, h: 1012.5 };
-/** Where the square body render sits in the arena. Its pedestal runs just past the bottom edge, so the robot stands in the pit. */
+// why: the pedestal runs just past the bottom edge, so the robot stands in the pit.
 const BODY = { x: 180, y: 50, size: 840 };
-/** A point of the body render (in pixels of its 1024px source) in arena coordinates. */
-const bodyPt = (px: number, py: number): Pt => ({ x: BODY.x + (px / 1024) * BODY.size, y: BODY.y + (py / 1024) * BODY.size });
-const bodyLen = (px: number) => (px / 1024) * BODY.size;
-/** The mask's single optic: centre and glass radius, in source pixels. */
-const OPTICS = [{ x: 509, y: 116, r: 11 }].map((o) => ({ ...bodyPt(o.x, o.y), r: bodyLen(o.r) }));
+const BODY_SOURCE_PX = 1024;
+const bodyPt = (px: number, py: number): Pt => ({ x: BODY.x + (px / BODY_SOURCE_PX) * BODY.size, y: BODY.y + (py / BODY_SOURCE_PX) * BODY.size });
+const bodyLen = (px: number) => (px / BODY_SOURCE_PX) * BODY.size;
+const OPTICS_SOURCE_PX = [{ x: 509, y: 116, r: 11 }];
+const OPTICS = OPTICS_SOURCE_PX.map((o) => ({ ...bodyPt(o.x, o.y), r: bodyLen(o.r) }));
 
 function Robot({ attacking, clock }: { attacking: boolean; clock: SwayClock }) {
   const still = prefersStill();
@@ -525,7 +503,7 @@ function Robot({ attacking, clock }: { attacking: boolean; clock: SwayClock }) {
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
   }, [frozen, still]);
-  const t = still ? null : (clock.frozenAt ?? performance.now() - clock.offset);
+  const t = still ? null : (clock.frozenAt ?? performance.now() - clock.pausedMs);
   const arms = [0, 1, 2].map((k) => armPose(k, t));
   return (
     <g class={`robot ${attacking ? "attacking" : ""}`}>
@@ -551,14 +529,8 @@ function Robot({ attacking, clock }: { attacking: boolean; clock: SwayClock }) {
   );
 }
 
-/** Tiles visible in each direction around the player on the phone's map (7×7). */
 const MINI_RADIUS = 3;
 
-/**
- * Top-down map for the phone: a 7×7 window that follows the player, who stays
- * in the middle. Shows the red Xs, the collapsing ring in solid red, other players as dots,
- * and the robot's edge of the board.
- */
 export function MiniBoard({
   me,
   others,
@@ -584,20 +556,19 @@ export function MiniBoard({
   const extra = ACCESSORY_ART[avatar.accessory] ?? ACCESSORY_ART.none;
   const edge = inset * cell;
   const size = (ROBOT_BOARD - 2 * inset) * cell;
-  // The whole board slides under a fixed window so the player stays centered.
+  // why: the board slides under a fixed window so the player stays centered.
   const shift = { x: (MINI_RADIUS - me.x) * cell, y: (MINI_RADIUS - me.y) * cell };
   return (
     <svg class={`mini-board ${ROBOT_SKIN}`} viewBox={`0 0 ${span} ${span}`} role="img" aria-label={`You are on column ${me.x + 1}, row ${me.y + 1}`}>
-      {/* The svg box can be wider or taller than the map; show only the 7×7 window. */}
+      {/* why: the svg box can be wider or taller than the map. */}
       <clipPath id="mini-window">
         <rect x={0} y={0} width={span} height={span} rx={2} />
       </clipPath>
       <rect x={0} y={0} width={span} height={span} rx={2} class="mini-void" />
       <g clip-path="url(#mini-window)">
         <g class="mini-scroll" style={{ transform: `translate(${shift.x}px, ${shift.y}px)` }}>
-          {/* The robot (or snowman) stands beyond the top edge, as on the big screen. */}
           <rect x={edge} y={edge - cell} width={size} height={cell - 1.5} class="mini-robot-edge" />
-          {/* Repeated so one is always inside the 7-tile window. */}
+          {/* why: repeated so one is always inside the window. */}
           {Array.from({ length: ROBOT_BOARD / 2 }, (_, k) => 2 * k + 1)
             .filter((u) => u >= inset && u <= ROBOT_BOARD - inset)
             .map((u) => (
