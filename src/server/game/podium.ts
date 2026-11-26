@@ -3,7 +3,7 @@ import type { SubAward } from "../../shared/mode-views.ts";
 import type { RankKey } from "./standings.ts";
 import { rankBy } from "./standings.ts";
 
-/** A mode's awards: each key's label (from its shared mode entry) and the value a player is judged on. */
+/** why: labels come from the shared mode entry; value is what a player is judged on. */
 export interface AwardDeclarations<P, K extends string> {
   labels: Readonly<Record<K, string>>;
   values: Readonly<Record<K, (player: P) => number>>;
@@ -14,16 +14,15 @@ interface PodiumPlayer {
   nickname: string;
 }
 
-/** What a game mode gives the Podium (GLOSSARY.md). */
 export interface PodiumSpec<E extends object, P extends PodiumPlayer, K extends string> {
-  /** Players, or teams. */
+  /** why: players, or teams. */
   entries: readonly E[];
-  /** The Standings order: entries equal on every key share a place. */
+  /** why: entries equal on every key share a place. */
   order: RankKey<E>[];
-  /** Orders entries only within a shared place. */
+  /** why: orders entries only within a shared place. */
   then?: RankKey<E>[];
   players: readonly P[];
-  /** The entry a player finishes with (themselves, or their team). */
+  /** why: a player's team in team modes. */
   entryOf: (player: P) => E;
   awards: AwardDeclarations<P, K>;
 }
@@ -31,29 +30,28 @@ export interface PodiumSpec<E extends object, P extends PodiumPlayer, K extends 
 export interface PodiumResult {
   place: number;
   playerCount: number;
-  /** Labels of the awards this player won. */
   awards: string[];
 }
 
 export interface Podium<E extends object, P extends PodiumPlayer, K extends string> {
-  /** Entries best first, each a copy taken when the game finished, with its place. */
+  /** why: copies taken when the game finished, best first. */
   readonly places: readonly (E & { place: number })[];
-  /** Each award's winners, or null when nobody scored above 0. */
+  /** why: null when nobody scored above 0. */
   readonly awards: Readonly<Record<K, SubAward | null>>;
-  /** Results sheet rows: each player (copied when the game finished) with their entry's place, in Standings order. */
+  /** why: players copied when the game finished, in Standings order. */
   readonly rows: readonly { place: number; player: P }[];
-  /** A player's place, the player count and their award labels; null for someone not in the game. */
+  /** why: null for someone not in the game. */
   result(playerId: string): PodiumResult | null;
 }
 
-/** The highest value wins, everyone tied on it shares the award, and nobody gets it when the highest value is 0. */
+/** why: ties share the award; nobody gets it when the highest value is 0. */
 function winners<P extends PodiumPlayer>(players: readonly P[], value: (p: P) => number): { value: number; players: P[] } | null {
   const values = players.map(value);
   const top = Math.max(0, ...values);
   return top > 0 ? { value: top, players: players.filter((_, i) => values[i] === top) } : null;
 }
 
-/** The Podium of a game whose own one could not be worked out: no places, rows or award winners, and no result for anyone. */
+/** why: fallback when a game's own Podium could not be worked out. */
 export function emptyPodium<E extends object, P extends PodiumPlayer, K extends string>(labels: Readonly<Record<K, string>>): Podium<E, P, K> {
   // checked: the loop below fills every key of the labels.
   const values = {} as Record<K, () => number>;
@@ -69,7 +67,7 @@ export function emptyPodium<E extends object, P extends PodiumPlayer, K extends 
   });
 }
 
-/** Work out the finished game's Podium once; nothing about it changes after. */
+/** why: built once at game finish; nothing about it changes after. */
 export function buildPodium<E extends object, P extends PodiumPlayer, K extends string>(spec: PodiumSpec<E, P, K>): Podium<E, P, K> {
   const wrap = (keys: RankKey<E>[]): RankKey<{ entry: E }>[] => keys.map((key) => (a, b) => key(a.entry, b.entry));
   const ranked = rankBy(

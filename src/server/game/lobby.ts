@@ -17,7 +17,6 @@ interface LobbyOptions extends Partial<LobbyChoices> {
   onChange?: () => void;
 }
 
-/** Owns the waiting players, host choices and team previews. */
 export class Lobby {
   readonly phase = "lobby";
   readonly quizId: string;
@@ -81,7 +80,7 @@ export class Lobby {
     return player;
   }
 
-  /** Change a player's character/accessory; only while waiting in the lobby. */
+  /** why: only while waiting in the lobby. */
   setAvatar(playerId: string, avatar: unknown, accessory: unknown): void {
     const p = this.players.get(playerId);
     if (!p) return;
@@ -108,7 +107,7 @@ export class Lobby {
     this.onChange();
   }
 
-  /** Change one mode's settings in the lobby; a partial change keeps the rest (and the theme) as they are. */
+  /** why: a partial change keeps the rest (and the theme) as they are. */
   setModeSettings(mode: GameMode, raw: unknown): void {
     if (!Object.hasOwn(MODES, mode)) throw new GameError("Unknown game mode");
     this.applySettings(mode, raw && typeof raw === "object" ? (raw as RawSettings) : {});
@@ -121,15 +120,15 @@ export class Lobby {
     this.onChange();
   }
 
-  /** Teams in the lobby preview, as the selected mode's entry gives them for its settings; null in solo modes. */
+  /** why: null in solo modes. */
   teamCount(): number | null {
     return this.teamsIn(this.mode);
   }
 
-  /** Round-robin until the first manual move; then keep every assignment that still fits. */
+  /** why: round-robin until the first manual move; then keep every assignment that still fits. */
   private reconcileTeams(): void {
     const count = this.teamCount();
-    // Solo modes hide the arrangement without changing it.
+    // why: solo modes hide the arrangement without changing it.
     if (count === null) return;
     const ids = [...this.players.keys()];
     if (!this.hasManualTeams) {
@@ -151,7 +150,7 @@ export class Lobby {
     }
   }
 
-  /** Move one player to another team in the lobby; everyone else stays where they are shown. */
+  /** why: everyone else stays where they are shown. */
   setTeam(playerId: string, team: number): void {
     const count = this.teamCount();
     if (count === null) throw new GameError("This game mode has no teams");
@@ -172,7 +171,7 @@ export class Lobby {
     this.onChange();
   }
 
-  /** The hub closes a lobby like any game: it remembers its `choices`, then disposes of it. A lobby holds no timers. */
+  /** why: the hub remembers `choices` before disposing; a lobby holds no timers. */
   dispose(): void {}
 
   get choices(): LobbyChoices {
@@ -231,10 +230,7 @@ export class Lobby {
   }
 }
 
-/**
- * Every mode's settings: the given ones where there are any (carried over from the last lobby), else the defaults.
- * They are taken as they are, except that a theme the server no longer knows becomes the mode's default theme.
- */
+/** why: settings carried over from the last lobby win; a theme the server no longer knows becomes the default. */
 function initialSettings(given: InitialSettings = {}): ModeSettingsMap {
   const read = <M extends GameMode>(mode: M): ModeSettingsMap[M] => {
     const defaults = MODES[mode].defaultSettings;
@@ -256,7 +252,6 @@ function initialSettings(given: InitialSettings = {}): ModeSettingsMap {
   };
 }
 
-/** The settings with an unknown theme replaced by the default one; settings without a theme stay as they are. */
 function knownTheme<S extends object>(settings: S, defaults: S): S {
   if (!("theme" in settings) || isSeasonTheme(settings.theme) || !("theme" in defaults)) return settings;
   return { ...settings, theme: defaults.theme };

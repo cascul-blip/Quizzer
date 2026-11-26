@@ -43,12 +43,9 @@ export interface RobotPlayer extends BasePlayer, AnswerTotals {
   x: number;
   y: number;
   lives: number;
-  /** Round this player lost their last life in, or null while still in the game. */
   outRound: number | null;
-  /** Movement points to spend this round. */
   points: number;
   moves: number;
-  /** Laser hits taken. */
   hits: number;
 }
 
@@ -62,18 +59,14 @@ interface RobotOptions {
 
 interface RobotGameSettings {
   shuffleAnswers: boolean;
-  /** Longer waits for wrong answers in a row (the lobby's "Protect from abuse"). */
+  /** why: the lobby's "Protect from abuse" setting: longer waits for wrong answers in a row. */
   protect?: boolean;
 }
 
 const tileOf = (x: number, y: number) => y * ROBOT_BOARD + x;
 const tileXY = (i: number) => ({ x: i % ROBOT_BOARD, y: Math.floor(i / ROBOT_BOARD) });
 
-/**
- * Pick a tile as far as possible from the taken ones (Chebyshev distance),
- * among `allowed` tiles; ties go to the earliest tile in the shuffled order.
- * Once every tile is taken, the least crowded tile wins.
- */
+/** why: Chebyshev distance; ties go to the earliest tile in `order`, and once every tile is taken the least crowded wins. */
 export function spreadTile(taken: { x: number; y: number }[], order: number[], allowed: (i: number) => boolean = () => true): number {
   let best = -1;
   let bestScore = -Infinity;
@@ -96,7 +89,6 @@ export function spreadTile(taken: { x: number; y: number }[], order: number[], a
   return best === -1 ? order[0]! : best;
 }
 
-/** Robot Attack: answer questions for movement points, then dodge the robot's lasers. Last one standing wins. */
 export class RobotGame {
   readonly runningMode = "robot" as const;
   readonly quizId: string;
@@ -105,9 +97,8 @@ export class RobotGame {
   round = 0;
   attacks = 0;
   marked = new Set<number>();
-  /** Rings of tiles destroyed so far. */
   inset = 0;
-  /** The ring being destroyed this round; set with the targets, kept through the attack. */
+  /** why: set with the targets and kept through the attack. */
   collapsing = new Set<number>();
   lastAttack: RobotAttack | null = null;
 
@@ -141,7 +132,6 @@ export class RobotGame {
     return this.session.choices;
   }
 
-  /** Take over a lobby's players (same ids and tokens), spread out across the board. */
   static fromLobby(lobby: LobbyFacts<"robot">, opts: RobotOptions = {}): RobotGame {
     const game = new RobotGame(lobby.quiz, { shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
     game.session.adoptLobby(lobby, (base) => game.newPlayer(base));
@@ -152,7 +142,6 @@ export class RobotGame {
     return this.session.phase;
   }
 
-  /** When the current phase's countdown ends; 0 when it has none. */
   get phaseEndsAt(): number {
     return this.session.phases.endsAt;
   }
@@ -170,7 +159,7 @@ export class RobotGame {
   }
 
   private newPlayer(base: BasePlayer): Omit<RobotPlayer, keyof AnswerTotals> {
-    // Late joiners stay off the red Xs while there's no chance left to earn a way off them, and never start on a collapsing tile.
+    // why: late joiners can't earn a way off the red Xs any more, and must never start on a collapsing tile.
     const lateInDanger = this.phase === "move" || this.phase === "attack";
     const tile = spreadTile(this.alive(), this.shuffledTiles(), (i) => !this.collapsing.has(i) && !(lateInDanger && this.marked.has(i)));
     const { x, y } = tileXY(tile);
@@ -202,11 +191,7 @@ export class RobotGame {
     this.session.changed();
   }
 
-  /**
-   * The robot picks its targets: a random 3/4 of the board plus every tile someone stands on.
-   * Every ROBOT_SHRINK_EVERY rounds the outer ring goes too, and the 3/4 is of the board left inside it.
-   * Occupied tiles count toward the 3/4 first, so a quarter of the board stays safe however small it gets.
-   */
+  /** why: occupied tiles count toward the 3/4 first, so a quarter of the board stays safe however small it shrinks. */
   private markTargets(): void {
     this.session.phases.cancel("warn");
     if (this.phase !== "quiz") return;
@@ -252,7 +237,7 @@ export class RobotGame {
     this.session.changed();
   }
 
-  /** Their tile is gone: put the player on the closest free tile (in steps), or the least crowded one once the board is full. */
+  /** why: closest free tile in steps; the least crowded one once the board is full. */
   private relocate(p: RobotPlayer): void {
     const others = this.alive().filter((o) => o !== p);
     let best = -1;
@@ -273,7 +258,7 @@ export class RobotGame {
     p.y = to.y;
   }
 
-  /** Last one standing: a solo game runs until its player is out. */
+  /** why: a solo game runs until its player is out. */
   private isOver(): boolean {
     const alive = this.alive().length;
     return this.players.size <= 1 ? alive === 0 : alive <= 1;
@@ -307,7 +292,6 @@ export class RobotGame {
     return p;
   }
 
-  /** Answer during the quiz phase; a correct answer earns a movement point (players still in the game only). */
   answer(playerId: string, seq: number, option: AnswerValue): boolean {
     const answered = this.session.answer(playerId, seq, option);
     if (!answered) return false;
@@ -317,7 +301,6 @@ export class RobotGame {
     return true;
   }
 
-  /** Step one tile for one point, unless the edge or another player in the game is in the way. Returns whether the move was made. */
   move(playerId: string, dir: RobotDir): boolean {
     const p = this.players.get(playerId);
     if (!p || this.phase !== "move" || p.outRound !== null || p.points <= 0 || !ROBOT_DIRS.includes(dir)) return false;
@@ -325,7 +308,7 @@ export class RobotGame {
     const x = p.x + dx;
     const y = p.y + dy;
     if (!robotInBounds(x, y, this.inset)) return false;
-    // One player per tile: others can block the way to a safe spot.
+    // why: one player per tile, so others can block the way to a safe spot.
     if (this.alive().some((o) => o !== p && o.x === x && o.y === y)) return false;
     p.x = x;
     p.y = y;
@@ -335,7 +318,7 @@ export class RobotGame {
     return true;
   }
 
-  /** Survivors first, then the latest knocked out; lives break ties. Equal standing shares a place, ordered by correct answers. */
+  /** why: survivors first, then the latest knocked out; lives break ties, correct answers order within a shared place. */
   private buildPodium(): Podium<RobotPlayer, RobotPlayer, RobotAwardKey> {
     const players = [...this.players.values()];
     return buildPodium({
@@ -348,7 +331,6 @@ export class RobotGame {
     });
   }
 
-  /** The finished game's Podium (GLOSSARY.md), worked out once in Game finish. */
   get podium(): Podium<RobotPlayer, RobotPlayer, RobotAwardKey> {
     return this.session.podium;
   }

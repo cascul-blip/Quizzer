@@ -43,7 +43,7 @@ type MsgTypeOf<M extends GameMode> = SharedOf<M>["msgTypes"][number];
 
 type MsgModeMap = { [T in MsgTypeOf<GameMode>]: { [M in GameMode]: T extends MsgTypeOf<M> ? M : never }[GameMode] };
 
-/** The mode whose shared mode entry lists this phone message type; undefined for join, resume and anything unknown. tests/mode-entries.test.ts checks that no two modes list the same type. */
+/** why: undefined for join and resume; tests/mode-entries.test.ts checks no two modes list the same type. */
 export function modeOfMsg(type: string): GameMode | undefined {
   const lists = (mode: GameMode): readonly string[] => SHARED_MODES[mode].msgTypes;
   return keysOf(SHARED_MODES).find((mode) => lists(mode).includes(type));
@@ -51,12 +51,10 @@ export function modeOfMsg(type: string): GameMode | undefined {
 
 type ModeMsgType = keyof MsgModeMap;
 
-/** Holds every phone message but join and resume to a mode: the compiler reports a PlayerMsg type no shared mode entry lists. */
 export const EVERY_MSG_HAS_A_MODE: [Exclude<PlayerMsg["type"], "join" | "resume">] extends [ModeMsgType] ? true : never = true;
 
 export type ModeMsg<M extends GameMode> = Extract<PlayerMsg, { type: { [T in ModeMsgType]: MsgModeMap[T] extends M ? T : never }[ModeMsgType] }>;
 
-/** Raw mode settings from the host, read by the mode's readSettings. */
 export type RawSettings = Readonly<Record<string, unknown>>;
 
 export interface StartContext {
@@ -69,7 +67,6 @@ export interface StartContext {
   onFinish: (game: LiveGame) => void;
 }
 
-/** A game played question by question: the host sets its pacing and moves it on. */
 export interface PacedGame {
   pacing: Pacing;
   setPacing(pacing: Pacing): void;
@@ -79,7 +76,6 @@ export interface PacedGame {
 
 type PacedFlag<M extends GameMode> = SharedOf<M>["flags"]["paced"];
 
-/** A ModeEntry's pacing: a function in a paced mode, null in any other, and either when M is not one mode. */
 type PacingOf<M extends GameMode> = [PacedFlag<M>] extends [true]
   ? (game: ModeGame[M]) => PacedGame
   : [PacedFlag<M>] extends [false]
@@ -94,28 +90,26 @@ export interface FinishContext {
 export type ModeEntry<M extends GameMode> = SharedOf<M> & ServerModeEntry<M>;
 
 interface ServerModeEntry<M extends GameMode> {
-  /** Error text for a lobby control received after this game starts. */
   lobbyControlError?(message: string): string;
   defaultSettings: ModeSettingsMap[M];
-  /** The host's change applied to the current settings; throws GameError when it isn't valid. */
+  /** why: throws GameError when the change isn't valid. */
   readSettings(raw: RawSettings, current: ModeSettingsMap[M]): ModeSettingsMap[M];
-  /** Build the mode's game from the lobby, not started yet, and the line to log once it starts. */
+  /** why: the game is not started yet; log is printed once it starts. */
   start(lobby: LobbyFacts<M>, ctx: StartContext): { game: ModeGame[M]; log: string | null };
-  /** For a paced mode (its shared mode entry's flags), its game as a PacedGame: next, skip and pacing work, and the pacing carries over to the next lobby. Null otherwise; the compiler holds each entry to its flag. */
+  /** why: the pacing carries over to the next lobby. */
   pacing: PacingOf<M>;
-  /** How many teams the lobby previews and assigns players to with these settings; null in a solo mode. */
+  /** why: null in a solo mode. */
   teams(settings: ModeSettingsMap[M]): number | null;
-  /** Build every view of one broadcast inside send, so work the views share is done once. Absent: views are built one by one. */
+  /** why: views built inside send share work once; absent, views are built one by one. */
   viewBatch?(game: ModeGame[M], send: () => void): void;
-  /** The results to save when the game finishes. */
   results(game: ModeGame[M]): ResultsSheet;
-  /** After the results are saved. */
+  /** why: runs after the results are saved. */
   finished?(game: ModeGame[M], ctx: FinishContext): void;
-  /** One of the mode's phone messages; "resend" when the phone should get its view again. Throws GameError to report an error; the default case calls unhandled. */
+  /** why: "resend" makes the phone get its view again; throw GameError to report an error. */
   handle(game: ModeGame[M], playerId: string, msg: ModeMsg<M>): "resend" | void;
 }
 
-/** The default case of a mode's handle: the compiler checks every message is handled, and one that still gets here is a server bug. */
+/** why: a message that still gets here past the compiler's check is a server bug. */
 export function unhandled(msg: never): never {
   throw new Error(`No handler for phone message ${(msg as { type: string }).type}`);
 }
@@ -124,7 +118,6 @@ export function handoffOptions({ clock, rng, onChange, onActivity, onFinish }: S
   return { clock, rng, onChange, onActivity, onFinish };
 }
 
-/** A settings theme: kept as it is when not given, refused when it isn't a known look. */
 export function pickTheme(value: unknown, current: SeasonTheme, mode: string): SeasonTheme {
   if (value === undefined) return current;
   if (!isSeasonTheme(value)) throw new GameError(`Unknown ${mode} theme`);

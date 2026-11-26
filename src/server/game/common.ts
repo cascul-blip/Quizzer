@@ -16,7 +16,7 @@ export const realClock: Clock = {
 };
 
 export const MAX_PLAYERS = 200;
-/** Caps per LAN address so one device can't hold the server or fill the roster. Loopback is exempt. */
+/** why: one device can't hold the server or fill the roster; loopback is exempt. */
 export const MAX_SOCKETS_PER_ADDRESS = 8;
 export const MAX_JOINS_PER_ADDRESS = 3;
 const MAX_NICKNAME = 20;
@@ -32,7 +32,7 @@ export function shuffle<T>(arr: T[], rng: () => number): T[] {
   return a;
 }
 
-/** Shuffle a question's options; correct indices are remapped. True/False keeps its familiar order; pin spots stay put. */
+/** why: True/False keeps its familiar order and pin spots stay put; correct indices are remapped. */
 export function shuffleOptions<Q extends { type: string; options: string[]; correct: number[] }>(q: Q, rng: () => number): Q {
   if (q.type === "true_false" || q.type === "text" || q.type === "pin") return q;
   const order = shuffle(
@@ -53,7 +53,7 @@ export function cleanNickname(raw: unknown): string {
   return name;
 }
 
-/** The questions with the most wrong answers, worst first (ties in quiz order); questions nobody got wrong are left out. */
+/** why: worst first, ties in quiz order; questions nobody got wrong are left out. */
 export function topErrors(questions: { text: string; options: string[]; correct: number[] }[], wrongCounts: number[], limit = ERRORS_SHOWN): QuestionError[] {
   return questions
     .map((q, i) => ({ wrong: wrongCounts[i] ?? 0, text: q.text, answers: q.correct.map((c) => q.options[c]!), i }))
@@ -73,10 +73,10 @@ export function assignTeams(count: number, teamCount: number): number[] {
 }
 
 export const AUTO_REVEAL_MS = 5000;
-/** Answers sent just before the deadline may arrive slightly after it. */
+/** why: answers sent just before the deadline may arrive slightly after it. */
 export const GRACE_MS = 500;
 
-/** Shuffle once per game (same order for everyone); correct indices are remapped. */
+/** why: same order for everyone in the game; correct indices are remapped. */
 export function preparePlayOrder(source: Question[], opts: ShuffleOptions, rng: () => number = Math.random): Question[] {
   let questions = source.map((q) => ({ ...q, options: [...q.options], correct: [...q.correct] }));
   if (opts.questions) questions = shuffle(questions, rng);
