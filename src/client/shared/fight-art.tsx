@@ -1,5 +1,4 @@
-/**
- * Tower Fight battlefield, drawn in field units (see fight-physics.ts) inside
+/** why: Tower Fight battlefield, drawn in field units (see fight-physics.ts) inside
  * one SVG so the projector and the phones show exactly the same arcs.
  * SVG y points down, so field height h is drawn at FIELD_H - h.
  */
@@ -57,16 +56,15 @@ import skyImg from "./fight/sky.webp";
 import { catapultAngle, fightChristmasArt, useGingerbread } from "./fight-skin.tsx";
 import { isPhoneArt, pickArt } from "./phone-art.ts";
 
-/** Field height → SVG y. */
 export const sy = (y: number) => FIELD_H - y;
 const BASE = sy(GROUND);
 const IMPACT_MS = 1200;
 export const FIGHT_PHONE_UI = { backdrop: phoneBackdropImg, attack: phoneUiAttackImg, rebuild: phoneUiRebuildImg, brick: phoneBrickImg };
 
-/** The painted sky and earth cover the field once; mirrored copies either side fill wide screens seamlessly. */
+/** why: The painted sky and earth cover the field once; mirrored copies either side fill wide screens seamlessly. */
 function Mirrored({ href, y, height }: { href: string; y: number; height: number }) {
   const at = { href, y, height, preserveAspectRatio: "none" };
-  // The copies overlap the main image by one unit, so no anti-aliased hairline shows at the joins.
+  // why: The copies overlap the main image by one unit, so no anti-aliased hairline shows at the joins.
   return (
     <>
       <image {...at} x={0} width={FIELD_W} />
@@ -82,13 +80,12 @@ export function Battlefield(props: {
   terrain: number[];
   damage: number[];
   colors: string[];
-  /** Avatar waiting in each team's catapult, if any. */
   loaded?: (AvatarChoice | null)[];
-  /** Team whose tower is collapsing right now. */
+  /** why: Team whose tower is collapsing right now. */
   collapsing?: number | null;
-  /** Per team: someone is repairing that tower (scaffolding goes up). */
+  /** why: Per team: someone is repairing that tower (scaffolding goes up). */
   repairing?: boolean[];
-  /** Avatar radius in field units (bigger on small phone screens). */
+  /** why: Avatar radius in field units (bigger on small phone screens). */
   spriteR?: number;
   class?: string;
   children?: ComponentChildren;
@@ -163,7 +160,7 @@ const GRASS_DEPTH_FIELD_UNITS = 10;
 function Terrain({ terrain, hill }: { terrain: number[]; hill: HillHeight }) {
   const christmas = useGingerbread();
   const original = gingerbreadGround(hill);
-  // Flat ground continues past both edges, for screens wider than the field.
+  // why: Flat ground continues past both edges, for screens wider than the field.
   const edge = FIELD_W;
   const pts = [`${-edge},${sy(terrain[0]!)}`, ...terrain.map((h, i) => `${i * COL_W},${sy(h).toFixed(1)}`), `${FIELD_W + edge},${sy(terrain.at(-1)!)}`].join(
     " L",
@@ -202,21 +199,19 @@ function Terrain({ terrain, hill }: { terrain: number[]; hill: HillHeight }) {
   );
 }
 
-// Proportions of the castle image (width / height), measured on the art build's castle-0.webp.
+// why: Proportions of the castle image (width / height), measured on the art build's castle-0.webp.
 const CASTLE_ASPECT = 0.403;
-// Roof and pennant.
 const ROOF_SHARE_ABOVE_BATTLEMENTS = 0.198;
-/** Drawn so the stonework is as tall as the tower's hit box. */
+/** why: Drawn so the stonework is as tall as the tower's hit box. */
 const CASTLE_H = TOWER_H / (1 - ROOF_SHARE_ABOVE_BATTLEMENTS);
 const CASTLE_W = CASTLE_H * CASTLE_ASPECT;
 const CASTLE_STAGES = [castle0, castle1, castle2, castle3, castle4];
 const PHONE_CASTLE_STAGES = [phoneCastle0, phoneCastle1, phoneCastle2, phoneCastle3, phoneCastle4];
-/** The team-cloth mask for each stage; damaged stages lose roof and banner, so one mask won't do. */
+/** why: The team-cloth mask for each stage; damaged stages lose roof and banner, so one mask won't do. */
 const CLOTH_STAGES = [castleCloth0, castleCloth1, castleCloth2, castleCloth3, castleCloth4];
 const PHONE_CLOTH_STAGES = [phoneCastleCloth0, phoneCastleCloth1, phoneCastleCloth2, phoneCastleCloth3, phoneCastleCloth4];
 
-/**
- * A stone castle tower (painted images from the art build) whose flag and
+/** why: A stone castle tower (painted images from the art build) whose flag and
  * banners take the team color; it looks worse with every hit, and is rubble at FIGHT_MAX_DAMAGE.
  */
 function CastleTower({
@@ -236,7 +231,7 @@ function CastleTower({
   const cx = TOWER_X[team]!;
   const top = BASE - TOWER_H;
   const stage = Math.min(damage, CASTLE_STAGES.length - 1);
-  // Source canvases include bottom padding: sink the iced foot into the ground by one unit.
+  // why: Source canvases include bottom padding: sink the iced foot into the ground by one unit.
   const img = christmas
     ? { x: cx - 46, y: top - 3, width: 92, height: TOWER_H + 14 }
     : { x: cx - CASTLE_W / 2, y: BASE - CASTLE_H, width: CASTLE_W, height: CASTLE_H };
@@ -286,7 +281,7 @@ function CastleTower({
   );
 }
 
-/** Traced candy regions in the source canvas; tint the original pixels to retain sugar and shading. */
+/** why: Traced candy regions in the source canvas; tint the original pixels to retain sugar and shading. */
 function GingerbreadCandy({
   team,
   color,
@@ -340,7 +335,7 @@ function GingerbreadCandy({
   );
 }
 
-/** Color only the baked candy stripes around the door, keeping the white icing stripes white. */
+/** why: Color only the baked candy stripes around the door, keeping the white icing stripes white. */
 function GingerbreadStripes({
   team,
   color,
@@ -424,7 +419,7 @@ function Rubble({ team }: { team: number }) {
   return <image class="rubble" href={pickArt(rubbleImg, phoneRubbleImg)} x={cx - 65} y={BASE + 4 - 84} width={130} height={84} preserveAspectRatio="none" />;
 }
 
-/** A dust cloud rising over a damaged tower, or a bigger one as it collapses. */
+/** why: A dust cloud rising over a damaged tower, or a bigger one as it collapses. */
 function Smoke({ x, y, big }: { x: number; y: number; big?: boolean }) {
   const christmas = useGingerbread();
   const w = big ? 90 : 70;
@@ -450,14 +445,14 @@ function Smoke({ x, y, big }: { x: number; y: number; big?: boolean }) {
   );
 }
 
-/** A wooden catapult with team-coloured cloth; Red's throws to the right, Blue's to the left. */
+/** why: A wooden catapult with team-coloured cloth; Red's throws to the right, Blue's to the left. */
 function Catapult({ team, color, loaded, r, shots }: { team: number; color: string; loaded: AvatarChoice | null; r?: number; shots: FightShot[] }) {
   const christmas = useGingerbread();
   if (christmas) return <GingerbreadCatapult team={team} color={color} loaded={loaded} r={r} shots={shots} />;
   const cx = CATAPULT_X[team]!;
   const dir = team === 0 ? 1 : -1;
   const cupY = sy(LAUNCH_Y);
-  // Placed so the cup sits at (cx, LAUNCH_Y) and the wheels on the ground.
+  // why: Placed so the cup sits at (cx, LAUNCH_Y) and the wheels on the ground.
   const img = { x: -4.8, y: cupY - 5, width: 57.1, height: 39.4 };
   return (
     <g class="catapult">
@@ -473,7 +468,7 @@ function Catapult({ team, color, loaded, r, shots }: { team: number; color: stri
   );
 }
 
-/** The arm is a separate transparent sprite; its peppermint axle is the rotation pivot. */
+/** why: The arm is a separate transparent sprite; its peppermint axle is the rotation pivot. */
 function GingerbreadCatapult({ team, color, loaded, r, shots }: { team: number; color: string; loaded: AvatarChoice | null; r?: number; shots: FightShot[] }) {
   const cx = CATAPULT_X[team]!;
   const { now, startOf } = useShotClock(shots);
@@ -522,7 +517,7 @@ function GingerbreadCatapult({ team, color, loaded, r, shots }: { team: number; 
   );
 }
 
-/** An avatar drawn in the field (center x, y), optionally spinning. */
+/** why: An avatar drawn in the field (center x, y), optionally spinning. */
 export function AvatarSprite({ choice, x, y, r = SHOT_R * 1.5, spin = 0 }: { choice: AvatarChoice; x: number; y: number; r?: number; spin?: number }) {
   const body = AVATAR_ART[choice.avatar] ?? AVATAR_ART.cat;
   const extra = ACCESSORY_ART[choice.accessory] ?? ACCESSORY_ART.none;
@@ -591,8 +586,7 @@ function ImpactBurst({ impact }: { impact: ShotImpact }) {
   );
 }
 
-/**
- * Animation clock for shots. Each shot starts (locally) when it was first seen
+/** why: Animation clock for shots. Each shot starts (locally) when it was first seen
  * minus how long ago it was fired, so every screen replays it from the same point.
  * Ticks every frame while a shot is flying or its burst is showing.
  */

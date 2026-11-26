@@ -83,8 +83,7 @@ import { pickArt } from "./phone-art.ts";
 import { canvasUrl, loadImage } from "./tint.ts";
 import { teamInk } from "./ui.tsx";
 
-/*
- * Land Grab's board and its art, shared by the projector and the phones. The art is the
+/** why: Land Grab's board and its art, shared by the projector and the phones. The art is the
  * storybook parchment map in ./land/; ./land/manifest.md says where each piece goes, how big it is
  * and how it is tinted. Phones get the half-size copies in ./land/phone/. The card, banner
  * and plinths are projector only.
@@ -101,7 +100,7 @@ const ART = {
   "claimed-1": [claimed1Img, phoneClaimed1Img],
   "claimed-2": [claimed2Img, phoneClaimed2Img],
   "claimed-3": [claimed3Img, phoneClaimed3Img],
-  // The maps are big, and even the phone copies (about 112 px per HEX_CORNER_RADIUS_SVG) are twice what a 1080p projector needs, so both use them.
+  // why: The maps are big, and even the phone copies (about 112 px per HEX_CORNER_RADIUS_SVG) are twice what a 1080p projector needs, so both use them.
   "map-10": [phoneMap10Img, phoneMap10Img],
   "map-12": [phoneMap12Img, phoneMap12Img],
   "map-14": [phoneMap14Img, phoneMap14Img],
@@ -144,7 +143,7 @@ export const landArt = (id: LandArtId): string => pickArt(ART[id][0], ART[id][1]
 
 const HEX_CORNER_RADIUS_SVG = 10;
 const TENTH_OF_HEX_RADIUS = HEX_CORNER_RADIUS_SVG / 10;
-/** Tiles are drawn a little smaller than their cell, so the parchment edge shows between them as ink lines. */
+/** why: Tiles are drawn a little smaller than their cell, so the parchment edge shows between them as ink lines. */
 const TILE_R = HEX_CORNER_RADIUS_SVG * 0.95;
 const TILE_W = TILE_R * Math.sqrt(3);
 const hexCorners = (r: number) =>
@@ -159,13 +158,13 @@ const hexPoints = (r: number, x = 0, y = 0) =>
 const TILE = hexPoints(TILE_R);
 
 const OWNER_BORDER_CORNERS = hexCorners(TILE_R);
-/** The parchment edge: every cell a little bigger, an ink outline under a darker paper band, so its outline follows the board. */
+/** why: The parchment edge: every cell a little bigger, an ink outline under a darker paper band, so its outline follows the board. */
 const EDGE_INK_R = 1.17 * HEX_CORNER_RADIUS_SVG;
 const EDGE_R = 1.12 * HEX_CORNER_RADIUS_SVG;
 const INK = "#3a2412";
 const EDGE_PAPER_TILE_SIZE = 40;
 const EDGE_AND_SHADOW_MARGIN = 5 * TENTH_OF_HEX_RADIUS;
-/** The keep is 1.24 tiles wide; its anchor (the middle of its base) goes on the tile centre. */
+/** why: The keep is 1.24 tiles wide; its anchor (the middle of its base) goes on the tile centre. */
 const KEEP_W = 1.24 * TILE_W;
 const KEEP_H = (KEEP_W * 801) / 552;
 const KEEP_ANCHOR = { x: 0.496, y: 0.85 };
@@ -173,21 +172,20 @@ const BADGE_DISC_TILE_HEIGHT = 0.27;
 const BADGE_DISC_PICTURE_FILL = 0.8;
 const BADGE = (BADGE_DISC_TILE_HEIGHT * 2 * TILE_R) / BADGE_DISC_PICTURE_FILL;
 const SELECTED_SCALE = 1.2;
-/** The selected tile is also hatched in the map's own ink, so it reads at a glance on a phone. */
+/** why: The selected tile is also hatched in the map's own ink, so it reads at a glance on a phone. */
 const HATCH_INK = "#1c130a";
 const HATCH = 1.6;
 const CAPTURE_FLASH_SCALE = 1.3;
-/** The placing pop is square. */
 const PLACE_POP_TILES = 2;
 const POP = PLACE_POP_TILES * TILE_W;
 
 const GRASS: LandArtId[] = ["grass-1", "grass-2", "grass-3", "grass-4"];
 const CLAIMED: LandArtId[] = ["claimed-1", "claimed-2", "claimed-3"];
-/** The keep with its flag in each team's colour, in TEAMS order. */
+/** why: The keep with its flag in each team's colour, in TEAMS order. */
 const KEEPS: LandArtId[] = ["keep-red", "keep-blue", "keep-yellow", "keep-cyan", "keep-purple", "keep-pink"];
-/** One continuous map per board size, covering boardExtent exactly. Other sizes fall back to grass-N and claimed-N per tile. */
+/** why: One continuous map per board size, covering boardExtent exactly. Other sizes fall back to grass-N and claimed-N per tile. */
 const MAPS: Partial<Record<number, LandArtId>> = { 10: "map-10", 12: "map-12", 14: "map-14" };
-/** Claimed tiles show the map lightened toward paper, then multiplied by the team colour; yellow, blue and purple get more lighten. */
+/** why: Claimed tiles show the map lightened toward paper, then multiplied by the team colour; yellow, blue and purple get more lighten. */
 const CLAIM_PAPER = "#fffaf0";
 const CLAIM_LIGHTEN: Record<string, number> = { "#d81e3a": 0.35, "#1f5ee0": 0.4, "#f5c400": 0.45, "#12b5cb": 0.35, "#7d3cc8": 0.4, "#f0559e": 0.35 };
 
@@ -201,10 +199,10 @@ const teamColor = (team: number) => TEAMS[team % TEAMS.length]!.color;
 
 const rgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
 const toHex = (c: number[]) => `#${c.map((v) => Math.round(v).toString(16).padStart(2, "0")).join("")}`;
-/** A colour scaled toward black: 0.5 is half as bright. */
+/** why: A colour scaled toward black: 0.5 is half as bright. */
 const shade = (hex: string, f: number) => toHex(rgb(hex).map((v) => v * f));
 
-/** A picture drawn over the tile's whole box (`scale` times the tile), centred on (x, y). */
+/** why: A picture drawn over the tile's whole box (`scale` times the tile), centred on (x, y). */
 function TileImage({
   id,
   x,
@@ -238,18 +236,17 @@ function TileImage({
 
 interface HexBoardProps {
   board: LandBoard;
-  /** The team looking at the board: tiles it can't take are hatched, tiles that cost extra are marked. */
+  /** why: The team looking at the board: tiles it can't take are hatched, tiles that cost extra are marked. */
   viewer?: number;
   selected?: number | null;
-  /** Just placed: pops in. */
+  /** why: Just placed: pops in. */
   placed?: LandPlace | null;
-  /** Just surrounded: these tiles flip over to their new colour. */
+  /** why: Just surrounded: these tiles flip over to their new colour. */
   capture?: LandCapture | null;
   label?: string;
 }
 
-/**
- * The whole board, back to front: parchment edge, the map, tiles (claimed ones tinted), borders,
+/** why: The whole board, back to front: parchment edge, the map, tiles (claimed ones tinted), borders,
  * keeps, then the viewer's tile states and the effects. Each tile carries data-tile, so a tap can be
  * traced back to it; everything drawn after the tiles lets taps through.
  */
@@ -279,8 +276,8 @@ export function HexBoard({ board, viewer, selected, placed, capture, label }: He
     const grass = owner === EMPTY;
     const color = grass ? "" : teamColor(owner);
     const cls = ["hex", grass ? "grass" : "owned", placed?.tile === tile ? "placed" : "", flipIndex !== undefined ? "flipped" : ""].join(" ");
-    // With a map, grass is the board-wide map showing through the transparent fill (which still takes the tap).
-    // A claimed tile carries its own copy of the map inside .hex-body, so the multiply tint pops and flips with it.
+    // why: With a map, grass is the board-wide map showing through the transparent fill (which still takes the tap).
+    // why: A claimed tile carries its own copy of the map inside .hex-body, so the multiply tint pops and flips with it.
     let face;
     if (map && grass) face = <polygon class="hex-fill" points={TILE} style={{ fill: "transparent" }} />;
     else if (map)
@@ -343,7 +340,7 @@ export function HexBoard({ board, viewer, selected, placed, capture, label }: He
     );
   });
 
-  // Sorted by row, so a keep overlaps the tiles and keeps above it.
+  // why: Sorted by row, so a keep overlaps the tiles and keeps above it.
   const keeps = [...starts]
     .sort((a, b) => a.tile - b.tile)
     .map((s) => {
@@ -369,7 +366,7 @@ export function HexBoard({ board, viewer, selected, placed, capture, label }: He
           if (owner === viewer) return [];
           const t = top(tile);
           if (isProtected(size, starts, viewer, tile)) return [<TileImage key={tile} id="state-blocked" x={t.x} y={t.y} />];
-          // Takeable, but for more than one claim: another team's land, or the ring around its start.
+          // why: Takeable, but for more than one claim: another team's land, or the ring around its start.
           const cost = placementCost(owners, size, starts, viewer, tile, LAND_STEAL_COST, LAND_GUARD_COST);
           if (cost === null || cost <= 1) return [];
           return [
@@ -487,9 +484,7 @@ export function HexBoard({ board, viewer, selected, placed, capture, label }: He
   );
 }
 
-// The projector's HUD: shapes, team cards, banners, plinths.
-
-/** A team's painted shape token (white, outlined): the second cue besides colour. */
+/** why: A team's painted shape token (white, outlined): the second cue besides colour. */
 export function LandShape({ team, class: cls = "" }: { team: number; class?: string }) {
   const shape = TEAMS[team % TEAMS.length]!.shape;
   return <img class={`land-shape ${cls}`} src={landArt(`shape-${shape}`)} alt={shape} draggable={false} />;
@@ -497,7 +492,7 @@ export function LandShape({ team, class: cls = "" }: { team: number; class?: str
 
 const tinted = new Map<string, Promise<string>>();
 
-/** `base` with `color` multiplied in where the greyscale `mask` is white, as an object URL. Made once per picture and colour. */
+/** why: `base` with `color` multiplied in where the greyscale `mask` is white, as an object URL. Made once per picture and colour. */
 function tint(base: string, mask: string, color: string): Promise<string> {
   const key = `${base} ${color}`;
   let url = tinted.get(key);
@@ -529,7 +524,7 @@ function tint(base: string, mask: string, color: string): Promise<string> {
   return url;
 }
 
-/** The tinted picture once it's ready; the untinted one until then. */
+/** why: The tinted picture once it's ready; the untinted one until then. */
 function useTinted(base: LandArtId, mask: LandArtId, color: string): string {
   const [url, setUrl] = useState(landArt(base));
   useEffect(() => {
@@ -542,14 +537,14 @@ function useTinted(base: LandArtId, mask: LandArtId, color: string): string {
   return url;
 }
 
-/** The team card plaque with its ribbon in the team colour, for a 9-slice border-image. */
+/** why: The team card plaque with its ribbon in the team colour, for a 9-slice border-image. */
 export const useTeamCard = (color: string) => `url(${useTinted("team-card", "team-card-tint", color)})`;
 
-/** Event banner colours: a ring closed, a team knocked out; the conquest uses the winner's colour. */
+/** why: Event banner colours: a ring closed, a team knocked out; the conquest uses the winner's colour. */
 export const BANNER_CAPTURE = "#3d8a34";
 export const BANNER_KNOCKOUT = "#8e1330";
 
-/** The ribbon banner in `color`, for a 3-slice border-image. */
+/** why: The ribbon banner in `color`, for a 3-slice border-image. */
 export const useBanner = (color: string) => `url(${useTinted("banner", "banner-tint", color)})`;
 
 const PLINTHS = {
@@ -558,7 +553,7 @@ const PLINTHS = {
   third: ["podium-3rd", "podium-3rd-tint"],
 } as const satisfies Record<string, readonly [LandArtId, LandArtId]>;
 
-/** A podium plinth with its drape in the team colour, and the team's shape and rank on the drape. */
+/** why: A podium plinth with its drape in the team colour, and the team's shape and rank on the drape. */
 export function Plinth({ place, team, color, rank }: { place: keyof typeof PLINTHS; team: number; color: string; rank: string }) {
   const [base, mask] = PLINTHS[place];
   return (

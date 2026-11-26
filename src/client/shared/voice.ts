@@ -1,8 +1,4 @@
-/**
- * The attackers' pre-recorded voices (projector only): the MP3 lines in
- * ./voice/. Plays through the shared AudioContext, follows the mute
- * button, and ducks the music while it speaks.
- */
+// why: projector only; plays through the shared AudioContext so it follows mute and ducks the music.
 import type { VoiceLineId } from "../../shared/voice-lines.ts";
 import { music } from "./music/index.ts";
 import { getAudioContext, isMuted } from "./sounds.ts";
@@ -45,14 +41,14 @@ export function setVoiceEnabled(on: boolean): void {
   try {
     localStorage.setItem(ON_KEY, on ? "1" : "0");
   } catch {
-    // storage unavailable: the setting just won't persist
+    // why: storage unavailable: the setting just won't persist
   }
 }
 
-// Downloaded up front so a line plays the moment it's needed; decoded on first use.
+// why: downloaded up front so a line plays the moment it's needed; decoded on first use.
 const data = new Map<VoiceLineId, Promise<ArrayBuffer | null>>();
 const decoded = new Map<VoiceLineId, AudioBuffer>();
-/** When the line already playing (or queued) finishes, on the AudioContext clock. */
+/** why: on the AudioContext clock, when the playing or queued line finishes. */
 let busyUntil = 0;
 
 function load(id: VoiceLineId): Promise<ArrayBuffer | null> {
@@ -70,7 +66,7 @@ export function preloadVoice(ids: VoiceLineId[]): void {
   for (const id of ids) void load(id);
 }
 
-/** Say a line, unless the voice is off or sounds are muted. Lines never overlap: a new one waits for the current one. */
+/** why: lines never overlap; a new one waits for the current one. */
 export async function say(id: VoiceLineId): Promise<void> {
   const ctx = getAudioContext();
   if (!enabled || isMuted() || !ctx || ctx.state !== "running") return;
@@ -79,7 +75,7 @@ export async function say(id: VoiceLineId): Promise<void> {
     const raw = await load(id);
     if (!raw) return;
     try {
-      // decodeAudioData detaches its input, so decode a copy and keep the download reusable.
+      // why: decodeAudioData detaches its input, so decode a copy and keep the download reusable.
       buf = await ctx.decodeAudioData(raw.slice(0));
     } catch {
       return;

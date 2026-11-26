@@ -88,11 +88,8 @@ import wolfLeapImg from "./siege/wolf-leap.webp";
 import wolfRunImg from "./siege/wolf-run.webp";
 import { useChristmasSiege } from "./siege-skin.tsx";
 
-/**
- * Classic file → Toybox file, keyed by bundled URL. Two classic files with the same name and bytes
- * get one URL, so they can't both be keys: the coin and heart (projector and phone copies are
- * identical) are picked as themed pairs in SiegeIcon instead.
- */
+// why: keyed by bundled URL, and identical classic files share one URL, so the coin and heart
+// are picked as themed pairs in SiegeIcon instead.
 const TOYBOX_ART: Record<string, string> = {
   [archerDrawImg]: christmasArcherDrawImg,
   [archerReadyImg]: christmasArcherReadyImg,
@@ -133,19 +130,18 @@ const TOYBOX_ART: Record<string, string> = {
   [wolfRunImg]: christmasWolfRunImg,
 };
 
-/** Resolve the skin at render time so lobby changes and both clients share one art path. */
+/** why: resolved at render time so lobby changes and both clients share one art path. */
 function ArtImage({ src, ...props }: JSX.IntrinsicElements["img"]) {
   const christmas = useChristmasSiege();
   return <img {...props} src={christmas && typeof src === "string" ? (TOYBOX_ART[src] ?? src) : src} />;
 }
 
-// The numbers come from ./siege/manifest.md.
+// why: these numbers come from ./siege/manifest.md; change them together with it.
 
-/** board.webp, in px. Everything on the board is placed in these pixels and drawn in % of them. */
+/** why: board.webp size in px; everything is placed in these pixels and drawn in % of them. */
 const BOARD = { w: 1344, h: 768 };
-/** The castle wall layers sit at (0, 0) over the board's left edge. */
 const CASTLE = { w: 360, h: 768 };
-/** Each lane's y range and its 8 squares' x ranges (square 1 next to the wall, square 8 the entry), in board px. */
+/** why: board px; square 1 is next to the wall and square 8 is the entry. */
 const LANES: readonly { y0: number; y1: number; x: readonly (readonly [number, number])[] }[] = [
   {
     y0: 67,
@@ -218,14 +214,14 @@ const LANES: readonly { y0: number; y1: number; x: readonly (readonly [number, n
     ],
   },
 ];
-/** Figures are drawn at lane height / FIGURE_LANE_PX, with the anchor this share of the lane height below the square centre. */
+/** why: figures scale by lane height / FIGURE_LANE_PX; the anchor sits this share of lane height below the square centre. */
 const FIGURE_LANE_PX = 130;
 const ANCHOR_DROP = 0.12;
 
 interface Canvas {
   w: number;
   h: number;
-  /** The centre of the base, in the figure's own px. */
+  /** why: base centre, in the figure's own px. */
   ax: number;
   ay: number;
 }
@@ -240,11 +236,11 @@ const FIGURES: Record<"archer" | "knight" | "wall" | SiegeMonsterType, Canvas> =
   giant: { w: 420, h: 520, ax: 226, ay: 440 },
 };
 
-/** Cut-out pieces, back to front, with their pivots in the figure's px. */
+/** why: listed back to front (draw order); pivots in the figure's px. */
 const KNIGHT_PIVOT = { body: [99, 136], head: [107, 83], sword: [84, 83], shield: [125, 84] } as const;
 const GIANT_PIVOT = { torso: [228, 290], head: [226, 119], right: [148, 143], left: [299, 98] } as const;
 
-/** Level details: where each one's foot (or bottom-middle) goes on its figure's canvas. */
+/** why: each point is where the detail's foot (or bottom-middle) goes on its figure's canvas. */
 const PENNANT = { w: 64, h: 96 };
 const ARCHER_PENNANT = { foot: [12, 95], ready: [151, 92], draw: [115, 4] } as const;
 const KNIGHT_PENNANT = { foot: [10, 95], at: [114, 118] } as const;
@@ -253,7 +249,7 @@ const WALL_SPIKES = { w: 110, h: 79, foot: [55, 62], at: [96, 32] } as const;
 
 const pct = (v: number, of: number) => `${(v / of) * 100}%`;
 
-/** A square's centre x on a lane, for any position in squares (k = square k's centre, 0.5 = the wall face). */
+/** why: position is in squares: k = square k's centre, 0.5 = the wall face. */
 function laneX(lane: number, x: number): number {
   const squares = LANES[lane]!.x;
   const centre = (k: number) => (squares[k - 1]![0] + squares[k - 1]![1]) / 2;
@@ -263,14 +259,13 @@ function laneX(lane: number, x: number): number {
   return centre(k) + (centre(k + 1) - centre(k)) * (x - k);
 }
 
-/** Where a figure's base centre goes, and how big it is drawn. */
 function boardPoint(lane: number, x: number): { px: number; py: number; scale: number } {
   const l = LANES[Math.max(0, Math.min(LANES.length - 1, lane))]!;
   const h = l.y1 - l.y0;
   return { px: laneX(lane, x), py: (l.y0 + l.y1) / 2 + ANCHOR_DROP * h, scale: h / FIGURE_LANE_PX };
 }
 
-/** The style that puts a figure canvas on the board with its anchor at (px, py). Lower figures draw on top. */
+/** why: lower figures draw on top, so figures nearer the viewer overlap the ones behind. */
 function placeStyle(c: Canvas, p: { px: number; py: number; scale: number }): JSX.CSSProperties {
   const w = c.w * p.scale;
   const h = c.h * p.scale;
@@ -285,7 +280,7 @@ function placeStyle(c: Canvas, p: { px: number; py: number; scale: number }): JS
   };
 }
 
-/** A layer on a figure canvas (full size unless given), placed in the canvas's own px. */
+/** why: placed in the canvas's own px; full canvas size unless given. */
 function Layer({
   src,
   c,
@@ -324,7 +319,7 @@ function footBox(detail: { w: number; h: number }, foot: readonly [number, numbe
   return [at[0] - foot[0], at[1] - foot[1], detail.w, detail.h];
 }
 
-/** Alternating animation names restart a CSS animation each time a counter changes. */
+/** why: alternating animation names restart a CSS animation each time a counter changes. */
 const flip = (name: string, seq: number) => (seq > 0 ? `${name}-${seq % 2 ? "a" : "b"}` : "");
 
 export function SiegeBoard({
@@ -365,18 +360,16 @@ export function SiegeBoard({
   );
 }
 
-/** A lane's rectangle on the board (buildable squares and the entry square). */
 function laneRect(lane: number): JSX.CSSProperties {
   const l = LANES[lane]!;
   return { left: pct(l.x[0]![0], BOARD.w), top: pct(l.y0, BOARD.h), width: pct(l.x[7]![1] - l.x[0]![0], BOARD.w), height: pct(l.y1 - l.y0, BOARD.h) };
 }
 
-/** A lane flashing red: danger (a monster near the wall) or the giant's horn. */
+/** why: shared by danger (a monster near the wall) and the giant's horn. */
 export function LaneFlash({ lane, kind }: { lane: number; kind: "danger" | "giant" }) {
   return <div class={`siege-lane-flash ${kind}`} style={laneRect(lane)} aria-hidden="true" />;
 }
 
-/** A small arrow at the lane's right edge: a monster is coming onto this lane. */
 export function WarningArrow({ lane }: { lane: number }) {
   const l = LANES[lane]!;
   const right = Math.min(BOARD.w - 6, l.x[7]![1]);
@@ -430,7 +423,7 @@ function Archer({ level, drawing }: { level: number; drawing: boolean }) {
   );
 }
 
-/** The knight's cut-out: legs, (Lv 2 banner behind his back), body, head, sword arm, shield arm. Each strike swings the sword arm and leans the body. */
+/** why: pieces draw in order, so the Lv 2 banner sits between legs and body (behind his back). */
 function Knight({ level, attackSeq }: { level: number; attackSeq: number }) {
   const c = FIGURES.knight;
   const P = useChristmasSiege() ? toyboxManifest.knight.pivots : KNIGHT_PIVOT;
@@ -461,7 +454,6 @@ function StoneWall({ level, cracked }: { level: number; cracked: boolean }) {
   );
 }
 
-/** A monster at position x (in squares). Walking ones bob; attacking ones switch pose on each hit. */
 export function MonsterFigure({ m, x, posed }: { m: HostSiegeMonster; x: number; posed: boolean }) {
   const christmas = useChristmasSiege();
   const c = monsterCanvas(m.type, christmas);
@@ -483,7 +475,7 @@ export function MonsterFigure({ m, x, posed }: { m: HostSiegeMonster; x: number;
   );
 }
 
-/** Pose canvases can extend around a weapon while their base stays on the same lane point. */
+/** why: pose canvases can extend around a weapon while their base stays on the same lane point. */
 function monsterCanvas(type: SiegeMonsterType, christmas: boolean): Canvas {
   if (!christmas) return FIGURES[type];
   const { size, anchor } = toyboxManifest[type];
@@ -496,7 +488,6 @@ function monsterPose(type: Exclude<SiegeMonsterType, "giant">, action: boolean):
   return action ? trollSmashImg : trollWalkImg;
 }
 
-/** The giant's cut-out: legs, torso, head, right arm with the club, left arm. Each stomp swings the club down. */
 function Giant({ attackSeq }: { attackSeq: number }) {
   const c = FIGURES.giant;
   const P = useChristmasSiege() ? toyboxManifest.giant.pivots : GIANT_PIVOT;
@@ -513,7 +504,6 @@ function Giant({ attackSeq }: { attackSeq: number }) {
   );
 }
 
-/** A defeated monster tips over on its base and fades; one that reached the wall fades into a puff of dust. */
 export function FallenFigure({ type, lane, x, reachedWall }: { type: SiegeMonsterType; lane: number; x: number; reachedWall: boolean }) {
   const christmas = useChristmasSiege();
   const c = monsterCanvas(type, christmas);
@@ -526,7 +516,7 @@ export function FallenFigure({ type, lane, x, reachedWall }: { type: SiegeMonste
   );
 }
 
-/** Dust from a defeat, a destroyed defender or a stomp: grows and fades. Bottom-middle on the ground. */
+/** why: anchored bottom-middle on the ground. */
 export function DustPuff({ at }: { at?: { lane: number; x: number } }) {
   if (!at) return <ArtImage class="siege-dust" src={dustImg} alt="" />;
   const p = boardPoint(at.lane, at.x);
@@ -585,7 +575,6 @@ export function Confetti() {
   );
 }
 
-/** The cross banners rising for the victory (the spare banner cloth). */
 export function RisingBanners() {
   return (
     <div class="siege-rising-banners" aria-hidden="true">
@@ -595,8 +584,6 @@ export function RisingBanners() {
     </div>
   );
 }
-
-// Icons (projector and phone).
 
 const DEFENDER_ICON: Record<SiegeDefenderType, string> = {
   archer: phoneArcherIconImg,
