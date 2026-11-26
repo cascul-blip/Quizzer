@@ -37,7 +37,7 @@ function App() {
   useEffect(() => void loadCustomMusic(), []);
   useMusic(musicFor(view));
 
-  // Keep the previous view across stage changes for lobby joins and gameplay entry.
+  // why: kept across stage changes for lobby joins and gameplay entry.
   const previousView = useRef<HostView | null>(null);
   useEffect(() => {
     const previous = previousView.current;
@@ -46,7 +46,7 @@ function App() {
     if (view.kind === "lobby" && view.players.length > previous.players.length) play("join");
   }, [view]);
 
-  // Arriving from the admin page with ?quiz=… opens that quiz, unless a game is already running.
+  // why: ?quiz= from the admin page never replaces a running game.
   useEffect(() => {
     if (!pendingQuiz || !view) return;
     if (view.kind === "idle") {
