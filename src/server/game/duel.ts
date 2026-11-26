@@ -36,11 +36,10 @@ import { fewest, most, rankBy } from "./standings.ts";
 
 export { AUTO_REVEAL_MS, GRACE_MS } from "./common.ts";
 
-/** Each round shows the question this long before the options. */
 export { INTRO_MS };
 
 export interface DuelAnswer {
-  /** Chosen option index; -1 for a typed answer. */
+  /** why: -1 marks a typed answer. */
   option: number;
   text?: string;
   correct: boolean;
@@ -48,18 +47,18 @@ export interface DuelAnswer {
 }
 
 export interface DuelPlayer extends BasePlayer {
-  /** By round slot (round − 1). */
+  /** why: indexed by round slot (round − 1). */
   answers: (DuelAnswer | undefined)[];
-  /** Earned by winning duels: the bottom arena is worth 1, each arena above it 1 more. Decides the final ranking. */
+  /** why: the bottom arena is worth 1, each arena above 1 more; decides the final ranking. */
   points: number;
   wins: number;
   losses: number;
   draws: number;
-  /** Counted when a round closes, for duelists only. */
+  /** why: counted when a round closes, for duelists only. */
   correct: number;
-  /** Answered wrong; a round left unanswered is not counted. */
+  /** why: a round left unanswered is not counted. */
   wrong: number;
-  /** Rounds won in Arena 1. */
+  /** why: counts rounds won in Arena 1 only. */
   reign: number;
   startArena: number;
 }
@@ -68,7 +67,7 @@ interface DuelOptions {
   clock?: Clock;
   rng?: () => number;
   onChange?: () => void;
-  /** One player answered: they need their own view at once, everyone else can wait a moment. */
+  /** why: the answerer needs their own view at once; everyone else can wait a moment. */
   onActivity?: (playerId: string) => void;
   onFinish?: (game: DuelGame) => void;
 }
@@ -86,12 +85,11 @@ export class DuelGame {
   readonly title: string;
   readonly rounds: number;
   readonly theme: SeasonTheme;
-  /** One question per round slot: the quiz's play order, repeated in fresh cycles. */
+  /** why: the quiz's play order, repeated in fresh cycles, one per round slot. */
   readonly questions: Question[];
-  /** Current round slot (round − 1); -1 before the start. */
-  /** Player ids, top of the ladder first. */
+  /** why: top of the ladder first. */
   ladder: string[] = [];
-  /** This round's arenas (player ids), fixed when the round starts; kicked players are taken out. */
+  /** why: fixed when the round starts; kicked players are taken out. */
   arenas: string[][] = [];
   lastRound: DuelRound | null = null;
   played = 0;
@@ -103,7 +101,6 @@ export class DuelGame {
   } | null = null;
 
   private readonly source: Question[];
-  /** Index into the quiz's questions for each slot. */
   private readonly slotSource: number[];
   private readonly session: PacedSession<DuelPlayer, never, Podium<DuelPlayer, DuelPlayer, DuelAwardKey>, DuelGame>;
 
@@ -145,12 +142,12 @@ export class DuelGame {
 
   private setup!: LobbyChoices;
 
-  /** The lobby's choices with the pacing as the host left it; the next lobby opens with them. */
+  /** why: keeps the pacing as the host left it; the next lobby opens with them. */
   get choices(): LobbyChoices {
     return { ...this.setup, pacing: this.pacing };
   }
 
-  /** Take over a lobby's players (same ids and tokens), its rounds, shuffle choices and pacing. */
+  /** why: keeps the lobby's ids and tokens, rounds, shuffle choices and pacing. */
   static fromLobby(lobby: LobbyFacts<"duel">, opts: DuelOptions = {}): DuelGame {
     const game = new DuelGame(lobby.quiz, { shuffle: lobby.shuffle, rounds: lobby.settings.rounds, theme: lobby.settings.theme, pacing: lobby.pacing }, opts);
     game.setup = lobby.choices;
@@ -162,7 +159,7 @@ export class DuelGame {
     return this.session.paced.phase;
   }
 
-  /** Current round slot (round − 1); -1 before the start. */
+  /** why: round slot is round − 1; -1 before the start. */
   get qIndex(): number {
     return this.session.paced.qIndex;
   }
@@ -175,7 +172,7 @@ export class DuelGame {
     return this.session.paced.openedAt;
   }
 
-  /** When the current phase's countdown ends; 0 when it has none. */
+  /** why: 0 when the phase has no countdown. */
   get phaseEndsAt(): number {
     return this.session.paced.phases.endsAt;
   }
@@ -200,15 +197,12 @@ export class DuelGame {
     return { ...base, answers: [], points: 0, wins: 0, losses: 0, draws: 0, correct: 0, wrong: 0, reign: 0, startArena: 0 };
   }
 
-  /** The arena (index) a player duels in this round, or -1. */
+  /** why: -1 when the player is not duelling this round. */
   private arenaIndex(playerId: string): number {
     return this.arenas.findIndex((a) => a.includes(playerId));
   }
 
-  /**
-   * This round's arena (still this round's on the reveal), or -1 on the podium and for a late joiner
-   * waiting for the next round, who gets the arena the ladder puts them in and no opponents.
-   */
+  /** why: -1 on the podium and for a late joiner awaiting the next round (who gets the ladder's arena, no opponents). */
   private arenaIndexOnReveal(p: DuelPlayer): number {
     if (this.phase === "podium") return -1;
     return this.batch ? (this.shared("arenaById", () => this.arenaIndexes()).get(p.id) ?? -1) : this.arenaIndex(p.id);
@@ -220,7 +214,7 @@ export class DuelGame {
     return out;
   }
 
-  /** Late joiners go to the bottom of the ladder and duel from the next round. */
+  /** why: late joiners go to the bottom of the ladder and duel from the next round. */
   join(rawNickname: unknown, avatar?: AvatarChoice | null): DuelPlayer {
     const player = this.session.addPlayer(rawNickname, avatar, (base) => this.newPlayer(base));
     if (this.qIndex >= 0) this.ladder.push(player.id);
@@ -232,12 +226,12 @@ export class DuelGame {
     return this.session.byToken(token);
   }
 
-  /** Away players keep their place and count as no answer. */
+  /** why: away players keep their place and count as no answer. */
   setConnected(playerId: string, connected: boolean): void {
     this.session.setConnected(playerId, connected);
   }
 
-  /** The ladder closes up; an arena left with one duelist ends in "stay". */
+  /** why: the ladder closes up; an arena left with one duelist ends in "stay". */
   kick(playerId: string): DuelPlayer | null {
     const p = this.session.removePlayer(playerId);
     if (!p) return null;
@@ -247,7 +241,7 @@ export class DuelGame {
     return p;
   }
 
-  /** One answer per duelist per round. Returns whether it was accepted. */
+  /** why: one answer per duelist per round; returns whether it was accepted. */
   answer(playerId: string, qIndex: number, answer: AnswerValue): boolean {
     if (this.arenaIndex(playerId) < 0) return false;
     if (!this.session.paced.take(this.players.get(playerId), qIndex, answer, (a) => a)) return false;
@@ -271,12 +265,11 @@ export class DuelGame {
     this.session.paced.next();
   }
 
-  /** Cut the current countdown short: straight to the options, or close the question. */
   skip(): void {
     this.session.paced.skip();
   }
 
-  /** Host ends the game now. An open round is settled first; a round that hadn't opened yet is dropped. */
+  /** why: an open round is settled first; a round that hadn't opened yet is dropped. */
   end(): void {
     this.session.end();
   }
@@ -344,18 +337,18 @@ export class DuelGame {
     return this.ladder.map((id) => this.players.get(id)).filter((p): p is DuelPlayer => !!p);
   }
 
-  /** The standings (rank 1 first): most points, then most correct answers; a full tie shares a place, listed higher on the ladder first. */
+  /** why: most points, then most correct; a full tie shares a place, higher on the ladder listed first. */
   ranked(): Ranked<DuelPlayer>[] {
     const pos = new Map(this.ladder.map((id, i) => [id, i]));
     return rankBy(this.onLadder(), [most((p) => p.points), most((p) => p.correct)], [fewest((p) => pos.get(p.id) ?? Infinity)]);
   }
 
-  /** Arena per player id on the current ladder (next round's arena during the reveal; the final one at the podium). */
+  /** why: next round's arena during the reveal; the final one at the podium. */
   ladderArenas(): Map<string, number> {
     return arenaOf(this.ladder);
   }
 
-  /** Arena climbed from the start to the current ladder; 0 for someone who never duelled. */
+  /** why: 0 for someone who never duelled. */
   climb(p: DuelPlayer, arenas = this.ladderArenas()): number {
     return p.startArena ? p.startArena - (arenas.get(p.id) ?? p.startArena) : 0;
   }
@@ -364,7 +357,6 @@ export class DuelGame {
     return this.shared("ranked", () => this.ranked());
   }
 
-  /** The standings order of `ranked()` and the three awards, on the final ladder. */
   private buildPodium(): Podium<DuelPlayer, DuelPlayer, DuelAwardKey> {
     const players = this.onLadder();
     const pos = new Map(this.ladder.map((id, i) => [id, i]));
@@ -382,12 +374,12 @@ export class DuelGame {
     });
   }
 
-  /** The finished game's Podium (GLOSSARY.md), worked out once in Game finish. */
+  /** why: worked out once in Game finish. */
   get podium(): Podium<DuelPlayer, DuelPlayer, DuelAwardKey> {
     return this.session.podium;
   }
 
-  /** The most-missed questions (counted per quiz question, over every round it was asked); unanswered doesn't count. */
+  /** why: counted per quiz question over every round it was asked; unanswered doesn't count. */
   errors(): QuestionError[] {
     const wrong = this.source.map(() => 0);
     this.questions.forEach((_, slot) => {
@@ -400,7 +392,7 @@ export class DuelGame {
     return this.phase === "podium" ? null : this.session.paced.view();
   }
 
-  /** The arena number a player is shown with: this round's while it is being played, else where the ladder puts them. */
+  /** why: this round's arena while it is played, else where the ladder puts them. */
   private arenaNow(playerId: string, ladderArenas: Map<string, number>): number {
     if (this.phase === "intro" || this.phase === "open") {
       const i = this.arenaIndex(playerId);
@@ -603,7 +595,7 @@ export const duelMode: ModeEntry<"duel"> = {
       case "duel.answer":
         return game.answer(playerId, Number(msg.index), answerOf(msg)) ? undefined : "resend";
       default:
-        // Duel has one message, so TypeScript narrows its type but not msg itself.
+        // why: Duel has one message, so TypeScript narrows its type but not msg itself.
         msg.type satisfies never;
         return unhandled(msg as never);
     }

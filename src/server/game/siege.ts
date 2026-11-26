@@ -53,11 +53,10 @@ export type { SiegeMonster } from "./siege-battlefield.ts";
 
 export { FEEDBACK_MS } from "./stream.ts";
 
-/** The message a phone shows when the player's purse can't pay. */
 export const SIEGE_NO_GOLD = "Not enough gold.";
 
 export interface SiegePlayer extends BasePlayer, AnswerTotals {
-  /** This player's own purse: only they earn it and only they can spend it. */
+  /** why: only this player earns and spends it. */
   gold: number;
   goldEarned: number;
   goldSpent: number;
@@ -65,7 +64,7 @@ export interface SiegePlayer extends BasePlayer, AnswerTotals {
   upgrades: number;
   archerUpgrades: number;
   wallUpgrades: number;
-  /** Monsters defeated by the defenders this player placed. */
+  /** why: counts kills by defenders this player placed. */
   defeated: number;
   archerKills: number;
   lastPlaced: SiegeDefenderType | null;
@@ -74,18 +73,18 @@ export interface SiegePlayer extends BasePlayer, AnswerTotals {
 
 interface SiegeWaveLog {
   wave: number;
-  /** Difficulty scale in %. */
+  /** why: percent. */
   scale: number;
-  /** The board's worth in gold when the wave began (defenders by health left, plus unspent gold). */
+  /** why: gold worth at wave start (defenders by health left, plus unspent gold). */
   defense: number;
-  /** How much stronger than usual a strong board made this wave (1 = not at all). */
+  /** why: 1 = no boost from a strong board. */
   boost: number;
-  /** The usual budget, raised by the boost. */
+  /** why: the usual budget, raised by the boost. */
   budget: number;
-  /** Monster health multiplier for a strong board (1 = none). */
+  /** why: monster health multiplier; 1 = none. */
   toughness: number;
   sent: number;
-  /** Answers given from the wave's start to the next wave's start (or the end of the game). */
+  /** why: counts run from this wave's start to the next one's (or game end). */
   correct: number;
   answered: number;
   heartsLost: number;
@@ -94,26 +93,21 @@ interface SiegeWaveLog {
 interface SiegeOptions {
   clock?: Clock;
   rng?: () => number;
-  /** The class's best Endless run on this quiz so far. */
   record?: SiegeRecord | null;
   onChange?: () => void;
   onActivity?: (playerId: string) => void;
-  /** A battle tick changed only what the projector shows (shots, monsters, defender hits). Defaults to onChange. */
+  /** why: tick changed only projector state (shots, monsters, defender hits); defaults to onChange. */
   onTick?: () => void;
   onFinish?: (game: SiegeGame) => void;
 }
 
 interface SiegeGameSettings extends SiegeSettings {
   shuffleAnswers: boolean;
-  /** Longer waits for wrong answers in a row (the lobby's "Protect from abuse"). */
+  /** why: the lobby's "Protect from abuse": longer waits after wrong answers in a row. */
   protect?: boolean;
 }
 
-/**
- * Kingdom Siege: the whole class defends one castle wall against waves of monsters marching
- * down its lanes. Each player earns gold with correct answers and spends their own purse on defenders.
- * The battle runs in fixed SIEGE_TICK_MS steps on the game clock.
- */
+/** why: battle runs in fixed SIEGE_TICK_MS steps on the game clock. */
 const SIEGE_AWARD_VALUES: Record<SiegeAwardKey, (p: SiegePlayer) => number> = {
   topArcher: (p) => p.archerKills,
   masterMason: (p) => p.placed.wall + p.wallUpgrades,
@@ -126,12 +120,12 @@ export class SiegeGame {
   readonly title: string;
   readonly questions: Question[];
   readonly settings: SiegeGameSettings;
-  /** Kicked players: their stats stay in the results. */
+  /** why: kept so their stats stay in the results. */
   readonly kicked: SiegePlayer[] = [];
 
-  /** The wave being fought, or the next one during a build break. */
+  /** why: during a build break this is the next wave. */
   wave = 0;
-  /** Difficulty scale for the current wave, in %. */
+  /** why: percent. */
   scale = 100;
   outcome: SiegeResult["outcome"] | null = null;
   readonly waveLog: SiegeWaveLog[] = [];
@@ -206,7 +200,6 @@ export class SiegeGame {
     return this.session.players;
   }
 
-  /** Everyone who played, kicked players included. */
   get everyone(): SiegePlayer[] {
     return [...this.players.values(), ...this.kicked];
   }
@@ -252,7 +245,6 @@ export class SiegeGame {
     this.session.start(() => this.beginOpening());
   }
 
-  /** The opening build break: questions start and the class places its first defenders. */
   private beginOpening(): void {
     this.wave = 1;
     for (const p of this.players.values()) this.session.stream.open(p);
@@ -261,10 +253,7 @@ export class SiegeGame {
     this.session.changed();
   }
 
-  /**
-   * Records the battle, stores the answers from the wave just gone and the break after it on its log entry,
-   * rescales difficulty from them, resets the answer counters, and returns that entry.
-   */
+  /** why: also rescales difficulty from the stored answers and resets the counters. */
   private closePreviousWave(): (typeof this.waveLog)[number] | undefined {
     this.recordBattle();
     const prev = this.waveLog[this.waveLog.length - 1];
@@ -282,7 +271,7 @@ export class SiegeGame {
     const prev = this.closePreviousWave();
     this.wave = wave;
     const defense = Math.round(this.defenseGold());
-    // A board stronger than par makes the wave stronger; the boost only climbs after a wave that cost no hearts.
+    // why: a strong board makes the wave stronger; the boost only climbs after a wave that cost no hearts.
     const { boost, budget, toughness } = siegeWaveStrength(
       siegeWaveBudget(wave, this.connectedCount(), this.scale),
       defense,
@@ -295,7 +284,7 @@ export class SiegeGame {
     this.session.changed();
   }
 
-  /** What the board is worth: the defenders (by health left) plus the gold the players haven't spent yet. */
+  /** why: defenders count by health left, plus unspent gold. */
   defenseGold(): number {
     return this.battlefield.boardGold() + [...this.players.values()].reduce((sum, p) => sum + p.gold, 0);
   }
@@ -311,7 +300,7 @@ export class SiegeGame {
     if (this.hearts <= 0) return this.fall();
     if (this.phase === "wave" && this.battlefield.waveCleared) return this.endWave();
     this.scheduleTick();
-    // Shots, monster moves and defender hits are only on the projector: don't rebuild every phone's view for them.
+    // why: shots, monster moves and defender hits are projector-only; don't rebuild every phone's view.
     if (phones || (map && [...this.players.values()].some((p) => p.mapOpen))) this.session.changed();
     else if (changed) this.onTick();
   }
@@ -333,7 +322,7 @@ export class SiegeGame {
     this.session.changed();
   }
 
-  /** Place a defender, paid from the player's own purse. Returns null, or why it couldn't be placed. */
+  /** why: returns null on success, or why it couldn't be placed. */
   place(playerId: string, type: unknown, lane: unknown, square: unknown): string | null {
     const p = this.players.get(playerId);
     if (!p) return "You're not in this game.";
@@ -353,7 +342,7 @@ export class SiegeGame {
     return null;
   }
 
-  /** Upgrade the defender on a square one level. The extra health is added to what it has left. */
+  /** why: the extra health is added to what it has left. */
   upgrade(playerId: string, lane: unknown, square: unknown): string | null {
     const p = this.players.get(playerId);
     if (!p) return "You're not in this game.";
@@ -402,7 +391,7 @@ export class SiegeGame {
     this.session.changed();
   }
 
-  /** Host ends the game now: straight to the podium, without a cinematic. */
+  /** why: skips the cinematic. */
   end(): void {
     if (this.session.finished) return;
     if (!this.outcome) {
@@ -448,7 +437,7 @@ export class SiegeGame {
     this.session.setConnected(playerId, connected);
   }
 
-  /** The player's defenders stay on the board; their unspent gold goes with them. */
+  /** why: the player's defenders stay on the board; their unspent gold goes with them. */
   kick(playerId: string): SiegePlayer | null {
     const p = this.session.removePlayer(playerId);
     if (!p) return null;
@@ -469,7 +458,7 @@ export class SiegeGame {
       p.gold += SIEGE_GOLD_PER_CORRECT;
       p.goldEarned += SIEGE_GOLD_PER_CORRECT;
     }
-    // The projector's gold total changes on a correct answer; only the answerer's screen otherwise.
+    // why: the projector's gold total changes on a correct answer; otherwise only the answerer's screen.
     if (correct) this.session.changed();
     else this.session.activity(p.id);
     return true;
@@ -486,18 +475,16 @@ export class SiegeGame {
     });
   }
 
-  /** The finished game's Podium (GLOSSARY.md), worked out once in Game finish: the awards, and the results sheet's order. */
   get podium(): Podium<SiegePlayer, SiegePlayer, SiegeAwardKey> {
     return this.session.podium;
   }
 
-  /** Waves fully beaten. */
   wavesSurvived(): number {
     if (this.outcome === "stands") return this.wave;
     return Math.max(0, this.wave - 1);
   }
 
-  /** Average difficulty scale over the waves played, in %. */
+  /** why: percent. */
   avgScale(): number {
     if (this.waveLog.length === 0) return 100;
     return Math.round(this.waveLog.reduce((n, w) => n + w.scale, 0) / this.waveLog.length);
@@ -604,10 +591,7 @@ export class SiegeGame {
   }
 }
 
-/**
- * Kingdom Siege: one row per player (kicked players included), each with the class result,
- * then a wave log with one row per wave.
- */
+/** why: one row per player (kicked included) with the class result, then a wave log row per wave. */
 function siegeColumns(game: SiegeGame): Column<SiegePlayer>[] {
   const r = game.result();
   const result = r.outcome === "stands" ? "Stood" : r.outcome === "fallen" ? "Fell" : "Ended";
