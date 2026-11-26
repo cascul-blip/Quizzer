@@ -1,7 +1,6 @@
 export type DuelOutcome = "win" | "lose" | "stay";
 
 export interface DuelAnswerInfo {
-  /** why: null means didn't answer (or was away). */
   correct: boolean | null;
   answerDurationMs: number | null;
 }

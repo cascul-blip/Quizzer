@@ -13,13 +13,8 @@ import {
   sweepMsFor,
   TowerGame,
 } from "../src/server/game/tower.ts";
-import { EGG_LEVELS_ABOVE } from "../src/shared/modes/tower.ts";
 import type { Quiz } from "../src/shared/quiz-schema.ts";
 import { FakeClock, sampleQuiz } from "./helpers.ts";
-
-function zeroBasedEggRowFor(floors: number): number {
-  return floors + EGG_LEVELS_ABOVE - 1;
-}
 
 function allYesQuiz(): Quiz {
   return sampleQuiz({
@@ -398,9 +393,9 @@ describe("monster", () => {
     game.teams[1]!.columns = [8, 9, 8];
     game.teams[2]!.columns = [20, 5, 13];
     clock.advance(60_000);
-    expect(egg(game, 0)).toEqual({ col: 0, row: zeroBasedEggRowFor(10) });
-    expect(egg(game, 1)).toEqual({ col: 0, row: zeroBasedEggRowFor(8) });
-    expect(egg(game, 2)).toEqual({ col: 1, row: zeroBasedEggRowFor(5) });
+    expect(egg(game, 0)).toEqual({ col: 0, row: 13 });
+    expect(egg(game, 1)).toEqual({ col: 0, row: 11 });
+    expect(egg(game, 2)).toEqual({ col: 1, row: 8 });
     for (const r of [0, 0.34, 0.67, 0.99]) {
       const g = play(["A", "B"], { minutes: 3, monster: true, rng: () => r });
       g.game.teams[0]!.columns = [9, 3, 12];
@@ -419,7 +414,7 @@ describe("monster", () => {
     blue!.columns = [4, 4, 5];
     yellow!.columns = [3, 3, 3];
     clock.advance(60_000);
-    expect(egg(game, 0)).toEqual({ col: 1, row: zeroBasedEggRowFor(1) });
+    expect(egg(game, 0)).toEqual({ col: 1, row: 4 });
 
     const r = byName(game, "Red1");
     red!.columns = [1, 4, 1];

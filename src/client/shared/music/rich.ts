@@ -174,8 +174,7 @@ function pluckBuffer(ctx: Ctx, period: number): AudioBuffer {
   return b;
 }
 
-// why: Returning false asks the caller to synthesize the note with the plain voice.
-export function playRich(
+export function tryPlayRich(
   ctx: Ctx,
   dest: AudioNode,
   inst: string,
@@ -387,7 +386,7 @@ function playArcade(
     // why: The seasonal arcade arrangements reuse the acoustic FM bells and brass.
     case "bell":
     case "brass":
-      return playRich(ctx, dest, inst, t, freq, noteLengthS, v, detune, "acoustic");
+      return tryPlayRich(ctx, dest, inst, t, freq, noteLengthS, v, detune, "acoustic");
     case "lead": {
       const end = t + noteLengthS + 0.2;
       const g = ctx.createGain();

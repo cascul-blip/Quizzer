@@ -1479,7 +1479,7 @@ const SHOW_CHORDS = ["D3 F3 A3", "F3 A3 C4", "C3 E3 G3", "D3 F3 A3", "G3 Bb3 D4"
 const SHOW_GUITAR_ROOTS_PER_BAR = ["D2", "F2", "C3", "D2", "G2", "D2", "A2", "D2"];
 const tremolo = (chordTok: string) => noteOnHits(chordTok, "xxxxxxxxxxxxxxxx");
 const guitarPulse = (root: string) => seq([root, 4], [".", 4], [root, 4], [".", 4]);
-// why: The whistle enters late so each loop opens on guitar alone.
+// why: The delayed whistle entrance leaves room for the guitar tremolo to establish the theme.
 const SHOW_THEME = [
   seq([".", 6], ["A5", 10]),
   seq(["G5", 6], ["F5", 6], [".", 4]),
@@ -1490,7 +1490,7 @@ const SHOW_THEME = [
   seq(["E5", 4], [".", 2], ["C#5", 4], ["A5", 6]),
   seq(["D5", 12], [".", 4]),
 ];
-// why: The first flute bar is silent so the guitar opens the loop alone.
+// why: The flute waits for the whistle's entrance so it can answer in the gaps.
 const SHOW_FLUTE = [
   rest,
   seq([".", 12], ["A5", 2], ["G5", 2]),

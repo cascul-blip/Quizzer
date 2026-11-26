@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import type { Track } from "../src/client/shared/music/engine.ts";
 import { instrumentsOf, noteFreq, renderInto, STEPS_PER_BAR, stepSeconds, stepsPerBar, tokens, usesSamples } from "../src/client/shared/music/engine.ts";
 import { SAMPLE_SETS } from "../src/client/shared/music/samples/manifest.ts";
-import { loadSamples, nearestZone, playSample, samplesReady, setSamplesEnabled, urlsFor, VOICES } from "../src/client/shared/music/samples.ts";
+import { loadSamples, nearestZone, samplesReady, setSamplesEnabled, tryPlaySample, urlsFor, VOICES } from "../src/client/shared/music/samples.ts";
 import { TRACKS } from "../src/client/shared/music/tracks.ts";
 
 const RECORDING_END_FADE_S = 0.25;
@@ -53,6 +53,8 @@ class FakeCtx {
 }
 
 const fake = () => new FakeCtx() as FakeCtx & BaseAudioContext;
+// checked: The fake graph only passes the destination to connect, which accepts and returns the fake gain node.
+const dest = (ctx: FakeCtx) => ctx.createGain() as unknown as AudioNode;
 const noBytes = () => Promise.resolve(new ArrayBuffer(8));
 const ALL = Object.keys(VOICES);
 const midiOf = (f: number) => 69 + 12 * Math.log2(f / 440);
@@ -116,14 +118,14 @@ describe("the recordings", () => {
   });
 });
 
-describe("playSample", () => {
+describe("tryPlaySample", () => {
   test("returns false (play the synth) until the recordings are decoded, then plays them", async () => {
     const ctx = fake();
-    expect(playSample(ctx, ctx.createGain() as unknown as AudioNode, "piano", 0, 440, 0.5, 1)).toBe(false);
+    expect(tryPlaySample(ctx, dest(ctx), "piano", 0, 440, 0.5, 1)).toBe(false);
     await loadSamples(ctx, ["piano"], noBytes);
     expect(samplesReady(ctx, "piano")).toBe(true);
     const before = ctx.count("source");
-    expect(playSample(ctx, ctx.createGain() as unknown as AudioNode, "piano", 0, 440, 0.5, 1)).toBe(true);
+    expect(tryPlaySample(ctx, dest(ctx), "piano", 0, 440, 0.5, 1)).toBe(true);
     expect(ctx.count("source")).toBe(before + 1);
     expect(ctx.count("osc")).toBe(0);
   });
@@ -134,7 +136,7 @@ describe("playSample", () => {
     const set = SAMPLE_SETS.strings!;
     if (!("zones" in set)) throw new Error();
     const root = set.zones[3]!.root;
-    playSample(ctx, ctx.createGain() as unknown as AudioNode, "strings", 0, 440 * 2 ** ((root + 1 - 69) / 12), 0.5, 1);
+    tryPlaySample(ctx, dest(ctx), "strings", 0, 440 * 2 ** ((root + 1 - 69) / 12), 0.5, 1);
     const src = ctx.made.findLast((n) => n.kind === "source") as unknown as { playbackRate: FakeParam };
     expect(src.playbackRate.value).toBeCloseTo(2 ** (1 / 12), 5);
   });
@@ -148,17 +150,17 @@ describe("playSample", () => {
   test("a failed download leaves the instrument on its synth voice", async () => {
     const ctx = fake();
     await loadSamples(ctx, ["flute"], () => Promise.reject(new Error("offline")));
-    expect(playSample(ctx, ctx.createGain() as unknown as AudioNode, "flute", 0, 440, 0.5, 1)).toBe(false);
+    expect(tryPlaySample(ctx, dest(ctx), "flute", 0, 440, 0.5, 1)).toBe(false);
   });
 
   test("chiptune and sound-effect voices have no recordings; ?music=synth turns them all off", async () => {
     const ctx = fake();
     await loadSamples(ctx, ALL, noBytes);
     for (const inst of ["pulse", "lead", "chipnoise", "sonar", "bubble", "heart", "tick", "whistle"])
-      expect(playSample(ctx, ctx.createGain() as unknown as AudioNode, inst, 0, 440, 0.5, 1)).toBe(false);
+      expect(tryPlaySample(ctx, dest(ctx), inst, 0, 440, 0.5, 1)).toBe(false);
     setSamplesEnabled(false);
     try {
-      expect(playSample(ctx, ctx.createGain() as unknown as AudioNode, "piano", 0, 440, 0.5, 1)).toBe(false);
+      expect(tryPlaySample(ctx, dest(ctx), "piano", 0, 440, 0.5, 1)).toBe(false);
     } finally {
       setSamplesEnabled(true);
     }

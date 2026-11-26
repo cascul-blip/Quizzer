@@ -2,8 +2,8 @@
 // Drums also accept x for a hit and o for an accent.
 
 import type { Echo, RichBus, RichStyle } from "./rich.ts";
-import { createEcho, createRichBus, humanize, panFor, playRich, richStyle, STRUM_S } from "./rich.ts";
-import { loadSamples, playSample } from "./samples.ts";
+import { createEcho, createRichBus, humanize, panFor, richStyle, STRUM_S, tryPlayRich } from "./rich.ts";
+import { loadSamples, tryPlaySample } from "./samples.ts";
 
 type Instrument =
   | "kick"
@@ -548,8 +548,8 @@ export function scheduleStep(ctx: Ctx, dest: AudioNode, track: Track, step: numb
     if (DRUMS.has(layer.inst)) {
       const pitchHz = noteFreq(tok) ?? 0;
       const accent = tok === "o";
-      if (sampled && playSample(ctx, out, layer.inst, at, pitchHz, dur, vol, detune, accent)) return;
-      if (!(style && playRich(ctx, out, layer.inst, at, pitchHz, dur, vol, detune, style, accent)))
+      if (sampled && tryPlaySample(ctx, out, layer.inst, at, pitchHz, dur, vol, detune, accent)) return;
+      if (!(style && tryPlayRich(ctx, out, layer.inst, at, pitchHz, dur, vol, detune, style, accent)))
         playInstrument(ctx, out, layer.inst, at, pitchHz, dur, vol, accent);
       return;
     }
@@ -560,9 +560,9 @@ export function scheduleStep(ctx: Ctx, dest: AudioNode, track: Track, step: numb
       if (!f) return;
       const noteLengthS = held * dur * 0.95;
       const start = style && layer.inst === "pluck" ? at + i * STRUM_S : at;
-      if (sampled && playSample(ctx, out, layer.inst, start, f, noteLengthS, vol, detune)) return;
+      if (sampled && tryPlaySample(ctx, out, layer.inst, start, f, noteLengthS, vol, detune)) return;
       if (!style) return playInstrument(ctx, out, layer.inst, at, f, noteLengthS, vol);
-      if (!playRich(ctx, out, layer.inst, start, f, noteLengthS, vol, detune, style)) playInstrument(ctx, out, layer.inst, start, f, noteLengthS, vol);
+      if (!tryPlayRich(ctx, out, layer.inst, start, f, noteLengthS, vol, detune, style)) playInstrument(ctx, out, layer.inst, start, f, noteLengthS, vol);
     });
   });
 }
@@ -638,7 +638,6 @@ export class MusicPlayer {
     this.rampMs = rampMs || DEFAULT_INTENSITY_RAMP_MS;
   }
 
-  // why: Repeated calls with the same ID leave playback in place.
   play(id: string | null): void {
     this.wantedId = id;
     this.timer ??= setInterval(() => this.tick(), TICK_MS);

@@ -12,7 +12,7 @@ import {
   SIEGE_LANES,
   SIEGE_LEAP_MS,
   SIEGE_MAP_DOTS_MS,
-  SIEGE_MONSTER_ODDS,
+  SIEGE_MONSTER_WEIGHTS,
   SIEGE_MONSTERS,
   SIEGE_SHOTS_SHOWN,
   SIEGE_SQUARES,
@@ -171,11 +171,11 @@ export class SiegeBattlefield<O> {
     let left = budget;
     while (left >= 1) {
       const options = allowed.filter((t) => SIEGE_MONSTERS[t].cost <= left);
-      const total = options.reduce((n, t) => n + SIEGE_MONSTER_ODDS[t], 0);
+      const total = options.reduce((n, t) => n + SIEGE_MONSTER_WEIGHTS[t], 0);
       let r = this.rng() * total;
       let type = options[options.length - 1]!;
       for (const t of options) {
-        r -= SIEGE_MONSTER_ODDS[t];
+        r -= SIEGE_MONSTER_WEIGHTS[t];
         if (r < 0) {
           type = t;
           break;
@@ -491,7 +491,6 @@ export class SiegeBattlefield<O> {
     return d;
   }
 
-  /** why: upgrading preserves damage already taken. */
   upgrade(d: SiegeDefender<O>): void {
     if (siegeUpgradeCost(d.type, d.level) === null) return;
     const stats = SIEGE_DEFENDERS[d.type];

@@ -29,7 +29,7 @@ A game mode that can be shown in a seasonal theme (classic or Christmas). Its de
 _Avoid_: skinned mode, seasonal mode
 
 **Sting**:
-A short music track that plays once over the background music. Showdown plays a sting on a draw.
+A short music track that plays once over the background music. Showdown plays a sting during its classic reveal.
 
 **Results sheet**:
 What a finished game saves for the host as a spreadsheet: one row per player in the game mode's order, under the columns the mode declares, and optionally a free-form appendix such as Kingdom Siege's wave log. Every row has one cell per column.
@@ -136,4 +136,4 @@ _Avoid_: reveal opportunity
 
 **Thorns** is the damage a Kingdom Siege defender deals back to a monster that hits it.
 
-**Wave budget** is the allowance Kingdom Siege spends to pick ordinary monsters for a wave. Giants arrive separately. Class size and answer accuracy affect the allowance. The board’s defense value can then boost the allowance and the monsters’ toughness.
+**Wave budget** is the allowance Kingdom Siege spends to pick ordinary monsters for a wave. Giants arrive separately. Class size and answer accuracy affect the allowance. The battlefield’s defense value can then boost the allowance and the monsters’ toughness.

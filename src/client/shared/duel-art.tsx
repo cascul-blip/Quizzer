@@ -88,10 +88,10 @@ export const RIGHT_FACING_REVOLVER_TIP_FIRE_PCT = {
 export const DUEL_MUZZLE = RIGHT_FACING_REVOLVER_TIP_FIRE_PCT;
 
 export const DUEL_HEAD = Object.fromEntries(
-  Object.entries(RIGHT_FACING_POSE_HEAD_TRIMMED_PCT).map(([pose, h]) => [
-    pose,
-    { x: round2(trimmedPctToCanvasX(h.x)), y: round2(trimmedPctToCanvasY(h.y)), r: round2(trimmedPctToCanvasH(h.r)) },
-  ]),
+  Object.entries(RIGHT_FACING_POSE_HEAD_TRIMMED_PCT).map(([pose, { x: centerXPct, y: centerYPct, r: radiusPctOfTrimmedHeight }]) => {
+    const radiusPctOfCanvasHeight = round2(trimmedPctToCanvasH(radiusPctOfTrimmedHeight));
+    return [pose, { x: round2(trimmedPctToCanvasX(centerXPct)), y: round2(trimmedPctToCanvasY(centerYPct)), r: radiusPctOfCanvasHeight }];
+  }),
 ) as Record<DuelPose, { x: number; y: number; r: number }>;
 
 const mirrorX = (x: number, facing: DuelFacing) => (facing === "left" ? 100 - x : x);

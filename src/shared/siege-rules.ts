@@ -103,7 +103,7 @@ export function siegeMaxEntering(wave: number): number {
 
 export const SIEGE_STOMP_SPLASH = 2;
 export const SIEGE_LEAP_MS = 700;
-export const SIEGE_MONSTER_ODDS: Record<Exclude<SiegeMonsterType, "giant">, number> = { goblin: 5, wolf: 3, troll: 2 };
+export const SIEGE_MONSTER_WEIGHTS: Record<Exclude<SiegeMonsterType, "giant">, number> = { goblin: 5, wolf: 3, troll: 2 };
 
 export function siegeBaseBudget(wave: number): number {
   const w = Math.max(1, Math.floor(wave));

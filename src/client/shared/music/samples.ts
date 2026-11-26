@@ -111,8 +111,7 @@ export function nearestZone(zones: Zone[], midi: number): Zone {
 
 const midiOf = (freq: number) => 69 + 12 * Math.log2(freq / 440);
 
-// why: Returning false asks the caller to synthesize the note while samples are disabled, absent, or loading.
-export function playSample(ctx: Ctx, dest: AudioNode, inst: string, t: number, freq: number, len: number, vol: number, detune = 0, accent = false): boolean {
+export function tryPlaySample(ctx: Ctx, dest: AudioNode, inst: string, t: number, freq: number, len: number, vol: number, detune = 0, accent = false): boolean {
   const voice = VOICES[inst];
   const set = setOf(inst);
   if (!enabled || !voice || !set || !samplesReady(ctx, inst)) return false;

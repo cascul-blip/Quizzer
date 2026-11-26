@@ -54,7 +54,6 @@ export interface HostSiegeMonster {
   lane: number;
   /** why: The projector places a monster at the wall face at 0.5, between the castle and the center of square 1. */
   x: number;
-  /** why: moveRemainingMs 0 means standing still. */
   toX: number;
   moveRemainingMs: number;
   state: "wait" | "walk" | "attack" | "leap";
@@ -91,7 +90,6 @@ export interface HostSiegeState {
   phase: SiegePhase;
   quiz: { id: string; title: string; questionCount: number };
   settings: SiegeSettings;
-  /** why: the next wave during a build break; 0 before the countdown ends. */
   wave: number;
   gold: number;
   hearts: number;
@@ -120,7 +118,6 @@ export interface HostSiegeState {
 
 export interface SiegeMapView {
   defenders: { lane: number; square: number; type: SiegeDefenderType; level: number }[];
-  /** why: The server refreshes map dots at a lower rate than the battlefield ticks. */
   monsters: { lane: number; square: number }[];
 }
 
