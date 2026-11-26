@@ -1,0 +1,758 @@
+{
+  "id": "bible-trivia-seasoned-readers-d3td",
+  "title": "Bible Trivia: Seasoned Readers",
+  "description": "50 challenging Bible trivia questions for long-time readers, from a traditional Protestant perspective.",
+  "createdAt": "2026-11-26T16:16:15.240Z",
+  "updatedAt": "2026-11-26T16:18:28.881Z",
+  "settings": {
+    "shuffleQuestions": true,
+    "shuffleAnswers": true
+  },
+  "questions": [
+    {
+      "id": "q8usgb",
+      "type": "text",
+      "text": "Who is the oldest man recorded in the Bible, living 969 years?",
+      "timeLimitSec": 30,
+      "options": [
+        "Methuselah"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qyfsv7",
+      "type": "multiple_choice",
+      "text": "Who was the father of Methuselah, who \"walked with God\" and was taken?",
+      "timeLimitSec": 25,
+      "options": [
+        "Enoch",
+        "Lamech",
+        "Seth",
+        "Jared"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qas212",
+      "type": "multiple_choice",
+      "text": "Melchizedek was king of which city?",
+      "timeLimitSec": 25,
+      "options": [
+        "Salem",
+        "Hebron",
+        "Ur",
+        "Sodom"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qeuibh",
+      "type": "multiple_choice",
+      "text": "Before Isaac's birth, who did Abraham name as his heir?",
+      "timeLimitSec": 25,
+      "options": [
+        "Eliezer of Damascus",
+        "Lot",
+        "Ishmael",
+        "Laban"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q9af6c",
+      "type": "multiple_choice",
+      "text": "Jacob named the place where he wrestled with God…",
+      "timeLimitSec": 25,
+      "options": [
+        "Peniel",
+        "Bethel",
+        "Mahanaim",
+        "Shechem"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qnprcw",
+      "type": "multiple_choice",
+      "text": "Which two sons of Aaron died for offering unauthorized fire?",
+      "timeLimitSec": 25,
+      "options": [
+        "Nadab and Abihu",
+        "Eleazar and Ithamar",
+        "Hophni and Phinehas",
+        "Korah and Dathan"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qqwm6x",
+      "type": "multiple_choice",
+      "text": "Who was the Spirit-filled chief craftsman of the tabernacle?",
+      "timeLimitSec": 25,
+      "options": [
+        "Bezalel",
+        "Oholiab",
+        "Hur",
+        "Caleb"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qdkgq8",
+      "type": "multiple_choice",
+      "text": "Which tribe received no territorial inheritance in Canaan?",
+      "timeLimitSec": 25,
+      "options": [
+        "Levi",
+        "Dan",
+        "Simeon",
+        "Benjamin"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qxy12j",
+      "type": "multiple_choice",
+      "text": "Whose donkey spoke to him on the road?",
+      "timeLimitSec": 25,
+      "options": [
+        "Balaam",
+        "Balak",
+        "Gideon",
+        "Saul"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q7tcb6",
+      "type": "multiple_choice",
+      "text": "Whose theft at Jericho caused Israel's defeat at Ai?",
+      "timeLimitSec": 25,
+      "options": [
+        "Achan",
+        "Gehazi",
+        "Korah",
+        "Ahithophel"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q37ktn",
+      "type": "multiple_choice",
+      "text": "Which left-handed judge killed King Eglon of Moab?",
+      "timeLimitSec": 25,
+      "options": [
+        "Ehud",
+        "Othniel",
+        "Shamgar",
+        "Tola"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qyn2b3",
+      "type": "multiple_choice",
+      "text": "Who killed Sisera with a tent peg?",
+      "timeLimitSec": 25,
+      "options": [
+        "Jael",
+        "Deborah",
+        "Delilah",
+        "Abigail"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qlo0bn",
+      "type": "multiple_choice",
+      "text": "Which judge made a rash vow concerning his daughter?",
+      "timeLimitSec": 25,
+      "options": [
+        "Jephthah",
+        "Gideon",
+        "Samson",
+        "Ibzan"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q35oif",
+      "type": "multiple_choice",
+      "text": "According to Matthew 1, who was Boaz's mother?",
+      "timeLimitSec": 25,
+      "options": [
+        "Rahab",
+        "Ruth",
+        "Tamar",
+        "Naomi"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qt6feg",
+      "type": "multiple_choice",
+      "text": "Naomi told the women of Bethlehem to call her…",
+      "timeLimitSec": 25,
+      "options": [
+        "Mara",
+        "Orpah",
+        "Hannah",
+        "Peninnah"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q4e97a",
+      "type": "multiple_choice",
+      "text": "Which of Jonathan's sons was lame in both feet?",
+      "timeLimitSec": 25,
+      "options": [
+        "Mephibosheth",
+        "Ish-bosheth",
+        "Abner",
+        "Ziba"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q7r6qa",
+      "type": "multiple_choice",
+      "text": "Which prophet confronted David with the story of the poor man's lamb?",
+      "timeLimitSec": 25,
+      "options": [
+        "Nathan",
+        "Gad",
+        "Samuel",
+        "Ahijah"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qlg646",
+      "type": "multiple_choice",
+      "text": "How many years did Solomon take to build the temple?",
+      "timeLimitSec": 25,
+      "options": [
+        "Seven",
+        "Thirteen",
+        "Forty",
+        "Three"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qn2hcq",
+      "type": "multiple_choice",
+      "text": "Who was the first king of the northern kingdom of Israel?",
+      "timeLimitSec": 25,
+      "options": [
+        "Jeroboam",
+        "Rehoboam",
+        "Omri",
+        "Ahab"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q1uipn",
+      "type": "multiple_choice",
+      "text": "How many times did Naaman dip in the Jordan?",
+      "timeLimitSec": 25,
+      "options": [
+        "Seven",
+        "Three",
+        "Twelve",
+        "Once"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qxgir2",
+      "type": "multiple_choice",
+      "text": "How many years did God add to Hezekiah's life?",
+      "timeLimitSec": 25,
+      "options": [
+        "Fifteen",
+        "Ten",
+        "Seven",
+        "Forty"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qwmve2",
+      "type": "multiple_choice",
+      "text": "Which king began to reign at age eight and later found the Book of the Law?",
+      "timeLimitSec": 25,
+      "options": [
+        "Josiah",
+        "Joash",
+        "Uzziah",
+        "Manasseh"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q63f3h",
+      "type": "multiple_choice",
+      "text": "Which book of the Bible never directly mentions God by name?",
+      "timeLimitSec": 25,
+      "options": [
+        "Esther",
+        "Ruth",
+        "Nahum",
+        "Obadiah"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qkordp",
+      "type": "multiple_choice",
+      "text": "Which was NOT one of Job's three friends?",
+      "timeLimitSec": 25,
+      "options": [
+        "Elihu",
+        "Eliphaz",
+        "Bildad",
+        "Zophar"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q64e36",
+      "type": "multiple_choice",
+      "text": "What is the shortest chapter in the Bible?",
+      "timeLimitSec": 25,
+      "options": [
+        "Psalm 117",
+        "Psalm 23",
+        "Jude 1",
+        "Obadiah 1"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qxlq6y",
+      "type": "multiple_choice",
+      "text": "Which prophet was told to marry Gomer?",
+      "timeLimitSec": 25,
+      "options": [
+        "Hosea",
+        "Amos",
+        "Joel",
+        "Micah"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qgjaxw",
+      "type": "multiple_choice",
+      "text": "Which prophet foretold the Messiah would be born in Bethlehem?",
+      "timeLimitSec": 25,
+      "options": [
+        "Micah",
+        "Isaiah",
+        "Zechariah",
+        "Haggai"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qhzne7",
+      "type": "multiple_choice",
+      "text": "To which city did Jonah first try to flee?",
+      "timeLimitSec": 25,
+      "options": [
+        "Tarshish",
+        "Joppa",
+        "Tyre",
+        "Damascus"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qcad85",
+      "type": "multiple_choice",
+      "text": "What was Daniel's Babylonian name?",
+      "timeLimitSec": 25,
+      "options": [
+        "Belteshazzar",
+        "Belshazzar",
+        "Abednego",
+        "Nebuzaradan"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "ql7f0h",
+      "type": "text",
+      "text": "At Belshazzar's feast, the writing said \"Mene, Mene, Tekel, ___\". Fill in the blank.",
+      "timeLimitSec": 30,
+      "options": [
+        "Upharsin",
+        "Parsin",
+        "Peres"
+      ],
+      "correct": [
+        0,
+        1,
+        2
+      ]
+    },
+    {
+      "id": "qh4khb",
+      "type": "multiple_choice",
+      "text": "Which elderly prophetess praised God over baby Jesus at the temple?",
+      "timeLimitSec": 25,
+      "options": [
+        "Anna",
+        "Elizabeth",
+        "Huldah",
+        "Phoebe"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q3twwc",
+      "type": "multiple_choice",
+      "text": "What was the name of John the Baptist's father?",
+      "timeLimitSec": 25,
+      "options": [
+        "Zechariah",
+        "Simeon",
+        "Joseph",
+        "Eli"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qsda50",
+      "type": "multiple_choice",
+      "text": "Matthew the tax collector is also called…",
+      "timeLimitSec": 25,
+      "options": [
+        "Levi",
+        "Thaddeus",
+        "Nathanael",
+        "Didymus"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qlowkw",
+      "type": "multiple_choice",
+      "text": "On the cross, \"My God, my God, why have you forsaken me?\" quotes which psalm?",
+      "timeLimitSec": 25,
+      "options": [
+        "Psalm 22",
+        "Psalm 51",
+        "Psalm 69",
+        "Psalm 110"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qydli6",
+      "type": "multiple_choice",
+      "text": "Who walked with the risen Jesus on the road to Emmaus?",
+      "timeLimitSec": 25,
+      "options": [
+        "Cleopas",
+        "Nicodemus",
+        "Joseph of Arimathea",
+        "Matthias"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q8edbt",
+      "type": "multiple_choice",
+      "text": "Who replaced Judas among the Twelve?",
+      "timeLimitSec": 25,
+      "options": [
+        "Matthias",
+        "Barsabbas",
+        "Barnabas",
+        "Silas"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qbm4vi",
+      "type": "multiple_choice",
+      "text": "Which passage was the Ethiopian eunuch reading when Philip met him?",
+      "timeLimitSec": 25,
+      "options": [
+        "Isaiah 53",
+        "Psalm 22",
+        "Genesis 3",
+        "Daniel 7"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qbv3md",
+      "type": "multiple_choice",
+      "text": "Peter raised Tabitha from the dead. What was her Greek name?",
+      "timeLimitSec": 25,
+      "options": [
+        "Dorcas",
+        "Lydia",
+        "Priscilla",
+        "Chloe"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qocmf2",
+      "type": "multiple_choice",
+      "text": "Which young man fell from a window during Paul's long sermon?",
+      "timeLimitSec": 25,
+      "options": [
+        "Eutychus",
+        "Tychicus",
+        "Trophimus",
+        "Epaphras"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qk32in",
+      "type": "multiple_choice",
+      "text": "Lydia, a seller of purple, was from which city?",
+      "timeLimitSec": 25,
+      "options": [
+        "Thyatira",
+        "Philippi",
+        "Corinth",
+        "Berea"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qe3snl",
+      "type": "multiple_choice",
+      "text": "Paul was shipwrecked on which island?",
+      "timeLimitSec": 25,
+      "options": [
+        "Malta",
+        "Cyprus",
+        "Crete",
+        "Patmos"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q3oayi",
+      "type": "text",
+      "text": "What was the name of the runaway slave Paul sent back to Philemon?",
+      "timeLimitSec": 30,
+      "options": [
+        "Onesimus"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qwjty5",
+      "type": "multiple_choice",
+      "text": "Which of these was NOT one of the seven churches in Revelation?",
+      "timeLimitSec": 25,
+      "options": [
+        "Corinth",
+        "Smyrna",
+        "Sardis",
+        "Laodicea"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qp2i5t",
+      "type": "multiple_choice",
+      "text": "Which church in Revelation was rebuked for being lukewarm?",
+      "timeLimitSec": 25,
+      "options": [
+        "Laodicea",
+        "Ephesus",
+        "Pergamum",
+        "Philadelphia"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qrf0f5",
+      "type": "multiple_choice",
+      "text": "Which verse does Paul quote in Romans 4 to show Abraham was justified by faith?",
+      "timeLimitSec": 25,
+      "options": [
+        "Genesis 15:6",
+        "Genesis 12:1",
+        "Genesis 22:8",
+        "Habakkuk 2:4"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qrp8cr",
+      "type": "multiple_choice",
+      "text": "In Protestant theology, justification means God…",
+      "timeLimitSec": 25,
+      "options": [
+        "Declares the sinner righteous in Christ",
+        "Makes us gradually holy",
+        "Rewards our good works",
+        "Removes our sin nature"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q214mi",
+      "type": "multiple_choice",
+      "text": "Which of these is NOT one of the five solas of the Reformation?",
+      "timeLimitSec": 25,
+      "options": [
+        "Sola ecclesia",
+        "Sola gratia",
+        "Solus Christus",
+        "Soli Deo gloria"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qqcew4",
+      "type": "multiple_choice",
+      "text": "Per the Westminster Shorter Catechism, man's chief end is to glorify God and…",
+      "timeLimitSec": 25,
+      "options": [
+        "Enjoy Him forever",
+        "Obey His law",
+        "Serve His church",
+        "Spread His word"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qd0xir",
+      "type": "multiple_choice",
+      "text": "Who translated the New Testament into English from Greek and was martyred in 1536?",
+      "timeLimitSec": 25,
+      "options": [
+        "William Tyndale",
+        "John Wycliffe",
+        "Thomas Cranmer",
+        "John Knox"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q0meeq",
+      "type": "multiple_choice",
+      "text": "At which assembly did Luther reportedly say \"Here I stand\"?",
+      "timeLimitSec": 25,
+      "options": [
+        "Diet of Worms",
+        "Council of Trent",
+        "Diet of Augsburg",
+        "Synod of Dort"
+      ],
+      "correct": [
+        0
+      ]
+    }
+  ]
+}

@@ -1,0 +1,755 @@
+{
+  "id": "teen-bible-trivia-3cua",
+  "title": "Teen Bible Trivia",
+  "description": "50 Bible trivia questions for teenagers, from a traditional Protestant perspective.",
+  "createdAt": "2026-11-26T16:13:15.867Z",
+  "updatedAt": "2026-11-26T16:14:18.124Z",
+  "settings": {
+    "shuffleQuestions": true,
+    "shuffleAnswers": true
+  },
+  "questions": [
+    {
+      "id": "qo4lhl",
+      "type": "multiple_choice",
+      "text": "How many books are in the Protestant Bible?",
+      "timeLimitSec": 20,
+      "options": [
+        "66",
+        "73",
+        "39",
+        "27"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qs6ihi",
+      "type": "multiple_choice",
+      "text": "How many books are in the New Testament?",
+      "timeLimitSec": 20,
+      "options": [
+        "27",
+        "39",
+        "12",
+        "22"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qs6kxj",
+      "type": "multiple_choice",
+      "text": "Which book comes right after the four Gospels?",
+      "timeLimitSec": 20,
+      "options": [
+        "Acts",
+        "Romans",
+        "Revelation",
+        "Hebrews"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qphghf",
+      "type": "multiple_choice",
+      "text": "Which Gospel writer was a doctor?",
+      "timeLimitSec": 20,
+      "options": [
+        "Luke",
+        "Mark",
+        "Matthew",
+        "John"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qr7i4q",
+      "type": "multiple_choice",
+      "text": "Who wrote most of the Psalms?",
+      "timeLimitSec": 20,
+      "options": [
+        "David",
+        "Solomon",
+        "Moses",
+        "Asaph"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q8ln3m",
+      "type": "multiple_choice",
+      "text": "Who wrote the most New Testament letters?",
+      "timeLimitSec": 20,
+      "options": [
+        "Paul",
+        "Peter",
+        "John",
+        "James"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qs6f38",
+      "type": "multiple_choice",
+      "text": "What does \"gospel\" mean?",
+      "timeLimitSec": 20,
+      "options": [
+        "Good news",
+        "Holy book",
+        "Life story",
+        "Sacred law"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qco6r2",
+      "type": "multiple_choice",
+      "text": "Who sold his birthright to his brother for a bowl of stew?",
+      "timeLimitSec": 20,
+      "options": [
+        "Esau",
+        "Jacob",
+        "Reuben",
+        "Ishmael"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q38vd3",
+      "type": "multiple_choice",
+      "text": "God renamed Jacob as…",
+      "timeLimitSec": 20,
+      "options": [
+        "Israel",
+        "Judah",
+        "Abraham",
+        "Benjamin"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qxagqb",
+      "type": "multiple_choice",
+      "text": "Joseph's brothers sold him into slavery in which country?",
+      "timeLimitSec": 20,
+      "options": [
+        "Egypt",
+        "Babylon",
+        "Assyria",
+        "Canaan"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q8q3we",
+      "type": "multiple_choice",
+      "text": "What was the final plague on Egypt?",
+      "timeLimitSec": 20,
+      "options": [
+        "Death of the firstborn",
+        "Locusts",
+        "Darkness",
+        "Frogs"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qp2eg1",
+      "type": "multiple_choice",
+      "text": "The Passover lamb pointed ahead to whom?",
+      "timeLimitSec": 20,
+      "options": [
+        "Jesus",
+        "Moses",
+        "Aaron",
+        "David"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q6mr0c",
+      "type": "multiple_choice",
+      "text": "Which mountain did Moses receive the Ten Commandments on?",
+      "timeLimitSec": 20,
+      "options": [
+        "Sinai",
+        "Carmel",
+        "Zion",
+        "Ararat"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qghdv9",
+      "type": "multiple_choice",
+      "text": "Who was the only female judge of Israel named in Judges?",
+      "timeLimitSec": 20,
+      "options": [
+        "Deborah",
+        "Ruth",
+        "Miriam",
+        "Jael"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q92z5a",
+      "type": "multiple_choice",
+      "text": "Gideon defeated the Midianites with how many men?",
+      "timeLimitSec": 20,
+      "options": [
+        "300",
+        "3,000",
+        "12",
+        "40,000"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qltjth",
+      "type": "multiple_choice",
+      "text": "Ruth was from which nation?",
+      "timeLimitSec": 20,
+      "options": [
+        "Moab",
+        "Edom",
+        "Philistia",
+        "Egypt"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qsjfxk",
+      "type": "multiple_choice",
+      "text": "Ruth became the great-grandmother of…",
+      "timeLimitSec": 20,
+      "options": [
+        "King David",
+        "King Saul",
+        "Samuel",
+        "Solomon"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qthkda",
+      "type": "multiple_choice",
+      "text": "Who was Israel's first king?",
+      "timeLimitSec": 20,
+      "options": [
+        "Saul",
+        "David",
+        "Samuel",
+        "Solomon"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qb00op",
+      "type": "multiple_choice",
+      "text": "Which prophet called down fire from heaven on Mount Carmel?",
+      "timeLimitSec": 20,
+      "options": [
+        "Elijah",
+        "Elisha",
+        "Isaiah",
+        "Jeremiah"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q8rsow",
+      "type": "multiple_choice",
+      "text": "Elijah was taken to heaven in a…",
+      "timeLimitSec": 20,
+      "options": [
+        "Whirlwind",
+        "Pillar of cloud",
+        "Dream",
+        "Boat"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qagars",
+      "type": "multiple_choice",
+      "text": "Which prophet foretold a virgin would bear a son called Immanuel?",
+      "timeLimitSec": 20,
+      "options": [
+        "Isaiah",
+        "Jeremiah",
+        "Ezekiel",
+        "Malachi"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q6fusz",
+      "type": "multiple_choice",
+      "text": "What does \"Immanuel\" mean?",
+      "timeLimitSec": 20,
+      "options": [
+        "God with us",
+        "Prince of peace",
+        "Savior",
+        "Holy one"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qpfc2o",
+      "type": "multiple_choice",
+      "text": "Who refused to bow to Nebuchadnezzar's golden statue?",
+      "timeLimitSec": 20,
+      "options": [
+        "Shadrach, Meshach and Abednego",
+        "Daniel and Ezra",
+        "Peter, James and John",
+        "Nehemiah and Ezra"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q41hau",
+      "type": "multiple_choice",
+      "text": "Who led the rebuilding of Jerusalem's walls?",
+      "timeLimitSec": 20,
+      "options": [
+        "Nehemiah",
+        "Ezra",
+        "Zerubbabel",
+        "Haggai"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q2bzvp",
+      "type": "multiple_choice",
+      "text": "What is the last book of the Old Testament?",
+      "timeLimitSec": 20,
+      "options": [
+        "Malachi",
+        "Zechariah",
+        "Revelation",
+        "Daniel"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qr4aoc",
+      "type": "multiple_choice",
+      "text": "In Jesus' temptation, how did He answer Satan each time?",
+      "timeLimitSec": 20,
+      "options": [
+        "By quoting Scripture",
+        "By staying silent",
+        "By performing miracles",
+        "By calling angels"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q3eip1",
+      "type": "multiple_choice",
+      "text": "What was Jesus' first recorded miracle?",
+      "timeLimitSec": 20,
+      "options": [
+        "Water into wine at Cana",
+        "Healing a blind man",
+        "Raising Lazarus",
+        "Calming the storm"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q6mmjc",
+      "type": "multiple_choice",
+      "text": "Who came to Jesus at night and was told \"You must be born again\"?",
+      "timeLimitSec": 20,
+      "options": [
+        "Nicodemus",
+        "Zacchaeus",
+        "Joseph of Arimathea",
+        "Lazarus"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qpcw0y",
+      "type": "multiple_choice",
+      "text": "Which friend of Jesus was raised after four days in the tomb?",
+      "timeLimitSec": 20,
+      "options": [
+        "Lazarus",
+        "Jairus",
+        "Bartimaeus",
+        "Thomas"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q9zigm",
+      "type": "multiple_choice",
+      "text": "In the parable of the prodigal son, who represents God?",
+      "timeLimitSec": 20,
+      "options": [
+        "The father",
+        "The older brother",
+        "The younger son",
+        "The servant"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qszzaw",
+      "type": "multiple_choice",
+      "text": "Jesus said \"I am the way, the truth, and the…\"",
+      "timeLimitSec": 20,
+      "options": [
+        "Life",
+        "Light",
+        "Door",
+        "Vine"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qw2ibk",
+      "type": "multiple_choice",
+      "text": "How many times did Peter deny Jesus?",
+      "timeLimitSec": 20,
+      "options": [
+        "Three",
+        "Once",
+        "Seven",
+        "Twelve"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qzxdrm",
+      "type": "multiple_choice",
+      "text": "Which Roman governor sentenced Jesus to be crucified?",
+      "timeLimitSec": 20,
+      "options": [
+        "Pontius Pilate",
+        "Herod",
+        "Caesar Augustus",
+        "Felix"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qhhdrr",
+      "type": "multiple_choice",
+      "text": "Who was the first to see the risen Jesus?",
+      "timeLimitSec": 20,
+      "options": [
+        "Mary Magdalene",
+        "Peter",
+        "John",
+        "Thomas"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qbs4tf",
+      "type": "multiple_choice",
+      "text": "Which disciple doubted until he saw Jesus' wounds?",
+      "timeLimitSec": 20,
+      "options": [
+        "Thomas",
+        "Philip",
+        "Andrew",
+        "Bartholomew"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q5mlep",
+      "type": "multiple_choice",
+      "text": "What happened on the day of Pentecost?",
+      "timeLimitSec": 20,
+      "options": [
+        "The Holy Spirit came",
+        "Jesus was born",
+        "Jesus ascended",
+        "The temple fell"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qnyhyn",
+      "type": "multiple_choice",
+      "text": "Who was the first Christian martyr?",
+      "timeLimitSec": 20,
+      "options": [
+        "Stephen",
+        "James",
+        "Paul",
+        "Peter"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qz60gp",
+      "type": "multiple_choice",
+      "text": "Paul was converted on the road to…",
+      "timeLimitSec": 20,
+      "options": [
+        "Damascus",
+        "Emmaus",
+        "Jericho",
+        "Rome"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "ql86q2",
+      "type": "multiple_choice",
+      "text": "\"For all have sinned and fall short of the glory of God\" is from which book?",
+      "timeLimitSec": 20,
+      "options": [
+        "Romans",
+        "Genesis",
+        "John",
+        "James"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q17h6u",
+      "type": "multiple_choice",
+      "text": "Ephesians 2:8–9 says we are saved by grace through…",
+      "timeLimitSec": 20,
+      "options": [
+        "Faith",
+        "Works",
+        "Baptism",
+        "Obedience"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qtz20s",
+      "type": "multiple_choice",
+      "text": "What are the three persons of the Trinity?",
+      "timeLimitSec": 20,
+      "options": [
+        "Father, Son, Holy Spirit",
+        "Father, Mary, Son",
+        "God, angels, prophets",
+        "Moses, Elijah, Jesus"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qcxltc",
+      "type": "true_false",
+      "text": "Jesus is fully God and fully man.",
+      "timeLimitSec": 15,
+      "options": [
+        "True",
+        "False"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qwj4g9",
+      "type": "true_false",
+      "text": "Scripture alone is the final authority for Christian faith and life.",
+      "timeLimitSec": 15,
+      "options": [
+        "True",
+        "False"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qun2j1",
+      "type": "true_false",
+      "text": "Christians need a priest to approve their prayers to God.",
+      "timeLimitSec": 15,
+      "options": [
+        "True",
+        "False"
+      ],
+      "correct": [
+        1
+      ]
+    },
+    {
+      "id": "qaoc95",
+      "type": "multiple_choice",
+      "text": "Who nailed the 95 Theses to the church door in 1517?",
+      "timeLimitSec": 20,
+      "options": [
+        "Martin Luther",
+        "John Calvin",
+        "John Wesley",
+        "William Tyndale"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "q621nt",
+      "type": "multiple_choice",
+      "text": "\"Sola fide\" means salvation is by…",
+      "timeLimitSec": 20,
+      "options": [
+        "Faith alone",
+        "Scripture alone",
+        "Grace alone",
+        "Christ alone"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qqlcv8",
+      "type": "multiple_choice",
+      "text": "Which fruit of the Spirit is listed first in Galatians 5?",
+      "timeLimitSec": 20,
+      "options": [
+        "Love",
+        "Joy",
+        "Peace",
+        "Patience"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qw6no7",
+      "type": "multiple_choice",
+      "text": "Jesus said the greatest commandment is to love…",
+      "timeLimitSec": 20,
+      "options": [
+        "God with all your heart",
+        "Your neighbor",
+        "Your enemies",
+        "Yourself"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qw43xe",
+      "type": "true_false",
+      "text": "The Bible teaches that Jesus will return.",
+      "timeLimitSec": 15,
+      "options": [
+        "True",
+        "False"
+      ],
+      "correct": [
+        0
+      ]
+    },
+    {
+      "id": "qzz87i",
+      "type": "multiple_choice",
+      "text": "What is the last book of the Bible?",
+      "timeLimitSec": 20,
+      "options": [
+        "Revelation",
+        "Jude",
+        "Malachi",
+        "Acts"
+      ],
+      "correct": [
+        0
+      ]
+    }
+  ]
+}
