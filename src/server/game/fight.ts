@@ -44,7 +44,6 @@ const FIGHT_AWARD_VALUES: Record<FightAwardKey, (p: FightPlayer) => number> = {
 };
 /** why: choices sent right at the deadline are still accepted this long after it. */
 export const DECISION_GRACE_MS = 500;
-/** why: the thrower sees the result this long before questions come back. */
 export const RESULT_MS = 1500;
 /** why: the destroyed tower's collapse plays this long before the podium. */
 export const COLLAPSE_MS = 3500;
@@ -64,7 +63,6 @@ export interface FightPlayer extends BasePlayer, AnswerTotals {
   team: number;
   towardDecision: number;
   state: FightState;
-  /** why: aiming has no time limit; only the attack-or-rebuild choice does. */
   deadline: number;
   shots: number;
   hits: number;
@@ -89,11 +87,9 @@ interface FightOptions {
 
 interface FightGameSettings extends FightSettings {
   shuffleAnswers: boolean;
-  /** why: the lobby's "Protect from abuse": longer waits for wrong answers in a row. */
   protect?: boolean;
 }
 
-/** why: every 4 correct answers a player attacks the enemy tower or repairs their own. */
 export class FightGame {
   readonly runningMode = "fight" as const;
   readonly quizId: string;
@@ -143,7 +139,6 @@ export class FightGame {
     return this.session.choices;
   }
 
-  /** why: keeps ids and tokens; split Red/Blue as shown in the lobby. */
   static fromLobby(lobby: LobbyFacts<"fight">, opts: FightOptions = {}): FightGame {
     const game = new FightGame(lobby.quiz, { ...lobby.settings, shuffleAnswers: lobby.shuffle.answers, protect: lobby.protect }, opts);
     const players = [...lobby.players];
@@ -188,7 +183,6 @@ export class FightGame {
     this.session.changed();
   }
 
-  /** why: the least damaged tower wins. */
   end(): void {
     if (this.session.finished) return;
     this.outcome ??= this.judge();
@@ -206,7 +200,6 @@ export class FightGame {
     this.session.changed();
   }
 
-  /** why: least damage wins; equal damage goes to more correct answers; otherwise a draw. */
   judge(): FightOutcome {
     const [a, b] = this.teams as [FightTeam, FightTeam];
     const destroyed = this.teams.find((t) => t.damage >= FIGHT_MAX_DAMAGE);
@@ -253,7 +246,6 @@ export class FightGame {
     return p;
   }
 
-  /** why: each player's decision, repair and result timer has its own slot on the phase timer. */
   private playerSlot(p: FightPlayer): string {
     return `player:${p.id}`;
   }
@@ -288,7 +280,6 @@ export class FightGame {
     return true;
   }
 
-  /** why: too slow to choose, so the move is lost. */
   private forfeit(playerId: string): void {
     const p = this.players.get(playerId);
     if (!p || p.state !== "decide") return;
@@ -333,7 +324,6 @@ export class FightGame {
     this.session.changed();
   }
 
-  /** why: returns null if rejected. */
   fire(playerId: string, dx: number, dy: number): FightShot | null {
     const p = this.players.get(playerId);
     if (!p || p.state !== "aim" || this.phase !== "playing") return null;
@@ -400,7 +390,6 @@ export class FightGame {
     if (this.events.length > MAX_EVENTS) this.events.shift();
   }
 
-  /** why: both teams share first in a draw; players by enemy hits, then correct answers. */
   private buildPodium(outcome: FightOutcome): Podium<FightTeam, FightPlayer, FightAwardKey> {
     const players = [...this.players.values()].sort((a, b) => b.hits - a.hits || b.correct - a.correct);
     return buildPodium({
@@ -413,7 +402,6 @@ export class FightGame {
     });
   }
 
-  /** why: worked out once in Game finish. */
   get podium(): Podium<FightTeam, FightPlayer, FightAwardKey> {
     return this.session.podium;
   }
@@ -516,7 +504,6 @@ const FIGHT_COLUMNS: Column<FightResultRow>[] = [
 
 export function buildFightResults(game: FightGame): ResultsSheet {
   const { places, rows } = game.podium;
-  // why: every team sharing first place is a draw.
   const draw = places.every((t) => t.place === 1);
   return sheet(
     FIGHT_COLUMNS,

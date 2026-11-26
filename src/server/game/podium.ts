@@ -3,7 +3,6 @@ import type { SubAward } from "../../shared/mode-views.ts";
 import type { RankKey } from "./standings.ts";
 import { rankBy } from "./standings.ts";
 
-/** why: labels come from the shared mode entry; value is what a player is judged on. */
 export interface AwardDeclarations<P, K extends string> {
   labels: Readonly<Record<K, string>>;
   values: Readonly<Record<K, (player: P) => number>>;
@@ -15,14 +14,10 @@ interface PodiumPlayer {
 }
 
 export interface PodiumSpec<E extends object, P extends PodiumPlayer, K extends string> {
-  /** why: players, or teams. */
   entries: readonly E[];
-  /** why: entries equal on every key share a place. */
   order: RankKey<E>[];
-  /** why: orders entries only within a shared place. */
   then?: RankKey<E>[];
   players: readonly P[];
-  /** why: a player's team in team modes. */
   entryOf: (player: P) => E;
   awards: AwardDeclarations<P, K>;
 }
@@ -34,24 +29,18 @@ export interface PodiumResult {
 }
 
 export interface Podium<E extends object, P extends PodiumPlayer, K extends string> {
-  /** why: copies taken when the game finished, best first. */
   readonly places: readonly (E & { place: number })[];
-  /** why: null when nobody scored above 0. */
   readonly awards: Readonly<Record<K, SubAward | null>>;
-  /** why: players copied when the game finished, in Standings order. */
   readonly rows: readonly { place: number; player: P }[];
-  /** why: null for someone not in the game. */
   result(playerId: string): PodiumResult | null;
 }
 
-/** why: ties share the award; nobody gets it when the highest value is 0. */
 function winners<P extends PodiumPlayer>(players: readonly P[], value: (p: P) => number): { value: number; players: P[] } | null {
   const values = players.map(value);
   const top = Math.max(0, ...values);
   return top > 0 ? { value: top, players: players.filter((_, i) => values[i] === top) } : null;
 }
 
-/** why: fallback when a game's own Podium could not be worked out. */
 export function emptyPodium<E extends object, P extends PodiumPlayer, K extends string>(labels: Readonly<Record<K, string>>): Podium<E, P, K> {
   // checked: the loop below fills every key of the labels.
   const values = {} as Record<K, () => number>;
@@ -67,7 +56,6 @@ export function emptyPodium<E extends object, P extends PodiumPlayer, K extends 
   });
 }
 
-/** why: built once at game finish; nothing about it changes after. */
 export function buildPodium<E extends object, P extends PodiumPlayer, K extends string>(spec: PodiumSpec<E, P, K>): Podium<E, P, K> {
   const wrap = (keys: RankKey<E>[]): RankKey<{ entry: E }>[] => keys.map((key) => (a, b) => key(a.entry, b.entry));
   const ranked = rankBy(

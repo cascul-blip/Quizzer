@@ -14,7 +14,6 @@ export class Roster<P extends BasePlayer> {
   readonly players = new Map<string, P>();
   private readonly tokens = new Map<string, string>();
 
-  /** why: nicknames are unique case-insensitively; throws GameError. */
   add(rawNickname: unknown, avatar: AvatarChoice, make: (base: BasePlayer) => P): P {
     const nickname = cleanNickname(rawNickname);
     const key = nickname.toLocaleLowerCase();
@@ -25,21 +24,18 @@ export class Roster<P extends BasePlayer> {
     return this.adopt(make({ id: "p" + newId(8), nickname, token: crypto.randomUUID(), connected: true, avatar }));
   }
 
-  /** why: keeps id and token, e.g. when a lobby hands over to another mode. */
   adopt(player: P): P {
     this.players.set(player.id, player);
     this.tokens.set(player.token, player.id);
     return player;
   }
 
-  /** why: keeps id and token; how a lobby hands its players to another mode. */
   adoptFrom(source: Iterable<BasePlayer>, make: (base: BasePlayer) => P): void {
     for (const { id, nickname, token, connected, avatar } of source) {
       this.adopt(make({ id, nickname, token, connected, avatar }));
     }
   }
 
-  /** why: returns the player only when the flag changed, so callers react to real changes. */
   setConnected(playerId: string, connected: boolean): P | null {
     const p = this.players.get(playerId);
     if (!p || p.connected === connected) return null;
