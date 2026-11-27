@@ -6,16 +6,18 @@ type Handler = (req: Request) => Response;
 
 const TEXT_LOADERS = new Set(["html", "js", "css"]);
 
-// why: q=0 in Accept-Encoding rules gzip out even when it is listed.
+// why: an explicit gzip entry decides over * in any order (RFC 9110 §12.5.3).
 export function acceptsGzip(req: Request): boolean {
   const header = req.headers.get("accept-encoding");
   if (!header) return false;
-  return header.split(",").some((part) => {
+  const weights = new Map<string, number>();
+  for (const part of header.split(",")) {
     const [name, ...params] = part.trim().toLowerCase().split(";");
-    if (name !== "gzip" && name !== "*") return false;
     const q = params.map((p) => p.trim()).find((p) => p.startsWith("q="));
-    return q === undefined || Number(q.slice(2)) > 0;
-  });
+    weights.set(name!.trim(), q === undefined ? 1 : Number(q.slice(2)));
+  }
+  const weight = weights.get("gzip") ?? weights.get("*");
+  return weight !== undefined && weight > 0;
 }
 
 function fileHandler(file: NonNullable<HTMLBundle["files"]>[number], cacheControl: string): Handler {
