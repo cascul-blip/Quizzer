@@ -69,7 +69,9 @@ const PHONE_MSG: { [M in GameMode]: ModeMsg<M> } = {
   memory: { type: "memory.answer", index: 0, option: 0 },
 };
 
+// why: only for checking that nothing was sent; it lets the queued view broadcast run first.
 const flush = () => new Promise((r) => setTimeout(r, 0));
+const podium = () => host.hostState((view) => view.phase === "podium");
 
 let data: ReturnType<typeof tempDir>;
 let clock: FakeClock;
@@ -233,7 +235,7 @@ describe("Game modes", () => {
 
         send(host, { type: "host.start", pacing: "manual" });
         send(host, { type: "host.end" });
-        await flush();
+        await podium();
         send(host, { type: "host.open", quizId });
         expect(errors(host)).toEqual([]);
         expect(lobbyView().mode).toBe(mode);
@@ -265,7 +267,7 @@ describe("Game modes", () => {
         send(host, { type: "host.setPacing", pacing: "auto" });
         expect(errors(host).map((e) => e.type === "error" && e.message)).toEqual(PACED.has(mode) ? [] : [`Not available in ${MODES[mode].name}`]);
         send(host, { type: "host.end" });
-        await flush();
+        await podium();
         send(host, { type: "host.open", quizId });
         expect(lobbyView().pacing).toBe(PACED.has(mode) ? "auto" : "manual");
       });
@@ -275,7 +277,7 @@ describe("Game modes", () => {
         openLobby(mode, nicknames);
         send(host, { type: "host.start", pacing: "manual" });
         send(host, { type: "host.end" });
-        await flush();
+        await podium();
         const csv = hub.lastResults?.csv ?? "";
         expect(csv).toStartWith(BOM);
         const lines = csv.slice(1).split("\r\n");
@@ -308,7 +310,7 @@ describe("Game modes", () => {
       test("a phone message for a game mode that isn't running is ignored", async () => {
         const [noel] = openLobby(mode, ["Noel"]);
         send(host, { type: "host.start", pacing: "manual" });
-        await flush();
+        await host.hostState((view) => view.kind === mode);
         for (const other of GAME_MODES.filter((m) => m !== mode)) {
           noel!.phone.raw = [];
           send(noel!.phone, PHONE_MSG[other]);

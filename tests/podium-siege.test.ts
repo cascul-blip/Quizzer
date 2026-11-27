@@ -49,7 +49,7 @@ test("in Kingdom Siege, the podium screen, the phone and the results sheet read 
   p("Ivy").goldEarned = 50;
   p("Noel").goldEarned = 20;
   host.sendMsg({ type: "host.end" });
-  await new Promise((r) => setTimeout(r, 0));
+  await host.hostState((v) => v.kind === "siege" && v.phase === "podium");
   p("Ivy").archerKills = 9;
   p("Holly").goldEarned = 99;
   const view = hub.hostView();
