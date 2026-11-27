@@ -39,8 +39,8 @@ afterEach(() => {
   t.cleanup();
 });
 
-async function resultsCsv() {
-  await new Promise((r) => setTimeout(r, 0));
+/** why: the results are saved before the podium is sent, so callers that waited for the podium can read them. */
+function resultsCsv() {
   return hub.lastResults?.csv ?? "";
 }
 
@@ -141,7 +141,7 @@ describe("Game mode: Classic", () => {
     const annFinal = await players[0]!.playerState((v) => v.kind === "classic" && v.phase === "podium");
     expect(annFinal.view.kind === "classic" && annFinal.view.me.rank).toBe(1);
 
-    const text = await resultsCsv();
+    const text = resultsCsv();
     expect(text).toContain("Ann");
     expect(text).not.toContain("Cy");
 
@@ -256,7 +256,7 @@ describe("Game mode: Tallest Tower", () => {
     });
     const bobEnd = await players[1]!.playerState((v) => v.kind === "tower" && v.phase === "podium");
     expect(bobEnd.view.kind === "tower" && bobEnd.view.result).toMatchObject({ teamRank: 2, teamCount: 2, floors: 0 });
-    const csv = await resultsCsv();
+    const csv = resultsCsv();
     expect(csv).toContain("Team,Team rank,Team floors");
     expect(csv).toContain("Red,1,1,3,Ann,4,0,100,3,1,0");
 
@@ -318,7 +318,7 @@ describe("Game mode: Submarine Squad", () => {
 
     host.sendMsg({ type: "host.end" });
     await host.hostState((v) => v.kind === "submarine" && v.phase === "podium");
-    const csv = await resultsCsv();
+    const csv = resultsCsv();
     expect(csv).toContain("Nickname,Correct,Wrong,Boosts");
     expect(csv).toContain("Sam,4,0,1,");
     host.sendMsg({ type: "host.close" });
@@ -389,7 +389,7 @@ describe("Game mode: Tower Fight", () => {
     expect(podium.view.kind === "fight" && podium.view.outcome).toEqual({ winner: 1, reason: "damage" });
     const blueEnd = await players[1]!.playerState((v) => v.kind === "fight" && v.phase === "podium");
     expect(blueEnd.view.kind === "fight" && blueEnd.view.result?.outcome.winner).toBe(1);
-    const csv = await resultsCsv();
+    const csv = resultsCsv();
     expect(csv).toContain("Blue,Won,0,Blue1,");
     expect(csv).toContain("Red,Lost,1,Red1,4,0,100,1,0,1,0");
 
@@ -463,7 +463,7 @@ describe("Game mode: Robot Attack", () => {
     const podium = await host.hostState((v) => v.kind === "robot" && v.phase === "podium");
     expect(podium.view.kind === "robot" && podium.view.standings!.at(-1)!.nickname).toBe("Bob");
     await players[1]!.playerState((v) => v.kind === "robot" && v.phase === "podium" && !!v.result);
-    const csv = await resultsCsv();
+    const csv = resultsCsv();
     expect(csv).toContain("Rank,Nickname,Status");
     expect(csv).toContain("Bob,");
 
@@ -544,7 +544,7 @@ describe("Game mode: Cup of Death", () => {
     const podium = await host.hostState((v) => v.kind === "cup" && v.phase === "podium");
     expect(podium.view.kind === "cup" && podium.view.standings![0]!.nickname).toBe("Ann");
     await bob.playerState((v) => v.kind === "cup" && v.phase === "podium" && !!v.result);
-    const csv = await resultsCsv();
+    const csv = resultsCsv();
     expect(csv).toContain("Rank,Nickname,Status,Cups left");
     expect(csv).toContain("Bob,");
 
@@ -652,7 +652,7 @@ describe("Game mode: Kingdom Siege", () => {
     const podium = await host.hostState((v) => v.kind === "siege" && v.phase === "podium");
     expect(podium.view.kind === "siege" && podium.view.result).toMatchObject({ outcome: "ended", wavesSurvived: 1, newRecord: true });
     await ann.playerState((v) => v.kind === "siege" && v.phase === "podium" && !!v.result);
-    const csv = await resultsCsv();
+    const csv = resultsCsv();
     expect(csv).toContain("Nickname,Correct,Wrong,Accuracy %,Gold earned,Gold spent");
     expect(csv).toContain("Wave,Difficulty scale %,Defense gold,Strength boost,Monster budget,Monster health ×,Monsters sent,Class accuracy %,Hearts lost");
     expect(csv).toContain(",Ended,1,");
@@ -774,7 +774,7 @@ describe("Game mode: Land Grab", () => {
     ]);
     const bobEnd = await players[1]!.playerState((v) => v.kind === "land" && v.phase === "podium");
     expect(bobEnd.view.kind === "land" && bobEnd.view.result).toMatchObject({ teamRank: 2, teamCount: 2, tiles: 1, won: false });
-    const csv = await resultsCsv();
+    const csv = resultsCsv();
     expect(csv).toContain("Red,1,2,,Ann,3,0,100,1,0,0");
 
     host.sendMsg({ type: "host.open", quizId: quiz.id });
@@ -906,7 +906,7 @@ describe("Game mode: Racer", () => {
       turns: 2,
       awards: ["Most correct answers", "Best driver"],
     });
-    const csv = await resultsCsv();
+    const csv = resultsCsv();
     expect(csv).toContain("Nickname,Correct,Wrong,Accuracy %,Turns driven,Mph gained,Fail points as driver");
     expect(csv).toContain("Ann,1,1,50,1,");
     expect(csv).toContain(",12.5,50,0");
@@ -994,7 +994,7 @@ describe("Game mode: Showdown", () => {
     });
     const end = await players[0]!.playerState((v) => v.kind === "duel" && v.phase === "podium" && !!v.result);
     expect(end.view.kind === "duel" && end.view.result).toEqual({ rank: 1, playerCount: 2, awards: ["Longest reign", "Most wins"] });
-    const csv = await resultsCsv();
+    const csv = resultsCsv();
     expect(csv).toContain("Rank,Nickname,Points,Final arena,Start arena,Wins,Losses,Draws,Rounds won in Arena 1,Correct,Wrong,R1 answer (Q1)");
     expect(csv).toContain("1,Ann,1,1,1,1,0,0,1,1,0,right,yes,");
 
@@ -1183,7 +1183,7 @@ describe("Game mode: Gift Grab", () => {
       host.sendMsg({ type: "host.end" });
       await host.hostState((v) => v.kind === "gift" && v.phase === "podium");
       await resumed.playerState((v) => v.kind === "gift" && v.phase === "podium" && v.rank === 1);
-      expect(await resultsCsv()).toContain("1,Noel,10,5,0,1,1,0,0");
+      expect(resultsCsv()).toContain("1,Noel,10,5,0,1,1,0,0");
 
       host.sendMsg({ type: "host.open", quizId: quiz.id });
       await host.hostState((v) => v.kind === "lobby" && v.mode === "gift" && v.settings.gift.minutes === 3);
