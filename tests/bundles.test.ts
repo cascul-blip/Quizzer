@@ -34,6 +34,23 @@ describe("acceptsGzip", () => {
     expect(acceptsGzip(get("deflate, br"))).toBe(false);
     expect(acceptsGzip(get())).toBe(false);
   });
+
+  test("an explicit gzip;q=0 wins over a positive wildcard in either order", () => {
+    expect(acceptsGzip(get("gzip;q=0, *;q=1"))).toBe(false);
+    expect(acceptsGzip(get("*;q=1, gzip;q=0"))).toBe(false);
+    expect(acceptsGzip(get("GZIP;q=0, *"))).toBe(false);
+  });
+
+  test("an explicit positive gzip wins over a zero wildcard", () => {
+    expect(acceptsGzip(get("*;q=0, gzip"))).toBe(true);
+    expect(acceptsGzip(get("*;q=0, gzip;q=1"))).toBe(true);
+    expect(acceptsGzip(get("gzip;q=1, *;q=0"))).toBe(true);
+  });
+
+  test("the wildcard decides when gzip is not listed", () => {
+    expect(acceptsGzip(get("br, *"))).toBe(true);
+    expect(acceptsGzip(get("br, *;q=0"))).toBe(false);
+  });
 });
 
 describe("pageRoutes", () => {
